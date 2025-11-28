@@ -6,13 +6,8 @@ public interface IAggregateRoot : IEntity
     void ClearEvents();
 }
 
-public interface IAggregateRoot<TKey> : IAggregateRoot
-    where TKey : struct;
-
-public abstract class AggregateRoot<TKey> : Entity, IAggregateRoot<TKey>
-    where TKey : struct
+public abstract class AggregateRoot : Entity, IAggregateRoot
 {
-    public TKey Id { get; init; }
     protected List<IEvent> PreparedEvents = [];
     public virtual IReadOnlyList<IEvent> Events => PreparedEvents.AsReadOnly();
 

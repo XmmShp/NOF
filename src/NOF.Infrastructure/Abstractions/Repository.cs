@@ -10,6 +10,12 @@ public abstract class Repository<TAggregateRoot> : IRepository<TAggregateRoot>
     {
         DbContext = dbContext;
     }
+
+    public ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken)
+    {
+        return DbContext.Set<TAggregateRoot>().FindAsync(keyValues: keyValues, cancellationToken: cancellationToken);
+    }
+
     public virtual void Add(TAggregateRoot aggregateRoot)
     {
         DbContext.Set<TAggregateRoot>().Add(aggregateRoot);
@@ -17,19 +23,5 @@ public abstract class Repository<TAggregateRoot> : IRepository<TAggregateRoot>
     public virtual void Remove(TAggregateRoot aggregateRoot)
     {
         DbContext.Set<TAggregateRoot>().Remove(aggregateRoot);
-    }
-}
-
-public abstract class Repository<TAggregateRoot, TKey> : Repository<TAggregateRoot>, IRepository<TAggregateRoot, TKey>
-    where TKey : struct
-    where TAggregateRoot : class, IAggregateRoot<TKey>
-{
-    protected Repository(DbContext dbContext) : base(dbContext)
-    {
-    }
-
-    public virtual ValueTask<TAggregateRoot?> FindAsync(TKey key, CancellationToken cancellationToken)
-    {
-        return DbContext.Set<TAggregateRoot>().FindAsync([key], cancellationToken);
     }
 }

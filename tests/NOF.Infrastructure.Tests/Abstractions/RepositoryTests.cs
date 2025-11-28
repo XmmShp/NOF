@@ -6,15 +6,15 @@ namespace NOF.Infrastructure.Tests.Abstractions;
 
 public class RepositoryTests
 {
-    private class TestAggregateRoot : IAggregateRoot<long>
+    private class TestAggregateRoot : IAggregateRoot
     {
-        public long Id { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public IReadOnlyList<IEvent> Events => [];
         public void ClearEvents() { }
     }
 
-    private class TestRepository : Repository<TestAggregateRoot, long>
+    private class TestRepository : Repository<TestAggregateRoot>
     {
         public TestRepository(DbContext dbContext) : base(dbContext)
         {
