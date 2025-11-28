@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Settings -->
+    <IsPackable>true</IsPackable>
+    <PackageId>NOF.Infrastructure</PackageId>
+    <Description>NOF Infrastructure layer containing data access, external services integration, and cross-cutting concerns.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <FrameworkReference Include="Microsoft.AspNetCore.App" />
+	  <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+
+	  <PackageReference Include="MassTransit" />
+	  <PackageReference Include="MassTransit.RabbitMQ" />
+	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" />
+	  <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+	  <PackageReference Include="Scalar.AspNetCore" />
+	  <PackageReference Include="Vogen" />
+
+	  <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+	  <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
+	  <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+	  <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
+  </ItemGroup>
+
+</Project>

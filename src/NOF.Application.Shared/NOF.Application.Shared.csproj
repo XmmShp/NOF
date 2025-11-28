@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+    
+    <!-- NuGet Package Settings -->
+    <IsPackable>true</IsPackable>
+    <PackageId>NOF.Application.Shared</PackageId>
+    <Description>NOF Application Shared layer containing common application interfaces, DTOs, and shared logic.</Description>
+  </PropertyGroup>	
+
+  <ItemGroup>
+	<PackageReference Include="MassTransit.Abstractions" />
+	<PackageReference Include="DotNet.Glob" />
+	<PackageReference Include="Microsoft.Extensions.Http" />
+	<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+	<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+  </ItemGroup>
+
+</Project>

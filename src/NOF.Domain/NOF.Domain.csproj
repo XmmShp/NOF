@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Settings -->
+    <IsPackable>true</IsPackable>
+    <PackageId>NOF.Domain</PackageId>
+    <Description>NOF Domain layer containing domain entities, value objects, and domain exceptions.</Description>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="MassTransit.Abstractions" />
+		<PackageReference Include="Vogen" />
+		<PackageReference Include="Yitter.IdGenerator" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\NOF.SourceGenerator\NOF.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+</Project>

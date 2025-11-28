@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+    
+    <!-- NuGet Package Settings -->
+    <IsPackable>true</IsPackable>
+    <PackageId>NOF.Test</PackageId>
+    <Description>NOF Test utilities and helpers for testing NOF-based applications.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <PackageReference Include="coverlet.collector" />
+	  <PackageReference Include="MassTransit.Abstractions" />
+	  <PackageReference Include="Microsoft.AspNetCore.Http" />
+	  <PackageReference Include="Moq" />
+	  <PackageReference Include="FluentAssertions" />
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+	  <PackageReference Include="Yitter.IdGenerator" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NOF.Application.Shared\NOF.Application.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
