@@ -25,11 +25,11 @@ public class OptionalConverter<T> : JsonConverter<Optional<T>>
     {
         if (reader.TokenType == JsonTokenType.Null)
         {
-            return new Optional<T> { Value = default!, HasValue = true };
+            return Optional.Of<T>(default!);
         }
 
         var value = JsonSerializer.Deserialize<T>(ref reader, options)!;
-        return new Optional<T> { Value = value, HasValue = true };
+        return Optional.Of(value);
     }
 
     public override void Write(Utf8JsonWriter writer, Optional<T> value, JsonSerializerOptions options)
