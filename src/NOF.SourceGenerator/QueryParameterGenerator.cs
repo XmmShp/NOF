@@ -110,7 +110,6 @@ public class QueryParameterGenerator : IIncrementalGenerator
         {
             RecordDeclarationSyntax record => record.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record",
             StructDeclarationSyntax => "struct",
-            ClassDeclarationSyntax => "class",
             _ => "class"
         };
     }
@@ -140,7 +139,7 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine($"    /// {typeName}的查询参数部分类型");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public partial {typeKeyword} {typeName} : IQueryParameter");
+        sb.AppendLine($"    public partial {typeKeyword} {typeName}");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
         sb.AppendLine("        /// 将对象转换为URL查询字符串");
@@ -159,9 +158,6 @@ public class QueryParameterGenerator : IIncrementalGenerator
         }
 
         // 调用 ConfigureQueryString 方法
-        sb.AppendLine();
-        sb.AppendLine("            IQueryParameter instance = this;");
-        sb.AppendLine("            instance.ConfigureQueryString(queryParams);");
         sb.AppendLine();
         sb.AppendLine("            var queryStringParts = new List<string>();");
         sb.AppendLine("            foreach (var param in queryParams)");
