@@ -12,7 +12,7 @@
     <PackageTags>nof;framework;dotnet;aspnetcore</PackageTags>
     
     <!-- Version -->
-    <VersionPrefix>1.1.1</VersionPrefix>
+    <VersionPrefix>1.1.2</VersionPrefix>
     <VersionSuffix Condition="'$(Configuration)' == 'Debug'">dev</VersionSuffix>
     
     <!-- Build Properties -->
