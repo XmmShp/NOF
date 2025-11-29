@@ -111,10 +111,7 @@ public class SaveChangesFilterTests
             .Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken ct) =>
             {
-                if (ct.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException(ct);
-                }
+                ct.ThrowIfCancellationRequested();
                 return Task.FromResult(0);
             });
 

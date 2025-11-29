@@ -37,7 +37,7 @@ internal class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
                          .Where(path => path.Operations is not null)
                          .SelectMany(path => path.Operations!))
             {
-                operation.Value.Security ??= new List<OpenApiSecurityRequirement>();
+                operation.Value.Security ??= [];
 
                 operation.Value.Security.Add(new OpenApiSecurityRequirement
                 {

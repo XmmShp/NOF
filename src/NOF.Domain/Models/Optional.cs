@@ -12,7 +12,7 @@ public readonly struct NoneOptional;
 
 public readonly struct Optional<T>
 {
-    internal Optional(T? value, bool hasValue)
+    internal Optional(T value, bool hasValue)
     {
         Value = value;
         HasValue = hasValue;
@@ -33,5 +33,5 @@ public readonly struct Optional<T>
     [MemberNotNullWhen(true, nameof(Value))]
     public bool HasValue { get; }
 
-    public static implicit operator Optional<T>(NoneOptional optional) => new(default, false);
+    public static implicit operator Optional<T>(NoneOptional optional) => new(default!, false);
 }
