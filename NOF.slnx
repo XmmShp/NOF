@@ -14,5 +14,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NOF.Infrastructure.Tests/NOF.Infrastructure.Tests.csproj" />
+    <Project Path="tests/NOF.SourceGenerator.Tests/NOF.SourceGenerator.Tests.csproj" Id="35f09326-8798-4668-bd60-9b9a0882f1e9" />
   </Folder>
 </Solution>
