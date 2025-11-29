@@ -54,7 +54,9 @@ public class QueryParameterGenerator : IIncrementalGenerator
         // 获取类型的符号信息
         var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration);
         if (typeSymbol is null)
+        {
             return null;
+        }
 
         // 检查类型是否标记了QueryParameterAttribute
         var hasAttribute = typeSymbol.GetAttributes()
@@ -82,7 +84,9 @@ public class QueryParameterGenerator : IIncrementalGenerator
             var semanticModel = compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
             var typeSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
             if (typeSymbol is null)
+            {
                 continue;
+            }
 
             var typeName = typeSymbol.Name;
             var namespaceName = typeSymbol.ContainingNamespace.ToDisplayString();
@@ -130,7 +134,6 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("using System.Linq;");
         sb.AppendLine("using System.Text;");
         sb.AppendLine("using System.Text.Json;");
-        sb.AppendLine("using NOF;");
         sb.AppendLine();
 
         // 生成命名空间
@@ -145,16 +148,15 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("        /// 将对象转换为URL查询字符串");
         sb.AppendLine("        /// </summary>");
         sb.AppendLine("        /// <returns>URL查询字符串，如果有参数则以?开头</returns>");
-        sb.AppendLine("        public string ToQueryString(JsonSerializerOptions? jsonOptions = null)");
+        sb.AppendLine("        public string ToQueryString()");
         sb.AppendLine("        {");
-        sb.AppendLine("            jsonOptions ??= DefaultJsonSerializerOptions.Options;");
         sb.AppendLine("            var queryParams = new Dictionary<string, string>();");
         sb.AppendLine();
 
         // 为每个属性生成查询参数代码
-        foreach (var property in properties)
+        foreach (var propertyName in properties.Select(property => property.Name))
         {
-            GeneratePropertyQueryCode(sb, property);
+            sb.AppendLine($"            queryParams[\"{propertyName}\"] = {propertyName}?.ToString();");
         }
 
         // 调用 ConfigureQueryString 方法
@@ -179,100 +181,6 @@ public class QueryParameterGenerator : IIncrementalGenerator
 
         return sb.ToString();
     }
-
-    /// <summary>
-    /// 为属性生成查询参数代码
-    /// </summary>
-    private static void GeneratePropertyQueryCode(StringBuilder sb, IPropertySymbol property)
-    {
-        var propertyName = property.Name;
-        var propertyType = property.Type;
-
-        sb.AppendLine();
-
-        // 可空值类型
-        if (IsNullableValueType(propertyType))
-        {
-            sb.AppendLine($"            if ({propertyName}.HasValue)");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                queryParams[\"{propertyName}\"] = JsonSerializer.Serialize({propertyName}.Value, jsonOptions).Trim('\"');");
-            sb.AppendLine("            }");
-        }
-        // 字符串
-        else if (IsStringType(propertyType))
-        {
-            sb.AppendLine($"            if (!string.IsNullOrEmpty({propertyName}))");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                queryParams[\"{propertyName}\"] = {propertyName}; // 字符串不需要序列化");
-            sb.AppendLine("            }");
-        }
-        // 集合
-        else if (IsCollectionType(propertyType))
-        {
-            sb.AppendLine($"            if ({propertyName} is not null && {propertyName}.Any())");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                queryParams[\"{propertyName}\"] = JsonSerializer.Serialize({propertyName}, jsonOptions); // 集合序列化为 [1,2,3]");
-            sb.AppendLine("            }");
-        }
-        // 布尔值
-        else if (IsBooleanType(propertyType))
-        {
-            sb.AppendLine($"            queryParams[\"{propertyName}\"] = {propertyName}.ToString().ToLower();");
-        }
-        // 引用类型（对象、类等）
-        else if (IsReferenceTypeOrNullable(propertyType))
-        {
-            sb.AppendLine($"            if ({propertyName} is not null)");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                queryParams[\"{propertyName}\"] = JsonSerializer.Serialize({propertyName}, jsonOptions).Trim('\"');");
-            sb.AppendLine("            }");
-        }
-        // 其他值类型（int, enum, DateTime 等）
-        else
-        {
-            sb.AppendLine($"            queryParams[\"{propertyName}\"] = JsonSerializer.Serialize({propertyName}, jsonOptions).Trim('\"');");
-        }
-    }
-
-    /// <summary>
-    /// 判断是否为可空值类型（如 int?）
-    /// </summary>
-    private static bool IsNullableValueType(ITypeSymbol type)
-        => type is INamedTypeSymbol { IsGenericType: true } namedType &&
-           namedType.ConstructedFrom.ToDisplayString() == "System.Nullable<T>";
-
-    /// <summary>
-    /// 判断是否为引用类型或带有可空注释的引用类型
-    /// </summary>
-    private static bool IsReferenceTypeOrNullable(ITypeSymbol type)
-        => (type is { IsReferenceType: true } && !IsStringType(type)) ||
-           (type is { IsReferenceType: true, NullableAnnotation: NullableAnnotation.Annotated } && !IsStringType(type));
-
-    /// <summary>
-    /// 判断是否为字符串类型
-    /// </summary>
-    private static bool IsStringType(ITypeSymbol type)
-        => type.SpecialType == SpecialType.System_String;
-
-    /// <summary>
-    /// 判断是否为集合类型
-    /// </summary>
-    private static bool IsCollectionType(ITypeSymbol type)
-    {
-        if (type is INamedTypeSymbol namedType)
-        {
-            return namedType.AllInterfaces.Any(i =>
-                i.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>" &&
-                i.TypeArguments.Length == 1);
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// 判断是否为布尔类型
-    /// </summary>
-    private static bool IsBooleanType(ITypeSymbol type)
-        => type.SpecialType == SpecialType.System_Boolean;
 
     /// <summary>
     /// 获取类型的所有属性，包括继承的属性
