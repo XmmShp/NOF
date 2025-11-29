@@ -14,12 +14,9 @@
 
   <ItemGroup>
 	  <PackageReference Include="coverlet.collector" />
-	  <PackageReference Include="MassTransit.Abstractions" />
-	  <PackageReference Include="Microsoft.AspNetCore.Http" />
 	  <PackageReference Include="Moq" />
 	  <PackageReference Include="FluentAssertions" />
 	  <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
-	  <PackageReference Include="Yitter.IdGenerator" />
   </ItemGroup>
 
   <ItemGroup>

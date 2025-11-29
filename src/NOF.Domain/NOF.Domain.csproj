@@ -13,6 +13,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="MassTransit.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 		<PackageReference Include="Vogen" />
 		<PackageReference Include="Yitter.IdGenerator" />
 	</ItemGroup>
