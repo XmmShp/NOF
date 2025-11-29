@@ -22,14 +22,12 @@ public static class HttpResponseMessageExtensions
     extension(HttpResponseMessage response)
     {
         /// <summary>
-        /// 处理HTTP响应并转换为ApiResponse&lt;T&gt;
+        /// 处理HTTP响应并转换为Result&lt;T&gt;
         /// </summary>
         /// <typeparam name="T">响应数据类型</typeparam>
-        /// <param name="jsonOptions">JSON序列化选项</param>
         /// <returns>API响应</returns>
-        public async Task<Result<T>> ToApiResponseAsync<T>(JsonSerializerOptions? jsonOptions = null)
+        public async Task<Result<T>> ToResultAsync<T>()
         {
-            jsonOptions ??= Options;
             if (!response.IsSuccessStatusCode)
             {
                 return new Result<T>
@@ -43,7 +41,7 @@ public static class HttpResponseMessageExtensions
 
             try
             {
-                var apiResponse = await response.Content.ReadFromJsonAsync<Result<T>>(jsonOptions);
+                var apiResponse = await response.Content.ReadFromJsonAsync<Result<T>>(Options);
                 if (apiResponse is null)
                 {
                     return new Result<T>
@@ -69,13 +67,11 @@ public static class HttpResponseMessageExtensions
         }
 
         /// <summary>
-        /// 处理HTTP响应并转换为ApiResponse（无数据版本）
+        /// 处理HTTP响应并转换为Result（无数据版本）
         /// </summary>
-        /// <param name="jsonOptions">JSON序列化选项</param>
         /// <returns>API响应</returns>
-        public async Task<Result> ToApiResponseAsync(JsonSerializerOptions? jsonOptions = null)
+        public async Task<Result> ToResultAsync()
         {
-            jsonOptions ??= Options;
             if (!response.IsSuccessStatusCode)
             {
                 return new Result
@@ -88,7 +84,7 @@ public static class HttpResponseMessageExtensions
 
             try
             {
-                var apiResponse = await response.Content.ReadFromJsonAsync<Result>(jsonOptions);
+                var apiResponse = await response.Content.ReadFromJsonAsync<Result>(Options);
                 if (apiResponse is null)
                 {
                     return new Result

@@ -1,4 +1,3 @@
-using KoalaApp.Common;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 

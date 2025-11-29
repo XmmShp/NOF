@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using System.Collections.Concurrent;
 
 namespace NOF;
 
@@ -101,5 +102,44 @@ public static class WebApplicationExtensions
 
             return app;
         }
+
+        public WebApplication MapHttpEndpoints(params HttpEndpoint[] endpoints)
+        {
+            foreach (var endpoint in endpoints)
+            {
+                var routeHandler = endpoint.Method switch
+                {
+                    HttpVerb.Get => app.MapGet(endpoint.Route, CreateHandler(endpoint.RequestType, true)),
+                    HttpVerb.Post => app.MapPost(endpoint.Route, CreateHandler(endpoint.RequestType, false)),
+                    HttpVerb.Put => app.MapPut(endpoint.Route, CreateHandler(endpoint.RequestType, false)),
+                    HttpVerb.Delete => app.MapDelete(endpoint.Route, CreateHandler(endpoint.RequestType, false)),
+                    HttpVerb.Patch => app.MapPatch(endpoint.Route, CreateHandler(endpoint.RequestType, false)),
+                    _ => throw new NotSupportedException($"Unsupported verb: {endpoint.Method}")
+                };
+
+                if (endpoint.AllowAnonymous)
+                {
+                    routeHandler.AllowAnonymous();
+                }
+
+                if (!string.IsNullOrEmpty(endpoint.Permission))
+                {
+                    routeHandler.RequirePermission(endpoint.Permission);
+                }
+            }
+
+            return app;
+        }
+    }
+
+    private static readonly ConcurrentDictionary<(Type, bool), Delegate> HandlerCache = new();
+
+    private static Delegate CreateHandler(Type requestType, bool isQuery)
+    {
+        return HandlerCache.GetOrAdd((requestType, isQuery), static key =>
+        {
+            var (rt, iq) = key;
+            return HandlerFactory.Create(rt, iq);
+        });
     }
 }
