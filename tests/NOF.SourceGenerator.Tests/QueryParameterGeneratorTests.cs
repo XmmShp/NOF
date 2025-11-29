@@ -55,7 +55,7 @@ namespace NOF
         /// <returns>URL查询字符串，如果有参数则以?开头</returns>
         public static string ToQueryString(this TestNamespace.TestClass source)
         {
-            var queryParams = new Dictionary<string, string>();
+            var queryParams = new Dictionary<string, string?>();
 
             queryParams["Name"] = source.Name?.ToString();
             queryParams["Class"] = source.Class.ToString();

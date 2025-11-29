@@ -155,7 +155,7 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("        /// <returns>URL查询字符串，如果有参数则以?开头</returns>");
         sb.AppendLine($"        public static string ToQueryString(this {typeName} source)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var queryParams = new Dictionary<string, string>();");
+        sb.AppendLine("            var queryParams = new Dictionary<string, string?>();");
         sb.AppendLine();
 
         // 为每个属性生成查询参数代码
