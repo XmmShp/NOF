@@ -15,6 +15,7 @@ namespace NOF;
 [Generator]
 public class QueryParameterGenerator : IIncrementalGenerator
 {
+    /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // 获取所有带有QueryParameterAttribute的类
@@ -75,53 +76,38 @@ public class QueryParameterGenerator : IIncrementalGenerator
             return;
         }
 
-        foreach (var typeDeclaration in types)
+        var typesToGenerate = Enumerable.OfType<TypeDeclarationSyntax>(types)
+            .Select(typeDeclaration => new
+            {
+                TypeDeclaration = typeDeclaration,
+                SemanticModel = compilation.GetSemanticModel(typeDeclaration.SyntaxTree)
+            })
+            .Select(typeContext => typeContext
+                .SemanticModel
+                .GetDeclaredSymbol(typeContext.TypeDeclaration)
+            )
+            .OfType<INamedTypeSymbol>()
+            .Select(typeSymbol =>
+            (
+                typeSymbol.ToDisplayString(),
+                GetAllProperties(typeSymbol)
+                    .Where(p => p.DeclaredAccessibility == Accessibility.Public)
+                    .ToList()
+            ))
+            .ToList();
+
+        if (typesToGenerate.Count <= 0)
         {
-            if (typeDeclaration is null)
-            {
-                continue;
-            }
-            var semanticModel = compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
-            var typeSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration);
-            if (typeSymbol is null)
-            {
-                continue;
-            }
-
-            var typeName = typeSymbol.Name;
-            var namespaceName = typeSymbol.ContainingNamespace.ToDisplayString();
-
-            // 确定类型关键字
-            var typeKeyword = GetTypeKeyword(typeDeclaration);
-
-            // 获取所有公共属性，包括继承的属性
-            var properties = GetAllProperties(typeSymbol)
-                .Where(p => p.DeclaredAccessibility == Accessibility.Public)
-                .ToList();
-
-            var source = GenerateExtensionMethod(namespaceName, typeName, typeKeyword, properties);
-
-            context.AddSource($"{typeName}.QueryParameter.g.cs", SourceText.From(source, Encoding.UTF8));
+            return;
         }
+        var source = GenerateExtensionMethodsFile(typesToGenerate);
+        context.AddSource("QueryParameterExtensions.g.cs", SourceText.From(source, Encoding.UTF8));
     }
 
     /// <summary>
-    /// 获取类型关键字
+    /// 生成扩展方法文件
     /// </summary>
-    private static string GetTypeKeyword(TypeDeclarationSyntax typeDeclaration)
-    {
-        return typeDeclaration switch
-        {
-            RecordDeclarationSyntax record => record.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record",
-            StructDeclarationSyntax => "struct",
-            _ => "class"
-        };
-    }
-
-    /// <summary>
-    /// 生成实例方法代码
-    /// </summary>
-    private static string GenerateExtensionMethod(string namespaceName, string typeName, string typeKeyword, List<IPropertySymbol> properties)
+    private static string GenerateExtensionMethodsFile(List<(string TypeName, List<IPropertySymbol> Properties)> typesToGenerate)
     {
         var sb = new StringBuilder();
 
@@ -137,29 +123,54 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine();
 
         // 生成命名空间
-        sb.AppendLine($"namespace {namespaceName}");
+        sb.AppendLine("namespace NOF");
         sb.AppendLine("{");
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// {typeName}的查询参数部分类型");
+        sb.AppendLine("    /// 查询参数扩展方法");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public partial {typeKeyword} {typeName}");
+        sb.AppendLine("    public static class __QueryParameterExtensions__");
         sb.AppendLine("    {");
+
+        // 为每个类型生成扩展方法
+        foreach (var (typeName, properties) in typesToGenerate)
+        {
+            GenerateExtensionMethod(sb, typeName, properties);
+        }
+
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 生成单个扩展方法
+    /// </summary>
+    private static void GenerateExtensionMethod(StringBuilder sb, string typeName, List<IPropertySymbol> properties)
+    {
         sb.AppendLine("        /// <summary>");
-        sb.AppendLine("        /// 将对象转换为URL查询字符串");
+        sb.AppendLine($"        /// 将{typeName}对象转换为URL查询字符串");
         sb.AppendLine("        /// </summary>");
+        sb.AppendLine($"        /// <param name=\"source\">要转换的{typeName}对象</param>");
         sb.AppendLine("        /// <returns>URL查询字符串，如果有参数则以?开头</returns>");
-        sb.AppendLine("        public string ToQueryString()");
+        sb.AppendLine($"        public static string ToQueryString(this {typeName} source)");
         sb.AppendLine("        {");
         sb.AppendLine("            var queryParams = new Dictionary<string, string>();");
         sb.AppendLine();
 
         // 为每个属性生成查询参数代码
-        foreach (var propertyName in properties.Select(property => property.Name))
+        foreach (var property in properties)
         {
-            sb.AppendLine($"            queryParams[\"{propertyName}\"] = {propertyName}?.ToString();");
+            var propertyName = property.Name;
+            var isNullable = property.NullableAnnotation == NullableAnnotation.Annotated;
+            var propertyAccess = isNullable
+                ? $"source.{propertyName}?.ToString()"
+                : $"source.{propertyName}.ToString()";
+
+            sb.AppendLine($"            queryParams[\"{propertyName}\"] = {propertyAccess};");
         }
 
-        // 调用 ConfigureQueryString 方法
+        // 生成查询字符串
         sb.AppendLine();
         sb.AppendLine("            var queryStringParts = new List<string>();");
         sb.AppendLine("            foreach (var param in queryParams)");
@@ -174,12 +185,9 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("                queryStringParts.Add($\"{escapedKey}={escapedValue}\");");
         sb.AppendLine("            }");
         sb.AppendLine();
-        sb.AppendLine("            return queryStringParts.Count > 0 ? \"?\" + string.Join(\"&\", queryStringParts) : \"\";");
+        sb.AppendLine("            return queryStringParts.Count > 0 ? \"?\" + string.Join(\"&\", queryStringParts) : string.Empty;");
         sb.AppendLine("        }");
-        sb.AppendLine("    }");
-        sb.AppendLine("}");
-
-        return sb.ToString();
+        sb.AppendLine();
     }
 
     /// <summary>
