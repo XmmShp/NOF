@@ -157,7 +157,8 @@ public class ExposeToHttpEndpointGenerator : IIncrementalGenerator
             return;
         }
 
-        var serviceName = $"{namespaceName}Service";
+        const string service = "Service";
+        var serviceName = namespaceName.EndsWith(service) ? namespaceName : $"{namespaceName}Service";
         var interfaceName = $"I{serviceName}";
         var clientName = $"{serviceName}Client";
 
@@ -276,7 +277,7 @@ public class ExposeToHttpEndpointGenerator : IIncrementalGenerator
 
         sb.AppendLine("    }");
         sb.AppendLine("}");
-        sb2.AppendLine("        ]");
+        sb2.AppendLine("        ];");
         sb2.AppendLine("    }");
         sb2.AppendLine("}");
         // Add to source output
