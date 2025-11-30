@@ -48,7 +48,6 @@ jobs:
         dotnet pack src/NOF.Application.Shared/NOF.Application.Shared.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Infrastructure/NOF.Infrastructure.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
 
     - name: Upload build artifacts
