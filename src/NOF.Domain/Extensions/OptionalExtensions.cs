@@ -4,7 +4,6 @@ public static class OptionalExtensions
 {
     extension<T>(Optional<T> optional)
     {
-
         public T ValueOr(T defaultValue)
             => optional.ValueOr(() => defaultValue);
 
@@ -28,6 +27,11 @@ public static class OptionalExtensions
         public TResult Match<TResult>(Func<T, TResult> some, Func<TResult> none)
         {
             return optional.HasValue ? some(optional.Value) : none();
+        }
+
+        public Optional<TResult> Map<TResult>(Func<T, TResult> valueFactory)
+        {
+            return optional.HasValue ? Optional.Of(valueFactory(optional.Value)) : Optional.None;
         }
     }
 }
