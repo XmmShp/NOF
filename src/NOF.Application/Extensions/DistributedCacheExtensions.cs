@@ -80,9 +80,9 @@ public static class DistributedCacheExtensions
         /// <param name="value">如果找到，则包含缓存的对象；否则为默认值</param>
         /// <param name="jsonOptions">JSON序列化选项</param>
         /// <returns>如果找到缓存项则为true，否则为false</returns>
-        public bool TryGetValue<TValue>(CacheKey<TValue> key, [MaybeNullWhen(false)] out TValue value,
+        public bool TryGet<TValue>(CacheKey<TValue> key, [MaybeNullWhen(false)] out TValue value,
             JsonSerializerOptions? jsonOptions = null)
-            => cache.TryGetValue(key.Key, out value, jsonOptions);
+            => cache.TryGet(key.Key, out value, jsonOptions);
 
         /// <summary>
         /// 尝试获取强类型缓存对象
@@ -92,7 +92,7 @@ public static class DistributedCacheExtensions
         /// <param name="value">如果找到，则包含缓存的对象；否则为默认值</param>
         /// <param name="jsonOptions">JSON序列化选项</param>
         /// <returns>如果找到缓存项则为true，否则为false</returns>
-        public bool TryGetValue<T>(string key, [MaybeNullWhen(false)] out T value,
+        public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value,
             JsonSerializerOptions? jsonOptions = null)
         {
             var bytes = cache.Get(key);
@@ -149,11 +149,11 @@ public static class DistributedCacheExtensions
         /// <param name="jsonOptions">JSON序列化选项</param>
         /// <param name="cancellationToken">取消令牌</param>
         /// <returns>如果找到缓存项则为 (true, value)，否则为 (false, default)</returns>
-        public ValueTask<(bool Success, TValue? Value)> TryGetValueAsync<TValue>(
+        public ValueTask<(bool IsSuccess, TValue? Value)> TryGetAsync<TValue>(
             CacheKey<TValue> key,
             JsonSerializerOptions? jsonOptions = null,
             CancellationToken cancellationToken = default)
-            => cache.TryGetValueAsync<TValue>(key.Key, jsonOptions, cancellationToken);
+            => cache.TryGetAsync<TValue>(key.Key, jsonOptions, cancellationToken);
 
         /// <summary>
         /// 尝试异步获取强类型缓存对象
@@ -163,7 +163,7 @@ public static class DistributedCacheExtensions
         /// <param name="jsonOptions">JSON序列化选项</param>
         /// <param name="cancellationToken">取消令牌</param>
         /// <returns>如果找到缓存项则为 (true, value)，否则为 (false, default)</returns>
-        public async ValueTask<(bool Success, T? Value)> TryGetValueAsync<T>(
+        public async ValueTask<(bool IsSuccess, T? Value)> TryGetAsync<T>(
             string key,
             JsonSerializerOptions? jsonOptions = null,
             CancellationToken cancellationToken = default)
