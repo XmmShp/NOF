@@ -144,7 +144,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 _ => throw new InvalidOperationException($"Unsupported verb: {ep.Method}")
             };
 
-            var fromAttr = ep.Method == HttpVerb.Get ? "[FromQuery]" : "[FromBody]";
+            var fromAttr = ep.Method == HttpVerb.Get ? "[AsParameters]" : "[FromBody]";
             var requestType = ep.RequestType.ToDisplayString();
 
             // Build the lambda
