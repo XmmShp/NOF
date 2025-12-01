@@ -25,7 +25,8 @@ public class AutoInjectGeneratorTests
             }
             """;
 
-        var libComp = CSharpCompilation.CreateCompilation("Lib", libSource, isDll: true, typeof(IServiceCollection), typeof(AutoInjectAttribute));
+        var depRefs = new[] { typeof(IServiceCollection).ToMetadataReference(), typeof(AutoInjectAttribute).ToMetadataReference() };
+        var libComp = CSharpCompilation.CreateCompilation("Lib", libSource, isDll: true, depRefs);
         var libRef = libComp.CreateMetadataReference();
 
         // --- 主项目 ---
@@ -40,7 +41,7 @@ public class AutoInjectGeneratorTests
             }
             """;
 
-        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, libRef, typeof(AutoInjectAttribute).ToMetadataReference());
+        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, [libRef, .. depRefs]);
 
         // --- 运行生成器 ---
         var result = new AutoInjectGenerator().GetResult(mainComp);
