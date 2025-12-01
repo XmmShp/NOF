@@ -40,7 +40,7 @@ public class AutoInjectGeneratorTests
             }
             """;
 
-        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, additionalRefs: [libRef]);
+        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, libRef, typeof(AutoInjectAttribute).ToMetadataReference());
 
         // --- 运行生成器 ---
         var result = new AutoInjectGenerator().GetResult(mainComp);

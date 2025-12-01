@@ -11,11 +11,7 @@ internal static class IncrementalGeneratorExtensions
     {
         public GeneratorDriverRunResult GetResult(string source, params Type[] types)
         {
-            var extraReferences = types.Select(
-                    type => MetadataReference.CreateFromFile(type.Assembly.Location))
-                .Cast<MetadataReference>()
-                .ToArray();
-
+            var extraReferences = types.Select(type => type.ToMetadataReference()).ToArray();
             var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
 
             return generator.GetResult(compilation);

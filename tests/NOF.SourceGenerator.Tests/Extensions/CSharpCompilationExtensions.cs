@@ -18,14 +18,10 @@ public static class CSharpCompilationExtensions
     extension(CSharpCompilation compilation)
     {
         public static CSharpCompilation CreateCompilation(string assemblyName, string source, bool isDll)
-            => CSharpCompilation.CreateCompilation(assemblyName, source, isDll, types: []);
+            => CSharpCompilation.CreateCompilation(assemblyName, source, isDll, additionalRefs: []);
 
         public static CSharpCompilation CreateCompilation(string assemblyName, string source, bool isDll, params Type[] types)
-            => CSharpCompilation.CreateCompilation(assemblyName, source, isDll,
-                types.Select(type => MetadataReference
-                            .CreateFromFile(type.Assembly.Location))
-                            .Cast<MetadataReference>()
-                            .ToArray());
+            => CSharpCompilation.CreateCompilation(assemblyName, source, isDll, types.Select(type => type.ToMetadataReference()).ToArray());
 
         public static CSharpCompilation CreateCompilation(string assemblyName, string source, bool isDll, params MetadataReference[] additionalRefs)
         {
