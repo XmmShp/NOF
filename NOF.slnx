@@ -10,7 +10,8 @@
     <Project Path="src/NOF.Contract.SourceGenerator/NOF.Contract.SourceGenerator.csproj" Id="7710e156-f3b2-4eab-b3a6-cbd868826543" />
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
-    <Project Path="src/NOF.Infrastructure.SourceGenerator/NOF.Infrastructure.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
+    <Project Path="src/NOF.Host/NOF.Host.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
+    <Project Path="src/NOF.Host.SourceGenerator/NOF.Host.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
     <Project Path="src/NOF.Infrastructure/NOF.Infrastructure.csproj" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
   </Folder>
