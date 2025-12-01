@@ -79,14 +79,14 @@ public class ExposeToHttpEndpointMapperTests
         getBlock.Should()
             .Contain("app.MapGet(\"/api/user\"")
             .And.Contain("[FromQuery] Lib.GetUserRequest request")
-            .And.Contain("RequestWrapper<Lib.GetUserRequest, System.Guid>")
+            .And.Contain("mediator.SendRequest(request)")
             .And.Contain(".AllowAnonymous()")
             .And.NotContain("RequirePermission");
 
         postBlock.Should()
             .Contain("app.MapPost(\"/api/user\"")
             .And.Contain("[FromBody] App.CreateUserRequest request")
-            .And.Contain("RequestWrapper<App.CreateUserRequest>")
+            .And.Contain("mediator.SendRequest(request)")
             .And.Contain(".RequirePermission(\"User.Create\")")
             .And.NotContain("AllowAnonymous");
 

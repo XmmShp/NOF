@@ -147,24 +147,11 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             var fromAttr = ep.Method == HttpVerb.Get ? "[FromQuery]" : "[FromBody]";
             var requestType = ep.RequestType.ToDisplayString();
 
-            // Determine response wrapper type
-            var responseType = GetResponseType(ep.RequestType);
-            string wrapperType;
-            if (responseType != null)
-            {
-                var respType = responseType.ToDisplayString();
-                wrapperType = $"RequestWrapper<{requestType}, {respType}>";
-            }
-            else
-            {
-                wrapperType = $"RequestWrapper<{requestType}>";
-            }
-
             // Build the lambda
             sb.AppendLine($"            app.{mapMethod}(\"{ep.Route}\",");
             sb.AppendLine($"                async ({fromAttr} {requestType} request, [FromServices] IScopedMediator mediator) =>");
             sb.AppendLine("                {");
-            sb.AppendLine($"                    var response = await mediator.SendRequest(new {wrapperType}(request));");
+            sb.AppendLine("                    var response = await mediator.SendRequest(request);");
             sb.AppendLine("                    return Results.Ok(response);");
             sb.AppendLine("                })");
 
@@ -190,50 +177,11 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
         context.AddSource("NOF.WebApplicationExtensions.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
     }
-
-    private static INamedTypeSymbol? GetResponseType(INamedTypeSymbol requestType)
-    {
-        foreach (var iface in requestType.AllInterfaces)
-        {
-            if (iface.IsGenericType && iface.OriginalDefinition.ToDisplayString() == "NOF.IRequest<TResponse>")
-            {
-                return (INamedTypeSymbol)iface.TypeArguments[0];
-            }
-        }
-        return null;
-    }
 }
 
 #region Helper
 internal static class ExposeToHttpEndpointHelpers
 {
-    public static bool HasExposeToHttpEndpointAttribute(INamedTypeSymbol symbol)
-    {
-        return symbol.GetAttributes()
-            .Any(attr => attr.AttributeClass?.ToDisplayString() == "NOF.ExposeToHttpEndpointAttribute");
-    }
-
-    public static bool IsRequestType(INamedTypeSymbol typeSymbol)
-    {
-        return typeSymbol.AllInterfaces.Any(i =>
-            i.ToDisplayString() == "NOF.IRequest"
-            || (i is { IsGenericType: true, ConstructedFrom.SpecialType: SpecialType.None }
-                && i.OriginalDefinition.ToDisplayString() == "NOF.IRequest<TResponse>"));
-    }
-
-    public static string? GetRootNamespace(INamespaceSymbol ns)
-    {
-        while (ns is not null && !string.IsNullOrEmpty(ns.Name))
-        {
-            if (ns.ContainingNamespace is null || string.IsNullOrEmpty(ns.ContainingNamespace.Name))
-            {
-                return ns.Name;
-            }
-            ns = ns.ContainingNamespace;
-        }
-        return null;
-    }
-
     public static ITypeSymbol? GetResponseType(INamedTypeSymbol requestType)
     {
         var requestInterface = requestType.AllInterfaces

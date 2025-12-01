@@ -27,7 +27,23 @@ public abstract class RequestHandler<TRequest, TResponse> : MediatorRequestHandl
 }
 
 [ExcludeFromTopology]
-public record RequestWrapper<TRequest>(TRequest Request) : Request<Result> where TRequest : class, IRequest;
+public class RequestWrapper<TRequest> : Request<Result> where TRequest : class, IRequest
+{
+    public TRequest Request { get; }
+
+    internal RequestWrapper(TRequest request)
+    {
+        Request = request;
+    }
+}
 
 [ExcludeFromTopology]
-public record RequestWrapper<TRequest, TResponse>(TRequest Request) : Request<Result<TResponse>> where TRequest : class, IRequest<TResponse>;
+public class RequestWrapper<TRequest, TResponse> : Request<Result<TResponse>> where TRequest : class, IRequest<TResponse>
+{
+    public TRequest Request { get; }
+
+    internal RequestWrapper(TRequest request)
+    {
+        Request = request;
+    }
+}
