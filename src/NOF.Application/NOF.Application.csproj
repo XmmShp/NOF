@@ -12,11 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NOF.Application.Shared\NOF.Application.Shared.csproj" />
+    <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\NOF.Domain\NOF.Domain.csproj" />
   </ItemGroup>
 

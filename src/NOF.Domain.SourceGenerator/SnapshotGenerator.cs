@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF;
+namespace NOF.Domain.SourceGenerator;
 
 /// <summary>
 /// 源生成器：检测标记了SnapshotableAttribute的类，并生成快照类和扩展方法
@@ -244,15 +244,5 @@ public class SnapshotGenerator : IIncrementalGenerator
         return isNullable
             ? $"{typeNamespace}.{typeName}Snapshot?"
             : $"{typeNamespace}.{typeName}Snapshot";
-    }
-
-    /// <summary>
-    /// 获取根命名空间（取第一段）
-    /// </summary>
-    private static string GetRootNamespace(INamedTypeSymbol classSymbol)
-    {
-        var fullNamespace = classSymbol.ContainingNamespace.ToDisplayString();
-        var parts = fullNamespace.Split('.');
-        return parts[0];
     }
 }

@@ -1,10 +1,11 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NOF.Contract.SourceGenerator;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public class ExposeToHttpEndpointGeneratorTests
+public class ExposeToHttpEndpointServiceGeneratorTests
 {
 
     [Fact]
@@ -24,14 +25,12 @@ public class ExposeToHttpEndpointGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointGenerator().GetResult<ExposeToHttpEndpointAttribute>(source);
-        runResult.GeneratedTrees.Should().HaveCount(2);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
 
         var clientTree = runResult.GeneratedTrees[0];
-        var endpointsTree = runResult.GeneratedTrees[1];
 
         var clientRoot = clientTree.GetRoot();
-        var endpointsRoot = endpointsTree.GetRoot();
 
         // Client: interface and implementation
         clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
@@ -45,15 +44,6 @@ public class ExposeToHttpEndpointGeneratorTests
                 m.Identifier.Text == "CreateUserAsync"
                 && m.ParameterList.Parameters.Count == 1
                 && m.ParameterList.Parameters[0].Type!.ToString() == "MyApp.CreateUserRequest");
-
-        // Endpoints: HttpEndpoint construction
-        endpointsRoot.DescendantNodes().OfType<ImplicitObjectCreationExpressionSyntax>()
-            .Should().Contain(obj =>
-                obj.ArgumentList.Arguments.Count >= 5
-                && obj.ArgumentList.Arguments[0].Expression.ToString() == "typeof(MyApp.CreateUserRequest)"
-                && obj.ArgumentList.Arguments[1].Expression.ToString() == "HttpVerb.Post"
-                && obj.ArgumentList.Arguments[2].Expression.ToString() == "\"CreateUser\""
-                && obj.ArgumentList.Arguments[4].Expression.ToString() == "false");
     }
 
     [Fact]
@@ -74,28 +64,18 @@ public class ExposeToHttpEndpointGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointGenerator().GetResult<ExposeToHttpEndpointAttribute>(source);
-        runResult.GeneratedTrees.Should().HaveCount(2);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
 
         var clientTree = runResult.GeneratedTrees[0];
-        var endpointsTree = runResult.GeneratedTrees[1];
 
         var clientRoot = clientTree.GetRoot();
-        var endpointsRoot = endpointsTree.GetRoot();
 
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
                 m.Identifier.Text == "GetProfileAsync"
                 && m.ParameterList.Parameters.Count == 1
                 && m.ParameterList.Parameters[0].Type!.ToString() == "MyApi.UserProfileRequest");
-
-        endpointsRoot.DescendantNodes().OfType<ImplicitObjectCreationExpressionSyntax>()
-            .Should().Contain(obj =>
-                obj.ArgumentList.Arguments.Count >= 5
-                && obj.ArgumentList.Arguments[0].Expression.ToString() == "typeof(MyApi.UserProfileRequest)"
-                && obj.ArgumentList.Arguments[1].Expression.ToString() == "HttpVerb.Get"
-                && obj.ArgumentList.Arguments[2].Expression.ToString() == "\"/users/profile\""
-                && obj.ArgumentList.Arguments[4].Expression.ToString() == "false");
     }
 
     [Fact]
@@ -115,28 +95,18 @@ public class ExposeToHttpEndpointGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointGenerator().GetResult<ExposeToHttpEndpointAttribute>(source);
-        runResult.GeneratedTrees.Should().HaveCount(2);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
 
         var clientTree = runResult.GeneratedTrees[0];
-        var endpointsTree = runResult.GeneratedTrees[1];
 
         var clientRoot = clientTree.GetRoot();
-        var endpointsRoot = endpointsTree.GetRoot();
 
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
                 m.Identifier.Text == "DeleteTaskAsync"
                 && m.ParameterList.Parameters.Count == 1
                 && m.ParameterList.Parameters[0].Type!.ToString() == "Tasks.DeleteTaskRequest");
-
-        endpointsRoot.DescendantNodes().OfType<ImplicitObjectCreationExpressionSyntax>()
-            .Should().Contain(obj =>
-                obj.ArgumentList.Arguments.Count >= 5
-                && obj.ArgumentList.Arguments[0].Expression.ToString() == "typeof(Tasks.DeleteTaskRequest)"
-                && obj.ArgumentList.Arguments[1].Expression.ToString() == "HttpVerb.Delete"
-                && obj.ArgumentList.Arguments[2].Expression.ToString() == "\"DeleteTask\""
-                && obj.ArgumentList.Arguments[4].Expression.ToString() == "true"); // AllowAnonymous = true
     }
 
     [Fact]
@@ -159,14 +129,12 @@ public class ExposeToHttpEndpointGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointGenerator().GetResult<ExposeToHttpEndpointAttribute>(source);
-        runResult.GeneratedTrees.Should().HaveCount(2);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
 
         var clientTree = runResult.GeneratedTrees[0];
-        var endpointsTree = runResult.GeneratedTrees[1];
 
         var clientRoot = clientTree.GetRoot();
-        var endpointsRoot = endpointsTree.GetRoot();
 
         // Two methods in client
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
@@ -178,30 +146,6 @@ public class ExposeToHttpEndpointGeneratorTests
             .Should().Contain(m =>
                 m.Identifier.Text == "UpdateAsync"
                 && m.ParameterList.Parameters[0].Type!.ToString() == "Items.ItemRequest");
-
-        // Two HttpEndpoint objects
-        var endpointCreations = endpointsRoot
-            .DescendantNodes()
-            .OfType<ImplicitObjectCreationExpressionSyntax>()
-            .ToList();
-
-        endpointCreations.Should().HaveCount(2);
-
-        endpointCreations.Should().Contain(obj =>
-            obj.ArgumentList.Arguments.Count >= 5
-            && obj.ArgumentList.Arguments[0].Expression.ToString() == "typeof(Items.ItemRequest)"
-            && obj.ArgumentList.Arguments[1].Expression.ToString() == "HttpVerb.Post"
-            && obj.ArgumentList.Arguments[2].Expression.ToString() == "\"Create\""
-            && obj.ArgumentList.Arguments[3].Expression.ToString() == "null"
-            && obj.ArgumentList.Arguments[4].Expression.ToString() == "false");
-
-        endpointCreations.Should().Contain(obj =>
-            obj.ArgumentList.Arguments.Count >= 5
-            && obj.ArgumentList.Arguments[0].Expression.ToString() == "typeof(Items.ItemRequest)"
-            && obj.ArgumentList.Arguments[1].Expression.ToString() == "HttpVerb.Put"
-            && obj.ArgumentList.Arguments[2].Expression.ToString() == "\"/items/update\""
-            && obj.ArgumentList.Arguments[3].Expression.ToString() == "\"admin.write\""
-            && obj.ArgumentList.Arguments[4].Expression.ToString() == "false");
     }
 
     [Fact]
@@ -223,14 +167,12 @@ public class ExposeToHttpEndpointGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointGenerator().GetResult<ExposeToHttpEndpointAttribute>(source);
-        runResult.GeneratedTrees.Should().HaveCount(2);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
 
         var clientTree = runResult.GeneratedTrees[0];
-        var endpointsTree = runResult.GeneratedTrees[1];
 
         var clientRoot = clientTree.GetRoot();
-        var endpointsRoot = endpointsTree.GetRoot();
 
         // Service name based on root namespace "MyApp"
         clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
@@ -243,14 +185,6 @@ public class ExposeToHttpEndpointGeneratorTests
             .Should().Contain(m =>
                 m.Identifier.Text == "GetUserAsync"
                 && m.ParameterList.Parameters[0].Type!.ToString() == "MyApp.Features.Users.Api.GetUserRequest");
-
-        endpointsRoot.DescendantNodes().OfType<ImplicitObjectCreationExpressionSyntax>()
-            .Should().Contain(obj =>
-                obj.ArgumentList.Arguments.Count >= 5
-                && obj.ArgumentList.Arguments[0].Expression.ToString() == "typeof(MyApp.Features.Users.Api.GetUserRequest)"
-                && obj.ArgumentList.Arguments[1].Expression.ToString() == "HttpVerb.Get"
-                && obj.ArgumentList.Arguments[2].Expression.ToString() == "\"GetUser\""
-                && obj.ArgumentList.Arguments[4].Expression.ToString() == "false");
     }
 
     [Fact]
@@ -269,7 +203,7 @@ public class ExposeToHttpEndpointGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointGenerator().GetResult<ExposeToHttpEndpointAttribute>(source);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
         runResult.GeneratedTrees.Should().BeEmpty();
     }
 }

@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF;
+namespace NOF.Domain.SourceGenerator;
 
 /// <summary>
 /// 源生成器：检测标记了FailureAttribute的类，并生成静态错误实例

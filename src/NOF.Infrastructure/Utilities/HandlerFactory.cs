@@ -13,7 +13,7 @@ internal static class HandlerFactory
         [FromServices] IScopedMediator mediator)
         where TRequest : class, IRequest
     {
-        var response = await mediator.SendRequest(request);
+        var response = await mediator.SendRequest(new RequestWrapper<TRequest>(request));
         return Results.Ok(response);
     }
 
@@ -22,7 +22,7 @@ internal static class HandlerFactory
         [FromServices] IScopedMediator mediator)
         where TRequest : class, IRequest<TResponse>
     {
-        var response = await mediator.SendRequest(request);
+        var response = await mediator.SendRequest(new RequestWrapper<TRequest, TResponse>(request));
         return Results.Ok(response);
     }
 
@@ -31,7 +31,7 @@ internal static class HandlerFactory
         [FromServices] IScopedMediator mediator)
         where TRequest : class, IRequest
     {
-        var response = await mediator.SendRequest(request);
+        var response = await mediator.SendRequest(new RequestWrapper<TRequest>(request));
         return Results.Ok(response);
     }
 
@@ -40,7 +40,7 @@ internal static class HandlerFactory
         [FromServices] IScopedMediator mediator)
         where TRequest : class, IRequest<TResponse>
     {
-        var response = await mediator.SendRequest(request);
+        var response = await mediator.SendRequest(new RequestWrapper<TRequest, TResponse>(request));
         return Results.Ok(response);
     }
 

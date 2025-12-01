@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NOF.Contract.SourceGenerator;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -28,7 +29,7 @@ public class QueryParameterGeneratorTests
         }
         """;
 
-        var runResult = new QueryParameterGenerator().GetResult<QueryParameterAttribute>(source);
+        var runResult = new QueryParameterGenerator().GetResult(source, typeof(QueryParameterAttribute));
         runResult.GeneratedTrees.Should().ContainSingle();
 
         var tree = runResult.GeneratedTrees[0];
@@ -119,7 +120,7 @@ public class QueryParameterGeneratorTests
                               }
                               """;
 
-        var runResult = new QueryParameterGenerator().GetResult<QueryParameterAttribute>(source);
+        var runResult = new QueryParameterGenerator().GetResult(source, typeof(QueryParameterAttribute));
         runResult.GeneratedTrees.Should().ContainSingle();
 
         var tree = runResult.GeneratedTrees[0];

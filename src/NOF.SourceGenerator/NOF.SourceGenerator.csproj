@@ -7,11 +7,6 @@
     <Nullable>enable</Nullable>
     <IsRoslynComponent>true</IsRoslynComponent>
     
-    <!-- NuGet Package Settings -->
-    <IsPackable>true</IsPackable>
-    <PackageId>NOF.SourceGenerator</PackageId>
-    <Description>NOF Source Generator for automatic code generation in NOF-based applications.</Description>
-    
     <IncludeSymbols>false</IncludeSymbols>
 
     <!-- Source Generator Specific Settings -->
@@ -25,9 +20,5 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
-
-  <!-- Pack the generator DLL in the analyzers/dotnet/cs path -->
-  <ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-  </ItemGroup>
+		
 </Project>

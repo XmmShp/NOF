@@ -12,15 +12,13 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="MassTransit.Abstractions" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 		<PackageReference Include="Vogen" />
 		<PackageReference Include="Yitter.IdGenerator" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\NOF.SourceGenerator\NOF.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	  <None Include="..\NOF.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	  <ProjectReference Include="..\NOF.Domain.SourceGenerator\NOF.Domain.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	  <None Include="..\NOF.Domain.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Domain.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 
 </Project>

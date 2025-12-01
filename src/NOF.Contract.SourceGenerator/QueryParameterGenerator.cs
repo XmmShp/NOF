@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF;
+namespace NOF.Contract.SourceGenerator;
 
 /// <summary>
 /// 源生成器：检测标记了QueryParameterAttribute的类，并生成ToQueryString扩展方法

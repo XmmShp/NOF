@@ -45,7 +45,7 @@ jobs:
     - name: Pack NuGet packages (validation)
       run: |
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Application.Shared/NOF.Application.Shared.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Infrastructure/NOF.Infrastructure.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
