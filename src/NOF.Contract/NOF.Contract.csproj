@@ -8,8 +8,8 @@
     
     <!-- NuGet Package Settings -->
     <IsPackable>true</IsPackable>
-    <PackageId>NOF.Application.Shared</PackageId>
-    <Description>NOF Application Shared layer containing common application interfaces, DTOs, and shared logic.</Description>
+    <PackageId>NOF.Contract</PackageId>
+    <Description>NOF Contract layer containing common application interfaces, DTOs, and shared logic.</Description>
   </PropertyGroup>	
 
   <ItemGroup>
