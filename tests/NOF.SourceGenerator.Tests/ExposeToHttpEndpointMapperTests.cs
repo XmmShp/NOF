@@ -90,7 +90,7 @@ public class ExposeToHttpEndpointMapperTests
             .And.Contain(".RequirePermission(\"User.Create\")")
             .And.NotContain("AllowAnonymous");
 
-        bodyText.Should().Contain("return Results.Ok(response);");
+        bodyText.Should().Contain("return TypedResults.Ok(response);");
     }
 
     [Fact]

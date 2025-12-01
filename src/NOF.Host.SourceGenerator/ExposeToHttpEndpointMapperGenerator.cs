@@ -152,7 +152,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             sb.AppendLine($"                async ({fromAttr} {requestType} request, [FromServices] IScopedMediator mediator) =>");
             sb.AppendLine("                {");
             sb.AppendLine("                    var response = await mediator.SendRequest(request);");
-            sb.AppendLine("                    return Results.Ok(response);");
+            sb.AppendLine("                    return TypedResults.Ok(response);");
             sb.AppendLine("                })");
 
             // Apply metadata

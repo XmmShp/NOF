@@ -1,5 +1,12 @@
+using MassTransit;
+using MassTransit.Mediator;
+
 namespace NOF;
 
-public interface IRequest;
+[ExcludeFromTopology]
+[ExcludeFromImplementedTypes]
+public interface IRequest : Request<Result>;
 
-public interface IRequest<TResponse>;
+[ExcludeFromTopology]
+[ExcludeFromImplementedTypes]
+public interface IRequest<TResponse> : Request<Result<TResponse>>;

@@ -14,6 +14,7 @@
 
   <ItemGroup>
 	<PackageReference Include="DotNet.Glob" />
+	<PackageReference Include="MassTransit.Abstractions" />
 	<PackageReference Include="Microsoft.Extensions.Http" />
 	<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
 	<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
