@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MassTransit.Mediator;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NOF.Infrastructure.SourceGenerator;
@@ -46,7 +47,8 @@ public class ExposeToHttpEndpointMapperTests
             "App",
             mainSource,
             isDll: true,
-            libRef
+            libRef,
+            typeof(Request<>).ToMetadataReference()
         );
 
         // --- 执行生成器 ---
