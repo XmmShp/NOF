@@ -119,6 +119,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine("using Microsoft.AspNetCore.Http;");
         sb.AppendLine("using Microsoft.AspNetCore.Mvc;");
         sb.AppendLine("using System.Threading.Tasks;");
+        sb.AppendLine("using MassTransit;");
         sb.AppendLine();
         sb.AppendLine($"namespace {targetNamespace}");
         sb.AppendLine("{");
