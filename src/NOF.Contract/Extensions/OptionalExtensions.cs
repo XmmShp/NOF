@@ -33,5 +33,10 @@ public static class OptionalExtensions
         {
             return optional.HasValue ? Optional.Of(valueFactory(optional.Value)) : Optional.None;
         }
+
+        public TResult? MapAsNullable<TResult>(Func<T, TResult> valueFactory)
+        {
+            return optional.HasValue ? valueFactory(optional.Value) : default;
+        }
     }
 }
