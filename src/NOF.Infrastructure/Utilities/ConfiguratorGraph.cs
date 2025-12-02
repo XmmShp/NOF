@@ -1,14 +1,14 @@
 namespace NOF;
 
-public class ConfiguratorGraph
+public class ConfiguratorGraph<T> where T : IConfigurator
 {
-    private readonly HashSet<IConfigurator> _tasks;
-    private readonly Dictionary<IConfigurator, Type> _originType = [];
-    private readonly Dictionary<Type, HashSet<IConfigurator>> _typeTasks = [];
+    private readonly HashSet<T> _tasks;
+    private readonly Dictionary<T, Type> _originType = [];
+    private readonly Dictionary<Type, HashSet<T>> _typeTasks = [];
 
-    public ConfiguratorGraph(IEnumerable<IConfigurator> tasks)
+    public ConfiguratorGraph(IEnumerable<T> tasks)
     {
-        var tasksSet = new HashSet<IConfigurator>();
+        var tasksSet = new HashSet<T>();
         foreach (var task in tasks)
         {
             if (!tasksSet.Add(task))
@@ -27,10 +27,10 @@ public class ConfiguratorGraph
     /// <summary>
     /// 返回按拓扑顺序排列的任务列表（无依赖的任务在前）
     /// </summary>
-    public List<IConfigurator> GetExecutionOrder()
+    public List<T> GetExecutionOrder()
     {
         // 步骤 1: 构建依赖图（父任务 -> 子任务）
-        var graph = _tasks.ToDictionary(t => t, _ => new HashSet<IConfigurator>());
+        var graph = _tasks.ToDictionary(t => t, _ => new HashSet<T>());
         var inDegree = _tasks.ToDictionary(t => t, _ => 0);
         foreach (var task in _tasks)
         {
@@ -42,8 +42,8 @@ public class ConfiguratorGraph
             }
         }
 
-        var queue = new Queue<IConfigurator>(_tasks.Where(t => inDegree[t] == 0));
-        var result = new List<IConfigurator>();
+        var queue = new Queue<T>(_tasks.Where(t => inDegree[t] == 0));
+        var result = new List<T>();
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
@@ -70,7 +70,7 @@ public class ConfiguratorGraph
         return result;
     }
 
-    private IEnumerable<IConfigurator> GetConcreteDependencies(IConfigurator task)
+    private IEnumerable<T> GetConcreteDependencies(T task)
     {
         var taskType = _originType[task];
 
@@ -80,6 +80,10 @@ public class ConfiguratorGraph
             if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IDepsOn<>))
             {
                 var dependencyType = iface.GenericTypeArguments[0];
+                if (!dependencyType.IsAssignableTo(typeof(T)))
+                {
+                    continue;
+                }
 
                 // 找到所有已注册的、实现了该依赖接口的具体任务
                 var implementingTasks = _originType.Values

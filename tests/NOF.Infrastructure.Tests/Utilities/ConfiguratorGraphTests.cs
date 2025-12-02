@@ -39,7 +39,7 @@ public class ConfiguratorGraphTests
     public void Constructor_WithEmptyConfigurators_ShouldCreateEmptyGraph()
     {
         // Arrange & Act
-        var graph = new ConfiguratorGraph([]);
+        var graph = new ConfiguratorGraph<IConfigurator>([]);
 
         // Assert
         var executionOrder = graph.GetExecutionOrder();
@@ -53,7 +53,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
 
         // Act
-        var graph = new ConfiguratorGraph([taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskA]);
 
         // Assert
         var executionOrder = graph.GetExecutionOrder();
@@ -68,7 +68,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
 
         // Act
-        var graph = new ConfiguratorGraph([taskA, taskA, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskA, taskA, taskA]);
 
         // Assert
         var executionOrder = graph.GetExecutionOrder();
@@ -83,7 +83,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
         var taskB = new IndependentConfigurator();
         var taskC = new IndependentConfigurator();
-        var graph = new ConfiguratorGraph([taskA, taskB, taskC]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskA, taskB, taskC]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -101,7 +101,7 @@ public class ConfiguratorGraphTests
         // Arrange
         var taskA = new ConfiguratorA();
         var taskB = new ConfiguratorB();
-        var graph = new ConfiguratorGraph([taskB, taskA]); // Intentionally reversed order
+        var graph = new ConfiguratorGraph<IConfigurator>([taskB, taskA]); // Intentionally reversed order
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -119,7 +119,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
         var taskB = new ConfiguratorB();
         var taskC = new ConfiguratorC();
-        var graph = new ConfiguratorGraph([taskC, taskA, taskB]); // Random order
+        var graph = new ConfiguratorGraph<IConfigurator>([taskC, taskA, taskB]); // Random order
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -142,7 +142,7 @@ public class ConfiguratorGraphTests
         var taskB = new ConfiguratorB();
         var taskC = new ConfiguratorC();
         var taskD = new ConfiguratorD();
-        var graph = new ConfiguratorGraph([taskD, taskC, taskB, taskA]); // Reversed order
+        var graph = new ConfiguratorGraph<IConfigurator>([taskD, taskC, taskB, taskA]); // Reversed order
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -171,7 +171,7 @@ public class ConfiguratorGraphTests
         // Arrange
         var taskA = new CircularConfiguratorA();
         var taskB = new CircularConfiguratorB();
-        var graph = new ConfiguratorGraph([taskA, taskB]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskA, taskB]);
 
         // Act
         var act = () => graph.GetExecutionOrder();
@@ -188,7 +188,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
         var taskB = new ConfiguratorB();
         var multiDepsConfigurator = new MultiDepsConfigurator();
-        var graph = new ConfiguratorGraph([multiDepsConfigurator, taskB, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([multiDepsConfigurator, taskB, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -210,7 +210,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
         var taskB = new ConfiguratorB();
         var independent = new IndependentConfigurator();
-        var graph = new ConfiguratorGraph([taskB, independent, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskB, independent, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -230,7 +230,7 @@ public class ConfiguratorGraphTests
         var taskA1 = new ConfiguratorA1();
         var taskA2 = new ConfiguratorA2();
         var dependentConfigurator = new ConfiguratorDependsOnMultipleA();
-        var graph = new ConfiguratorGraph([dependentConfigurator, taskA2, taskA1]);
+        var graph = new ConfiguratorGraph<IConfigurator>([dependentConfigurator, taskA2, taskA1]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -260,7 +260,7 @@ public class ConfiguratorGraphTests
         var taskC = new ConfiguratorC();
         var taskD = new ConfiguratorD();
         var independent = new IndependentConfigurator();
-        var graph = new ConfiguratorGraph([independent, taskD, taskC, taskB, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([independent, taskD, taskC, taskB, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -286,7 +286,7 @@ public class ConfiguratorGraphTests
         var taskA = new ConfiguratorA();
         var taskB = new ConfiguratorB();
         var taskC = new ConfiguratorC();
-        var graph = new ConfiguratorGraph([taskC, taskB, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskC, taskB, taskA]);
 
         // Act
         var executionOrder1 = graph.GetExecutionOrder();
@@ -305,7 +305,7 @@ public class ConfiguratorGraphTests
         var task1 = new IndependentConfigurator();
         var task2 = new IndependentConfigurator();
         var task3 = new IndependentConfigurator();
-        var graph = new ConfiguratorGraph([task1, task2, task3]);
+        var graph = new ConfiguratorGraph<IConfigurator>([task1, task2, task3]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -329,7 +329,7 @@ public class ConfiguratorGraphTests
         var taskB = new ConfiguratorB(); // depends on ConfiguratorA
         var taskC = new ConfiguratorC(); // depends on ConfiguratorB
         var taskD = new ConfiguratorD(); // depends on ConfiguratorA and ConfiguratorC
-        var graph = new ConfiguratorGraph([taskD, taskC, taskB, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskD, taskC, taskB, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -359,7 +359,7 @@ public class ConfiguratorGraphTests
         // ConfiguratorWithMissingDependency depends on IConfiguratorE, but no IConfiguratorE is in the graph
         var taskA = new ConfiguratorA();
         var taskWithMissingDep = new ConfiguratorWithMissingDependency();
-        var graph = new ConfiguratorGraph([taskWithMissingDep, taskA]);
+        var graph = new ConfiguratorGraph<IConfigurator>([taskWithMissingDep, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -369,7 +369,7 @@ public class ConfiguratorGraphTests
         executionOrder.Should().HaveCount(2);
         executionOrder.Should().Contain(taskA);
         executionOrder.Should().Contain(taskWithMissingDep);
-        
+
         // Since the dependency is missing, taskWithMissingDependency should be treated as having no dependencies
         // and can appear anywhere in the order (no constraint on its position)
     }

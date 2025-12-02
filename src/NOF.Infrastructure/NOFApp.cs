@@ -20,33 +20,33 @@ public interface INOFApp
 
 public class NOFApp : INOFApp
 {
-    private readonly HashSet<IRegistrationConfigurator> _registrationStages = [];
-    private readonly HashSet<IStartupConfigurator> _startupStages = [];
+    internal readonly HashSet<IRegistrationConfigurator> RegistrationStages = [];
+    internal readonly HashSet<IStartupConfigurator> StartupStages = [];
     private readonly WebApplicationBuilder _builder;
 
     public IDictionary<string, object?> Metadata { get; }
 
     public INOFApp AddRegistrationConfigurator(IRegistrationConfigurator task)
     {
-        _registrationStages.Add(task);
+        RegistrationStages.Add(task);
         return this;
     }
 
     public INOFApp AddStartupConfigurator(IStartupConfigurator task)
     {
-        _startupStages.Add(task);
+        StartupStages.Add(task);
         return this;
     }
 
     public INOFApp RemoveRegistrationConfigurator(Predicate<IRegistrationConfigurator> predictor)
     {
-        _registrationStages.RemoveWhere(predictor);
+        RegistrationStages.RemoveWhere(predictor);
         return this;
     }
 
     public INOFApp RemoveStartupConfigurator(Predicate<IStartupConfigurator> predictor)
     {
-        _startupStages.RemoveWhere(predictor);
+        StartupStages.RemoveWhere(predictor);
         return this;
     }
 
@@ -57,28 +57,18 @@ public class NOFApp : INOFApp
 
     public async Task<WebApplication> BuildAsync()
     {
-        var regGraph = new ConfiguratorGraph(_registrationStages);
+        var regGraph = new ConfiguratorGraph<IRegistrationConfigurator>(RegistrationStages);
         foreach (var task in regGraph.GetExecutionOrder())
         {
-            if (task is not IRegistrationConfigurator registrationStage)
-            {
-                continue;
-            }
-
-            await registrationStage.ExecuteAsync(new RegistrationArgs(_builder, Metadata));
+            await task.ExecuteAsync(new RegistrationArgs(_builder, Metadata));
         }
 
         var app = _builder.Build();
-        var startGraph = new ConfiguratorGraph(_startupStages);
+        var startGraph = new ConfiguratorGraph<IStartupConfigurator>(StartupStages);
 
         foreach (var task in startGraph.GetExecutionOrder())
         {
-            if (task is not IStartupConfigurator startupStage)
-            {
-                continue;
-            }
-
-            await startupStage.ExecuteAsync(new StartupArgs(app, Metadata));
+            await task.ExecuteAsync(new StartupArgs(app, Metadata));
         }
 
         return app;
