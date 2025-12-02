@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace NOF;
 
@@ -33,20 +32,6 @@ public static class ServiceCollectionExtensions
                 }
                 configurator?.Invoke(sp, client);
             });
-        }
-
-        public OptionsBuilder<TOptions> AddOptionsInConfiguration<TOptions>(string? configSectionPath = null) where TOptions : class
-        {
-            // ReSharper disable once InvertIf
-            if (string.IsNullOrEmpty(configSectionPath))
-            {
-                configSectionPath = string.GetSectionNameFromOptions<TOptions>();
-            }
-
-            return services.AddOptions<TOptions>()
-                .BindConfiguration(configSectionPath)
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
         }
     }
 }

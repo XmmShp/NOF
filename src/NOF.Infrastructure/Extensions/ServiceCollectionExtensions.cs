@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace NOF;
 
@@ -14,6 +15,20 @@ public static class ServiceCollectionExtensions
 
         public IServiceCollection AddHostedService(Action<IServiceProvider, CancellationToken> startAction)
             => services.AddHostedService((sp, ct) => { startAction(sp, ct); return Task.CompletedTask; });
+
+        public OptionsBuilder<TOptions> AddOptionsInConfiguration<TOptions>(string? configSectionPath = null) where TOptions : class
+        {
+            // ReSharper disable once InvertIf
+            if (string.IsNullOrEmpty(configSectionPath))
+            {
+                configSectionPath = string.GetSectionNameFromOptions<TOptions>();
+            }
+
+            return services.AddOptions<TOptions>()
+                .BindConfiguration(configSectionPath)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+        }
     }
 }
 

@@ -16,6 +16,7 @@
 
 	  <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
 	  <PackageReference Include="MassTransit" />
+	  <PackageReference Include="MassTransit.EntityFrameworkCore" />
 	  <PackageReference Include="MassTransit.RabbitMQ" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

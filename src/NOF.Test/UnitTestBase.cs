@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Yitter.IdGenerator;
 
 namespace NOF.Test;
 
@@ -18,11 +17,6 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
 {
     protected TDbContext DbContext { get; }
     protected IDistributedCache Cache { get; }
-
-    static UnitTestBase()
-    {
-        YitIdHelper.SetIdGenerator(new IdGeneratorOptions());
-    }
 
     protected UnitTestBase()
     {
