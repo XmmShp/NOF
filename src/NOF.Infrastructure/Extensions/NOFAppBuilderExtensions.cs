@@ -94,7 +94,7 @@ public static class NOFAppBuilderExtensions
     }
 }
 
-internal class DelegateStartupTask : IStartupTask
+internal class DelegateStartupTask : IBusinessTask
 {
     private readonly Func<StartupArgs, Task> _fn;
 
@@ -109,7 +109,7 @@ internal class DelegateStartupTask : IStartupTask
     }
 }
 
-internal class DelegateRegistrationTask : IRegistrationTask
+internal class DelegateRegistrationTask : IConfiguredServicesTask
 {
     private readonly Func<RegistrationArgs, Task> _fn;
 
