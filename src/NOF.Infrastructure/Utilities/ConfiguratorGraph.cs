@@ -1,14 +1,14 @@
 namespace NOF;
 
-public class TaskGraph
+public class ConfiguratorGraph
 {
-    private readonly HashSet<ITask> _tasks;
-    private readonly Dictionary<ITask, Type> _originType = [];
-    private readonly Dictionary<Type, HashSet<ITask>> _typeTasks = [];
+    private readonly HashSet<IConfigurator> _tasks;
+    private readonly Dictionary<IConfigurator, Type> _originType = [];
+    private readonly Dictionary<Type, HashSet<IConfigurator>> _typeTasks = [];
 
-    public TaskGraph(IEnumerable<ITask> tasks)
+    public ConfiguratorGraph(IEnumerable<IConfigurator> tasks)
     {
-        var tasksSet = new HashSet<ITask>();
+        var tasksSet = new HashSet<IConfigurator>();
         foreach (var task in tasks)
         {
             if (!tasksSet.Add(task))
@@ -27,10 +27,10 @@ public class TaskGraph
     /// <summary>
     /// 返回按拓扑顺序排列的任务列表（无依赖的任务在前）
     /// </summary>
-    public List<ITask> GetExecutionOrder()
+    public List<IConfigurator> GetExecutionOrder()
     {
         // 步骤 1: 构建依赖图（父任务 -> 子任务）
-        var graph = _tasks.ToDictionary(t => t, _ => new HashSet<ITask>());
+        var graph = _tasks.ToDictionary(t => t, _ => new HashSet<IConfigurator>());
         var inDegree = _tasks.ToDictionary(t => t, _ => 0);
         foreach (var task in _tasks)
         {
@@ -42,8 +42,8 @@ public class TaskGraph
             }
         }
 
-        var queue = new Queue<ITask>(_tasks.Where(t => inDegree[t] == 0));
-        var result = new List<ITask>();
+        var queue = new Queue<IConfigurator>(_tasks.Where(t => inDegree[t] == 0));
+        var result = new List<IConfigurator>();
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
@@ -70,7 +70,7 @@ public class TaskGraph
         return result;
     }
 
-    private IEnumerable<ITask> GetConcreteDependencies(ITask task)
+    private IEnumerable<IConfigurator> GetConcreteDependencies(IConfigurator task)
     {
         var taskType = _originType[task];
 

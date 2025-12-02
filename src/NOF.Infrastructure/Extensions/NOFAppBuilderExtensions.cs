@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using System.Reflection;
 
 namespace NOF;
@@ -6,37 +7,37 @@ public static class NOFAppBuilderExtensions
 {
     extension(INOFApp app)
     {
-        public INOFApp AddRegistrationTask(Func<RegistrationArgs, Task> func)
+        public INOFApp AddCombinedConfigurator(ICombinedConfigurator configurator)
         {
-            return app.AddRegistrationTask(new DelegateRegistrationTask(func));
+            app.AddRegistrationConfigurator(configurator);
+            app.AddStartupConfigurator(configurator);
+            return app;
         }
 
-        public INOFApp AddStartupTask(Func<StartupArgs, Task> func)
-        {
-            return app.AddStartupTask(new DelegateStartupTask(func));
-        }
+        public INOFApp AddRegistrationConfigurator(Func<RegistrationArgs, ValueTask> func)
+            => app.AddRegistrationConfigurator(new DelegateRegistrationConfigurator(func));
 
-        public INOFApp AddRegistrationTask<T>() where T : IRegistrationTask, new()
-        {
-            return app.AddRegistrationTask(new T());
-        }
+        public INOFApp AddStartupConfigurator(Func<StartupArgs, Task> func)
+            => app.AddStartupConfigurator(new DelegateStartupConfigurator(func));
 
-        public INOFApp AddStartupTask<T>() where T : IStartupTask, new()
-        {
-            return app.AddStartupTask(new T());
-        }
+        public INOFApp AddRegistrationConfigurator<T>() where T : IRegistrationConfigurator, new()
+            => app.AddRegistrationConfigurator(new T());
 
-        public INOFApp RemoveRegistrationTask<T>() where T : IRegistrationTask
-        {
-            var type = typeof(T);
-            return app.RemoveRegistrationTask(t => type.IsInstanceOfType(t));
-        }
+        public INOFApp AddStartupConfigurator<T>() where T : IStartupConfigurator, new()
+            => app.AddStartupConfigurator(new T());
 
-        public INOFApp RemoveStartupTask<T>() where T : IStartupTask
-        {
-            var type = typeof(T);
-            return app.RemoveStartupTask(t => type.IsInstanceOfType(t));
-        }
+        public INOFApp AddCombinedConfigurator<T>() where T : ICombinedConfigurator, new()
+            => app.AddCombinedConfigurator(new T());
+
+        public INOFApp RemoveRegistrationConfigurator<T>() where T : IRegistrationConfigurator
+            => app.RemoveRegistrationConfigurator(t => t is T);
+
+        public INOFApp RemoveStartupConfigurator<T>() where T : IStartupConfigurator
+            => app.RemoveStartupConfigurator(t => t is T);
+
+        public INOFApp RemoveCombinedConfigurator<T>() where T : ICombinedConfigurator
+            => app.RemoveRegistrationConfigurator(t => t is T)
+                .RemoveStartupConfigurator(t => t is T);
 
         public INOFApp AddAssembly<T>()
             => app.AddAssembly(typeof(T));
@@ -46,59 +47,47 @@ public static class NOFAppBuilderExtensions
 
         public INOFApp AddAssembly(Assembly assembly)
         {
-            app.AddRegistrationTask(args =>
-            {
-                args.Metadata.Assemblies.Add(assembly);
-                return Task.CompletedTask;
-            });
+            app.Metadata.Assemblies.Add(assembly);
             return app;
         }
 
         public INOFApp UseDefaultSettings()
         {
-            app.AddRegistrationTask<ConfigureJsonOptionsTask>();
-            app.AddRegistrationTask<AddMassTransitTask>();
-            app.AddRegistrationTask<AddDefaultServicesTask>();
+            app.AddRegistrationConfigurator<ConfigureJsonOptionsConfigurator>();
+            app.AddRegistrationConfigurator<AddMassTransitConfigurator>();
+            app.AddRegistrationConfigurator<AddDefaultServicesConfigurator>();
+            app.AddRegistrationConfigurator<AddSignalRConfigurator>();
+            app.AddRegistrationConfigurator<AddRedisDistributedCacheConfigurator>();
 
-            app.AddRegistrationTask<AddApiResponseMiddlewareTask>();
-            app.AddStartupTask<UseApiResponseTask>();
+            app.AddCombinedConfigurator<AddCorsConfigurator>();
+            app.AddCombinedConfigurator<AddApiResponseMiddlewareConfigurator>();
+            app.AddCombinedConfigurator<AddJwtAuthenticationConfigurator>();
+            app.AddCombinedConfigurator<AddAspireConfigurator>();
 
-            app.AddRegistrationTask<AddJwtTask>();
-            app.AddRegistrationTask<ConfigureJwtTask>();
-            app.AddStartupTask<UseJwtTask>();
-
-            app.AddRegistrationTask<AddSignalRTask>();
-
-            app.AddRegistrationTask<AddCorsTask>();
-            app.AddStartupTask<UseCorsTask>();
-
-            app.AddRegistrationTask<AddRedisDistributedCacheTask>();
-
-            app.AddRegistrationTask<AddScalarTask>();
-            app.AddStartupTask<UseScalarTask>();
-
-            app.AddRegistrationTask<AddAspireTask>();
-            app.AddStartupTask<UseAspireTask>();
+            if (app.Unwarp().Environment.IsDevelopment())
+            {
+                app.AddCombinedConfigurator<AddScalarConfigurator>();
+            }
             return app;
         }
 
-        public INOFApp UsePostgreSQL<TDbContext>(bool autoMigrate = false) where TDbContext : NOFDbContext
+        public INOFApp AddPostgreSQL<TDbContext>(bool autoMigrate = false) where TDbContext : NOFDbContext
         {
-            app.AddRegistrationTask<AddPostgreSQLTask<TDbContext>>();
+            app.AddRegistrationConfigurator<AddPostgreSQLConfigurator<TDbContext>>();
             if (autoMigrate)
             {
-                app.AddStartupTask<MigrationTask>();
+                app.AddStartupConfigurator<AddMigrationConfigurator>();
             }
             return app;
         }
     }
 }
 
-internal class DelegateStartupTask : IBusinessTask
+internal class DelegateStartupConfigurator : IBusinessConfigurator
 {
     private readonly Func<StartupArgs, Task> _fn;
 
-    public DelegateStartupTask(Func<StartupArgs, Task> func)
+    public DelegateStartupConfigurator(Func<StartupArgs, Task> func)
     {
         _fn = func;
     }
@@ -109,16 +98,16 @@ internal class DelegateStartupTask : IBusinessTask
     }
 }
 
-internal class DelegateRegistrationTask : IConfiguredServicesTask
+internal class DelegateRegistrationConfigurator : IConfiguredServicesConfigurator
 {
-    private readonly Func<RegistrationArgs, Task> _fn;
+    private readonly Func<RegistrationArgs, ValueTask> _fn;
 
-    public DelegateRegistrationTask(Func<RegistrationArgs, Task> func)
+    public DelegateRegistrationConfigurator(Func<RegistrationArgs, ValueTask> func)
     {
         _fn = func;
     }
 
-    public Task ExecuteAsync(RegistrationArgs args)
+    public ValueTask ExecuteAsync(RegistrationArgs args)
     {
         return _fn(args);
     }

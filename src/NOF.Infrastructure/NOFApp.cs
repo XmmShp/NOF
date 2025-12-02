@@ -9,69 +9,76 @@ namespace NOF;
 
 public interface INOFApp
 {
-    INOFApp AddRegistrationTask(IRegistrationTask task);
-    INOFApp AddStartupTask(IStartupTask task);
-    INOFApp RemoveRegistrationTask(Predicate<IRegistrationTask> predictor);
-    INOFApp RemoveStartupTask(Predicate<IStartupTask> predictor);
+    INOFApp AddRegistrationConfigurator(IRegistrationConfigurator task);
+    INOFApp AddStartupConfigurator(IStartupConfigurator task);
+    INOFApp RemoveRegistrationConfigurator(Predicate<IRegistrationConfigurator> predictor);
+    INOFApp RemoveStartupConfigurator(Predicate<IStartupConfigurator> predictor);
+    IDictionary<string, object?> Metadata { get; }
+    WebApplicationBuilder Unwarp();
     Task<WebApplication> BuildAsync();
 }
 
 public class NOFApp : INOFApp
 {
-    private readonly HashSet<IRegistrationTask> _registrationTasks = [];
-    private readonly HashSet<IStartupTask> _startupTasks = [];
-    private readonly Dictionary<string, object?> _metadata = [];
+    private readonly HashSet<IRegistrationConfigurator> _registrationStages = [];
+    private readonly HashSet<IStartupConfigurator> _startupStages = [];
     private readonly WebApplicationBuilder _builder;
 
-    public INOFApp AddRegistrationTask(IRegistrationTask task)
+    public IDictionary<string, object?> Metadata { get; }
+
+    public INOFApp AddRegistrationConfigurator(IRegistrationConfigurator task)
     {
-        _registrationTasks.Add(task);
+        _registrationStages.Add(task);
         return this;
     }
 
-    public INOFApp AddStartupTask(IStartupTask task)
+    public INOFApp AddStartupConfigurator(IStartupConfigurator task)
     {
-        _startupTasks.Add(task);
+        _startupStages.Add(task);
         return this;
     }
 
-    public INOFApp RemoveRegistrationTask(Predicate<IRegistrationTask> predictor)
+    public INOFApp RemoveRegistrationConfigurator(Predicate<IRegistrationConfigurator> predictor)
     {
-        _registrationTasks.RemoveWhere(predictor);
+        _registrationStages.RemoveWhere(predictor);
         return this;
     }
 
-    public INOFApp RemoveStartupTask(Predicate<IStartupTask> predictor)
+    public INOFApp RemoveStartupConfigurator(Predicate<IStartupConfigurator> predictor)
     {
-        _startupTasks.RemoveWhere(predictor);
+        _startupStages.RemoveWhere(predictor);
         return this;
     }
 
+    public WebApplicationBuilder Unwarp()
+    {
+        return _builder;
+    }
 
     public async Task<WebApplication> BuildAsync()
     {
-        var regGraph = new TaskGraph(_registrationTasks);
+        var regGraph = new ConfiguratorGraph(_registrationStages);
         foreach (var task in regGraph.GetExecutionOrder())
         {
-            if (task is not IRegistrationTask registrationTask)
+            if (task is not IRegistrationConfigurator registrationStage)
             {
                 continue;
             }
 
-            await registrationTask.ExecuteAsync(new RegistrationArgs(_builder, _metadata));
+            await registrationStage.ExecuteAsync(new RegistrationArgs(_builder, Metadata));
         }
 
         var app = _builder.Build();
-        var startGraph = new TaskGraph(_startupTasks);
+        var startGraph = new ConfiguratorGraph(_startupStages);
 
         foreach (var task in startGraph.GetExecutionOrder())
         {
-            if (task is not IStartupTask startupTask)
+            if (task is not IStartupConfigurator startupStage)
             {
                 continue;
             }
 
-            await startupTask.ExecuteAsync(new StartupArgs(app, _metadata));
+            await startupStage.ExecuteAsync(new StartupArgs(app, Metadata));
         }
 
         return app;
@@ -80,13 +87,14 @@ public class NOFApp : INOFApp
     internal NOFApp(string[] args)
     {
         _builder = WebApplication.CreateBuilder(args);
+        Metadata = new Dictionary<string, object?>();
     }
 
     public static INOFApp CreateApp(string[] args)
     {
         var builder = new NOFApp(args);
         var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetCallingAssembly();
-        builder._metadata.Assemblies.Add(assembly);
+        builder.Metadata.Assemblies.Add(assembly);
         return builder;
     }
 }
