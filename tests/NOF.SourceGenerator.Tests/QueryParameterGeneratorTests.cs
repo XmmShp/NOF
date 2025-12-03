@@ -167,4 +167,76 @@ public class QueryParameterGeneratorTests
             }
         }
     }
+
+    [Fact]
+    public void GenerateQueryParameterExtensions_WithDateTimeTypes_UsesCorrectToStringFormat()
+    {
+        const string source = """
+                          using System;
+                          using NOF;
+
+                          namespace TestNamespace
+                          {
+                              [QueryParameter]
+                              public class TimeQuery
+                              {
+                                  public DateTime CreatedAt { get; set; }
+                                  public DateTime? UpdatedAt { get; set; }
+                                  public DateTimeOffset EventTime { get; set; }
+                                  public DateTimeOffset? ScheduledTime { get; set; }
+                                  public DateOnly BirthDate { get; set; }
+                                  public TimeOnly StartTime { get; set; }
+                              }
+                          }
+                          """;
+
+        var runResult = new QueryParameterGenerator().GetResult(source, typeof(QueryParameterAttribute));
+        runResult.GeneratedTrees.Should().ContainSingle();
+
+        var tree = runResult.GeneratedTrees[0];
+        var root = tree.GetRoot();
+
+        // 找到生成的扩展方法（针对 TimeQuery）
+        var method = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(m => m.ParameterList.Parameters.Count == 1 &&
+                                 m.ParameterList.Parameters[0].Type?.ToString() == "TestNamespace.TimeQuery");
+
+        method.Should().NotBeNull("应生成 TimeQuery 的 ToQueryString 扩展方法");
+
+        // 提取所有赋值语句：queryParams["xxx"] = ...
+        var assignments = method!.Body!
+            .DescendantNodes()
+            .OfType<AssignmentExpressionSyntax>()
+            .Where(a => a.Left is ElementAccessExpressionSyntax access &&
+                        access.Expression.ToString() == "queryParams")
+            .ToList();
+
+        assignments.Should().HaveCount(6);
+
+        // 构造期望的属性名 -> 期望的 ToString 调用模式
+        var expectedFormats = new Dictionary<string, string>
+        {
+            ["CreatedAt"] = ".ToString(\"O\")",
+            ["UpdatedAt"] = "?.ToString(\"O\")",
+            ["EventTime"] = ".ToString(\"O\")",
+            ["ScheduledTime"] = "?.ToString(\"O\")",
+            ["BirthDate"] = ".ToString(\"yyyy-MM-dd\")",
+            ["StartTime"] = ".ToString(\"HH:mm:ss.FFFFFFF\")"
+        };
+
+        foreach (var (propName, expectedSuffix) in expectedFormats)
+        {
+            var assignment = assignments
+                .FirstOrDefault(a => a.Left is ElementAccessExpressionSyntax e &&
+                                     e.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax lit &&
+                                     lit.Token.ValueText == propName);
+
+            assignment.Should().NotBeNull($"应找到属性 {propName} 的赋值语句");
+
+            var rightExpr = assignment!.Right.ToString();
+            rightExpr.Should().EndWith(expectedSuffix,
+                $"属性 {propName} 应使用正确的格式化 ToString，实际为: {rightExpr}");
+        }
+    }
 }

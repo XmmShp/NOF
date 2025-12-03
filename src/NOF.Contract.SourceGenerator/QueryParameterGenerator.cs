@@ -158,16 +158,39 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("            var queryParams = new Dictionary<string, string?>();");
         sb.AppendLine();
 
-        // 为每个属性生成查询参数代码
         foreach (var property in properties)
         {
             var propertyName = property.Name;
-            var isNullable = property.NullableAnnotation == NullableAnnotation.Annotated;
-            var propertyAccess = isNullable
-                ? $"source.{propertyName}?.ToString()"
-                : $"source.{propertyName}.ToString()";
+            var propertyType = property.Type;
 
-            sb.AppendLine($"            queryParams[\"{propertyName}\"] = {propertyAccess};");
+            // 判断是否为可空类型（如 DateTime?）
+            var isNullable = property.NullableAnnotation == NullableAnnotation.Annotated;
+
+            // 获取底层类型（对于 Nullable<T>，获取 T）
+            var underlyingType = isNullable && propertyType is INamedTypeSymbol { IsGenericType: true } namedType
+                ? namedType.TypeArguments[0]
+                : propertyType;
+
+            string valueExpression;
+
+            if (IsDateTime(underlyingType) || IsDateTimeOffset(underlyingType))
+            {
+                valueExpression = isNullable ? $"source.{propertyName}?.ToString(\"O\")" : $"source.{propertyName}.ToString(\"O\")";
+            }
+            else if (IsDateOnly(underlyingType))
+            {
+                valueExpression = isNullable ? $"source.{propertyName}?.ToString(\"yyyy-MM-dd\")" : $"source.{propertyName}.ToString(\"yyyy-MM-dd\")";
+            }
+            else if (IsTimeOnly(underlyingType))
+            {
+                valueExpression = isNullable ? $"source.{propertyName}?.ToString(\"HH:mm:ss.FFFFFFF\")" : $"source.{propertyName}.ToString(\"HH:mm:ss.FFFFFFF\")";
+            }
+            else
+            {
+                valueExpression = isNullable ? $"source.{propertyName}?.ToString()" : $"source.{propertyName}.ToString()";
+            }
+
+            sb.AppendLine($"            queryParams[\"{propertyName}\"] = {valueExpression};");
         }
 
         // 生成查询字符串
@@ -189,6 +212,11 @@ public class QueryParameterGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
     }
+
+    private static bool IsDateTime(ITypeSymbol type) => type.ToDisplayString() == "System.DateTime";
+    private static bool IsDateTimeOffset(ITypeSymbol type) => type.ToDisplayString() == "System.DateTimeOffset";
+    private static bool IsDateOnly(ITypeSymbol type) => type.ToDisplayString() == "System.DateOnly";
+    private static bool IsTimeOnly(ITypeSymbol type) => type.ToDisplayString() == "System.TimeOnly";
 
     /// <summary>
     /// 获取类型的所有属性，包括继承的属性
