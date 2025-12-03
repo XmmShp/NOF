@@ -85,7 +85,7 @@ public class ConfigureJsonOptionsConfigurator : IConfiguredOptionsConfigurator
     }
 }
 
-public class AddApiResponseMiddlewareConfigurator : ICombinedConfigurator, IConfiguringServicesConfigurator, IBusinessConfigurator
+public class AddApiResponseMiddlewareConfigurator : ICombinedConfigurator, IConfiguringServicesConfigurator, IResponseWrapConfigurator
 {
     public ValueTask ExecuteAsync(RegistrationArgs args)
     {
