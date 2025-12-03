@@ -16,6 +16,7 @@
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/NOF.Contract.Tests/NOF.Contract.Tests.csproj" Id="a4d4d1a7-24e1-4c7e-a368-8db0063b737a" />
     <Project Path="tests/NOF.Infrastructure.Tests/NOF.Infrastructure.Tests.csproj" />
     <Project Path="tests/NOF.SourceGenerator.Tests/NOF.SourceGenerator.Tests.csproj" Id="35f09326-8798-4668-bd60-9b9a0882f1e9" />
   </Folder>

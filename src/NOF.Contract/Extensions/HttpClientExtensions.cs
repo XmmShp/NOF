@@ -1,6 +1,8 @@
-using NOF;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+
+[assembly: InternalsVisibleTo("NOF.Contract.Tests")]
 
 namespace NOF;
 
@@ -46,7 +48,8 @@ public static class HttpClientExtensions
         /// <returns>API响应</returns>
         public async Task<Result<TResponse>> SendPostRequestAsync<TResponse>(string url, IRequest<TResponse> data)
         {
-            var response = await httpClient.PostAsJsonAsync(url, data, Options);
+            var content = GetJsonContent(data);
+            var response = await httpClient.PostAsync(url, content);
             return await response.ToResultAsync<TResponse>();
         }
 
@@ -58,8 +61,13 @@ public static class HttpClientExtensions
         /// <returns>API响应</returns>
         public async Task<Result> SendPostRequestAsync(string url, IRequest data)
         {
-            var response = await httpClient.PostAsJsonAsync(url, data, Options);
+            var content = GetJsonContent(data);
+            var response = await httpClient.PostAsync(url, content);
             return await response.ToResultAsync();
         }
+    }
+    internal static JsonContent GetJsonContent(object data)
+    {
+        return JsonContent.Create(data, data.GetType(), options: Options);
     }
 }
