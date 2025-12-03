@@ -84,7 +84,7 @@ public class CommandSenderTests
         var sender = new CommandSender(mockClientFactory.Object, mockSendEndpointProvider.Object);
 
         // Act
-        var result = await sender.SendAsync<TestCommandWithResponse, string>(command, destinationUri, CancellationToken.None);
+        var result = await sender.SendAsync(command, destinationUri, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();

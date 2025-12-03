@@ -2,7 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NOF;
 
-public record Result
+public interface IResult;
+
+public record Result : IResult
 {
     /// <summary>
     /// 是否成功
@@ -61,13 +63,13 @@ public record Result
     #endregion
 }
 
-public record FailResult
+public record FailResult : IResult
 {
     public required int ErrorCode { get; init; }
     public required string Message { get; init; }
 }
 
-public record Result<T>
+public record Result<T> : IResult
 {
     /// <summary>
     /// 是否成功
