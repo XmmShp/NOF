@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Reflection;
 
@@ -7,6 +8,8 @@ public static class NOFAppBuilderExtensions
 {
     extension(INOFApp app)
     {
+        public IServiceCollection Services => app.Unwarp().Services;
+
         public INOFApp AddCombinedConfigurator(ICombinedConfigurator configurator)
         {
             app.AddRegistrationConfigurator(configurator);
