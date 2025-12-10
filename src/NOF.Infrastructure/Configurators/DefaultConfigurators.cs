@@ -138,21 +138,6 @@ public class AddSignalRConfigurator : IConfiguringServicesConfigurator
     }
 }
 
-public class AddAspireConfigurator : ICombinedConfigurator, IConfiguringServicesConfigurator, IEndpointConfigurator
-{
-    public ValueTask ExecuteAsync(RegistrationArgs args)
-    {
-        args.Builder.AddServiceDefaults();
-        return ValueTask.CompletedTask;
-    }
-
-    public Task ExecuteAsync(StartupArgs args)
-    {
-        args.App.MapDefaultEndpoints();
-        return Task.CompletedTask;
-    }
-}
-
 public class AddRedisDistributedCacheConfigurator : IConfiguringServicesConfigurator
 {
     public ValueTask ExecuteAsync(RegistrationArgs args)

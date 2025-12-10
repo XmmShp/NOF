@@ -65,7 +65,6 @@ public static partial class __NOF_Infrastructure_Extensions__
             app.AddCombinedConfigurator<AddCorsConfigurator>();
             app.AddCombinedConfigurator<AddApiResponseMiddlewareConfigurator>();
             app.AddCombinedConfigurator<AddJwtAuthenticationConfigurator>();
-            app.AddCombinedConfigurator<AddAspireConfigurator>();
 
             if (app.Unwarp().Environment.IsDevelopment())
             {

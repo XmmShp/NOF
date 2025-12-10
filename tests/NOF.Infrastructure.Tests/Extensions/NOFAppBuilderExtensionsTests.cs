@@ -66,12 +66,10 @@ public class NOFAppBuilderExtensionsTests
         nofApp.RegistrationStages.Should().Contain(c => c is AddCorsConfigurator);
         nofApp.RegistrationStages.Should().Contain(c => c is AddApiResponseMiddlewareConfigurator);
         nofApp.RegistrationStages.Should().Contain(c => c is AddJwtAuthenticationConfigurator);
-        nofApp.RegistrationStages.Should().Contain(c => c is AddAspireConfigurator);
 
         // Check startup configurators (from combined configurators)
         nofApp.StartupStages.Should().Contain(c => c is AddCorsConfigurator);
         nofApp.StartupStages.Should().Contain(c => c is AddApiResponseMiddlewareConfigurator);
         nofApp.StartupStages.Should().Contain(c => c is AddJwtAuthenticationConfigurator);
-        nofApp.StartupStages.Should().Contain(c => c is AddAspireConfigurator);
     }
 }

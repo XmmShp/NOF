@@ -7,7 +7,7 @@ public static partial class __NOF_Infrastructure__EntityFrameworkCore__
     {
         public INOFEFCoreApp<TDbContext> AutoMigrate()
         {
-            app.App.AddStartupConfigurator<AutoMigrationConfigurator>();
+            app.App.AddStartupConfigurator<AutoMigrateConfigurator>();
             return app;
         }
     }
