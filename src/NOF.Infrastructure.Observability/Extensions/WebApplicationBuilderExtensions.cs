@@ -18,7 +18,7 @@ public static partial class __NOF_Infrastructure_Observability__
         public WebApplicationBuilder AddObservabilities()
         {
             return builder.ConfigureOpenTelemetry()
-                .AddDefaultHealthChecks();
+                .AddHealthChecks();
         }
 
         public WebApplicationBuilder ConfigureOpenTelemetry()
@@ -63,7 +63,7 @@ public static partial class __NOF_Infrastructure_Observability__
             return builder;
         }
 
-        private WebApplicationBuilder AddDefaultHealthChecks()
+        private WebApplicationBuilder AddHealthChecks()
         {
             builder.Services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);

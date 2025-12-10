@@ -7,7 +7,7 @@ public static partial class __NOF_Infrastructure_Observability__
 {
     extension(WebApplication app)
     {
-        public WebApplication MapDefaultEndpoints()
+        public WebApplication MapHealthCheckEndpoints()
         {
             app.MapHealthChecks(HealthEndpointPath);
             app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
