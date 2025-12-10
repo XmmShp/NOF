@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace NOF;
 
-public static class ConfigurationManagerExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     extension(ConfigurationManager manager)
     {

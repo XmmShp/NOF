@@ -1,6 +1,6 @@
 namespace NOF;
 
-public static class CommandExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     private static readonly EndpointNameFormatter Formatter = EndpointNameFormatter.Instance;
 

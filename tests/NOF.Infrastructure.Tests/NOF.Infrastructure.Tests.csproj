@@ -17,6 +17,7 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.EntityFramework\NOF.Infrastructure.EntityFramework.csproj" />
     <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
   </ItemGroup>

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using System.Reflection;
 using Xunit;
+using BusExtensions = NOF.__NOF_Infrastructure_Extensions__;
 
 namespace NOF.Infrastructure.Tests.Extensions;
 

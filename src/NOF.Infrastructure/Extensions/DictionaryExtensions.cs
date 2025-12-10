@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace NOF;
 
-public static class DictionaryExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     extension(IDictionary<string, object?> metadata)
     {
@@ -25,7 +25,7 @@ public static class DictionaryExtensions
         }
 
         public List<Assembly> Assemblies => metadata.GetOrAdd("Assemblies", () => new List<Assembly>());
-        internal List<Action<IBusRegistrationConfigurator>> MassTransitConfigurations
+        public List<Action<IBusRegistrationConfigurator>> MassTransitConfigurations
             => metadata.GetOrAdd("MassTransitConfigurations", () => new List<Action<IBusRegistrationConfigurator>>());
     }
 }

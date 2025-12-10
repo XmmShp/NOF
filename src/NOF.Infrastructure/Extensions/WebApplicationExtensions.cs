@@ -9,7 +9,7 @@ using OpenTelemetry.Trace;
 
 namespace NOF;
 
-public static class WebApplicationExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";

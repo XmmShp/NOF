@@ -2,7 +2,7 @@ using MassTransit;
 
 namespace NOF;
 
-public static class SendEndpointProviderExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     extension(ISendEndpointProvider sendEndpointProvider)
     {

@@ -16,12 +16,9 @@
 
 	  <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
 	  <PackageReference Include="MassTransit" />
-	  <PackageReference Include="MassTransit.EntityFrameworkCore" />
 	  <PackageReference Include="MassTransit.RabbitMQ" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 	  <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-	  <PackageReference Include="Microsoft.EntityFrameworkCore" />
-	  <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
 	  <PackageReference Include="Scalar.AspNetCore" />
 	  <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
 	  <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
@@ -34,6 +31,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Abstractions\" />
   </ItemGroup>
 
 </Project>

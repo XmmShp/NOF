@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace NOF;
 
-public static class ServiceCollectionExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     extension(IServiceCollection services)
     {

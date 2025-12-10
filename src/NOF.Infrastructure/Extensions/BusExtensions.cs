@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace NOF;
 
-public static class BusExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     internal static class ValueCommandCache<TResult> where TResult : class, IResult
     {
@@ -51,7 +51,7 @@ public static class BusExtensions
         return Expression.Lambda<Func<IBus, object, Uri, CancellationToken, Task<TResult>>>(call, bus, cmd, uri, token).Compile();
     }
 
-    internal static MethodInfo SendRequestAsyncMethodInfo = typeof(BusExtensions).GetMethod(nameof(SendRequestAsync), BindingFlags.Static | BindingFlags.NonPublic)!;
+    internal static MethodInfo SendRequestAsyncMethodInfo = typeof(__NOF_Infrastructure_Extensions__).GetMethod(nameof(SendRequestAsync), BindingFlags.Static | BindingFlags.NonPublic)!;
     internal static async Task<TResult> SendRequestAsync<TCommand, TResult>(IBus bus, TCommand command, Uri destinationAddress,
         CancellationToken cancellationToken = default)
         where TCommand : class

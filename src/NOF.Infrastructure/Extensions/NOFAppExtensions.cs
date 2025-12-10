@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace NOF;
 
-public static class NOFAppBuilderExtensions
+public static partial class __NOF_Infrastructure_Extensions__
 {
     extension(INOFApp app)
     {
@@ -70,16 +70,6 @@ public static class NOFAppBuilderExtensions
             if (app.Unwarp().Environment.IsDevelopment())
             {
                 app.AddCombinedConfigurator<AddScalarConfigurator>();
-            }
-            return app;
-        }
-
-        public INOFApp AddPostgreSQL<TDbContext>(bool autoMigrate = false) where TDbContext : NOFDbContext
-        {
-            app.AddRegistrationConfigurator<AddPostgreSQLConfigurator<TDbContext>>();
-            if (autoMigrate)
-            {
-                app.AddStartupConfigurator<AddMigrationConfigurator>();
             }
             return app;
         }

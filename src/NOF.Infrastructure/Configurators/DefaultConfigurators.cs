@@ -4,7 +4,6 @@ using MassTransit.Metadata;
 using MassTransit.Util;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -126,7 +125,6 @@ public class AddDefaultServicesConfigurator : IConfiguringServicesConfigurator
     {
         args.Builder.Services.AddScoped<ICommandSender, CommandSender>();
         args.Builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
-        args.Builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         return ValueTask.CompletedTask;
     }
 }
@@ -161,30 +159,6 @@ public class AddRedisDistributedCacheConfigurator : IConfiguringServicesConfigur
     {
         const string redisKey = "redis";
         args.Builder.AddRedisDistributedCache(redisKey);
-        return ValueTask.CompletedTask;
-    }
-}
-
-public class AddPostgreSQLConfigurator<TDbContext> : IConfiguringServicesConfigurator
-    where TDbContext : NOFDbContext
-{
-    public ValueTask ExecuteAsync(RegistrationArgs args)
-    {
-        const string postgresKey = "postgres";
-        args.Builder.Services.AddDbContext<TDbContext>(options => options.UseNpgsql(args.Builder.Configuration.GetConnectionString(postgresKey)));
-        args.Builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
-        args.Metadata.MassTransitConfigurations.Add(config =>
-        {
-            config.AddEntityFrameworkOutbox<TDbContext>(o =>
-            {
-                o.UsePostgres();
-                o.UseBusOutbox();
-            });
-            config.AddConfigureEndpointsCallback((context, name, cfg) =>
-            {
-                cfg.UseEntityFrameworkOutbox<TDbContext>(context);
-            });
-        });
         return ValueTask.CompletedTask;
     }
 }
@@ -224,18 +198,5 @@ public class AddMassTransitConfigurator : IConfiguredServicesConfigurator
                 configurator(config);
             }
         });
-    }
-}
-
-public class AddMigrationConfigurator : ISyncSeedConfigurator
-{
-    public async Task ExecuteAsync(StartupArgs args)
-    {
-        await using var scope = args.App.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
-        if (dbContext.Database.IsRelational())
-        {
-            await dbContext.Database.MigrateAsync();
-        }
     }
 }
