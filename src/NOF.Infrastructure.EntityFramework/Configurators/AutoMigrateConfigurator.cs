@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF;
 
-public class AutoMigrationConfigurator : ISyncSeedConfigurator
+public class AutoMigrateConfigurator : ISyncSeedConfigurator
 {
     public async Task ExecuteAsync(StartupArgs args)
     {

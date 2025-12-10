@@ -1,17 +1,13 @@
 namespace NOF;
 
-public static partial class __NOF_Infrastructure__EntityFrameworkCore__PostgreSQL__
+public static partial class __NOF_Infrastructure__EntityFrameworkCore__
 {
     extension(INOFApp app)
     {
-        public INOFEFCoreApp<TDbContext> AddEFCore<TDbContext>(bool autoMigration = false)
+        public INOFEFCoreApp<TDbContext> AddEFCore<TDbContext>()
             where TDbContext : NOFDbContext
         {
             app.AddRegistrationConfigurator<EFCoreConfigurator>();
-            if (autoMigration)
-            {
-                app.AddStartupConfigurator<AutoMigrationConfigurator>();
-            }
             return new NOFEFCoreApp<TDbContext>(app);
         }
     }
