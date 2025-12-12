@@ -1,6 +1,6 @@
 namespace NOF;
 
-public static class OptionalExtensions
+public static partial class __NOF_Contract_Extensions__
 {
     extension<T>(Optional<T> optional)
     {

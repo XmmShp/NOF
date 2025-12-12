@@ -1,5 +1,3 @@
-using MassTransit;
-using MassTransit.Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -22,9 +20,7 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
     {
         var databaseName = $"{Guid.NewGuid():N}";
         var services = new ServiceCollection();
-        var mockMediator = new Mock<IScopedMediator>();
 
-        services.AddSingleton(mockMediator.Object);
         services.AddDbContext<TDbContext>(options =>
             options.UseInMemoryDatabase(databaseName));
 
@@ -39,14 +35,5 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
     protected ILogger<T> GetLogger<T>()
     {
         return new Mock<ILogger<T>>().Object;
-    }
-
-    protected ConsumeContext<TMessage> GetConsumeContext<TMessage>(TMessage message)
-        where TMessage : class
-    {
-        var mockConsumeContext = new Mock<ConsumeContext<TMessage>>();
-        mockConsumeContext.Setup(c => c.Message).Returns(message);
-        mockConsumeContext.Setup(c => c.CancellationToken).Returns(CancellationToken.None);
-        return mockConsumeContext.Object;
     }
 }

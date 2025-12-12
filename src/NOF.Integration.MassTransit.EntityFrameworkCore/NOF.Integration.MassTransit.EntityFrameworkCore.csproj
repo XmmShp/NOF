@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NOF.Integration.EntityFrameworkCore\NOF.Integration.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\NOF.Integration.MassTransit\NOF.Integration.MassTransit.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="MassTransit.EntityFrameworkCore" />
+	</ItemGroup>
+</Project>

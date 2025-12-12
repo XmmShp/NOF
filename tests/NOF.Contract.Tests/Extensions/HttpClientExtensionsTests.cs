@@ -20,7 +20,7 @@ public class HttpClientExtensionsTests
         IRequest castRequest = request;
 
         // Act
-        var jsonContent = HttpClientExtensions.GetJsonContent(castRequest);
+        var jsonContent = __NOF_Contract_Extensions__.GetJsonContent(castRequest);
 
         // Assert: Read the content as string and parse JSON
         var jsonString = await jsonContent.ReadAsStringAsync();

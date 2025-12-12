@@ -1,6 +1,6 @@
 namespace NOF;
 
-public static class StringExtensions
+public static partial class __NOF_Contract_Extensions__
 {
     extension(string)
     {

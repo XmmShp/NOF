@@ -6,7 +6,7 @@ namespace NOF;
 /// <summary>
 /// HttpResponseMessage的扩展方法
 /// </summary>
-public static class HttpResponseMessageExtensions
+public static partial class __NOF_Contract_Extensions__
 {
     // 错误代码常量
     private const int ErrorCodeApiAccess = 400001;
@@ -15,8 +15,6 @@ public static class HttpResponseMessageExtensions
     // 错误消息常量
     private const string ErrorMessageApiAccess = "访问后端API时出现错误";
     private const string ErrorMessageResponseParsing = "解析返回结果时发生错误";
-
-    private static readonly JsonSerializerOptions Options = DefaultJsonSerializerOptions.Options;
 
     /// <param name="response">HTTP响应</param>
     extension(HttpResponseMessage response)

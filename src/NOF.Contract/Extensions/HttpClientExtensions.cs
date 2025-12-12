@@ -9,7 +9,7 @@ namespace NOF;
 /// <summary>
 /// HttpClient的扩展方法，用于处理API请求和响应
 /// </summary>
-public static class HttpClientExtensions
+public static partial class __NOF_Contract_Extensions__
 {
     private static readonly JsonSerializerOptions Options = DefaultJsonSerializerOptions.Options;
 

@@ -6,7 +6,7 @@ namespace NOF;
 /// <summary>
 /// 服务集合扩展方法
 /// </summary>
-public static class ServiceCollectionExtensions
+public static partial class __NOF_Contract_Extensions__
 {
     /// <param name="services">服务集合</param>
     extension(IServiceCollection services)

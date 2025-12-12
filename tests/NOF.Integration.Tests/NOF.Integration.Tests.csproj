@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Http" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NOF.Host\NOF.Host.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Integration.EntityFrameworkCore.PostgreSQL\NOF.Integration.EntityFrameworkCore.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Integration.EntityFrameworkCore\NOF.Integration.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Integration.MassTransit.EntityFrameworkCore\NOF.Integration.MassTransit.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Integration.MassTransit.RabbitMQ\NOF.Integration.MassTransit.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Integration.MassTransit\NOF.Integration.MassTransit.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Integration.Observability\NOF.Integration.Observability.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
+  </ItemGroup>
+
+</Project>

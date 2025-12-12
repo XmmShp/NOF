@@ -5,10 +5,7 @@ using System.Text.Json;
 
 namespace NOF;
 
-/// <summary>
-/// 分布式缓存扩展方法，提供强类型支持
-/// </summary>
-public static class DistributedCacheExtensions
+public static partial class __NOF_Application_Extensions__
 {
     private static readonly JsonSerializerOptions DefaultJsonOptions = DefaultJsonSerializerOptions.Options;
     private static readonly DistributedCacheEntryOptions DefaultCacheOptions = new();

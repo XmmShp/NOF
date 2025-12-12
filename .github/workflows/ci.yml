@@ -44,15 +44,24 @@ jobs:
 
     - name: Pack NuGet packages (validation)
       run: |
+        # Core packages
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Contract.Internal/NOF.Contract.Internal.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Infrastructure/NOF.Infrastructure.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Infrastructure.Observability/NOF.Infrastructure.Observability.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Infrastructure.EntityFramework/NOF.Infrastructure.EntityFramework.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Host/NOF.Host.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+     
+        # Integration packages
+        dotnet pack src/NOF.Integration/NOF.Integration.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Integration.EntityFrameworkCore/NOF.Integration.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Integration.EntityFrameworkCore.PostgreSQL/NOF.Integration.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Integration.MassTransit/NOF.Integration.MassTransit.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Integration.MassTransit.EntityFrameworkCore/NOF.Integration.MassTransit.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Integration.MassTransit.RabbitMQ/NOF.Integration.MassTransit.RabbitMQ.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        dotnet pack src/NOF.Integration.Observability/NOF.Integration.Observability.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
+        
+        # Testing package
+        dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
 
 
     - name: Upload build artifacts

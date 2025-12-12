@@ -10,11 +10,15 @@
 	  <Description>NOF Host</Description>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+		<PackageReference Include="Scalar.AspNetCore" />
+	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\NOF.Host.SourceGenerator\NOF.Host.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\NOF.Integration\NOF.Integration.csproj" />
 		<None Include="..\NOF.Host.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Host.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 

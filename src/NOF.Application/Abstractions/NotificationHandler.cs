@@ -1,10 +1,9 @@
-using MassTransit;
-
 namespace NOF;
 
-[ExcludeFromTopology]
 public interface INotificationHandler;
 
-[ExcludeFromTopology]
-public interface INotificationHandler<TNotification> : IConsumer<TNotification>, INotificationHandler
-    where TNotification : class, INotification;
+public interface INotificationHandler<TNotification> : INotificationHandler
+    where TNotification : class, INotification
+{
+    Task HandleAsync(TNotification notification, CancellationToken cancellationToken);
+}

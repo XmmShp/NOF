@@ -52,15 +52,30 @@ jobs:
 
     - name: Pack NuGet packages
       run: |
+        # Core packages - Domain layer with entities and business logic
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+      
+        # Contract packages - API contracts and DTOs
         dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Contract.Internal/NOF.Contract.Internal.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+       
+        # Application layer - Use cases and application services
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Infrastructure/NOF.Infrastructure.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Infrastructure.Observability/NOF.Infrastructure.Observability.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Infrastructure.EntityFramework/NOF.Infrastructure.EntityFramework.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        
+        # Host packages - Application hosting and bootstrapping
         dotnet pack src/NOF.Host/NOF.Host.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+       
+        # Integration packages - Infrastructure and external service integrations
+        dotnet pack src/NOF.Integration/NOF.Integration.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Integration.EntityFrameworkCore/NOF.Integration.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Integration.EntityFrameworkCore.PostgreSQL/NOF.Integration.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Integration.MassTransit/NOF.Integration.MassTransit.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Integration.MassTransit.EntityFrameworkCore/NOF.Integration.MassTransit.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Integration.MassTransit.RabbitMQ/NOF.Integration.MassTransit.RabbitMQ.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Integration.Observability/NOF.Integration.Observability.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        
+        # Testing package - Testing utilities and helpers
+        dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

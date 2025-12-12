@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MassTransit.Mediator;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NOF.Infrastructure.SourceGenerator;
@@ -47,8 +46,7 @@ public class ExposeToHttpEndpointMapperTests
             "App",
             mainSource,
             isDll: true,
-            libRef,
-            typeof(Request<>).ToMetadataReference()
+            libRef
         );
 
         // --- 执行生成器 ---
@@ -81,14 +79,14 @@ public class ExposeToHttpEndpointMapperTests
         getBlock.Should()
             .Contain("app.MapGet(\"/api/user\"")
             .And.Contain("[AsParameters] Lib.GetUserRequest request")
-            .And.Contain("mediator.SendRequest(request)")
+            .And.Contain("sender.SendAsync(request)")
             .And.Contain(".AllowAnonymous()")
             .And.NotContain("RequirePermission");
 
         postBlock.Should()
             .Contain("app.MapPost(\"/api/user\"")
             .And.Contain("[FromBody] App.CreateUserRequest request")
-            .And.Contain("mediator.SendRequest(request)")
+            .And.Contain("sender.SendAsync(request)")
             .And.Contain(".RequirePermission(\"User.Create\")")
             .And.NotContain("AllowAnonymous");
 
