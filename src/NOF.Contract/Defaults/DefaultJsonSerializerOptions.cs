@@ -9,8 +9,6 @@ public static class DefaultJsonSerializerOptions
     {
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-        Converters = { OptionalConverterFactory.Instance },
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
     };
 }

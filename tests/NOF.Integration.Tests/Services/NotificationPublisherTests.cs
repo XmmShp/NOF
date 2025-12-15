@@ -17,7 +17,7 @@ public class NotificationPublisherTests
     {
         // Arrange
         var mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        var publisher = new NotificationPublisher(mockPublishEndpoint.Object);
+        var publisher = new MassTransitNotificationPublisher(mockPublishEndpoint.Object);
         var notification = new TestNotification { Message = "Test Message" };
 
         // Act
@@ -44,7 +44,7 @@ public class NotificationPublisherTests
             It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var publisher = new NotificationPublisher(mockPublishEndpoint.Object);
+        var publisher = new MassTransitNotificationPublisher(mockPublishEndpoint.Object);
         var notification = new TestNotification { Message = "Test Message" };
 
         // Act
@@ -59,7 +59,7 @@ public class NotificationPublisherTests
     {
         // Arrange
         var mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        var publisher = new NotificationPublisher(mockPublishEndpoint.Object);
+        var publisher = new MassTransitNotificationPublisher(mockPublishEndpoint.Object);
         var notification1 = new TestNotification { Message = "Message 1" };
         var notification2 = new TestNotification { Message = "Message 2" };
 
@@ -88,7 +88,7 @@ public class NotificationPublisherTests
             .Callback<object, CancellationToken>((msg, ct) => capturedMessage = msg)
             .Returns(Task.CompletedTask);
 
-        var publisher = new NotificationPublisher(mockPublishEndpoint.Object);
+        var publisher = new MassTransitNotificationPublisher(mockPublishEndpoint.Object);
         var notification = new TestNotification { Message = "Test Message" };
 
         // Act
@@ -105,7 +105,7 @@ public class NotificationPublisherTests
     {
         // Arrange
         var mockPublishEndpoint = new Mock<IPublishEndpoint>();
-        var publisher = new NotificationPublisher(mockPublishEndpoint.Object);
+        var publisher = new MassTransitNotificationPublisher(mockPublishEndpoint.Object);
         var notification = new TestNotification { Message = "Test Message" };
 
         // Act

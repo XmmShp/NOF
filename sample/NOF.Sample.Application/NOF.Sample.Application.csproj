@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
-    <ProjectReference Include="..\NOF.Sample.Contract.Internal\NOF.Sample.Contract.Internal.csproj" />
+    <ProjectReference Include="..\NOF.Sample.Integration.Contract\NOF.Sample.Integration.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
   </ItemGroup>

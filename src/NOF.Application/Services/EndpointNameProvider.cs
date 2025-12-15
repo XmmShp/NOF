@@ -34,8 +34,9 @@ public class EndpointNameProvider : IEndpointNameProvider
 
                 var def = iface.GetGenericTypeDefinition();
 
-                return def == typeof(ICommandHandler<>) || def == typeof(ICommandHandler<,>) ||
-                       def == typeof(INotificationHandler<>);
+                return def == typeof(ICommandHandler<>) ||
+                       def == typeof(IRequestHandler<>) ||
+                       def == typeof(IRequestHandler<,>);
             })
             .Select(iface => iface.GetGenericArguments()[0]).ToList();
 

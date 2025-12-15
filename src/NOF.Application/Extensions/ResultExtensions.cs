@@ -103,7 +103,7 @@ public static partial class __NOF_Application_Extensions__
         /// <typeparam name="T">The return type of the async function.</typeparam>
         /// <param name="func">The asynchronous function to execute.</param>
         /// <param name="logger">Optional logger to record non-domain exceptions.</param>
-        /// <returns>A <see cref="Task{Result{T}}"/> containing the result or a domain failure.</returns>
+        /// <returns>A <see cref="Task"/> containing <see cref="Result{T}"/> the result or a domain failure.</returns>
         /// <exception cref="Exception">Rethrows any exception that is not a <see cref="DomainException"/>.</exception>
         public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> func, ILogger? logger = null)
         {

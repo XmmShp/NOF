@@ -2,15 +2,15 @@ namespace NOF.Sample;
 
 public static class __NOF_Sample__
 {
-    extension(INOFApp app)
+    extension(INOFAppBuilder builder)
     {
-        public INOFApp AddConfigurationFromCenter<TClient>()
+        public INOFAppBuilder AddConfigurationFromCenter<TClient>()
             where TClient : class
-            => app.AddConfigurationFromCenter(string.GetSystemNameFromClient<TClient>());
+            => builder.AddConfigurationFromCenter(string.GetSystemNameFromClient<TClient>());
 
-        public INOFApp AddConfigurationFromCenter(string systemName)
+        public INOFAppBuilder AddConfigurationFromCenter(string systemName)
         {
-            return app.AddRegistrationConfigurator(new ConfigurationCenterConfigurator(systemName));
+            return builder.AddServiceConfig(new ConfigurationCenterConfig(systemName));
         }
     }
 }

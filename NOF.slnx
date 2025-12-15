@@ -2,12 +2,12 @@
   <Folder Name="/sample/">
     <Project Path="sample/NOF.Sample.AppHost/NOF.Sample.AppHost.csproj" Id="1a4e8e94-b2d1-47b2-a87d-eb4d146b8bf7" />
     <Project Path="sample/NOF.Sample.Application/NOF.Sample.Application.csproj" Id="df9909e4-d1da-4865-95d8-27d133d9d32c" />
-    <Project Path="sample/NOF.Sample.Contract.Internal/NOF.Sample.Contract.Internal.csproj" Id="2069ab2c-33b2-4c61-8e39-65e2db022eb2" />
+    <Project Path="sample/NOF.Sample.Integration.Contract/NOF.Sample.Integration.Contract.csproj" Id="2069ab2c-33b2-4c61-8e39-65e2db022eb2" />
     <Project Path="sample/NOF.Sample.Contract/NOF.Sample.Contract.csproj" Id="cfe0cc27-76f5-44de-804b-717a85e9a8b8" />
     <Project Path="sample/NOF.Sample.Domain/NOF.Sample.Domain.csproj" Id="8cb8747c-bc2a-4330-bb74-4ae457f07b98" />
     <Project Path="sample/NOF.Sample.Integration/NOF.Sample.Integration.csproj" Id="30f271b4-ae7f-44f0-b9c9-276325f593d2" />
     <Project Path="sample/NOF.Sample.WebUI/NOF.Sample.WebUI.csproj" Id="4221e971-890d-4992-89fa-84f5904663cf" />
-    <Project Path="sample/NOF.Sample/NOF.Sample.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
+    <Project Path="sample/NOF.Sample.Hosting/NOF.Sample.Hosting.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
@@ -16,20 +16,21 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/NOF.Application/NOF.Application.csproj" />
-    <Project Path="src/NOF.Contract.Internal/NOF.Contract.Internal.csproj" Id="ed333faf-64a5-4079-8731-7690eff6810f" />
+    <Project Path="src/NOF.Integration.Contract/NOF.Integration.Contract.csproj" Id="ed333faf-64a5-4079-8731-7690eff6810f" />
     <Project Path="src/NOF.Contract.SourceGenerator/NOF.Contract.SourceGenerator.csproj" Id="7710e156-f3b2-4eab-b3a6-cbd868826543" />
     <Project Path="src/NOF.Contract/NOF.Contract.csproj" />
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
-    <Project Path="src/NOF.Host.SourceGenerator/NOF.Host.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
-    <Project Path="src/NOF.Host/NOF.Host.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
-    <Project Path="src/NOF.Integration.EntityFrameworkCore.PostgreSQL/NOF.Integration.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
-    <Project Path="src/NOF.Integration.EntityFrameworkCore/NOF.Integration.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
-    <Project Path="src/NOF.Integration.MassTransit.EntityFrameworkCore/NOF.Integration.MassTransit.EntityFrameworkCore.csproj" Id="d150693c-238c-411e-af84-6c91a9f8589d" />
-    <Project Path="src/NOF.Integration.MassTransit.RabbitMQ/NOF.Integration.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
-    <Project Path="src/NOF.Integration.MassTransit/NOF.Integration.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
+    <Project Path="src/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
+    <Project Path="src/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
+    <Project Path="src/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
+    <Project Path="src/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
+    <Project Path="src/NOF.Infrastructure.MassTransit.EntityFrameworkCore/NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" Id="d150693c-238c-411e-af84-6c91a9f8589d" />
+    <Project Path="src/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
+    <Project Path="src/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
+    <Project Path="src/NOF.Integration.Observability.AspNetCore/NOF.Integration.Observability.AspNetCore.csproj" Id="66cc29f1-fb06-4771-911f-2d997ab399a0" />
     <Project Path="src/NOF.Integration.Observability/NOF.Integration.Observability.csproj" Id="3da587b5-56da-4ed8-86e0-84aa90432d0a" />
-    <Project Path="src/NOF.Integration/NOF.Integration.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
+    <Project Path="src/NOF.Integration.Core/NOF.Integration.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
   </Folder>
   <Folder Name="/tests/">

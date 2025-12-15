@@ -1,119 +1,151 @@
-using DotNet.Globbing;
-
 namespace NOF;
 
 /// <summary>
-/// 用户上下文接口，用于获取当前用户信息
+/// Represents the current user context, providing access to identity, permissions, and custom properties.
 /// </summary>
 public interface IUserContext
 {
     /// <summary>
-    /// 用户是否已认证
+    /// Gets a value indicating whether the user is authenticated.
     /// </summary>
     bool IsAuthenticated { get; }
 
     /// <summary>
-    /// 用户ID
+    /// Gets the unique identifier of the current user, or <c>null</c> if not authenticated.
     /// </summary>
     string? Id { get; }
 
     /// <summary>
-    /// 用户名
+    /// Gets the username of the current user, or <c>null</c> if not authenticated.
     /// </summary>
     string? Username { get; }
 
     /// <summary>
-    /// 用户权限列表
+    /// Gets the list of permissions assigned to the current user.
     /// </summary>
-    List<string> Permissions { get; }
+    IList<string> Permissions { get; }
 
     /// <summary>
-    /// 检查用户是否拥有指定权限
+    /// Gets a dictionary for storing custom user-related properties.
+    /// Keys are typically strings or enums; values can be any object or <c>null</c>.
     /// </summary>
-    /// <param name="permission">权限名称</param>
-    /// <returns>如果用户拥有该权限则返回true，否则返回false</returns>
+    IDictionary<object, object?> Properties { get; }
+
+    /// <summary>
+    /// Determines whether the current user has the specified permission.
+    /// Supports exact match and wildcard patterns (e.g., "order.*").
+    /// </summary>
+    /// <param name="permission">The permission name to check.</param>
+    /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
     bool HasPermission(string permission);
 
     /// <summary>
-    /// 设置当前用户上下文
+    /// Sets the current user context synchronously.
     /// </summary>
-    /// <param name="id">用户id</param>
-    /// <param name="username">用户名</param>
-    /// <param name="permissions">用户权限</param>
+    /// <param name="id">The user ID. Must not be null or empty.</param>
+    /// <param name="username">The username. Must not be null or empty.</param>
+    /// <param name="permissions">The list of permissions assigned to the user.</param>
+    /// <exception cref="InvalidOperationException">Thrown if <paramref name="id"/> or <paramref name="username"/> is null or empty.</exception>
     void SetUser(string id, string username, IEnumerable<string> permissions);
 
     /// <summary>
-    /// 设置当前用户上下文
+    /// Sets the current user context asynchronously.
     /// </summary>
-    /// <param name="id">用户id</param>
-    /// <param name="username">用户名</param>
-    /// <param name="permissions">用户权限</param>
+    /// <param name="id">The user ID. Must not be null or empty.</param>
+    /// <param name="username">The username. Must not be null or empty.</param>
+    /// <param name="permissions">The list of permissions assigned to the user.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if <paramref name="id"/> or <paramref name="username"/> is null or empty.</exception>
     Task SetUserAsync(string id, string username, IEnumerable<string> permissions);
 
     /// <summary>
-    /// 取消设置当前用户上下文，即设为登出状态
+    /// Clears the current user context, marking the user as unauthenticated.
     /// </summary>
     void UnsetUser();
 
     /// <summary>
-    /// 取消设置当前用户上下文，即设为登出状态
+    /// Clears the current user context asynchronously, marking the user as unauthenticated.
     /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task UnsetUserAsync();
 }
 
 /// <summary>
-/// 用户上下文实现，用于获取当前用户信息
+/// Default implementation of <see cref="IUserContext"/>.
 /// </summary>
 public class UserContext : IUserContext
 {
-    public bool IsAuthenticated => Id is not null;
+    private readonly StringComparison _comparison;
 
-    public string? Id { get; private set; }
-
-    public string? Username { get; private set; }
-
-    public List<string> Permissions { get; } = [];
-
-    public bool HasPermission(string permission)
+    public UserContext(StringComparison comparison = StringComparison.OrdinalIgnoreCase)
     {
-        // 精确匹配
-        if (Permissions.Contains(permission, StringComparer.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        // 通配符匹配
-        return Permissions.Where(userPermission => userPermission.Contains('*'))
-            .Select(Glob.Parse)
-            .Any(glob => glob.IsMatch(permission));
+        _comparison = comparison;
     }
 
+    /// <inheritdoc />
+    public bool IsAuthenticated => Id is not null;
+
+    /// <inheritdoc />
+    public string? Id { get; private set; }
+
+    /// <inheritdoc />
+    public string? Username { get; private set; }
+
+    private readonly List<string> _permissions = [];
+
+    /// <inheritdoc />
+    public IList<string> Permissions => _permissions;
+
+    /// <inheritdoc />
+    public IDictionary<object, object?> Properties { get; } = new Dictionary<object, object?>();
+
+    /// <inheritdoc />
+    public bool HasPermission(string permission)
+    {
+        if (string.IsNullOrEmpty(permission))
+            return false;
+
+        var comparer = StringComparer.FromComparison(_comparison);
+
+        // Exact match
+        if (Permissions.Contains(permission, comparer))
+            return true;
+
+        // Wildcard match (e.g., "order.*", "admin.*.delete")
+        return Permissions
+            .Where(p => p?.Contains('*') == true)
+            .Any(pattern => permission.MatchWildcard(pattern!, _comparison));
+    }
+
+    /// <inheritdoc />
     public void SetUser(string id, string username, IEnumerable<string> permissions)
     {
         if (string.IsNullOrEmpty(id))
-        {
-            throw new InvalidOperationException("用户ID不可为空");
-        }
+            throw new InvalidOperationException("User ID cannot be null or empty.");
 
         if (string.IsNullOrEmpty(username))
-        {
-            throw new InvalidOperationException("用户名不可为空");
-        }
+            throw new InvalidOperationException("Username cannot be null or empty.");
+
         Id = id;
         Username = username;
-        Permissions.AddRange(permissions);
+        Permissions.Clear();
+        _permissions.AddRange(permissions);
     }
 
+    /// <inheritdoc />
     public Task SetUserAsync(string id, string username, IEnumerable<string> permissions)
         => Task.Run(() => SetUser(id, username, permissions));
 
+    /// <inheritdoc />
     public void UnsetUser()
     {
         Id = null;
         Username = null;
         Permissions.Clear();
+        Properties.Clear();
     }
 
+    /// <inheritdoc />
     public Task UnsetUserAsync()
         => Task.Run(UnsetUser);
 }

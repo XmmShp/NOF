@@ -16,13 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NOF.Contract.Internal\NOF.Contract.Internal.csproj" />
+    <ProjectReference Include="..\NOF.Integration.Contract\NOF.Integration.Contract.csproj" />
     <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\NOF.Domain\NOF.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Utilities\" />
   </ItemGroup>
 
 </Project>

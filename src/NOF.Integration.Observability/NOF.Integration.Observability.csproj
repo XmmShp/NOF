@@ -9,13 +9,12 @@
 	<ItemGroup>
 		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 		<PackageReference Include="OpenTelemetry.Instrumentation.Http" />
 		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\NOF.Integration\NOF.Integration.csproj" />
+	  <ProjectReference Include="..\NOF.Integration.Core\NOF.Integration.Core.csproj" />
 	</ItemGroup>
 
 </Project>

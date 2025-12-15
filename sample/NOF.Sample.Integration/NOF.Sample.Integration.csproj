@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Integration\NOF.Integration.csproj" />
-    <ProjectReference Include="..\NOF.Sample.Contract.Internal\NOF.Sample.Contract.Internal.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NOF.Integration.Core\NOF.Integration.Core.csproj" />
+    <ProjectReference Include="..\NOF.Sample.Integration.Contract\NOF.Sample.Integration.Contract.csproj" />
   </ItemGroup>
 
 </Project>

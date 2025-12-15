@@ -3,19 +3,19 @@ using System.Text;
 
 namespace NOF.Sample;
 
-internal class ConfigurationCenterConfigurator : IConfiguringServicesConfigurator
+internal class ConfigurationCenterConfig : IBaseSettingsServiceConfig
 {
     private readonly string _systemName;
 
-    public ConfigurationCenterConfigurator(string systemName)
+    public ConfigurationCenterConfig(string systemName)
     {
         _systemName = systemName;
     }
 
-    public async ValueTask ExecuteAsync(INOFApp app)
+    public async ValueTask ExecuteAsync(INOFAppBuilder buider)
     {
-        ArgumentNullException.ThrowIfNull(app.CommandSender);
-        var response = await app.CommandSender.SendAsync(new GetConfigurationCommand(_systemName));
+        ArgumentNullException.ThrowIfNull(buider.RequestSender);
+        var response = await buider.RequestSender.SendAsync(new GetConfigurationRequest(_systemName));
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Value.Content))
         {
             return;
@@ -24,6 +24,6 @@ internal class ConfigurationCenterConfigurator : IConfiguringServicesConfigurato
         var buffer = Encoding.UTF8.GetBytes(response.Value.Content);
         var ms = new MemoryStream(buffer);
 
-        app.Unwrap().Configuration.AddJsonStream(ms);
+        buider.Configuration.AddJsonStream(ms);
     }
 }

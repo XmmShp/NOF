@@ -49,5 +49,17 @@ public enum HttpVerb
     Post,
     Put,
     Delete,
-    Patch
+    Patch,
 }
+
+public static partial class __NOF_Contract_Extensions__
+{
+    extension(HttpVerb method)
+    {
+        public bool IsUseBody()
+        {
+            return method == HttpVerb.Post || method == HttpVerb.Put || method == HttpVerb.Patch;
+        }
+    }
+}
+

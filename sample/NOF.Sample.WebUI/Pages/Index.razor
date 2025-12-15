@@ -3,7 +3,7 @@
 @using NOF
 @inject IMessageService Message
 @inject INOFService NOFService
-@inject ICommandSender CommandSender
+@inject IRequestSender Sender
 
 <PageTitle>配置中心</PageTitle>
 
@@ -268,7 +268,7 @@
             var node = Message.UnwrapWithMessage(result);
             if (node?.Node != null)
             {
-                var response = await CommandSender.SendAsync(new GetConfigurationCommand(node.Node.Name));
+                var response = await Sender.SendAsync(new GetConfigurationRequest(node.Node.Name));
 
                 if (response.IsSuccess)
                 {

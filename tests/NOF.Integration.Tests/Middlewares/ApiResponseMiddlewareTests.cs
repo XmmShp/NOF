@@ -101,7 +101,7 @@ public class ApiResponseMiddlewareTests
 
         // Assert
         var responseBody = await context.GetResponseAsStringAsync();
-        responseBody.Should().Contain("isSuccess");
+        responseBody.Should().Contain("IsSuccess");
         responseBody.Should().Contain("true");
         responseBody.Should().Contain("Test");
     }

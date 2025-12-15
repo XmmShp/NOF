@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+	  <IsPackable>true</IsPackable>
+	  <PackageId>NOF.Host</PackageId>
+	  <Description>NOF Host</Description>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+		<PackageReference Include="Scalar.AspNetCore" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\NOF.Integration.Core\NOF.Integration.Core.csproj" />
+	</ItemGroup>
+
+</Project>

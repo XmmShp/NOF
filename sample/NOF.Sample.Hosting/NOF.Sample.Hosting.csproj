@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+		<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\src\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
+	  <ProjectReference Include="..\..\src\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" />
+	  <ProjectReference Include="..\..\src\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
+	  <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.EntityFrameworkCore\NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" />
+	  <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
+	  <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
+	  <ProjectReference Include="..\..\src\NOF.Integration.Observability\NOF.Integration.Observability.csproj" />
+	  <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />
+	  <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
+	  <ProjectReference Include="..\NOF.Sample.WebUI\NOF.Sample.WebUI.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+	</ItemGroup>
+</Project>

@@ -17,12 +17,12 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Host\NOF.Host.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Integration.EntityFrameworkCore.PostgreSQL\NOF.Integration.EntityFrameworkCore.PostgreSQL.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Integration.EntityFrameworkCore\NOF.Integration.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Integration.MassTransit.EntityFrameworkCore\NOF.Integration.MassTransit.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Integration.MassTransit.RabbitMQ\NOF.Integration.MassTransit.RabbitMQ.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Integration.MassTransit\NOF.Integration.MassTransit.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.EntityFrameworkCore\NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
     <ProjectReference Include="..\..\src\NOF.Integration.Observability\NOF.Integration.Observability.csproj" />
     <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
   </ItemGroup>

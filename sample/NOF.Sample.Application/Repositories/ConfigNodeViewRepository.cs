@@ -1,4 +1,3 @@
-using NOF.Sample.Application.CacheKeys;
 using NOF.Sample.Application.Entities;
 
 namespace NOF.Sample.Application.Repositories;

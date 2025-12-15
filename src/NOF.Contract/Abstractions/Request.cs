@@ -1,5 +1,7 @@
 namespace NOF;
 
-public interface IRequest;
+public interface IRequestBase;
 
-public interface IRequest<TResponse>;
+public interface IRequest : IRequestBase;
+
+public interface IRequest<TResponse> : IRequestBase;

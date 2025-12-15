@@ -42,7 +42,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
                 m.Identifier.Text == "CreateUserAsync"
-                && m.ParameterList.Parameters.Count == 1
+                && m.ParameterList.Parameters.Count == 3
                 && m.ParameterList.Parameters[0].Type!.ToString() == "MyApp.CreateUserRequest");
     }
 
@@ -74,7 +74,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
                 m.Identifier.Text == "GetProfileAsync"
-                && m.ParameterList.Parameters.Count == 1
+                && m.ParameterList.Parameters.Count == 3
                 && m.ParameterList.Parameters[0].Type!.ToString() == "MyApi.UserProfileRequest");
     }
 
@@ -105,7 +105,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
                 m.Identifier.Text == "DeleteTaskAsync"
-                && m.ParameterList.Parameters.Count == 1
+                && m.ParameterList.Parameters.Count == 3
                 && m.ParameterList.Parameters[0].Type!.ToString() == "Tasks.DeleteTaskRequest");
     }
 

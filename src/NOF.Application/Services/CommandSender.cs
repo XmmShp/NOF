@@ -2,9 +2,7 @@ namespace NOF;
 
 public interface ICommandSender
 {
-    Task<Result> SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default);
-    Task<Result<TResponse>> SendAsync<TResponse>(ICommand<TResponse> command, string? destinationEndpointName = null, CancellationToken cancellationToken = default);
-    Task SendAsync(IAsyncCommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default);
+    Task SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default);
 }
 
 public interface ISender : ICommandSender, IRequestSender;
@@ -17,24 +15,18 @@ public class Sender : ISender
     public Sender(ICommandSender commandSender, IRequestSender requestSender)
     {
         ArgumentNullException.ThrowIfNull(commandSender);
-        _commandSender = commandSender;
-
         ArgumentNullException.ThrowIfNull(requestSender);
+
+        _commandSender = commandSender;
         _requestSender = requestSender;
     }
 
-    public Task<Result> SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+    public Task SendAsync(ICommand command, string? destinationEndpointName, CancellationToken cancellationToken)
         => _commandSender.SendAsync(command, destinationEndpointName, cancellationToken);
 
-    public Task<Result<TResponse>> SendAsync<TResponse>(ICommand<TResponse> command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
-        => _commandSender.SendAsync(command, destinationEndpointName, cancellationToken);
+    public Task<Result> SendAsync(IRequest request, string? destinationEndpointName, CancellationToken cancellationToken)
+        => _requestSender.SendAsync(request, destinationEndpointName, cancellationToken);
 
-    public Task SendAsync(IAsyncCommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
-        => _commandSender.SendAsync(command, destinationEndpointName, cancellationToken);
-
-    public Task<Result> SendAsync(IRequest request, CancellationToken cancellationToken = default)
-        => _requestSender.SendAsync(request, cancellationToken);
-
-    public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
-        => _requestSender.SendAsync(request, cancellationToken);
+    public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName, CancellationToken cancellationToken)
+        => _requestSender.SendAsync(request, destinationEndpointName, cancellationToken);
 }
