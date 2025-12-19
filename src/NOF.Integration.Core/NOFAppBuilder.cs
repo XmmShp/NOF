@@ -143,7 +143,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// Initializes a new instance of the <see cref="NOFAppBuilder{THostApplication}"/> class.
     /// Sets up a default implementation of <see cref="IEventDispatcher"/> for internal configuration events.
     /// </summary>
-    protected NOFAppBuilder(bool autoInject)
+    protected NOFAppBuilder()
     {
         EventDispatcher = new NOFEventDispatcher();
         ServiceConfigs = [];
@@ -151,11 +151,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         if (Assembly.GetEntryAssembly() is { } assembly)
         {
             this.Assemblies.Add(assembly);
-        }
-
-        if (autoInject)
-        {
-            this.AutoInject();
         }
     }
 

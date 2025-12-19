@@ -1,6 +1,6 @@
-namespace NOF;
+using NOF.Application.Internals;
 
-public interface ICommandHandler;
+namespace NOF;
 
 public interface ICommandHandler<TCommand> : ICommandHandler
     where TCommand : class, ICommand

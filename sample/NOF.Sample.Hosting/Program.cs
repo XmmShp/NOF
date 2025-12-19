@@ -3,17 +3,21 @@ using Microsoft.Extensions.Options;
 using NOF;
 using NOF.Sample;
 using NOF.Sample.Application.RequestHandlers;
+using NOF.Sample.Repositories;
 using NOF.Sample.WebUI;
 using Yitter.IdGenerator;
 
 var builder = NOFWebApplicationBuilder.Create(args, autoInject: true, useDefaultConfigs: true, autoMapEndpoints: true);
 
-builder.WithApplicationPart<ConfigNode>()
+builder
+    .WithApplicationPart<ConfigNodeRepository>()
+    .WithApplicationPart<ConfigNode>()
     .WithApplicationPart<GetRootConfigNodesRequest>()
     .WithApplicationPart<GetRootConfigNodes>()
     .WithApplicationPart<GetConfigurationRequest>();
 
 builder.AddObservability()
+    .AddAspNetCoreTelemetry(builder)
     .AddEFCore<ConfigurationDbContext>()
     .AutoMigrate(builder)
     .UsePostgreSQL();
@@ -24,11 +28,24 @@ builder.AddMassTransit(builder)
 
 builder.Services.AddOptionsInConfiguration<IdGeneratorOptions>();
 builder.Services.AddAntDesign()
-.AddRazorComponents()
-.AddInteractiveServerComponents();
+    .AddRazorComponents()
+    .AddInteractiveServerComponents();
 
 // Here, we self-call for test
 builder.Services.AddHttpClient<INOFService, NOFServiceClient>(client => client.BaseAddress = new Uri("http://localhost:55892/"));
+
+builder.Services.AddHostedService(async (sp, ct) =>
+{
+    while (!ct.IsCancellationRequested)
+    {
+        await using var scope = sp.CreateAsyncScope();
+        var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        await publisher.PublishAsync(new TaskStarted(), ct);
+        await uow.SaveChangesAsync(ct);
+        await Task.Delay(TimeSpan.FromSeconds(10), ct);
+    }
+});
 
 var app = await builder.BuildAsync();
 YitIdHelper.SetIdGenerator(app.Services.GetRequiredService<IOptions<IdGeneratorOptions>>().Value);

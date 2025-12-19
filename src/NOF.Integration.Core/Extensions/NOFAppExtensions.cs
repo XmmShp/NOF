@@ -7,7 +7,8 @@ namespace NOF;
 // ReSharper disable once InconsistentNaming
 public static partial class __NOF_Integration_Extensions__
 {
-    private const string Assemblies = "NOF.Integration:Assemblies";
+    private const string Assemblies = "NOF.Integration.Core:Assemblies";
+    private const string ExtraHandlerInfos = "NOF.Integration.Core:ExtraHandlerInfos";
     /// <param name="builder">The <see cref="INOFAppBuilder{THostApplication}"/> to operate on.</param>
     extension(INOFAppBuilder builder)
     {
@@ -52,7 +53,13 @@ public static partial class __NOF_Integration_Extensions__
         /// Gets the list of handler metadata (e.g., command, event, request handlers) discovered in the assemblies 
         /// configured for this builder. The scan is performed on-demand and results are cached per assembly.
         /// </summary>
-        public IReadOnlyList<HandlerInfo> HandlerInfos => HandlerScanner.ScanHandlers(builder.Assemblies);
+        public IReadOnlyList<HandlerInfo> HandlerInfos
+            => HandlerScanner.ScanHandlers(builder.Assemblies)
+                .Union(builder.ExtraHandlerInfos)
+                .ToList()
+                .AsReadOnly();
+
+        public List<HandlerInfo> ExtraHandlerInfos => builder.Properties.GetOrAdd(ExtraHandlerInfos, _ => new List<HandlerInfo>());
 
         /// <summary>
         /// Adds a service configuration delegate that will be executed during the service registration phase.

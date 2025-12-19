@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Conventions\**" />
+    <EmbeddedResource Remove="Conventions\**" />
+    <None Remove="Conventions\**" />
+  </ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="MassTransit" />
 	</ItemGroup>

@@ -5,7 +5,7 @@ namespace NOF.Sample;
 
 public class ConfigurationDbContext : NOFDbContext
 {
-    public ConfigurationDbContext(IEventDispatcher dispatcher, DbContextOptions options) : base(dispatcher, options)
+    public ConfigurationDbContext(DbContextOptions options) : base(options)
     {
     }
 

@@ -7,7 +7,7 @@ namespace NOF;
 
 public record MassTransitConfiguring(IBusRegistrationConfigurator Configurator);
 
-internal class MassTransitConfig : IDependentServiceConfig
+internal class MassTransitConfig : IDependentServiceConfig, IDepsOn<StateMachineConfig>
 {
     /// <inheritdoc/>
     public ValueTask ExecuteAsync(INOFAppBuilder builder)

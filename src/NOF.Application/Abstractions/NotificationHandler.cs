@@ -1,6 +1,6 @@
-namespace NOF;
+using NOF.Application.Internals;
 
-public interface INotificationHandler;
+namespace NOF;
 
 public interface INotificationHandler<in TNotification> : INotificationHandler
     where TNotification : class, INotification

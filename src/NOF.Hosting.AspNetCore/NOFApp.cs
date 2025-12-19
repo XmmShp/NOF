@@ -15,7 +15,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 {
     public WebApplicationBuilder InnerBuilder { get; }
 
-    private NOFWebApplicationBuilder(string[] args, bool autoInject) : base(autoInject)
+    private NOFWebApplicationBuilder(string[] args, bool autoInject)
     {
         InnerBuilder = WebApplication.CreateBuilder(args);
     }
@@ -35,6 +35,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         {
             builder.AutoMapEndpoints();
         }
+        builder.AddServiceConfig(new StateMachineConfig());
         return builder;
     }
 

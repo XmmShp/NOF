@@ -1,6 +1,6 @@
-namespace NOF;
+using NOF.Application.Internals;
 
-public interface IEventHandler;
+namespace NOF;
 
 public interface IEventHandler<in TEvent> : IEventHandler
     where TEvent : class, IEvent

@@ -10,12 +10,12 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
         public INOFMassTransitSelector AddMassTransit<THostApplicationBuilder>(INOFAppBuilder<THostApplicationBuilder> originBuilder)
             where THostApplicationBuilder : class, IHost
         {
-
             builder.Services.AddScoped<IRequestHandleNodeFactory, RequestHandleNodeFactory>();
             builder.Services.AddScoped<ICommandSender, MassTransitCommandSender>();
             builder.Services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
             builder.Services.AddScoped<INotificationPublisher, MassTransitNotificationPublisher>();
             builder.Services.AddScoped<IRequestSender, MassTransitRequestSender>();
+            builder.Services.AddScoped<ICorrelationIdProvider, MassTransitCorrelationIdProvider>();
             builder.AddServiceConfig(new MassTransitConfig());
 
             builder.Services.AddSingleton<IRequestHandleNodeRegistry, RequestHandleNodeRegistry>();

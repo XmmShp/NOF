@@ -7,7 +7,6 @@ public class AutoInjectConfig : IDependentServiceConfig
 {
     public ValueTask ExecuteAsync(INOFAppBuilder builder)
     {
-        builder.Services.AddSingleton(builder.EventDispatcher);
         var assemblies = builder.Assemblies;
         var types = assemblies
             .SelectMany(a => a.GetTypes())
@@ -44,8 +43,7 @@ public class AutoInjectConfig : IDependentServiceConfig
                     // Then register each interface as a factory pointing to the concrete type
                     foreach (var serviceType in serviceTypeList)
                     {
-                        var st = serviceType; // capture for closure
-                        builder.Services.Add(new ServiceDescriptor(st, sp => sp.GetRequiredService(type), lifetime: Map(lifetime)));
+                        builder.Services.Add(new ServiceDescriptor(serviceType, sp => sp.GetRequiredService(type), lifetime: Map(lifetime)));
                     }
                 }
             }

@@ -1,6 +1,6 @@
-namespace NOF;
+using NOF.Application.Internals;
 
-public interface IRequestHandler;
+namespace NOF;
 
 public interface IRequestHandler<TRequest> : IRequestHandler
     where TRequest : IRequest
