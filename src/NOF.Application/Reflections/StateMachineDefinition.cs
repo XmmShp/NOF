@@ -1,3 +1,3 @@
-namespace NOF.Application.Internals;
+namespace NOF.Application.Reflections;
 
 public interface IStateMachineDefinition;

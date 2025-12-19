@@ -1,12 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application.Internals;
 
 namespace NOF;
 
 public static partial class __NOF_Application_Extensions__
 {
     extension<TState, TContext, TNotification>(IStateMachineBuilderWhenClause<TState, TContext, TNotification> when)
-        where TContext : class, IStateMachineContext<TState>, new()
+        where TContext : class, IStateMachineContext
         where TNotification : class, INotification
         where TState : struct, Enum
     {

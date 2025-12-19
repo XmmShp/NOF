@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NOF.Sample;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NOF.Sample.Migrations
 {
     [DbContext(typeof(ConfigurationDbContext))]
-    partial class ConfigurationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251219151209_RenameStateMachineInfo")]
+    partial class RenameStateMachineInfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -246,9 +249,6 @@ namespace NOF.Sample.Migrations
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
-
-                    b.Property<int>("State")
-                        .HasColumnType("integer");
 
                     b.HasKey("CorrelationId", "DefinitionType");
 

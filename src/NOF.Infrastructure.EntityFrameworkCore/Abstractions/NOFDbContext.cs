@@ -1,14 +1,18 @@
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NOF;
 
 public record DbContextModelCreating(ModelBuilder Builder);
 
+[Table(nameof(StateMachineContextInfo))]
 internal sealed class StateMachineContextInfo
 {
-    public string CorrelationId { get; set; } = null!;
-    public string ContextType { get; set; } = null!;
-    public string ContextData { get; set; } = null!;
+    public required string CorrelationId { get; set; }
+    public required string DefinitionType { get; set; }
+    public required string ContextType { get; set; }
+    public required string ContextData { get; set; }
+    public required int State { get; set; }
 }
 
 public abstract class NOFDbContext : DbContext
@@ -26,7 +30,7 @@ public abstract class NOFDbContext : DbContext
     {
         modelBuilder.Entity<StateMachineContextInfo>(entity =>
         {
-            entity.HasKey(e => e.CorrelationId);
+            entity.HasKey(e => new { e.CorrelationId, e.DefinitionType });
             entity.Property(e => e.ContextType).IsRequired().HasMaxLength(1024);
             entity.Property(e => e.ContextData).IsRequired();
         });

@@ -1,18 +1,13 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Application.Utilities;
 
-public interface IEndpointNameProvider
+public class EndpointNameProvider
 {
-    static IEndpointNameProvider Instance { get; set; } = new EndpointNameProvider();
-    string GetEndpointName(Type type);
-}
-
-public class EndpointNameProvider : IEndpointNameProvider
-{
+    public static EndpointNameProvider Instance { get; protected set; } = new();
     private static readonly ConcurrentDictionary<Type, string> NameCache = [];
-    public string GetEndpointName(Type type)
+    public virtual string GetEndpointName(Type type)
     {
         if (NameCache.TryGetValue(type, out var cached))
         {
@@ -58,7 +53,7 @@ public class EndpointNameProvider : IEndpointNameProvider
         return NameCache.GetOrAdd(type, fallbackName);
     }
 
-    private static string BuildSafeTypeName(Type type)
+    protected virtual string BuildSafeTypeName(Type type)
     {
         if (!type.IsGenericType)
         {

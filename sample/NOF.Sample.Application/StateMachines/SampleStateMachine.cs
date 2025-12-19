@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using NOF.Application.Internals;
 
 namespace NOF.Sample;
 
@@ -10,16 +9,18 @@ public enum SampleState
     Failed
 }
 
-public record TaskStarted : INotification;
-public record ProcessingSucceeded : INotification;
-public record ProcessingFailed(string CorrelationId, string Reason) : INotification;
+public record TaskStarted(string TaskId) : INotification;
+public record ProcessingSucceeded(string TaskId) : INotification;
+public record ProcessingFailed(string TaskId, string Reason) : INotification;
+public record StartProcessingCommand(string TaskId) : ICommand;
 
-public record StartProcessingCommand(string CorrelationId) : ICommand;
-
-public class SampleStateMachineContext : IStateMachineContext<SampleState>
+public class SampleStateMachineContext : IStateMachineContext
 {
-    public string CorrelationId { get; set; }
-    public SampleState State { get; set; }
+    public string TaskId { get; set; }
+    public DateTime StartOn { get; set; }
+    public DateTime? SucceededOn { get; set; }
+    public DateTime? FailedOn { get; set; }
+    public string FailReason { get; set; }
 }
 
 public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
@@ -41,13 +42,13 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
         var isSuccess = Random.Shared.Next(2) == 0;
         if (isSuccess)
         {
-            _logger.LogInformation("Processing {Id} Succeeded", command.CorrelationId);
-            await _notificationPublisher.PublishAsync(new ProcessingSucceeded(), cancellationToken);
+            _logger.LogInformation("Processing {Id} Succeeded", command.TaskId);
+            await _notificationPublisher.PublishAsync(new ProcessingSucceeded(command.TaskId), cancellationToken);
         }
         else
         {
-            _logger.LogError("Processing {Id} Failed", command.CorrelationId);
-            await _notificationPublisher.PublishAsync(new ProcessingFailed(command.CorrelationId, "An error occurred during processing."), cancellationToken);
+            _logger.LogError("Processing {Id} Failed", command.TaskId);
+            await _notificationPublisher.PublishAsync(new ProcessingFailed(command.TaskId, "An error occurred during processing."), cancellationToken);
         }
 
         await _uow.SaveChangesAsync(cancellationToken);
@@ -56,23 +57,35 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
 
 public class SampleStateMachine : IStateMachineDefinition<SampleState, SampleStateMachineContext>
 {
+    private string TaskKey(string taskId) => $"Task-{taskId}";
+
     public void Build(IStateMachineBuilder<SampleState, SampleStateMachineContext> builder)
     {
-        builder.StartWhen<TaskStarted>(SampleState.Processing)
-            .Execute((ctx, _, _) => Console.WriteLine($"[{ctx.CorrelationId}] Task ."))
-            .SendCommandAsync((ctx, _) => new StartProcessingCommand(ctx.CorrelationId));
+        builder.Correlate<TaskStarted>(n => TaskKey(n.TaskId));
+        builder.Correlate<ProcessingSucceeded>(n => TaskKey(n.TaskId));
+        builder.Correlate<ProcessingFailed>(n => TaskKey(n.TaskId));
+
+        builder.StartWhen<TaskStarted>(
+                SampleState.Processing,
+                n => new SampleStateMachineContext
+                {
+                    StartOn = DateTime.UtcNow,
+                    TaskId = n.TaskId
+                })
+            .SendCommandAsync((_, notification) => new StartProcessingCommand(notification.TaskId));
 
         builder.On(SampleState.Processing)
             .When<ProcessingSucceeded>()
-            .Execute((ctx, _, _) => Console.WriteLine($"[{ctx.CorrelationId}] Task succeeded!"))
+            .Modify((ctx, _) => ctx.SucceededOn = DateTime.UtcNow)
             .TransitionTo(SampleState.Completed);
 
         builder.On(SampleState.Processing)
-            .When<ProcessingFailed>()
-            .Execute((ctx, notification, _) =>
-            {
-                Console.WriteLine($"[{ctx.CorrelationId}] Failed: {notification.Reason}");
-            })
-            .TransitionTo(SampleState.Failed);
+                .When<ProcessingFailed>()
+                .Modify((ctx, notification) =>
+                {
+                    ctx.FailedOn = DateTime.UtcNow;
+                    ctx.FailReason = notification.Reason;
+                })
+                .TransitionTo(SampleState.Failed);
     }
 }

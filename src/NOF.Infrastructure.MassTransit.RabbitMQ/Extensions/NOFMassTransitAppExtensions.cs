@@ -20,9 +20,6 @@ public static partial class __NOF_Infrastructure_MassTransit_RabbitMQ_Extensions
                     cfg.Publish<ICommand>(p => p.Exclude = true);
                     cfg.Publish<INotification>(p => p.Exclude = true);
 
-                    cfg.UseSendFilter(typeof(CorrelationFilter<>), context);
-                    cfg.UsePublishFilter(typeof(CorrelationFilter<>), context);
-
                     var connectString = selector.Builder.Configuration.GetConnectionString(connectStringName);
                     ArgumentException.ThrowIfNullOrEmpty(connectString);
                     cfg.Host(new Uri(connectString));

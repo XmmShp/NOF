@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application.Internals;
+using NOF.Application.Integrations;
+using NOF.Application.Reflections;
 using System.Reflection;
 
 namespace NOF;
@@ -13,8 +14,7 @@ public class StateMachineConfig : IDependentServiceConfig
             .SelectMany(a => a.GetTypes())
             .Where(t => t is { IsClass: true, IsAbstract: false });
 
-        var startupRules = new List<IStateMachineOperation>();
-        var transferRules = new List<IStateMachineOperation>();
+        var blueprints = new List<StateMachineBlueprint>();
         foreach (var type in types)
         {
             if (type.IsAbstract || type.IsInterface || type.IsGenericTypeDefinition)
@@ -60,23 +60,20 @@ public class StateMachineConfig : IDependentServiceConfig
                 var method = type.GetMethod(nameof(IStateMachineDefinition<,>.Build), BindingFlags.Instance | BindingFlags.Public);
                 ArgumentNullException.ThrowIfNull(method);
                 method.Invoke(defObj, [typedBuilder]);
-                var (startup, transfer) = typedBuilder.Build();
-                foreach (var operation in startup)
+                var blueprint = typedBuilder.Build();
+                ArgumentNullException.ThrowIfNull(blueprint);
+
+                blueprint.DefinitionType = type;
+                foreach (var notificationType in blueprint.ObservedNotificationTypes)
                 {
-                    var handlerType = typeof(StateMachineNotificationHandler<,>).MakeGenericType(type, operation.NotificationType);
-                    builder.ExtraHandlerInfos.Add(new HandlerInfo(HandlerKind.Notification, handlerType, operation.NotificationType, null));
-                    startupRules.Add(operation);
+                    var handlerType = typeof(StateMachineNotificationHandler<,>).MakeGenericType(type, notificationType);
+                    builder.ExtraHandlerInfos.Add(new HandlerInfo(HandlerKind.Notification, handlerType, notificationType, null));
                 }
-                foreach (var operation in transfer)
-                {
-                    var handlerType = typeof(StateMachineNotificationHandler<,>).MakeGenericType(type, operation.NotificationType);
-                    builder.ExtraHandlerInfos.Add(new HandlerInfo(HandlerKind.Notification, handlerType, operation.NotificationType, null));
-                    transferRules.Add(operation);
-                }
+                blueprints.Add(blueprint);
             }
         }
 
-        var registry = new StateMachineRegistry(startupRules, transferRules);
+        var registry = new StateMachineRegistry(blueprints);
         builder.Services.AddSingleton<IStateMachineRegistry>(registry);
         return ValueTask.CompletedTask;
     }

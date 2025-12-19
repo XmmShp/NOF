@@ -1,4 +1,4 @@
-using NOF.Application.Internals;
+using NOF.Application.Reflections;
 
 namespace NOF;
 

@@ -1,9 +1,9 @@
-using NOF.Application.Internals;
+using NOF.Application.Reflections;
 
 namespace NOF;
 
 public interface IStateMachineDefinition<TState, TContext> : IStateMachineDefinition
-    where TContext : class, IStateMachineContext<TState>, new()
+    where TContext : class, IStateMachineContext
     where TState : struct, Enum
 {
     void Build(IStateMachineBuilder<TState, TContext> builder);
