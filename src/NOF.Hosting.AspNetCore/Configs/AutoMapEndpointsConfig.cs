@@ -79,7 +79,19 @@ public class AutoMapEndpointsConfig<THostApplicationBuilder> : IEndpointConfig<T
                     map[fromType] = del;
                 }
 
-                EndpointMapper.Map(app, attr.Method, route, del);
+                var endpoint = EndpointMapper.Map(app, attr.Method, route, del);
+                if (attr.AllowAnonymous)
+                {
+                    endpoint.AllowAnonymous();
+                }
+                else
+                {
+                    endpoint.RequireAuthorization();
+                    if (attr.Permission is not null)
+                    {
+                        endpoint.RequirePermission(attr.Permission);
+                    }
+                }
             }
         }
 

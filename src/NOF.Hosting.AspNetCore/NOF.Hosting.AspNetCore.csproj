@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
 
 	  <IsPackable>true</IsPackable>
-	  <PackageId>NOF.Host</PackageId>
-	  <Description>NOF Host</Description>
+	  <PackageId>NOF.Hosting.AspNetCore</PackageId>
+	  <Description>NOF.Hosting.AspNetCore</Description>
   </PropertyGroup>
 
 	<ItemGroup>

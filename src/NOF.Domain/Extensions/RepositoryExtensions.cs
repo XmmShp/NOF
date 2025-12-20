@@ -1,6 +1,6 @@
 namespace NOF;
 
-public static class RepositoryExtensions
+public static partial class __NOF_Domain_Extensions__
 {
     extension<TAggregateRoot>(IRepository<TAggregateRoot> repository)
         where TAggregateRoot : class, IAggregateRoot

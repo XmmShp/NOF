@@ -5,7 +5,7 @@ namespace NOF;
 
 public record DbContextConfigurating(DbContextOptionsBuilder Options);
 
-public static partial class __NOF_Infrastructure__EntityFrameworkCore__
+public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
     private const string UseEntityFrameworkCore = "NOF.Infrastructure.EntityFrameworkCore:UseEntityFrameworkCore";
     private const string DbContextType = "NOF.Infrastructure.EntityFrameworkCore:DbContextType";

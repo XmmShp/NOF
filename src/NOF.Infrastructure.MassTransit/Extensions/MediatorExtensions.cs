@@ -4,7 +4,7 @@ using System.Runtime.ExceptionServices;
 
 namespace NOF;
 
-public static class MediatorExtensions
+public static partial class __NOF_Infrastructure_MassTransit_Extensions__
 {
     extension(IMediator mediator)
     {

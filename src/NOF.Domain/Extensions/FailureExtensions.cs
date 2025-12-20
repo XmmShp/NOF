@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NOF;
 
-public static class FailureExtensions
+public static partial class __NOF_Domain_Extensions__
 {
     extension(Failure failure)
     {

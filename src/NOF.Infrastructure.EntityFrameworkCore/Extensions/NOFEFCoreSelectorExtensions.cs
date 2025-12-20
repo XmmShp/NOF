@@ -2,7 +2,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
-public static partial class __NOF_Infrastructure__EntityFrameworkCore__
+public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
     extension<THostApplication>(INOFEFCoreSelector<THostApplication> selector)
         where THostApplication : class, IHost
