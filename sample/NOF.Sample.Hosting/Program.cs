@@ -16,13 +16,12 @@ builder
     .WithApplicationPart<GetRootConfigNodes>()
     .WithApplicationPart<GetConfigurationRequest>();
 
-builder.AddObservability()
-    .AddAspNetCoreTelemetry(builder)
-    .AddEFCore<ConfigurationDbContext>()
-    .AutoMigrate(builder)
+builder.AddEFCore()
+    .WithDbContext<ConfigurationDbContext>()
+    .AutoMigrate()
     .UsePostgreSQL();
 
-builder.AddMassTransit(builder)
+builder.AddMassTransit()
     .UseEFCoreOutbox(o => o.UsePostgres())
     .UseRabbitMQ();
 

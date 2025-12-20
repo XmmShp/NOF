@@ -15,8 +15,6 @@
 	  <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.EntityFrameworkCore\NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" />
 	  <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
 	  <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
-	  <ProjectReference Include="..\..\src\NOF.Integration.Observability.AspNetCore\NOF.Integration.Observability.AspNetCore.csproj" />
-	  <ProjectReference Include="..\..\src\NOF.Integration.Observability\NOF.Integration.Observability.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.WebUI\NOF.Sample.WebUI.csproj" />

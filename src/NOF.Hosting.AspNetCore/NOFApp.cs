@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("NOF.Integration.Tests")]
@@ -43,6 +47,34 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     protected override Task<WebApplication> BuildApplicationAsync()
     {
         return Task.FromResult(InnerBuilder.Build());
+    }
+
+    protected override void ConfigureDefaultServices()
+    {
+        base.ConfigureDefaultServices();
+
+        const string healthEndpointPath = "/health";
+        const string alivenessEndpointPath = "/alive";
+        const string tag = "live";
+
+        Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [tag]);
+        Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
+        Services.ConfigureOpenTelemetryTracerProvider(tracing =>
+            tracing.AddAspNetCoreInstrumentation(options =>
+                options.Filter = context =>
+                    !context.Request.Path.StartsWithSegments(healthEndpointPath)
+                    && !context.Request.Path.StartsWithSegments(alivenessEndpointPath)
+            ));
+
+        this.AddApplicationConfig((_, application) =>
+        {
+            application.MapHealthChecks(healthEndpointPath);
+            application.MapHealthChecks(alivenessEndpointPath, new HealthCheckOptions
+            {
+                Predicate = r => r.Tags.Contains(tag)
+            });
+            return Task.CompletedTask;
+        });
     }
 
     /// <inheritdoc />

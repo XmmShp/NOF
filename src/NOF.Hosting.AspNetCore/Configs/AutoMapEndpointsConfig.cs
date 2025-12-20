@@ -9,7 +9,7 @@ namespace NOF;
 public class AutoMapEndpointsConfig<THostApplicationBuilder> : IEndpointConfig<THostApplicationBuilder>
     where THostApplicationBuilder : class, IHost, IEndpointRouteBuilder
 {
-    public Task ExecuteAsync(INOFAppBuilder<THostApplicationBuilder> builder, THostApplicationBuilder app)
+    public Task ExecuteAsync(INOFAppBuilder builder, THostApplicationBuilder app)
     {
         foreach (var type in builder.Assemblies.SelectMany(a => a.GetTypes()))
         {

@@ -22,7 +22,7 @@ public interface IDependentServiceConfig : IServiceConfig, IDepsOn<IBaseSettings
 /// This is the first step in the application configuration pipeline.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface IDataSeedConfig<THostApplication> : IApplicationConfig<THostApplication>
+public interface IDataSeedConfig<in THostApplication> : IApplicationConfig<THostApplication>
     where THostApplication : class, IHost;
 
 /// <summary>
@@ -30,7 +30,7 @@ public interface IDataSeedConfig<THostApplication> : IApplicationConfig<THostApp
 /// Depends on data seeding to ensure telemetry contexts are properly initialized.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface IObservabilityConfig<THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IDataSeedConfig<THostApplication>>
+public interface IObservabilityConfig<in THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IDataSeedConfig<THostApplication>>
     where THostApplication : class, IHost;
 
 /// <summary>
@@ -38,7 +38,7 @@ public interface IObservabilityConfig<THostApplication> : IApplicationConfig<THo
 /// Executes after observability to ensure security events are logged and traced.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface ISecurityConfig<THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IObservabilityConfig<THostApplication>>
+public interface ISecurityConfig<in THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IObservabilityConfig<THostApplication>>
     where THostApplication : class, IHost;
 
 /// <summary>
@@ -46,7 +46,7 @@ public interface ISecurityConfig<THostApplication> : IApplicationConfig<THostApp
 /// Runs after security to ensure responses respect authentication/authorization outcomes.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface IResponseFormattingConfig<THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<ISecurityConfig<THostApplication>>
+public interface IResponseFormattingConfig<in THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<ISecurityConfig<THostApplication>>
     where THostApplication : class, IHost;
 
 /// <summary>
@@ -54,7 +54,7 @@ public interface IResponseFormattingConfig<THostApplication> : IApplicationConfi
 /// Depends on response formatting to ensure auth failures return standardized error structures.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface IAuthenticationConfig<THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IResponseFormattingConfig<THostApplication>>
+public interface IAuthenticationConfig<in THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IResponseFormattingConfig<THostApplication>>
     where THostApplication : class, IHost;
 
 /// <summary>
@@ -62,7 +62,7 @@ public interface IAuthenticationConfig<THostApplication> : IApplicationConfig<TH
 /// or application service registrations that require authenticated context.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface IBusinessLogicConfig<THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IAuthenticationConfig<THostApplication>>
+public interface IBusinessLogicConfig<in THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IAuthenticationConfig<THostApplication>>
     where THostApplication : class, IHost;
 
 /// <summary>
@@ -71,5 +71,5 @@ public interface IBusinessLogicConfig<THostApplication> : IApplicationConfig<THo
 /// ensuring all underlying infrastructure (auth, business logic, etc.) is ready.
 /// </summary>
 /// <typeparam name="THostApplication">The host application type, constrained to <see cref="IHost"/>.</typeparam>
-public interface IEndpointConfig<THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IBusinessLogicConfig<THostApplication>>
+public interface IEndpointConfig<in THostApplication> : IApplicationConfig<THostApplication>, IDepsOn<IBusinessLogicConfig<THostApplication>>
     where THostApplication : class, IHost;

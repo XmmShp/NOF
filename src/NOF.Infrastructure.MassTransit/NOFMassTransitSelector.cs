@@ -1,18 +1,21 @@
+using Microsoft.Extensions.Hosting;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("NOF.Integration.Tests")]
 
 namespace NOF;
 
-public interface INOFMassTransitSelector
+public interface INOFMassTransitSelector<THostApplication>
+    where THostApplication : class, IHost
 {
-    public INOFAppBuilder Builder { get; }
+    public INOFAppBuilder<THostApplication> Builder { get; }
 }
 
-public class NOFMassTransitSelector : INOFMassTransitSelector
+public class NOFMassTransitSelector<THostApplication> : INOFMassTransitSelector<THostApplication>
+    where THostApplication : class, IHost
 {
-    public INOFAppBuilder Builder { get; }
-    public NOFMassTransitSelector(INOFAppBuilder builder)
+    public INOFAppBuilder<THostApplication> Builder { get; }
+    public NOFMassTransitSelector(INOFAppBuilder<THostApplication> builder)
     {
         Builder = builder;
     }

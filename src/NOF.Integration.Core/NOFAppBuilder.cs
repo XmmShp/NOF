@@ -3,6 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NOF.Application.Integrations;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -189,6 +193,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// <inheritdoc />
     public virtual async Task<THostApplication> BuildAsync()
     {
+        ConfigureDefaultServices();
         var regGraph = new ConfiguratorGraph<IServiceConfig>(ServiceConfigs);
         foreach (var task in regGraph.GetExecutionOrder())
         {
@@ -212,6 +217,38 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// </summary>
     /// <returns>A task that resolves to the built host application instance.</returns>
     protected abstract Task<THostApplication> BuildApplicationAsync();
+
+    protected virtual void ConfigureDefaultServices()
+    {
+        const string OTEL_EXPORTER_OTLP_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT";
+        Logging.AddOpenTelemetry(logging =>
+        {
+            logging.IncludeFormattedMessage = true;
+            logging.IncludeScopes = true;
+        });
+
+        Services.AddOpenTelemetry()
+            .WithMetrics(metrics =>
+            {
+                metrics.AddMeter(this.MetricNames.ToArray());
+                metrics.AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation();
+            })
+            .WithTracing(tracing =>
+            {
+                tracing.AddSource(StateMachineTracing.StateMachineActivitySourceName);
+                tracing.AddSource(this.ActivitySources.ToArray());
+                tracing.AddSource(Environment.ApplicationName)
+                    .AddHttpClientInstrumentation();
+            });
+
+        var useOtlpExporter = !string.IsNullOrWhiteSpace(Configuration[OTEL_EXPORTER_OTLP_ENDPOINT]);
+
+        if (useOtlpExporter)
+        {
+            Services.AddOpenTelemetry().UseOtlpExporter();
+        }
+    }
 
     #region Abstractions
     /// <inheritdoc/>

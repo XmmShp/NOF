@@ -8,7 +8,7 @@ namespace NOF;
 public class CorsConfig<THostApplication> : ISecurityConfig<THostApplication>
     where THostApplication : class, IHost, IApplicationBuilder
 {
-    public Task ExecuteAsync(INOFAppBuilder<THostApplication> builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
     {
         var corsSettings = app.Services.GetRequiredService<IOptions<CorsSettingsOptions>>().Value;
         app.UseCors(policy =>

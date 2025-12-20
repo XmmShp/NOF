@@ -1,5 +1,6 @@
 using NOF.Application.Dependents;
 using NOF.Application.Integrations;
+using System.Diagnostics;
 
 namespace NOF.Application.Reflections;
 
@@ -31,20 +32,38 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
         {
             var correlationId = bp.GetCorrelationId(notification);
             ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-            var existing = await _repository.FindAsync(correlationId, bp.DefinitionType);
-            if (existing is not null)
+
+            const string process = "nof.state_machine.process";
+            using var instanceActivity = StateMachineTracing.Source.StartActivity(name: process, kind: ActivityKind.Consumer);
+
+            instanceActivity?.SetTag("nof.state_machine.correlation_id", correlationId);
+            instanceActivity?.SetTag("nof.state_machine.type", bp.DefinitionType.Name);
+            instanceActivity?.SetBaggage("nof_sm_correlation_id", correlationId);
+            instanceActivity?.SetBaggage("nof_sm_type", bp.DefinitionType.FullName);
+
+            try
             {
-                var context = new StatefulStateMachineContext { Context = existing.Value.Context, State = existing.Value.State };
-                await bp.TransferAsync(context, notification, _serviceProvider, cancellationToken);
-                _repository.Update(correlationId, bp.DefinitionType, context.Context, context.State);
-            }
-            else
-            {
-                var context = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
-                if (context is not null)
+                var existing = await _repository.FindAsync(correlationId, bp.DefinitionType);
+                if (existing is not null)
                 {
-                    _repository.Add(correlationId, bp.DefinitionType, context.Context, context.State);
+                    var context = new StatefulStateMachineContext
+                    { Context = existing.Value.Context, State = existing.Value.State };
+                    await bp.TransferAsync(context, notification, _serviceProvider, cancellationToken);
+                    _repository.Update(correlationId, bp.DefinitionType, context.Context, context.State);
                 }
+                else
+                {
+                    var context = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
+                    if (context is not null)
+                    {
+                        _repository.Add(correlationId, bp.DefinitionType, context.Context, context.State);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                instanceActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                throw;
             }
         }
 

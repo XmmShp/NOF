@@ -23,7 +23,6 @@
     <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.EntityFrameworkCore\NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Integration.Observability\NOF.Integration.Observability.csproj" />
     <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
   </ItemGroup>
 

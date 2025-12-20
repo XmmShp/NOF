@@ -8,7 +8,7 @@ namespace NOF;
 public class ScalarConfig<THostApplication> : IEndpointConfig<THostApplication>
     where THostApplication : class, IHost, IEndpointRouteBuilder
 {
-    public Task ExecuteAsync(INOFAppBuilder<THostApplication> builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
     {
         app.MapOpenApi();
         app.MapScalarApiReference();

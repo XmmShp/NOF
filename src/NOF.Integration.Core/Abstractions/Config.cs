@@ -16,7 +16,7 @@ public interface IConfig;
 /// <typeparam name="TDependency">
 /// The configuration type this component depends on. Must implement <see cref="IConfig"/>.
 /// </typeparam>
-public interface IDepsOn<TDependency> where TDependency : IConfig;
+public interface IDepsOn<out TDependency> where TDependency : IConfig;
 
 /// <summary>
 /// Defines a service-level configuration unit that participates in the DI container registration phase.
@@ -43,7 +43,7 @@ public interface IServiceConfig : IConfig
 /// <typeparam name="THostApplication">
 /// The concrete host application type constrained to be a class implementing <see cref="IHost"/>.
 /// </typeparam>
-public interface IApplicationConfig<THostApplication> : IConfig
+public interface IApplicationConfig<in THostApplication> : IConfig
     where THostApplication : class, IHost
 {
     /// <summary>
@@ -54,5 +54,5 @@ public interface IApplicationConfig<THostApplication> : IConfig
     /// <param name="builder">The application builder used for contextual information and services.</param>
     /// <param name="app">The constructed host application instance </param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ExecuteAsync(INOFAppBuilder<THostApplication> builder, THostApplication app);
+    Task ExecuteAsync(INOFAppBuilder builder, THostApplication app);
 }

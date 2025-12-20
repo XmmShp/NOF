@@ -1,13 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
 public static partial class __NOF_Infrastructure__EntityFrameworkCore__PostgreSQL__
 {
-    extension(INOFEFCoreSelector selector)
+    extension<THostApplication>(INOFEFCoreSelector<THostApplication> selector)
+        where THostApplication : class, IHost
     {
-        public INOFAppBuilder UsePostgreSQL(string connectStringName = "postgres")
+        public INOFAppBuilder<THostApplication> UsePostgreSQL(string connectStringName = "postgres")
         {
             selector.Builder.EventDispatcher.Subscribe<DbContextConfigurating>(e =>
             {

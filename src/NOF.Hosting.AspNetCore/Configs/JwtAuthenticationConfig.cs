@@ -10,7 +10,7 @@ namespace NOF;
 public class JwtAuthenticationConfig<THostApplication> : IAuthenticationConfig<THostApplication>
     where THostApplication : class, IHost, IApplicationBuilder
 {
-    public Task ExecuteAsync(INOFAppBuilder<THostApplication> builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
     {
         app.UseAuthentication();
         app.UseMiddleware<JwtUserInfoMiddleware>();

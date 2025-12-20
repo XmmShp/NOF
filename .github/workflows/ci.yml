@@ -62,8 +62,6 @@ jobs:
         # Integration packages
         dotnet pack src/NOF.Integration.Contract/NOF.Integration.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         dotnet pack src/NOF.Integration.Core/NOF.Integration.Core.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Integration.Observability/NOF.Integration.Observability.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
-        dotnet pack src/NOF.Integration.Observability.AspNetCore/NOF.Integration.Observability.AspNetCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts
         
         # Testing package
         dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts

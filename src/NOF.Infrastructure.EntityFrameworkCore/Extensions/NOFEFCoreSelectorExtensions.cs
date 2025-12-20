@@ -4,11 +4,12 @@ namespace NOF;
 
 public static partial class __NOF_Infrastructure__EntityFrameworkCore__
 {
-    extension(INOFEFCoreSelector selector)
+    extension<THostApplication>(INOFEFCoreSelector<THostApplication> selector)
+        where THostApplication : class, IHost
     {
-        public INOFEFCoreSelector AutoMigrate<THostApplication>(INOFAppBuilder<THostApplication> originBuilder) where THostApplication : class, IHost
+        public INOFEFCoreSelector<THostApplication> AutoMigrate()
         {
-            originBuilder.AddApplicationConfig(new AutoMigrateConfig<THostApplication>());
+            selector.Builder.AddApplicationConfig(new AutoMigrateConfig<THostApplication>());
             return selector;
         }
     }

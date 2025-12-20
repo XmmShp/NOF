@@ -1,3 +1,4 @@
+using NOF.Application.Integrations;
 using NOF.Application.Reflections;
 
 namespace NOF
@@ -102,7 +103,14 @@ namespace NOF.Application.Reflections
 
                 if (TargetState is not null)
                 {
-                    context.State = TargetState.Value;
+                    if (context.State != TargetState.Value)
+                    {
+                        const string stateTransition = "nof.state_machine.state_transition";
+                        using var activity = StateMachineTracing.Source.StartActivity(stateTransition);
+                        activity?.SetTag("from", context.State);
+                        activity?.SetTag("to", TargetState.Value);
+                        context.State = TargetState.Value;
+                    }
                 }
             }
         }

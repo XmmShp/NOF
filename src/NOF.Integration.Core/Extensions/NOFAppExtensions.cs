@@ -9,6 +9,9 @@ public static partial class __NOF_Integration_Extensions__
 {
     private const string Assemblies = "NOF.Integration.Core:Assemblies";
     private const string ExtraHandlerInfos = "NOF.Integration.Core:ExtraHandlerInfos";
+    private const string ActivitySources = "NOF.Integration.Core:ActivitySources";
+    private const string MetricNames = "NOF.Integration.Core:MetricNames";
+
     /// <param name="builder">The <see cref="INOFAppBuilder{THostApplication}"/> to operate on.</param>
     extension(INOFAppBuilder builder)
     {
@@ -18,6 +21,10 @@ public static partial class __NOF_Integration_Extensions__
         /// Extensions or modules can add their assemblies here to enable convention-based discovery during startup.
         /// </summary>
         public HashSet<Assembly> Assemblies => builder.Properties.GetOrAdd(Assemblies, _ => new HashSet<Assembly>());
+
+        public List<string> ActivitySources => builder.Properties.GetOrAdd(ActivitySources, _ => new List<string>());
+
+        public List<string> MetricNames => builder.Properties.GetOrAdd(MetricNames, _ => new List<string>());
 
         /// <summary>
         /// Registers the assembly containing the specified type as an application part for HTTP endpoint discovery.
@@ -106,7 +113,7 @@ public static partial class __NOF_Integration_Extensions__
         /// <see cref="DelegateApplicationConfig{THostApplication}"/> and invoked during the application startup phase.
         /// </param>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder<THostApplication> AddApplicationConfig(Func<INOFAppBuilder<THostApplication>, THostApplication, Task> func)
+        public INOFAppBuilder<THostApplication> AddApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> func)
             => builder.AddApplicationConfig(new DelegateApplicationConfig<THostApplication>(func));
 
         /// <summary>
@@ -125,14 +132,14 @@ public static partial class __NOF_Integration_Extensions__
 internal class DelegateApplicationConfig<THostApplication> : IBusinessLogicConfig<THostApplication>
     where THostApplication : class, IHost
 {
-    private readonly Func<INOFAppBuilder<THostApplication>, THostApplication, Task> _fn;
+    private readonly Func<INOFAppBuilder, THostApplication, Task> _fn;
 
-    public DelegateApplicationConfig(Func<INOFAppBuilder<THostApplication>, THostApplication, Task> func)
+    public DelegateApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> func)
     {
         _fn = func;
     }
 
-    public Task ExecuteAsync(INOFAppBuilder<THostApplication> builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
     {
         return _fn(builder, app);
     }

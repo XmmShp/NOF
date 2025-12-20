@@ -1,11 +1,13 @@
 using MassTransit;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
 public static partial class __NOF_Infrastructure_MassTransit_RabbitMQ_Extensions__
 {
-    extension(INOFMassTransitSelector selector)
+    extension<THostApplication>(INOFMassTransitSelector<THostApplication> selector)
+        where THostApplication : class, IHost
     {
         public INOFAppBuilder UseRabbitMQ(string connectStringName = "rabbitmq")
         {

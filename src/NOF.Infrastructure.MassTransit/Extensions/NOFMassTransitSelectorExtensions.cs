@@ -9,9 +9,10 @@ namespace NOF;
 public static partial class __NOF_Infrastructure_MassTransit_Extensions__
 {
     ///
-    extension(INOFMassTransitSelector selector)
+    extension<THostApplication>(INOFMassTransitSelector<THostApplication> selector)
+        where THostApplication : class, IHost
     {
-        public INOFMassTransitSelector UseInMemoryInboxOutbox()
+        public INOFMassTransitSelector<THostApplication> UseInMemoryInboxOutbox()
         {
             selector.Builder.EventDispatcher.Subscribe<MassTransitConfiguring>(e =>
             {
@@ -25,10 +26,9 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
             return selector;
         }
 
-        public INOFMassTransitSelector AddRequestHandleNode<THostApplication>(INOFAppBuilder<THostApplication> originBuilder, Type nodeType)
-            where THostApplication : class, IHost
+        public INOFMassTransitSelector<THostApplication> AddRequestHandleNode(Type nodeType)
         {
-            originBuilder.AddApplicationConfig((builder, app) =>
+            selector.Builder.AddApplicationConfig((_, app) =>
             {
                 app.Services.GetRequiredService<IRequestHandleNodeRegistry>().Registry.AddFirst(nodeType);
                 return Task.CompletedTask;

@@ -1,3 +1,5 @@
+using MassTransit.Logging;
+using MassTransit.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -5,11 +7,14 @@ namespace NOF;
 
 public static partial class __NOF_Infrastructure_MassTransit_Extensions__
 {
-    extension(INOFAppBuilder builder)
+    extension<THostApplication>(INOFAppBuilder<THostApplication> builder)
+        where THostApplication : class, IHost
     {
-        public INOFMassTransitSelector AddMassTransit<THostApplicationBuilder>(INOFAppBuilder<THostApplicationBuilder> originBuilder)
-            where THostApplicationBuilder : class, IHost
+        public INOFMassTransitSelector<THostApplication> AddMassTransit()
         {
+            builder.ActivitySources.Add(DiagnosticHeaders.DefaultListenerName);
+            builder.MetricNames.Add(InstrumentationOptions.MeterName);
+
             builder.Services.AddScoped<IRequestHandleNodeFactory, RequestHandleNodeFactory>();
             builder.Services.AddScoped<ICommandSender, MassTransitCommandSender>();
             builder.Services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
@@ -18,9 +23,9 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
             builder.AddServiceConfig(new MassTransitConfig());
 
             builder.Services.AddSingleton<IRequestHandleNodeRegistry, RequestHandleNodeRegistry>();
-            var selector = new NOFMassTransitSelector(builder);
-            selector.AddRequestHandleNode(originBuilder, typeof(RiderRequestHandleNode));
-            selector.AddRequestHandleNode(originBuilder, typeof(MediatorRequestHandleNode));
+            var selector = new NOFMassTransitSelector<THostApplication>(builder);
+            selector.AddRequestHandleNode(typeof(RiderRequestHandleNode));
+            selector.AddRequestHandleNode(typeof(MediatorRequestHandleNode));
             return selector;
         }
     }
