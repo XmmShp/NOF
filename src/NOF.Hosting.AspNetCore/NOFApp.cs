@@ -19,14 +19,14 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 {
     public WebApplicationBuilder InnerBuilder { get; }
 
-    private NOFWebApplicationBuilder(string[] args, bool autoInject)
+    protected NOFWebApplicationBuilder(string[] args)
     {
         InnerBuilder = WebApplication.CreateBuilder(args);
     }
 
     public static NOFWebApplicationBuilder Create(string[] args, bool autoInject = true, bool useDefaultConfigs = true, bool autoMapEndpoints = true)
     {
-        var builder = new NOFWebApplicationBuilder(args, autoInject);
+        var builder = new NOFWebApplicationBuilder(args);
         if (autoInject)
         {
             builder.AutoInject();

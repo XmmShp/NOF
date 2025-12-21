@@ -129,33 +129,17 @@ public static partial class __NOF_Integration_Extensions__
     }
 }
 
-internal class DelegateApplicationConfig<THostApplication> : IBusinessLogicConfig<THostApplication>
+internal class DelegateApplicationConfig<THostApplication> : ApplicationConfig<THostApplication>, IBusinessLogicConfig<THostApplication>
     where THostApplication : class, IHost
 {
-    private readonly Func<INOFAppBuilder, THostApplication, Task> _fn;
-
-    public DelegateApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> func)
+    public DelegateApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> func) : base(func)
     {
-        _fn = func;
-    }
-
-    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
-    {
-        return _fn(builder, app);
     }
 }
 
-internal class DelegateServiceConfig : IDependentServiceConfig
+internal class DelegateServiceConfig : ServiceConfig, IDependentServiceConfig
 {
-    private readonly Func<INOFAppBuilder, ValueTask> _fn;
-
-    public DelegateServiceConfig(Func<INOFAppBuilder, ValueTask> func)
+    public DelegateServiceConfig(Func<INOFAppBuilder, ValueTask> func) : base(func)
     {
-        _fn = func;
-    }
-
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
-    {
-        return _fn(builder);
     }
 }

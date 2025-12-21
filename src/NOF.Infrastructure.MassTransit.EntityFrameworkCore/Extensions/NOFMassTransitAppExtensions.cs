@@ -22,18 +22,31 @@ public static partial class __NOF_Infrastructure_MassTransit_EntityFrameworkCore
         }
     }
 
+    internal class ConfigWrapper : ServiceConfig, IBefore<IDependentServiceConfig>
+    {
+        public ConfigWrapper(Func<INOFAppBuilder, ValueTask> configurator) : base(configurator)
+        {
+        }
+    }
+
     extension<THostApplication>(INOFMassTransitSelector<THostApplication> selector)
         where THostApplication : class, IHost
     {
+
         public INOFMassTransitSelector<THostApplication> UseEFCoreOutbox(Action<IEntityFrameworkOutboxConfigurator> configurator)
         {
             ArgumentNullException.ThrowIfNull(configurator);
-            var dbContextType = selector.Builder.DbContextType;
-            ArgumentNullException.ThrowIfNull(dbContextType);
+            selector.Builder.AddServiceConfig(new ConfigWrapper(builder =>
+            {
+                var dbContextType = builder.DbContextType;
+                ArgumentNullException.ThrowIfNull(dbContextType);
 
-            var invokeDelegateType = typeof(UseEFCoreOutboxInvokeDelegate<>).MakeGenericType(dbContextType);
-            var invokeDelegate = (IUseEFCoreOutboxInvokeDelegate)Activator.CreateInstance(invokeDelegateType)!;
-            return invokeDelegate.Invoke(selector, configurator);
+                var invokeDelegateType = typeof(UseEFCoreOutboxInvokeDelegate<>).MakeGenericType(dbContextType);
+                var invokeDelegate = (IUseEFCoreOutboxInvokeDelegate)Activator.CreateInstance(invokeDelegateType)!;
+                invokeDelegate.Invoke(selector, configurator);
+                return ValueTask.CompletedTask;
+            }));
+            return selector;
         }
 
         public INOFMassTransitSelector<THostApplication> UseEFCoreOutbox<TDbContext>(Action<IEntityFrameworkOutboxConfigurator> configurator)

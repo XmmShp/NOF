@@ -10,16 +10,16 @@ public interface IConfigC : IConfig;
 public interface IConfigD : IConfig;
 
 public class ConfigA : IConfigA;
-public class ConfigB : IConfigB, IDepsOn<IConfigA>;
-public class ConfigC : IConfigC, IDepsOn<IConfigB>;
-public class ConfigD : IConfigD, IDepsOn<IConfigA>, IDepsOn<IConfigC>;
+public class ConfigB : IConfigB, IAfter<IConfigA>;
+public class ConfigC : IConfigC, IAfter<IConfigB>;
+public class ConfigD : IConfigD, IAfter<IConfigA>, IAfter<IConfigC>;
 
 // Circular dependency test tasks
-public class CircularConfigA : IConfig, IDepsOn<CircularConfigB>;
-public class CircularConfigB : IConfig, IDepsOn<CircularConfigA>;
+public class CircularConfigA : IConfig, IAfter<CircularConfigB>;
+public class CircularConfigB : IConfig, IAfter<CircularConfigA>;
 
 // Multiple dependencies test tasks
-public class MultiDepsConfig : IConfig, IDepsOn<IConfigA>, IDepsOn<IConfigB>;
+public class MultiDepsConfig : IConfig, IAfter<IConfigA>, IAfter<IConfigB>;
 
 // No dependency task
 public class IndependentConfig : IConfig;
@@ -27,11 +27,11 @@ public class IndependentConfig : IConfig;
 // Multiple tasks implementing same interface
 public class ConfigA1 : IConfigA;
 public class ConfigA2 : IConfigA;
-public class ConfigDependsOnMultipleA : IConfig, IDepsOn<IConfigA>;
+public class ConfigDependsOnMultipleA : IConfig, IAfter<IConfigA>;
 
 // Missing dependency test - dependency not in graph
 public interface IConfigE : IConfig;
-public class ConfigWithMissingDependency : IConfig, IDepsOn<IConfigE>;
+public class ConfigWithMissingDependency : IConfig, IAfter<IConfigE>;
 
 public class ConfiguratorGraphTests
 {
@@ -104,7 +104,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([taskB, taskA]); // Intentionally reversed order
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(2);
@@ -122,7 +122,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([taskC, taskA, taskB]); // Random order
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(3);
@@ -145,7 +145,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([taskD, taskC, taskB, taskA]); // Reversed order
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(4);
@@ -191,7 +191,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([multiDepsConfigurator, taskB, taskA]);
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(3);
@@ -213,7 +213,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([taskB, independent, taskA]);
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(3);
@@ -233,7 +233,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([dependentConfigurator, taskA2, taskA1]);
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(3);
@@ -263,7 +263,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([independent, taskD, taskC, taskB, taskA]);
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(5);
@@ -332,7 +332,7 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IConfig>([taskD, taskC, taskB, taskA]);
 
         // Act
-        var executionOrder = graph.GetExecutionOrder();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
         // Assert
         executionOrder.Should().HaveCount(4);

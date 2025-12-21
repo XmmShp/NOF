@@ -16,14 +16,14 @@ builder
     .WithApplicationPart<GetRootConfigNodes>()
     .WithApplicationPart<GetConfigurationRequest>();
 
+builder.AddMassTransit()
+    .UseEFCoreOutbox(o => o.UsePostgres())
+    .UseRabbitMQ();
+
 builder.AddEFCore()
     .WithDbContext<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
-
-builder.AddMassTransit()
-    .UseEFCoreOutbox(o => o.UsePostgres())
-    .UseRabbitMQ();
 
 builder.Services.AddOptionsInConfiguration<IdGeneratorOptions>();
 builder.Services.AddAntDesign()

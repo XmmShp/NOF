@@ -16,7 +16,14 @@ public interface IConfig;
 /// <typeparam name="TDependency">
 /// The configuration type this component depends on. Must implement <see cref="IConfig"/>.
 /// </typeparam>
-public interface IDepsOn<out TDependency> where TDependency : IConfig;
+public interface IAfter<TDependency> where TDependency : IConfig;
+
+/// <summary>
+/// Indicates that the implementing configurator must execute before any configurator of type <typeparamref name="T"/>.
+/// This provides a way to declare ordering without modifying the dependent type.
+/// </summary>
+/// <typeparam name="TDependency">The configurator type that should run after this one.</typeparam>
+public interface IBefore<TDependency> where TDependency : IConfig;
 
 /// <summary>
 /// Defines a service-level configuration unit that participates in the DI container registration phase.
@@ -35,6 +42,20 @@ public interface IServiceConfig : IConfig
     ValueTask ExecuteAsync(INOFAppBuilder builder);
 }
 
+public class ServiceConfig : IServiceConfig
+{
+    private readonly Func<INOFAppBuilder, ValueTask> _configurator;
+
+    public ServiceConfig(Func<INOFAppBuilder, ValueTask> configurator)
+    {
+        _configurator = configurator;
+    }
+    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    {
+        return _configurator(builder);
+    }
+}
+
 /// <summary>
 /// Defines an application-level configuration unit that runs after the host application has been fully constructed.
 /// Implementations can interact with the live host instance (e.g., configure middleware pipelines,
@@ -43,7 +64,7 @@ public interface IServiceConfig : IConfig
 /// <typeparam name="THostApplication">
 /// The concrete host application type constrained to be a class implementing <see cref="IHost"/>.
 /// </typeparam>
-public interface IApplicationConfig<in THostApplication> : IConfig
+public interface IApplicationConfig<THostApplication> : IConfig
     where THostApplication : class, IHost
 {
     /// <summary>
@@ -55,4 +76,20 @@ public interface IApplicationConfig<in THostApplication> : IConfig
     /// <param name="app">The constructed host application instance </param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task ExecuteAsync(INOFAppBuilder builder, THostApplication app);
+}
+
+public class ApplicationConfig<THostApplication> : IApplicationConfig<THostApplication>
+    where THostApplication : class, IHost
+{
+    private readonly Func<INOFAppBuilder, THostApplication, Task> _configurator;
+
+    public ApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> configurator)
+    {
+        _configurator = configurator;
+    }
+
+    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
+    {
+        return _configurator(builder, app);
+    }
 }
