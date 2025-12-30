@@ -107,7 +107,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine($"    /// {namespaceName} service client interface");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public interface {interfaceName}");
+        sb.AppendLine($"    public partial interface {interfaceName}");
         sb.AppendLine("    {");
 
         foreach (var endpoint in endpoints)
@@ -134,7 +134,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine($"    /// {namespaceName} service client implementation");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public class {clientName} : {interfaceName}");
+        sb.AppendLine($"    public partial class {clientName} : {interfaceName}");
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly HttpClient _httpClient;");
         sb.AppendLine();

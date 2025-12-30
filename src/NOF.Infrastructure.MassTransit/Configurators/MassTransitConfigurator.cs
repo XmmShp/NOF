@@ -31,34 +31,24 @@ internal class MassTransitConfig : IDependentServiceConfig, IAfter<StateMachineC
             {
                 MediatorRequestHandleNode.SupportedRequestTypes.Add(handlerInfo.MessageType);
                 internalConsumers.Add(CreateHandlerAdapter(handlerInfo));
-                continue; // Skip further processing for events
-            }
-
-            // Determine if this request type is exposed via HTTP
-            var isExposedToHttp = handlerInfo.MessageType.GetCustomAttributes<ExposeToHttpEndpointAttribute>().Any();
-
-            if (isExposedToHttp)
-            {
-                // HTTP-exposed requests are handled internally by Mediator
-                MediatorRequestHandleNode.SupportedRequestTypes.Add(handlerInfo.MessageType);
-                internalConsumers.Add(CreateHandlerAdapter(handlerInfo));
-
-                // Check if an explicit endpoint name is defined (via attribute on message or handler)
-                var hasEndpointName =
-                    handlerInfo.MessageType.GetCustomAttribute<EndpointNameAttribute>() is not null ||
-                    handlerInfo.HandlerType.GetCustomAttributes<EndpointNameAttribute>().Any();
-
-                // If an explicit endpoint name is provided, also register as a MassTransit consumer
-                // This allows the same handler to be invoked via message queues in addition to HTTP
-                if (hasEndpointName)
-                {
-                    externalConsumers.Add(CreateHandlerAdapter(handlerInfo));
-                }
             }
             else
             {
-                // Non-HTTP handlers are only consumed via MassTransit (external messaging)
                 externalConsumers.Add(CreateHandlerAdapter(handlerInfo));
+
+                if (handlerInfo.Kind == HandlerKind.RequestWithResponse ||
+                    handlerInfo.Kind == HandlerKind.RequestWithoutResponse)
+                {
+                    // Determine if this request type is exposed via HTTP
+                    var isExposedToHttp = handlerInfo.MessageType.GetCustomAttributes<ExposeToHttpEndpointAttribute>().Any();
+
+                    if (isExposedToHttp)
+                    {
+                        // HTTP-exposed requests are handled internally by Mediator
+                        MediatorRequestHandleNode.SupportedRequestTypes.Add(handlerInfo.MessageType);
+                        internalConsumers.Add(CreateHandlerAdapter(handlerInfo));
+                    }
+                }
             }
         }
 
