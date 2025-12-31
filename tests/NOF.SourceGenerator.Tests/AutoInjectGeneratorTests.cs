@@ -53,7 +53,7 @@ public class AutoInjectGeneratorTests
         appNs.Name.ToString().Should().Be("NOF.Generated");
 
         var appMethod = appNs.DescendantNodes().OfType<MethodDeclarationSyntax>().Single();
-        appMethod.Identifier.Text.Should().Be("AddAutoInjectServices");
+        appMethod.Identifier.Text.Should().Be("AddAppAutoInjectServices");
         appMethod.Body!.ToString().Should().Contain("IAppSvc").And.Contain("AppService").And.Contain("ServiceLifetime.Transient");
         appMethod.Body!.ToString().Should().Contain("ILibSvc").And.Contain("LibService").And.Contain("ServiceLifetime.Singleton");
     }

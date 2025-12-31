@@ -67,6 +67,116 @@ public static partial class __NOF_Integration_Extensions__
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
         }
+
+        /// <summary>
+        /// Replaces an existing service descriptor or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <param name="descriptor">The service descriptor to replace or add.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAdd(ServiceDescriptor descriptor)
+        {
+            ArgumentNullException.ThrowIfNull(descriptor);
+
+            var existingDescriptor = services.FirstOrDefault(d => d.Lifetime == descriptor.Lifetime && d.ServiceType == descriptor.ServiceType);
+            if (existingDescriptor is not null)
+            {
+                services.Remove(existingDescriptor);
+            }
+
+            services.Add(descriptor);
+            return services;
+        }
+
+        /// <summary>
+        /// Replaces an existing singleton service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddSingleton<TService, TImplementation>()
+            where TService : class
+            where TImplementation : class, TService
+        {
+            return services.ReplaceOrAdd(ServiceDescriptor.Singleton<TService, TImplementation>());
+        }
+
+        /// <summary>
+        /// Replaces an existing singleton service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationFactory">The factory that creates the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddSingleton<TService>(Func<IServiceProvider, TService> implementationFactory)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationFactory);
+            return services.ReplaceOrAdd(ServiceDescriptor.Singleton(implementationFactory));
+        }
+
+        /// <summary>
+        /// Replaces an existing singleton service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationInstance">The instance of the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddSingleton<TService>(TService implementationInstance)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationInstance);
+            return services.ReplaceOrAdd(ServiceDescriptor.Singleton(implementationInstance));
+        }
+
+        /// <summary>
+        /// Replaces an existing scoped service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddScoped<TService, TImplementation>()
+            where TService : class
+            where TImplementation : class, TService
+        {
+            return services.ReplaceOrAdd(ServiceDescriptor.Scoped<TService, TImplementation>());
+        }
+
+        /// <summary>
+        /// Replaces an existing scoped service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationFactory">The factory that creates the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddScoped<TService>(Func<IServiceProvider, TService> implementationFactory)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationFactory);
+            return services.ReplaceOrAdd(ServiceDescriptor.Scoped(implementationFactory));
+        }
+
+        /// <summary>
+        /// Replaces an existing transient service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddTransient<TService, TImplementation>()
+            where TService : class
+            where TImplementation : class, TService
+        {
+            return services.ReplaceOrAdd(ServiceDescriptor.Transient<TService, TImplementation>());
+        }
+
+        /// <summary>
+        /// Replaces an existing transient service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationFactory">The factory that creates the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddTransient<TService>(Func<IServiceProvider, TService> implementationFactory)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationFactory);
+            return services.ReplaceOrAdd(ServiceDescriptor.Transient(implementationFactory));
+        }
     }
 }
 

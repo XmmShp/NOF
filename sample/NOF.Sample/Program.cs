@@ -10,7 +10,7 @@ var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
 
 builder.WithAutoApplicationParts();
 
-builder.Services.AddAutoInjectServices();
+builder.Services.AddNOF_SampleAutoInjectServices();
 
 builder.AddMassTransit()
     .UseEFCoreOutbox(o => o.UsePostgres())

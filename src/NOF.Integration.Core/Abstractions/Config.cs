@@ -19,7 +19,7 @@ public interface IConfig;
 public interface IAfter<TDependency> where TDependency : IConfig;
 
 /// <summary>
-/// Indicates that the implementing configurator must execute before any configurator of type <typeparamref name="T"/>.
+/// Indicates that the implementing configurator must execute before any configurator.
 /// This provides a way to declare ordering without modifying the dependent type.
 /// </summary>
 /// <typeparam name="TDependency">The configurator type that should run after this one.</typeparam>
