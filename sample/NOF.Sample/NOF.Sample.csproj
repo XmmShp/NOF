@@ -18,6 +18,10 @@
 	  <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.WebUI\NOF.Sample.WebUI.csproj" />
+
+	  <ProjectReference Include="..\..\src\NOF.Annotation.SourceGenerator\NOF.Annotation.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	  <ProjectReference Include="..\..\src\NOF.Hosting.AspNetCore.SourceGenerator\NOF.Hosting.AspNetCore.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	  <ProjectReference Include="..\..\src\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" />

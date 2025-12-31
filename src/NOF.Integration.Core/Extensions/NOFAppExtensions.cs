@@ -91,11 +91,6 @@ public static partial class __NOF_Integration_Extensions__
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
         public INOFAppBuilder RemoveServiceConfig<T>() where T : IServiceConfig
             => builder.RemoveServiceConfig(t => t is T);
-
-        public INOFAppBuilder AutoInject()
-        {
-            return builder.AddServiceConfig(new AutoInjectConfig());
-        }
     }
 
     /// <param name="builder">The <see cref="INOFAppBuilder{THostApplication}"/> to operate on.</param>

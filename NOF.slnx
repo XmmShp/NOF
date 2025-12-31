@@ -2,12 +2,12 @@
   <Folder Name="/sample/">
     <Project Path="sample/NOF.Sample.AppHost/NOF.Sample.AppHost.csproj" Id="1a4e8e94-b2d1-47b2-a87d-eb4d146b8bf7" />
     <Project Path="sample/NOF.Sample.Application/NOF.Sample.Application.csproj" Id="df9909e4-d1da-4865-95d8-27d133d9d32c" />
+    <Project Path="sample/NOF.Sample/NOF.Sample.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
     <Project Path="sample/NOF.Sample.Integration.Contract/NOF.Sample.Integration.Contract.csproj" Id="2069ab2c-33b2-4c61-8e39-65e2db022eb2" />
     <Project Path="sample/NOF.Sample.Contract/NOF.Sample.Contract.csproj" Id="cfe0cc27-76f5-44de-804b-717a85e9a8b8" />
     <Project Path="sample/NOF.Sample.Domain/NOF.Sample.Domain.csproj" Id="8cb8747c-bc2a-4330-bb74-4ae457f07b98" />
     <Project Path="sample/NOF.Sample.Integration/NOF.Sample.Integration.csproj" Id="30f271b4-ae7f-44f0-b9c9-276325f593d2" />
     <Project Path="sample/NOF.Sample.WebUI/NOF.Sample.WebUI.csproj" Id="4221e971-890d-4992-89fa-84f5904663cf" />
-    <Project Path="sample/NOF.Sample.Hosting/NOF.Sample.Hosting.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
@@ -15,6 +15,8 @@
     <File Path="nuget.config" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/NOF.Annotation.SourceGenerator/NOF.Annotation.SourceGenerator.csproj" Id="0f7326ba-40e9-4f3c-b0a4-f3d1bb3e51e4" />
+    <Project Path="src/NOF.Annotation/NOF.Annotation.csproj" Id="89674e5f-d1e8-4a92-b9e8-6f1c2d547219" />
     <Project Path="src/NOF.Application/NOF.Application.csproj" />
     <Project Path="src/NOF.Integration.Contract/NOF.Integration.Contract.csproj" Id="ed333faf-64a5-4079-8731-7690eff6810f" />
     <Project Path="src/NOF.Contract.SourceGenerator/NOF.Contract.SourceGenerator.csproj" Id="7710e156-f3b2-4eab-b3a6-cbd868826543" />
@@ -22,6 +24,7 @@
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
+    <Project Path="src/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
     <Project Path="src/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
     <Project Path="src/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
     <Project Path="src/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />

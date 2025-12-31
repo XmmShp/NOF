@@ -52,6 +52,9 @@ jobs:
 
     - name: Pack NuGet packages
       run: |
+        dotnet pack src/NOF.Annotation/NOF.Annotation.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Annotation.SourceGenerator/NOF.Annotation.SourceGenerator.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+
         # Core packages - Domain layer with entities and business logic
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
       

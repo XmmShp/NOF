@@ -98,11 +98,5 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             builder.AddApplicationConfig(new ScalarConfig<THostApplication>());
             return builder;
         }
-
-        public INOFAppBuilder<THostApplication> AutoMapEndpoints()
-        {
-            builder.AddApplicationConfig(new AutoMapEndpointsConfig<THostApplication>());
-            return builder;
-        }
     }
 }

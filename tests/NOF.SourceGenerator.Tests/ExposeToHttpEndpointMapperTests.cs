@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using NOF.Infrastructure.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 

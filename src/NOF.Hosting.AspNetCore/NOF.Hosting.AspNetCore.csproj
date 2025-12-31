@@ -19,6 +19,10 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\NOF.Integration.Core\NOF.Integration.Core.csproj" />
+
+		<None Include="..\NOF.Hosting.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Hosting.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="..\NOF.Hosting.AspNetCore.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Hosting.AspNetCore.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="..\NOF.Annotation.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Annotation.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 
 </Project>

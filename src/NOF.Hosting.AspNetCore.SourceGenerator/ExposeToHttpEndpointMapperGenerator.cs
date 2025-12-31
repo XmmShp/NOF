@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF.Infrastructure.SourceGenerator;
+namespace NOF;
 
 [Generator]
 public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
@@ -155,10 +155,9 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             sb.AppendLine("                })");
 
             // Apply metadata
-            if (ep.AllowAnonymous)
-            {
-                sb.AppendLine("                .AllowAnonymous()");
-            }
+            sb.AppendLine(ep.AllowAnonymous
+                ? "                .AllowAnonymous()"
+                : "                .RequireAuthorization()");
 
             if (!string.IsNullOrEmpty(ep.Permission))
             {

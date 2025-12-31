@@ -1,20 +1,16 @@
 using MassTransit;
 using Microsoft.Extensions.Options;
 using NOF;
+using NOF.Generated;
 using NOF.Sample;
-using NOF.Sample.Application.RequestHandlers;
-using NOF.Sample.Repositories;
 using NOF.Sample.WebUI;
 using Yitter.IdGenerator;
 
-var builder = NOFWebApplicationBuilder.Create(args, autoInject: true, useDefaultConfigs: true, autoMapEndpoints: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
 
-builder
-    .WithApplicationPart<ConfigNodeRepository>()
-    .WithApplicationPart<ConfigNode>()
-    .WithApplicationPart<GetRootConfigNodesRequest>()
-    .WithApplicationPart<GetRootConfigNodes>()
-    .WithApplicationPart<GetConfigurationRequest>();
+builder.WithAutoApplicationParts();
+
+builder.Services.AddAutoInjectServices();
 
 builder.AddMassTransit()
     .UseEFCoreOutbox(o => o.UsePostgres())
@@ -54,5 +50,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapAllHttpEndpoints();
 
 await app.RunAsync();

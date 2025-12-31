@@ -17,14 +17,14 @@ var garnet = builder.AddGarnet("garnet")
 var postgresUserName = builder.AddParameter("postgresUserName", "postgres");
 var postgresPassword = builder.AddParameter("postgresPassword", "123456");
 var postgres = builder.AddPostgres("postgres", postgresUserName, postgresPassword)
-    .WithPgAdmin()
+    .WithPgAdmin(pgAdmin => pgAdmin.WithLifetime(ContainerLifetime.Persistent))
     .WithLifetime(ContainerLifetime.Persistent)
     .PublishAsConnectionString();
 postgresUserName.WithParentRelationship(postgres);
 postgresPassword.WithParentRelationship(postgres);
 var database = postgres.AddDatabase("db");
 
-var sample = builder.AddProject<NOF_Sample_Hosting>("NOF-Sample")
+var sample = builder.AddProject<NOF_Sample>("NOF-Sample")
     .WithReference(rabbitMq, "rabbitmq")
     .WaitFor(rabbitMq)
     .WithReference(database, "postgres")

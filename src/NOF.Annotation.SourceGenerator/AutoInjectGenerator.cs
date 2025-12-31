@@ -2,12 +2,13 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF.Infrastructure.SourceGenerator;
+namespace NOF;
 
 /// <summary>
 /// 源生成器：检测标记了 AutoInjectAttribute 的服务类（包括引用项目），并生成 DI 注册代码
@@ -143,24 +144,28 @@ public class AutoInjectGenerator : IIncrementalGenerator
     private static void GenerateServiceRegistration(StringBuilder sb, INamedTypeSymbol serviceClass)
     {
         var attribute = serviceClass.GetAttributes()
-            .FirstOrDefault(attr =>
-                attr.AttributeClass?.Name == "AutoInjectAttribute" ||
-                (attr.AttributeClass != null && attr.AttributeClass.ToDisplayString().EndsWith("AutoInjectAttribute")));
+            .FirstOrDefault(attr
+                => attr.AttributeClass is not null
+                   && attr.AttributeClass.ToDisplayString().Equals("NOF.AutoInjectAttribute"));
 
-        if (attribute == null)
+        if (attribute is null)
+        {
             return;
+        }
 
         // 解析生命周期
-        var lifetime = "ServiceLifetime.Transient";
-        if (attribute.ConstructorArguments.Length > 0 && attribute.ConstructorArguments[0].Value is int intValue)
+        if (attribute.ConstructorArguments.Length <= 0 || attribute.ConstructorArguments[0].Value is not int intValue)
         {
-            lifetime = intValue switch
-            {
-                0 => "ServiceLifetime.Singleton",
-                1 => "ServiceLifetime.Scoped",
-                _ => "ServiceLifetime.Transient"
-            };
+            return;
         }
+
+        var lifetime = intValue switch
+        {
+            0 => Lifetime.Singleton,
+            1 => Lifetime.Scoped,
+            2 => Lifetime.Transient,
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
         // 获取完全限定但无 global:: 的类型名
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
@@ -193,20 +198,20 @@ public class AutoInjectGenerator : IIncrementalGenerator
         }
 
         // 处理 Singleton / Scoped（需要共享实例）
-        if (lifetime is "ServiceLifetime.Singleton" or "ServiceLifetime.Scoped")
+        if (lifetime == Lifetime.Singleton || lifetime == Lifetime.Scoped)
         {
             if (typesToRegister.Count == 1)
             {
-                sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typesToRegister[0]}), typeof({serviceTypeName}), {lifetime}));");
+                sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typesToRegister[0]}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
             }
             else
             {
                 // 先注册自身
-                sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {lifetime}));");
+                sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 // 再注册接口（工厂委托指向自身）
                 foreach (var typeName in typesToRegister)
                 {
-                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), sp => sp.GetRequiredService<{serviceTypeName}>(), {lifetime}));");
+                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), sp => sp.GetRequiredService<{serviceTypeName}>(), {ToLifeTime(lifetime)}));");
                 }
             }
         }
@@ -219,7 +224,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                              .Where(t => t != null)
                              .Select(t => t!.ToDisplayString(typeFormat)))
                 {
-                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {lifetime}));");
+                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 }
             }
             else
@@ -228,17 +233,35 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 {
                     foreach (var typeName in typesToRegister)
                     {
-                        sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {lifetime}));");
+                        sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                     }
                 }
                 else
                 {
                     // 没有接口，注册自身
-                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {lifetime}));");
+                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 }
             }
         }
 
         sb.AppendLine();
     }
+
+    private static string ToLifeTime(Lifetime lifetime)
+    {
+        return lifetime switch
+        {
+            Lifetime.Singleton => "ServiceLifetime.Singleton",
+            Lifetime.Scoped => "ServiceLifetime.Scoped",
+            Lifetime.Transient => "ServiceLifetime.Transient",
+            _ => throw new ArgumentOutOfRangeException(nameof(lifetime), lifetime, null)
+        };
+    }
+}
+
+enum Lifetime
+{
+    Singleton = 0,
+    Scoped = 1,
+    Transient = 2
 }

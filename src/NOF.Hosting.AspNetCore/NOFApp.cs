@@ -24,20 +24,12 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         InnerBuilder = WebApplication.CreateBuilder(args);
     }
 
-    public static NOFWebApplicationBuilder Create(string[] args, bool autoInject = true, bool useDefaultConfigs = true, bool autoMapEndpoints = true)
+    public static NOFWebApplicationBuilder Create(string[] args, bool useDefaultConfigs = true)
     {
         var builder = new NOFWebApplicationBuilder(args);
-        if (autoInject)
-        {
-            builder.AutoInject();
-        }
         if (useDefaultConfigs)
         {
             builder.UseDefaultSettings();
-        }
-        if (autoMapEndpoints)
-        {
-            builder.AutoMapEndpoints();
         }
         builder.AddServiceConfig(new StateMachineConfig());
         return builder;

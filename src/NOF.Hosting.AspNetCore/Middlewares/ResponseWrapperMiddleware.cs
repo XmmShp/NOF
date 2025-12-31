@@ -122,7 +122,7 @@ internal class ResponseWrapperMiddleware : IMiddleware
     }
 
     /// <summary>
-    /// 检查JSON字符串是否已经是Result或Result&lt;T&gt;类型
+    /// 检查JSON字符串是否已经是<see cref="Result"/>或<see cref="Result{T}"/>类型
     /// </summary>
     private static bool IsResultType(string jsonContent)
     {

@@ -12,7 +12,8 @@
   </PropertyGroup>
 	
 	<ItemGroup>
-	  <ProjectReference Include="..\NOF.Domain.SourceGenerator\NOF.Domain.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	  <ProjectReference Include="..\NOF.Annotation\NOF.Annotation.csproj" />
+
 	  <None Include="..\NOF.Domain.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Domain.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 

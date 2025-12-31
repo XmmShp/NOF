@@ -17,7 +17,6 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\NOF.Contract.SourceGenerator\NOF.Contract.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<None Include="..\NOF.Contract.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Contract.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 
