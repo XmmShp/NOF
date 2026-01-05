@@ -5,7 +5,8 @@ namespace NOF;
 /// <summary>
 /// 分页结果查询请求基类
 /// </summary>
-public record PaginatedRequest
+public record PaginatedRequest<T> : IRequest<T>
+    where T : class, IPaginatedResult
 {
     /// <summary>
     /// 页码，从1开始
