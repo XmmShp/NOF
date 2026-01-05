@@ -133,7 +133,7 @@ public class ApplicationPartGenerator : IIncrementalGenerator
 
                 var typeName = assemblyInfo.TypeSymbol.ToDisplayString(typeFormat);
 
-                sb.AppendLine($"            builder.WithApplicationPart(typeof({typeName}).Assembly);");
+                sb.AppendLine($"            builder.WithApplicationPart(typeof({typeName}).Assembly!);");
             }
         }
 

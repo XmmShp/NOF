@@ -110,7 +110,9 @@ public class FailureGenerator : IIncrementalGenerator
         foreach (var errorClass in validClasses)
         {
             var source = GenerateFailureClass(errorClass!);
-            context.AddSource($"{errorClass!.TypeName}.g.cs", SourceText.From(source, Encoding.UTF8));
+            // 使用完全限定名避免文件名冲突（将命名空间中的点替换为下划线）
+            var safeFileName = $"{errorClass!.Namespace.Replace('.', '_')}_{errorClass.TypeName}.g.cs";
+            context.AddSource(safeFileName, SourceText.From(source, Encoding.UTF8));
         }
     }
 
