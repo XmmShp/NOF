@@ -22,7 +22,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\NOF.Annotation.SourceGenerator\NOF.Annotation.SourceGenerator.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Contract.SourceGenerator\NOF.Contract.SourceGenerator.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Hosting.AspNetCore.SourceGenerator\NOF.Hosting.AspNetCore.SourceGenerator.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" />

@@ -15,7 +15,6 @@
     <File Path="nuget.config" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/NOF.Annotation.SourceGenerator/NOF.Annotation.SourceGenerator.csproj" Id="0f7326ba-40e9-4f3c-b0a4-f3d1bb3e51e4" />
     <Project Path="src/NOF.Annotation/NOF.Annotation.csproj" Id="89674e5f-d1e8-4a92-b9e8-6f1c2d547219" />
     <Project Path="src/NOF.Application/NOF.Application.csproj" />
     <Project Path="src/NOF.Integration.Contract/NOF.Integration.Contract.csproj" Id="ed333faf-64a5-4079-8731-7690eff6810f" />

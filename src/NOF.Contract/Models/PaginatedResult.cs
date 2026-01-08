@@ -72,5 +72,5 @@ public record PaginatedResult<T> : IPaginatedResult
     /// <summary>
     /// 分页数据项
     /// </summary>
-    public List<T> Items { get; init; } = [];
+    public required T[] Items { get; init; }
 }
