@@ -11,13 +11,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
 		<PackageReference Include="AntDesign" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
-	  <ProjectReference Include="..\NOF.Sample.Integration.Contract\NOF.Sample.Integration.Contract.csproj" />
-	  <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
+		<FrameworkReference Include="Microsoft.AspNetCore.App"/>
+		<ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
+		<ProjectReference Include="..\NOF.Sample.Integration.Contract\NOF.Sample.Integration.Contract.csproj" />
+		<ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
 	</ItemGroup>
+
 </Project>
