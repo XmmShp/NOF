@@ -27,13 +27,6 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             builder.Services.AddSignalR();
             return builder;
         }
-
-        public INOFAppBuilder UseRedisDistributedCache()
-        {
-            const string redisKey = "redis";
-            builder.AddRedisDistributedCache(redisKey);
-            return builder;
-        }
     }
 
     extension<THostApplication>(INOFAppBuilder<THostApplication> builder)
@@ -45,7 +38,6 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             builder.UseCors();
             builder.UseJwtAuthentication();
             builder.UseSignalR();
-            builder.UseRedisDistributedCache();
             builder.UseResponseWrapper();
 
             if (builder.Environment.IsDevelopment())

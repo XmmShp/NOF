@@ -11,12 +11,12 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
 		<PackageReference Include="Scalar.AspNetCore" />
 		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\NOF.Annotation\NOF.Annotation.csproj" />
 		<ProjectReference Include="..\NOF.Integration.Core\NOF.Integration.Core.csproj" />
