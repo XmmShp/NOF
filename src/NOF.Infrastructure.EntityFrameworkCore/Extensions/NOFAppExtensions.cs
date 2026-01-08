@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using NOF.Application.Dependents;
 
 namespace NOF;
 
@@ -27,11 +29,22 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             }
         }
     }
-    extension<THostApplication>(INOFAppBuilder<THostApplication> builder) where THostApplication : class, IHost
+    extension(INOFAppBuilder builder)
     {
-        public INOFEFCoreDbContextSelector<THostApplication> AddEFCore()
+        public INOFEFCoreSelector AddEFCore<TDbContext>() where TDbContext : NOFDbContext
         {
-            return new NOFEFCoreDbContextSelector<THostApplication>(builder);
+
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<IStateMachineContextRepository, StateMachineContextRepository<TDbContext>>();
+            builder.Services.AddDbContext<TDbContext>(options =>
+            {
+                ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.EventDispatcher));
+                builder.EventDispatcher.Publish(new DbContextConfigurating(options));
+            });
+            builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
+            builder.UseEntityFrameworkCore = true;
+            builder.DbContextType = typeof(TDbContext);
+            return new NOFEFCoreSelector(builder);
         }
     }
 }

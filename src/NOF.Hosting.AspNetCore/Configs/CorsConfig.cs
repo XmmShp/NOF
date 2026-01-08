@@ -5,22 +5,24 @@ using Microsoft.Extensions.Options;
 
 namespace NOF;
 
-public class CorsConfig<THostApplication> : ISecurityConfig<THostApplication>
-    where THostApplication : class, IHost, IApplicationBuilder
+public class CorsConfig : ISecurityConfig
 {
-    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
-        var corsSettings = app.Services.GetRequiredService<IOptions<CorsSettingsOptions>>().Value;
-        app.UseCors(policy =>
+        if (app is IApplicationBuilder actualApp)
         {
-            policy.WithOrigins(corsSettings.AllowedOrigins)
-                .WithMethods(corsSettings.AllowedMethods)
-                .WithHeaders(corsSettings.AllowedHeaders);
-            if (corsSettings.AllowCredentials)
+            var corsSettings = app.Services.GetRequiredService<IOptions<CorsSettingsOptions>>().Value;
+            actualApp.UseCors(policy =>
             {
-                policy.AllowCredentials();
-            }
-        });
+                policy.WithOrigins(corsSettings.AllowedOrigins)
+                    .WithMethods(corsSettings.AllowedMethods)
+                    .WithHeaders(corsSettings.AllowedHeaders);
+                if (corsSettings.AllowCredentials)
+                {
+                    policy.AllowCredentials();
+                }
+            });
+        }
 
         return Task.CompletedTask;
     }

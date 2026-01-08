@@ -5,13 +5,12 @@ using Scalar.AspNetCore;
 
 namespace NOF;
 
-public class ScalarConfig<THostApplication> : IEndpointConfig<THostApplication>
-    where THostApplication : class, IHost, IEndpointRouteBuilder
+public class ScalarConfig : IEndpointConfig
 {
-    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
-        app.MapOpenApi();
-        app.MapScalarApiReference();
+        (app as IEndpointRouteBuilder)?.MapOpenApi();
+        (app as IEndpointRouteBuilder)?.MapScalarApiReference();
         return Task.CompletedTask;
     }
 }

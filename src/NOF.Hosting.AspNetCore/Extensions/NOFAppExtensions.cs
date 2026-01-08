@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -27,12 +25,8 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             builder.Services.AddSignalR();
             return builder;
         }
-    }
 
-    extension<THostApplication>(INOFAppBuilder<THostApplication> builder)
-        where THostApplication : class, IHost, IApplicationBuilder, IEndpointRouteBuilder
-    {
-        public INOFAppBuilder<THostApplication> UseDefaultSettings()
+        public INOFAppBuilder UseDefaultSettings()
         {
             builder.ConfigureJsonOptions();
             builder.UseCors();
@@ -47,15 +41,15 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             return builder;
         }
 
-        public INOFAppBuilder<THostApplication> UseCors()
+        public INOFAppBuilder UseCors()
         {
             builder.Services.AddOptionsInConfiguration<CorsSettingsOptions>();
             builder.Services.AddCors();
-            builder.AddApplicationConfig(new CorsConfig<THostApplication>());
+            builder.AddApplicationConfig(new CorsConfig());
             return builder;
         }
 
-        public INOFAppBuilder<THostApplication> UseJwtAuthentication()
+        public INOFAppBuilder UseJwtAuthentication()
         {
             builder.Services.AddOptionsInConfiguration<JwtOptions>();
             builder.Services.AddScoped<IUserContext, UserContext>();
@@ -69,25 +63,25 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             builder.Services.AddAuthorization();
             builder.Services.AddScoped<JwtUserInfoMiddleware>();
             builder.Services.AddScoped<PermissionAuthorizationMiddleware>();
-            builder.AddApplicationConfig(new JwtAuthenticationConfig<THostApplication>());
+            builder.AddApplicationConfig(new JwtAuthenticationConfig());
             return builder;
         }
 
-        public INOFAppBuilder<THostApplication> UseResponseWrapper()
+        public INOFAppBuilder UseResponseWrapper()
         {
             builder.Services.AddScoped<ResponseWrapperMiddleware>();
-            builder.AddApplicationConfig(new ResponseWrapperConfig<THostApplication>());
+            builder.AddApplicationConfig(new ResponseWrapperConfig());
             return builder;
         }
 
-        public INOFAppBuilder<THostApplication> UseScalar()
+        public INOFAppBuilder UseScalar()
         {
             builder.Services.AddOpenApi(opt =>
             {
                 opt.AddDocumentTransformer<BearerSecuritySchemeTransformer>()
                     .AddSchemaTransformer<OptionalSchemaTransformer>();
             });
-            builder.AddApplicationConfig(new ScalarConfig<THostApplication>());
+            builder.AddApplicationConfig(new ScalarConfig());
             return builder;
         }
     }

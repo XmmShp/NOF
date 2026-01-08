@@ -38,6 +38,21 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     INOFAppBuilder RemoveServiceConfig(Predicate<IServiceConfig> predicate);
 
     /// <summary>
+    /// Registers an application configuration delegate that runs after the web application is built.
+    /// Use this to configure middleware, endpoints, and other runtime pipeline components.
+    /// </summary>
+    /// <param name="config">The application configurator to register. Must not be null.</param>
+    /// <returns>The current builder instance to allow method chaining.</returns>
+    INOFAppBuilder AddApplicationConfig(IApplicationConfig config);
+
+    /// <summary>
+    /// Removes all previously registered application configurators that satisfy the given condition.
+    /// </summary>
+    /// <param name="predicate">A predicate used to identify which application configurators to remove.</param>
+    /// <returns>The current builder instance to allow method chaining.</returns>
+    INOFAppBuilder RemoveApplicationConfig(Predicate<IApplicationConfig> predicate);
+
+    /// <summary>
     /// Gets the configuration-time event dispatcher used to enable plugin-style customization
     /// during application setup. This dispatcher allows modules to react to configuration lifecycle
     /// events without tight coupling. 
@@ -62,21 +77,6 @@ public interface INOFAppBuilder<THostApplication> : INOFAppBuilder
     where THostApplication : class, IHost
 {
     /// <summary>
-    /// Registers an application configuration delegate that runs after the web application is built.
-    /// Use this to configure middleware, endpoints, and other runtime pipeline components.
-    /// </summary>
-    /// <param name="config">The application configurator to register. Must not be null.</param>
-    /// <returns>The current builder instance to allow method chaining.</returns>
-    INOFAppBuilder<THostApplication> AddApplicationConfig(IApplicationConfig<THostApplication> config);
-
-    /// <summary>
-    /// Removes all previously registered application configurators that satisfy the given condition.
-    /// </summary>
-    /// <param name="predicate">A predicate used to identify which application configurators to remove.</param>
-    /// <returns>The current builder instance to allow method chaining.</returns>
-    INOFAppBuilder<THostApplication> RemoveApplicationConfig(Predicate<IApplicationConfig<THostApplication>> predicate);
-
-    /// <summary>
     /// Asynchronously constructs and initializes the final host application instance.
     /// This method finalizes the configuration pipeline, applies all registered service
     /// and application configurators, and prepares the underlying host for execution.
@@ -87,7 +87,7 @@ public interface INOFAppBuilder<THostApplication> : INOFAppBuilder
     /// </returns>
     /// <remarks>
     /// Call this method once all desired configurations have been added via
-    /// <see cref="INOFAppBuilder.AddServiceConfig"/> and <see cref="AddApplicationConfig"/>.
+    /// <see cref="INOFAppBuilder.AddServiceConfig"/> and <see cref="INOFAppBuilder.AddApplicationConfig"/>.
     /// It should typically be followed by invoking <c>RunAsync()</c> or manually managing the host lifetime.
     /// </remarks>
     Task<THostApplication> BuildAsync();
@@ -104,13 +104,13 @@ public interface INOFAppBuilder<THostApplication> : INOFAppBuilder
 ///   <item><description><b>Service Configuration Phase</b>: Executes all registered <see cref="IServiceConfig"/>
 ///   instances to populate the dependency injection container and configure infrastructure services.</description></item>
 ///   <item><description><b>Application Configuration Phase</b>: After the host application is built,
-///   executes all registered <see cref="IApplicationConfig{THostApplication}"/> instances to perform
+///   executes all registered <see cref="IApplicationConfig"/> instances to perform
 ///   final setup such as middleware registration, event subscriptions, or background task initialization.</description></item>
 /// </list>
 /// </para>
 /// <para>
 /// Configuration units are executed in topological order based on declared dependencies
-/// (via <see cref="IDepsOn{T}"/>), enabling safe, composable module composition.
+/// (via <see cref="IAfter{T}"/>), enabling safe, composable module composition.
 /// </para>
 /// <para>
 /// Derived classes must implement <see cref="BuildApplicationAsync"/> to construct the concrete host using the configured service collection.
@@ -135,7 +135,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// event subscriptions, or background task initialization.
     /// Configurations are executed in dependency-resolved order via <see cref="AddApplicationConfig"/>.
     /// </summary>
-    protected readonly HashSet<IApplicationConfig<THostApplication>> ApplicationConfigs;
+    protected readonly HashSet<IApplicationConfig> ApplicationConfigs;
 
     /// <inheritdoc/>
     public virtual IEventDispatcher EventDispatcher { get; }
@@ -167,7 +167,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     }
 
     /// <inheritdoc />
-    public virtual INOFAppBuilder<THostApplication> AddApplicationConfig(IApplicationConfig<THostApplication> config)
+    public virtual INOFAppBuilder AddApplicationConfig(IApplicationConfig config)
     {
         ArgumentNullException.ThrowIfNull(config);
         ApplicationConfigs.Add(config);
@@ -183,7 +183,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     }
 
     /// <inheritdoc />
-    public virtual INOFAppBuilder<THostApplication> RemoveApplicationConfig(Predicate<IApplicationConfig<THostApplication>> predicate)
+    public virtual INOFAppBuilder RemoveApplicationConfig(Predicate<IApplicationConfig> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ApplicationConfigs.RemoveWhere(predicate);
@@ -202,7 +202,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
         var app = await BuildApplicationAsync();
 
-        var startGraph = new ConfiguratorGraph<IApplicationConfig<THostApplication>>(ApplicationConfigs);
+        var startGraph = new ConfiguratorGraph<IApplicationConfig>(ApplicationConfigs);
         foreach (var task in startGraph.GetExecutionOrder())
         {
             await task.ExecuteAsync(this, app).ConfigureAwait(false);
@@ -220,7 +220,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
     protected virtual void ConfigureDefaultServices()
     {
-        const string OTEL_EXPORTER_OTLP_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT";
+        const string otelExporterOtlpEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT";
         Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
@@ -242,7 +242,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
                     .AddHttpClientInstrumentation();
             });
 
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(Configuration[OTEL_EXPORTER_OTLP_ENDPOINT]);
+        var useOtlpExporter = !string.IsNullOrWhiteSpace(Configuration[otelExporterOtlpEndpoint]);
 
         if (useOtlpExporter)
         {

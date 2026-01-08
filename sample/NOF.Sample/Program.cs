@@ -16,8 +16,7 @@ builder.AddMassTransit()
     .UseEFCoreOutbox(o => o.UsePostgres())
     .UseRabbitMQ();
 
-builder.AddEFCore()
-    .WithDbContext<ConfigurationDbContext>()
+builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 

@@ -61,11 +61,7 @@ public class ServiceConfig : IServiceConfig
 /// Implementations can interact with the live host instance (e.g., configure middleware pipelines,
 /// subscribe to runtime events, or start background tasks).
 /// </summary>
-/// <typeparam name="THostApplication">
-/// The concrete host application type constrained to be a class implementing <see cref="IHost"/>.
-/// </typeparam>
-public interface IApplicationConfig<THostApplication> : IConfig
-    where THostApplication : class, IHost
+public interface IApplicationConfig : IConfig
 {
     /// <summary>
     /// Asynchronously executes the application configuration logic using both the application builder
@@ -75,20 +71,19 @@ public interface IApplicationConfig<THostApplication> : IConfig
     /// <param name="builder">The application builder used for contextual information and services.</param>
     /// <param name="app">The constructed host application instance </param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ExecuteAsync(INOFAppBuilder builder, THostApplication app);
+    Task ExecuteAsync(INOFAppBuilder builder, IHost app);
 }
 
-public class ApplicationConfig<THostApplication> : IApplicationConfig<THostApplication>
-    where THostApplication : class, IHost
+public class ApplicationConfig : IApplicationConfig
 {
-    private readonly Func<INOFAppBuilder, THostApplication, Task> _configurator;
+    private readonly Func<INOFAppBuilder, IHost, Task> _configurator;
 
-    public ApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> configurator)
+    public ApplicationConfig(Func<INOFAppBuilder, IHost, Task> configurator)
     {
         _configurator = configurator;
     }
 
-    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
         return _configurator(builder, app);
     }

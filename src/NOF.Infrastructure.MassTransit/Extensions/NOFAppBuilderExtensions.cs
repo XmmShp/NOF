@@ -1,16 +1,14 @@
 using MassTransit.Logging;
 using MassTransit.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
 public static partial class __NOF_Infrastructure_MassTransit_Extensions__
 {
-    extension<THostApplication>(INOFAppBuilder<THostApplication> builder)
-        where THostApplication : class, IHost
+    extension(INOFAppBuilder builder)
     {
-        public INOFMassTransitSelector<THostApplication> AddMassTransit()
+        public INOFMassTransitSelector AddMassTransit()
         {
             builder.ActivitySources.Add(DiagnosticHeaders.DefaultListenerName);
             builder.MetricNames.Add(InstrumentationOptions.MeterName);
@@ -23,7 +21,7 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
             builder.AddServiceConfig(new MassTransitConfig());
 
             builder.Services.AddSingleton<IRequestHandleNodeRegistry, RequestHandleNodeRegistry>();
-            var selector = new NOFMassTransitSelector<THostApplication>(builder);
+            var selector = new NOFMassTransitSelector(builder);
             selector.AddRequestHandleNode(typeof(RiderRequestHandleNode));
             selector.AddRequestHandleNode(typeof(MediatorRequestHandleNode));
             return selector;

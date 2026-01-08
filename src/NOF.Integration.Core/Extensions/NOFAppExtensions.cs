@@ -91,12 +91,7 @@ public static partial class __NOF_Integration_Extensions__
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
         public INOFAppBuilder RemoveServiceConfig<T>() where T : IServiceConfig
             => builder.RemoveServiceConfig(t => t is T);
-    }
 
-    /// <param name="builder">The <see cref="INOFAppBuilder{THostApplication}"/> to operate on.</param>
-    extension<THostApplication>(INOFAppBuilder<THostApplication> builder)
-        where THostApplication : class, IHost
-    {
         /// <summary>
         /// Adds an application configuration delegate that will be executed after the host is built but before it starts.
         /// The delegate receives the application builder and the constructed host application instance,
@@ -105,29 +100,28 @@ public static partial class __NOF_Integration_Extensions__
         /// </summary>
         /// <param name="func">
         /// A delegate that performs post-build application configuration. It is wrapped in a
-        /// <see cref="DelegateApplicationConfig{THostApplication}"/> and invoked during the application startup phase.
+        /// <see cref="DelegateApplicationConfig"/> and invoked during the application startup phase.
         /// </param>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder<THostApplication> AddApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> func)
-            => builder.AddApplicationConfig(new DelegateApplicationConfig<THostApplication>(func));
+        public INOFAppBuilder AddApplicationConfig(Func<INOFAppBuilder, IHost, Task> func)
+            => builder.AddApplicationConfig(new DelegateApplicationConfig(func));
 
         /// <summary>
         /// Removes all registered application configurations of the specified type <typeparamref name="T"/>.
         /// Enables runtime adjustment of startup behavior, such as disabling a feature module during integration tests.
         /// </summary>
         /// <typeparam name="T">
-        /// The application configuration type to remove. Must derive from <see cref="IApplicationConfig{THostApplication}"/>.
+        /// The application configuration type to remove. Must derive from <see cref="IApplicationConfig"/>.
         /// </typeparam>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder<THostApplication> RemoveApplicationConfig<T>() where T : IApplicationConfig<THostApplication>
+        public INOFAppBuilder RemoveApplicationConfig<T>() where T : IApplicationConfig
             => builder.RemoveApplicationConfig(t => t is T);
     }
 }
 
-internal class DelegateApplicationConfig<THostApplication> : ApplicationConfig<THostApplication>, IBusinessLogicConfig<THostApplication>
-    where THostApplication : class, IHost
+internal class DelegateApplicationConfig : ApplicationConfig, IBusinessLogicConfig
 {
-    public DelegateApplicationConfig(Func<INOFAppBuilder, THostApplication, Task> func) : base(func)
+    public DelegateApplicationConfig(Func<INOFAppBuilder, IHost, Task> func) : base(func)
     {
     }
 }

@@ -1,15 +1,12 @@
-using Microsoft.Extensions.Hosting;
-
 namespace NOF;
 
 public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
-    extension<THostApplication>(INOFEFCoreSelector<THostApplication> selector)
-        where THostApplication : class, IHost
+    extension(INOFEFCoreSelector selector)
     {
-        public INOFEFCoreSelector<THostApplication> AutoMigrate()
+        public INOFEFCoreSelector AutoMigrate()
         {
-            selector.Builder.AddApplicationConfig(new AutoMigrateConfig<THostApplication>());
+            selector.Builder.AddApplicationConfig(new AutoMigrateConfig());
             return selector;
         }
     }

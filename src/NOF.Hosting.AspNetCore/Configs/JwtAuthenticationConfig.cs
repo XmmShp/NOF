@@ -7,15 +7,14 @@ using System.Runtime.CompilerServices;
 
 namespace NOF;
 
-public class JwtAuthenticationConfig<THostApplication> : IAuthenticationConfig<THostApplication>
-    where THostApplication : class, IHost, IApplicationBuilder
+public class JwtAuthenticationConfig : IAuthenticationConfig
 {
-    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
-        app.UseAuthentication();
-        app.UseMiddleware<JwtUserInfoMiddleware>();
-        app.UseMiddleware<PermissionAuthorizationMiddleware>();
-        app.UseAuthorization();
+        (app as IApplicationBuilder)?.UseAuthentication();
+        (app as IApplicationBuilder)?.UseMiddleware<JwtUserInfoMiddleware>();
+        (app as IApplicationBuilder)?.UseMiddleware<PermissionAuthorizationMiddleware>();
+        (app as IApplicationBuilder)?.UseAuthorization();
         return Task.CompletedTask;
     }
 }

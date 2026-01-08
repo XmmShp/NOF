@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -60,11 +61,15 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 
         this.AddApplicationConfig((_, application) =>
         {
-            application.MapHealthChecks(healthEndpointPath);
-            application.MapHealthChecks(alivenessEndpointPath, new HealthCheckOptions
+            if (application is IEndpointRouteBuilder rt)
             {
-                Predicate = r => r.Tags.Contains(tag)
-            });
+                rt.MapHealthChecks(healthEndpointPath);
+                rt.MapHealthChecks(alivenessEndpointPath, new HealthCheckOptions
+                {
+                    Predicate = r => r.Tags.Contains(tag)
+                });
+            }
+
             return Task.CompletedTask;
         });
     }

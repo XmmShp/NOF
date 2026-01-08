@@ -1,5 +1,4 @@
 using MassTransit;
-using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
@@ -7,18 +6,15 @@ public static partial class __NOF_Infrastructure_MassTransit_EntityFrameworkCore
 {
     internal interface IUseEFCoreOutboxInvokeDelegate
     {
-        INOFMassTransitSelector<THostApplication> Invoke<THostApplication>(INOFMassTransitSelector<THostApplication> selector, Action<IEntityFrameworkOutboxConfigurator> configurator)
-            where THostApplication : class, IHost;
+        INOFMassTransitSelector Invoke(INOFMassTransitSelector selector, Action<IEntityFrameworkOutboxConfigurator> configurator);
     }
 
     internal class UseEFCoreOutboxInvokeDelegate<TDbContext> : IUseEFCoreOutboxInvokeDelegate
         where TDbContext : NOFDbContext
     {
-        public INOFMassTransitSelector<THostApplication> Invoke<THostApplication>(INOFMassTransitSelector<THostApplication> selector, Action<IEntityFrameworkOutboxConfigurator> configurator)
-            where THostApplication : class, IHost
-
+        public INOFMassTransitSelector Invoke(INOFMassTransitSelector selector, Action<IEntityFrameworkOutboxConfigurator> configurator)
         {
-            return selector.UseEFCoreOutbox<THostApplication, TDbContext>(configurator);
+            return selector.UseEFCoreOutbox<TDbContext>(configurator);
         }
     }
 
@@ -29,11 +25,10 @@ public static partial class __NOF_Infrastructure_MassTransit_EntityFrameworkCore
         }
     }
 
-    extension<THostApplication>(INOFMassTransitSelector<THostApplication> selector)
-        where THostApplication : class, IHost
+    extension(INOFMassTransitSelector selector)
     {
 
-        public INOFMassTransitSelector<THostApplication> UseEFCoreOutbox(Action<IEntityFrameworkOutboxConfigurator> configurator)
+        public INOFMassTransitSelector UseEFCoreOutbox(Action<IEntityFrameworkOutboxConfigurator> configurator)
         {
             ArgumentNullException.ThrowIfNull(configurator);
             selector.Builder.AddServiceConfig(new ConfigWrapper(builder =>
@@ -49,7 +44,7 @@ public static partial class __NOF_Infrastructure_MassTransit_EntityFrameworkCore
             return selector;
         }
 
-        public INOFMassTransitSelector<THostApplication> UseEFCoreOutbox<TDbContext>(Action<IEntityFrameworkOutboxConfigurator> configurator)
+        public INOFMassTransitSelector UseEFCoreOutbox<TDbContext>(Action<IEntityFrameworkOutboxConfigurator> configurator)
             where TDbContext : NOFDbContext
         {
             ArgumentNullException.ThrowIfNull(configurator);

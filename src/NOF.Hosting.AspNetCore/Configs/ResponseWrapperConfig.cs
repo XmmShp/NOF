@@ -3,12 +3,11 @@ using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
-public class ResponseWrapperConfig<THostApplication> : IResponseFormattingConfig<THostApplication>
-    where THostApplication : class, IHost, IApplicationBuilder
+public class ResponseWrapperConfig : IResponseFormattingConfig
 {
-    public Task ExecuteAsync(INOFAppBuilder builder, THostApplication app)
+    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
-        app.UseMiddleware<ResponseWrapperMiddleware>();
+        (app as IApplicationBuilder)?.UseMiddleware<ResponseWrapperMiddleware>();
         return Task.CompletedTask;
     }
 }

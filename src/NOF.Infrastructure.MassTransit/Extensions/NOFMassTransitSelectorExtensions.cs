@@ -1,6 +1,5 @@
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace NOF;
 
@@ -9,10 +8,9 @@ namespace NOF;
 public static partial class __NOF_Infrastructure_MassTransit_Extensions__
 {
     ///
-    extension<THostApplication>(INOFMassTransitSelector<THostApplication> selector)
-        where THostApplication : class, IHost
+    extension(INOFMassTransitSelector selector)
     {
-        public INOFMassTransitSelector<THostApplication> UseInMemoryInboxOutbox()
+        public INOFMassTransitSelector UseInMemoryInboxOutbox()
         {
             selector.Builder.EventDispatcher.Subscribe<MassTransitConfiguring>(e =>
             {
@@ -26,7 +24,7 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
             return selector;
         }
 
-        public INOFMassTransitSelector<THostApplication> AddRequestHandleNode(Type nodeType)
+        public INOFMassTransitSelector AddRequestHandleNode(Type nodeType)
         {
             selector.Builder.AddApplicationConfig((_, app) =>
             {
