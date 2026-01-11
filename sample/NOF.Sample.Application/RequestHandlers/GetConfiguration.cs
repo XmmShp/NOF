@@ -5,17 +5,9 @@ using System.Text.Json.Nodes;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class GetConfiguration : IRequestHandler<GetConfigurationRequest, GetConfigurationResponse>
+public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheService cache)
+    : IRequestHandler<GetConfigurationRequest, GetConfigurationResponse>
 {
-    private readonly IConfigNodeViewRepository _viewRepository;
-    private readonly IDistributedCache _cache;
-
-    public GetConfiguration(IConfigNodeViewRepository viewRepository, IDistributedCache cache)
-    {
-        _viewRepository = viewRepository;
-        _cache = cache;
-    }
-
     public async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
     {
         var appNameStr = request.AppName;
@@ -23,7 +15,7 @@ public class GetConfiguration : IRequestHandler<GetConfigurationRequest, GetConf
 
         // 1. Find App Node
         var appName = ConfigNodeName.From(appNameStr);
-        var appNode = await _viewRepository.GetByNameAsync(appName, cancellationToken);
+        var appNode = await viewRepository.GetByNameAsync(appName, cancellationToken);
 
         if (appNode is null)
         {
@@ -37,17 +29,20 @@ public class GetConfiguration : IRequestHandler<GetConfigurationRequest, GetConf
         var maxVersion = 0L;
         foreach (var versionKey in fullPath.Select(node => new ConfigNodeVersionCacheKey(ConfigNodeId.From(node.Id))))
         {
-            var (success, versionVal) = await _cache.TryGetAsync(versionKey, cancellationToken: cancellationToken);
-            if (success && versionVal > maxVersion)
+            var version = await cache.GetAsync(versionKey, cancellationToken: cancellationToken);
+            version.IfSome(versionVal =>
             {
-                maxVersion = versionVal;
-            }
+                if (versionVal > maxVersion)
+                {
+                    maxVersion = versionVal;
+                }
+            });
         }
 
-        var (isSuccess, cachedResult) = await _cache.TryGetAsync(appCacheKey, cancellationToken: cancellationToken);
-        if (isSuccess && cachedResult!.Version >= maxVersion)
+        var cachedResult = await cache.GetAsync(appCacheKey, cancellationToken: cancellationToken);
+        if (cachedResult.HasValue && cachedResult.Value.Version >= maxVersion)
         {
-            return new GetConfigurationResponse(cachedResult.Content);
+            return new GetConfigurationResponse(cachedResult.Value.Content);
         }
 
 
@@ -57,11 +52,11 @@ public class GetConfiguration : IRequestHandler<GetConfigurationRequest, GetConf
 
         // 4. Update Result Cache
         var newResult = new CachedConfigResult(jsonString, maxVersion);
-        await _cache.SetAsync(
+        await cache.SetAsync(
             appCacheKey,
             newResult,
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) },
-            token: cancellationToken);
+            cancellationToken);
 
         return new GetConfigurationResponse(jsonString);
     }
@@ -76,7 +71,7 @@ public class GetConfiguration : IRequestHandler<GetConfigurationRequest, GetConf
 
         while (current.ParentId.HasValue)
         {
-            var parent = await _viewRepository.GetByIdAsync(ConfigNodeId.From(current.ParentId.Value), cancellationToken);
+            var parent = await viewRepository.GetByIdAsync(ConfigNodeId.From(current.ParentId.Value), cancellationToken);
             if (parent is null)
             {
                 break;

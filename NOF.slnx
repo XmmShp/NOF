@@ -30,6 +30,7 @@
     <Project Path="src/NOF.Infrastructure.MassTransit.EntityFrameworkCore/NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" Id="d150693c-238c-411e-af84-6c91a9f8589d" />
     <Project Path="src/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
     <Project Path="src/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
+    <Project Path="src/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
     <Project Path="src/NOF.Integration.Contract/NOF.Integration.Contract.csproj" Id="ed333faf-64a5-4079-8731-7690eff6810f" />
     <Project Path="src/NOF.Integration.Core/NOF.Integration.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />

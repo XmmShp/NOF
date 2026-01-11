@@ -12,9 +12,9 @@ namespace ConfigurationCenter;
 public class ConfigNodeViewRepository : IConfigNodeViewRepository
 {
     private readonly ConfigurationDbContext _dbContext;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cache;
 
-    public ConfigNodeViewRepository(ConfigurationDbContext dbContext, IDistributedCache cache)
+    public ConfigNodeViewRepository(ConfigurationDbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
@@ -148,10 +148,10 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
 
     private async Task<ConfigNodeDto?> GetOrSetCacheAsync(CacheKey<ConfigNodeDto> cacheKey, Func<Task<ConfigNodeDto?>> queryFn, CancellationToken cancellationToken)
     {
-        var (isSuccess, value) = await _cache.TryGetAsync(cacheKey, cancellationToken: cancellationToken);
-        if (isSuccess)
+        var value = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
+        if (value.HasValue)
         {
-            return value;
+            return value.Value;
         }
 
         var dto = await queryFn();
@@ -161,7 +161,7 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
                 cacheKey,
                 dto,
                 new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) },
-                token: cancellationToken);
+                cancellationToken);
         }
 
         return dto;

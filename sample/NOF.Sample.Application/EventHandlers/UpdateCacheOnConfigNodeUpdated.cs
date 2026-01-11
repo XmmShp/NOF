@@ -5,9 +5,9 @@ namespace NOF.Sample.Application.EventHandlers;
 
 public class UpdateCacheOnConfigNodeUpdated : IEventHandler<ConfigNodeUpdatedEvent>
 {
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cache;
 
-    public UpdateCacheOnConfigNodeUpdated(IDistributedCache cache)
+    public UpdateCacheOnConfigNodeUpdated(ICacheService cache)
     {
         _cache = cache;
     }
@@ -23,7 +23,7 @@ public class UpdateCacheOnConfigNodeUpdated : IEventHandler<ConfigNodeUpdatedEve
         await _cache.SetAsync(
             new ConfigNodeVersionCacheKey(@event.Id),
             version,
-            options: new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
-            token: cancellationToken);
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
+            cancellationToken);
     }
 }

@@ -57,6 +57,28 @@ public static partial class __NOF_Contract_Extensions__
         }
 
         /// <summary>
+        /// Executes an action if a value is present.
+        /// </summary>
+        /// <param name="action">Action to execute with the value if present.</param>
+        /// <returns>The original optional for chaining.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="action"/> is <c>null</c>.
+        /// </exception>
+        public void IfSome(Action<T> action)
+            => optional.Match(action, () => { });
+
+        /// <summary>
+        /// Executes an action if no value is present.
+        /// </summary>
+        /// <param name="action">Action to execute if no value is present.</param>
+        /// <returns>The original optional for chaining.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="action"/> is <c>null</c>.
+        /// </exception>
+        public void IfNone(Action action)
+            => optional.Match(_ => { }, action);
+
+        /// <summary>
         /// Transforms the optional value into a result of type <typeparamref name="TResult"/>.
         /// If a value is present, applies the <paramref name="some"/> function; otherwise, uses the <paramref name="none"/> function.
         /// </summary>

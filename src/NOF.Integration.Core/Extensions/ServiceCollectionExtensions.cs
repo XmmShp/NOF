@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -176,6 +178,45 @@ public static partial class __NOF_Integration_Extensions__
         {
             ArgumentNullException.ThrowIfNull(implementationFactory);
             return services.ReplaceOrAdd(ServiceDescriptor.Transient(implementationFactory));
+        }
+
+        /// <summary>
+        /// Adds a memory-based cache service for development and testing.
+        /// </summary>
+        /// <param name="configureOptions">Optional action to configure the cache service options.</param>
+        /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+        public IServiceCollection AddMemoryCache(Action<CacheServiceOptions>? configureOptions = null)
+        {
+            var options = new CacheServiceOptions();
+            configureOptions?.Invoke(options);
+
+            return services.AddCacheService<MemoryCacheService>((sp, opt) =>
+            {
+                var serializer = opt.GetSerializer(sp);
+                var lockRetryStrategy = opt.GetLockRetryStrategy(sp);
+                return new MemoryCacheService(serializer, lockRetryStrategy, opt);
+            }, options);
+        }
+
+        /// <summary>
+        /// Adds a cache service implementation with automatic interface registration.
+        /// </summary>
+        /// <typeparam name="TImplementation">The cache service implementation type.</typeparam>
+        /// <param name="implementationFactory">Factory to create the cache service instance.</param>
+        /// <param name="options">The cache service options.</param>
+        /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+        public IServiceCollection AddCacheService<TImplementation>(Func<IServiceProvider, CacheServiceOptions, TImplementation> implementationFactory,
+            CacheServiceOptions options)
+            where TImplementation : class, ICacheServiceWithRawAccess
+        {
+            services.AddSingleton(sp => implementationFactory(sp, options));
+
+            // Register all cache-related interfaces
+            services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<TImplementation>());
+            services.TryAddSingleton<ICacheService>(sp => sp.GetRequiredService<TImplementation>());
+            services.TryAddSingleton<ICacheServiceWithRawAccess>(sp => sp.GetRequiredService<TImplementation>());
+
+            return services;
         }
     }
 }
