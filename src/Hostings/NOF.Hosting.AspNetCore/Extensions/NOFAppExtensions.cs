@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 
 namespace NOF;
@@ -53,7 +52,7 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
         {
             builder.Services.AddOptionsInConfiguration<JwtOptions>();
             builder.Services.AddScoped<IUserContext, UserContext>();
-            builder.Services.AddSingleton<IConfigureNamedOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+            builder.Services.ConfigureOptions<ConfigureJwtBearerOptions>();
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
