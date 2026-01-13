@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -19,7 +20,10 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
         var services = new ServiceCollection();
 
         services.AddDbContext<TDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName));
+        {
+            ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new NOFDbContextOptionsExtension(new StartupEventChannel()));
+            options.UseInMemoryDatabase(databaseName);
+        });
 
         var serviceProvider = services.BuildServiceProvider().CreateScope().ServiceProvider;
         DbContext = serviceProvider.GetRequiredService<TDbContext>();

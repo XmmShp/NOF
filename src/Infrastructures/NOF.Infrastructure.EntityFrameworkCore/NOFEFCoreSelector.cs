@@ -1,3 +1,7 @@
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("NOF.Test")]
+
 namespace NOF;
 
 public interface INOFEFCoreSelector

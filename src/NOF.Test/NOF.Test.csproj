@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Infrastructures\NOF.Infrastructure.Memory\NOF.Infrastructure.Memory.csproj" />
     <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
   </ItemGroup>
