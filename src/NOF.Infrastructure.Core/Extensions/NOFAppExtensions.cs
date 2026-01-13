@@ -78,7 +78,7 @@ public static partial class __NOF_Integration_Extensions__
         /// and scheduled to run when the host application builds its service collection.
         /// </param>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder AddServiceConfig(Func<INOFAppBuilder, ValueTask> func)
+        public INOFAppBuilder AddRegistrationStep(Func<INOFAppBuilder, ValueTask> func)
             => builder.AddRegistrationStep(new DelegateServiceRegistrationStep(func));
 
         /// <summary>
@@ -89,7 +89,7 @@ public static partial class __NOF_Integration_Extensions__
         /// The service configuration type to remove. Must derive from <see cref="IServiceRegistrationStep"/>.
         /// </typeparam>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder RemoveServiceConfig<T>() where T : IServiceRegistrationStep
+        public INOFAppBuilder RemoveRegistrationStep<T>() where T : IServiceRegistrationStep
             => builder.RemoveRegistrationStep(t => t is T);
 
         /// <summary>
@@ -103,7 +103,7 @@ public static partial class __NOF_Integration_Extensions__
         /// <see cref="DelegateApplicationInitializationStep"/> and invoked during the application startup phase.
         /// </param>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder AddApplicationConfig(Func<INOFAppBuilder, IHost, Task> func)
+        public INOFAppBuilder AddInitializationStep(Func<INOFAppBuilder, IHost, Task> func)
             => builder.AddInitializationStep(new DelegateApplicationInitializationStep(func));
 
         /// <summary>
@@ -114,7 +114,7 @@ public static partial class __NOF_Integration_Extensions__
         /// The application configuration type to remove. Must derive from <see cref="IApplicationInitializationStep"/>.
         /// </typeparam>
         /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
-        public INOFAppBuilder RemoveApplicationConfig<T>() where T : IApplicationInitializationStep
+        public INOFAppBuilder RemoveInitializationStep<T>() where T : IApplicationInitializationStep
             => builder.RemoveInitializationStep(t => t is T);
     }
 }
