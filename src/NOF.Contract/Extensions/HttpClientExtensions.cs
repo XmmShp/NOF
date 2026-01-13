@@ -14,7 +14,7 @@ namespace NOF;
 // ReSharper disable once InconsistentNaming
 public static partial class __NOF_Contract_Extensions__
 {
-    private static readonly JsonSerializerOptions Options = DefaultJsonSerializerOptions.Options;
+    private static readonly JsonSerializerOptions Options = JsonSerializerOptions.NOFDefaults;
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertyCache = new();
 
     /// <param name="httpClient">The HTTP client instance. Must not be null.</param>

@@ -179,7 +179,7 @@ public class ApiResponseMiddlewareTests
 
         // Assert
         var responseBody = await context.GetResponseAsStringAsync();
-        var result = JsonSerializer.Deserialize<Result>(responseBody, DefaultJsonSerializerOptions.Options);
+        var result = JsonSerializer.Deserialize<Result>(responseBody, JsonSerializerOptions.NOFDefaults);
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(404);
@@ -204,7 +204,7 @@ public class ApiResponseMiddlewareTests
 
         // Assert
         var responseBody = await context.GetResponseAsStringAsync();
-        var result = JsonSerializer.Deserialize<Result>(responseBody, DefaultJsonSerializerOptions.Options);
+        var result = JsonSerializer.Deserialize<Result>(responseBody, JsonSerializerOptions.NOFDefaults);
         result.Should().NotBeNull();
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(500);

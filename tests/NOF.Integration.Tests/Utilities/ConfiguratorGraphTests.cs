@@ -4,34 +4,34 @@ using Xunit;
 namespace NOF.Infrastructure.Tests.Utilities;
 
 // Test task interfaces and implementations
-public interface IConfigA : IConfig;
-public interface IConfigB : IConfig;
-public interface IConfigC : IConfig;
-public interface IConfigD : IConfig;
+public interface IStepA : IStep;
+public interface IStepB : IStep;
+public interface IStepC : IStep;
+public interface IStepD : IStep;
 
-public class ConfigA : IConfigA;
-public class ConfigB : IConfigB, IAfter<IConfigA>;
-public class ConfigC : IConfigC, IAfter<IConfigB>;
-public class ConfigD : IConfigD, IAfter<IConfigA>, IAfter<IConfigC>;
+public class StepA : IStepA;
+public class StepB : IStepB, IAfter<IStepA>;
+public class StepC : IStepC, IAfter<IStepB>;
+public class StepD : IStepD, IAfter<IStepA>, IAfter<IStepC>;
 
 // Circular dependency test tasks
-public class CircularConfigA : IConfig, IAfter<CircularConfigB>;
-public class CircularConfigB : IConfig, IAfter<CircularConfigA>;
+public class CircularStepA : IStep, IAfter<CircularStepB>;
+public class CircularStepB : IStep, IAfter<CircularStepA>;
 
 // Multiple dependencies test tasks
-public class MultiDepsConfig : IConfig, IAfter<IConfigA>, IAfter<IConfigB>;
+public class MultiDepsStep : IStep, IAfter<IStepA>, IAfter<IStepB>;
 
 // No dependency task
-public class IndependentConfig : IConfig;
+public class IndependentStep : IStep;
 
 // Multiple tasks implementing same interface
-public class ConfigA1 : IConfigA;
-public class ConfigA2 : IConfigA;
-public class ConfigDependsOnMultipleA : IConfig, IAfter<IConfigA>;
+public class StepA1 : IStepA;
+public class StepA2 : IStepA;
+public class StepDependsOnMultipleA : IStep, IAfter<IStepA>;
 
 // Missing dependency test - dependency not in graph
-public interface IConfigE : IConfig;
-public class ConfigWithMissingDependency : IConfig, IAfter<IConfigE>;
+public interface IStepE : IStep;
+public class StepWithMissingDependency : IStep, IAfter<IStepE>;
 
 public class ConfiguratorGraphTests
 {
@@ -39,7 +39,7 @@ public class ConfiguratorGraphTests
     public void Constructor_WithEmptyConfigurators_ShouldCreateEmptyGraph()
     {
         // Arrange & Act
-        var graph = new ConfiguratorGraph<IConfig>([]);
+        var graph = new ConfiguratorGraph<IStep>([]);
 
         // Assert
         var executionOrder = graph.GetExecutionOrder();
@@ -50,10 +50,10 @@ public class ConfiguratorGraphTests
     public void Constructor_WithSingleConfigurator_ShouldCreateGraphWithOneConfigurator()
     {
         // Arrange
-        var taskA = new ConfigA();
+        var taskA = new StepA();
 
         // Act
-        var graph = new ConfiguratorGraph<IConfig>([taskA]);
+        var graph = new ConfiguratorGraph<IStep>([taskA]);
 
         // Assert
         var executionOrder = graph.GetExecutionOrder();
@@ -65,10 +65,10 @@ public class ConfiguratorGraphTests
     public void Constructor_WithDuplicateConfigurators_ShouldIgnoreDuplicates()
     {
         // Arrange
-        var taskA = new ConfigA();
+        var taskA = new StepA();
 
         // Act
-        var graph = new ConfiguratorGraph<IConfig>([taskA, taskA, taskA]);
+        var graph = new ConfiguratorGraph<IStep>([taskA, taskA, taskA]);
 
         // Assert
         var executionOrder = graph.GetExecutionOrder();
@@ -80,10 +80,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithNoDependencies_ShouldReturnAllConfigurators()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new IndependentConfig();
-        var taskC = new IndependentConfig();
-        var graph = new ConfiguratorGraph<IConfig>([taskA, taskB, taskC]);
+        var taskA = new StepA();
+        var taskB = new IndependentStep();
+        var taskC = new IndependentStep();
+        var graph = new ConfiguratorGraph<IStep>([taskA, taskB, taskC]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -99,9 +99,9 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithSimpleDependency_ShouldOrderCorrectly()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var graph = new ConfiguratorGraph<IConfig>([taskB, taskA]); // Intentionally reversed order
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var graph = new ConfiguratorGraph<IStep>([taskB, taskA]); // Intentionally reversed order
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -116,10 +116,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithChainedDependencies_ShouldOrderCorrectly()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var taskC = new ConfigC();
-        var graph = new ConfiguratorGraph<IConfig>([taskC, taskA, taskB]); // Random order
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var taskC = new StepC();
+        var graph = new ConfiguratorGraph<IStep>([taskC, taskA, taskB]); // Random order
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -138,11 +138,11 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithMultipleDependencies_ShouldOrderCorrectly()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var taskC = new ConfigC();
-        var taskD = new ConfigD();
-        var graph = new ConfiguratorGraph<IConfig>([taskD, taskC, taskB, taskA]); // Reversed order
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var taskC = new StepC();
+        var taskD = new StepD();
+        var graph = new ConfiguratorGraph<IStep>([taskD, taskC, taskB, taskA]); // Reversed order
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -169,9 +169,9 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithCircularDependency_ShouldThrowInvalidOperationException()
     {
         // Arrange
-        var taskA = new CircularConfigA();
-        var taskB = new CircularConfigB();
-        var graph = new ConfiguratorGraph<IConfig>([taskA, taskB]);
+        var taskA = new CircularStepA();
+        var taskB = new CircularStepB();
+        var graph = new ConfiguratorGraph<IStep>([taskA, taskB]);
 
         // Act
         var act = () => graph.GetExecutionOrder();
@@ -185,10 +185,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithMultipleDependenciesOnSameConfigurator_ShouldOrderCorrectly()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var multiDepsConfigurator = new MultiDepsConfig();
-        var graph = new ConfiguratorGraph<IConfig>([multiDepsConfigurator, taskB, taskA]);
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var multiDepsConfigurator = new MultiDepsStep();
+        var graph = new ConfiguratorGraph<IStep>([multiDepsConfigurator, taskB, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -207,10 +207,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithMixedDependentAndIndependentConfigurators_ShouldOrderCorrectly()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var independent = new IndependentConfig();
-        var graph = new ConfiguratorGraph<IConfig>([taskB, independent, taskA]);
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var independent = new IndependentStep();
+        var graph = new ConfiguratorGraph<IStep>([taskB, independent, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -227,10 +227,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithMultipleConfiguratorsImplementingSameInterface_ShouldResolveDependenciesCorrectly()
     {
         // Arrange
-        var taskA1 = new ConfigA1();
-        var taskA2 = new ConfigA2();
-        var dependentConfigurator = new ConfigDependsOnMultipleA();
-        var graph = new ConfiguratorGraph<IConfig>([dependentConfigurator, taskA2, taskA1]);
+        var taskA1 = new StepA1();
+        var taskA2 = new StepA2();
+        var dependentConfigurator = new StepDependsOnMultipleA();
+        var graph = new ConfiguratorGraph<IStep>([dependentConfigurator, taskA2, taskA1]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -255,12 +255,12 @@ public class ConfiguratorGraphTests
         // ConfiguratorC depends on ConfiguratorB
         // ConfiguratorD depends on ConfiguratorA and ConfiguratorC
         // Independent task (no deps)
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var taskC = new ConfigC();
-        var taskD = new ConfigD();
-        var independent = new IndependentConfig();
-        var graph = new ConfiguratorGraph<IConfig>([independent, taskD, taskC, taskB, taskA]);
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var taskC = new StepC();
+        var taskD = new StepD();
+        var independent = new IndependentStep();
+        var graph = new ConfiguratorGraph<IStep>([independent, taskD, taskC, taskB, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -283,10 +283,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_CalledMultipleTimes_ShouldReturnConsistentResults()
     {
         // Arrange
-        var taskA = new ConfigA();
-        var taskB = new ConfigB();
-        var taskC = new ConfigC();
-        var graph = new ConfiguratorGraph<IConfig>([taskC, taskB, taskA]);
+        var taskA = new StepA();
+        var taskB = new StepB();
+        var taskC = new StepC();
+        var graph = new ConfiguratorGraph<IStep>([taskC, taskB, taskA]);
 
         // Act
         var executionOrder1 = graph.GetExecutionOrder();
@@ -302,10 +302,10 @@ public class ConfiguratorGraphTests
     public void GetExecutionOrder_WithOnlyIndependentConfigurators_ShouldReturnAllConfigurators()
     {
         // Arrange
-        var task1 = new IndependentConfig();
-        var task2 = new IndependentConfig();
-        var task3 = new IndependentConfig();
-        var graph = new ConfiguratorGraph<IConfig>([task1, task2, task3]);
+        var task1 = new IndependentStep();
+        var task2 = new IndependentStep();
+        var task3 = new IndependentStep();
+        var graph = new ConfiguratorGraph<IStep>([task1, task2, task3]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();
@@ -325,11 +325,11 @@ public class ConfiguratorGraphTests
         // ConfiguratorB   ConfiguratorC (independent)
         //    \     /
         //     ConfiguratorD
-        var taskA = new ConfigA();
-        var taskB = new ConfigB(); // depends on ConfiguratorA
-        var taskC = new ConfigC(); // depends on ConfiguratorB
-        var taskD = new ConfigD(); // depends on ConfiguratorA and ConfiguratorC
-        var graph = new ConfiguratorGraph<IConfig>([taskD, taskC, taskB, taskA]);
+        var taskA = new StepA();
+        var taskB = new StepB(); // depends on ConfiguratorA
+        var taskC = new StepC(); // depends on ConfiguratorB
+        var taskD = new StepD(); // depends on ConfiguratorA and ConfiguratorC
+        var graph = new ConfiguratorGraph<IStep>([taskD, taskC, taskB, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder().ToList();
@@ -357,9 +357,9 @@ public class ConfiguratorGraphTests
     {
         // Arrange
         // ConfiguratorWithMissingDependency depends on IConfiguratorE, but no IConfiguratorE is in the graph
-        var taskA = new ConfigA();
-        var taskWithMissingDep = new ConfigWithMissingDependency();
-        var graph = new ConfiguratorGraph<IConfig>([taskWithMissingDep, taskA]);
+        var taskA = new StepA();
+        var taskWithMissingDep = new StepWithMissingDependency();
+        var graph = new ConfiguratorGraph<IStep>([taskWithMissingDep, taskA]);
 
         // Act
         var executionOrder = graph.GetExecutionOrder();

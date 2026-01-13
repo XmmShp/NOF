@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Integration.Contract\NOF.Integration.Contract.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
   </ItemGroup>
 
 </Project>

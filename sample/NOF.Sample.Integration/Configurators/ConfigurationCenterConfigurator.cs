@@ -3,11 +3,11 @@ using System.Text;
 
 namespace NOF.Sample;
 
-internal class ConfigurationCenterConfig : IBaseSettingsServiceConfig
+internal class ConfigurationCenterRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
     private readonly string _systemName;
 
-    public ConfigurationCenterConfig(string systemName)
+    public ConfigurationCenterRegistrationStep(string systemName)
     {
         _systemName = systemName;
     }

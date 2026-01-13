@@ -62,7 +62,7 @@ public static class HttpMockHelpers
             Value = value!
         };
 
-        var content = JsonSerializer.Serialize(apiResponse, DefaultJsonSerializerOptions.Options);
+        var content = JsonSerializer.Serialize(apiResponse, JsonSerializerOptions.NOFDefaults);
         return CreateMockHttpMessageHandler(statusCode, content);
     }
 
@@ -87,7 +87,7 @@ public static class HttpMockHelpers
             Message = message
         };
 
-        var content = JsonSerializer.Serialize(apiResponse, DefaultJsonSerializerOptions.Options);
+        var content = JsonSerializer.Serialize(apiResponse, JsonSerializerOptions.NOFDefaults);
         return CreateMockHttpMessageHandler(statusCode, content);
     }
 }

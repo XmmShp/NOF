@@ -15,25 +15,29 @@
     <File Path="nuget.config" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/NOF.SourceGenerator/NOF.SourceGenerator.csproj" Id="50ec49cd-0d88-4a97-a323-07c5fccf9bf2" />
     <Project Path="src/NOF.Annotation/NOF.Annotation.csproj" Id="89674e5f-d1e8-4a92-b9e8-6f1c2d547219" />
     <Project Path="src/NOF.Application/NOF.Application.csproj" />
     <Project Path="src/NOF.Contract.SourceGenerator/NOF.Contract.SourceGenerator.csproj" Id="7710e156-f3b2-4eab-b3a6-cbd868826543" />
     <Project Path="src/NOF.Contract/NOF.Contract.csproj" />
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
-    <Project Path="src/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
-    <Project Path="src/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
-    <Project Path="src/NOF.Hosting.SourceGenerator.Shell/NOF.Hosting.SourceGenerator.Shell.csproj" Id="c172f223-fef8-424d-845e-4911fe54cf7d" />
-    <Project Path="src/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
-    <Project Path="src/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
-    <Project Path="src/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
-    <Project Path="src/NOF.Infrastructure.MassTransit.EntityFrameworkCore/NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" Id="d150693c-238c-411e-af84-6c91a9f8589d" />
-    <Project Path="src/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
-    <Project Path="src/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
-    <Project Path="src/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
-    <Project Path="src/NOF.Integration.Contract/NOF.Integration.Contract.csproj" Id="ed333faf-64a5-4079-8731-7690eff6810f" />
-    <Project Path="src/NOF.Integration.Core/NOF.Integration.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
+    <Project Path="src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
+  </Folder>
+  <Folder Name="/src/Hostings/">
+    <Project Path="src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
+    <Project Path="src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
+    <Project Path="src/Hostings/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
+  </Folder>
+  <Folder Name="/src/Infrastructures/">
+    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit.EntityFrameworkCore/NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" Id="d150693c-238c-411e-af84-6c91a9f8589d" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.Memory/NOF.Infrastructure.Memory.csproj" Id="13be10a2-0d0c-4efe-a25b-3f80e643916e" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NOF.Contract.Tests/NOF.Contract.Tests.csproj" Id="a4d4d1a7-24e1-4c7e-a368-8db0063b737a" />

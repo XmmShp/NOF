@@ -10,7 +10,7 @@ public static class __NOF_Sample__
 
         public INOFAppBuilder AddConfigurationFromCenter(string systemName)
         {
-            return builder.AddServiceConfig(new ConfigurationCenterConfig(systemName));
+            return builder.AddRegistrationStep(new ConfigurationCenterRegistrationStep(systemName));
         }
     }
 }
