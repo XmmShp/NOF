@@ -1,4 +1,4 @@
-namespace NOF.Application.Mechanisms;
+namespace NOF;
 
 internal interface IStateMachineBuilderInternal
 {

@@ -1,4 +1,4 @@
-namespace NOF.Application.Mechanisms;
+namespace NOF;
 
 public abstract class StateMachineBlueprint
 {

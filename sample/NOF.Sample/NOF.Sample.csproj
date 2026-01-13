@@ -12,7 +12,6 @@
 	  <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
-	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit.EntityFrameworkCore\NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />

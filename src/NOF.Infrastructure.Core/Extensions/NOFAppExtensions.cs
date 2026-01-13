@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Reflection;
 
@@ -7,6 +8,31 @@ namespace NOF;
 // ReSharper disable once InconsistentNaming
 public static partial class __NOF_Integration_Extensions__
 {
+    /// <summary>
+    /// 添加 Outbox 模式的通用服务
+    /// 包括后台发送服务
+    /// 注意：清理服务由具体的持久化层（如 EFCore）注册，因为它包含持久化特定的业务逻辑
+    /// </summary>
+    /// <param name="builder">NOF 应用构建器</param>
+    /// <param name="configureOptions">配置 Outbox 选项的委托（可选）</param>
+    public static INOFAppBuilder AddOutboxServices(
+        this INOFAppBuilder builder,
+        Action<OutboxOptions>? configureOptions = null)
+    {
+        if (configureOptions != null)
+        {
+            builder.Services.Configure(configureOptions);
+        }
+        else
+        {
+            builder.Services.AddOptions<OutboxOptions>();
+        }
+
+        builder.Services.AddHostedService<OutboxCommandBackgroundService>();
+
+        return builder;
+    }
+
     private const string Assemblies = "NOF.Integration.Core:Assemblies";
     private const string ExtraHandlerInfos = "NOF.Integration.Core:ExtraHandlerInfos";
     private const string ActivitySources = "NOF.Integration.Core:ActivitySources";

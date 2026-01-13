@@ -1,3 +1,5 @@
+using NOF.Contract.Annotations;
+
 namespace NOF;
 
-public interface INotification;
+public interface INotification : IMessage;

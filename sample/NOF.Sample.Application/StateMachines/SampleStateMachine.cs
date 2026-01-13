@@ -23,32 +23,30 @@ public class SampleStateMachineContext : IStateMachineContext
     public string FailReason { get; set; }
 }
 
-public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
+public class StartProcessingCommandHandler : CommandHandler<StartProcessingCommand>
 {
-    private readonly INotificationPublisher _notificationPublisher;
     private readonly IUnitOfWork _uow;
     private readonly ILogger<StartProcessingCommandHandler> _logger;
 
-    public StartProcessingCommandHandler(INotificationPublisher notificationPublisher, IUnitOfWork uow, ILogger<StartProcessingCommandHandler> logger)
+    public StartProcessingCommandHandler(IUnitOfWork uow, ILogger<StartProcessingCommandHandler> logger)
     {
-        _notificationPublisher = notificationPublisher;
         _uow = uow;
         _logger = logger;
     }
 
-    public async Task HandleAsync(StartProcessingCommand command, CancellationToken cancellationToken)
+    public override async Task HandleAsync(StartProcessingCommand command, CancellationToken cancellationToken)
     {
         await Task.Delay(1000, cancellationToken);
         var isSuccess = Random.Shared.Next(2) == 0;
         if (isSuccess)
         {
             _logger.LogInformation("Processing {Id} Succeeded", command.TaskId);
-            await _notificationPublisher.PublishAsync(new ProcessingSucceeded(command.TaskId), cancellationToken);
+            PublishNotification(new ProcessingSucceeded(command.TaskId));
         }
         else
         {
             _logger.LogError("Processing {Id} Failed", command.TaskId);
-            await _notificationPublisher.PublishAsync(new ProcessingFailed(command.TaskId, "An error occurred during processing."), cancellationToken);
+            PublishNotification(new ProcessingFailed(command.TaskId, "An error occurred during processing."));
         }
 
         await _uow.SaveChangesAsync(cancellationToken);

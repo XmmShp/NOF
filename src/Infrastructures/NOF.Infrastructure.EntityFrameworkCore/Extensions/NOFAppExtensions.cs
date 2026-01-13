@@ -34,12 +34,16 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
         {
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-            builder.Services.AddScoped<IStateMachineContextRepository, StateMachineContextRepository<TDbContext>>();
+            builder.Services.AddScoped<IStateMachineContextRepository, StateMachineContextRepository>();
+            builder.Services.AddScoped<ITransactionalMessageRepository, TransactionalMessageRepository>();
+            builder.Services.AddScoped<ITransactionalMessageCollector, TransactionalMessageCollector>();
+            builder.Services.AddHostedService<OutboxCleanupService>();
             builder.Services.AddDbContext<TDbContext>(options =>
             {
                 ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
                 builder.StartupEventChannel.Publish(new DbContextConfigurating(options));
             });
+            builder.Services.AddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.UseEntityFrameworkCore = true;
             builder.DbContextType = typeof(TDbContext);

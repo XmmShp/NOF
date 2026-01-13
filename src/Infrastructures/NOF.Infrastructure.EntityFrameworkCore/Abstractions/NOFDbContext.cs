@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.CompilerServices;
 
@@ -11,12 +12,66 @@ public record DbContextModelCreating(ModelBuilder Builder);
 [Table(nameof(StateMachineContextInfo))]
 internal sealed class StateMachineContextInfo
 {
+    [Required]
     public required string CorrelationId { get; set; }
+
+    [Required]
     public required string DefinitionType { get; set; }
+
+    [Required]
+    [MaxLength(1024)]
     public required string ContextType { get; set; }
+
+    [Required]
     public required string ContextData { get; set; }
+
     public required int State { get; set; }
 }
+
+[Table(nameof(TransactionalMessage))]
+internal sealed class TransactionalMessage
+{
+    [Key]
+    public Guid Id { get; set; }
+
+    [Required]
+    public OutboxMessageType MessageType { get; set; }
+
+    [Required]
+    [MaxLength(512)]
+    public string PayloadType { get; set; } = null!;
+
+    [Required]
+    public string Payload { get; set; } = null!;
+
+    [MaxLength(256)]
+    public string? DestinationEndpointName { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? SentAt { get; set; }
+    public DateTimeOffset? FailedAt { get; set; }
+
+    [MaxLength(2048)]
+    public string? ErrorMessage { get; set; }
+
+    public int RetryCount { get; set; }
+
+    public OutboxMessageStatus Status { get; set; }
+}
+
+internal enum OutboxMessageType
+{
+    Command = 0,
+    Notification = 1
+}
+
+internal enum OutboxMessageStatus
+{
+    Pending = 0,
+    Sent = 1,
+    Failed = 2
+}
+
 
 public abstract class NOFDbContext : DbContext
 {
@@ -28,15 +83,20 @@ public abstract class NOFDbContext : DbContext
     }
 
     internal DbSet<StateMachineContextInfo> StateMachineContexts { get; set; }
+    internal DbSet<TransactionalMessage> TransactionalMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StateMachineContextInfo>(entity =>
         {
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionType });
-            entity.Property(e => e.ContextType).IsRequired().HasMaxLength(1024);
-            entity.Property(e => e.ContextData).IsRequired();
         });
+
+        modelBuilder.Entity<TransactionalMessage>(entity =>
+        {
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+        });
+
         base.OnModelCreating(modelBuilder);
         _startupEventChannel.Publish(new DbContextModelCreating(modelBuilder));
     }

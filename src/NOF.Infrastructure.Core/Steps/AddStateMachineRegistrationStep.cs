@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application.Annotations;
-using NOF.Application.Mechanisms;
 using System.Reflection;
 
 namespace NOF;

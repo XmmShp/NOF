@@ -33,7 +33,6 @@
   <Folder Name="/src/Infrastructures/">
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
-    <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit.EntityFrameworkCore/NOF.Infrastructure.MassTransit.EntityFrameworkCore.csproj" Id="d150693c-238c-411e-af84-6c91a9f8589d" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.Memory/NOF.Infrastructure.Memory.csproj" Id="13be10a2-0d0c-4efe-a25b-3f80e643916e" />

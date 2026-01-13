@@ -2,11 +2,10 @@ using System.Text.Json;
 
 namespace NOF;
 
-public class StateMachineContextRepository<TDatabase> : IStateMachineContextRepository
-    where TDatabase : NOFDbContext
+public class StateMachineContextRepository : IStateMachineContextRepository
 {
-    private readonly TDatabase _dbContext;
-    public StateMachineContextRepository(TDatabase dbContext)
+    private readonly NOFDbContext _dbContext;
+    public StateMachineContextRepository(NOFDbContext dbContext)
     {
         _dbContext = dbContext;
     }

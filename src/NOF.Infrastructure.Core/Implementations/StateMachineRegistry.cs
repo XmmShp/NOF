@@ -1,6 +1,9 @@
-using NOF.Application.Mechanisms;
-
 namespace NOF;
+
+public interface IStateMachineRegistry
+{
+    IReadOnlySet<StateMachineBlueprint> GetBlueprints<TNotification>();
+}
 
 public sealed class StateMachineRegistry : IStateMachineRegistry
 {

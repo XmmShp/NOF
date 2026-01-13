@@ -219,6 +219,11 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
     protected virtual void ConfigureDefaultServices()
     {
+        Services.AddHostedService<OutboxCommandBackgroundService>();
+        Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
+        Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
+        Services.AddHandlerPipeline();
+
         const string otelExporterOtlpEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT";
         Logging.AddOpenTelemetry(logging =>
         {
@@ -229,12 +234,14 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
+                metrics.AddMeter(HandlerPipelineTracing.MeterName);
                 metrics.AddMeter(this.MetricNames.ToArray());
                 metrics.AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
             })
             .WithTracing(tracing =>
             {
+                tracing.AddSource(HandlerPipelineTracing.ActivitySourceName);
                 tracing.AddSource(StateMachineTracing.StateMachineActivitySourceName);
                 tracing.AddSource(this.ActivitySources.ToArray());
                 tracing.AddSource(Environment.ApplicationName)

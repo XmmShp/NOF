@@ -15,7 +15,6 @@ builder.Services.AddNOF_SampleAutoInjectServices();
 builder.Services.AddRedisCache();
 
 builder.AddMassTransit()
-    .UseEFCoreOutbox(o => o.UsePostgres())
     .UseRabbitMQ();
 
 builder.AddEFCore<ConfigurationDbContext>()
