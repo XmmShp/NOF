@@ -179,27 +179,3 @@ public interface IDistributedLock : IAsyncDisposable
     /// <returns>True if the lock was released; otherwise, false.</returns>
     ValueTask<bool> ReleaseAsync(CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Extends <see cref="ICacheService"/> with low-level cache engine operations.
-/// <para>
-/// <strong>WARNING:</strong> This interface breaks encapsulation and exposes implementation details.
-/// Use this ONLY when you need direct access to the underlying cache engine for advanced scenarios.
-/// Prefer using standard <see cref="ICacheService"/> methods whenever possible.
-/// </para>
-/// </summary>
-public interface ICacheServiceWithRawAccess : ICacheService
-{
-    /// <summary>
-    /// Executes a raw engine-specific operation.
-    /// <para>
-    /// <strong>DANGER:</strong> This method bypasses all abstractions and directly interacts with the cache engine.
-    /// The parameters dictionary is engine-specific and may vary between implementations (Redis, Memcached, etc.).
-    /// Using this method makes your code tightly coupled to a specific cache implementation.
-    /// </para>
-    /// </summary>
-    /// <param name="parameters">Engine-specific parameters. The keys and values depend on the underlying cache implementation.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    ValueTask ExecuteRawAsync(IDictionary<string, object?> parameters, CancellationToken cancellationToken = default);
-}

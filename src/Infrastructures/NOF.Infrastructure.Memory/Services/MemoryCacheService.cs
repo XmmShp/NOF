@@ -6,7 +6,7 @@ namespace NOF;
 /// <summary>
 /// In-memory implementation of <see cref="ICacheService"/> for development and testing purposes.
 /// </summary>
-public sealed class MemoryCacheService : ICacheServiceWithRawAccess, IDisposable
+public sealed class MemoryCacheService : ICacheService, IDisposable
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
     private readonly ICacheSerializer _serializer;

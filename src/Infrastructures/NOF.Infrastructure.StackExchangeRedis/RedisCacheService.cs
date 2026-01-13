@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 
 namespace NOF;
 
-public class RedisCacheService : ICacheServiceWithRawAccess
+public class RedisCacheService : ICacheService
 {
     private readonly IDatabase _database;
     private readonly ICacheSerializer _serializer;

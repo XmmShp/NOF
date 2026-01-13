@@ -189,14 +189,13 @@ public static partial class __NOF_Integration_Extensions__
         /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
         public IServiceCollection AddCacheService<TImplementation>(Func<IServiceProvider, CacheServiceOptions, TImplementation> implementationFactory,
             CacheServiceOptions options)
-            where TImplementation : class, ICacheServiceWithRawAccess
+            where TImplementation : class, ICacheService
         {
             services.AddSingleton(sp => implementationFactory(sp, options));
 
             // Register all cache-related interfaces
             services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<TImplementation>());
             services.TryAddSingleton<ICacheService>(sp => sp.GetRequiredService<TImplementation>());
-            services.TryAddSingleton<ICacheServiceWithRawAccess>(sp => sp.GetRequiredService<TImplementation>());
 
             return services;
         }

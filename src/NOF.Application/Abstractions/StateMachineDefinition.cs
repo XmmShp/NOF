@@ -1,6 +1,6 @@
 using NOF.Application.Annotations;
 
-namespace NOF.Application.Abstractions;
+namespace NOF;
 
 public interface IStateMachineDefinition<TState, TContext> : IStateMachineDefinition
     where TContext : class, IStateMachineContext

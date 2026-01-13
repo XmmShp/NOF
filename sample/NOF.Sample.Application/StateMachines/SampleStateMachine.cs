@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using NOF.Application.Abstractions;
 
 namespace NOF.Sample;
 
