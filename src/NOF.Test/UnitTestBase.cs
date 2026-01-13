@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 
 namespace NOF.Test;
@@ -14,7 +11,7 @@ namespace NOF.Test;
 public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
 {
     protected TDbContext DbContext { get; }
-    protected IDistributedCache Cache { get; }
+    protected ICacheService Cache { get; }
 
     protected UnitTestBase()
     {
@@ -29,7 +26,7 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
 
         DbContext.Database.EnsureCreated();
 
-        Cache = new MemoryDistributedCache(new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()));
+        Cache = new MemoryCacheService(new JsonCacheSerializer(), new ExponentialBackoffLockRetryStrategy(), new CacheServiceOptions());
     }
 
     protected ILogger<T> GetLogger<T>()

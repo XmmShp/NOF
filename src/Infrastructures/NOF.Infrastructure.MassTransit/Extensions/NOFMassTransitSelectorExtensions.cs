@@ -26,7 +26,7 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
 
         public INOFMassTransitSelector AddRequestHandleNode(Type nodeType)
         {
-            selector.Builder.AddApplicationConfig((_, app) =>
+            selector.Builder.AddInitializationStep((_, app) =>
             {
                 app.Services.GetRequiredService<IRequestHandleNodeRegistry>().Registry.AddFirst(nodeType);
                 return Task.CompletedTask;

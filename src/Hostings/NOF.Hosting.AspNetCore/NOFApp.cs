@@ -59,7 +59,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
                     && !context.Request.Path.StartsWithSegments(alivenessEndpointPath)
             ));
 
-        this.AddApplicationConfig((_, application) =>
+        this.AddInitializationStep((_, application) =>
         {
             if (application is IEndpointRouteBuilder rt)
             {
