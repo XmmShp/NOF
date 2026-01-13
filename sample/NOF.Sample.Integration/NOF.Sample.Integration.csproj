@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Integration.Core\NOF.Infrastructure.Abstraction.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
     <ProjectReference Include="..\NOF.Sample.Integration.Contract\NOF.Sample.Integration.Contract.csproj" />
   </ItemGroup>
 
