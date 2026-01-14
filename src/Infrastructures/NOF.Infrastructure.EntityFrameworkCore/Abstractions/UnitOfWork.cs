@@ -40,7 +40,7 @@ public class UnitOfWork : IUnitOfWork
 
             var messages = _collector.GetMessages();
 
-            var hasMessage = messages.Count > 1;
+            var hasMessage = messages.Count > 0;
 
             if (hasMessage)
             {
