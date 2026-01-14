@@ -63,4 +63,14 @@ public sealed class OutboxMessage
     /// 重试次数（添加时默认为0）
     /// </summary>
     public int RetryCount { get; init; } = 0;
+
+    /// <summary>
+    /// 分布式追踪 TraceId（用于恢复追踪上下文）
+    /// </summary>
+    public string? TraceId { get; init; }
+
+    /// <summary>
+    /// 分布式追踪 SpanId（用于恢复追踪上下文）
+    /// </summary>
+    public string? SpanId { get; init; }
 }

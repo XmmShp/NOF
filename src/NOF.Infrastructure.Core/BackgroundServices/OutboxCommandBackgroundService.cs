@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 using System.Threading.Channels;
 
 namespace NOF;
@@ -145,6 +146,9 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
             return;
         }
 
+        // 恢复追踪上下文
+        using var restoredActivity = RestoreTracingContext(message);
+
         try
         {
             if (message.Message is ICommand command)
@@ -178,5 +182,38 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
             await repository.RecordDeliveryFailureAsync(message.Id, ex.Message, cancellationToken);
             throw; // ensure not added to success list
         }
+    }
+
+    private static Activity? RestoreTracingContext(OutboxMessage message)
+    {
+        if (string.IsNullOrEmpty(message.TraceId))
+        {
+            return null;
+        }
+
+        var activityContext = new ActivityContext(
+            traceId: ActivityTraceId.CreateFromString(message.TraceId.AsSpan()),
+            spanId: string.IsNullOrEmpty(message.SpanId) ? ActivitySpanId.CreateRandom() : ActivitySpanId.CreateFromString(message.SpanId.AsSpan()),
+            traceFlags: ActivityTraceFlags.Recorded,
+            isRemote: true);
+
+        var activity = OutboxTracing.Source.StartActivity(
+            OutboxTracing.ActivityNames.MessageProcessing,
+            kind: ActivityKind.Consumer,
+            parentContext: activityContext);
+
+        if (activity is { IsAllDataRequested: true })
+        {
+            activity.SetTag(OutboxTracing.Tags.MessageId, message.Id.ToString());
+            activity.SetTag(OutboxTracing.Tags.MessageType, message.Message.GetType().Name);
+            activity.SetTag(OutboxTracing.Tags.RetryCount, message.RetryCount.ToString());
+            activity.SetTag(OutboxTracing.Tags.TraceId, message.TraceId);
+            if (!string.IsNullOrEmpty(message.SpanId))
+            {
+                activity.SetTag(OutboxTracing.Tags.SpanId, message.SpanId);
+            }
+        }
+
+        return activity;
     }
 }

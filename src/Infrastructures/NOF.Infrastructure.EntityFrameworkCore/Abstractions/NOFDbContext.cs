@@ -68,6 +68,18 @@ internal sealed class TransactionalMessage
     public DateTimeOffset? ClaimExpiresAt { get; set; }
 
     public OutboxMessageStatus Status { get; set; }
+
+    /// <summary>
+    /// 分布式追踪 TraceId（用于恢复追踪上下文）
+    /// </summary>
+    [MaxLength(128)]
+    public string? TraceId { get; set; }
+
+    /// <summary>
+    /// 分布式追踪 SpanId（用于恢复追踪上下文）
+    /// </summary>
+    [MaxLength(128)]
+    public string? SpanId { get; set; }
 }
 
 internal enum OutboxMessageType
@@ -108,6 +120,8 @@ public abstract class NOFDbContext : DbContext
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
             entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt }); // 联合索引替代Claimed状态
             entity.HasIndex(e => e.ClaimedBy);
+            // 为追踪字段添加索引以支持追踪查询
+            entity.HasIndex(e => e.TraceId);
         });
 
         base.OnModelCreating(modelBuilder);

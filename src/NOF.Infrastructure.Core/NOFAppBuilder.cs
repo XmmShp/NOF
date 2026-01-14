@@ -246,6 +246,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
             {
                 tracing.AddSource(HandlerPipelineTracing.ActivitySourceName);
                 tracing.AddSource(StateMachineTracing.StateMachineActivitySourceName);
+                tracing.AddSource(OutboxTracing.ActivitySourceName);
                 tracing.AddSource(this.ActivitySources.ToArray());
                 tracing.AddSource(Environment.ApplicationName)
                     .AddHttpClientInstrumentation();

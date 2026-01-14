@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace NOF;
 
 /// <summary>
@@ -14,11 +16,15 @@ internal sealed class DeferredCommandSender : IDeferredCommandSender
 
     public void Send(ICommand command, string? destinationEndpointName = null)
     {
+        var currentActivity = Activity.Current;
+
         _collector.AddMessage(new OutboxMessage
         {
             Message = command,
             DestinationEndpointName = destinationEndpointName,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            TraceId = currentActivity?.TraceId.ToString(),
+            SpanId = currentActivity?.SpanId.ToString()
         });
     }
 }
@@ -37,11 +43,15 @@ internal sealed class DeferredNotificationPublisher : IDeferredNotificationPubli
 
     public void Publish(INotification notification)
     {
+        var currentActivity = Activity.Current;
+
         _collector.AddMessage(new OutboxMessage
         {
             Message = notification,
             DestinationEndpointName = null,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            TraceId = currentActivity?.TraceId.ToString(),
+            SpanId = currentActivity?.SpanId.ToString()
         });
     }
 }

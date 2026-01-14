@@ -44,7 +44,9 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
                 Status = OutboxMessageStatus.Pending,
                 RetryCount = msg.RetryCount,
                 ClaimedBy = null,
-                ClaimExpiresAt = null
+                ClaimExpiresAt = null,
+                TraceId = msg.TraceId,
+                SpanId = msg.SpanId
             });
         }
 
@@ -122,13 +124,16 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
                 try
                 {
                     var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
+
                     result.Add(new OutboxMessage
                     {
                         Id = m.Id,
                         Message = message,
                         DestinationEndpointName = m.DestinationEndpointName,
                         CreatedAt = m.CreatedAt,
-                        RetryCount = m.RetryCount
+                        RetryCount = m.RetryCount,
+                        TraceId = m.TraceId,
+                        SpanId = m.SpanId
                     });
                 }
                 catch (Exception ex)
