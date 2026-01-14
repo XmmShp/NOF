@@ -69,93 +69,70 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
         var lockId = Guid.NewGuid().ToString();
         var expiresAt = DateTimeOffset.UtcNow.Add(timeout);
 
-        // 使用事务确保原子性操作
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
+        int rowsUpdated;
+        // 第一步：直接声明待处理消息（包括过期锁的消息）
         try
         {
-            // 第一步：直接声明待处理消息（包括过期锁的消息）
-            var rowsUpdated = await _dbContext.TransactionalMessages
+            rowsUpdated = await _dbContext.TransactionalMessages
                 .Where(m => m.Status == OutboxMessageStatus.Pending &&
-                           m.RetryCount < _options.MaxRetryCount &&
-                           (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+                            m.RetryCount < _options.MaxRetryCount &&
+                            (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
                 .OrderBy(m => m.CreatedAt)
                 .Take(batchSize)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(m => m.ClaimedBy, lockId)
-                    .SetProperty(m => m.ClaimExpiresAt, expiresAt),
-                    cancellationToken);
-
-            // 如果没有获取到消息，尝试跳过一些消息再重试一次
-            if (rowsUpdated == 0)
-            {
-                var skipCount = batchSize / 2;
-                var retryRowsUpdated = await _dbContext.TransactionalMessages
-                    .Where(m => m.Status == OutboxMessageStatus.Pending &&
-                               m.RetryCount < _options.MaxRetryCount &&
-                               (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
-                    .OrderBy(m => m.CreatedAt)
-                    .Skip(skipCount)
-                    .Take(batchSize)
-                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
                         .SetProperty(m => m.ClaimedBy, lockId)
                         .SetProperty(m => m.ClaimExpiresAt, expiresAt),
-                        cancellationToken);
-
-                rowsUpdated = retryRowsUpdated;
-            }
-
-            await transaction.CommitAsync(cancellationToken);
-
-            if (rowsUpdated == 0)
-            {
-                return new List<OutboxMessage>();
-            }
-
-            // 第二步：获取成功声明的消息
-            var claimedMessages = await _dbContext.TransactionalMessages
-                .Where(m => m.ClaimedBy == lockId && m.ClaimExpiresAt == expiresAt)
-                .ToListAsync(cancellationToken);
-
-            var result = new List<OutboxMessage>(claimedMessages.Count);
-
-            foreach (var m in claimedMessages)
-            {
-                try
-                {
-                    var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
-
-                    result.Add(new OutboxMessage
-                    {
-                        Id = m.Id,
-                        Message = message,
-                        DestinationEndpointName = m.DestinationEndpointName,
-                        CreatedAt = m.CreatedAt,
-                        RetryCount = m.RetryCount,
-                        TraceId = m.TraceId,
-                        SpanId = m.SpanId
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Deserialization failed for claimed message {MessageId}, type: {TypeName}",
-                        m.Id, m.PayloadType);
-
-                    // 释放失败消息的锁并标记为永久失败
-                    await ReleaseClaimAndMarkAsFailedAsync(m.Id, $"Deserialization error: {ex.Message}", cancellationToken);
-                }
-            }
-
-            _logger.LogDebug("Successfully claimed {ClaimedCount} messages with lock {LockId}",
-                result.Count, lockId);
-
-            return result;
+                    cancellationToken);
         }
-        catch
+        catch (DbUpdateException)
         {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
+            return new List<OutboxMessage>();
         }
+
+        if (rowsUpdated == 0)
+        {
+            return new List<OutboxMessage>();
+        }
+
+        // 第二步：获取成功声明的消息
+        var claimedMessages = await _dbContext.TransactionalMessages
+            .Where(m => m.ClaimedBy == lockId)
+            .ToListAsync(cancellationToken);
+
+        var result = new List<OutboxMessage>(claimedMessages.Count);
+
+        foreach (var m in claimedMessages)
+        {
+            try
+            {
+                var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
+
+                result.Add(new OutboxMessage
+                {
+                    Id = m.Id,
+                    Message = message,
+                    DestinationEndpointName = m.DestinationEndpointName,
+                    CreatedAt = m.CreatedAt,
+                    RetryCount = m.RetryCount,
+                    TraceId = m.TraceId,
+                    SpanId = m.SpanId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Deserialization failed for claimed message {MessageId}, type: {TypeName}",
+                    m.Id, m.PayloadType);
+
+                // 释放失败消息的锁并标记为永久失败
+                await ReleaseClaimAndMarkAsFailedAsync(m.Id, $"Deserialization error: {ex.Message}", cancellationToken);
+            }
+        }
+
+        _logger.LogDebug("Successfully claimed {ClaimedCount} messages with lock {LockId}",
+            result.Count, lockId);
+
+        return result;
     }
 
     public async Task MarkAsSentAsync(
@@ -164,9 +141,7 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
     {
         // 避免重复标记（如已被其他实例处理）
         await _dbContext.TransactionalMessages
-            .Where(m => messageIds.Contains(m.Id) &&
-                       m.Status == OutboxMessageStatus.Pending &&
-                       (m.ClaimedBy == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+            .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
                 .SetProperty(m => m.SentAt, DateTimeOffset.UtcNow)
@@ -181,11 +156,8 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
     public async Task RecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
         var rowsUpdated = await _dbContext.TransactionalMessages
-            .Where(m => m.Id == messageId &&
-                       m.Status == OutboxMessageStatus.Pending &&
-                       (m.ClaimedBy == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+            .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
                 .SetProperty(m => m.ErrorMessage, errorMessage)
                 .SetProperty(m => m.FailedAt, DateTimeOffset.UtcNow),
                 cancellationToken);

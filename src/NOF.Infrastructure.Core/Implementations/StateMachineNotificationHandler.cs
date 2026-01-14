@@ -5,9 +5,9 @@ namespace NOF;
 
 public interface IStateMachineContextRepository
 {
-    ValueTask<(IStateMachineContext Context, int State)?> FindAsync(string correlationId, Type definitionType);
-    void Add(string correlationId, Type definitionType, IStateMachineContext context, int state);
-    void Update(string correlationId, Type definitionType, IStateMachineContext context, int state);
+    ValueTask<StateMachineContext?> FindAsync(string correlationId, Type definitionType);
+    void Add(StateMachineContext stateMachineContext);
+    void Update(StateMachineContext stateMachineContext);
 }
 
 public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNotification> : INotificationHandler<TNotification>
@@ -39,13 +39,29 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
             var correlationId = bp.GetCorrelationId(notification);
             ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
-            const string process = "nof.state_machine.process";
-            using var instanceActivity = StateMachineTracing.Source.StartActivity(name: process, kind: ActivityKind.Consumer);
+            // 使用CorrelationId作为Handler名称，而不是类型名
+            using var instanceActivity = StateMachineTracing.Source.StartActivity(
+                name: $"{StateMachineTracing.ActivityNames.Handler}({correlationId})",
+                kind: ActivityKind.Consumer);
 
-            instanceActivity?.SetTag("nof.state_machine.correlation_id", correlationId);
-            instanceActivity?.SetTag("nof.state_machine.type", bp.DefinitionType.Name);
-            instanceActivity?.SetBaggage("nof_sm_correlation_id", correlationId);
-            instanceActivity?.SetBaggage("nof_sm_type", bp.DefinitionType.FullName);
+            if (instanceActivity != null)
+            {
+                instanceActivity.SetTag(StateMachineTracing.Tags.CorrelationId, correlationId);
+                instanceActivity.SetTag(StateMachineTracing.Tags.Type, bp.DefinitionType.Name);
+                instanceActivity.SetTag(StateMachineTracing.Tags.HandlerName, $"{bp.DefinitionType.Name}({correlationId})");
+
+                // 设置当前追踪信息
+                var currentActivity = Activity.Current;
+                if (currentActivity != null)
+                {
+                    instanceActivity.SetTag(StateMachineTracing.Tags.TraceId, currentActivity.TraceId.ToString());
+                    instanceActivity.SetTag(StateMachineTracing.Tags.SpanId, currentActivity.SpanId.ToString());
+                }
+
+                // 设置Baggage以便后续追踪
+                instanceActivity.SetBaggage(StateMachineTracing.Baggage.CorrelationId, correlationId);
+                instanceActivity.SetBaggage(StateMachineTracing.Baggage.Type, bp.DefinitionType.FullName);
+            }
 
             try
             {
@@ -54,18 +70,38 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
                 {
                     var context = new StatefulStateMachineContext
                     {
-                        Context = existing.Value.Context,
-                        State = existing.Value.State
+                        Context = existing.Context,
+                        State = existing.State
                     };
                     await bp.TransferAsync(context, notification, _serviceProvider, cancellationToken);
-                    _repository.Update(correlationId, bp.DefinitionType, context.Context, context.State);
+
+                    // 创建更新后的状态机上下文
+                    var updatedContext = StateMachineContext.Create(
+                        correlationId: correlationId,
+                        definitionType: bp.DefinitionType,
+                        context: context.Context,
+                        state: context.State,
+                        traceId: existing.TraceId,
+                        spanId: existing.SpanId);
+
+                    _repository.Update(updatedContext);
                 }
                 else
                 {
                     var context = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
                     if (context is not null)
                     {
-                        _repository.Add(correlationId, bp.DefinitionType, context.Context, context.State);
+                        // 捕获当前追踪上下文
+                        var currentActivity = Activity.Current;
+                        var newStateMachineContext = StateMachineContext.Create(
+                            correlationId: correlationId,
+                            definitionType: bp.DefinitionType,
+                            context: context.Context,
+                            state: context.State,
+                            traceId: currentActivity?.TraceId.ToString(),
+                            spanId: currentActivity?.SpanId.ToString());
+
+                        _repository.Add(newStateMachineContext);
                     }
                 }
             }

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace NOF.Sample;
@@ -6,10 +7,13 @@ public enum SampleState
 {
     Processing,
     Completed,
-    Failed
+    Failed,
+    Stopped
 }
 
 public record TaskStarted(string TaskId) : INotification;
+public record TaskContinued(string TaskId) : INotification;
+
 public record ProcessingSucceeded(string TaskId) : INotification;
 public record ProcessingFailed(string TaskId, string Reason) : INotification;
 public record StartProcessingCommand(string TaskId) : ICommand;
@@ -60,6 +64,7 @@ public class SampleStateMachine : IStateMachineDefinition<SampleState, SampleSta
     public void Build(IStateMachineBuilder<SampleState, SampleStateMachineContext> builder)
     {
         builder.Correlate<TaskStarted>(n => TaskKey(n.TaskId));
+        builder.Correlate<TaskContinued>(n => TaskKey(n.TaskId));
         builder.Correlate<ProcessingSucceeded>(n => TaskKey(n.TaskId));
         builder.Correlate<ProcessingFailed>(n => TaskKey(n.TaskId));
 
@@ -85,5 +90,23 @@ public class SampleStateMachine : IStateMachineDefinition<SampleState, SampleSta
                     ctx.FailReason = notification.Reason;
                 })
                 .TransitionTo(SampleState.Failed);
+
+        builder.On(SampleState.Completed)
+            .When<TaskContinued>()
+            .Execute((_, n, sp) =>
+            {
+                sp.GetRequiredService<ILogger<SampleStateMachine>>()
+                    .LogInformation("Task-{TaskId} Continued.", n.TaskId);
+            })
+            .TransitionTo(SampleState.Stopped);
+
+        builder.On(SampleState.Failed)
+            .When<TaskContinued>()
+            .Execute((_, n, sp) =>
+            {
+                sp.GetRequiredService<ILogger<SampleStateMachine>>()
+                    .LogInformation("Task-{TaskId} Continued.", n.TaskId);
+            })
+            .TransitionTo(SampleState.Stopped);
     }
 }

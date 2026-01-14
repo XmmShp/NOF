@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace NOF;
 
 internal interface IStateMachineBuilderInternal
@@ -27,10 +29,27 @@ public class StateMachineBuilder<TState, TContext> : IStateMachineBuilder<TState
             {
                 if (context.State != TargetState.Value)
                 {
-                    const string stateTransition = "nof.state_machine.state_transition";
-                    using var activity = StateMachineTracing.Source.StartActivity(stateTransition);
-                    activity?.SetTag("from", context.State);
-                    activity?.SetTag("to", TargetState.Value);
+                    using var activity = StateMachineTracing.Source.StartActivity(StateMachineTracing.ActivityNames.StateTransition);
+
+                    if (activity is { IsAllDataRequested: true })
+                    {
+                        activity.SetTag(StateMachineTracing.Tags.StateFrom, context.State.ToString());
+                        activity.SetTag(StateMachineTracing.Tags.StateTo, TargetState.Value.ToString());
+
+                        // 尝试从当前Activity或Baggage中获取状态机信息
+                        var currentActivity = Activity.Current;
+                        if (currentActivity != null)
+                        {
+                            var correlationId = currentActivity.GetBaggageItem(StateMachineTracing.Baggage.CorrelationId);
+                            var machineType = currentActivity.GetBaggageItem(StateMachineTracing.Baggage.Type);
+
+                            if (!string.IsNullOrEmpty(correlationId))
+                                activity.SetTag(StateMachineTracing.Tags.CorrelationId, correlationId);
+                            if (!string.IsNullOrEmpty(machineType))
+                                activity.SetTag(StateMachineTracing.Tags.Type, machineType);
+                        }
+                    }
+
                     context.State = TargetState.Value;
                 }
             }

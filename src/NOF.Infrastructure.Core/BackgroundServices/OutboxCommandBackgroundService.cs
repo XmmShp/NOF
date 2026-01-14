@@ -86,6 +86,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         var repository = scope.ServiceProvider.GetRequiredService<ITransactionalMessageRepository>();
         var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
         var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         // 使用抢占式获取，避免多实例重复处理
         var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);

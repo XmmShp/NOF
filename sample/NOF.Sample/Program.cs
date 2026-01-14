@@ -41,9 +41,11 @@ builder.Services.AddHostedService(async (sp, ct) =>
         await using var scope = sp.CreateAsyncScope();
         var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        await publisher.PublishAsync(new TaskStarted(Random.Shared.Next().ToString()), ct);
-        await uow.SaveChangesAsync(ct);
-        await Task.Delay(TimeSpan.FromSeconds(10), ct);
+        var taskId = Random.Shared.Next().ToString();
+        await publisher.PublishAsync(new TaskStarted(taskId), ct);
+        await Task.Delay(TimeSpan.FromSeconds(3), ct);
+        await publisher.PublishAsync(new TaskContinued(taskId), ct);
+        await Task.Delay(TimeSpan.FromSeconds(5), ct);
     }
 });
 
