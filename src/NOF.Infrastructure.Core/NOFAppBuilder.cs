@@ -219,7 +219,10 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
     protected virtual void ConfigureDefaultServices()
     {
-        Services.AddHostedService<OutboxCommandBackgroundService>();
+        Services.AddSingleton<OutboxCommandBackgroundService>();
+        Services.AddHostedService(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
+        Services.AddSingleton<IOutboxPublisher>(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
+
         Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
         Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
         Services.AddHandlerPipeline();

@@ -2,54 +2,77 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Threading.Channels;
 
 namespace NOF;
 
-/// <summary>
-/// Outbox 消息后台发送服务
-/// 定期轮询数据库获取待发送的消息并使用 ICommandSender/INotificationPublisher 发送
-/// 使用分布式锁防止多进程重复投递
-/// </summary>
-public sealed class OutboxCommandBackgroundService : BackgroundService
+public interface IOutboxPublisher
+{
+    void TriggerImmediateProcessing();
+}
+
+public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxPublisher
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ICacheService _cacheService;
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxCommandBackgroundService> _logger;
+    private readonly Channel<object> _wakeUpChannel;
 
     public OutboxCommandBackgroundService(
         IServiceProvider serviceProvider,
-        ICacheService cacheService,
         IOptions<OutboxOptions> options,
         ILogger<OutboxCommandBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
-        _cacheService = cacheService;
         _options = options.Value;
         _logger = logger;
+
+        _wakeUpChannel = Channel.CreateBounded<object>(new BoundedChannelOptions(1)
+        {
+            FullMode = BoundedChannelFullMode.DropWrite,
+            SingleReader = true,
+            SingleWriter = false
+        });
+    }
+
+    public void TriggerImmediateProcessing()
+    {
+        _wakeUpChannel.Writer.TryWrite(null!);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation(
-            "Outbox message sender started with polling interval: {Interval}, batch size: {BatchSize}, max retry: {MaxRetry}",
+            "Outbox message sender started. PollingInterval: {Interval}, BatchSize: {BatchSize}, MaxRetry: {MaxRetry}",
             _options.PollingInterval, _options.BatchSize, _options.MaxRetryCount);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                var wakeUpTask = _wakeUpChannel.Reader.WaitToReadAsync(stoppingToken).AsTask();
+                var delayTask = Task.Delay(_options.PollingInterval, stoppingToken);
+
+                var completedTask = await Task.WhenAny(wakeUpTask, delayTask);
+
+                if (completedTask == wakeUpTask && wakeUpTask.Result)
+                {
+                    // 消费所有唤醒信号（防止多次 WakeUp 被丢弃）
+                    while (_wakeUpChannel.Reader.TryRead(out _))
+                    { }
+                    _logger.LogDebug("Received wake-up signal(s), processing immediately");
+                }
+
                 await ProcessPendingMessagesAsync(stoppingToken);
-                await Task.Delay(_options.PollingInterval, stoppingToken);
+
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing pending messages");
-                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+                _logger.LogError(ex, "Unexpected error in outbox background service loop");
             }
         }
 
@@ -58,65 +81,51 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
 
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
-        try
+        using var scope = _serviceProvider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ITransactionalMessageRepository>();
+        var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
+        var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+
+        var pendingMessages = await repository.GetPendingMessagesAsync(_options.BatchSize, cancellationToken);
+
+        if (pendingMessages.Count == 0)
         {
-            using var scope = _serviceProvider.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<ITransactionalMessageRepository>();
-            var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
-            var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+            _logger.LogDebug("No pending messages found");
+            return;
+        }
 
-            var pendingMessages = await repository.GetPendingMessagesAsync(_options.BatchSize, cancellationToken);
+        _logger.LogDebug("Retrieved {Count} pending messages for processing", pendingMessages.Count);
 
-            if (pendingMessages.Count == 0)
+        var succeededIds = new List<Guid>(pendingMessages.Count);
+        var failedCount = 0;
+
+        foreach (var message in pendingMessages)
+        {
+            try
             {
-                return;
+                await ProcessSingleMessageAsync(message, repository, commandSender, notificationPublisher, cancellationToken);
+                succeededIds.Add(message.Id);
             }
-
-            _logger.LogDebug("Found {Count} pending messages", pendingMessages.Count);
-
-            var processedCount = 0;
-            var skippedCount = 0;
-
-            foreach (var message in pendingMessages)
+            catch (Exception ex)
             {
-                var lockKey = $"outbox:lock:{message.Id}";
-                var lockResult = await _cacheService.TryAcquireLockAsync(
-                    lockKey,
-                    _options.LockExpiration,
-                    _options.LockTimeout,
-                    cancellationToken);
-
-                if (!lockResult.HasValue)
-                {
-                    // 锁被其他进程持有，跳过此消息
-                    skippedCount++;
-                    _logger.LogDebug("Message {MessageId} is locked by another process, skipping", message.Id);
-                    continue;
-                }
-
-                await using var distributedLock = lockResult.Value;
-
-                try
-                {
-                    await ProcessSingleMessageAsync(message, repository, commandSender, notificationPublisher, cancellationToken);
-                    processedCount++;
-                }
-                finally
-                {
-                    // 锁会在 using 结束时自动释放
-                }
-            }
-
-            if (processedCount > 0 || skippedCount > 0)
-            {
-                _logger.LogInformation(
-                    "Processed {ProcessedCount} messages, skipped {SkippedCount} locked messages",
-                    processedCount, skippedCount);
+                failedCount++;
+                _logger.LogError(ex, "Unhandled exception while processing message {MessageId}", message.Id);
             }
         }
-        catch (Exception ex)
+
+        if (succeededIds.Count > 0)
         {
-            _logger.LogError(ex, "Failed to process pending messages");
+            try
+            {
+                await repository.MarkAsSentAsync(succeededIds, cancellationToken);
+                _logger.LogInformation(
+                    "Batch processed: {Succeeded} sent, {Failed} failed",
+                    succeededIds.Count, failedCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mark {Count} messages as sent", succeededIds.Count);
+            }
         }
     }
 
@@ -127,52 +136,46 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
         INotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)
     {
+        if (message.RetryCount >= _options.MaxRetryCount)
+        {
+            await repository.RecordDeliveryFailureAsync(message.Id, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
+            _logger.LogWarning("Message {MessageId} exceeded max retry count ({MaxRetry}), marked as failed",
+                message.Id, _options.MaxRetryCount);
+            return;
+        }
+
         try
         {
-            if (message.RetryCount >= _options.MaxRetryCount)
+            if (message.Message is ICommand command)
             {
-                await repository.MarkAsFailedAsync(message.Id, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
-                _logger.LogWarning("Message {MessageId} exceeded max retry count ({MaxRetry}), marked as failed", 
-                    message.Id, _options.MaxRetryCount);
-                return;
+                await commandSender.SendAsync(command, message.DestinationEndpointName, cancellationToken);
+                _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
+                    message.Id, command.GetType().Name, message.RetryCount);
             }
-
-            try
+            else if (message.Message is INotification notification)
             {
-                if (message.Message is ICommand command)
-                {
-                    await commandSender.SendAsync(
-                        command,
-                        message.DestinationEndpointName,
-                        cancellationToken);
-
-                    _logger.LogInformation(
-                        "Successfully sent command {MessageId} of type {MessageType} (retry count: {RetryCount})",
-                        message.Id, command.GetType().Name, message.RetryCount);
-                }
-                else if (message.Message is INotification notification)
-                {
-                    await notificationPublisher.PublishAsync(notification, cancellationToken);
-
-                    _logger.LogInformation(
-                        "Successfully published notification {MessageId} of type {MessageType} (retry count: {RetryCount})",
-                        message.Id, notification.GetType().Name, message.RetryCount);
-                }
-
-                await repository.MarkAsSentAsync([message.Id], cancellationToken);
+                await notificationPublisher.PublishAsync(notification, cancellationToken);
+                _logger.LogDebug("Published notification {MessageId} of type {Type} (retry {Retry})",
+                    message.Id, notification.GetType().Name, message.RetryCount);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogWarning(ex,
-                    "Failed to send message {MessageId}, retry count: {RetryCount}",
-                    message.Id, message.RetryCount);
-
-                await repository.MarkAsFailedAsync(message.Id, ex.Message, cancellationToken);
+                await repository.RecordDeliveryFailureAsync(message.Id, "Unsupported message type", cancellationToken);
+                _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
+                    message.Id, message.Message.GetType().FullName ?? "null");
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // 服务正在关闭，不记录为失败，留待下次启动重试
+            _logger.LogInformation("Message {MessageId} delivery canceled due to shutdown", message.Id);
+            throw; // rethrow to prevent marking as succeeded
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error processing message {MessageId}", message.Id);
+            _logger.LogWarning(ex, "Failed to deliver message {MessageId} (retry {Retry})", message.Id, message.RetryCount);
+            await repository.RecordDeliveryFailureAsync(message.Id, ex.Message, cancellationToken);
+            throw; // ensure not added to success list
         }
     }
 }

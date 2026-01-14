@@ -55,6 +55,7 @@ internal sealed class TransactionalMessage
     public string? ErrorMessage { get; set; }
 
     public int RetryCount { get; set; }
+    public DateTimeOffset? NextTryAt { get; set; }
 
     public OutboxMessageStatus Status { get; set; }
 }

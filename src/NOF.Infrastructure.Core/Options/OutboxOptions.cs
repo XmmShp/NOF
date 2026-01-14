@@ -12,18 +12,6 @@ public sealed class OutboxOptions
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// 分布式锁过期时间
-    /// 默认值: 30 秒
-    /// </summary>
-    public TimeSpan LockExpiration { get; set; } = TimeSpan.FromSeconds(30);
-
-    /// <summary>
-    /// 获取分布式锁的超时时间
-    /// 默认值: 100 毫秒
-    /// </summary>
-    public TimeSpan LockTimeout { get; set; } = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>
     /// 每次轮询获取的最大消息数量
     /// 默认值: 100
     /// </summary>
@@ -37,8 +25,14 @@ public sealed class OutboxOptions
 
     /// <summary>
     /// 重试延迟的基数（秒）
-    /// 实际延迟 = 2^(RetryCount) * RetryDelayBase
+    /// 实际延迟 = (2^(RetryCount - 1)) * RetryDelayBase
     /// 默认值: 1 秒
     /// </summary>
     public TimeSpan RetryDelayBase { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// 重试延迟的最大上限（防止退避时间过长）
+    /// 默认值: 5 分钟
+    /// </summary>
+    public TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromMinutes(5);
 }

@@ -29,7 +29,7 @@ public interface ITransactionalMessageRepository
     /// <summary>
     /// 标记消息发送失败
     /// </summary>
-    Task MarkAsFailedAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default);
+    Task RecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
