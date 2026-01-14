@@ -55,7 +55,17 @@ internal sealed class TransactionalMessage
     public string? ErrorMessage { get; set; }
 
     public int RetryCount { get; set; }
-    public DateTimeOffset? NextTryAt { get; set; }
+
+    /// <summary>
+    /// 抢占锁标识符（实例ID）
+    /// </summary>
+    [MaxLength(256)]
+    public string? ClaimedBy { get; set; }
+
+    /// <summary>
+    /// 抢占锁过期时间
+    /// </summary>
+    public DateTimeOffset? ClaimExpiresAt { get; set; }
 
     public OutboxMessageStatus Status { get; set; }
 }
@@ -96,6 +106,8 @@ public abstract class NOFDbContext : DbContext
         modelBuilder.Entity<TransactionalMessage>(entity =>
         {
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
+            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt }); // 联合索引替代Claimed状态
+            entity.HasIndex(e => e.ClaimedBy);
         });
 
         base.OnModelCreating(modelBuilder);

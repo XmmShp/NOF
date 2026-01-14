@@ -43,7 +43,8 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
                 CreatedAt = msg.CreatedAt,
                 Status = OutboxMessageStatus.Pending,
                 RetryCount = msg.RetryCount,
-                NextTryAt = null
+                ClaimedBy = null,
+                ClaimExpiresAt = null
             });
         }
 
@@ -54,46 +55,102 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
         }
     }
 
-    public async Task<IReadOnlyList<OutboxMessage>> GetPendingMessagesAsync(
+    /// <summary>
+    /// 抢占式获取待发送的消息，避免多实例重复处理
+    /// </summary>
+    public async Task<IReadOnlyList<OutboxMessage>> ClaimPendingMessagesAsync(
         int batchSize,
+        TimeSpan? claimTimeout = null,
         CancellationToken cancellationToken = default)
     {
-        // 只获取：状态为 Pending、未达最大重试、且到了下次重试时间的消息
-        var dbMessages = await _dbContext.TransactionalMessages
-            .Where(m => m.Status == OutboxMessageStatus.Pending)
-            .Where(m => m.RetryCount < _options.MaxRetryCount)
-            .Where(m => !m.NextTryAt.HasValue || m.NextTryAt <= DateTimeOffset.UtcNow)
-            .OrderBy(m => m.CreatedAt)
-            .Take(batchSize)
-            .ToListAsync(cancellationToken);
+        var timeout = claimTimeout ?? _options.ClaimTimeout;
+        var lockId = Guid.NewGuid().ToString();
+        var expiresAt = DateTimeOffset.UtcNow.Add(timeout);
 
-        var result = new List<OutboxMessage>(dbMessages.Count);
+        // 使用事务确保原子性操作
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        foreach (var m in dbMessages)
+        try
         {
-            try
+            // 第一步：直接声明待处理消息（包括过期锁的消息）
+            var rowsUpdated = await _dbContext.TransactionalMessages
+                .Where(m => m.Status == OutboxMessageStatus.Pending &&
+                           m.RetryCount < _options.MaxRetryCount &&
+                           (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+                .OrderBy(m => m.CreatedAt)
+                .Take(batchSize)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(m => m.ClaimedBy, lockId)
+                    .SetProperty(m => m.ClaimExpiresAt, expiresAt),
+                    cancellationToken);
+
+            // 如果没有获取到消息，尝试跳过一些消息再重试一次
+            if (rowsUpdated == 0)
             {
-                var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
-                result.Add(new OutboxMessage
+                var skipCount = batchSize / 2;
+                var retryRowsUpdated = await _dbContext.TransactionalMessages
+                    .Where(m => m.Status == OutboxMessageStatus.Pending &&
+                               m.RetryCount < _options.MaxRetryCount &&
+                               (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+                    .OrderBy(m => m.CreatedAt)
+                    .Skip(skipCount)
+                    .Take(batchSize)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(m => m.ClaimedBy, lockId)
+                        .SetProperty(m => m.ClaimExpiresAt, expiresAt),
+                        cancellationToken);
+
+                rowsUpdated = retryRowsUpdated;
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+
+            if (rowsUpdated == 0)
+            {
+                return new List<OutboxMessage>();
+            }
+
+            // 第二步：获取成功声明的消息
+            var claimedMessages = await _dbContext.TransactionalMessages
+                .Where(m => m.ClaimedBy == lockId && m.ClaimExpiresAt == expiresAt)
+                .ToListAsync(cancellationToken);
+
+            var result = new List<OutboxMessage>(claimedMessages.Count);
+
+            foreach (var m in claimedMessages)
+            {
+                try
                 {
-                    Id = m.Id,
-                    Message = message,
-                    DestinationEndpointName = m.DestinationEndpointName,
-                    CreatedAt = m.CreatedAt,
-                    RetryCount = m.RetryCount
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Deserialization failed for message {MessageId}, type: {TypeName}",
-                    m.Id, m.PayloadType);
+                    var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
+                    result.Add(new OutboxMessage
+                    {
+                        Id = m.Id,
+                        Message = message,
+                        DestinationEndpointName = m.DestinationEndpointName,
+                        CreatedAt = m.CreatedAt,
+                        RetryCount = m.RetryCount
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Deserialization failed for claimed message {MessageId}, type: {TypeName}",
+                        m.Id, m.PayloadType);
 
-                // 即使反序列化失败，也应标记为永久失败（避免无限重试）
-                await MarkAsPermanentlyFailedAsync(m.Id, $"Deserialization error: {ex.Message}", cancellationToken);
+                    // 释放失败消息的锁并标记为永久失败
+                    await ReleaseClaimAndMarkAsFailedAsync(m.Id, $"Deserialization error: {ex.Message}", cancellationToken);
+                }
             }
+
+            _logger.LogDebug("Successfully claimed {ClaimedCount} messages with lock {LockId}",
+                result.Count, lockId);
+
+            return result;
         }
-
-        return result;
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task MarkAsSentAsync(
@@ -102,10 +159,14 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
     {
         // 避免重复标记（如已被其他实例处理）
         await _dbContext.TransactionalMessages
-            .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
+            .Where(m => messageIds.Contains(m.Id) &&
+                       m.Status == OutboxMessageStatus.Pending &&
+                       (m.ClaimedBy == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
-                .SetProperty(m => m.SentAt, DateTimeOffset.UtcNow),
+                .SetProperty(m => m.SentAt, DateTimeOffset.UtcNow)
+                .SetProperty(m => m.ClaimedBy, (string?)null)
+                .SetProperty(m => m.ClaimExpiresAt, (DateTimeOffset?)null),
                 cancellationToken);
     }
 
@@ -115,7 +176,9 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
     public async Task RecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
         var rowsUpdated = await _dbContext.TransactionalMessages
-            .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
+            .Where(m => m.Id == messageId &&
+                       m.Status == OutboxMessageStatus.Pending &&
+                       (m.ClaimedBy == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
                 .SetProperty(m => m.ErrorMessage, errorMessage)
@@ -128,7 +191,7 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
             return;
         }
 
-        // 第二步：加载最新状态以计算 NextTryAt 和最终状态
+        // 第二步：加载最新状态以计算最终状态
         var message = await _dbContext.TransactionalMessages
             .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
 
@@ -141,47 +204,24 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
         {
             // 永久失败
             message.Status = OutboxMessageStatus.Failed;
+            message.ClaimedBy = null;
+            message.ClaimExpiresAt = null;
             _logger.LogWarning(
                 "Message {MessageId} marked as permanently failed after {RetryCount} retries. Error: {Error}",
                 messageId, message.RetryCount, errorMessage);
         }
         else
         {
-            var delay = TimeSpan.FromTicks((long)(_options.RetryDelayBase.Ticks * Math.Pow(2, message.RetryCount - 1))
-            );
-
-            // 应用上限
-            if (delay > _options.MaxRetryDelay)
-            {
-                delay = _options.MaxRetryDelay;
-            }
-
-            message.NextTryAt = DateTimeOffset.UtcNow + delay;
             message.Status = OutboxMessageStatus.Pending;
+            message.ClaimedBy = null;
+            message.ClaimExpiresAt = null;
 
             _logger.LogWarning(
-                "Message {MessageId} scheduled for retry #{RetryCount} at {NextTryAt}. Error: {Error}",
-                messageId, message.RetryCount, message.NextTryAt, errorMessage);
+                "Message {MessageId} scheduled for retry #{RetryCount}. Error: {Error}",
+                messageId, message.RetryCount, errorMessage);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// 直接标记为永久失败（用于反序列化错误等不可恢复场景）
-    /// </summary>
-    private async Task MarkAsPermanentlyFailedAsync(
-        Guid messageId,
-        string reason,
-        CancellationToken cancellationToken = default)
-    {
-        await _dbContext.TransactionalMessages
-            .Where(m => m.Id == messageId && m.Status != OutboxMessageStatus.Failed)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(m => m.Status, OutboxMessageStatus.Failed)
-                .SetProperty(m => m.ErrorMessage, reason)
-                .SetProperty(m => m.FailedAt, DateTimeOffset.UtcNow),
-                cancellationToken);
     }
 
     private static readonly JsonSerializerOptions SerializeOptions = new()
@@ -201,5 +241,24 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
             ?? throw new InvalidOperationException($"Cannot resolve type: {typeName}");
 
         return (T)JsonSerializer.Deserialize(payload, type, SerializeOptions)!;
+    }
+
+    /// <summary>
+    /// 释放抢占锁并标记消息为失败状态
+    /// </summary>
+    private async Task ReleaseClaimAndMarkAsFailedAsync(
+        Guid messageId,
+        string errorMessage,
+        CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TransactionalMessages
+            .Where(m => m.Id == messageId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(m => m.Status, OutboxMessageStatus.Failed)
+                .SetProperty(m => m.ErrorMessage, errorMessage)
+                .SetProperty(m => m.FailedAt, DateTimeOffset.UtcNow)
+                .SetProperty(m => m.ClaimedBy, (string?)null)
+                .SetProperty(m => m.ClaimExpiresAt, (DateTimeOffset?)null),
+                cancellationToken);
     }
 }

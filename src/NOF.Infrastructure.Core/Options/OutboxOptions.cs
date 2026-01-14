@@ -24,15 +24,8 @@ public sealed class OutboxOptions
     public int MaxRetryCount { get; set; } = 5;
 
     /// <summary>
-    /// 重试延迟的基数（秒）
-    /// 实际延迟 = (2^(RetryCount - 1)) * RetryDelayBase
-    /// 默认值: 1 秒
-    /// </summary>
-    public TimeSpan RetryDelayBase { get; set; } = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// 重试延迟的最大上限（防止退避时间过长）
+    /// 抢占锁超时时间（防止实例崩溃导致永久死锁）
     /// 默认值: 5 分钟
     /// </summary>
-    public TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan ClaimTimeout { get; set; } = TimeSpan.FromMinutes(5);
 }

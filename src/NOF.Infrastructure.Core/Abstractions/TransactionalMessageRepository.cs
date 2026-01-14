@@ -17,9 +17,10 @@ public interface ITransactionalMessageRepository
     void Add(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 获取待发送的消息（供后台服务使用）
+    /// 抢占式获取待发送的消息，避免多实例重复处理
+    /// 返回的消息会被标记为处理中状态，其他实例无法重复获取
     /// </summary>
-    Task<IReadOnlyList<OutboxMessage>> GetPendingMessagesAsync(int batchSize = 100, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OutboxMessage>> ClaimPendingMessagesAsync(int batchSize = 100, TimeSpan? claimTimeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 标记消息已发送

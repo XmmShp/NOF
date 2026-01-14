@@ -86,15 +86,16 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
         var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
 
-        var pendingMessages = await repository.GetPendingMessagesAsync(_options.BatchSize, cancellationToken);
+        // 使用抢占式获取，避免多实例重复处理
+        var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
 
         if (pendingMessages.Count == 0)
         {
-            _logger.LogDebug("No pending messages found");
+            _logger.LogDebug("No pending messages claimed for processing");
             return;
         }
 
-        _logger.LogDebug("Retrieved {Count} pending messages for processing", pendingMessages.Count);
+        _logger.LogDebug("Claimed {Count} pending messages for processing", pendingMessages.Count);
 
         var succeededIds = new List<Guid>(pendingMessages.Count);
         var failedCount = 0;
@@ -109,7 +110,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
             catch (Exception ex)
             {
                 failedCount++;
-                _logger.LogError(ex, "Unhandled exception while processing message {MessageId}", message.Id);
+                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId}", message.Id);
             }
         }
 
@@ -124,7 +125,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to mark {Count} messages as sent", succeededIds.Count);
+                _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
             }
         }
     }
