@@ -35,7 +35,6 @@
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
-    <Project Path="src/Infrastructures/NOF.Infrastructure.Memory/NOF.Infrastructure.Memory.csproj" Id="13be10a2-0d0c-4efe-a25b-3f80e643916e" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
   </Folder>
   <Folder Name="/tests/">
