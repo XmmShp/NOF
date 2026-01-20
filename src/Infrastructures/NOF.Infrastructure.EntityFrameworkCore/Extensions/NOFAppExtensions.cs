@@ -32,7 +32,6 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
     {
         public INOFEFCoreSelector AddEFCore<TDbContext>() where TDbContext : NOFDbContext
         {
-
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IStateMachineContextRepository, StateMachineContextRepository>();
             builder.Services.AddScoped<ITransactionalMessageRepository, TransactionalMessageRepository>();

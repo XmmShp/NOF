@@ -86,16 +86,19 @@ internal class RiderRequestHandleNode : IRequestHandleNode
     }
 
     private readonly IScopedClientFactory _clientFactory;
-    public RiderRequestHandleNode(IScopedClientFactory clientFactory)
+    private readonly IEndpointNameProvider _nameProvider;
+
+    public RiderRequestHandleNode(IScopedClientFactory clientFactory, IEndpointNameProvider nameProvider)
     {
         _clientFactory = clientFactory;
+        _nameProvider = nameProvider;
     }
 
     public bool CanHandle(Type requestType, string? destinationEndpointName) => true;
 
     public async Task<Result> SendAsync(IRequest request, string? destinationEndpointName, CancellationToken cancellationToken)
     {
-        destinationEndpointName ??= request.GetType().GetEndpointName();
+        destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());
         var commandType = request.GetType();
         var cache = ValueCommandCache<Result>.Cache;
         var executor = cache.GetOrAdd(commandType, _ => CreateExecutor<Result>(commandType));
@@ -104,7 +107,7 @@ internal class RiderRequestHandleNode : IRequestHandleNode
 
     public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName, CancellationToken cancellationToken)
     {
-        destinationEndpointName ??= request.GetType().GetEndpointName();
+        destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());
         var commandType = request.GetType();
         var cache = ValueCommandCache<Result<TResponse>>.Cache;
         var executor = cache.GetOrAdd(commandType, _ => CreateExecutor<Result<TResponse>>(commandType));

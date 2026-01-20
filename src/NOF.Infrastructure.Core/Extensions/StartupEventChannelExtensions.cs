@@ -2,7 +2,7 @@ namespace NOF;
 
 
 // ReSharper disable once InconsistentNaming
-public static partial class __NOF_Integration_Extensions__
+public static partial class __NOF_Infrastructure_Core_Extensions__
 {
     extension(IStartupEventChannel startupEventChannel)
     {

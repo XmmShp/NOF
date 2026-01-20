@@ -10,7 +10,7 @@ public class StateMachineContextRepository : IStateMachineContextRepository
         _dbContext = dbContext;
     }
 
-    public async ValueTask<StateMachineContext?> FindAsync(string correlationId, Type definitionType)
+    public async ValueTask<StateMachineInfo?> FindAsync(string correlationId, Type definitionType)
     {
         if (string.IsNullOrWhiteSpace(correlationId))
         {
@@ -42,7 +42,7 @@ public class StateMachineContextRepository : IStateMachineContextRepository
             return null;
         }
 
-        return StateMachineContext.Create(
+        return StateMachineInfo.Create(
             correlationId: correlationId,
             definitionType: definitionType,
             context: context,
@@ -51,70 +51,70 @@ public class StateMachineContextRepository : IStateMachineContextRepository
             spanId: dbEntity.SpanId);
     }
 
-    public void Add(StateMachineContext stateMachineContext)
+    public void Add(StateMachineInfo stateMachineInfo)
     {
-        ArgumentNullException.ThrowIfNull(stateMachineContext);
-        ArgumentException.ThrowIfNullOrWhiteSpace(stateMachineContext.CorrelationId);
-        ArgumentNullException.ThrowIfNull(stateMachineContext.Context);
-        ArgumentNullException.ThrowIfNull(stateMachineContext.DefinitionType);
+        ArgumentNullException.ThrowIfNull(stateMachineInfo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(stateMachineInfo.CorrelationId);
+        ArgumentNullException.ThrowIfNull(stateMachineInfo.Context);
+        ArgumentNullException.ThrowIfNull(stateMachineInfo.DefinitionType);
 
-        var definitionTypeString = stateMachineContext.DefinitionType.AssemblyQualifiedName;
+        var definitionTypeString = stateMachineInfo.DefinitionType.AssemblyQualifiedName;
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionTypeString);
 
-        var contextType = stateMachineContext.Context.GetType();
+        var contextType = stateMachineInfo.Context.GetType();
         var contextTypeString = contextType.AssemblyQualifiedName;
         ArgumentException.ThrowIfNullOrWhiteSpace(contextTypeString);
-        var contextData = JsonSerializer.Serialize(stateMachineContext.Context, contextType, JsonSerializerOptions.NOFDefaults);
+        var contextData = JsonSerializer.Serialize(stateMachineInfo.Context, contextType, JsonSerializerOptions.NOFDefaults);
 
         var dbEntity = new StateMachineContextInfo
         {
-            CorrelationId = stateMachineContext.CorrelationId,
+            CorrelationId = stateMachineInfo.CorrelationId,
             DefinitionType = definitionTypeString,
             ContextType = contextTypeString,
             ContextData = contextData,
-            State = stateMachineContext.State,
-            TraceId = stateMachineContext.TraceId,
-            SpanId = stateMachineContext.SpanId
+            State = stateMachineInfo.State,
+            TraceId = stateMachineInfo.TraceId,
+            SpanId = stateMachineInfo.SpanId
         };
 
         _dbContext.StateMachineContexts.Add(dbEntity);
     }
 
-    public void Update(StateMachineContext stateMachineContext)
+    public void Update(StateMachineInfo stateMachineInfo)
     {
-        ArgumentNullException.ThrowIfNull(stateMachineContext);
-        ArgumentException.ThrowIfNullOrWhiteSpace(stateMachineContext.CorrelationId);
-        ArgumentNullException.ThrowIfNull(stateMachineContext.DefinitionType);
+        ArgumentNullException.ThrowIfNull(stateMachineInfo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(stateMachineInfo.CorrelationId);
+        ArgumentNullException.ThrowIfNull(stateMachineInfo.DefinitionType);
 
-        var definitionTypeString = stateMachineContext.DefinitionType.AssemblyQualifiedName;
+        var definitionTypeString = stateMachineInfo.DefinitionType.AssemblyQualifiedName;
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionTypeString);
 
-        var dbEntity = _dbContext.StateMachineContexts.Find(stateMachineContext.CorrelationId, definitionTypeString);
+        var dbEntity = _dbContext.StateMachineContexts.Find(stateMachineInfo.CorrelationId, definitionTypeString);
 
         if (dbEntity is null)
         {
             return;
         }
 
-        var type = stateMachineContext.Context.GetType();
+        var type = stateMachineInfo.Context.GetType();
         if (type.AssemblyQualifiedName != dbEntity.ContextType)
         {
             throw new InvalidOperationException($"Invalid context type: {type.AssemblyQualifiedName}");
         }
 
-        var contextData = JsonSerializer.Serialize(stateMachineContext.Context, type, JsonSerializerOptions.NOFDefaults);
+        var contextData = JsonSerializer.Serialize(stateMachineInfo.Context, type, JsonSerializerOptions.NOFDefaults);
         if (contextData != dbEntity.ContextData)
         {
             dbEntity.ContextData = contextData;
         }
 
-        if (stateMachineContext.State != dbEntity.State)
+        if (stateMachineInfo.State != dbEntity.State)
         {
-            dbEntity.State = stateMachineContext.State;
+            dbEntity.State = stateMachineInfo.State;
         }
 
         // 更新追踪信息
-        dbEntity.TraceId = stateMachineContext.TraceId;
-        dbEntity.SpanId = stateMachineContext.SpanId;
+        dbEntity.TraceId = stateMachineInfo.TraceId;
+        dbEntity.SpanId = stateMachineInfo.SpanId;
     }
 }

@@ -5,7 +5,6 @@ namespace NOF;
 
 public class EndpointNameFormatter : DefaultEndpointNameFormatter
 {
-    private static readonly ConcurrentDictionary<Type, string> NameCache = new();
     private static readonly HashSet<Type> SupportedConsumerGenericTypes =
     [
         typeof(MassTransitRequestHandlerAdapter<,>),
@@ -15,7 +14,14 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
         typeof(MassTransitNotificationHandlerAdapter<,>)
     ];
 
-    public new static EndpointNameFormatter Instance { get; } = new();
+    private readonly ConcurrentDictionary<Type, string> NameCache = new();
+    private readonly IEndpointNameProvider _nameProvider;
+
+    public EndpointNameFormatter(IEndpointNameProvider nameProvider)
+    {
+        ArgumentNullException.ThrowIfNull(nameProvider);
+        _nameProvider = nameProvider;
+    }
 
     protected override string GetConsumerName(Type consumerType)
     {
@@ -26,18 +32,18 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
 
         if (!consumerType.IsGenericType || !SupportedConsumerGenericTypes.Contains(consumerType.GetGenericTypeDefinition()))
         {
-            var fallback = consumerType.GetEndpointName();
+            var fallback = _nameProvider.GetEndpointName(consumerType);
             return NameCache.GetOrAdd(consumerType, fallback);
         }
 
         var handlerType = consumerType.GenericTypeArguments[0];
-        var endpointName = handlerType.GetEndpointName();
+        var endpointName = _nameProvider.GetEndpointName(handlerType);
 
         return NameCache.GetOrAdd(consumerType, endpointName);
     }
 
     protected override string GetMessageName(Type type)
     {
-        return type.GetEndpointName();
+        return _nameProvider.GetEndpointName(type);
     }
 }

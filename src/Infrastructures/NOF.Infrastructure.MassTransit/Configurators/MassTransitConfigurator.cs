@@ -59,7 +59,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep, 
 
         builder.Services.AddMassTransit(config =>
         {
-            config.SetEndpointNameFormatter(EndpointNameFormatter.Instance);
+            config.SetEndpointNameFormatter(new EndpointNameFormatter(builder.EndpointNameProvider!));
             config.AddConsumers(externalConsumers.ToArray());
             builder.StartupEventChannel.Publish(new MassTransitConfiguring(config));
         });

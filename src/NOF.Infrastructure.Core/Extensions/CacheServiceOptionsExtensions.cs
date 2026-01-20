@@ -2,7 +2,7 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace NOF;
 
-public static partial class __NOF_Integration_Extensions__
+public static partial class __NOF_Infrastructure_Core_Extensions__
 {
     /// <param name="options">The cache service options.</param>
     extension(CacheServiceOptions options)
