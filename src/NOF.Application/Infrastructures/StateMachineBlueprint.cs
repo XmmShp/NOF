@@ -15,8 +15,8 @@ public abstract class StateMachineBlueprint
         set;
     } = null!;
 
-    internal HashSet<Type> ObservedTypes { get; } = [];
-    internal Dictionary<Type, Func<object, string>> CorrelationIdSelectors { get; } = [];
+    public HashSet<Type> ObservedTypes { get; } = [];
+    public Dictionary<Type, Func<object, string>> CorrelationIdSelectors { get; } = [];
 
     public IReadOnlySet<Type> ObservedNotificationTypes => ObservedTypes.AsReadOnly();
 
@@ -28,15 +28,14 @@ public abstract class StateMachineBlueprint
             : null;
     }
 
-    internal abstract Task<StatefulStateMachineContext?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public abstract Task<StatefulStateMachineContext?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         where TNotification : class, INotification;
-    internal abstract Task TransferAsync<TNotification>(StatefulStateMachineContext context, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public abstract Task TransferAsync<TNotification>(StatefulStateMachineContext context, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         where TNotification : class, INotification;
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public class StatefulStateMachineContext
+public interface IStateMachineBuilderInternal
 {
-    public int State { get; set; }
-    public required IStateMachineContext Context { get; init; }
+    StateMachineBlueprint Build();
 }

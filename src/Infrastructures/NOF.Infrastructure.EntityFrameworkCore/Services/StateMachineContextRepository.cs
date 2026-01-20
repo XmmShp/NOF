@@ -46,9 +46,7 @@ public class StateMachineContextRepository : IStateMachineContextRepository
             correlationId: correlationId,
             definitionType: definitionType,
             context: context,
-            state: dbEntity.State,
-            traceId: dbEntity.TraceId,
-            spanId: dbEntity.SpanId);
+            state: dbEntity.State);
     }
 
     public void Add(StateMachineInfo stateMachineInfo)
@@ -72,9 +70,7 @@ public class StateMachineContextRepository : IStateMachineContextRepository
             DefinitionType = definitionTypeString,
             ContextType = contextTypeString,
             ContextData = contextData,
-            State = stateMachineInfo.State,
-            TraceId = stateMachineInfo.TraceId,
-            SpanId = stateMachineInfo.SpanId
+            State = stateMachineInfo.State
         };
 
         _dbContext.StateMachineContexts.Add(dbEntity);
@@ -112,9 +108,5 @@ public class StateMachineContextRepository : IStateMachineContextRepository
         {
             dbEntity.State = stateMachineInfo.State;
         }
-
-        // 更新追踪信息
-        dbEntity.TraceId = stateMachineInfo.TraceId;
-        dbEntity.SpanId = stateMachineInfo.SpanId;
     }
 }

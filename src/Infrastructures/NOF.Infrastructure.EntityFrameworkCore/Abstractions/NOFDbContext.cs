@@ -26,18 +26,6 @@ internal sealed class StateMachineContextInfo
     public required string ContextData { get; set; }
 
     public required int State { get; set; }
-
-    /// <summary>
-    /// 分布式追踪 TraceId（用于恢复追踪上下文）
-    /// </summary>
-    [MaxLength(128)]
-    public string? TraceId { get; set; }
-
-    /// <summary>
-    /// 分布式追踪 SpanId（用于恢复追踪上下文）
-    /// </summary>
-    [MaxLength(128)]
-    public string? SpanId { get; set; }
 }
 
 [Table(nameof(TransactionalMessage))]

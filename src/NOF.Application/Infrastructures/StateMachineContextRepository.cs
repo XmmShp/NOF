@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace NOF;
 
@@ -30,16 +30,6 @@ public sealed class StateMachineInfo
     public required int State { get; init; }
 
     /// <summary>
-    /// 分布式追踪 TraceId
-    /// </summary>
-    public string? TraceId { get; init; }
-
-    /// <summary>
-    /// 分布式追踪 SpanId
-    /// </summary>
-    public string? SpanId { get; init; }
-
-    /// <summary>
     /// 创建新的状态机上下文实例
     /// </summary>
     public static StateMachineInfo Create(
@@ -55,9 +45,15 @@ public sealed class StateMachineInfo
             CorrelationId = correlationId,
             DefinitionType = definitionType,
             Context = context,
-            State = state,
-            TraceId = traceId,
-            SpanId = spanId
+            State = state
         };
     }
+}
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IStateMachineContextRepository
+{
+    ValueTask<StateMachineInfo?> FindAsync(string correlationId, Type definitionType);
+    void Add(StateMachineInfo stateMachineInfo);
+    void Update(StateMachineInfo stateMachineInfo);
 }
