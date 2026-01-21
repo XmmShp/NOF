@@ -32,6 +32,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         {
             builder.UseDefaultSettings();
         }
+        builder.ConfigureDefaultServices();
         builder.AddRegistrationStep(new AddStateMachineRegistrationStep());
         return builder;
     }
@@ -44,6 +45,11 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 
     protected override void ConfigureDefaultServices()
     {
+        if (DefaultServicesConfigured)
+        {
+            return;
+        }
+
         base.ConfigureDefaultServices();
 
         const string healthEndpointPath = "/health";

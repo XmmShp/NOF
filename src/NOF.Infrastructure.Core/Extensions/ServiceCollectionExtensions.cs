@@ -184,19 +184,42 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         /// Adds a cache service implementation with automatic interface registration.
         /// </summary>
         /// <typeparam name="TImplementation">The cache service implementation type.</typeparam>
-        /// <param name="implementationFactory">Factory to create the cache service instance.</param>
-        /// <param name="options">The cache service options.</param>
+        /// <param name="optionsConfigurator">The cache service options.</param>
         /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
-        public IServiceCollection AddCacheService<TImplementation>(Func<IServiceProvider, CacheServiceOptions, TImplementation> implementationFactory,
-            CacheServiceOptions options)
+        public IServiceCollection ReplaceOrAddCacheService<TImplementation>(Action<CacheServiceOptions>? optionsConfigurator = null)
             where TImplementation : class, ICacheService
         {
-            services.AddSingleton(sp => implementationFactory(sp, options));
+            services.AddOptions<CacheServiceOptions>();
+            if (optionsConfigurator is not null)
+            {
+                services.Configure(optionsConfigurator);
+            }
 
-            // Register all cache-related interfaces
-            services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<TImplementation>());
-            services.TryAddSingleton<ICacheService>(sp => sp.GetRequiredService<TImplementation>());
+            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetSerializer(sp));
+            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetLockRetryStrategy(sp));
+            services.ReplaceOrAddSingleton<ICacheService, TImplementation>();
+            services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+            return services;
+        }
 
+        /// <summary>
+        /// Adds a cache service implementation with automatic interface registration.
+        /// </summary>
+        /// <param name="implementationFactory">Factory to create the cache service instance.</param>
+        /// <param name="optionsConfigurator">The cache service options.</param>
+        /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+        public IServiceCollection ReplaceOrAddCacheService(Func<IServiceProvider, ICacheService> implementationFactory, Action<CacheServiceOptions>? optionsConfigurator = null)
+        {
+            services.AddOptions<CacheServiceOptions>();
+            if (optionsConfigurator is not null)
+            {
+                services.Configure(optionsConfigurator);
+            }
+
+            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetSerializer(sp));
+            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetLockRetryStrategy(sp));
+            services.ReplaceOrAddSingleton(implementationFactory);
+            services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             return services;
         }
 

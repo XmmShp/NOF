@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace NOF.Test;
@@ -30,7 +31,7 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
 
         DbContext.Database.EnsureCreated();
 
-        Cache = new MemoryCacheService(new JsonCacheSerializer(), new ExponentialBackoffLockRetryStrategy(), new CacheServiceOptions());
+        Cache = new MemoryCacheService(new JsonCacheSerializer(), new ExponentialBackoffLockRetryStrategy(), Options.Create(new CacheServiceOptions()));
     }
 
     protected ILogger<T> GetLogger<T>()

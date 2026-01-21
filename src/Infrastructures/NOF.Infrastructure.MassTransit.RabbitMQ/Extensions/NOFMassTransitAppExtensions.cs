@@ -9,12 +9,7 @@ public static partial class __NOF_Infrastructure_MassTransit_RabbitMQ_Extensions
     {
         public INOFAppBuilder UseRabbitMQ(string connectStringName = "rabbitmq")
         {
-            var endpointProviderServiceDescriptor =
-                selector.Builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IEndpointNameProvider));
-            ArgumentNullException.ThrowIfNull(endpointProviderServiceDescriptor);
-            var nameProvider = (endpointProviderServiceDescriptor.IsKeyedService
-                ? endpointProviderServiceDescriptor.KeyedImplementationInstance
-                : endpointProviderServiceDescriptor.ImplementationInstance) as IEndpointNameProvider;
+            var nameProvider = selector.Builder.EndpointNameProvider;
             ArgumentNullException.ThrowIfNull(nameProvider);
             selector.Builder.RequestSender = new MassTransitRabbitMQStartupRequestSender(selector.Builder, connectStringName, nameProvider);
             selector.Builder.StartupEventChannel.Subscribe<MassTransitConfiguring>(e =>

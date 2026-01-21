@@ -11,8 +11,10 @@ var rabbitMq = builder.AddRabbitMQ("rabbitmq", rabbitMqUserName, rabbitMqPasswor
 rabbitMqUserName.WithParentRelationship(rabbitMq);
 rabbitMqPassword.WithParentRelationship(rabbitMq);
 
-var garnet = builder.AddGarnet("garnet")
+var garnetPassword = builder.AddParameter("garnetPassword", "123456");
+var garnet = builder.AddGarnet("garnet", password: garnetPassword)
     .WithLifetime(ContainerLifetime.Persistent);
+garnetPassword.WithParentRelationship(garnet);
 
 var postgresUserName = builder.AddParameter("postgresUserName", "postgres");
 var postgresPassword = builder.AddParameter("postgresPassword", "123456");

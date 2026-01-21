@@ -3,7 +3,7 @@
 namespace NOF;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public class StateMachineBuilder<TState, TContext> : IStateMachineBuilder<TState, TContext>
+public class StateMachineBuilder<TState, TContext> : IStateMachineBuilder<TState, TContext>, IStateMachineBuilderInternal
     where TContext : class, IStateMachineContext
     where TState : struct, Enum
 {

@@ -34,13 +34,7 @@ public static partial class __NOF_Infrastructure_Extensions__
                 return ConnectionMultiplexer.Connect(connectionString);
             });
 
-            return services.AddCacheService<RedisCacheService>((sp, opt) =>
-            {
-                var connectionMultiplexer = sp.GetRequiredService<IConnectionMultiplexer>();
-                var serializer = opt.GetSerializer(sp);
-                var lockRetryStrategy = opt.GetLockRetryStrategy(sp);
-                return new RedisCacheService(connectionMultiplexer, serializer, opt, lockRetryStrategy);
-            }, options);
+            return services.ReplaceOrAddCacheService<RedisCacheService>();
         }
     }
 }

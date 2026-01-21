@@ -217,8 +217,18 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// <returns>A task that resolves to the built host application instance.</returns>
     protected abstract Task<THostApplication> BuildApplicationAsync();
 
+    protected bool DefaultServicesConfigured;
     protected virtual void ConfigureDefaultServices()
     {
+        if (DefaultServicesConfigured)
+        {
+            return;
+        }
+
+        DefaultServicesConfigured = true;
+
+        Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
+        Services.ReplaceOrAddCacheService<MemoryCacheService>();
         Services.AddSingleton<OutboxCommandBackgroundService>();
         Services.AddHostedService(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
         Services.AddSingleton<IOutboxPublisher>(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());

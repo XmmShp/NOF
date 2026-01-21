@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 
@@ -15,7 +16,7 @@ public class RedisCacheService : ICacheService
     public RedisCacheService(
         IConnectionMultiplexer connectionMultiplexer,
         ICacheSerializer serializer,
-        CacheServiceOptions options,
+        IOptions<CacheServiceOptions> options,
         ILockRetryStrategy lockRetryStrategy)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
@@ -25,7 +26,7 @@ public class RedisCacheService : ICacheService
 
         _database = connectionMultiplexer.GetDatabase();
         _serializer = serializer;
-        _options = options;
+        _options = options.Value;
         _lockRetryStrategy = lockRetryStrategy;
     }
 
