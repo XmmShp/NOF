@@ -7,9 +7,9 @@ namespace NOF;
 /// </summary>
 public sealed class DeferredCommandSender : IDeferredCommandSender
 {
-    private readonly ITransactionalMessageCollector _collector;
+    private readonly IOutboxMessageCollector _collector;
 
-    public DeferredCommandSender(ITransactionalMessageCollector collector)
+    public DeferredCommandSender(IOutboxMessageCollector collector)
     {
         _collector = collector;
     }

@@ -9,8 +9,8 @@ namespace NOF;
 
 public record DbContextModelCreating(ModelBuilder Builder);
 
-[Table(nameof(StateMachineContextInfo))]
-internal sealed class StateMachineContextInfo
+[Table(nameof(EFCoreStateMachineContext))]
+internal sealed class EFCoreStateMachineContext
 {
     [Required]
     public required string CorrelationId { get; set; }
@@ -28,8 +28,8 @@ internal sealed class StateMachineContextInfo
     public required int State { get; set; }
 }
 
-[Table(nameof(TransactionalMessage))]
-internal sealed class TransactionalMessage
+[Table(nameof(EFCoreOutboxMessage))]
+internal sealed class EFCoreOutboxMessage
 {
     [Key]
     public Guid Id { get; set; }
@@ -95,6 +95,79 @@ internal enum OutboxMessageStatus
     Failed = 2
 }
 
+/// <summary>
+/// 收件箱消息实体
+/// 用于记录需要可靠处理的消息
+/// </summary>
+[Table(nameof(EFCoreInboxMessage))]
+internal sealed class EFCoreInboxMessage
+{
+    /// <summary>
+    /// 消息唯一标识
+    /// </summary>
+    [Key]
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 消息类型
+    /// </summary>
+    [Required]
+    [MaxLength(512)]
+    public string MessageType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息内容（JSON序列化）
+    /// </summary>
+    [Required]
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 消息创建时间
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 消息处理时间
+    /// </summary>
+    public DateTime? ProcessedAt { get; set; }
+
+    /// <summary>
+    /// 消息状态
+    /// </summary>
+    public EFCoreInboxMessageStatus Status { get; set; }
+
+    /// <summary>
+    /// 重试次数
+    /// </summary>
+    public int RetryCount { get; set; }
+
+    /// <summary>
+    /// 错误信息
+    /// </summary>
+    [MaxLength(2048)]
+    public string? ErrorMessage { get; set; }
+}
+
+/// <summary>
+/// 收件箱消息状态枚举
+/// </summary>
+internal enum EFCoreInboxMessageStatus
+{
+    /// <summary>
+    /// 等待处理
+    /// </summary>
+    Pending = 0,
+
+    /// <summary>
+    /// 处理成功
+    /// </summary>
+    Processed = 1,
+
+    /// <summary>
+    /// 处理失败
+    /// </summary>
+    Failed = 2
+}
 
 public abstract class NOFDbContext : DbContext
 {
@@ -105,23 +178,30 @@ public abstract class NOFDbContext : DbContext
         _startupEventChannel = extension?.StartupEventChannel ?? throw new InvalidOperationException("EventDispatcher is not configured in NOFDbContextOptionsExtension.");
     }
 
-    internal DbSet<StateMachineContextInfo> StateMachineContexts { get; set; }
-    internal DbSet<TransactionalMessage> TransactionalMessages { get; set; }
+    internal DbSet<EFCoreStateMachineContext> StateMachineContexts { get; set; }
+    internal DbSet<EFCoreOutboxMessage> TransactionalMessages { get; set; }
+    internal DbSet<EFCoreInboxMessage> InboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<StateMachineContextInfo>(entity =>
+        modelBuilder.Entity<EFCoreStateMachineContext>(entity =>
         {
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionType });
         });
 
-        modelBuilder.Entity<TransactionalMessage>(entity =>
+        modelBuilder.Entity<EFCoreOutboxMessage>(entity =>
         {
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
             entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt }); // 联合索引替代Claimed状态
             entity.HasIndex(e => e.ClaimedBy);
             // 为追踪字段添加索引以支持追踪查询
             entity.HasIndex(e => e.TraceId);
+        });
+
+        modelBuilder.Entity<EFCoreInboxMessage>(entity =>
+        {
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+            entity.HasIndex(e => new { e.Status, e.ProcessedAt });
         });
 
         base.OnModelCreating(modelBuilder);

@@ -3,7 +3,7 @@ using System.ComponentModel;
 namespace NOF;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface INotificationHandler;
+public interface INotificationHandler : IMessageHandler;
 
 public interface INotificationHandler<in TNotification> : INotificationHandler
     where TNotification : class, INotification

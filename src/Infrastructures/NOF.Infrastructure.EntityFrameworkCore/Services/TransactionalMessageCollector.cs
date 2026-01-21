@@ -4,7 +4,7 @@ namespace NOF;
 /// 事务性消息收集器实现
 /// 作为最底层组件，不依赖任何其他业务组件
 /// </summary>
-internal sealed class TransactionalMessageCollector : ITransactionalMessageCollector
+internal sealed class OutboxMessageCollector : IOutboxMessageCollector
 {
     private readonly List<OutboxMessage> _messages = [];
 

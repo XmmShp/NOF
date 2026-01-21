@@ -83,7 +83,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITransactionalMessageRepository>();
+        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
         var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -134,7 +134,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
 
     private async Task ProcessSingleMessageAsync(
         OutboxMessage message,
-        ITransactionalMessageRepository repository,
+        IOutboxMessageRepository repository,
         ICommandSender commandSender,
         INotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)

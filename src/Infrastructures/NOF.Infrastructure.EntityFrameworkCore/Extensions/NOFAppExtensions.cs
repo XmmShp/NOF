@@ -33,9 +33,12 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
         public INOFEFCoreSelector AddEFCore<TDbContext>() where TDbContext : NOFDbContext
         {
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<ITransactionManager, TransactionManager>();
+            builder.Services.AddScoped<IInboxMessageRepository, InboxMessageRepository>();
             builder.Services.AddScoped<IStateMachineContextRepository, StateMachineContextRepository>();
-            builder.Services.AddScoped<ITransactionalMessageRepository, TransactionalMessageRepository>();
-            builder.Services.AddScoped<ITransactionalMessageCollector, TransactionalMessageCollector>();
+            builder.Services.AddScoped<IOutboxMessageRepository, OutboxMessageRepository>();
+            builder.Services.AddScoped<IOutboxMessageCollector, OutboxMessageCollector>();
+            builder.Services.AddHostedService<InboxCleanupService>();
             builder.Services.AddHostedService<OutboxCleanupService>();
             builder.Services.AddDbContext<TDbContext>(options =>
             {

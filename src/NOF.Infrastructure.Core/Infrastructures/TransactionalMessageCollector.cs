@@ -8,7 +8,7 @@ namespace NOF;
 /// 负责收集事务性消息，不依赖任何其他组件
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface ITransactionalMessageCollector
+public interface IOutboxMessageCollector
 {
     void AddMessage(OutboxMessage message);
     IReadOnlyList<OutboxMessage> GetMessages();

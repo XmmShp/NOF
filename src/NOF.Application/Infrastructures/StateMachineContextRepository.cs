@@ -7,7 +7,7 @@ namespace NOF;
 /// 包含状态机上下文、状态和追踪信息
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class StateMachineInfo
+public sealed class StateMachineContext
 {
     /// <summary>
     /// 关联ID，用于标识状态机实例
@@ -32,7 +32,7 @@ public sealed class StateMachineInfo
     /// <summary>
     /// 创建新的状态机上下文实例
     /// </summary>
-    public static StateMachineInfo Create(
+    public static StateMachineContext Create(
         string correlationId,
         Type definitionType,
         IStateMachineContext context,
@@ -40,7 +40,7 @@ public sealed class StateMachineInfo
         string? traceId = null,
         string? spanId = null)
     {
-        return new StateMachineInfo
+        return new StateMachineContext
         {
             CorrelationId = correlationId,
             DefinitionType = definitionType,
@@ -53,7 +53,7 @@ public sealed class StateMachineInfo
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IStateMachineContextRepository
 {
-    ValueTask<StateMachineInfo?> FindAsync(string correlationId, Type definitionType);
-    void Add(StateMachineInfo stateMachineInfo);
-    void Update(StateMachineInfo stateMachineInfo);
+    ValueTask<StateMachineContext?> FindAsync(string correlationId, Type definitionType);
+    void Add(StateMachineContext stateMachineContext);
+    void Update(StateMachineContext stateMachineContext);
 }

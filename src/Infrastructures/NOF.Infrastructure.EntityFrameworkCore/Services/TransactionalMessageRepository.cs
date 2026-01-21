@@ -7,16 +7,16 @@ using System.Text.Json.Serialization;
 
 namespace NOF;
 
-internal sealed class TransactionalMessageRepository : ITransactionalMessageRepository
+internal sealed class OutboxMessageRepository : IOutboxMessageRepository
 {
     private readonly NOFDbContext _dbContext;
     private readonly OutboxOptions _options;
-    private readonly ILogger<TransactionalMessageRepository> _logger;
+    private readonly ILogger<OutboxMessageRepository> _logger;
 
-    public TransactionalMessageRepository(
+    public OutboxMessageRepository(
         NOFDbContext dbContext,
         IOptions<OutboxOptions> options,
-        ILogger<TransactionalMessageRepository> logger)
+        ILogger<OutboxMessageRepository> logger)
     {
         _dbContext = dbContext;
         _options = options.Value;
@@ -25,7 +25,7 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
 
     public void Add(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken = default)
     {
-        var outboxMessages = new List<TransactionalMessage>();
+        var outboxMessages = new List<EFCoreOutboxMessage>();
 
         foreach (var msg in messages)
         {
@@ -33,7 +33,7 @@ internal sealed class TransactionalMessageRepository : ITransactionalMessageRepo
                 ? OutboxMessageType.Command
                 : OutboxMessageType.Notification;
 
-            outboxMessages.Add(new TransactionalMessage
+            outboxMessages.Add(new EFCoreOutboxMessage
             {
                 Id = msg.Id,
                 MessageType = messageType,

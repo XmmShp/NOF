@@ -7,9 +7,9 @@ namespace NOF;
 /// </summary>
 public sealed class DeferredNotificationPublisher : IDeferredNotificationPublisher
 {
-    private readonly ITransactionalMessageCollector _collector;
+    private readonly IOutboxMessageCollector _collector;
 
-    public DeferredNotificationPublisher(ITransactionalMessageCollector collector)
+    public DeferredNotificationPublisher(IOutboxMessageCollector collector)
     {
         _collector = collector;
     }

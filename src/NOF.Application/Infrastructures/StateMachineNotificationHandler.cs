@@ -44,7 +44,7 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
                 await bp.TransferAsync(context, notification, _serviceProvider, cancellationToken);
 
                 // 创建更新后的状态机上下文
-                var updatedContext = StateMachineInfo.Create(
+                var updatedContext = StateMachineContext.Create(
                     correlationId: correlationId,
                     definitionType: bp.DefinitionType,
                     context: context.Context,
@@ -59,7 +59,7 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
                 {
                     // 捕获当前追踪上下文
                     var currentActivity = Activity.Current;
-                    var newStateMachineContext = StateMachineInfo.Create(
+                    var newStateMachineContext = StateMachineContext.Create(
                         correlationId: correlationId,
                         definitionType: bp.DefinitionType,
                         context: context.Context,

@@ -7,7 +7,7 @@ namespace NOF;
 /// 1. 持久化能力（Outbox 表）
 /// 2. 可靠发送能力（后台服务）
 /// </summary>
-public interface ITransactionalMessageRepository
+public interface IOutboxMessageRepository
 {
     /// <summary>
     /// 在当前事务上下文中添加消息到 Outbox

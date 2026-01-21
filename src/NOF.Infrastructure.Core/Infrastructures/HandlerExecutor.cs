@@ -18,30 +18,6 @@ public interface IHandlerExecutor
         CancellationToken cancellationToken) where TCommand : class, ICommand;
 
     /// <summary>
-    /// 执行 Request Handler（无返回值）
-    /// </summary>
-    ValueTask<Result> ExecuteRequestAsync<TRequest>(
-        IRequestHandler<TRequest> handler,
-        TRequest request,
-        CancellationToken cancellationToken) where TRequest : class, IRequest;
-
-    /// <summary>
-    /// 执行 Request Handler（有返回值）
-    /// </summary>
-    ValueTask<Result<TResponse>> ExecuteRequestAsync<TRequest, TResponse>(
-        IRequestHandler<TRequest, TResponse> handler,
-        TRequest request,
-        CancellationToken cancellationToken) where TRequest : class, IRequest<TResponse>;
-
-    /// <summary>
-    /// 执行 Event Handler
-    /// </summary>
-    ValueTask ExecuteEventAsync<TEvent>(
-        IEventHandler<TEvent> handler,
-        TEvent @event,
-        CancellationToken cancellationToken) where TEvent : class, IEvent;
-
-    /// <summary>
     /// 执行 Notification Handler
     /// </summary>                  
     ValueTask ExecuteNotificationAsync<TNotification>(
@@ -83,67 +59,6 @@ public sealed class HandlerExecutor : IHandlerExecutor
         await pipeline(cancellationToken);
     }
 
-    public async ValueTask<Result> ExecuteRequestAsync<TRequest>(
-        IRequestHandler<TRequest> handler,
-        TRequest request,
-        CancellationToken cancellationToken) where TRequest : class, IRequest
-    {
-        var context = new HandlerContext
-        {
-            HandlerType = handler.GetType().Name,
-            MessageType = typeof(TRequest).Name,
-            Message = request,
-            Handler = handler
-        };
-
-        var result = default(Result);
-        var pipeline = BuildPipeline(context, async (ct) =>
-        {
-            result = await handler.HandleAsync(request, ct);
-        });
-        await pipeline(cancellationToken);
-        return result!;
-    }
-
-    public async ValueTask<Result<TResponse>> ExecuteRequestAsync<TRequest, TResponse>(
-        IRequestHandler<TRequest, TResponse> handler,
-        TRequest request,
-        CancellationToken cancellationToken) where TRequest : class, IRequest<TResponse>
-    {
-        var context = new HandlerContext
-        {
-            HandlerType = handler.GetType().Name,
-            MessageType = typeof(TRequest).Name,
-            Message = request,
-            Handler = handler
-        };
-
-        var result = default(Result<TResponse>);
-        var pipeline = BuildPipeline(context, async (ct) =>
-        {
-            result = await handler.HandleAsync(request, ct);
-        });
-        await pipeline(cancellationToken);
-        return result!;
-    }
-
-    public async ValueTask ExecuteEventAsync<TEvent>(
-        IEventHandler<TEvent> handler,
-        TEvent @event,
-        CancellationToken cancellationToken) where TEvent : class, IEvent
-    {
-        var context = new HandlerContext
-        {
-            HandlerType = handler.GetType().Name,
-            MessageType = typeof(TEvent).Name,
-            Message = @event,
-            Handler = handler
-        };
-
-        var pipeline = BuildPipeline(context, (ct) => new ValueTask(handler.HandleAsync(@event, ct)));
-        await pipeline(cancellationToken);
-    }
-
     public async ValueTask ExecuteNotificationAsync<TNotification>(
         INotificationHandler<TNotification> handler,
         TNotification notification,
@@ -172,12 +87,19 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var logger = _serviceProvider.GetRequiredService<ILogger<AutoInstrumentationMiddleware>>();
         builder.Use(new AutoInstrumentationMiddleware(logger));
 
-        // 3. 事务性消息上下文
+        // 3. 收件箱消息处理
+        var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();
+        var inboxMessageRepository = _serviceProvider.GetRequiredService<IInboxMessageRepository>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var inboxLogger = _serviceProvider.GetRequiredService<ILogger<InboxHandlerMiddleware>>();
+        builder.Use(new InboxHandlerMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger));
+
+        // 4. 事务性消息上下文
         var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();
         var deferredNotificationPublisher = _serviceProvider.GetRequiredService<IDeferredNotificationPublisher>();
         builder.Use(new TransactionalMessageContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
 
-        // 4. 用户自定义中间件扩展点（可以多次调用 Configure 添加）
+        // 5. 用户自定义中间件扩展点（可以多次调用 Configure 添加）
         foreach (var configure in _configureActions)
         {
             configure(builder, _serviceProvider);

@@ -7,17 +7,14 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
     where TRequest : class, IRequest
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
-
-    public MassTransitRequestHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitRequestHandlerAdapter(THandler consumer)
     {
-        _handler = handler;
-        _executor = executor;
+        _handler = consumer;
     }
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var response = await _executor.ExecuteRequestAsync(_handler, context.Message, context.CancellationToken).ConfigureAwait(false);
+        var response = await _handler.HandleAsync(context.Message, context.CancellationToken).ConfigureAwait(false);
         await context.RespondAsync(response).ConfigureAwait(false);
     }
 }
@@ -27,17 +24,14 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
     where TRequest : class, IRequest<TResponse>
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
-
-    public MassTransitRequestHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitRequestHandlerAdapter(THandler consumer)
     {
-        _handler = handler;
-        _executor = executor;
+        _handler = consumer;
     }
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var response = await _executor.ExecuteRequestAsync(_handler, context.Message, context.CancellationToken).ConfigureAwait(false);
+        var response = await _handler.HandleAsync(context.Message, context.CancellationToken).ConfigureAwait(false);
         await context.RespondAsync(response).ConfigureAwait(false);
     }
 }
@@ -47,17 +41,14 @@ internal class MassTransitEventHandlerAdapter<THandler, TEvent> : IConsumer<TEve
     where TEvent : class, IEvent
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
-
-    public MassTransitEventHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitEventHandlerAdapter(THandler consumer)
     {
-        _handler = handler;
-        _executor = executor;
+        _handler = consumer;
     }
 
-    public async Task Consume(ConsumeContext<TEvent> context)
+    public Task Consume(ConsumeContext<TEvent> context)
     {
-        await _executor.ExecuteEventAsync(_handler, context.Message, context.CancellationToken).ConfigureAwait(false);
+        return _handler.HandleAsync(context.Message, context.CancellationToken);
     }
 }
 
