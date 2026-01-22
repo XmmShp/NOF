@@ -23,10 +23,10 @@ public interface IOutboxMessageRepository
     /// <summary>
     /// 标记消息已发送
     /// </summary>
-    Task MarkAsSentAsync(IEnumerable<Guid> messageIds, CancellationToken cancellationToken = default);
+    Task MarkAsSentAsync(IEnumerable<long> messageIds, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 标记消息发送失败
     /// </summary>
-    Task RecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default);
+    Task RecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default);
 }

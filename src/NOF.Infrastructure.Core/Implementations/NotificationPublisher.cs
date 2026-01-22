@@ -16,15 +16,37 @@ public sealed class NotificationPublisher : INotificationPublisher
 
     public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
     {
+        using var activity = MessageTracing.Source.StartActivity(
+            $"{MessageTracing.ActivityNames.MessageSending}: {notification.GetType().FullName}",
+            ActivityKind.Producer);
+
+        var messageId = Guid.NewGuid().ToString();
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = Guid.NewGuid().ToString(),
+            [NOFConstants.MessageId] = messageId,
             [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
             [NOFConstants.SpanId] = currentActivity?.SpanId.ToString()
         };
 
-        return _rider.PublishAsync(notification, headers, cancellationToken);
+        if (activity is { IsAllDataRequested: true })
+        {
+            activity.SetTag(MessageTracing.Tags.MessageId, messageId);
+            activity.SetTag(MessageTracing.Tags.MessageType, notification.GetType().Name);
+            activity.SetTag(MessageTracing.Tags.Destination, "broadcast");
+        }
+
+        try
+        {
+            var result = _rider.PublishAsync(notification, headers, cancellationToken);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
     }
 }
 
@@ -44,12 +66,18 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
     {
         var currentActivity = Activity.Current;
 
-        _collector.AddMessage(OutboxMessage.Create(
-            id: Guid.NewGuid(),
-            message: notification,
-            destinationEndpointName: null,
-            traceId: currentActivity?.TraceId.ToString(),
-            spanId: currentActivity?.SpanId.ToString()
-        ));
+        var headers = new Dictionary<string, string?>
+        {
+            [NOFConstants.MessageId] = Guid.NewGuid().ToString()
+        };
+
+        _collector.AddMessage(new OutboxMessage
+        {
+            Message = notification,
+            DestinationEndpointName = null,
+            Headers = headers,
+            TraceId = currentActivity?.TraceId,
+            SpanId = currentActivity?.SpanId
+        });
     }
 }

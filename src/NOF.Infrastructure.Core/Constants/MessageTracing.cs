@@ -3,14 +3,14 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// Outbox 追踪常量
+/// 消息追踪常量
 /// </summary>
-public static class OutboxTracing
+public static class MessageTracing
 {
     /// <summary>
     /// ActivitySource 名称
     /// </summary>
-    public const string ActivitySourceName = "NOF.Outbox";
+    public const string ActivitySourceName = "NOF.Messaging";
 
     /// <summary>
     /// ActivitySource 实例
@@ -22,11 +22,9 @@ public static class OutboxTracing
     /// </summary>
     public static class Tags
     {
-        public const string MessageId = "outbox.message_id";
-        public const string MessageType = "outbox.message_type";
-        public const string RetryCount = "outbox.retry_count";
-        public const string TraceId = "outbox.trace_id";
-        public const string SpanId = "outbox.span_id";
+        public const string MessageId = "messaging.message_id";
+        public const string MessageType = "messaging.message_type";
+        public const string Destination = "messaging.destination";
     }
 
     /// <summary>
@@ -34,6 +32,6 @@ public static class OutboxTracing
     /// </summary>
     public static class ActivityNames
     {
-        public const string MessageProcessing = "OutboxMessageProcessing";
+        public const string MessageSending = "MessageSending";
     }
 }

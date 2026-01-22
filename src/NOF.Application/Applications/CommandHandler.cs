@@ -39,7 +39,7 @@ public abstract class HandlerBase
     /// <param name="destinationEndpointName">可选的目标端点名称</param>
     protected void SendCommand(ICommand command, string? destinationEndpointName = null)
     {
-        TransactionalMessageContext.AddCommand(command, destinationEndpointName);
+        MessageOutboxContext.AddCommand(command, destinationEndpointName);
     }
 
     /// <summary>
@@ -49,6 +49,6 @@ public abstract class HandlerBase
     /// <param name="notification">要发送的通知</param>
     protected void PublishNotification(INotification notification)
     {
-        TransactionalMessageContext.AddNotification(notification);
+        MessageOutboxContext.AddNotification(notification);
     }
 }

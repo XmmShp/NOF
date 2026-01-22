@@ -98,7 +98,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
 
         _logger.LogDebug("Claimed {Count} pending messages for processing", pendingMessages.Count);
 
-        var succeededIds = new List<Guid>(pendingMessages.Count);
+        var succeededIds = new List<long>(pendingMessages.Count);
         var failedCount = 0;
 
         foreach (var message in pendingMessages)
@@ -147,20 +147,28 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         }
 
         // 恢复追踪上下文
-        using var restoredActivity = RestoreTracingContext(message);
+        using var activity = RestoreTracingContext(message);
+        var messageId = Guid.NewGuid();
+
+        if (activity is { IsAllDataRequested: true })
+        {
+            activity.SetTag(MessageTracing.Tags.MessageId, messageId);
+            activity.SetTag(MessageTracing.Tags.MessageType, message.Message.GetType().Name);
+            activity.SetTag(MessageTracing.Tags.Destination, message.DestinationEndpointName ?? "default");
+            activity.SetTag("OutboxMessageId", message.Id);
+        }
+
+        var headers = new Dictionary<string, string?>(message.Headers);
+        headers.TryAdd(NOFConstants.MessageId, messageId.ToString());
+        headers.TryAdd(NOFConstants.SpanId, activity?.SpanId.ToString());
+        headers.TryAdd(NOFConstants.TraceId, activity?.TraceId.ToString());
 
         try
         {
-            var headers = new Dictionary<string, string?>()
-            {
-                [NOFConstants.MessageId] = message.Id.ToString(),
-                [NOFConstants.SpanId] = restoredActivity?.SpanId.ToString(),
-                [NOFConstants.TraceId] = restoredActivity?.TraceId.ToString()
-            };
-
             if (message.Message is ICommand command)
             {
-                await commandRider.SendAsync(command, headers, message.DestinationEndpointName, cancellationToken);
+                await commandRider.SendAsync(command, headers, message.DestinationEndpointName,
+                    cancellationToken);
                 _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
                     message.Id, command.GetType().Name, message.RetryCount);
             }
@@ -181,45 +189,39 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         {
             // 服务正在关闭，不记录为失败，留待下次启动重试
             _logger.LogInformation("Message {MessageId} delivery canceled due to shutdown", message.Id);
+            activity?.SetStatus(ActivityStatusCode.Ok);
             throw; // rethrow to prevent marking as succeeded
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to deliver message {MessageId} (retry {Retry})", message.Id, message.RetryCount);
+            _logger.LogWarning(ex, "Failed to deliver message {MessageId} (retry {Retry})", message.Id,
+                message.RetryCount);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             await repository.RecordDeliveryFailureAsync(message.Id, ex.Message, cancellationToken);
             throw; // ensure not added to success list
         }
+
+        // 成功处理完成，设置 Activity 状态为成功
+        activity?.SetStatus(ActivityStatusCode.Ok);
     }
 
     private static Activity? RestoreTracingContext(OutboxMessage message)
     {
-        if (string.IsNullOrEmpty(message.TraceId))
+        if (message.TraceId is null)
         {
             return null;
         }
 
         var activityContext = new ActivityContext(
-            traceId: ActivityTraceId.CreateFromString(message.TraceId.AsSpan()),
-            spanId: string.IsNullOrEmpty(message.SpanId) ? ActivitySpanId.CreateRandom() : ActivitySpanId.CreateFromString(message.SpanId.AsSpan()),
+            traceId: message.TraceId ?? ActivityTraceId.CreateRandom(),
+            spanId: message.SpanId ?? ActivitySpanId.CreateRandom(),
             traceFlags: ActivityTraceFlags.Recorded,
             isRemote: true);
 
-        var activity = OutboxTracing.Source.StartActivity(
-            OutboxTracing.ActivityNames.MessageProcessing,
-            kind: ActivityKind.Consumer,
+        var activity = MessageTracing.Source.StartActivity(
+            $"{MessageTracing.ActivityNames.MessageSending}: {message.Message.GetType().FullName}",
+            kind: ActivityKind.Producer,
             parentContext: activityContext);
-
-        if (activity is { IsAllDataRequested: true })
-        {
-            activity.SetTag(OutboxTracing.Tags.MessageId, message.Id.ToString());
-            activity.SetTag(OutboxTracing.Tags.MessageType, message.Message.GetType().Name);
-            activity.SetTag(OutboxTracing.Tags.RetryCount, message.RetryCount.ToString());
-            activity.SetTag(OutboxTracing.Tags.TraceId, message.TraceId);
-            if (!string.IsNullOrEmpty(message.SpanId))
-            {
-                activity.SetTag(OutboxTracing.Tags.SpanId, message.SpanId);
-            }
-        }
 
         return activity;
     }

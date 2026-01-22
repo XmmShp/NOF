@@ -1,4 +1,5 @@
 using MassTransit;
+using System.Diagnostics;
 
 namespace NOF;
 
@@ -35,6 +36,13 @@ public class MassTransitCommandRider : ICommandRider
             foreach (var header in headers)
             {
                 context.Headers.Set(header.Key, header.Value);
+            }
+
+            var activity = Activity.Current;
+            if (activity is not null)
+            {
+                context.Headers.Set(NOFConstants.TraceId, activity.TraceId.ToString());
+                context.Headers.Set(NOFConstants.SpanId, activity.SpanId.ToString());
             }
         }, cancellationToken);
     }

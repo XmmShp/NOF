@@ -15,6 +15,12 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
         // 合并追踪上下文并创建Activity
         using var activity = RestoreTraceContext(context);
 
+        if (activity is { IsAllDataRequested: true })
+        {
+            activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
+            activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
+        }
+
         try
         {
             await next(cancellationToken);
@@ -40,92 +46,21 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
     /// <returns>创建的Activity，如果没有追踪信息则返回null</returns>
     private static Activity? RestoreTraceContext(HandlerContext context)
     {
-        // 从HandlerContext.Items中提取追踪信息
-        if (!context.Items.TryGetValue(NOFConstants.TraceId, out var traceIdObj) ||
-            traceIdObj is not string traceId ||
-            string.IsNullOrEmpty(traceId))
-        {
-            // 没有TraceId，创建普通的Handler Activity
-            var activity = HandlerPipelineTracing.Source.StartActivity(
-                $"{context.HandlerType}.Handle",
-                ActivityKind.Internal);
+        var traceId = context.Items.GetOrDefault(NOFConstants.TraceId, string.Empty);
+        var spanId = context.Items.GetOrDefault(NOFConstants.SpanId, string.Empty);
 
-            if (activity != null)
-            {
-                activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
-                activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
-                activity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
-            }
+        var activityContext = new ActivityContext(
+            traceId: string.IsNullOrEmpty(traceId) ? ActivityTraceId.CreateRandom() : ActivityTraceId.CreateFromString(traceId),
+            spanId: string.IsNullOrEmpty(spanId) ? ActivitySpanId.CreateRandom() : ActivitySpanId.CreateFromString(spanId),
+            traceFlags: ActivityTraceFlags.Recorded,
+            isRemote: true);
 
-            return activity;
-        }
+        var activity = HandlerPipelineTracing.Source.StartActivity(
+            $"{context.HandlerType}.Handle: {context.MessageType}",
+            kind: ActivityKind.Consumer,
+            parentContext: activityContext);
 
-        var currentActivity = Activity.Current;
-
-        // 如果当前没有Activity，创建一个新的Activity来恢复追踪上下文
-        if (currentActivity == null)
-        {
-            var spanId = ActivitySpanId.CreateRandom();
-            if (context.Items.TryGetValue(NOFConstants.SpanId, out var spanIdObj1) &&
-                spanIdObj1 is string spanIdStr1 &&
-                !string.IsNullOrEmpty(spanIdStr1))
-            {
-                spanId = ActivitySpanId.CreateFromString(spanIdStr1.AsSpan());
-            }
-
-            var activityContext = new ActivityContext(
-                traceId: ActivityTraceId.CreateFromString(traceId.AsSpan()),
-                spanId: spanId,
-                traceFlags: ActivityTraceFlags.Recorded,
-                isRemote: true);
-
-            var activity = HandlerPipelineTracing.Source.StartActivity(
-                $"{context.HandlerType}.Handle",
-                kind: ActivityKind.Consumer,
-                parentContext: activityContext);
-
-            if (activity is { IsAllDataRequested: true })
-            {
-                activity.SetTag("trace.id", traceId);
-                activity.SetTag("span.id", spanId.ToString());
-                activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
-                activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
-                activity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
-            }
-
-            return activity;
-        }
-
-        // 如果当前已有Activity，尝试合并（静默失败）
-        // 设置TraceId和SpanId到Activity的Tag中，以便追踪
-        currentActivity.SetTag("trace.id", traceId);
-
-        if (context.Items.TryGetValue(NOFConstants.SpanId, out var spanIdObj) &&
-            spanIdObj is string spanIdStr &&
-            !string.IsNullOrEmpty(spanIdStr))
-        {
-            currentActivity.SetTag("span.id", spanIdStr);
-        }
-
-        // 创建普通的Handler Activity，但会继承当前Activity的上下文
-        var handlerActivity = HandlerPipelineTracing.Source.StartActivity(
-            $"{context.HandlerType}.Handle",
-            ActivityKind.Internal);
-
-        if (handlerActivity != null)
-        {
-            handlerActivity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
-            handlerActivity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
-            handlerActivity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
-        }
-
-        return handlerActivity;
-    }
-
-    private static string GetMessageName(string fullTypeName)
-    {
-        var lastDot = fullTypeName.LastIndexOf('.');
-        return lastDot >= 0 ? fullTypeName.Substring(lastDot + 1) : fullTypeName;
+        return activity;
     }
 }
 
@@ -202,12 +137,12 @@ public sealed class AutoInstrumentationMiddleware : IHandlerMiddleware
 /// 事务性消息上下文中间件
 /// 为 Command Handler 自动创建 TransactionalMessageContext Scope
 /// </summary>
-public sealed class TransactionalMessageContextMiddleware : IHandlerMiddleware
+public sealed class MessageOutboxContextMiddleware : IHandlerMiddleware
 {
     private readonly IDeferredCommandSender _deferredCommandSender;
     private readonly IDeferredNotificationPublisher _deferredNotificationPublisher;
 
-    public TransactionalMessageContextMiddleware(
+    public MessageOutboxContextMiddleware(
         IDeferredCommandSender deferredCommandSender,
         IDeferredNotificationPublisher deferredNotificationPublisher)
     {
@@ -217,7 +152,7 @@ public sealed class TransactionalMessageContextMiddleware : IHandlerMiddleware
 
     public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        using (TransactionalMessageContext.BeginScope(_deferredCommandSender, _deferredNotificationPublisher))
+        using (MessageOutboxContext.BeginScope(_deferredCommandSender, _deferredNotificationPublisher))
         {
             await next(cancellationToken);
         }
@@ -265,19 +200,14 @@ public sealed class InboxHandlerMiddleware : IHandlerMiddleware
                 return;
             }
 
-            // 创建收件箱消息
             var inboxMessage = new InboxMessage(messageId);
 
-            // 添加收件箱消息到仓储
             _inboxMessageRepository.Add(inboxMessage);
 
-            // 保存更改到事务中
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 执行后续逻辑
             await next(cancellationToken);
 
-            // 提交事务
             await transaction.CommitAsync(cancellationToken);
 
             _logger.LogDebug(

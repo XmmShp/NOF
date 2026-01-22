@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Contract.Annotations;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -39,14 +40,15 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
                 MessageType = messageType,
                 PayloadType = msg.Message.GetType().AssemblyQualifiedName!,
                 Payload = Serialize(msg.Message),
+                Headers = Serialize(msg.Headers),
                 DestinationEndpointName = msg.DestinationEndpointName,
                 CreatedAt = msg.CreatedAt,
                 Status = OutboxMessageStatus.Pending,
                 RetryCount = msg.RetryCount,
                 ClaimedBy = null,
                 ClaimExpiresAt = null,
-                TraceId = msg.TraceId,
-                SpanId = msg.SpanId
+                TraceId = msg.TraceId?.ToString(),
+                SpanId = msg.SpanId?.ToString()
             });
         }
 
@@ -108,15 +110,17 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
             {
                 var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
 
-                result.Add(OutboxMessage.Create(
-                    m.Id,
-                    message,
-                    destinationEndpointName: m.DestinationEndpointName,
-                    createdAt: m.CreatedAt,
-                    retryCount: m.RetryCount,
-                    traceId: m.TraceId,
-                    spanId: m.SpanId
-                ));
+                result.Add(new OutboxMessage
+                {
+                    Id = m.Id,
+                    Message = message,
+                    Headers = Deserialize<Dictionary<string, string?>>(typeof(Dictionary<string, string?>).AssemblyQualifiedName!, m.Headers),
+                    DestinationEndpointName = m.DestinationEndpointName,
+                    CreatedAt = m.CreatedAt,
+                    RetryCount = m.RetryCount,
+                    TraceId = string.IsNullOrEmpty(m.TraceId) ? null : ActivityTraceId.CreateFromString(m.TraceId),
+                    SpanId = string.IsNullOrEmpty(m.SpanId) ? null : ActivitySpanId.CreateFromString(m.SpanId)
+                });
             }
             catch (Exception ex)
             {
@@ -135,7 +139,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
     }
 
     public async Task MarkAsSentAsync(
-        IEnumerable<Guid> messageIds,
+        IEnumerable<long> messageIds,
         CancellationToken cancellationToken = default)
     {
         // 避免重复标记（如已被其他实例处理）
@@ -152,7 +156,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
     /// <summary>
     /// 记录发送失败，并根据重试次数决定是否继续重试或永久失败。
     /// </summary>
-    public async Task RecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default)
+    public async Task RecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
         var rowsUpdated = await _dbContext.OutboxMessages
             .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
@@ -223,7 +227,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
     /// 释放抢占锁并标记消息为失败状态
     /// </summary>
     private async Task ReleaseClaimAndMarkAsFailedAsync(
-        Guid messageId,
+        long messageId,
         string errorMessage,
         CancellationToken cancellationToken = default)
     {

@@ -32,7 +32,7 @@ internal sealed class EFCoreStateMachineContext
 internal sealed class EFCoreOutboxMessage
 {
     [Key]
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     [Required]
     public OutboxMessageType MessageType { get; set; }
@@ -46,6 +46,8 @@ internal sealed class EFCoreOutboxMessage
 
     [MaxLength(256)]
     public string? DestinationEndpointName { get; set; }
+
+    public string Headers { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }

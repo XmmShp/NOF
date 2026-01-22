@@ -99,7 +99,7 @@ public sealed class HandlerExecutor : IHandlerExecutor
         // 4. 事务性消息上下文
         var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();
         var deferredNotificationPublisher = _serviceProvider.GetRequiredService<IDeferredNotificationPublisher>();
-        builder.Use(new TransactionalMessageContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
+        builder.Use(new MessageOutboxContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
 
         // 5. 用户自定义中间件扩展点（可以多次调用 Configure 添加）
         foreach (var configure in _configureActions)

@@ -36,17 +36,17 @@ public sealed class HandlerContext
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(StateMachineNotificationHandler<,>))
             {
                 var stateMachineType = type.GenericTypeArguments[0];
-                return stateMachineType.Name;
+                return stateMachineType.FullName ?? stateMachineType.Name;
             }
 
-            return Handler.GetType().Name;
+            return Handler.GetType().FullName ?? Handler.GetType().Name;
         }
     }
 
     /// <summary>
     /// 消息类型名称
     /// </summary>
-    public string MessageType => Message.GetType().Name;
+    public string MessageType => Message.GetType().FullName ?? Message.GetType().Name;
 }
 
 /// <summary>

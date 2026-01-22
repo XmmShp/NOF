@@ -8,14 +8,14 @@ namespace NOF;
 /// 依赖链: Context -> Sender -> Collector
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class TransactionalMessageContext
+public sealed class MessageOutboxContext
 {
-    private static readonly AsyncLocal<TransactionalMessageContext?> _current = new();
+    private static readonly AsyncLocal<MessageOutboxContext?> _current = new();
 
     private readonly IDeferredCommandSender _commandSender;
     private readonly IDeferredNotificationPublisher _notificationPublisher;
 
-    private TransactionalMessageContext(
+    private MessageOutboxContext(
         IDeferredCommandSender commandSender,
         IDeferredNotificationPublisher notificationPublisher)
     {
@@ -23,7 +23,7 @@ public sealed class TransactionalMessageContext
         _notificationPublisher = notificationPublisher;
     }
 
-    public static TransactionalMessageContext? Current
+    public static MessageOutboxContext? Current
     {
         get => _current.Value;
         private set => _current.Value = value;
@@ -36,7 +36,7 @@ public sealed class TransactionalMessageContext
         IDeferredCommandSender commandSender,
         IDeferredNotificationPublisher notificationPublisher)
     {
-        var context = new TransactionalMessageContext(commandSender, notificationPublisher);
+        var context = new MessageOutboxContext(commandSender, notificationPublisher);
         Current = context;
         return new ContextScope(context);
     }
@@ -77,16 +77,16 @@ public sealed class TransactionalMessageContext
 
     private sealed class ContextScope : IDisposable
     {
-        private readonly TransactionalMessageContext _context;
+        private readonly MessageOutboxContext _outboxContext;
 
-        public ContextScope(TransactionalMessageContext context)
+        public ContextScope(MessageOutboxContext outboxContext)
         {
-            _context = context;
+            _outboxContext = outboxContext;
         }
 
         public void Dispose()
         {
-            if (Current == _context)
+            if (Current == _outboxContext)
             {
                 Current = null;
             }
