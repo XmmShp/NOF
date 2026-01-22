@@ -227,6 +227,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
         DefaultServicesConfigured = true;
 
+        Services.AddScoped<ICommandSender, CommandSender>();
+        Services.AddScoped<INotificationPublisher, NotificationPublisher>();
         Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
         Services.ReplaceOrAddCacheService<MemoryCacheService>();
         Services.AddSingleton<OutboxCommandBackgroundService>();
@@ -248,7 +250,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
             .WithMetrics(metrics =>
             {
                 metrics.AddMeter(HandlerPipelineTracing.MeterName);
-                metrics.AddMeter(this.MetricNames.ToArray());
                 metrics.AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
             })
@@ -257,7 +258,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
                 tracing.AddSource(HandlerPipelineTracing.ActivitySourceName);
                 tracing.AddSource(StateMachineTracing.StateMachineActivitySourceName);
                 tracing.AddSource(OutboxTracing.ActivitySourceName);
-                tracing.AddSource(this.ActivitySources.ToArray());
                 tracing.AddSource(Environment.ApplicationName)
                     .AddHttpClientInstrumentation();
             });

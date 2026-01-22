@@ -52,7 +52,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
 
         if (outboxMessages.Count > 0)
         {
-            _dbContext.TransactionalMessages.AddRange(outboxMessages);
+            _dbContext.OutboxMessages.AddRange(outboxMessages);
             _logger.LogDebug("Added {Count} messages to outbox", outboxMessages.Count);
         }
     }
@@ -73,7 +73,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
         // 第一步：直接声明待处理消息（包括过期锁的消息）
         try
         {
-            rowsUpdated = await _dbContext.TransactionalMessages
+            rowsUpdated = await _dbContext.OutboxMessages
                 .Where(m => m.Status == OutboxMessageStatus.Pending &&
                             m.RetryCount < _options.MaxRetryCount &&
                             (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
@@ -96,7 +96,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
         }
 
         // 第二步：获取成功声明的消息
-        var claimedMessages = await _dbContext.TransactionalMessages
+        var claimedMessages = await _dbContext.OutboxMessages
             .Where(m => m.ClaimedBy == lockId)
             .ToListAsync(cancellationToken);
 
@@ -108,16 +108,15 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
             {
                 var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
 
-                result.Add(new OutboxMessage
-                {
-                    Id = m.Id,
-                    Message = message,
-                    DestinationEndpointName = m.DestinationEndpointName,
-                    CreatedAt = m.CreatedAt,
-                    RetryCount = m.RetryCount,
-                    TraceId = m.TraceId,
-                    SpanId = m.SpanId
-                });
+                result.Add(OutboxMessage.Create(
+                    m.Id,
+                    message,
+                    destinationEndpointName: m.DestinationEndpointName,
+                    createdAt: m.CreatedAt,
+                    retryCount: m.RetryCount,
+                    traceId: m.TraceId,
+                    spanId: m.SpanId
+                ));
             }
             catch (Exception ex)
             {
@@ -140,7 +139,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
         CancellationToken cancellationToken = default)
     {
         // 避免重复标记（如已被其他实例处理）
-        await _dbContext.TransactionalMessages
+        await _dbContext.OutboxMessages
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
@@ -155,7 +154,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
     /// </summary>
     public async Task RecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
-        var rowsUpdated = await _dbContext.TransactionalMessages
+        var rowsUpdated = await _dbContext.OutboxMessages
             .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.ErrorMessage, errorMessage)
@@ -169,7 +168,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
         }
 
         // 第二步：加载最新状态以计算最终状态
-        var message = await _dbContext.TransactionalMessages
+        var message = await _dbContext.OutboxMessages
             .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
 
         if (message == null)
@@ -228,7 +227,7 @@ internal sealed class OutboxMessageRepository : IOutboxMessageRepository
         string errorMessage,
         CancellationToken cancellationToken = default)
     {
-        await _dbContext.TransactionalMessages
+        await _dbContext.OutboxMessages
             .Where(m => m.Id == messageId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, OutboxMessageStatus.Failed)

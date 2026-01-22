@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.Text.Json;
 
 namespace NOF;
 
@@ -168,23 +167,25 @@ public sealed class InboxHandlerMiddleware : IHandlerMiddleware
 
     public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        // 创建收件箱消息
-        var inboxMessage = CreateInboxMessage(context);
-
-        // 检查是否已经处理过该消息（避免重复处理）
-        var messageExists = await _inboxMessageRepository.ExistByMessageIdAsync(inboxMessage.Id, cancellationToken);
-        if (messageExists)
-        {
-            _logger.LogDebug(
-                "Inbox message {MessageId} for {MessageType} already exists, skipping processing",
-                inboxMessage.Id, context.MessageType);
-            return;
-        }
-
         await using var transaction = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
 
         try
         {
+            var messageId = context.MessageId;
+            var messageExists = await _inboxMessageRepository.ExistByMessageIdAsync(messageId, cancellationToken);
+            if (messageExists)
+            {
+                _logger.LogDebug(
+                    "Inbox message {MessageId} for {MessageType} already exists, skipping processing",
+                    messageId, context.MessageType);
+
+                await transaction.RollbackAsync(cancellationToken);
+                return;
+            }
+
+            // 创建收件箱消息
+            var inboxMessage = new InboxMessage(messageId);
+
             // 添加收件箱消息到仓储
             _inboxMessageRepository.Add(inboxMessage);
 
@@ -199,7 +200,7 @@ public sealed class InboxHandlerMiddleware : IHandlerMiddleware
 
             _logger.LogDebug(
                 "Inbox message {MessageId} for {MessageType} processed and committed successfully",
-                inboxMessage.Id, context.MessageType);
+                messageId, context.MessageType);
         }
         catch (Exception ex)
         {
@@ -219,25 +220,6 @@ public sealed class InboxHandlerMiddleware : IHandlerMiddleware
                 context.MessageType);
 
             throw;
-        }
-    }
-
-    /// <summary>
-    /// 创建收件箱消息
-    /// </summary>
-    /// <param name="context">Handler上下文</param>
-    /// <returns>收件箱消息</returns>
-    private static InboxMessage CreateInboxMessage(HandlerContext context)
-    {
-        try
-        {
-            var content = JsonSerializer.Serialize(context.Message);
-            return InboxMessage.Create(context.MessageType, content);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Failed to serialize message of type {context.MessageType} for inbox processing", ex);
         }
     }
 }

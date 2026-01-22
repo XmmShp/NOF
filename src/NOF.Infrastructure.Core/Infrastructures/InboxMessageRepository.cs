@@ -9,88 +9,19 @@ public class InboxMessage
     /// <summary>
     /// 消息唯一标识
     /// </summary>
-    public Guid Id { get; set; }
-
-    /// <summary>
-    /// 消息类型
-    /// </summary>
-    public string MessageType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 消息内容（JSON序列化）
-    /// </summary>
-    public string Content { get; set; } = string.Empty;
+    public Guid Id { get; }
 
     /// <summary>
     /// 消息创建时间
     /// </summary>
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; }
 
-    /// <summary>
-    /// 消息处理时间
-    /// </summary>
-    public DateTime? ProcessedAt { get; set; }
-
-    /// <summary>
-    /// 消息状态
-    /// </summary>
-    public InboxMessageStatus Status { get; set; }
-
-    /// <summary>
-    /// 重试次数
-    /// </summary>
-    public int RetryCount { get; set; }
-
-    /// <summary>
-    /// 错误信息
-    /// </summary>
-    public string? ErrorMessage { get; set; }
-
-    public InboxMessage()
+    public InboxMessage(Guid id)
     {
-        Id = Guid.NewGuid();
+        Id = id;
         CreatedAt = DateTime.UtcNow;
-        Status = InboxMessageStatus.Pending;
-        RetryCount = 0;
-    }
-
-    /// <summary>
-    /// 创建收件箱消息
-    /// </summary>
-    /// <param name="messageType">消息类型</param>
-    /// <param name="content">消息内容</param>
-    /// <returns>收件箱消息实例</returns>
-    public static InboxMessage Create(string messageType, string content)
-    {
-        return new InboxMessage
-        {
-            MessageType = messageType,
-            Content = content
-        };
     }
 }
-
-/// <summary>
-/// 收件箱消息状态枚举
-/// </summary>
-public enum InboxMessageStatus
-{
-    /// <summary>
-    /// 等待处理
-    /// </summary>
-    Pending = 0,
-
-    /// <summary>
-    /// 处理成功
-    /// </summary>
-    Processed = 1,
-
-    /// <summary>
-    /// 处理失败
-    /// </summary>
-    Failed = 2
-}
-
 
 /// <summary>
 /// 收件箱消息仓储接口

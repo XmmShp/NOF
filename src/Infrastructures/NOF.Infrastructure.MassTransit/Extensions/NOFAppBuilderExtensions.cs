@@ -1,6 +1,8 @@
 using MassTransit.Logging;
 using MassTransit.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace NOF;
 
@@ -10,13 +12,13 @@ public static partial class __NOF_Infrastructure_MassTransit_Extensions__
     {
         public INOFMassTransitSelector AddMassTransit()
         {
-            builder.ActivitySources.Add(DiagnosticHeaders.DefaultListenerName);
-            builder.MetricNames.Add(InstrumentationOptions.MeterName);
+            builder.Services.ConfigureOpenTelemetryMeterProvider(meter => meter.AddMeter(InstrumentationOptions.MeterName));
+            builder.Services.ConfigureOpenTelemetryTracerProvider(tracer => tracer.AddSource(DiagnosticHeaders.DefaultListenerName));
 
             builder.Services.AddScoped<IRequestHandleNodeFactory, RequestHandleNodeFactory>();
-            builder.Services.AddScoped<ICommandSender, MassTransitCommandSender>();
+            builder.Services.AddScoped<ICommandRider, MassTransitCommandRider>();
             builder.Services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
-            builder.Services.AddScoped<INotificationPublisher, MassTransitNotificationPublisher>();
+            builder.Services.AddScoped<INotificationRider, MassTransitNotificationRider>();
             builder.Services.AddScoped<IRequestSender, MassTransitRequestSender>();
             builder.AddRegistrationStep(new MassTransitRegistrationStep());
 

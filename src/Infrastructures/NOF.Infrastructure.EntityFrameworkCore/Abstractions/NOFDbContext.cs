@@ -109,64 +109,9 @@ internal sealed class EFCoreInboxMessage
     public Guid Id { get; set; }
 
     /// <summary>
-    /// 消息类型
-    /// </summary>
-    [Required]
-    [MaxLength(512)]
-    public string MessageType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 消息内容（JSON序列化）
-    /// </summary>
-    [Required]
-    public string Content { get; set; } = string.Empty;
-
-    /// <summary>
     /// 消息创建时间
     /// </summary>
     public DateTime CreatedAt { get; set; }
-
-    /// <summary>
-    /// 消息处理时间
-    /// </summary>
-    public DateTime? ProcessedAt { get; set; }
-
-    /// <summary>
-    /// 消息状态
-    /// </summary>
-    public EFCoreInboxMessageStatus Status { get; set; }
-
-    /// <summary>
-    /// 重试次数
-    /// </summary>
-    public int RetryCount { get; set; }
-
-    /// <summary>
-    /// 错误信息
-    /// </summary>
-    [MaxLength(2048)]
-    public string? ErrorMessage { get; set; }
-}
-
-/// <summary>
-/// 收件箱消息状态枚举
-/// </summary>
-internal enum EFCoreInboxMessageStatus
-{
-    /// <summary>
-    /// 等待处理
-    /// </summary>
-    Pending = 0,
-
-    /// <summary>
-    /// 处理成功
-    /// </summary>
-    Processed = 1,
-
-    /// <summary>
-    /// 处理失败
-    /// </summary>
-    Failed = 2
 }
 
 public abstract class NOFDbContext : DbContext
@@ -179,7 +124,7 @@ public abstract class NOFDbContext : DbContext
     }
 
     internal DbSet<EFCoreStateMachineContext> StateMachineContexts { get; set; }
-    internal DbSet<EFCoreOutboxMessage> TransactionalMessages { get; set; }
+    internal DbSet<EFCoreOutboxMessage> OutboxMessages { get; set; }
     internal DbSet<EFCoreInboxMessage> InboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -200,8 +145,7 @@ public abstract class NOFDbContext : DbContext
 
         modelBuilder.Entity<EFCoreInboxMessage>(entity =>
         {
-            entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Status, e.ProcessedAt });
+            entity.HasIndex(e => e.CreatedAt);
         });
 
         base.OnModelCreating(modelBuilder);

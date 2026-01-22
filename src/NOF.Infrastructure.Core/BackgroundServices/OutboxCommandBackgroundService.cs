@@ -84,9 +84,8 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
     {
         using var scope = _serviceProvider.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-        var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
-        var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
+        var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 
         // 使用抢占式获取，避免多实例重复处理
         var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
@@ -106,7 +105,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         {
             try
             {
-                await ProcessSingleMessageAsync(message, repository, commandSender, notificationPublisher, cancellationToken);
+                await ProcessSingleMessageAsync(message, repository, commandRider, notificationRider, cancellationToken);
                 succeededIds.Add(message.Id);
             }
             catch (Exception ex)
@@ -135,8 +134,8 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
     private async Task ProcessSingleMessageAsync(
         OutboxMessage message,
         IOutboxMessageRepository repository,
-        ICommandSender commandSender,
-        INotificationPublisher notificationPublisher,
+        ICommandRider commandRider,
+        INotificationRider notificationRider,
         CancellationToken cancellationToken)
     {
         if (message.RetryCount >= _options.MaxRetryCount)
@@ -152,15 +151,20 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
 
         try
         {
+            var headers = new Dictionary<string, object?>()
+            {
+                [NOFConstants.MessageId] = message.Id
+            };
+
             if (message.Message is ICommand command)
             {
-                await commandSender.SendAsync(command, message.DestinationEndpointName, cancellationToken);
+                await commandRider.SendAsync(command, headers, message.DestinationEndpointName, cancellationToken);
                 _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
                     message.Id, command.GetType().Name, message.RetryCount);
             }
             else if (message.Message is INotification notification)
             {
-                await notificationPublisher.PublishAsync(notification, cancellationToken);
+                await notificationRider.PublishAsync(notification, headers, cancellationToken);
                 _logger.LogDebug("Published notification {MessageId} of type {Type} (retry {Retry})",
                     message.Id, notification.GetType().Name, message.RetryCount);
             }

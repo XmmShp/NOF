@@ -11,8 +11,6 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
 {
     private const string Assemblies = "NOF.Integration.Core:Assemblies";
     private const string ExtraHandlerInfos = "NOF.Integration.Core:ExtraHandlerInfos";
-    private const string ActivitySources = "NOF.Integration.Core:ActivitySources";
-    private const string MetricNames = "NOF.Integration.Core:MetricNames";
     private const string EndpointNameProvider = "NOF.Integration.Core:EndpointNameProvider";
 
     /// <param name="builder">The <see cref="INOFAppBuilder{THostApplication}"/> to operate on.</param>
@@ -24,10 +22,6 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         /// Extensions or modules can add their assemblies here to enable convention-based discovery during startup.
         /// </summary>
         public HashSet<Assembly> Assemblies => builder.Properties.GetOrAdd(Assemblies, _ => new HashSet<Assembly>());
-
-        public List<string> ActivitySources => builder.Properties.GetOrAdd(ActivitySources, _ => new List<string>());
-
-        public List<string> MetricNames => builder.Properties.GetOrAdd(MetricNames, _ => new List<string>());
         public IEndpointNameProvider? EndpointNameProvider
         {
             get

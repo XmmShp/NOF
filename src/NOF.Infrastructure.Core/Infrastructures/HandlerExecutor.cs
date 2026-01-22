@@ -15,6 +15,7 @@ public interface IHandlerExecutor
     ValueTask ExecuteCommandAsync<TCommand>(
         ICommandHandler<TCommand> handler,
         TCommand command,
+        IDictionary<string, string?> headers,
         CancellationToken cancellationToken) where TCommand : class, ICommand;
 
     /// <summary>
@@ -23,6 +24,7 @@ public interface IHandlerExecutor
     ValueTask ExecuteNotificationAsync<TNotification>(
         INotificationHandler<TNotification> handler,
         TNotification notification,
+        IDictionary<string, string?> headers,
         CancellationToken cancellationToken) where TNotification : class, INotification;
 }
 
@@ -45,34 +47,34 @@ public sealed class HandlerExecutor : IHandlerExecutor
     public async ValueTask ExecuteCommandAsync<TCommand>(
         ICommandHandler<TCommand> handler,
         TCommand command,
+        IDictionary<string, string?> headers,
         CancellationToken cancellationToken) where TCommand : class, ICommand
     {
         var context = new HandlerContext
         {
-            HandlerType = handler.GetType().Name,
-            MessageType = typeof(TCommand).Name,
             Message = command,
-            Handler = handler
+            Handler = handler,
+            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
         };
 
-        var pipeline = BuildPipeline(context, (ct) => new ValueTask(handler.HandleAsync(command, ct)));
+        var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(command, ct)));
         await pipeline(cancellationToken);
     }
 
     public async ValueTask ExecuteNotificationAsync<TNotification>(
         INotificationHandler<TNotification> handler,
         TNotification notification,
+        IDictionary<string, string?> headers,
         CancellationToken cancellationToken) where TNotification : class, INotification
     {
         var context = new HandlerContext
         {
-            HandlerType = handler.GetType().Name,
-            MessageType = typeof(TNotification).Name,
             Message = notification,
-            Handler = handler
+            Handler = handler,
+            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
         };
 
-        var pipeline = BuildPipeline(context, (ct) => new ValueTask(handler.HandleAsync(notification, ct)));
+        var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(notification, ct)));
         await pipeline(cancellationToken);
     }
 

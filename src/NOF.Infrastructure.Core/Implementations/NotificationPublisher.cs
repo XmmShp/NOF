@@ -3,6 +3,31 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
+/// 通知发布器实现
+/// </summary>
+public sealed class NotificationPublisher : INotificationPublisher
+{
+    private readonly INotificationRider _rider;
+
+    public NotificationPublisher(INotificationRider rider)
+    {
+        _rider = rider;
+    }
+
+    public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
+    {
+        var headers = new Dictionary<string, object?>
+        {
+            [NOFConstants.MessageId] = Guid.NewGuid()
+        };
+
+        return _rider.PublishAsync(notification,
+            headers,
+            cancellationToken);
+    }
+}
+
+/// <summary>
 /// 延迟通知发布器实现
 /// </summary>
 public sealed class DeferredNotificationPublisher : IDeferredNotificationPublisher
@@ -18,13 +43,12 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
     {
         var currentActivity = Activity.Current;
 
-        _collector.AddMessage(new OutboxMessage
-        {
-            Message = notification,
-            DestinationEndpointName = null,
-            CreatedAt = DateTimeOffset.UtcNow,
-            TraceId = currentActivity?.TraceId.ToString(),
-            SpanId = currentActivity?.SpanId.ToString()
-        });
+        _collector.AddMessage(OutboxMessage.Create(
+            id: Guid.NewGuid(),
+            message: notification,
+            destinationEndpointName: null,
+            traceId: currentActivity?.TraceId.ToString(),
+            spanId: currentActivity?.SpanId.ToString()
+        ));
     }
 }

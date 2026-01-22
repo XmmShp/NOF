@@ -59,8 +59,7 @@ internal sealed class InboxCleanupService : BackgroundService
 
             var olderThan = DateTime.UtcNow - _retentionPeriod;
             var deletedCount = await dbContext.Set<EFCoreInboxMessage>()
-                .Where(m => m.Status == EFCoreInboxMessageStatus.Processed)
-                .Where(m => m.ProcessedAt != null && m.ProcessedAt < olderThan)
+                .Where(m => m.CreatedAt < olderThan)
                 .ExecuteDeleteAsync(cancellationToken);
 
             if (deletedCount > 0)

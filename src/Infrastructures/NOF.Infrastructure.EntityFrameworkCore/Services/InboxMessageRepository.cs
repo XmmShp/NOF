@@ -22,19 +22,10 @@ internal sealed class InboxMessageRepository : IInboxMessageRepository
         var entity = new EFCoreInboxMessage
         {
             Id = message.Id,
-            MessageType = message.MessageType,
-            Content = message.Content,
-            CreatedAt = message.CreatedAt,
-            ProcessedAt = message.ProcessedAt,
-            Status = (EFCoreInboxMessageStatus)message.Status,
-            RetryCount = message.RetryCount,
-            ErrorMessage = message.ErrorMessage
+            CreatedAt = message.CreatedAt
         };
 
         _dbContext.InboxMessages.Add(entity);
-
-        _logger.LogDebug("Added inbox message {MessageId} of type {MessageType}",
-            message.Id, message.MessageType);
     }
 
     public async Task<bool> ExistByMessageIdAsync(Guid messageId, CancellationToken cancellationToken = default)
@@ -43,8 +34,7 @@ internal sealed class InboxMessageRepository : IInboxMessageRepository
             .AsNoTracking()
             .AnyAsync(m => m.Id == messageId, cancellationToken);
 
-        _logger.LogDebug("Checked existence of inbox message {MessageId}: {Exists}",
-            messageId, exists);
+        _logger.LogDebug("Checked existence of inbox message {MessageId}: {Exists}", messageId, exists);
 
         return exists;
     }

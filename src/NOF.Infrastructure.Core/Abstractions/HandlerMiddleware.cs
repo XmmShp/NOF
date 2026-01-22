@@ -11,16 +11,6 @@ namespace NOF;
 public sealed class HandlerContext
 {
     /// <summary>
-    /// Handler 类型名称
-    /// </summary>
-    public required string HandlerType { get; init; }
-
-    /// <summary>
-    /// 消息类型名称
-    /// </summary>
-    public required string MessageType { get; init; }
-
-    /// <summary>
     /// 消息实例
     /// </summary>
     public required IMessage Message { get; init; }
@@ -28,12 +18,22 @@ public sealed class HandlerContext
     /// <summary>
     /// Handler 实例
     /// </summary>
-    public required object Handler { get; init; }
+    public required IMessageHandler Handler { get; init; }
 
     /// <summary>
     /// 自定义属性字典，用于在中间件之间传递数据
     /// </summary>
-    public Dictionary<string, object> Items { get; } = new();
+    public Dictionary<string, object?> Items { get; init; } = new();
+
+    /// <summary>
+    /// Handler 类型名称
+    /// </summary>
+    public string HandlerType => Handler.GetType().Name;
+
+    /// <summary>
+    /// 消息类型名称
+    /// </summary>
+    public string MessageType => Message.GetType().Name;
 }
 
 /// <summary>
@@ -55,4 +55,40 @@ public interface IHandlerMiddleware
     /// <param name="next">管道中的下一个中间件或最终的 Handler</param>
     /// <param name="cancellationToken">取消令牌</param>
     ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken);
+}
+
+public static partial class NOFConstants
+{
+    public const string MessageId = "NOF.Message.MessageId";
+}
+
+public static partial class __NOF_Infrastructure_Core_Extensions__
+{
+    extension(HandlerContext context)
+    {
+        public Guid MessageId
+        {
+            get
+            {
+                if (context.Items.TryGetValue(NOFConstants.MessageId, out var value) && value is Guid guidValue)
+                {
+                    return guidValue;
+                }
+
+                if (value is string stringValue)
+                {
+                    guidValue = Guid.Parse(stringValue);
+                }
+                else
+                {
+                    guidValue = Guid.NewGuid();
+                }
+
+                context.Items[NOFConstants.MessageId] = guidValue;
+                return guidValue;
+            }
+
+            set => context.Items[NOFConstants.MessageId] = value;
+        }
+    }
 }
