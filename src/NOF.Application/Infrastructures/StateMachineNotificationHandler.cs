@@ -33,6 +33,8 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
             var correlationId = bp.GetCorrelationId(notification);
             ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
+            Activity.Current?.SetTag("correlationId", correlationId);
+
             var existing = await _repository.FindAsync(correlationId, bp.DefinitionType);
             if (existing is not null)
             {
