@@ -28,7 +28,20 @@ public sealed class HandlerContext
     /// <summary>
     /// Handler 类型名称
     /// </summary>
-    public string HandlerType => Handler.GetType().Name;
+    public string HandlerType
+    {
+        get
+        {
+            var type = Handler.GetType();
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(StateMachineNotificationHandler<,>))
+            {
+                var stateMachineType = type.GenericTypeArguments[0];
+                return stateMachineType.Name;
+            }
+
+            return Handler.GetType().Name;
+        }
+    }
 
     /// <summary>
     /// 消息类型名称
@@ -60,6 +73,8 @@ public interface IHandlerMiddleware
 public static partial class NOFConstants
 {
     public const string MessageId = "NOF.Message.MessageId";
+    public const string TraceId = "NOF.Message.TraceId";
+    public const string SpanId = "NOF.Message.SpanId";
 }
 
 public static partial class __NOF_Infrastructure_Core_Extensions__

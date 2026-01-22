@@ -151,9 +151,11 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
 
         try
         {
-            var headers = new Dictionary<string, object?>()
+            var headers = new Dictionary<string, string?>()
             {
-                [NOFConstants.MessageId] = message.Id
+                [NOFConstants.MessageId] = message.Id.ToString(),
+                [NOFConstants.SpanId] = restoredActivity?.SpanId.ToString(),
+                [NOFConstants.TraceId] = restoredActivity?.TraceId.ToString()
             };
 
             if (message.Message is ICommand command)

@@ -68,9 +68,10 @@ internal class MassTransitCommandHandlerAdapter<THandler, TCommand> : IConsumer<
     public async Task Consume(ConsumeContext<TCommand> context)
     {
         var headers = context.Headers.ToDictionary(
-            h => h.Key, h => h.Value.ToString()
+            h => h.Key, 
+            h => h.Value?.ToString() ?? string.Empty
         );
-
+        
         await _executor.ExecuteCommandAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
     }
 }
@@ -91,7 +92,8 @@ internal class MassTransitNotificationHandlerAdapter<THandler, TNotification> : 
     public async Task Consume(ConsumeContext<TNotification> context)
     {
         var headers = context.Headers.ToDictionary(
-            h => h.Key, h => h.Value.ToString()
+            h => h.Key, 
+            h => h.Value?.ToString() ?? string.Empty
         );
 
         await _executor.ExecuteNotificationAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);

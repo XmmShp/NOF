@@ -3,6 +3,6 @@
 public interface INotificationRider
 {
     Task PublishAsync(INotification notification,
-        IDictionary<string, object?>? headers = null,
+        IDictionary<string, string?>? headers = null,
         CancellationToken cancellationToken = default);
 }

@@ -16,15 +16,15 @@ public sealed class CommandSender : ICommandSender
 
     public Task SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
-        var headers = new Dictionary<string, object?>
+        var currentActivity = Activity.Current;
+        var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = Guid.NewGuid()
+            [NOFConstants.MessageId] = Guid.NewGuid().ToString(),
+            [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
+            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString()
         };
 
-        return _rider.SendAsync(command,
-            headers,
-            destinationEndpointName,
-            cancellationToken);
+        return _rider.SendAsync(command, headers, destinationEndpointName, cancellationToken);
     }
 }
 

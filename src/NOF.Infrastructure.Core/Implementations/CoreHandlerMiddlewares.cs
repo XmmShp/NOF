@@ -12,16 +12,8 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
 {
     public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        using var activity = HandlerPipelineTracing.Source.StartActivity(
-            $"{context.HandlerType}.Handle",
-            ActivityKind.Internal);
-
-        if (activity != null)
-        {
-            activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
-            activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
-            activity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
-        }
+        // 合并追踪上下文并创建Activity
+        using var activity = RestoreTraceContext(context);
 
         try
         {
@@ -38,6 +30,96 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
             }
             throw;
         }
+    }
+
+    /// <summary>
+    /// 恢复追踪上下文并创建Activity：如果HandlerContext.Items中有TraceId/SpanId，则恢复追踪上下文
+    /// 如果当前已有其它追踪，则尝试合并，合并静默失败
+    /// </summary>
+    /// <param name="context">Handler执行上下文</param>
+    /// <returns>创建的Activity，如果没有追踪信息则返回null</returns>
+    private static Activity? RestoreTraceContext(HandlerContext context)
+    {
+        // 从HandlerContext.Items中提取追踪信息
+        if (!context.Items.TryGetValue(NOFConstants.TraceId, out var traceIdObj) ||
+            traceIdObj is not string traceId ||
+            string.IsNullOrEmpty(traceId))
+        {
+            // 没有TraceId，创建普通的Handler Activity
+            var activity = HandlerPipelineTracing.Source.StartActivity(
+                $"{context.HandlerType}.Handle",
+                ActivityKind.Internal);
+
+            if (activity != null)
+            {
+                activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
+                activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
+                activity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
+            }
+
+            return activity;
+        }
+
+        var currentActivity = Activity.Current;
+
+        // 如果当前没有Activity，创建一个新的Activity来恢复追踪上下文
+        if (currentActivity == null)
+        {
+            var spanId = ActivitySpanId.CreateRandom();
+            if (context.Items.TryGetValue(NOFConstants.SpanId, out var spanIdObj1) &&
+                spanIdObj1 is string spanIdStr1 &&
+                !string.IsNullOrEmpty(spanIdStr1))
+            {
+                spanId = ActivitySpanId.CreateFromString(spanIdStr1.AsSpan());
+            }
+
+            var activityContext = new ActivityContext(
+                traceId: ActivityTraceId.CreateFromString(traceId.AsSpan()),
+                spanId: spanId,
+                traceFlags: ActivityTraceFlags.Recorded,
+                isRemote: true);
+
+            var activity = HandlerPipelineTracing.Source.StartActivity(
+                $"{context.HandlerType}.Handle",
+                kind: ActivityKind.Consumer,
+                parentContext: activityContext);
+
+            if (activity is { IsAllDataRequested: true })
+            {
+                activity.SetTag("trace.id", traceId);
+                activity.SetTag("span.id", spanId.ToString());
+                activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
+                activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
+                activity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
+            }
+
+            return activity;
+        }
+
+        // 如果当前已有Activity，尝试合并（静默失败）
+        // 设置TraceId和SpanId到Activity的Tag中，以便追踪
+        currentActivity.SetTag("trace.id", traceId);
+
+        if (context.Items.TryGetValue(NOFConstants.SpanId, out var spanIdObj) &&
+            spanIdObj is string spanIdStr &&
+            !string.IsNullOrEmpty(spanIdStr))
+        {
+            currentActivity.SetTag("span.id", spanIdStr);
+        }
+
+        // 创建普通的Handler Activity，但会继承当前Activity的上下文
+        var handlerActivity = HandlerPipelineTracing.Source.StartActivity(
+            $"{context.HandlerType}.Handle",
+            ActivityKind.Internal);
+
+        if (handlerActivity != null)
+        {
+            handlerActivity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
+            handlerActivity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
+            handlerActivity.SetTag(HandlerPipelineTracing.Tags.MessageName, GetMessageName(context.MessageType));
+        }
+
+        return handlerActivity;
     }
 
     private static string GetMessageName(string fullTypeName)

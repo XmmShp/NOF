@@ -15,7 +15,7 @@ public class MassTransitNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(INotification notification,
-        IDictionary<string, object?>? headers = null,
+        IDictionary<string, string?>? headers = null,
         CancellationToken cancellationToken = default)
     {
         await _publishEndpoint.Publish(notification as object, context =>

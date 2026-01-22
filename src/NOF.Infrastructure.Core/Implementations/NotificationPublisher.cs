@@ -16,14 +16,15 @@ public sealed class NotificationPublisher : INotificationPublisher
 
     public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
     {
-        var headers = new Dictionary<string, object?>
+        var currentActivity = Activity.Current;
+        var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = Guid.NewGuid()
+            [NOFConstants.MessageId] = Guid.NewGuid().ToString(),
+            [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
+            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString()
         };
 
-        return _rider.PublishAsync(notification,
-            headers,
-            cancellationToken);
+        return _rider.PublishAsync(notification, headers, cancellationToken);
     }
 }
 

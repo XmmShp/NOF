@@ -17,7 +17,7 @@ public class MassTransitCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ICommand command,
-        IDictionary<string, object?>? headers = null,
+        IDictionary<string, string>? headers = null,
         string? destinationEndpointName = null,
         CancellationToken cancellationToken = default)
     {
