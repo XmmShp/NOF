@@ -4,12 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF;
 
-public record DbContextConfigurating(DbContextOptionsBuilder Options);
+public record DbContextConfigurating(IServiceProvider ServiceProvider, DbContextOptionsBuilder Options);
 
 public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
     private const string UseEntityFrameworkCore = "NOF.Infrastructure.EntityFrameworkCore:UseEntityFrameworkCore";
     private const string DbContextType = "NOF.Infrastructure.EntityFrameworkCore:DbContextType";
+
     extension(INOFAppBuilder builder)
     {
         public bool UseEntityFrameworkCore
@@ -28,6 +29,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             }
         }
     }
+
     extension(INOFAppBuilder builder)
     {
         public INOFEFCoreSelector AddEFCore<TDbContext>() where TDbContext : NOFDbContext
@@ -40,11 +42,19 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             builder.Services.AddScoped<IOutboxMessageCollector, OutboxMessageCollector>();
             builder.Services.AddHostedService<InboxCleanupService>();
             builder.Services.AddHostedService<OutboxCleanupService>();
-            builder.Services.AddDbContext<TDbContext>(options =>
+
+            // Register DbContext factory - actual configuration will be done by specific database providers
+            builder.Services.AddScoped<TDbContext>(sp =>
             {
-                ((IDbContextOptionsBuilderInfrastructure)options).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
-                builder.StartupEventChannel.Publish(new DbContextConfigurating(options));
+                var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
+                ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
+                builder.StartupEventChannel.Publish(new DbContextConfigurating(sp, optionsBuilder));
+
+                var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(sp, optionsBuilder.Options);
+
+                return dbContext;
             });
+
             builder.Services.AddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.UseEntityFrameworkCore = true;
