@@ -227,17 +227,38 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
         DefaultServicesConfigured = true;
 
+        Services.AddScoped<ITenantContextInternal, TenantContext>();
+        Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<ITenantContextInternal>());
+
+        Services.AddScoped<IUserContextInternal, UserContext>();
+        Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IUserContextInternal>());
+
         Services.AddScoped<ICommandSender, CommandSender>();
         Services.AddScoped<INotificationPublisher, NotificationPublisher>();
+
         Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
+
         Services.ReplaceOrAddCacheService<MemoryCacheService>();
+
         Services.AddSingleton<OutboxCommandBackgroundService>();
-        Services.AddHostedService(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
         Services.AddSingleton<IOutboxPublisher>(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
+
+        Services.AddHostedService(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
 
         Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
         Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
-        Services.AddHandlerPipeline();
+
+        // Ensure the collection of pipeline configuration actions is registered
+        if (Services.All(d => d.ServiceType != typeof(IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>)))
+        {
+            Services.AddSingleton<IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>>(sp =>
+            {
+                var actions = sp.GetService<List<Action<IHandlerPipelineBuilder, IServiceProvider>>>();
+                return actions ?? [];
+            });
+            Services.AddSingleton(new List<Action<IHandlerPipelineBuilder, IServiceProvider>>());
+        }
+        Services.AddScoped<IHandlerExecutor, HandlerExecutor>();
 
         const string otelExporterOtlpEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT";
         Logging.AddOpenTelemetry(logging =>

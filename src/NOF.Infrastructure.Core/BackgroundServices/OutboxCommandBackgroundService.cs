@@ -150,18 +150,22 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         using var activity = RestoreTracingContext(message);
         var messageId = Guid.NewGuid();
 
+        var headers = new Dictionary<string, string?>(message.Headers);
+        headers.TryAdd(NOFConstants.MessageId, messageId.ToString());
+        headers.TryAdd(NOFConstants.SpanId, activity?.SpanId.ToString());
+        headers.TryAdd(NOFConstants.TraceId, activity?.TraceId.ToString());
+
         if (activity is { IsAllDataRequested: true })
         {
             activity.SetTag(MessageTracing.Tags.MessageId, messageId);
             activity.SetTag(MessageTracing.Tags.MessageType, message.Message.GetType().Name);
             activity.SetTag(MessageTracing.Tags.Destination, message.DestinationEndpointName ?? "default");
             activity.SetTag("OutboxMessageId", message.Id);
+            if (headers.TryGetValue(NOFConstants.TenantId, out var tenantId))
+            {
+                activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
+            }
         }
-
-        var headers = new Dictionary<string, string?>(message.Headers);
-        headers.TryAdd(NOFConstants.MessageId, messageId.ToString());
-        headers.TryAdd(NOFConstants.SpanId, activity?.SpanId.ToString());
-        headers.TryAdd(NOFConstants.TraceId, activity?.TraceId.ToString());
 
         try
         {

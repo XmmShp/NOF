@@ -8,10 +8,12 @@ namespace NOF;
 public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
+    private readonly ITenantContext _tenantContext;
 
-    public NotificationPublisher(INotificationRider rider)
+    public NotificationPublisher(INotificationRider rider, ITenantContext tenantContext)
     {
         _rider = rider;
+        _tenantContext = tenantContext;
     }
 
     public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
@@ -22,11 +24,14 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         var messageId = Guid.NewGuid().ToString();
         var currentActivity = Activity.Current;
+        var tenantId = _tenantContext.CurrentTenantId;
+
         var headers = new Dictionary<string, string?>
         {
             [NOFConstants.MessageId] = messageId,
             [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
-            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString()
+            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString(),
+            [NOFConstants.TenantId] = tenantId
         };
 
         if (activity is { IsAllDataRequested: true })
@@ -34,6 +39,8 @@ public sealed class NotificationPublisher : INotificationPublisher
             activity.SetTag(MessageTracing.Tags.MessageId, messageId);
             activity.SetTag(MessageTracing.Tags.MessageType, notification.GetType().Name);
             activity.SetTag(MessageTracing.Tags.Destination, "broadcast");
+
+            activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
         }
 
         try
@@ -56,19 +63,23 @@ public sealed class NotificationPublisher : INotificationPublisher
 public sealed class DeferredNotificationPublisher : IDeferredNotificationPublisher
 {
     private readonly IOutboxMessageCollector _collector;
+    private readonly ITenantContext _tenantContext;
 
-    public DeferredNotificationPublisher(IOutboxMessageCollector collector)
+    public DeferredNotificationPublisher(IOutboxMessageCollector collector, ITenantContext tenantContext)
     {
         _collector = collector;
+        _tenantContext = tenantContext;
     }
 
     public void Publish(INotification notification)
     {
         var currentActivity = Activity.Current;
+        var tenantId = _tenantContext.CurrentTenantId;
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = Guid.NewGuid().ToString()
+            [NOFConstants.MessageId] = Guid.NewGuid().ToString(),
+            [NOFConstants.TenantId] = tenantId
         };
 
         _collector.AddMessage(new OutboxMessage

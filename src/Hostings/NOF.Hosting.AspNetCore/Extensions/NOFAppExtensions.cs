@@ -51,7 +51,6 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
         public INOFAppBuilder UseJwtAuthentication()
         {
             builder.Services.AddOptionsInConfiguration<JwtOptions>();
-            builder.Services.AddScoped<IUserContext, UserContext>();
             builder.Services.ConfigureOptions<ConfigureJwtBearerOptions>();
             builder.Services.AddAuthentication(options =>
             {
@@ -60,7 +59,7 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer();
             builder.Services.AddAuthorization();
-            builder.Services.AddScoped<JwtUserInfoMiddleware>();
+            builder.Services.AddScoped<JwtAuthenticationContextMiddleware>();
             builder.Services.AddScoped<PermissionAuthorizationMiddleware>();
             builder.AddInitializationStep(new JwtAuthenticationInitializationStep());
             return builder;

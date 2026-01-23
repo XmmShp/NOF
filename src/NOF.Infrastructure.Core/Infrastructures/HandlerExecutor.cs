@@ -89,19 +89,23 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var logger = _serviceProvider.GetRequiredService<ILogger<AutoInstrumentationMiddleware>>();
         builder.Use(new AutoInstrumentationMiddleware(logger));
 
-        // 3. 收件箱消息处理
+        // 3. 租户头处理
+        var tenantContext = _serviceProvider.GetRequiredService<ITenantContextInternal>();
+        builder.Use(new TenantHeaderMiddleware(tenantContext));
+
+        // 4. 收件箱消息处理
         var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();
         var inboxMessageRepository = _serviceProvider.GetRequiredService<IInboxMessageRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
         var inboxLogger = _serviceProvider.GetRequiredService<ILogger<InboxHandlerMiddleware>>();
         builder.Use(new InboxHandlerMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger));
 
-        // 4. 事务性消息上下文
+        // 5. 事务性消息上下文
         var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();
         var deferredNotificationPublisher = _serviceProvider.GetRequiredService<IDeferredNotificationPublisher>();
         builder.Use(new MessageOutboxContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
 
-        // 5. 用户自定义中间件扩展点（可以多次调用 Configure 添加）
+        // 6. 用户自定义中间件扩展点（可以多次调用 Configure 添加）
         foreach (var configure in _configureActions)
         {
             configure(builder, _serviceProvider);

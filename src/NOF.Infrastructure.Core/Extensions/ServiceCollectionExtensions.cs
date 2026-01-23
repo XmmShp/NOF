@@ -224,35 +224,12 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         }
 
         /// <summary>
-        /// 添加 Handler 执行器和中间件支持
-        /// </summary>
-        public IServiceCollection AddHandlerPipeline()
-        {
-            // 注册配置动作集合
-            if (services.All(d => d.ServiceType != typeof(IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>)))
-            {
-                services.AddSingleton<IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>>(sp =>
-                {
-                    var actions = sp.GetService<List<Action<IHandlerPipelineBuilder, IServiceProvider>>>();
-                    return actions ?? [];
-                });
-                services.AddSingleton(new List<Action<IHandlerPipelineBuilder, IServiceProvider>>());
-            }
-
-            services.AddScoped<IHandlerExecutor, HandlerExecutor>();
-
-            return services;
-        }
-
-        /// <summary>
         /// 配置 Handler 管道中间件（可多次调用）
         /// 用户自定义的中间件将被插入到核心中间件之间：
         /// Activity 追踪 -> 自动埋点 -> [用户中间件] -> 事务性消息上下文
         /// </summary>
         public IServiceCollection ConfigureHandlerPipeline(Action<IHandlerPipelineBuilder, IServiceProvider> configure)
         {
-            services.AddHandlerPipeline();
-
             // 获取或创建配置动作列表
             var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(List<Action<IHandlerPipelineBuilder, IServiceProvider>>));
             if (descriptor?.ImplementationInstance is List<Action<IHandlerPipelineBuilder, IServiceProvider>> actions)

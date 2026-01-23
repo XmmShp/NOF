@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace NOF;
 
 /// <summary>
@@ -8,6 +10,7 @@ public interface IUserContext
     /// <summary>
     /// Gets a value indicating whether the user is authenticated.
     /// </summary>
+    [MemberNotNullWhen(true, nameof(Id), nameof(Username))]
     bool IsAuthenticated { get; }
 
     /// <summary>
@@ -23,22 +26,17 @@ public interface IUserContext
     /// <summary>
     /// Gets the list of permissions assigned to the current user.
     /// </summary>
-    IList<string> Permissions { get; }
+    IReadOnlyList<string> Permissions { get; }
 
     /// <summary>
     /// Gets a dictionary for storing custom user-related properties.
-    /// Keys are typically strings or enums; values can be any object or <c>null</c>.
+    /// Keys are strings; values can be any object or <c>null</c>.
     /// </summary>
-    IDictionary<object, object?> Properties { get; }
+    IDictionary<string, object?> Properties { get; }
+}
 
-    /// <summary>
-    /// Determines whether the current user has the specified permission.
-    /// Supports exact match and wildcard patterns (e.g., "order.*").
-    /// </summary>
-    /// <param name="permission">The permission name to check.</param>
-    /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
-    bool HasPermission(string permission);
-
+public interface IUserContextInternal : IUserContext
+{
     /// <summary>
     /// Sets the current user context synchronously.
     /// </summary>
@@ -73,16 +71,10 @@ public interface IUserContext
 /// <summary>
 /// Default implementation of <see cref="IUserContext"/>.
 /// </summary>
-public class UserContext : IUserContext
+public class UserContext : IUserContextInternal
 {
-    private readonly StringComparison _comparison;
-
-    public UserContext(StringComparison comparison = StringComparison.OrdinalIgnoreCase)
-    {
-        _comparison = comparison;
-    }
-
     /// <inheritdoc />
+    [MemberNotNullWhen(true, nameof(Id), nameof(Username))]
     public bool IsAuthenticated => Id is not null;
 
     /// <inheritdoc />
@@ -94,28 +86,10 @@ public class UserContext : IUserContext
     private readonly List<string> _permissions = [];
 
     /// <inheritdoc />
-    public IList<string> Permissions => _permissions;
+    public IReadOnlyList<string> Permissions => _permissions.AsReadOnly();
 
     /// <inheritdoc />
-    public IDictionary<object, object?> Properties { get; } = new Dictionary<object, object?>();
-
-    /// <inheritdoc />
-    public bool HasPermission(string permission)
-    {
-        if (string.IsNullOrEmpty(permission))
-            return false;
-
-        var comparer = StringComparer.FromComparison(_comparison);
-
-        // Exact match
-        if (Permissions.Contains(permission, comparer))
-            return true;
-
-        // Wildcard match (e.g., "order.*", "admin.*.delete")
-        return Permissions
-            .Where(p => p?.Contains('*') == true)
-            .Any(pattern => permission.MatchWildcard(pattern!, _comparison));
-    }
+    public IDictionary<string, object?> Properties { get; } = new Dictionary<string, object?>();
 
     /// <inheritdoc />
     public void SetUser(string id, string username, IEnumerable<string> permissions)
@@ -128,7 +102,7 @@ public class UserContext : IUserContext
 
         Id = id;
         Username = username;
-        Permissions.Clear();
+        _permissions.Clear();
         _permissions.AddRange(permissions);
     }
 
@@ -141,11 +115,41 @@ public class UserContext : IUserContext
     {
         Id = null;
         Username = null;
-        Permissions.Clear();
+        _permissions.Clear();
         Properties.Clear();
     }
 
     /// <inheritdoc />
     public Task UnsetUserAsync()
         => Task.Run(UnsetUser);
+}
+
+public static partial class __NOF_Contract_Extensions__
+{
+    extension(IUserContext context)
+    {
+        /// <summary>
+        /// Determines whether the current user has the specified permission.
+        /// Supports exact match and wildcard patterns (e.g., "order.*").
+        /// </summary>
+        /// <param name="permission">The permission name to check.</param>
+        /// <param name="comparison"></param>
+        /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
+        public bool HasPermission(string permission, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
+        {
+            if (string.IsNullOrEmpty(permission))
+                return false;
+
+            var comparer = StringComparer.FromComparison(comparison);
+
+            // Exact match
+            if (context.Permissions.Contains(permission, comparer))
+                return true;
+
+            // Wildcard match (e.g., "order.*", "admin.*.delete")
+            return context.Permissions
+                .Where(p => p?.Contains('*') == true)
+                .Any(pattern => permission.MatchWildcard(pattern, comparison));
+        }
+    }
 }

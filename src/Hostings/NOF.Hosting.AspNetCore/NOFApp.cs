@@ -28,11 +28,11 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     public static NOFWebApplicationBuilder Create(string[] args, bool useDefaultConfigs = true)
     {
         var builder = new NOFWebApplicationBuilder(args);
+        builder.ConfigureDefaultServices();
         if (useDefaultConfigs)
         {
             builder.UseDefaultSettings();
         }
-        builder.ConfigureDefaultServices();
         builder.AddRegistrationStep(new AddStateMachineRegistrationStep());
         return builder;
     }

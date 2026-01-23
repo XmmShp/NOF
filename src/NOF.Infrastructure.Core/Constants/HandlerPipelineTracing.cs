@@ -35,7 +35,7 @@ public static class HandlerPipelineTracing
     {
         public const string HandlerType = "handler.type";
         public const string MessageType = "message.type";
-        public const string MessageName = "message.name";
+        public const string TenantId = "tenant.id";
     }
 
     /// <summary>

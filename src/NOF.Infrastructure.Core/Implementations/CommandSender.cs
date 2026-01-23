@@ -8,10 +8,12 @@ namespace NOF;
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
+    private readonly ITenantContext _tenantContext;
 
-    public CommandSender(ICommandRider rider)
+    public CommandSender(ICommandRider rider, ITenantContext tenantContext)
     {
         _rider = rider;
+        _tenantContext = tenantContext;
     }
 
     public Task SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
@@ -21,12 +23,15 @@ public sealed class CommandSender : ICommandSender
             ActivityKind.Producer);
 
         var messageId = Guid.NewGuid().ToString();
+        var tenantId = _tenantContext.CurrentTenantId;
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>
         {
             [NOFConstants.MessageId] = messageId,
             [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
-            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString()
+            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString(),
+
+            [NOFConstants.TenantId] = tenantId
         };
 
         if (activity is { IsAllDataRequested: true })
@@ -34,6 +39,8 @@ public sealed class CommandSender : ICommandSender
             activity.SetTag(MessageTracing.Tags.MessageId, messageId);
             activity.SetTag(MessageTracing.Tags.MessageType, command.GetType().Name);
             activity.SetTag(MessageTracing.Tags.Destination, destinationEndpointName ?? "default");
+
+            activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
         }
 
         try
@@ -56,17 +63,23 @@ public sealed class CommandSender : ICommandSender
 public sealed class DeferredCommandSender : IDeferredCommandSender
 {
     private readonly IOutboxMessageCollector _collector;
+    private readonly ITenantContext _tenantContext;
 
-    public DeferredCommandSender(IOutboxMessageCollector collector)
+    public DeferredCommandSender(IOutboxMessageCollector collector, ITenantContext tenantContext)
     {
         _collector = collector;
+        _tenantContext = tenantContext;
     }
 
     public void Send(ICommand command, string? destinationEndpointName = null)
     {
         var currentActivity = Activity.Current;
+        var tenantId = _tenantContext.CurrentTenantId;
 
-        var headers = new Dictionary<string, string?>();
+        var headers = new Dictionary<string, string?>
+        {
+            [NOFConstants.TenantId] = tenantId
+        };
 
         _collector.AddMessage(new OutboxMessage
         {
