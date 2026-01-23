@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace NOF;
 
 public interface ICacheSerializer
@@ -7,9 +9,40 @@ public interface ICacheSerializer
     T? Deserialize<T>(ReadOnlyMemory<byte> data);
 }
 
-public abstract class CacheSerializer : ICacheSerializer
+public class JsonCacheSerializer : ICacheSerializer
 {
-    public abstract ReadOnlyMemory<byte> Serialize<T>(T value);
+    private readonly JsonSerializerOptions _options;
 
-    public abstract T? Deserialize<T>(ReadOnlyMemory<byte> data);
+    public JsonCacheSerializer() : this(JsonSerializerOptions.NOFDefaults)
+    {
+    }
+
+    public JsonCacheSerializer(JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        _options = options;
+    }
+
+    /// <inheritdoc />
+    public ReadOnlyMemory<byte> Serialize<T>(T value)
+    {
+        if (value is null)
+        {
+            return ReadOnlyMemory<byte>.Empty;
+        }
+
+        return JsonSerializer.SerializeToUtf8Bytes(value, _options);
+    }
+
+    /// <inheritdoc />
+    public T? Deserialize<T>(ReadOnlyMemory<byte> data)
+    {
+        if (data.IsEmpty || JsonSerializer.Deserialize<T>(data.Span, _options) is not { } value)
+        {
+            return default;
+        }
+
+        return value;
+    }
 }
+

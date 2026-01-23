@@ -9,7 +9,7 @@ public class RedisCacheService : ICacheService
 {
     private readonly IDatabase _database;
     private readonly ICacheSerializer _serializer;
-    private readonly ILockRetryStrategy _lockRetryStrategy;
+    private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
 
@@ -17,7 +17,7 @@ public class RedisCacheService : ICacheService
         IConnectionMultiplexer connectionMultiplexer,
         ICacheSerializer serializer,
         IOptions<CacheServiceOptions> options,
-        ILockRetryStrategy lockRetryStrategy)
+        ICacheLockRetryStrategy lockRetryStrategy)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
         ArgumentNullException.ThrowIfNull(serializer);

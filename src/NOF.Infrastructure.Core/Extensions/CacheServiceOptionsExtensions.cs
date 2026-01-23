@@ -124,7 +124,7 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         /// </summary>
         /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
         /// <returns>The configured or default lock retry strategy.</returns>
-        public ILockRetryStrategy GetLockRetryStrategy(IServiceProvider serviceProvider)
+        public ICacheLockRetryStrategy GetLockRetryStrategy(IServiceProvider serviceProvider)
         {
             ArgumentNullException.ThrowIfNull(options);
             ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -139,7 +139,7 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
                 return options.LockRetryStrategyFactory(serviceProvider);
             }
 
-            return new ExponentialBackoffLockRetryStrategy();
+            return new ExponentialBackoffCacheLockRetryStrategy();
         }
     }
 }

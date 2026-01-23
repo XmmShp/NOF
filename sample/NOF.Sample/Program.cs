@@ -26,11 +26,6 @@ builder.Services.AddAntDesign()
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("redis");
-});
-
 // Here, we self-call for test
 builder.Services.AddHttpClient<INOFService, NOFServiceClient>(client => client.BaseAddress = new Uri("http://localhost:55892/"));
 

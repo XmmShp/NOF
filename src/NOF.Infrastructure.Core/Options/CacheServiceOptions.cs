@@ -45,12 +45,12 @@ public class CacheServiceOptions
     /// Gets or sets the lock retry strategy.
     /// If null, a default ExponentialBackoffRetryStrategy will be created using the legacy properties.
     /// </summary>
-    public ILockRetryStrategy? LockRetryStrategy { get; set; }
+    public ICacheLockRetryStrategy? LockRetryStrategy { get; set; }
 
     /// <summary>
     /// Gets or sets the factory function to create a lock retry strategy.
     /// </summary>
-    public Func<IServiceProvider, ILockRetryStrategy>? LockRetryStrategyFactory { get; set; }
+    public Func<IServiceProvider, ICacheLockRetryStrategy>? LockRetryStrategyFactory { get; set; }
 
     /// <summary>
     /// Gets or sets additional custom properties for implementation-specific configurations.

@@ -11,12 +11,12 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
     private readonly ICacheSerializer _serializer;
-    private readonly ILockRetryStrategy _lockRetryStrategy;
+    private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly Timer _expirationTimer;
     private readonly CacheServiceOptions _options;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
 
-    public MemoryCacheService(ICacheSerializer serializer, ILockRetryStrategy lockRetryStrategy, IOptions<CacheServiceOptions> options)
+    public MemoryCacheService(ICacheSerializer serializer, ICacheLockRetryStrategy lockRetryStrategy, IOptions<CacheServiceOptions> options)
     {
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -182,6 +181,7 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
 
         /// <summary>
         /// Adds a cache service implementation with automatic interface registration.
+        /// Supports multi-tenant architecture by creating tenant-specific cache instances with isolated key prefixes.
         /// </summary>
         /// <typeparam name="TImplementation">The cache service implementation type.</typeparam>
         /// <param name="optionsConfigurator">The cache service options.</param>
@@ -195,31 +195,48 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
                 services.Configure(optionsConfigurator);
             }
 
-            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetSerializer(sp));
-            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetLockRetryStrategy(sp));
-            services.ReplaceOrAddSingleton<ICacheService, TImplementation>();
-            services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
-            return services;
-        }
+            // Register as Scoped to support multi-tenant isolation
+            services.ReplaceOrAddScoped(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetSerializer(sp));
+            services.ReplaceOrAddScoped(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetLockRetryStrategy(sp));
 
-        /// <summary>
-        /// Adds a cache service implementation with automatic interface registration.
-        /// </summary>
-        /// <param name="implementationFactory">Factory to create the cache service instance.</param>
-        /// <param name="optionsConfigurator">The cache service options.</param>
-        /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
-        public IServiceCollection ReplaceOrAddCacheService(Func<IServiceProvider, ICacheService> implementationFactory, Action<CacheServiceOptions>? optionsConfigurator = null)
-        {
-            services.AddOptions<CacheServiceOptions>();
-            if (optionsConfigurator is not null)
+            // Register multi-tenant aware cache service factory
+            services.ReplaceOrAddScoped<ICacheService>(sp =>
             {
-                services.Configure(optionsConfigurator);
-            }
+                var tenantContext = sp.GetRequiredService<ITenantContext>();
+                var baseOptions = sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value;
 
-            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetSerializer(sp));
-            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value.GetLockRetryStrategy(sp));
-            services.ReplaceOrAddSingleton(implementationFactory);
-            services.TryAddSingleton<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+                // Create tenant-specific options
+                var tenantOptions = new CacheServiceOptions
+                {
+                    Serializer = baseOptions.Serializer,
+                    SerializerFactory = baseOptions.SerializerFactory,
+                    DefaultEntryOptions = baseOptions.DefaultEntryOptions,
+                    MinimumLockRenewalDuration = baseOptions.MinimumLockRenewalDuration,
+                    LockRenewalIntervalFactor = baseOptions.LockRenewalIntervalFactor,
+                    LockRetryStrategy = baseOptions.LockRetryStrategy,
+                    LockRetryStrategyFactory = baseOptions.LockRetryStrategyFactory,
+                    Properties = baseOptions.Properties
+                };
+
+                // Set tenant-specific KeyPrefix for transparent multi-tenant isolation
+                var tenantId = tenantContext.CurrentTenantId;
+                if (!string.IsNullOrEmpty(tenantId))
+                {
+                    tenantOptions.KeyPrefix = string.IsNullOrEmpty(baseOptions.KeyPrefix)
+                        ? $"tenant:{tenantId}:"
+                        : $"{baseOptions.KeyPrefix}:tenant:{tenantId}:";
+                }
+                else
+                {
+                    tenantOptions.KeyPrefix = baseOptions.KeyPrefix;
+                }
+
+                var options = Options.Create(tenantOptions);
+
+                return ActivatorUtilities.CreateInstance<TImplementation>(sp, options);
+            });
+
+            services.ReplaceOrAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             return services;
         }
 

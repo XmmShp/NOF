@@ -31,7 +31,7 @@ public abstract class UnitTestBase<TDbContext> where TDbContext : DbContext
 
         DbContext.Database.EnsureCreated();
 
-        Cache = new MemoryCacheService(new JsonCacheSerializer(), new ExponentialBackoffLockRetryStrategy(), Options.Create(new CacheServiceOptions()));
+        Cache = new MemoryCacheService(new JsonCacheSerializer(), new ExponentialBackoffCacheLockRetryStrategy(), Options.Create(new CacheServiceOptions()));
     }
 
     protected ILogger<T> GetLogger<T>()
