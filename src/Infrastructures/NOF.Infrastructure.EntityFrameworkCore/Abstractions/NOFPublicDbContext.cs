@@ -18,9 +18,20 @@ public abstract class NOFPublicDbContext : DbContext
         _startupEventChannel = extension?.StartupEventChannel ?? throw new InvalidOperationException("EventDispatcher is not configured in NOFDbContextOptionsExtension.");
     }
 
+    internal DbSet<EFCoreTenant> Tenants { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<EFCoreTenant>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(256);
+            entity.Property(e => e.Name).HasMaxLength(256);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
 
         _startupEventChannel.Publish(new PublicDbContextModelCreating(GetType(), modelBuilder));
     }
