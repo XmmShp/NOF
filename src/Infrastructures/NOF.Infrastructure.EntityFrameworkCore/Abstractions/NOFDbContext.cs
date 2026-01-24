@@ -126,22 +126,43 @@ public abstract class NOFDbContext : DbContext
     }
 
     internal DbSet<EFCoreStateMachineContext> StateMachineContexts { get; set; }
-    internal DbSet<EFCoreOutboxMessage> OutboxMessages { get; set; }
-    internal DbSet<EFCoreInboxMessage> InboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<EFCoreStateMachineContext>(entity =>
         {
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionType });
         });
 
+        _startupEventChannel.Publish(new DbContextModelCreating(modelBuilder));
+    }
+}
+
+/// <summary>
+/// Public DbContext that is not isolated by tenant. Data is stored in {Database}Public database.
+/// This prevents conflicts with tenants named "Public".
+/// Contains system-wide entities like outbox and inbox messages.
+/// </summary>
+public abstract class NOFPublicDbContext : NOFDbContext
+{
+    protected NOFPublicDbContext(DbContextOptions options) : base(options)
+    {
+    }
+
+    internal DbSet<EFCoreOutboxMessage> OutboxMessages { get; set; }
+    internal DbSet<EFCoreInboxMessage> InboxMessages { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<EFCoreOutboxMessage>(entity =>
         {
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt }); // 联合索引替代Claimed状态
+            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
             entity.HasIndex(e => e.ClaimedBy);
-            // 为追踪字段添加索引以支持追踪查询
             entity.HasIndex(e => e.TraceId);
         });
 
@@ -149,9 +170,6 @@ public abstract class NOFDbContext : DbContext
         {
             entity.HasIndex(e => e.CreatedAt);
         });
-
-        base.OnModelCreating(modelBuilder);
-        _startupEventChannel.Publish(new DbContextModelCreating(modelBuilder));
     }
 }
 

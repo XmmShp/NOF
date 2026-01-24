@@ -8,28 +8,6 @@ public record DbContextConfigurating(IServiceProvider ServiceProvider, DbContext
 
 public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
-    private const string UseEntityFrameworkCore = "NOF.Infrastructure.EntityFrameworkCore:UseEntityFrameworkCore";
-    private const string DbContextType = "NOF.Infrastructure.EntityFrameworkCore:DbContextType";
-
-    extension(INOFAppBuilder builder)
-    {
-        public bool UseEntityFrameworkCore
-        {
-            get => builder.Properties.GetOrDefault<bool>(UseEntityFrameworkCore);
-            set => builder.Properties[UseEntityFrameworkCore] = value;
-        }
-
-        public Type? DbContextType
-        {
-            get => builder.Properties.GetOrDefault<Type>(DbContextType);
-            set
-            {
-                ArgumentNullException.ThrowIfNull(value);
-                builder.Properties[DbContextType] = value;
-            }
-        }
-    }
-
     extension(INOFAppBuilder builder)
     {
         public INOFEFCoreSelector AddEFCore<TDbContext>() where TDbContext : NOFDbContext
@@ -39,9 +17,8 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             builder.Services.AddScoped<IInboxMessageRepository, InboxMessageRepository>();
             builder.Services.AddScoped<IStateMachineContextRepository, StateMachineContextRepository>();
             builder.Services.AddScoped<IOutboxMessageRepository, OutboxMessageRepository>();
-            builder.Services.AddScoped<IOutboxMessageCollector, OutboxMessageCollector>();
-            builder.Services.AddHostedService<InboxCleanupService>();
-            builder.Services.AddHostedService<OutboxCleanupService>();
+            builder.Services.AddHostedService<InboxCleanupBackgroundService>();
+            builder.Services.AddHostedService<OutboxCleanupBackgroundService>();
 
             // Register DbContext factory - actual configuration will be done by specific database providers
             builder.Services.AddScoped<TDbContext>(sp =>
@@ -54,11 +31,20 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
 
                 return dbContext;
             });
-
             builder.Services.AddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
-            builder.UseEntityFrameworkCore = true;
-            builder.DbContextType = typeof(TDbContext);
+
+            builder.Services.AddScoped<NOFPublicDbContext>(sp =>
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<NOFPublicDbContext>();
+                ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
+                builder.StartupEventChannel.Publish(new DbContextConfigurating(sp, optionsBuilder));
+
+                var dbContext = ActivatorUtilities.CreateInstance<NOFPublicDbContext>(sp, optionsBuilder.Options);
+
+                return dbContext;
+            });
+
             return new NOFEFCoreSelector(builder);
         }
     }

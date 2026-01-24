@@ -6,19 +6,19 @@ using Microsoft.Extensions.Logging;
 namespace NOF;
 
 /// <summary>
-/// Outbox 清理服务
-/// 定期清理已发送的旧命令，维持数据库性能
+/// Inbox 清理服务
+/// 定期清理已处理的旧消息，维持数据库性能
 /// </summary>
-internal sealed class OutboxCleanupService : BackgroundService
+internal sealed class InboxCleanupBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<OutboxCleanupService> _logger;
+    private readonly ILogger<InboxCleanupBackgroundService> _logger;
     private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(1);
     private readonly TimeSpan _retentionPeriod = TimeSpan.FromDays(7);
 
-    public OutboxCleanupService(
+    public InboxCleanupBackgroundService(
         IServiceProvider serviceProvider,
-        ILogger<OutboxCleanupService> logger)
+        ILogger<InboxCleanupBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -27,7 +27,7 @@ internal sealed class OutboxCleanupService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation(
-            "Outbox cleanup service started. Cleanup interval: {Interval}, Retention period: {Retention}",
+            "Inbox cleanup service started. Cleanup interval: {Interval}, Retention period: {Retention}",
             _cleanupInterval, _retentionPeriod);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -35,7 +35,7 @@ internal sealed class OutboxCleanupService : BackgroundService
             try
             {
                 await Task.Delay(_cleanupInterval, stoppingToken);
-                await CleanupOutboxAsync(stoppingToken);
+                await CleanupInboxAsync(stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -43,40 +43,39 @@ internal sealed class OutboxCleanupService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during outbox cleanup");
+                _logger.LogError(ex, "Error during inbox cleanup");
             }
         }
 
-        _logger.LogInformation("Outbox cleanup service stopped");
+        _logger.LogInformation("Inbox cleanup service stopped");
     }
 
-    private async Task CleanupOutboxAsync(CancellationToken cancellationToken)
+    private async Task CleanupInboxAsync(CancellationToken cancellationToken)
     {
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
 
-            var olderThan = DateTimeOffset.UtcNow - _retentionPeriod;
-            var deletedCount = await dbContext.Set<EFCoreOutboxMessage>()
-                .Where(m => m.Status == OutboxMessageStatus.Sent)
-                .Where(m => m.SentAt != null && m.SentAt < olderThan)
+            var olderThan = DateTime.UtcNow - _retentionPeriod;
+            var deletedCount = await dbContext.Set<EFCoreInboxMessage>()
+                .Where(m => m.CreatedAt < olderThan)
                 .ExecuteDeleteAsync(cancellationToken);
 
             if (deletedCount > 0)
             {
                 _logger.LogInformation(
-                    "Outbox cleanup completed. Deleted {Count} sent messages older than {Date}",
+                    "Inbox cleanup completed. Deleted {Count} processed messages older than {Date}",
                     deletedCount, olderThan);
             }
             else
             {
-                _logger.LogDebug("Outbox cleanup completed. No messages to delete");
+                _logger.LogDebug("Inbox cleanup completed. No messages to delete");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cleanup outbox");
+            _logger.LogError(ex, "Failed to cleanup inbox");
         }
     }
 }

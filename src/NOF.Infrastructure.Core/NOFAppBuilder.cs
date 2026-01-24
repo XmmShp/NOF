@@ -248,6 +248,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
         Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
 
+        Services.AddScoped<IOutboxMessageCollector, OutboxMessageCollector>();
+
         // Ensure the collection of pipeline configuration actions is registered
         if (Services.All(d => d.ServiceType != typeof(IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>)))
         {

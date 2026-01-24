@@ -10,10 +10,10 @@ namespace NOF;
 /// </summary>
 internal sealed class TransactionManager : ITransactionManager
 {
-    private readonly NOFDbContext _dbContext;
+    private readonly DbContext _dbContext;
     private readonly ILogger<TransactionManager> _logger;
 
-    public TransactionManager(NOFDbContext dbContext, ILogger<TransactionManager> logger)
+    public TransactionManager(DbContext dbContext, ILogger<TransactionManager> logger)
     {
         _dbContext = dbContext;
         _logger = logger;

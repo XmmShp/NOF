@@ -10,12 +10,12 @@ namespace NOF;
 
 internal sealed class OutboxMessageRepository : IOutboxMessageRepository
 {
-    private readonly NOFDbContext _dbContext;
+    private readonly NOFPublicDbContext _dbContext;
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxMessageRepository> _logger;
 
     public OutboxMessageRepository(
-        NOFDbContext dbContext,
+        NOFPublicDbContext dbContext,
         IOptions<OutboxOptions> options,
         ILogger<OutboxMessageRepository> logger)
     {
