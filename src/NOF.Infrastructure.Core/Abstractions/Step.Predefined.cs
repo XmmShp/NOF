@@ -15,12 +15,14 @@ public interface IBaseSettingsServiceRegistrationStep : IServiceRegistrationStep
 /// </summary>
 public interface IDependentServiceRegistrationStep : IServiceRegistrationStep, IAfter<IBaseSettingsServiceRegistrationStep>;
 
+public interface IPublicDataSeedInitializationStep : IApplicationInitializationStep;
+
 /// <summary>
 /// Configures synchronous data seeding or initial state setup (e.g., database seeders, cache warm-up).
 /// This is the first step in the application configuration pipeline.
 /// </summary>
 
-public interface IDataSeedInitializationStep : IApplicationInitializationStep;
+public interface IDataSeedInitializationStep : IApplicationInitializationStep, IAfter<IPublicDataSeedInitializationStep>;
 
 
 /// <summary>

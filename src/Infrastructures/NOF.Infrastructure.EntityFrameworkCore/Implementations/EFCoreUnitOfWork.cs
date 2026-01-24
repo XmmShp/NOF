@@ -9,22 +9,19 @@ internal class EFCoreUnitOfWork : IUnitOfWork
     private readonly IEventPublisher _publisher;
     private readonly IOutboxMessageRepository _messageRepository;
     private readonly IOutboxMessageCollector _collector;
-    private readonly IOutboxPublisher _outboxPublisher;
 
     public EFCoreUnitOfWork(
         DbContext dbContext,
         ITransactionManager transactionManager,
         IEventPublisher publisher,
         IOutboxMessageRepository messageRepository,
-        IOutboxMessageCollector collector,
-        IOutboxPublisher outboxPublisher)
+        IOutboxMessageCollector collector)
     {
         _dbContext = dbContext;
         _transactionManager = transactionManager;
         _publisher = publisher;
         _messageRepository = messageRepository;
         _collector = collector;
-        _outboxPublisher = outboxPublisher;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
@@ -48,18 +45,15 @@ internal class EFCoreUnitOfWork : IUnitOfWork
             if (hasMessage)
             {
                 _messageRepository.Add(messages, cancellationToken);
+
+                var result = await _dbContext.SaveChangesAsync(cancellationToken);
+                await tx.CommitAsync(cancellationToken);
+
+                _collector.Clear();
+                return result;
             }
 
-            var result = await _dbContext.SaveChangesAsync(cancellationToken);
-            await tx.CommitAsync(cancellationToken);
-
-            _collector.Clear();
-            if (hasMessage)
-            {
-                _outboxPublisher.TriggerImmediateProcessing();
-            }
-
-            return result;
+            return 0;
         }
         catch
         {

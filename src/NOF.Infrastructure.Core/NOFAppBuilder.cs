@@ -240,10 +240,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
         Services.ReplaceOrAddCacheService<MemoryCacheService>();
 
-        Services.AddSingleton<OutboxCommandBackgroundService>();
-        Services.AddSingleton<IOutboxPublisher>(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
-
-        Services.AddHostedService(sp => sp.GetRequiredService<OutboxCommandBackgroundService>());
+        Services.AddHostedService<OutboxCommandBackgroundService>();
 
         Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
         Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
@@ -290,6 +287,10 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         {
             Services.AddOpenTelemetry().UseOtlpExporter();
         }
+
+
+        AddRegistrationStep(new AddStateMachineRegistrationStep());
+        AddInitializationStep(new DefaultTenantInitializationStep());
     }
 
     #region Abstractions

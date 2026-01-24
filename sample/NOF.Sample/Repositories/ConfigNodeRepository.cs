@@ -4,7 +4,7 @@ using NOF;
 namespace NOF.Sample.Repositories;
 
 [AutoInject(Lifetime.Scoped)]
-public class ConfigNodeRepository : Repository<ConfigNode>, IConfigNodeRepository
+public class ConfigNodeRepository : EFCoreRepository<ConfigNode>, IConfigNodeRepository
 {
     private readonly ConfigurationDbContext _dbContext;
 

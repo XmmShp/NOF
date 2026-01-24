@@ -33,6 +33,8 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             builder.Services.AddScoped<IInboxMessageRepository, EFCoreInboxMessageRepository>();
             builder.Services.AddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
             builder.Services.AddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
+            builder.Services.AddScoped<ITenantRepository, EFCoreTenantRepository>();
+            builder.Services.AddScoped<IRepositoryFactory, EFCoreRepositoryFactory<TTenantDbContext>>();
 
             builder.Services.AddScoped<INOFDbContextFactory>(sp => new NOFDbContextFactory(
                 sp,
@@ -47,7 +49,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory>();
                 var tenantContext = sp.GetRequiredService<ITenantContext>();
-                return factory.GetTenantDbContext<TTenantDbContext>(tenantContext.CurrentTenantId);
+                return factory.GetDbContextBundle<TTenantDbContext>(tenantContext.CurrentTenantId).Repository;
             });
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
@@ -59,7 +61,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
                 ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
                 builder.StartupEventChannel.Publish(new PublicDbContextConfigurating(sp, optionsBuilder));
 
-                var dbContext = ActivatorUtilities.CreateInstance<TPublicDbContext>(sp, (DbContextOptions)optionsBuilder.Options);
+                var dbContext = ActivatorUtilities.CreateInstance<TPublicDbContext>(sp, optionsBuilder.Options);
 
                 return dbContext;
             });

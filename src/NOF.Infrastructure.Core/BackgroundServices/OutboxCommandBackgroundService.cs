@@ -7,17 +7,11 @@ using System.Threading.Channels;
 
 namespace NOF;
 
-public interface IOutboxPublisher
-{
-    void TriggerImmediateProcessing();
-}
-
-public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxPublisher
+public sealed class OutboxCommandBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxCommandBackgroundService> _logger;
-    private readonly Channel<object> _wakeUpChannel;
 
     public OutboxCommandBackgroundService(
         IServiceProvider serviceProvider,
@@ -27,18 +21,6 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         _serviceProvider = serviceProvider;
         _options = options.Value;
         _logger = logger;
-
-        _wakeUpChannel = Channel.CreateBounded<object>(new BoundedChannelOptions(1)
-        {
-            FullMode = BoundedChannelFullMode.DropWrite,
-            SingleReader = true,
-            SingleWriter = false
-        });
-    }
-
-    public void TriggerImmediateProcessing()
-    {
-        _wakeUpChannel.Writer.TryWrite(null!);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,21 +33,8 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
         {
             try
             {
-                var wakeUpTask = _wakeUpChannel.Reader.WaitToReadAsync(stoppingToken).AsTask();
-                var delayTask = Task.Delay(_options.PollingInterval, stoppingToken);
-
-                var completedTask = await Task.WhenAny(wakeUpTask, delayTask);
-
-                if (completedTask == wakeUpTask && wakeUpTask.Result)
-                {
-                    // 消费所有唤醒信号（防止多次 WakeUp 被丢弃）
-                    while (_wakeUpChannel.Reader.TryRead(out _))
-                    { }
-                    _logger.LogDebug("Received wake-up signal(s), processing immediately");
-                }
-
+                await Task.Delay(_options.PollingInterval, stoppingToken);
                 await ProcessPendingMessagesAsync(stoppingToken);
-
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -83,52 +52,85 @@ public sealed class OutboxCommandBackgroundService : BackgroundService, IOutboxP
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+        var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+        var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContextInternal>();
         var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
         var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 
-        // 使用抢占式获取，避免多实例重复处理
-        var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
-
-        if (pendingMessages.Count == 0)
+        // 获取所有租户
+        var tenants = await tenantRepository.GetAllAsync();
+        
+        // 保存原始租户上下文
+        var originalTenantId = tenantContext.CurrentTenantId;
+        
+        foreach (var tenant in tenants)
         {
-            _logger.LogDebug("No pending messages claimed for processing");
-            return;
-        }
+            if (!tenant.IsActive)
+            {
+                _logger.LogDebug("Skipping inactive tenant {TenantId}", tenant.Id);
+                continue;
+            }
 
-        _logger.LogDebug("Claimed {Count} pending messages for processing", pendingMessages.Count);
-
-        var succeededIds = new List<long>(pendingMessages.Count);
-        var failedCount = 0;
-
-        foreach (var message in pendingMessages)
-        {
             try
             {
-                await ProcessSingleMessageAsync(message, repository, commandRider, notificationRider, cancellationToken);
-                succeededIds.Add(message.Id);
+                // 设置租户上下文
+                tenantContext.SetCurrentTenantId(tenant.Id);
+                _logger.LogDebug("Processing outbox messages for tenant {TenantId}", tenant.Id);
+
+                // 使用当前 scope 的 repository，它会自动使用设置的租户上下文
+                var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+
+                // 使用抢占式获取，避免多实例重复处理
+                var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
+
+                if (pendingMessages.Count == 0)
+                {
+                    _logger.LogDebug("No pending messages claimed for tenant {TenantId}", tenant.Id);
+                    continue;
+                }
+
+                _logger.LogDebug("Claimed {Count} pending messages for tenant {TenantId}", pendingMessages.Count, tenant.Id);
+
+                var succeededIds = new List<long>(pendingMessages.Count);
+                var failedCount = 0;
+
+                foreach (var message in pendingMessages)
+                {
+                    try
+                    {
+                        await ProcessSingleMessageAsync(message, repository, commandRider, notificationRider, cancellationToken);
+                        succeededIds.Add(message.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        failedCount++;
+                        _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for tenant {TenantId}", message.Id, tenant.Id);
+                    }
+                }
+
+                if (succeededIds.Count > 0)
+                {
+                    try
+                    {
+                        await repository.MarkAsSentAsync(succeededIds, cancellationToken);
+                        _logger.LogInformation(
+                            "Tenant {TenantId} batch processed: {Succeeded} sent, {Failed} failed",
+                            tenant.Id, succeededIds.Count, failedCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent for tenant {TenantId}", succeededIds.Count, tenant.Id);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                failedCount++;
-                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId}", message.Id);
+                _logger.LogError(ex, "Error processing outbox messages for tenant {TenantId}", tenant.Id);
             }
         }
 
-        if (succeededIds.Count > 0)
-        {
-            try
-            {
-                await repository.MarkAsSentAsync(succeededIds, cancellationToken);
-                _logger.LogInformation(
-                    "Batch processed: {Succeeded} sent, {Failed} failed",
-                    succeededIds.Count, failedCount);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
-            }
-        }
+        // 恢复原始租户上下文
+        tenantContext.SetCurrentTenantId(originalTenantId);
     }
 
     private async Task ProcessSingleMessageAsync(

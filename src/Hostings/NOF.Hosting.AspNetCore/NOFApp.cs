@@ -33,7 +33,6 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         {
             builder.UseDefaultSettings();
         }
-        builder.AddRegistrationStep(new AddStateMachineRegistrationStep());
         return builder;
     }
 

@@ -2,11 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NOF;
 
-public abstract class Repository<TAggregateRoot> : IRepository<TAggregateRoot>
+public abstract class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateRoot>
     where TAggregateRoot : class, IAggregateRoot
 {
     protected readonly DbContext DbContext;
-    protected Repository(DbContext dbContext)
+    protected EFCoreRepository(DbContext dbContext)
     {
         DbContext = dbContext;
     }

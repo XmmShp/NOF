@@ -14,7 +14,7 @@ public class RepositoryTests
         public void ClearEvents() { }
     }
 
-    private class TestRepository : Repository<TestAggregateRoot>
+    private class TestRepository : EFCoreRepository<TestAggregateRoot>
     {
         public TestRepository(DbContext dbContext) : base(dbContext)
         {

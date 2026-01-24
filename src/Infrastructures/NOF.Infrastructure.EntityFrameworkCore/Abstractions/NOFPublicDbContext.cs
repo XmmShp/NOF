@@ -7,7 +7,6 @@ public record PublicDbContextModelCreating(Type DbContextType, ModelBuilder Buil
 /// <summary>
 /// Public DbContext that is not isolated by tenant. Data is stored in {Database}Public database.
 /// This prevents conflicts with tenants named "Public".
-/// Contains system-wide entities like outbox and inbox messages.
 /// </summary>
 public abstract class NOFPublicDbContext : DbContext
 {

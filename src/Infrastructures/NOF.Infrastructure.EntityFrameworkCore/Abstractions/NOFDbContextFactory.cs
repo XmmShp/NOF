@@ -15,7 +15,14 @@ public interface INOFDbContextFactory
     /// <summary>
     /// 创建指定租户的数据库上下文
     /// </summary>
-    TDbContext GetTenantDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext;
+    DbContextBundle<TDbContext> GetDbContextBundle<TDbContext>(string tenantId) where TDbContext : NOFDbContext;
+}
+
+public sealed class DbContextBundle<TDbContext> where TDbContext : NOFDbContext
+{
+    public IUnitOfWork UnitOfWork { get; init; }
+    public ITransactionManager TransactionManager { get; init; }
+    public TDbContext Repository { get; init; }
 }
 
 internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
@@ -39,7 +46,7 @@ internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
         _logger = logger;
     }
 
-    public TDbContext GetTenantDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext
+    public DbContextBundle<TDbContext> GetDbContextBundle<TDbContext>(string tenantId) where TDbContext : NOFDbContext
     {
         if (string.IsNullOrEmpty(tenantId))
         {
@@ -50,7 +57,7 @@ internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
 
         if (_cache.TryGetValue(key, out var cached))
         {
-            return (TDbContext)cached;
+            return (DbContextBundle<TDbContext>)cached;
         }
 
         var dbContext = CreateTenantDbContext<TDbContext>(tenantId);
@@ -58,7 +65,7 @@ internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
         return dbContext;
     }
 
-    private TDbContext CreateTenantDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext
+    private DbContextBundle<TDbContext> CreateTenantDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext
     {
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
         var extension = new NOFDbContextOptionsExtension(_startupEventChannel);
@@ -69,9 +76,17 @@ internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
         var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);
 
         ConfigureTenantDbContext(dbContext, tenantId);
+        var unitOfWork = ActivatorUtilities.CreateInstance<EFCoreUnitOfWork>(_serviceProvider, dbContext);
+        var transactionManager = ActivatorUtilities.CreateInstance<EFCoreTransactionManager>(_serviceProvider, dbContext);
+        var dbContextBundle = new DbContextBundle<TDbContext>
+        {
+            UnitOfWork = unitOfWork,
+            TransactionManager = transactionManager,
+            Repository = dbContext
+        };
 
         _logger.LogDebug("Created {DbContextType} for tenant {TenantId}", typeof(TDbContext).Name, tenantId);
-        return dbContext;
+        return dbContextBundle;
     }
 
     private void ConfigureTenantDbContext<TDbContext>(TDbContext dbContext, string tenantId) where TDbContext : NOFDbContext

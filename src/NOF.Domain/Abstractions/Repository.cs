@@ -1,5 +1,8 @@
+using System.ComponentModel;
+
 namespace NOF;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public interface IRepository;
 
 public interface IRepository<TAggregateRoot> : IRepository

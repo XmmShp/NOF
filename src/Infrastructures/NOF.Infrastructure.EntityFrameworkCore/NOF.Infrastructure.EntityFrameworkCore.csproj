@@ -15,4 +15,8 @@
 		<ProjectReference Include="..\..\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Models\" />
+	</ItemGroup>
+
 </Project>
