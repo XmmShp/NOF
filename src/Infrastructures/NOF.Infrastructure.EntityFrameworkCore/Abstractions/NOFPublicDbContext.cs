@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NOF;
 
+public record PublicDbContextModelCreating(Type DbContextType, ModelBuilder Builder);
+
 /// <summary>
 /// Public DbContext that is not isolated by tenant. Data is stored in {Database}Public database.
 /// This prevents conflicts with tenants named "Public".
@@ -20,6 +22,6 @@ public abstract class NOFPublicDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        _startupEventChannel.Publish(new DbContextModelCreating(GetType(), modelBuilder));
+        _startupEventChannel.Publish(new PublicDbContextModelCreating(GetType(), modelBuilder));
     }
 }

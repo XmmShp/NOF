@@ -2,11 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace NOF;
 
-public record DbContextConfigurating(IServiceProvider ServiceProvider, DbContextOptionsBuilder Options);
+public record DbContextConfigurating(IServiceProvider ServiceProvider, string TenantId, DbContextOptionsBuilder Options);
+public record PublicDbContextConfigurating(IServiceProvider ServiceProvider, DbContextOptionsBuilder Options);
 
 public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
@@ -32,43 +33,21 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             builder.Services.AddScoped<IInboxMessageRepository, EFCoreInboxMessageRepository>();
             builder.Services.AddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
             builder.Services.AddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
+
+            builder.Services.AddScoped<INOFDbContextFactory>(sp => new NOFDbContextFactory(
+                sp,
+                builder.StartupEventChannel,
+                builder.AutoMigrateTenantDatabases,
+                sp.GetRequiredService<ILogger<NOFDbContextFactory>>()));
+
             builder.Services.AddHostedService<InboxCleanupBackgroundService>();
             builder.Services.AddHostedService<OutboxCleanupBackgroundService>();
 
-            // Register custom tenant DbContext
             builder.Services.AddScoped<TTenantDbContext>(sp =>
             {
-                var optionsBuilder = new DbContextOptionsBuilder<TTenantDbContext>();
-                ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
-                builder.StartupEventChannel.Publish(new DbContextConfigurating(sp, optionsBuilder));
-
-                var dbContext = ActivatorUtilities.CreateInstance<TTenantDbContext>(sp, optionsBuilder.Options);
-
-                if (Assembly.GetEntryAssembly()?.GetName().Name?.ToLowerInvariant() != "ef")
-                {
-                    // Handle auto-migration for tenant DbContext
-                    if (dbContext.Database.IsRelational())
-                    {
-                        var autoMigrate = builder.AutoMigrateTenantDatabases;
-
-                        if (autoMigrate)
-                        {
-                            dbContext.Database.Migrate();
-                        }
-                        else
-                        {
-                            var pendingMigrations = dbContext.Database.GetPendingMigrations().ToArray();
-                            if (pendingMigrations.Length != 0)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Tenant database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
-                                    $"Enable auto-migration by setting builder.AutoMigrateTenantDatabases = true or run migrations manually.");
-                            }
-                        }
-                    }
-                }
-
-                return dbContext;
+                var factory = sp.GetRequiredService<INOFDbContextFactory>();
+                var tenantContext = sp.GetRequiredService<ITenantContext>();
+                return factory.GetTenantDbContext<TTenantDbContext>(tenantContext.CurrentTenantId);
             });
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
@@ -78,7 +57,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             {
                 var optionsBuilder = new DbContextOptionsBuilder<TPublicDbContext>();
                 ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
-                builder.StartupEventChannel.Publish(new DbContextConfigurating(sp, optionsBuilder));
+                builder.StartupEventChannel.Publish(new PublicDbContextConfigurating(sp, optionsBuilder));
 
                 var dbContext = ActivatorUtilities.CreateInstance<TPublicDbContext>(sp, (DbContextOptions)optionsBuilder.Options);
 
