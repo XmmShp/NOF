@@ -45,15 +45,11 @@ internal class EFCoreUnitOfWork : IUnitOfWork
             if (hasMessage)
             {
                 _messageRepository.Add(messages, cancellationToken);
-
-                var result = await _dbContext.SaveChangesAsync(cancellationToken);
-                await tx.CommitAsync(cancellationToken);
-
                 _collector.Clear();
-                return result;
             }
-
-            return 0;
+            var result = await _dbContext.SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+            return result;
         }
         catch
         {

@@ -34,7 +34,6 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             builder.Services.AddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
             builder.Services.AddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
             builder.Services.AddScoped<ITenantRepository, EFCoreTenantRepository>();
-            builder.Services.AddScoped<IRepositoryFactory, EFCoreRepositoryFactory<TTenantDbContext>>();
 
             builder.Services.AddScoped<INOFDbContextFactory>(sp => new NOFDbContextFactory(
                 sp,
@@ -49,7 +48,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory>();
                 var tenantContext = sp.GetRequiredService<ITenantContext>();
-                return factory.GetDbContextBundle<TTenantDbContext>(tenantContext.CurrentTenantId).Repository;
+                return factory.GetDbContext<TTenantDbContext>(tenantContext.CurrentTenantId);
             });
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
