@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NOF;
 
-public class UnitOfWork : IUnitOfWork
+internal class EFCoreUnitOfWork : IUnitOfWork
 {
     private readonly DbContext _dbContext;
     private readonly IEventPublisher _publisher;
@@ -10,7 +10,7 @@ public class UnitOfWork : IUnitOfWork
     private readonly IOutboxMessageCollector _collector;
     private readonly IOutboxPublisher _outboxPublisher;
 
-    public UnitOfWork(
+    public EFCoreUnitOfWork(
         DbContext dbContext,
         IEventPublisher publisher,
         IOutboxMessageRepository messageRepository,

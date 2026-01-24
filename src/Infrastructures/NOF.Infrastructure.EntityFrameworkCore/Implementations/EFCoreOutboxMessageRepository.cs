@@ -8,16 +8,16 @@ using System.Text.Json.Serialization;
 
 namespace NOF;
 
-internal sealed class OutboxMessageRepository : IOutboxMessageRepository
+internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
 {
     private readonly NOFPublicDbContext _dbContext;
     private readonly OutboxOptions _options;
-    private readonly ILogger<OutboxMessageRepository> _logger;
+    private readonly ILogger<EFCoreOutboxMessageRepository> _logger;
 
-    public OutboxMessageRepository(
+    public EFCoreOutboxMessageRepository(
         NOFPublicDbContext dbContext,
         IOptions<OutboxOptions> options,
-        ILogger<OutboxMessageRepository> logger)
+        ILogger<EFCoreOutboxMessageRepository> logger)
     {
         _dbContext = dbContext;
         _options = options.Value;

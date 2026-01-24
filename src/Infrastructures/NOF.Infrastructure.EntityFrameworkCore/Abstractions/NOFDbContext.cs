@@ -1,13 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Runtime.CompilerServices;
 
 namespace NOF;
 
-public record DbContextModelCreating(ModelBuilder Builder);
+public record DbContextModelCreating(Type DbContextType, ModelBuilder Builder);
 
 [Table(nameof(EFCoreStateMachineContext))]
 internal sealed class EFCoreStateMachineContext
@@ -28,95 +25,7 @@ internal sealed class EFCoreStateMachineContext
     public required int State { get; set; }
 }
 
-[Table(nameof(EFCoreOutboxMessage))]
-internal sealed class EFCoreOutboxMessage
-{
-    [Key]
-    public long Id { get; set; }
-
-    [Required]
-    public OutboxMessageType MessageType { get; set; }
-
-    [Required]
-    [MaxLength(512)]
-    public string PayloadType { get; set; } = null!;
-
-    [Required]
-    public string Payload { get; set; } = null!;
-
-    [MaxLength(256)]
-    public string? DestinationEndpointName { get; set; }
-
-    public string Headers { get; set; }
-
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? SentAt { get; set; }
-    public DateTimeOffset? FailedAt { get; set; }
-
-    [MaxLength(2048)]
-    public string? ErrorMessage { get; set; }
-
-    public int RetryCount { get; set; }
-
-    /// <summary>
-    /// 抢占锁标识符（实例ID）
-    /// </summary>
-    [MaxLength(256)]
-    public string? ClaimedBy { get; set; }
-
-    /// <summary>
-    /// 抢占锁过期时间
-    /// </summary>
-    public DateTimeOffset? ClaimExpiresAt { get; set; }
-
-    public OutboxMessageStatus Status { get; set; }
-
-    /// <summary>
-    /// 分布式追踪 TraceId（用于恢复追踪上下文）
-    /// </summary>
-    [MaxLength(128)]
-    public string? TraceId { get; set; }
-
-    /// <summary>
-    /// 分布式追踪 SpanId（用于恢复追踪上下文）
-    /// </summary>
-    [MaxLength(128)]
-    public string? SpanId { get; set; }
-}
-
-internal enum OutboxMessageType
-{
-    Command = 0,
-    Notification = 1
-}
-
-internal enum OutboxMessageStatus
-{
-    Pending = 0,
-    Sent = 1,
-    Failed = 2
-}
-
-/// <summary>
-/// 收件箱消息实体
-/// 用于记录需要可靠处理的消息
-/// </summary>
-[Table(nameof(EFCoreInboxMessage))]
-internal sealed class EFCoreInboxMessage
-{
-    /// <summary>
-    /// 消息唯一标识
-    /// </summary>
-    [Key]
-    public Guid Id { get; set; }
-
-    /// <summary>
-    /// 消息创建时间
-    /// </summary>
-    public DateTime CreatedAt { get; set; }
-}
-
-public abstract class NOFDbContext : DbContext
+public class NOFDbContext : DbContext
 {
     private readonly IStartupEventChannel _startupEventChannel;
     protected NOFDbContext(DbContextOptions options) : base(options)
@@ -136,82 +45,6 @@ public abstract class NOFDbContext : DbContext
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionType });
         });
 
-        _startupEventChannel.Publish(new DbContextModelCreating(modelBuilder));
-    }
-}
-
-/// <summary>
-/// Public DbContext that is not isolated by tenant. Data is stored in {Database}Public database.
-/// This prevents conflicts with tenants named "Public".
-/// Contains system-wide entities like outbox and inbox messages.
-/// </summary>
-public abstract class NOFPublicDbContext : NOFDbContext
-{
-    protected NOFPublicDbContext(DbContextOptions options) : base(options)
-    {
-    }
-
-    internal DbSet<EFCoreOutboxMessage> OutboxMessages { get; set; }
-    internal DbSet<EFCoreInboxMessage> InboxMessages { get; set; }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<EFCoreOutboxMessage>(entity =>
-        {
-            entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
-            entity.HasIndex(e => e.ClaimedBy);
-            entity.HasIndex(e => e.TraceId);
-        });
-
-        modelBuilder.Entity<EFCoreInboxMessage>(entity =>
-        {
-            entity.HasIndex(e => e.CreatedAt);
-        });
-    }
-}
-
-internal class NOFDbContextOptionsExtension : IDbContextOptionsExtension
-{
-    public IStartupEventChannel StartupEventChannel { get; }
-
-    public NOFDbContextOptionsExtension(IStartupEventChannel startupEventChannel)
-    {
-        StartupEventChannel = startupEventChannel ?? throw new ArgumentNullException(nameof(startupEventChannel));
-    }
-
-    public void ApplyServices(IServiceCollection services) { }
-
-    public void Validate(IDbContextOptions options) { }
-
-    public DbContextOptionsExtensionInfo Info => new NoFDbContextOptionsExtensionInfo(this);
-
-    private sealed class NoFDbContextOptionsExtensionInfo : DbContextOptionsExtensionInfo
-    {
-        private readonly NOFDbContextOptionsExtension _extension;
-
-        public NoFDbContextOptionsExtensionInfo(IDbContextOptionsExtension extension)
-            : base(extension)
-        {
-            _extension = (NOFDbContextOptionsExtension)extension;
-        }
-
-        public override bool IsDatabaseProvider => false;
-        public override string LogFragment => "";
-
-        public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
-        {
-            return other is NoFDbContextOptionsExtensionInfo otherTyped &&
-                   ReferenceEquals(_extension.StartupEventChannel, otherTyped._extension.StartupEventChannel);
-        }
-
-        public override int GetServiceProviderHashCode()
-        {
-            return RuntimeHelpers.GetHashCode(_extension.StartupEventChannel);
-        }
-
-        public override void PopulateDebugInfo(IDictionary<string, string> debugInfo) { }
+        _startupEventChannel.Publish(new DbContextModelCreating(GetType(), modelBuilder));
     }
 }

@@ -6,12 +6,12 @@ namespace NOF;
 /// <summary>
 /// 收件箱消息仓储实现
 /// </summary>
-internal sealed class InboxMessageRepository : IInboxMessageRepository
+internal sealed class EFCoreInboxMessageRepository : IInboxMessageRepository
 {
     private readonly NOFPublicDbContext _dbContext;
-    private readonly ILogger<InboxMessageRepository> _logger;
+    private readonly ILogger<EFCoreInboxMessageRepository> _logger;
 
-    public InboxMessageRepository(NOFPublicDbContext dbContext, ILogger<InboxMessageRepository> logger)
+    public EFCoreInboxMessageRepository(NOFPublicDbContext dbContext, ILogger<EFCoreInboxMessageRepository> logger)
     {
         _dbContext = dbContext;
         _logger = logger;
