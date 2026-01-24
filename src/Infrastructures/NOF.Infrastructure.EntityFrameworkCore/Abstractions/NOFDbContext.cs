@@ -1,31 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NOF;
 
 public record DbContextModelCreating(Type DbContextType, ModelBuilder Builder);
 
-[Table(nameof(EFCoreStateMachineContext))]
-internal sealed class EFCoreStateMachineContext
-{
-    [Required]
-    public required string CorrelationId { get; set; }
-
-    [Required]
-    public required string DefinitionType { get; set; }
-
-    [Required]
-    [MaxLength(1024)]
-    public required string ContextType { get; set; }
-
-    [Required]
-    public required string ContextData { get; set; }
-
-    public required int State { get; set; }
-}
-
-public class NOFDbContext : DbContext
+public abstract class NOFDbContext : DbContext
 {
     private readonly IStartupEventChannel _startupEventChannel;
     protected NOFDbContext(DbContextOptions options) : base(options)
@@ -35,6 +14,8 @@ public class NOFDbContext : DbContext
     }
 
     internal DbSet<EFCoreStateMachineContext> StateMachineContexts { get; set; }
+    internal DbSet<EFCoreInboxMessage> InboxMessages { get; set; }
+    internal DbSet<EFCoreOutboxMessage> OutboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +24,19 @@ public class NOFDbContext : DbContext
         modelBuilder.Entity<EFCoreStateMachineContext>(entity =>
         {
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionType });
+        });
+
+        modelBuilder.Entity<EFCoreInboxMessage>(entity =>
+        {
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<EFCoreOutboxMessage>(entity =>
+        {
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
+            entity.HasIndex(e => e.ClaimedBy);
+            entity.HasIndex(e => e.TraceId);
         });
 
         _startupEventChannel.Publish(new DbContextModelCreating(GetType(), modelBuilder));

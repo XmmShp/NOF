@@ -17,7 +17,7 @@ builder.Services.AddRedisCache();
 builder.AddMassTransit()
     .UseRabbitMQ();
 
-builder.AddEFCore<ConfigurationDbContext>()
+builder.AddEFCore<ConfigurationDbContext, ConfigurationPublicDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 

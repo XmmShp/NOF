@@ -6,6 +6,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
     {
         public INOFEFCoreSelector AutoMigrate()
         {
+            selector.Builder.AutoMigrateTenantDatabases = true;
             selector.Builder.AddInitializationStep(new AutoMigrateInitializationStep());
             return selector;
         }

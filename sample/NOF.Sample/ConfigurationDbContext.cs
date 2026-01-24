@@ -5,7 +5,7 @@ namespace NOF.Sample;
 
 public class ConfigurationDbContext : NOFDbContext
 {
-    public ConfigurationDbContext(DbContextOptions options) : base(options)
+    public ConfigurationDbContext(DbContextOptions<ConfigurationDbContext> options) : base(options)
     {
     }
 

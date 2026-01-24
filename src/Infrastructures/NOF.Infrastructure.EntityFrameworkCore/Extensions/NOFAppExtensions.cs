@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Reflection;
 
 namespace NOF;
 
@@ -9,14 +10,19 @@ public record DbContextConfigurating(IServiceProvider ServiceProvider, DbContext
 
 public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
 {
+    private const string AutoMigrateTenantDatabases = "NOF.Infrastructure.EntityFrameworkCore:AutoMigrateTenantDatabases";
+
     extension(INOFAppBuilder builder)
     {
-        public INOFEFCoreSelector AddEFCore()
-            => builder.AddEFCore<NOFDbContext, NOFPublicDbContext>();
+        public bool AutoMigrateTenantDatabases
+        {
+            get => builder.Properties.GetOrDefault<bool>(AutoMigrateTenantDatabases);
+            set => builder.Properties[AutoMigrateTenantDatabases] = value;
+        }
+    }
 
-        public INOFEFCoreSelector AddEFCore<TTenantDbContext>() where TTenantDbContext : NOFDbContext
-            => builder.AddEFCore<TTenantDbContext, NOFPublicDbContext>();
-
+    extension(INOFAppBuilder builder)
+    {
         public INOFEFCoreSelector AddEFCore<TTenantDbContext, TPublicDbContext>()
             where TTenantDbContext : NOFDbContext
             where TPublicDbContext : NOFPublicDbContext
@@ -38,6 +44,30 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
 
                 var dbContext = ActivatorUtilities.CreateInstance<TTenantDbContext>(sp, optionsBuilder.Options);
 
+                if (Assembly.GetEntryAssembly()?.GetName().Name?.ToLowerInvariant() != "ef")
+                {
+                    // Handle auto-migration for tenant DbContext
+                    if (dbContext.Database.IsRelational())
+                    {
+                        var autoMigrate = builder.AutoMigrateTenantDatabases;
+
+                        if (autoMigrate)
+                        {
+                            dbContext.Database.Migrate();
+                        }
+                        else
+                        {
+                            var pendingMigrations = dbContext.Database.GetPendingMigrations().ToArray();
+                            if (pendingMigrations.Length != 0)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Tenant database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
+                                    $"Enable auto-migration by setting builder.AutoMigrateTenantDatabases = true or run migrations manually.");
+                            }
+                        }
+                    }
+                }
+
                 return dbContext;
             });
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
@@ -50,7 +80,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
                 ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(new NOFDbContextOptionsExtension(builder.StartupEventChannel));
                 builder.StartupEventChannel.Publish(new DbContextConfigurating(sp, optionsBuilder));
 
-                var dbContext = ActivatorUtilities.CreateInstance<TPublicDbContext>(sp, optionsBuilder.Options);
+                var dbContext = ActivatorUtilities.CreateInstance<TPublicDbContext>(sp, (DbContextOptions)optionsBuilder.Options);
 
                 return dbContext;
             });

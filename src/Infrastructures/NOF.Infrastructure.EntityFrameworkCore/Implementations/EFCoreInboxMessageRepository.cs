@@ -8,10 +8,10 @@ namespace NOF;
 /// </summary>
 internal sealed class EFCoreInboxMessageRepository : IInboxMessageRepository
 {
-    private readonly NOFPublicDbContext _dbContext;
+    private readonly NOFDbContext _dbContext;
     private readonly ILogger<EFCoreInboxMessageRepository> _logger;
 
-    public EFCoreInboxMessageRepository(NOFPublicDbContext dbContext, ILogger<EFCoreInboxMessageRepository> logger)
+    public EFCoreInboxMessageRepository(NOFDbContext dbContext, ILogger<EFCoreInboxMessageRepository> logger)
     {
         _dbContext = dbContext;
         _logger = logger;

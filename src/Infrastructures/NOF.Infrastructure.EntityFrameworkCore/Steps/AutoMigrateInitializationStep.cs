@@ -9,10 +9,11 @@ public class AutoMigrateInitializationStep : IDataSeedInitializationStep
     public async Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
         await using var scope = app.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
-        if (dbContext.Database.IsRelational())
+        
+        var publicDbContext = scope.ServiceProvider.GetService<NOFPublicDbContext>();
+        if (publicDbContext?.Database.IsRelational() == true)
         {
-            await dbContext.Database.MigrateAsync();
+            await publicDbContext.Database.MigrateAsync();
         }
     }
 }
