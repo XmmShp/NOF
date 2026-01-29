@@ -24,7 +24,7 @@ public interface IInvocationContext
     /// Shared storage for components participating in this invocation.
     /// Similar to HttpContext.Items or AsyncLocal state.
     /// </summary>
-    IDictionary<object, object?> Items { get; }
+    IDictionary<string, object?> Items { get; }
 
     /// <summary>
     /// The trace ID for distributed tracing across service boundaries.
@@ -92,7 +92,7 @@ public class InvocationContext : IInvocationContextInternal
     public string TenantId { get; private set; } = "default";
 
     /// <inheritdoc />
-    public IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
+    public IDictionary<string, object?> Items { get; } = new Dictionary<string, object?>();
 
     /// <inheritdoc />
     public string? TraceId { get; private set; }

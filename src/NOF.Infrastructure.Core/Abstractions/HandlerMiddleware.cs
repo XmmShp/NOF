@@ -4,34 +4,29 @@ using System.ComponentModel;
 namespace NOF;
 
 /// <summary>
-/// Handler 执行上下文
-/// 包含 Handler 执行过程中的元数据
+/// Handler execution context
+/// Contains metadata during handler execution
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class HandlerContext
 {
     /// <summary>
-    /// 消息实例
+    /// Message instance
     /// </summary>
     public required IMessage Message { get; init; }
 
     /// <summary>
-    /// Handler 实例
+    /// Handler instance
     /// </summary>
     public required IMessageHandler Handler { get; init; }
 
     /// <summary>
-    /// 响应结果（仅用于 Request handlers）
+    /// Response result (only used for Request handlers)
     /// </summary>
     public object? Response { get; set; }
 
     /// <summary>
-    /// 自定义属性字典，用于在中间件之间传递数据
-    /// </summary>
-    public Dictionary<string, object?> Items { get; init; } = new();
-
-    /// <summary>
-    /// Handler 类型名称
+    /// Handler type name
     /// </summary>
     public string HandlerType
     {
@@ -49,29 +44,29 @@ public sealed class HandlerContext
     }
 
     /// <summary>
-    /// 消息类型名称
+    /// Message type name
     /// </summary>
     public string MessageType => Message.GetType().FullName ?? Message.GetType().Name;
 }
 
 /// <summary>
-/// Handler 执行管道的委托
+/// Handler execution pipeline delegate
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public delegate ValueTask HandlerDelegate(CancellationToken cancellationToken);
 
 /// <summary>
-/// Handler 中间件接口
-/// 用于在 Handler 执行前后插入横切关注点（如事务、日志、验证等）
+/// Handler middleware interface
+/// Used to insert cross-cutting concerns (such as transactions, logging, validation, etc.) before and after Handler execution
 /// </summary>
 public interface IHandlerMiddleware
 {
     /// <summary>
-    /// 执行中间件逻辑
+    /// Execute middleware logic
     /// </summary>
-    /// <param name="context">Handler 执行上下文</param>
-    /// <param name="next">管道中的下一个中间件或最终的 Handler</param>
-    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="context">Handler execution context</param>
+    /// <param name="next">Next middleware in the pipeline or the final Handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken);
 }
 
@@ -81,35 +76,4 @@ public static partial class NOFConstants
     public const string TraceId = "NOF.Message.TraceId";
     public const string SpanId = "NOF.Message.SpanId";
     public const string TenantId = "NOF.TenantId";
-}
-
-public static partial class __NOF_Infrastructure_Core_Extensions__
-{
-    extension(HandlerContext context)
-    {
-        public Guid MessageId
-        {
-            get
-            {
-                if (context.Items.TryGetValue(NOFConstants.MessageId, out var value) && value is Guid guidValue)
-                {
-                    return guidValue;
-                }
-
-                if (value is string stringValue)
-                {
-                    guidValue = Guid.Parse(stringValue);
-                }
-                else
-                {
-                    guidValue = Guid.NewGuid();
-                }
-
-                context.Items[NOFConstants.MessageId] = guidValue;
-                return guidValue;
-            }
-
-            set => context.Items[NOFConstants.MessageId] = value;
-        }
-    }
 }

@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 namespace NOF;
 
 /// <summary>
-/// Handler 执行器接口
-/// 负责通过管道执行 Handler
+/// Handler executor interface
+/// Responsible for executing handlers through the pipeline
 /// </summary>
 public interface IHandlerExecutor
 {
     /// <summary>
-    /// 执行 Command Handler
+    /// Execute Command Handler
     /// </summary>
     ValueTask ExecuteCommandAsync<TCommand>(
         ICommandHandler<TCommand> handler,
@@ -19,7 +19,7 @@ public interface IHandlerExecutor
         CancellationToken cancellationToken) where TCommand : class, ICommand;
 
     /// <summary>
-    /// 执行 Notification Handler
+    /// Execute Notification Handler
     /// </summary>                  
     ValueTask ExecuteNotificationAsync<TNotification>(
         INotificationHandler<TNotification> handler,
@@ -28,7 +28,7 @@ public interface IHandlerExecutor
         CancellationToken cancellationToken) where TNotification : class, INotification;
 
     /// <summary>
-    /// 执行 Request Handler（无返回值）
+    /// Execute Request Handler (no return value)
     /// </summary>
     ValueTask<Result> ExecuteRequestAsync<TRequest>(
         IRequestHandler<TRequest> handler,
@@ -37,7 +37,7 @@ public interface IHandlerExecutor
         CancellationToken cancellationToken) where TRequest : class, IRequest;
 
     /// <summary>
-    /// 执行 Request Handler（有返回值）
+    /// Execute Request Handler (with return value)
     /// </summary>
     ValueTask<Result<TResponse>> ExecuteRequestAsync<TRequest, TResponse>(
         IRequestHandler<TRequest, TResponse> handler,
@@ -47,7 +47,7 @@ public interface IHandlerExecutor
 }
 
 /// <summary>
-/// Handler 执行器的默认实现
+/// Default implementation of Handler executor
 /// </summary>
 public sealed class HandlerExecutor : IHandlerExecutor
 {
@@ -71,11 +71,10 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = command,
-            Handler = handler,
-            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
+            Handler = handler
         };
 
-        var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(command, ct)));
+        var pipeline = BuildPipeline(context, headers, ct => new ValueTask(handler.HandleAsync(command, ct)));
         await pipeline(cancellationToken);
     }
 
@@ -88,11 +87,10 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = notification,
-            Handler = handler,
-            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
+            Handler = handler
         };
 
-        var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(notification, ct)));
+        var pipeline = BuildPipeline(context, headers, ct => new ValueTask(handler.HandleAsync(notification, ct)));
         await pipeline(cancellationToken);
     }
 
@@ -105,11 +103,10 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = request,
-            Handler = handler,
-            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
+            Handler = handler
         };
 
-        var pipeline = BuildPipeline(context, async ct =>
+        var pipeline = BuildPipeline(context, headers, async ct =>
         {
             context.Response = await handler.HandleAsync(request, ct);
         });
@@ -127,11 +124,10 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = request,
-            Handler = handler,
-            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
+            Handler = handler
         };
 
-        var pipeline = BuildPipeline(context, async ct =>
+        var pipeline = BuildPipeline(context, headers, async ct =>
         {
             context.Response = await handler.HandleAsync(request, ct);
         });
@@ -140,34 +136,45 @@ public sealed class HandlerExecutor : IHandlerExecutor
         return (Result<TResponse>)context.Response!;
     }
 
-    private HandlerDelegate BuildPipeline(HandlerContext context, HandlerDelegate handler)
+    private HandlerDelegate BuildPipeline(HandlerContext context, IDictionary<string, string?> headers, HandlerDelegate handler)
     {
+        // Copy headers to InvocationContext.Items for middleware access
+        var invocationContext = _serviceProvider.GetRequiredService<IInvocationContextInternal>();
+        foreach (var header in headers)
+        {
+            invocationContext.Items[header.Key] = header.Value;
+        }
+
+        // Set tracing information from headers to InvocationContext properties
+        headers.TryGetValue(NOFConstants.TraceId, out var traceId);
+        headers.TryGetValue(NOFConstants.SpanId, out var spanId);
+        invocationContext.SetTracingInfo(traceId, spanId);
+
         var builder = new HandlerPipelineBuilder();
 
-        // 1. Activity 追踪
-        builder.Use(new ActivityTracingMiddleware());
+        // 1. Activity tracing
+        builder.Use(new ActivityTracingMiddleware(invocationContext));
 
-        // 2. 自动埋点
+        // 2. Auto instrumentation
         var logger = _serviceProvider.GetRequiredService<ILogger<AutoInstrumentationMiddleware>>();
         builder.Use(new AutoInstrumentationMiddleware(logger));
 
-        // 3. 租户头处理
-        var invocationContext = _serviceProvider.GetRequiredService<IInvocationContextInternal>();
+        // 3. Tenant header processing
         builder.Use(new TenantHeaderMiddleware(invocationContext));
 
-        // 4. 收件箱消息处理
+        // 4. Inbox message processing
         var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();
         var inboxMessageRepository = _serviceProvider.GetRequiredService<IInboxMessageRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
         var inboxLogger = _serviceProvider.GetRequiredService<ILogger<MessageInboxMiddleware>>();
-        builder.Use(new MessageInboxMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger));
+        builder.Use(new MessageInboxMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger, invocationContext));
 
-        // 5. 事务性消息上下文
+        // 5. Transactional message context
         var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();
         var deferredNotificationPublisher = _serviceProvider.GetRequiredService<IDeferredNotificationPublisher>();
         builder.Use(new MessageOutboxContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
 
-        // 6. 用户自定义中间件扩展点（可以多次调用 Configure 添加）
+        // 6. User-defined middleware extension points (can call Configure multiple times)
         foreach (var configure in _configureActions)
         {
             configure(builder, _serviceProvider);

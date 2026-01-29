@@ -3,8 +3,8 @@
 namespace NOF;
 
 /// <summary>
-/// 收件箱中间件
-/// 负责在事务中记录收件箱消息，确保消息的可靠处理
+/// Inbox middleware
+/// Responsible for recording inbox messages in transactions to ensure reliable message processing
 /// </summary>
 public sealed class MessageInboxMiddleware : IHandlerMiddleware
 {
@@ -12,17 +12,15 @@ public sealed class MessageInboxMiddleware : IHandlerMiddleware
     private readonly IInboxMessageRepository _inboxMessageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxMiddleware> _logger;
+    private readonly IInvocationContext _invocationContext;
 
-    public MessageInboxMiddleware(
-        ITransactionManager transactionManager,
-        IInboxMessageRepository inboxMessageRepository,
-        IUnitOfWork unitOfWork,
-        ILogger<MessageInboxMiddleware> logger)
+    public MessageInboxMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxMiddleware> logger, IInvocationContext invocationContext)
     {
         _transactionManager = transactionManager;
         _inboxMessageRepository = inboxMessageRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _invocationContext = invocationContext;
     }
 
     public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -31,13 +29,20 @@ public sealed class MessageInboxMiddleware : IHandlerMiddleware
 
         try
         {
-            var messageId = context.MessageId;
+            _invocationContext.Items.TryGetValue(NOFConstants.MessageId, out var messageIdObj);
+            var messageId = messageIdObj switch
+            {
+                Guid existingGuid => existingGuid,
+                string existingString => Guid.TryParse(existingString, out var value) ? value : Guid.NewGuid(),
+                _ => Guid.NewGuid()
+            };
+
+            _invocationContext.Items[NOFConstants.MessageId] = messageId;
+
             var messageExists = await _inboxMessageRepository.ExistByMessageIdAsync(messageId, cancellationToken);
             if (messageExists)
             {
-                _logger.LogDebug(
-                    "Inbox message {MessageId} for {MessageType} already exists, skipping processing",
-                    messageId, context.MessageType);
+                _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, context.MessageType);
 
                 await transaction.RollbackAsync(cancellationToken);
                 return;

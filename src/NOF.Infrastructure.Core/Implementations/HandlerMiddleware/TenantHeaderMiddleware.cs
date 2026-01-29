@@ -3,8 +3,8 @@
 namespace NOF;
 
 /// <summary>
-/// 租户头处理中间件
-/// 从消息头中提取租户信息并设置到 InvocationContext 中
+/// Tenant header processing middleware
+/// Extracts tenant information from message headers and sets it to InvocationContext
 /// </summary>
 public sealed class TenantHeaderMiddleware : IHandlerMiddleware
 {
@@ -19,8 +19,8 @@ public sealed class TenantHeaderMiddleware : IHandlerMiddleware
     {
         var activity = Activity.Current;
 
-        // 从消息头中提取租户ID
-        if (context.Items.TryGetValue(NOFConstants.TenantId, out var tenantIdObj) &&
+        // Extract tenant ID from message headers (now in InvocationContext.Items)
+        if (_invocationContext.Items.TryGetValue(NOFConstants.TenantId, out var tenantIdObj) &&
             tenantIdObj is string tenantId &&
             !string.IsNullOrEmpty(tenantId))
         {

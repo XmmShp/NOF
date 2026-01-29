@@ -3,14 +3,21 @@
 namespace NOF;
 
 /// <summary>
-/// Activity 追踪中间件
-/// 为每个 Handler 执行创建分布式追踪 Activity
+/// Activity tracing middleware
+/// Creates distributed tracing Activity for each Handler execution
 /// </summary>
 public sealed class ActivityTracingMiddleware : IHandlerMiddleware
 {
+    private readonly IInvocationContextInternal _invocationContext;
+
+    public ActivityTracingMiddleware(IInvocationContextInternal invocationContext)
+    {
+        _invocationContext = invocationContext;
+    }
+
     public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        // 合并追踪上下文并创建Activity
+        // Merge tracing context and create Activity
         using var activity = RestoreTraceContext(context);
 
         if (activity is { IsAllDataRequested: true })
@@ -37,15 +44,15 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
     }
 
     /// <summary>
-    /// 恢复追踪上下文并创建Activity：如果HandlerContext.Items中有TraceId/SpanId，则恢复追踪上下文
-    /// 如果当前已有其它追踪，则尝试合并，合并静默失败
+    /// Restore tracing context and create Activity: if InvocationContext has TraceId/SpanId, restore tracing context
+    /// If there is other existing tracing, try to merge, merge fails silently
     /// </summary>
-    /// <param name="context">Handler执行上下文</param>
-    /// <returns>创建的Activity，如果没有追踪信息则返回null</returns>
-    private static Activity? RestoreTraceContext(HandlerContext context)
+    /// <param name="context">Handler execution context</param>
+    /// <returns>Created Activity, returns null if no tracing information</returns>
+    private Activity? RestoreTraceContext(HandlerContext context)
     {
-        var traceId = context.Items.GetOrDefault(NOFConstants.TraceId, string.Empty);
-        var spanId = context.Items.GetOrDefault(NOFConstants.SpanId, string.Empty);
+        var traceId = _invocationContext.TraceId;
+        var spanId = _invocationContext.SpanId;
 
         var activityContext = new ActivityContext(
             traceId: string.IsNullOrEmpty(traceId) ? ActivityTraceId.CreateRandom() : ActivityTraceId.CreateFromString(traceId),
