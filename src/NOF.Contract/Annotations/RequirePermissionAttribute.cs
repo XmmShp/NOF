@@ -1,20 +1,20 @@
 namespace NOF;
 
 /// <summary>
-/// 权限要求特性，用于标记页面组件需要的权限
+/// Permission requirement attribute for marking handlers or messages that need specific permissions
 /// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
 public class RequirePermissionAttribute : Attribute
 {
     /// <summary>
-    /// 需要的权限，如果为null则表示只需要登录
+    /// Required permission, if null then only authentication is required
     /// </summary>
     public string? Permission { get; }
 
     /// <summary>
-    /// 构造函数
+    /// Constructor
     /// </summary>
-    /// <param name="permission">需要的权限，如果为null则表示只需要登录</param>
+    /// <param name="permission">Required permission, if null then only authentication is required</param>
     public RequirePermissionAttribute(string? permission = null)
     {
         Permission = permission;

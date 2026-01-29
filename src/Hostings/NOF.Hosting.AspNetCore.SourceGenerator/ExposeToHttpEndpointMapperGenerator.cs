@@ -152,19 +152,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             sb.AppendLine("                {");
             sb.AppendLine("                    var response = await sender.SendAsync(request);");
             sb.AppendLine("                    return TypedResults.Ok(response);");
-            sb.AppendLine("                })");
-
-            // Apply metadata
-            sb.AppendLine(ep.AllowAnonymous
-                ? "                .AllowAnonymous()"
-                : "                .RequireAuthorization()");
-
-            if (!string.IsNullOrEmpty(ep.Permission))
-            {
-                sb.AppendLine($"                .RequirePermission(\"{ep.Permission}\")");
-            }
-
-            sb.AppendLine("                ;");
+            sb.AppendLine("                });");
             sb.AppendLine();
         }
 
@@ -211,10 +199,6 @@ internal static class ExposeToHttpEndpointHelpers
         route ??= operationName;
 
         var responseType = GetResponseType(classSymbol);
-        var permission = attr.NamedArguments
-            .FirstOrDefault(arg => arg.Key == "Permission").Value.Value as string;
-        var allowAnonymous = attr.NamedArguments
-            .FirstOrDefault(arg => arg.Key == "AllowAnonymous").Value.Value is true;
 
         return new EndpointInfo
         {
@@ -222,9 +206,7 @@ internal static class ExposeToHttpEndpointHelpers
             ResponseType = responseType,
             Method = method,
             Route = route,
-            OperationName = operationName,
-            Permission = permission,
-            AllowAnonymous = allowAnonymous
+            OperationName = operationName
         };
     }
 }
@@ -236,8 +218,6 @@ internal class EndpointInfo
     public HttpVerb Method { get; set; }
     public string Route { get; set; } = string.Empty;
     public string OperationName { get; set; } = string.Empty;
-    public string? Permission { get; set; }
-    public bool AllowAnonymous { get; set; }
 }
 
 internal enum HttpVerb

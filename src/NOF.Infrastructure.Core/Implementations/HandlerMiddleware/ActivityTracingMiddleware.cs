@@ -34,7 +34,7 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
         }
         catch (Exception ex)
         {
-            if (activity != null)
+            if (activity is not null)
             {
                 activity.SetStatus(ActivityStatusCode.Error, ex.Message);
                 activity.AddException(ex);

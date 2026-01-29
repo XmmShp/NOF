@@ -13,7 +13,6 @@ public class JwtAuthenticationInitializationStep : IAuthenticationInitialization
     {
         (app as IApplicationBuilder)?.UseAuthentication();
         (app as IApplicationBuilder)?.UseMiddleware<JwtAuthenticationContextMiddleware>();
-        (app as IApplicationBuilder)?.UseMiddleware<PermissionAuthorizationMiddleware>();
         (app as IApplicationBuilder)?.UseAuthorization();
         return Task.CompletedTask;
     }

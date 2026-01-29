@@ -73,7 +73,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
         if (_cache.TryGetValue(prefixedKey, out var entry) && !entry.IsExpired(now))
         {
             // Update last accessed time using CAS pattern
-            if (entry.SlidingExpiration.HasValue)
+            if (entry.SlidingExpiration is not null)
             {
                 var newEntry = entry.WithUpdatedAccess(now);
                 _cache.TryUpdate(prefixedKey, newEntry, entry);
@@ -112,7 +112,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
         var now = DateTimeOffset.UtcNow;
         if (_cache.TryGetValue(prefixedKey, out var entry) && !entry.IsExpired(now))
         {
-            if (entry.SlidingExpiration.HasValue)
+            if (entry.SlidingExpiration is not null)
             {
                 var newEntry = entry.WithUpdatedAccess(now);
                 _cache.TryUpdate(prefixedKey, newEntry, entry);
@@ -367,7 +367,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
         if (_cache.TryGetValue(prefixedKey, out var entry) && !entry.IsExpired(now))
         {
             var ttl = entry.GetTimeToLive(now);
-            return ValueTask.FromResult(ttl.HasValue ? Optional.Of(ttl.Value) : Optional.None);
+            return ValueTask.FromResult(ttl is not null ? Optional.Of(ttl.Value) : Optional.None);
         }
         return ValueTask.FromResult<Optional<TimeSpan>>(Optional.None);
     }
@@ -380,7 +380,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
         while (_cache.TryGetValue(prefixedKey, out var oldEntry))
         {
             // Don't allow changing expiration type (absolute vs sliding)
-            if (oldEntry.SlidingExpiration.HasValue)
+            if (oldEntry.SlidingExpiration is not null)
             {
                 throw new InvalidOperationException("Cannot set absolute expiration on entry with sliding expiration. Remove and re-add the entry instead.");
             }
@@ -488,11 +488,11 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
             _lastAccessed = lastAccessed;
             SlidingExpiration = options.SlidingExpiration;
 
-            if (options.AbsoluteExpiration.HasValue)
+            if (options.AbsoluteExpiration is not null)
             {
                 AbsoluteExpiration = options.AbsoluteExpiration.Value;
             }
-            else if (options.AbsoluteExpirationRelativeToNow.HasValue)
+            else if (options.AbsoluteExpirationRelativeToNow is not null)
             {
                 AbsoluteExpiration = DateTimeOffset.UtcNow.Add(options.AbsoluteExpirationRelativeToNow.Value);
             }
@@ -500,12 +500,12 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
 
         public bool IsExpired(DateTimeOffset now)
         {
-            if (AbsoluteExpiration.HasValue && now >= AbsoluteExpiration.Value)
+            if (AbsoluteExpiration is not null && now >= AbsoluteExpiration.Value)
             {
                 return true;
             }
 
-            if (SlidingExpiration.HasValue && now - _lastAccessed >= SlidingExpiration.Value)
+            if (SlidingExpiration is not null && now - _lastAccessed >= SlidingExpiration.Value)
             {
                 return true;
             }
@@ -535,13 +535,13 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
 
         public TimeSpan? GetTimeToLive(DateTimeOffset now)
         {
-            if (AbsoluteExpiration.HasValue)
+            if (AbsoluteExpiration is not null)
             {
                 var ttl = AbsoluteExpiration.Value - now;
                 return ttl > TimeSpan.Zero ? ttl : null;
             }
 
-            if (SlidingExpiration.HasValue)
+            if (SlidingExpiration is not null)
             {
                 var ttl = SlidingExpiration.Value - (now - _lastAccessed);
                 return ttl > TimeSpan.Zero ? ttl : null;

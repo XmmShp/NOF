@@ -128,7 +128,7 @@ public class StateMachineBuilder<TState, TContext> : IStateMachineBuilder<TState
 
             void SetTargetState(TState targetState)
             {
-                if (operation.TargetState.HasValue)
+                if (operation.TargetState is not null)
                 {
                     throw new InvalidOperationException(
                         $"Transition target state for notification '{notificationType.Name}' " +

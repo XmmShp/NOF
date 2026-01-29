@@ -31,7 +31,6 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             builder.UseCors();
             builder.UseJwtAuthentication();
             builder.UseSignalR();
-            builder.UseResponseWrapper();
 
             if (builder.Environment.IsDevelopment())
             {
@@ -60,15 +59,7 @@ public static partial class __NOF_Hosting_AspNetCore_Extensions__
             }).AddJwtBearer();
             builder.Services.AddAuthorization();
             builder.Services.AddScoped<JwtAuthenticationContextMiddleware>();
-            builder.Services.AddScoped<PermissionAuthorizationMiddleware>();
             builder.AddInitializationStep(new JwtAuthenticationInitializationStep());
-            return builder;
-        }
-
-        public INOFAppBuilder UseResponseWrapper()
-        {
-            builder.Services.AddScoped<ResponseWrapperMiddleware>();
-            builder.AddInitializationStep(new ResponseWrapperInitializationStep());
             return builder;
         }
 

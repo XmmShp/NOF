@@ -152,29 +152,38 @@ public sealed class HandlerExecutor : IHandlerExecutor
 
         var builder = new HandlerPipelineBuilder();
 
-        // 1. Activity tracing
+        // 0. Exception handling (outermost to catch all exceptions)
+        var exceptionLogger = _serviceProvider.GetRequiredService<ILogger<ExceptionMiddleware>>();
+        builder.Use(new ExceptionMiddleware(exceptionLogger));
+
+        // 1. Permission authorization
+        builder.Use(new PermissionAuthorizationMiddleware(
+            invocationContext,
+            _serviceProvider.GetRequiredService<ILogger<PermissionAuthorizationMiddleware>>()));
+
+        // 2. Activity tracing
         builder.Use(new ActivityTracingMiddleware(invocationContext));
 
-        // 2. Auto instrumentation
+        // 3. Auto instrumentation
         var logger = _serviceProvider.GetRequiredService<ILogger<AutoInstrumentationMiddleware>>();
         builder.Use(new AutoInstrumentationMiddleware(logger));
 
-        // 3. Tenant header processing
+        // 4. Tenant header processing
         builder.Use(new TenantHeaderMiddleware(invocationContext));
 
-        // 4. Inbox message processing
+        // 5. Inbox message processing
         var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();
         var inboxMessageRepository = _serviceProvider.GetRequiredService<IInboxMessageRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
         var inboxLogger = _serviceProvider.GetRequiredService<ILogger<MessageInboxMiddleware>>();
         builder.Use(new MessageInboxMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger, invocationContext));
 
-        // 5. Transactional message context
+        // 6. Transactional message context
         var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();
         var deferredNotificationPublisher = _serviceProvider.GetRequiredService<IDeferredNotificationPublisher>();
         builder.Use(new MessageOutboxContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
 
-        // 6. User-defined middleware extension points (can call Configure multiple times)
+        // 7. User-defined middleware extension points (can call Configure multiple times)
         foreach (var configure in _configureActions)
         {
             configure(builder, _serviceProvider);

@@ -39,7 +39,7 @@ internal class ConfiguratorGraph<T> where T : IStep
         var ancestors = new HashSet<Type>();
 
         // Collect all base types
-        for (var t = type; t != null; t = t.BaseType)
+        for (var t = type; t is not null; t = t.BaseType)
         {
             ancestors.Add(t);
         }
