@@ -7,7 +7,7 @@ namespace NOF;
 /// <summary>
 /// 认证上下文中间件，用于从认证信息中提取用户和租户信息并设置到 InvocationContext 中
 /// </summary>
-public class JwtAuthenticationContextMiddleware : IMiddleware
+public class InvocationContextMiddleware : IMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
 
@@ -15,7 +15,7 @@ public class JwtAuthenticationContextMiddleware : IMiddleware
     /// 构造函数
     /// </summary>
     /// <param name="invocationContext">调用上下文</param>
-    public JwtAuthenticationContextMiddleware(IInvocationContextInternal invocationContext)
+    public InvocationContextMiddleware(IInvocationContextInternal invocationContext)
     {
         _invocationContext = invocationContext;
     }
