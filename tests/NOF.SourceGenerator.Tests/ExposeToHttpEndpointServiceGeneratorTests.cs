@@ -87,7 +87,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
 
                               namespace Tasks
                               {
-                                  [ExposeToHttpEndpoint(HttpVerb.Delete, AllowAnonymous = true)]
+                                  [ExposeToHttpEndpoint(HttpVerb.Delete)]
                                   public partial class DeleteTaskRequest : IRequest
                                   {
                                       public int Id { get; set; }
@@ -119,7 +119,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               namespace Items
                               {
                                   [ExposeToHttpEndpoint(HttpVerb.Post, OperationName = "Create")]
-                                  [ExposeToHttpEndpoint(HttpVerb.Put, "/items/update", OperationName = "Update", Permission = "admin.write")]
+                                  [ExposeToHttpEndpoint(HttpVerb.Put, "/items/update", OperationName = "Update")]
                                   public partial class ItemRequest : IRequest<ItemResponse>
                                   {
                                       public string Data { get; set; } = default!;

@@ -16,7 +16,7 @@ public class ExposeToHttpEndpointMapperTests
             using NOF;
             namespace Lib
             {
-                [ExposeToHttpEndpoint(HttpVerb.Get, "/api/user", AllowAnonymous = true)]
+                [ExposeToHttpEndpoint(HttpVerb.Get, "/api/user")]
                 public record GetUserRequest(string Id) : IRequest<System.Guid>;
             }
             """;
@@ -36,7 +36,7 @@ public class ExposeToHttpEndpointMapperTests
             using NOF;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/user", Permission = "User.Create")]
+                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/user")]
                 public record CreateUserRequest(string Name) : IRequest;
             }
             """;
@@ -78,16 +78,12 @@ public class ExposeToHttpEndpointMapperTests
         getBlock.Should()
             .Contain("app.MapGet(\"/api/user\"")
             .And.Contain("[AsParameters] Lib.GetUserRequest request")
-            .And.Contain("sender.SendAsync(request)")
-            .And.Contain(".AllowAnonymous()")
-            .And.NotContain("RequirePermission");
+            .And.Contain("sender.SendAsync(request)");
 
         postBlock.Should()
             .Contain("app.MapPost(\"/api/user\"")
             .And.Contain("[FromBody] App.CreateUserRequest request")
-            .And.Contain("sender.SendAsync(request)")
-            .And.Contain(".RequirePermission(\"User.Create\")")
-            .And.NotContain("AllowAnonymous");
+            .And.Contain("sender.SendAsync(request)");
 
         bodyText.Should().Contain("return TypedResults.Ok(response);");
     }
