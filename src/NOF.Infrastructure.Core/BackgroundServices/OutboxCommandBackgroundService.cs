@@ -3,7 +3,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using System.Threading.Channels;
 
 namespace NOF;
 
@@ -59,10 +58,10 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
 
         // 获取所有租户
         var tenants = await tenantRepository.GetAllAsync();
-        
+
         // 保存原始租户上下文
         var originalTenantId = tenantContext.CurrentTenantId;
-        
+
         foreach (var tenant in tenants)
         {
             if (!tenant.IsActive)

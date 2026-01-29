@@ -23,7 +23,6 @@
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
-    <Project Path="src/NOF.Test/NOF.Test.csproj" />
   </Folder>
   <Folder Name="/src/Hostings/">
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />

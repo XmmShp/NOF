@@ -233,6 +233,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         Services.AddScoped<IUserContextInternal, UserContext>();
         Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IUserContextInternal>());
 
+        Services.AddScoped(typeof(IDataAccessContext<>), typeof(DataAccessContextWrapper<>));
+
         Services.AddScoped<ICommandSender, CommandSender>();
         Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 

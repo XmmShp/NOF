@@ -21,12 +21,7 @@ public class GetConfigNodeById : IRequestHandler<GetConfigNodeByIdRequest, GetCo
             return Result.Fail(404, "配置节点不存在");
         }
 
-        var dto = new ConfigNodeDto(
-            node.Id,
-            node.ParentId,
-            node.Name,
-            node.ActiveFileName,
-            node.ConfigFiles.Select(f => new ConfigFileDto(f.Name, f.Content)).ToList());
+        var dto = node with { ConfigFiles = node.ConfigFiles.Select(f => new ConfigFileDto(f.Name, f.Content)).ToList() };
 
         return new GetConfigNodeByIdResponse(dto);
     }

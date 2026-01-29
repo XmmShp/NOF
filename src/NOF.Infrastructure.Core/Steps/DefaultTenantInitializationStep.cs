@@ -7,7 +7,7 @@ namespace NOF;
 /// <summary>
 /// Default tenant initialization implementation
 /// </summary>
-public class DefaultTenantInitializationStep : IPublicDataSeedInitializationStep
+public class DefaultTenantInitializationStep : IDataSeedInitializationStep
 {
     public async Task ExecuteAsync(INOFAppBuilder builder, IHost app)
     {
@@ -15,9 +15,10 @@ public class DefaultTenantInitializationStep : IPublicDataSeedInitializationStep
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DefaultTenantInitializationStep>>();
         try
         {
-            var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+            var context = scope.ServiceProvider.GetRequiredService<IPublicDataAccessContextFactory>().CreatePublicContext();
+            var tenantRepository = context.GetRepository<ITenantRepository>();
+            var uow = context.UnitOfWork;
 
-            // 检查是否已存在默认租户
             var existingTenant = await tenantRepository.FindAsync("default");
 
             if (existingTenant is not null)
@@ -39,6 +40,7 @@ public class DefaultTenantInitializationStep : IPublicDataSeedInitializationStep
 
             tenantRepository.Add(defaultTenant);
 
+            await uow.SaveChangesAsync();
             logger.LogInformation("Created default tenant with ID: {TenantId}", defaultTenant.Id);
         }
         catch (Exception ex)

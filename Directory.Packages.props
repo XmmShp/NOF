@@ -43,7 +43,6 @@
     <!-- Test -->
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <!--Private Assets-->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />

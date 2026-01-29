@@ -15,8 +15,4 @@
 		</PackageReference>
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
-	</ItemGroup>
-
 </Project>

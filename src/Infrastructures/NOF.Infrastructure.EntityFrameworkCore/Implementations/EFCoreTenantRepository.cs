@@ -78,7 +78,6 @@ internal sealed class EFCoreTenantRepository : ITenantRepository
         };
 
         _dbContext.Tenants.Add(entity);
-        _dbContext.SaveChanges();
         _logger.LogDebug("Added tenant {TenantId}", tenant.Id);
     }
 
@@ -97,7 +96,6 @@ internal sealed class EFCoreTenantRepository : ITenantRepository
         };
 
         _dbContext.Tenants.Update(entity);
-        _dbContext.SaveChanges();
         _logger.LogDebug("Updated tenant {TenantId}", tenant.Id);
     }
 
@@ -111,7 +109,6 @@ internal sealed class EFCoreTenantRepository : ITenantRepository
         var entity = new EFCoreTenant { Id = tenantId };
         _dbContext.Tenants.Attach(entity);
         _dbContext.Tenants.Remove(entity);
-        _dbContext.SaveChanges();
         _logger.LogDebug("Deleted tenant {TenantId}", tenantId);
     }
 

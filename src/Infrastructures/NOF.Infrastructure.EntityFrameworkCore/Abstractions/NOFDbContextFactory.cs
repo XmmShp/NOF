@@ -10,56 +10,47 @@ namespace NOF;
 /// NOF 数据库上下文工厂接口
 /// 用于创建指定类型的数据库上下文
 /// </summary>
-public interface INOFDbContextFactory
+public interface INOFDbContextFactory<TDbContext> : IDbContextFactory<TDbContext> where TDbContext : DbContext
 {
     /// <summary>
     /// 创建指定租户的数据库上下文
     /// </summary>
-    TDbContext GetDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext;
+    TDbContext CreateDbContext(string tenantId);
 }
 
-internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
+internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDbContext>
+    where TDbContext : DbContext
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ITenantContext _tenantContext;
     private readonly IStartupEventChannel _startupEventChannel;
     private readonly bool _autoMigrate;
-    private readonly ILogger<NOFDbContextFactory> _logger;
-    private readonly Dictionary<(Type DbContextType, string TenantId), object> _cache = new();
-    private bool _disposed = false;
+    private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
+        ITenantContext tenantContext,
         IStartupEventChannel startupEventChannel,
         bool autoMigrate,
-        ILogger<NOFDbContextFactory> logger)
+        ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
+        _tenantContext = tenantContext;
         _startupEventChannel = startupEventChannel;
         _autoMigrate = autoMigrate;
         _logger = logger;
     }
 
-    public TDbContext GetDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext
+    public TDbContext CreateDbContext()
+        => CreateDbContext(_tenantContext.CurrentTenantId);
+
+    public TDbContext CreateDbContext(string tenantId)
     {
         if (string.IsNullOrEmpty(tenantId))
         {
             throw new ArgumentException("Tenant ID cannot be null or empty", nameof(tenantId));
         }
 
-        var key = (typeof(TDbContext), tenantId);
-
-        if (_cache.TryGetValue(key, out var cached))
-        {
-            return (TDbContext)cached;
-        }
-
-        var dbContext = CreateNewDbContext<TDbContext>(tenantId);
-        _cache[key] = dbContext;
-        return dbContext;
-    }
-
-    private TDbContext CreateNewDbContext<TDbContext>(string tenantId) where TDbContext : NOFDbContext
-    {
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
         var extension = new NOFDbContextOptionsExtension(_startupEventChannel);
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
@@ -74,7 +65,7 @@ internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
         return dbContext;
     }
 
-    private void ConfigureDbContext<TDbContext>(TDbContext dbContext, string tenantId) where TDbContext : NOFDbContext
+    private void ConfigureDbContext(TDbContext dbContext, string tenantId)
     {
         if (Assembly.GetEntryAssembly()?.GetName().Name?.ToLowerInvariant() != "ef")
         {
@@ -99,23 +90,6 @@ internal sealed class NOFDbContextFactory : INOFDbContextFactory, IDisposable
                     }
                 }
             }
-        }
-
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            foreach (var dbContext in _cache.Values)
-            {
-                if (dbContext is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
-            _cache.Clear();
-            _disposed = true;
         }
     }
 }

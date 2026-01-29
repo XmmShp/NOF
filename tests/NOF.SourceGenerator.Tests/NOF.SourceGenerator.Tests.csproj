@@ -19,14 +19,17 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.AspNetCore.Http" />
+		<PackageReference Include="Moq" />
+		<PackageReference Include="FluentAssertions" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\src\NOF.Annotation\NOF.Annotation.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Contract.SourceGenerator\NOF.Contract.SourceGenerator.csproj" />
 		<ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore.SourceGenerator\NOF.Hosting.AspNetCore.SourceGenerator.csproj" />
 		<ProjectReference Include="..\..\src\Hostings\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" />
+		<ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
 		<ProjectReference Include="..\..\src\NOF.SourceGenerator\NOF.SourceGenerator.csproj" />
-		<ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
 	</ItemGroup>
 
 </Project>

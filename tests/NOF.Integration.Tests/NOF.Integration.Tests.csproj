@@ -14,6 +14,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Http" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="FluentAssertions" />
   </ItemGroup>
   
   <ItemGroup>
@@ -22,7 +24,6 @@
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
   </ItemGroup>
 
 </Project>

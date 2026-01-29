@@ -97,8 +97,8 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();
         var inboxMessageRepository = _serviceProvider.GetRequiredService<IInboxMessageRepository>();
         var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
-        var inboxLogger = _serviceProvider.GetRequiredService<ILogger<InboxHandlerMiddleware>>();
-        builder.Use(new InboxHandlerMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger));
+        var inboxLogger = _serviceProvider.GetRequiredService<ILogger<MessageInboxMiddleware>>();
+        builder.Use(new MessageInboxMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger));
 
         // 5. 事务性消息上下文
         var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();

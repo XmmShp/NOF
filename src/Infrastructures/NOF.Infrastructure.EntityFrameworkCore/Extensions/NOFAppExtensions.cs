@@ -28,32 +28,25 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             where TTenantDbContext : NOFDbContext
             where TPublicDbContext : NOFPublicDbContext
         {
-            builder.Services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
-            builder.Services.AddScoped<ITransactionManager, EFCoreTransactionManager>();
+            #region Tenant Related Services
             builder.Services.AddScoped<IInboxMessageRepository, EFCoreInboxMessageRepository>();
             builder.Services.AddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
             builder.Services.AddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
-            builder.Services.AddScoped<ITenantRepository, EFCoreTenantRepository>();
-
-            builder.Services.AddScoped<INOFDbContextFactory>(sp => new NOFDbContextFactory(
-                sp,
-                builder.StartupEventChannel,
-                builder.AutoMigrateTenantDatabases,
-                sp.GetRequiredService<ILogger<NOFDbContextFactory>>()));
-
-            builder.Services.AddHostedService<InboxCleanupBackgroundService>();
-            builder.Services.AddHostedService<OutboxCleanupBackgroundService>();
 
             builder.Services.AddScoped<TTenantDbContext>(sp =>
             {
-                var factory = sp.GetRequiredService<INOFDbContextFactory>();
+                var factory = sp.GetRequiredService<INOFDbContextFactory<TTenantDbContext>>();
                 var tenantContext = sp.GetRequiredService<ITenantContext>();
-                return factory.GetDbContext<TTenantDbContext>(tenantContext.CurrentTenantId);
+                return factory.CreateDbContext(tenantContext.CurrentTenantId);
             });
+            builder.Services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
+            builder.Services.AddScoped<ITransactionManager, EFCoreTransactionManager>();
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TTenantDbContext>());
+            #endregion
 
-            // Register custom public DbContext
+            #region Public Related Services
+            builder.Services.AddScoped<ITenantRepository, EFCoreTenantRepository>();
             builder.Services.AddScoped<TPublicDbContext>(sp =>
             {
                 var optionsBuilder = new DbContextOptionsBuilder<TPublicDbContext>();
@@ -65,6 +58,25 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
                 return dbContext;
             });
             builder.Services.TryAddScoped<NOFPublicDbContext>(sp => sp.GetRequiredService<TPublicDbContext>());
+            #endregion
+
+            #region Infrastructure Services
+            builder.Services.AddScoped<INOFDbContextFactory<TTenantDbContext>>(sp => new NOFDbContextFactory<TTenantDbContext>(
+                sp,
+                sp.GetRequiredService<ITenantContext>(),
+                builder.StartupEventChannel,
+                builder.AutoMigrateTenantDatabases,
+                sp.GetRequiredService<ILogger<NOFDbContextFactory<TTenantDbContext>>>()));
+            builder.Services.AddScoped<IDbContextFactory<TTenantDbContext>>(sp => sp.GetRequiredService<INOFDbContextFactory<TTenantDbContext>>());
+
+            builder.Services.AddScoped<IDataAccessContext, EFCoreDataAccessContext<TTenantDbContext>>();
+            builder.Services.AddScoped<IPublicDataAccessContextFactory, EFCoreDataAccessContextFactory<TPublicDbContext>>();
+            builder.Services.AddScoped<IDataAccessContextFactory, EFCoreDataAccessContextFactory<TTenantDbContext>>();
+
+            builder.Services.AddHostedService<InboxCleanupBackgroundService>();
+            builder.Services.AddHostedService<OutboxCleanupBackgroundService>();
+
+            #endregion
 
             return new NOFEFCoreSelector(builder);
         }
