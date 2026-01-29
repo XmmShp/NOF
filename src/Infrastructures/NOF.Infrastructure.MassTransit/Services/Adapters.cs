@@ -8,15 +8,30 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
     where TRequest : class, IRequest
 {
     private readonly THandler _handler;
-    public MassTransitRequestHandlerAdapter(THandler consumer)
+    private readonly IHandlerExecutor _executor;
+
+    public MassTransitRequestHandlerAdapter(THandler handler, IHandlerExecutor executor)
     {
-        _handler = consumer;
+        _handler = handler;
+        _executor = executor;
     }
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var response = await _handler.HandleAsync(context.Message, context.CancellationToken).ConfigureAwait(false);
-        await context.RespondAsync(response).ConfigureAwait(false);
+        var headers = context.Headers.ToDictionary(
+            h => h.Key,
+            h => h.Value.ToString()
+        );
+
+        var activity = Activity.Current;
+        if (activity is not null)
+        {
+            headers[NOFConstants.TraceId] = activity.TraceId.ToString();
+            headers[NOFConstants.SpanId] = activity.SpanId.ToString();
+        }
+
+        var result = await _executor.ExecuteRequestAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
+        await context.RespondAsync(result).ConfigureAwait(false);
     }
 }
 
@@ -25,15 +40,30 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
     where TRequest : class, IRequest<TResponse>
 {
     private readonly THandler _handler;
-    public MassTransitRequestHandlerAdapter(THandler consumer)
+    private readonly IHandlerExecutor _executor;
+
+    public MassTransitRequestHandlerAdapter(THandler handler, IHandlerExecutor executor)
     {
-        _handler = consumer;
+        _handler = handler;
+        _executor = executor;
     }
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var response = await _handler.HandleAsync(context.Message, context.CancellationToken).ConfigureAwait(false);
-        await context.RespondAsync(response).ConfigureAwait(false);
+        var headers = context.Headers.ToDictionary(
+            h => h.Key,
+            h => h.Value.ToString()
+        );
+
+        var activity = Activity.Current;
+        if (activity is not null)
+        {
+            headers[NOFConstants.TraceId] = activity.TraceId.ToString();
+            headers[NOFConstants.SpanId] = activity.SpanId.ToString();
+        }
+
+        var result = await _executor.ExecuteRequestAsync<TRequest, TResponse>(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
+        await context.RespondAsync(result).ConfigureAwait(false);
     }
 }
 

@@ -3,7 +3,7 @@ using System.ComponentModel;
 namespace NOF;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRequestHandler;
+public interface IRequestHandler : IMessageHandler;
 
 public interface IRequestHandler<TRequest> : IRequestHandler
     where TRequest : IRequest

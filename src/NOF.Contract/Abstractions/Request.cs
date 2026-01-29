@@ -1,6 +1,8 @@
+using NOF.Contract.Annotations;
+
 namespace NOF;
 
-public interface IRequestBase;
+public interface IRequestBase : IMessage;
 
 public interface IRequest : IRequestBase;
 

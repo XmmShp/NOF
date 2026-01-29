@@ -26,6 +26,24 @@ public interface IHandlerExecutor
         TNotification notification,
         IDictionary<string, string?> headers,
         CancellationToken cancellationToken) where TNotification : class, INotification;
+
+    /// <summary>
+    /// 执行 Request Handler（无返回值）
+    /// </summary>
+    ValueTask<Result> ExecuteRequestAsync<TRequest>(
+        IRequestHandler<TRequest> handler,
+        TRequest request,
+        IDictionary<string, string?> headers,
+        CancellationToken cancellationToken) where TRequest : class, IRequest;
+
+    /// <summary>
+    /// 执行 Request Handler（有返回值）
+    /// </summary>
+    ValueTask<Result<TResponse>> ExecuteRequestAsync<TRequest, TResponse>(
+        IRequestHandler<TRequest, TResponse> handler,
+        TRequest request,
+        IDictionary<string, string?> headers,
+        CancellationToken cancellationToken) where TRequest : class, IRequest<TResponse>;
 }
 
 /// <summary>
@@ -76,6 +94,50 @@ public sealed class HandlerExecutor : IHandlerExecutor
 
         var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(notification, ct)));
         await pipeline(cancellationToken);
+    }
+
+    public async ValueTask<Result> ExecuteRequestAsync<TRequest>(
+        IRequestHandler<TRequest> handler,
+        TRequest request,
+        IDictionary<string, string?> headers,
+        CancellationToken cancellationToken) where TRequest : class, IRequest
+    {
+        var context = new HandlerContext
+        {
+            Message = request,
+            Handler = handler,
+            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
+        };
+
+        var pipeline = BuildPipeline(context, async ct =>
+        {
+            context.Response = await handler.HandleAsync(request, ct);
+        });
+        await pipeline(cancellationToken);
+
+        return (Result)context.Response!;
+    }
+
+    public async ValueTask<Result<TResponse>> ExecuteRequestAsync<TRequest, TResponse>(
+        IRequestHandler<TRequest, TResponse> handler,
+        TRequest request,
+        IDictionary<string, string?> headers,
+        CancellationToken cancellationToken) where TRequest : class, IRequest<TResponse>
+    {
+        var context = new HandlerContext
+        {
+            Message = request,
+            Handler = handler,
+            Items = headers.ToDictionary(kv => kv.Key, object? (kv) => kv.Value)
+        };
+
+        var pipeline = BuildPipeline(context, async ct =>
+        {
+            context.Response = await handler.HandleAsync(request, ct);
+        });
+        await pipeline(cancellationToken);
+
+        return (Result<TResponse>)context.Response!;
     }
 
     private HandlerDelegate BuildPipeline(HandlerContext context, HandlerDelegate handler)

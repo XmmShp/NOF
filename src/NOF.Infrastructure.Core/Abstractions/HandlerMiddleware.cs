@@ -21,6 +21,11 @@ public sealed class HandlerContext
     public required IMessageHandler Handler { get; init; }
 
     /// <summary>
+    /// 响应结果（仅用于 Request handlers）
+    /// </summary>
+    public object? Response { get; set; }
+
+    /// <summary>
     /// 自定义属性字典，用于在中间件之间传递数据
     /// </summary>
     public Dictionary<string, object?> Items { get; init; } = new();
