@@ -13,17 +13,17 @@ public class EFCoreDataAccessContextFactory<TDbContext> :
     where TDbContext : DbContext
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ITenantContext _tenantContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public EFCoreDataAccessContextFactory(IServiceProvider serviceProvider, ITenantContext tenantContext)
+    public EFCoreDataAccessContextFactory(IServiceProvider serviceProvider, IInvocationContext invocationContext)
     {
         _serviceProvider = serviceProvider;
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
     }
 
     public IDataAccessContext CreateTenantContext()
     {
-        return CreateTenantContext(_tenantContext.CurrentTenantId);
+        return CreateTenantContext(_invocationContext.TenantId);
     }
 
     public IDataAccessContext CreateTenantContext(string tenantId)

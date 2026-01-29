@@ -52,7 +52,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContextInternal>();
+        var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContextInternal>();
         var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
         var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 
@@ -60,7 +60,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
         var tenants = await tenantRepository.GetAllAsync();
 
         // 保存原始租户上下文
-        var originalTenantId = tenantContext.CurrentTenantId;
+        var originalTenantId = invocationContext.TenantId;
 
         foreach (var tenant in tenants)
         {
@@ -73,7 +73,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
             try
             {
                 // 设置租户上下文
-                tenantContext.SetCurrentTenantId(tenant.Id);
+                invocationContext.SetTenantId(tenant.Id);
                 _logger.LogDebug("Processing outbox messages for tenant {TenantId}", tenant.Id);
 
                 // 使用当前 scope 的 repository，它会自动使用设置的租户上下文
@@ -129,7 +129,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
         }
 
         // 恢复原始租户上下文
-        tenantContext.SetCurrentTenantId(originalTenantId);
+        invocationContext.SetTenantId(originalTenantId);
     }
 
     private async Task ProcessSingleMessageAsync(

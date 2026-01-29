@@ -152,8 +152,8 @@ public sealed class HandlerExecutor : IHandlerExecutor
         builder.Use(new AutoInstrumentationMiddleware(logger));
 
         // 3. 租户头处理
-        var tenantContext = _serviceProvider.GetRequiredService<ITenantContextInternal>();
-        builder.Use(new TenantHeaderMiddleware(tenantContext));
+        var invocationContext = _serviceProvider.GetRequiredService<IInvocationContextInternal>();
+        builder.Use(new TenantHeaderMiddleware(invocationContext));
 
         // 4. 收件箱消息处理
         var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();

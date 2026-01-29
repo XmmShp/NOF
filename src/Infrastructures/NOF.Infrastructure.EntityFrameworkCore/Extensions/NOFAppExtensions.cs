@@ -36,8 +36,8 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             builder.Services.AddScoped<TTenantDbContext>(sp =>
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory<TTenantDbContext>>();
-                var tenantContext = sp.GetRequiredService<ITenantContext>();
-                return factory.CreateDbContext(tenantContext.CurrentTenantId);
+                var invocationContext = sp.GetRequiredService<IInvocationContext>();
+                return factory.CreateDbContext(invocationContext.TenantId);
             });
             builder.Services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
             builder.Services.AddScoped<ITransactionManager, EFCoreTransactionManager>();
@@ -63,10 +63,11 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
             #region Infrastructure Services
             builder.Services.AddScoped<INOFDbContextFactory<TTenantDbContext>>(sp => new NOFDbContextFactory<TTenantDbContext>(
                 sp,
-                sp.GetRequiredService<ITenantContext>(),
+                sp.GetRequiredService<IInvocationContext>(),
                 builder.StartupEventChannel,
                 builder.AutoMigrateTenantDatabases,
                 sp.GetRequiredService<ILogger<NOFDbContextFactory<TTenantDbContext>>>()));
+
             builder.Services.AddScoped<IDbContextFactory<TTenantDbContext>>(sp => sp.GetRequiredService<INOFDbContextFactory<TTenantDbContext>>());
 
             builder.Services.AddScoped<IDataAccessContext, EFCoreDataAccessContext<TTenantDbContext>>();

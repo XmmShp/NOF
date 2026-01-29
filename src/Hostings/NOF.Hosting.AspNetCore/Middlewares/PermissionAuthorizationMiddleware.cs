@@ -8,15 +8,15 @@ namespace NOF;
 /// </summary>
 public class PermissionAuthorizationMiddleware : IMiddleware
 {
-    private readonly IUserContext _userContext;
+    private readonly IInvocationContext _invocationContext;
 
     /// <summary>
     /// 初始化 <see cref="PermissionAuthorizationMiddleware"/> 类的新实例
     /// </summary>
-    /// <param name="userContext">用户上下文</param>
-    public PermissionAuthorizationMiddleware(IUserContext userContext)
+    /// <param name="invocationContext">调用上下文</param>
+    public PermissionAuthorizationMiddleware(IInvocationContext invocationContext)
     {
-        _userContext = userContext;
+        _invocationContext = invocationContext;
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public class PermissionAuthorizationMiddleware : IMiddleware
 
         if (permissionAttr is not null)
         {
-            if (!_userContext.IsAuthenticated)
+            if (!_invocationContext.User.IsAuthenticated)
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("请先登录");
@@ -46,7 +46,7 @@ public class PermissionAuthorizationMiddleware : IMiddleware
             }
 
             if (!string.IsNullOrEmpty(permissionAttr.Permission)
-                && !_userContext.HasPermission(permissionAttr.Permission))
+                && !_invocationContext.User.HasPermission(permissionAttr.Permission))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 await context.Response.WriteAsync("没有所需的权限");

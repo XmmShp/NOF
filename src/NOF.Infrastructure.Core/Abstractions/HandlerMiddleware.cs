@@ -80,6 +80,7 @@ public static partial class NOFConstants
     public const string MessageId = "NOF.Message.MessageId";
     public const string TraceId = "NOF.Message.TraceId";
     public const string SpanId = "NOF.Message.SpanId";
+    public const string TenantId = "NOF.TenantId";
 }
 
 public static partial class __NOF_Infrastructure_Core_Extensions__

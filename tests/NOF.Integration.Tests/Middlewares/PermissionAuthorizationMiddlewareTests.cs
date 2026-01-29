@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;
+using System.Security.Claims;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Middlewares;
@@ -11,8 +12,11 @@ public class PermissionAuthorizationMiddlewareTests
     public async Task InvokeAsync_NoEndpoint_ShouldCallNext()
     {
         // Arrange
-        var mockUserContext = new Mock<IUserContext>();
-        var middleware = new PermissionAuthorizationMiddleware(mockUserContext.Object);
+        var mockInvocationContext = new Mock<IInvocationContext>();
+        var mockUser = new Mock<ClaimsPrincipal>();
+        mockInvocationContext.Setup(x => x.User).Returns(mockUser.Object);
+        
+        var middleware = new PermissionAuthorizationMiddleware(mockInvocationContext.Object);
         var context = new DefaultHttpContext();
 
         var nextCalled = false;
@@ -33,8 +37,11 @@ public class PermissionAuthorizationMiddlewareTests
     public async Task InvokeAsync_NoPermissionAttribute_ShouldCallNext()
     {
         // Arrange
-        var mockUserContext = new Mock<IUserContext>();
-        var middleware = new PermissionAuthorizationMiddleware(mockUserContext.Object);
+        var mockInvocationContext = new Mock<IInvocationContext>();
+        var mockUser = new Mock<ClaimsPrincipal>();
+        mockInvocationContext.Setup(x => x.User).Returns(mockUser.Object);
+        
+        var middleware = new PermissionAuthorizationMiddleware(mockInvocationContext.Object);
         var context = new DefaultHttpContext();
 
         var endpoint = new Endpoint(
@@ -62,10 +69,12 @@ public class PermissionAuthorizationMiddlewareTests
     public async Task InvokeAsync_RequiresPermission_UserNotAuthenticated_ShouldReturn401()
     {
         // Arrange
-        var mockUserContext = new Mock<IUserContext>();
-        mockUserContext.Setup(u => u.IsAuthenticated).Returns(false);
+        var mockInvocationContext = new Mock<IInvocationContext>();
+        var mockUser = new Mock<ClaimsPrincipal>();
+        mockUser.Setup(u => u.Identity.IsAuthenticated).Returns(false);
+        mockInvocationContext.Setup(x => x.User).Returns(mockUser.Object);
 
-        var middleware = new PermissionAuthorizationMiddleware(mockUserContext.Object);
+        var middleware = new PermissionAuthorizationMiddleware(mockInvocationContext.Object);
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 
@@ -96,10 +105,12 @@ public class PermissionAuthorizationMiddlewareTests
     public async Task InvokeAsync_EmptyPermission_UserAuthenticated_ShouldCallNext()
     {
         // Arrange
-        var mockUserContext = new Mock<IUserContext>();
-        mockUserContext.Setup(u => u.IsAuthenticated).Returns(true);
+        var mockInvocationContext = new Mock<IInvocationContext>();
+        var mockUser = new Mock<ClaimsPrincipal>();
+        mockUser.Setup(u => u.Identity.IsAuthenticated).Returns(true);
+        mockInvocationContext.Setup(x => x.User).Returns(mockUser.Object);
 
-        var middleware = new PermissionAuthorizationMiddleware(mockUserContext.Object);
+        var middleware = new PermissionAuthorizationMiddleware(mockInvocationContext.Object);
         var context = new DefaultHttpContext();
 
         var permissionAttr = new RequirePermissionAttribute("");
@@ -128,10 +139,12 @@ public class PermissionAuthorizationMiddlewareTests
     public async Task InvokeAsync_NullPermission_UserAuthenticated_ShouldCallNext()
     {
         // Arrange
-        var mockUserContext = new Mock<IUserContext>();
-        mockUserContext.Setup(u => u.IsAuthenticated).Returns(true);
+        var mockInvocationContext = new Mock<IInvocationContext>();
+        var mockUser = new Mock<ClaimsPrincipal>();
+        mockUser.Setup(u => u.Identity.IsAuthenticated).Returns(true);
+        mockInvocationContext.Setup(x => x.User).Returns(mockUser.Object);
 
-        var middleware = new PermissionAuthorizationMiddleware(mockUserContext.Object);
+        var middleware = new PermissionAuthorizationMiddleware(mockInvocationContext.Object);
         var context = new DefaultHttpContext();
 
         var permissionAttr = new RequirePermissionAttribute(null!);
@@ -160,10 +173,12 @@ public class PermissionAuthorizationMiddlewareTests
     public async Task InvokeAsync_EmptyPermission_UserNotAuthenticated_ShouldReturn401()
     {
         // Arrange
-        var mockUserContext = new Mock<IUserContext>();
-        mockUserContext.Setup(u => u.IsAuthenticated).Returns(false);
+        var mockInvocationContext = new Mock<IInvocationContext>();
+        var mockUser = new Mock<ClaimsPrincipal>();
+        mockUser.Setup(u => u.Identity.IsAuthenticated).Returns(false);
+        mockInvocationContext.Setup(x => x.User).Returns(mockUser.Object);
 
-        var middleware = new PermissionAuthorizationMiddleware(mockUserContext.Object);
+        var middleware = new PermissionAuthorizationMiddleware(mockInvocationContext.Object);
         var context = new DefaultHttpContext();
         context.Response.Body = new MemoryStream();
 

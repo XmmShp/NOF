@@ -227,11 +227,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
         DefaultServicesConfigured = true;
 
-        Services.AddScoped<ITenantContextInternal, TenantContext>();
-        Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<ITenantContextInternal>());
-
-        Services.AddScoped<IUserContextInternal, UserContext>();
-        Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IUserContextInternal>());
+        Services.AddScoped<IInvocationContextInternal, InvocationContext>();
+        Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());
 
         Services.AddScoped(typeof(IDataAccessContext<>), typeof(DataAccessContextWrapper<>));
 

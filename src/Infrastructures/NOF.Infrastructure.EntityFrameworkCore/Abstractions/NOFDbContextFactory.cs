@@ -22,27 +22,27 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
     where TDbContext : DbContext
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ITenantContext _tenantContext;
+    private readonly IInvocationContext _invocationContext;
     private readonly IStartupEventChannel _startupEventChannel;
     private readonly bool _autoMigrate;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        ITenantContext tenantContext,
+        IInvocationContext invocationContext,
         IStartupEventChannel startupEventChannel,
         bool autoMigrate,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
         _startupEventChannel = startupEventChannel;
         _autoMigrate = autoMigrate;
         _logger = logger;
     }
 
     public TDbContext CreateDbContext()
-        => CreateDbContext(_tenantContext.CurrentTenantId);
+        => CreateDbContext(_invocationContext.TenantId);
 
     public TDbContext CreateDbContext(string tenantId)
     {

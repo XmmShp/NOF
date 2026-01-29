@@ -4,15 +4,15 @@ namespace NOF;
 
 /// <summary>
 /// 租户头处理中间件
-/// 从消息头中提取租户信息并设置到 HandlerContext.Items 中
+/// 从消息头中提取租户信息并设置到 InvocationContext 中
 /// </summary>
 public sealed class TenantHeaderMiddleware : IHandlerMiddleware
 {
-    private readonly ITenantContextInternal _tenantContext;
+    private readonly IInvocationContextInternal _invocationContext;
 
-    public TenantHeaderMiddleware(ITenantContextInternal tenantContext)
+    public TenantHeaderMiddleware(IInvocationContextInternal invocationContext)
     {
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
     }
 
     public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -24,7 +24,7 @@ public sealed class TenantHeaderMiddleware : IHandlerMiddleware
             tenantIdObj is string tenantId &&
             !string.IsNullOrEmpty(tenantId))
         {
-            _tenantContext.SetCurrentTenantId(tenantId);
+            _invocationContext.SetTenantId(tenantId);
             if (activity is { IsAllDataRequested: true })
             {
                 activity.SetTag(HandlerPipelineTracing.Tags.TenantId, tenantId);

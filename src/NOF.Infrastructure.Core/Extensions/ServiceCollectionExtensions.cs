@@ -202,7 +202,7 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
             // Register multi-tenant aware cache service factory
             services.ReplaceOrAddScoped<ICacheService>(sp =>
             {
-                var tenantContext = sp.GetRequiredService<ITenantContext>();
+                var invocationContext = sp.GetRequiredService<IInvocationContext>();
                 var baseOptions = sp.GetRequiredService<IOptions<CacheServiceOptions>>().Value;
 
                 // Create tenant-specific options
@@ -219,7 +219,7 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
                 };
 
                 // Set tenant-specific KeyPrefix for transparent multi-tenant isolation
-                var tenantId = tenantContext.CurrentTenantId;
+                var tenantId = invocationContext.TenantId;
                 if (!string.IsNullOrEmpty(tenantId))
                 {
                     tenantOptions.KeyPrefix = string.IsNullOrEmpty(baseOptions.KeyPrefix)

@@ -8,12 +8,12 @@ namespace NOF;
 public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
-    private readonly ITenantContext _tenantContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public NotificationPublisher(INotificationRider rider, ITenantContext tenantContext)
+    public NotificationPublisher(INotificationRider rider, IInvocationContext invocationContext)
     {
         _rider = rider;
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
     }
 
     public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
@@ -24,7 +24,7 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         var messageId = Guid.NewGuid().ToString();
         var currentActivity = Activity.Current;
-        var tenantId = _tenantContext.CurrentTenantId;
+        var tenantId = _invocationContext.TenantId;
 
         var headers = new Dictionary<string, string?>
         {
@@ -63,18 +63,18 @@ public sealed class NotificationPublisher : INotificationPublisher
 public sealed class DeferredNotificationPublisher : IDeferredNotificationPublisher
 {
     private readonly IOutboxMessageCollector _collector;
-    private readonly ITenantContext _tenantContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public DeferredNotificationPublisher(IOutboxMessageCollector collector, ITenantContext tenantContext)
+    public DeferredNotificationPublisher(IOutboxMessageCollector collector, IInvocationContext invocationContext)
     {
         _collector = collector;
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
     }
 
     public void Publish(INotification notification)
     {
         var currentActivity = Activity.Current;
-        var tenantId = _tenantContext.CurrentTenantId;
+        var tenantId = _invocationContext.TenantId;
 
         var headers = new Dictionary<string, string?>
         {

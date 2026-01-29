@@ -8,12 +8,12 @@ namespace NOF;
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
-    private readonly ITenantContext _tenantContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public CommandSender(ICommandRider rider, ITenantContext tenantContext)
+    public CommandSender(ICommandRider rider, IInvocationContext invocationContext)
     {
         _rider = rider;
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
     }
 
     public Task SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
@@ -23,7 +23,7 @@ public sealed class CommandSender : ICommandSender
             ActivityKind.Producer);
 
         var messageId = Guid.NewGuid().ToString();
-        var tenantId = _tenantContext.CurrentTenantId;
+        var tenantId = _invocationContext.TenantId;
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>
         {
@@ -63,18 +63,18 @@ public sealed class CommandSender : ICommandSender
 public sealed class DeferredCommandSender : IDeferredCommandSender
 {
     private readonly IOutboxMessageCollector _collector;
-    private readonly ITenantContext _tenantContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public DeferredCommandSender(IOutboxMessageCollector collector, ITenantContext tenantContext)
+    public DeferredCommandSender(IOutboxMessageCollector collector, IInvocationContext invocationContext)
     {
         _collector = collector;
-        _tenantContext = tenantContext;
+        _invocationContext = invocationContext;
     }
 
     public void Send(ICommand command, string? destinationEndpointName = null)
     {
         var currentActivity = Activity.Current;
-        var tenantId = _tenantContext.CurrentTenantId;
+        var tenantId = _invocationContext.TenantId;
 
         var headers = new Dictionary<string, string?>
         {
