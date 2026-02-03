@@ -6,16 +6,6 @@ namespace NOF;
 public static class NOFJwtConstants
 {
     /// <summary>
-    /// Cache key prefix for revoked refresh tokens.
-    /// </summary>
-    public const string RevokedRefreshTokenCachePrefix = "jwt:revoked_refresh:";
-
-    /// <summary>
-    /// Cache key for JWKS.
-    /// </summary>
-    public const string JwksCacheKey = "jwt:jwks";
-
-    /// <summary>
     /// JWT token type.
     /// </summary>
     public const string TokenType = "Bearer";
@@ -39,13 +29,5 @@ public static class NOFJwtConstants
         public const string ExpiresAt = "exp";
         public const string Role = "role";
         public const string Permission = "permission";
-    }
-
-    /// <summary>
-    /// Default expiration times.
-    /// </summary>
-    public static class Expiration
-    {
-        public static readonly TimeSpan JwksCacheDuration = TimeSpan.FromHours(1);
     }
 }

@@ -12,14 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Options" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
-    <ProjectReference Include="..\..\NOF.Domain\NOF.Domain.csproj" />
     <ProjectReference Include="..\..\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
     <ProjectReference Include="..\NOF.Extensions.Auth.Jwt.Client\NOF.Extensions.Auth.Jwt.Client.csproj" />
   </ItemGroup>
