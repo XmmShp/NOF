@@ -6,24 +6,14 @@ namespace NOF;
 public static class NOFJwtConstants
 {
     /// <summary>
-    /// Cache key prefix for revoked tokens.
+    /// Cache key prefix for revoked refresh tokens.
     /// </summary>
-    public const string RevokedTokenCachePrefix = "jwt:revoked:";
-
-    /// <summary>
-    /// Cache key prefix for revoked user tokens.
-    /// </summary>
-    public const string RevokedUserCachePrefix = "jwt:revoked_user:";
+    public const string RevokedRefreshTokenCachePrefix = "jwt:revoked_refresh:";
 
     /// <summary>
     /// Cache key for JWKS.
     /// </summary>
     public const string JwksCacheKey = "jwt:jwks";
-
-    /// <summary>
-    /// Cache key prefix for refresh tokens.
-    /// </summary>
-    public const string RefreshTokenCachePrefix = "refresh:";
 
     /// <summary>
     /// JWT token type.
@@ -33,12 +23,7 @@ public static class NOFJwtConstants
     /// <summary>
     /// Default algorithm for JWT signing.
     /// </summary>
-    public const string DefaultAlgorithm = "RS256";
-
-    /// <summary>
-    /// Default JWKS endpoint path.
-    /// </summary>
-    public const string DefaultJwksPath = "/.well-known/jwks.json";
+    public const string Algorithm = "RS256";
 
     /// <summary>
     /// Claim types.
@@ -61,10 +46,6 @@ public static class NOFJwtConstants
     /// </summary>
     public static class Expiration
     {
-        public static readonly TimeSpan DefaultAccessTokenExpiration = TimeSpan.FromMinutes(60);
-        public static readonly TimeSpan DefaultRefreshTokenExpiration = TimeSpan.FromDays(7);
-        public static readonly TimeSpan DefaultClockSkew = TimeSpan.FromMinutes(5);
         public static readonly TimeSpan JwksCacheDuration = TimeSpan.FromHours(1);
-        public static readonly TimeSpan RevokedTokenCacheDuration = TimeSpan.FromDays(7);
     }
 }

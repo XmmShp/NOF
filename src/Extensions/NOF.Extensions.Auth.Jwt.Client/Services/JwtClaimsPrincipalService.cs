@@ -66,9 +66,9 @@ public class JwtClaimsPrincipalService
         return jwtClaim.Type switch
         {
             "sub" => new Claim(ClaimTypes.NameIdentifier, jwtClaim.Value),
-            "tenant_id" => new Claim(ClaimTypes.TenantId, jwtClaim.Value),
+            "tenant_id" => new Claim(NOFJwtConstants.ClaimTypes.TenantId, jwtClaim.Value),
             "role" => new Claim(ClaimTypes.Role, jwtClaim.Value),
-            "permission" => new Claim(ClaimTypes.Permission, jwtClaim.Value),
+            "permission" => new Claim(NOFJwtConstants.ClaimTypes.Permission, jwtClaim.Value),
             _ => jwtClaim // Keep other claims as-is
         };
     }

@@ -30,16 +30,18 @@ public class JwtClientInitializer : IHostedService
             _logger.LogInformation("Initializing JWT client and retrieving JWKS...");
 
             // Pre-fetch JWKS to ensure validation service is ready
-            var request = new GetJwksRequest();
+            // Use a default audience for initialization
+            var defaultAudience = "default-client";
+            var request = new GetJwksRequest(defaultAudience);
             var result = await _requestSender.SendAsync(request, cancellationToken: cancellationToken);
 
-            if (result.IsFailure)
+            if (!result.IsSuccess)
             {
-                _logger.LogError("Failed to retrieve JWKS during initialization: {Error}", result.Error);
+                _logger.LogError("Failed to retrieve JWKS during initialization: {Error}", result.Message);
                 throw new InvalidOperationException("Failed to initialize JWT client: Could not retrieve JWKS");
             }
 
-            if (result.Value?.JwksJson == null)
+            if (result.Value?.Keys == null)
             {
                 _logger.LogError("Received empty JWKS during initialization");
                 throw new InvalidOperationException("Failed to initialize JWT client: Empty JWKS received");

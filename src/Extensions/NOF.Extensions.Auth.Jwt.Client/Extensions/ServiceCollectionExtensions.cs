@@ -27,27 +27,6 @@ public static class ServiceCollectionExtensions
         // Register JWT client initializer (hosted service)
         services.AddHostedService<JwtClientInitializer>();
 
-        // Register notification handler for token revocation
-        services.AddSingleton<INotificationHandler<TokenRevokedNotification>, TokenRevokedNotificationHandler>();
-
         return services;
-    }
-}
-
-/// <summary>
-/// Handler for token revocation notifications.
-/// </summary>
-public class TokenRevokedNotificationHandler : INotificationHandler<TokenRevokedNotification>
-{
-    private readonly JwtClientService _jwtClientService;
-
-    public TokenRevokedNotificationHandler(JwtClientService jwtClientService)
-    {
-        _jwtClientService = jwtClientService;
-    }
-
-    public Task HandleAsync(TokenRevokedNotification notification, CancellationToken cancellationToken = default)
-    {
-        return _jwtClientService.HandleTokenRevokedAsync(notification, cancellationToken);
     }
 }

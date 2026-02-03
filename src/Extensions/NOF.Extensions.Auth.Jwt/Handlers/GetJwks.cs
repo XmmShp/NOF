@@ -1,8 +1,4 @@
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.Buffers.Text;
-using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace NOF;
 
@@ -12,20 +8,20 @@ namespace NOF;
 public class GetJwks : IRequestHandler<GetJwksRequest, GetJwksResponse>
 {
     private readonly JwtOptions _options;
-    private readonly RsaSecurityKey _signingKey;
+    private readonly IKeyDerivationService _keyDerivationService;
 
-    public GetJwks(IOptions<JwtOptions> options)
+    public GetJwks(IOptions<JwtOptions> options, IKeyDerivationService keyDerivationService)
     {
         _options = options.Value;
-        _signingKey = CreateRsaSecurityKey(_options.SecurityKey);
+        _keyDerivationService = keyDerivationService;
     }
 
     public async Task<Result<GetJwksResponse>> HandleAsync(GetJwksRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var jwks = await GetJwksAsync();
-            return Result.Success(new GetJwksResponse(jwks));
+            var keys = await GetJwksAsync(request.Audience);
+            return Result.Success(new GetJwksResponse(_options.Issuer, keys));
         }
         catch (Exception ex)
         {
@@ -33,53 +29,27 @@ public class GetJwks : IRequestHandler<GetJwksRequest, GetJwksResponse>
         }
     }
 
-    private async Task<string> GetJwksAsync()
+    private Task<JsonWebKey[]> GetJwksAsync(string audience)
     {
-        var rsa = _signingKey.Rsa;
+        // Derive client-specific key from master key based on audience
+        var clientKey = _keyDerivationService.DeriveClientKey(audience);
+        var signingKey = _keyDerivationService.CreateRsaSecurityKey(clientKey);
+        var rsa = signingKey.Rsa;
         var parameters = rsa.ExportParameters(false);
 
-        var jwks = new
+        var keys = new[]
         {
-            keys = new[]
+            new JsonWebKey
             {
-                new
-                {
-                    kty = "RSA",
-                    use = "sig",
-                    alg = _options.Algorithm,
-                    kid = Guid.NewGuid().ToString(),
-                    n = Base64Url.Encode(parameters.Modulus),
-                    e = Base64Url.Encode(parameters.Exponent)
-                }
+                Kty = "RSA",
+                Use = "sig",
+                Alg = NOFJwtConstants.Algorithm,
+                Kid = clientKey[^16..], // Use last 16 characters of client key as key ID
+                N = Convert.ToBase64String(parameters.Modulus ?? throw new InvalidOperationException("RSA modulus cannot be null")),
+                E = Convert.ToBase64String(parameters.Exponent ?? throw new InvalidOperationException("RSA exponent cannot be null"))
             }
         };
 
-        return JsonSerializer.Serialize(jwks, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-    }
-
-    private RsaSecurityKey CreateRsaSecurityKey(string keyString)
-    {
-        var rsa = RSA.Create();
-
-        if (!string.IsNullOrEmpty(keyString) && keyString.Length > 100)
-        {
-            try
-            {
-                rsa.ImportRSAPrivateKey(Convert.FromBase64String(keyString), out _);
-            }
-            catch
-            {
-                rsa = RSA.Create(2048);
-            }
-        }
-        else
-        {
-            rsa = RSA.Create(2048);
-        }
-
-        return new RsaSecurityKey(rsa);
+        return Task.FromResult(keys);
     }
 }

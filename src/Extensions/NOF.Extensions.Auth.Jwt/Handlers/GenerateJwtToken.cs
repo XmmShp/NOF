@@ -1,9 +1,7 @@
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
-using System.Text.Json;
+using System.Security.Claims;
 
 namespace NOF;
 
@@ -13,63 +11,61 @@ namespace NOF;
 public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, GenerateJwtTokenResponse>
 {
     private readonly JwtOptions _options;
-    private readonly ICacheService _cache;
-    private readonly RsaSecurityKey _signingKey;
     private readonly JwtSecurityTokenHandler _tokenHandler;
+    private readonly IKeyDerivationService _keyDerivationService;
 
-    public GenerateJwtToken(IOptions<JwtOptions> options, ICacheService cache)
+    public GenerateJwtToken(IOptions<JwtOptions> options, IKeyDerivationService keyDerivationService)
     {
         _options = options.Value;
-        _cache = cache;
         _tokenHandler = new JwtSecurityTokenHandler();
-        _signingKey = CreateRsaSecurityKey(_options.SecurityKey);
+        _keyDerivationService = keyDerivationService;
     }
 
-    public async Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default)
+    public Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
             var now = DateTime.UtcNow;
-            var accessTokenExpires = now.AddMinutes(_options.AccessTokenExpirationMinutes);
-            var refreshTokenExpires = now.AddDays(_options.RefreshTokenExpirationDays);
+            var accessTokenExpires = now.Add(request.AccessTokenExpiration);
+            var refreshTokenExpires = now.Add(request.RefreshTokenExpiration);
 
             // Generate unique token IDs
             var jti = Guid.NewGuid().ToString();
             var refreshTokenId = Guid.NewGuid().ToString();
 
-            // Create claims
-            var claims = new JwtClaims
+            // Create access token
+            var clientKey = _keyDerivationService.DeriveClientKey(request.Audience);
+            var signingKey = _keyDerivationService.CreateRsaSecurityKey(clientKey);
+            var refreshTokenKey = _keyDerivationService.DeriveRefreshTokenKey(request.Audience);
+            var refreshSigningKey = _keyDerivationService.CreateRsaSecurityKey(refreshTokenKey);
+
+            var accessClaims = new JwtClaims
             {
                 Jti = jti,
                 Sub = request.UserId,
                 TenantId = request.TenantId,
-                Roles = request.Roles ?? [],
-                Permissions = request.Permissions ?? [],
+                Roles = request.Roles?.ToList() ?? [],
+                Permissions = request.Permissions?.ToList() ?? [],
                 CustomClaims = request.CustomClaims ?? new Dictionary<string, string>(),
                 Iat = now,
                 Exp = accessTokenExpires,
                 Iss = _options.Issuer,
-                Aud = _options.Audience
+                Aud = request.Audience
             };
-
-            // Create access token
-            var accessToken = CreateAccessToken(claims);
+            var accessToken = CreateToken(accessClaims, signingKey);
 
             // Create refresh token
-            var refreshToken = CreateRefreshToken(refreshTokenId, request.UserId, refreshTokenExpires);
-
-            // Store refresh token in cache for validation
-            var refreshTokenData = new RefreshTokenData
+            var refreshClaims = new JwtClaims
             {
-                TokenId = refreshTokenId,
-                UserId = request.UserId,
-                Expires = refreshTokenExpires,
-                Roles = request.Roles,
-                Permissions = request.Permissions,
-                CustomClaims = request.CustomClaims
+                Jti = refreshTokenId,
+                Sub = request.UserId,
+                TenantId = request.TenantId,
+                Iat = now,
+                Exp = refreshTokenExpires,
+                Iss = _options.Issuer,
+                Aud = request.Audience
             };
-
-            await StoreRefreshTokenAsync(refreshTokenId, refreshTokenData, refreshTokenExpires, cancellationToken);
+            var refreshToken = CreateToken(refreshClaims, refreshSigningKey);
 
             var tokenPair = new TokenPair
             {
@@ -80,81 +76,57 @@ public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, Generat
                 TokenType = NOFJwtConstants.TokenType
             };
 
-            return Result.Success(new GenerateJwtTokenResponse(tokenPair));
+            return Task.FromResult(Result.Success(new GenerateJwtTokenResponse(tokenPair)));
         }
         catch (Exception ex)
         {
-            return Result.Fail(500, ex.Message);
+            return Task.FromResult<Result<GenerateJwtTokenResponse>>(Result.Fail(500, ex.Message));
         }
     }
 
-    private string CreateAccessToken(JwtClaims claims)
+    private string CreateToken(JwtClaims claims, RsaSecurityKey signingKey)
     {
+        var claimList = new List<Claim>
+        {
+            new(NOFJwtConstants.ClaimTypes.JwtId, claims.Jti),
+            new(NOFJwtConstants.ClaimTypes.Subject, claims.Sub),
+            new(NOFJwtConstants.ClaimTypes.IssuedAt, new DateTimeOffset(claims.Iat).ToUnixTimeSeconds().ToString()),
+            new(NOFJwtConstants.ClaimTypes.ExpiresAt, new DateTimeOffset(claims.Exp).ToUnixTimeSeconds().ToString()),
+            new(NOFJwtConstants.ClaimTypes.Issuer, claims.Iss),
+            new(NOFJwtConstants.ClaimTypes.Audience, claims.Aud)
+        };
+
+        // Add tenant ID if provided
+        if (!string.IsNullOrEmpty(claims.TenantId))
+        {
+            claimList.Add(new Claim(NOFJwtConstants.ClaimTypes.TenantId, claims.TenantId));
+        }
+
+        // Add roles if provided
+        if (claims.Roles is not null)
+        {
+            claimList.AddRange(claims.Roles.Select(role => new Claim(NOFJwtConstants.ClaimTypes.Role, role)));
+        }
+
+        // Add permissions if provided
+        if (claims.Permissions is not null)
+        {
+            claimList.AddRange(claims.Permissions.Select(permission => new Claim(NOFJwtConstants.ClaimTypes.Permission, permission)));
+        }
+
+        // Add custom claims if provided
+        claimList.AddRange(claims.CustomClaims.Select(kv => new Claim(kv.Key, kv.Value)));
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new System.Security.Claims.ClaimsIdentity(new[]
-            {
-                new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.JwtId, claims.Jti),
-                new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.Subject, claims.Sub),
-                new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.TenantId, claims.TenantId),
-                new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.IssuedAt, new DateTimeOffset(claims.Iat).ToUnixTimeSeconds().ToString()),
-                new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.ExpiresAt, new DateTimeOffset(claims.Exp).ToUnixTimeSeconds().ToString())
-            }.Concat(claims.Roles.Select(role => new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.Role, role)))
-             .Concat(claims.Permissions.Select(permission => new System.Security.Claims.Claim(NOFJwtConstants.ClaimTypes.Permission, permission)))
-             .Concat(claims.CustomClaims.Select(kv => new System.Security.Claims.Claim(kv.Key, kv.Value)))),
-
+            Subject = new ClaimsIdentity(claimList),
             Expires = claims.Exp,
-            Issuer = _options.Issuer,
-            Audience = _options.Audience,
-            SigningCredentials = new SigningCredentials(_signingKey, _options.Algorithm)
+            Issuer = claims.Iss,
+            Audience = claims.Aud,
+            SigningCredentials = new SigningCredentials(signingKey, NOFJwtConstants.Algorithm)
         };
 
         var token = _tokenHandler.CreateToken(tokenDescriptor);
         return _tokenHandler.WriteToken(token);
-    }
-
-    private string CreateRefreshToken(string tokenId, string userId, DateTime expires)
-    {
-        var refreshTokenData = new
-        {
-            TokenId = tokenId,
-            UserId = userId,
-            Expires = expires,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(refreshTokenData));
-    }
-
-    private async Task StoreRefreshTokenAsync(string tokenId, RefreshTokenData data, DateTime expires, CancellationToken cancellationToken)
-    {
-        var cacheKey = new RefreshTokenCacheKey(tokenId);
-        await _cache.SetAsync(cacheKey, data, new DistributedCacheEntryOptions
-        {
-            AbsoluteExpiration = expires
-        }, cancellationToken);
-    }
-
-    private RsaSecurityKey CreateRsaSecurityKey(string keyString)
-    {
-        var rsa = RSA.Create();
-
-        if (!string.IsNullOrEmpty(keyString) && keyString.Length > 100)
-        {
-            try
-            {
-                rsa.ImportRSAPrivateKey(Convert.FromBase64String(keyString), out _);
-            }
-            catch
-            {
-                rsa = RSA.Create(2048);
-            }
-        }
-        else
-        {
-            rsa = RSA.Create(2048);
-        }
-
-        return new RsaSecurityKey(rsa);
     }
 }

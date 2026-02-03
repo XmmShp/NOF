@@ -54,12 +54,12 @@ public class JwtClaims
     /// <summary>
     /// Gets or sets the list of roles.
     /// </summary>
-    public List<string> Roles { get; set; } = new();
+    public List<string>? Roles { get; set; }
 
     /// <summary>
     /// Gets or sets the list of permissions.
     /// </summary>
-    public List<string> Permissions { get; set; } = new();
+    public List<string>? Permissions { get; set; }
 
     /// <summary>
     /// Gets or sets additional custom claims.

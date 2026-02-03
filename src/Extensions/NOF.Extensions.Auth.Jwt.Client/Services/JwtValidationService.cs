@@ -1,10 +1,8 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.IdentityModel.Tokens;
 using NOF;
-using System.Buffers.Text;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace NOF;
 
@@ -35,21 +33,22 @@ public class JwtValidationService
     {
         try
         {
-            // Get the token ID (jti) to check if it's revoked
+            // Get the token ID (jti) and audience to check if it's revoked and get proper keys
             var jwtToken = _tokenHandler.ReadJwtToken(token);
             var jti = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFJwtConstants.ClaimTypes.JwtId)?.Value;
+            var audience = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFJwtConstants.ClaimTypes.Audience)?.Value;
 
-            if (string.IsNullOrEmpty(jti))
+            if (string.IsNullOrEmpty(jti) || string.IsNullOrEmpty(audience))
                 return null;
 
             // Check if token is revoked in cache
-            var revokedKey = $"{NOFJwtConstants.RevokedTokenCachePrefix}{jti}";
+            var revokedKey = $"{NOFJwtConstants.RevokedRefreshTokenCachePrefix}{jti}";
             var isRevoked = await _cache.ExistsAsync(revokedKey, cancellationToken);
             if (isRevoked)
                 return null;
 
-            // Get validation parameters with JWKS
-            var validationParameters = await GetValidationParametersAsync(cancellationToken);
+            // Get validation parameters with JWKS for specific audience
+            var validationParameters = await GetValidationParametersAsync(audience, cancellationToken);
             if (validationParameters == null)
                 return null;
 
@@ -65,38 +64,11 @@ public class JwtValidationService
         }
     }
 
-    /// <summary>
-    /// Handles token revocation notification.
-    /// </summary>
-    /// <param name="notification">The revocation notification.</param>
-    public async Task HandleTokenRevokedAsync(TokenRevokedNotification notification, CancellationToken cancellationToken = default)
+    private async Task<TokenValidationParameters?> GetValidationParametersAsync(string audience, CancellationToken cancellationToken)
     {
-        // Cache the revoked token ID
-        var revokedKey = $"{NOFJwtConstants.RevokedTokenCachePrefix}{notification.TokenId}";
-        await _cache.SetAsync(revokedKey, true, new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = NOFJwtConstants.Expiration.RevokedTokenCacheDuration
-        }, cancellationToken);
-
-        // If user ID is provided, cache user revocation
-        if (!string.IsNullOrEmpty(notification.UserId))
-        {
-            var userRevokedKey = $"{NOFJwtConstants.RevokedUserCachePrefix}{notification.UserId}";
-            await _cache.SetAsync(userRevokedKey, true, new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = NOFJwtConstants.Expiration.RevokedTokenCacheDuration
-            }, cancellationToken);
-        }
-    }
-
-    private async Task<TokenValidationParameters?> GetValidationParametersAsync(CancellationToken cancellationToken)
-    {
-        var jwks = await GetJwksAsync(cancellationToken);
-        if (string.IsNullOrEmpty(jwks))
+        var keys = await GetJwksAsync(audience, cancellationToken);
+        if (keys == null)
             return null;
-
-        var jwksDocument = JsonDocument.Parse(jwks);
-        var keys = jwksDocument.RootElement.GetProperty("keys");
 
         var validationParameters = new TokenValidationParameters
         {
@@ -111,39 +83,40 @@ public class JwtValidationService
         return validationParameters;
     }
 
-    private async Task<string?> GetJwksAsync(CancellationToken cancellationToken)
+    private async Task<JsonWebKey[]?> GetJwksAsync(string audience, CancellationToken cancellationToken)
     {
-        var cachedJwks = await _cache.GetAsync<string>(NOFJwtConstants.JwksCacheKey, cancellationToken);
-        if (cachedJwks.HasValue)
-            return cachedJwks.Value;
+        var cacheKey = $"{NOFJwtConstants.JwksCacheKey}:{audience}";
+        var cachedKeys = await _cache.GetAsync<JsonWebKey[]>(cacheKey, cancellationToken);
+        if (cachedKeys.HasValue)
+            return cachedKeys.Value;
 
-        var request = new GetJwksRequest();
+        var request = new GetJwksRequest(audience);
         var result = await _requestSender.SendAsync(request, cancellationToken: cancellationToken);
 
-        if (result.IsSuccess && result.Value?.JwksJson != null)
+        if (result.IsSuccess && result.Value?.Keys != null)
         {
-            await _cache.SetAsync(NOFJwtConstants.JwksCacheKey, result.Value.JwksJson, new DistributedCacheEntryOptions
+            await _cache.SetAsync(cacheKey, result.Value.Keys, new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = _jwksCacheDuration
             }, cancellationToken);
 
-            return result.Value.JwksJson;
+            return result.Value.Keys;
         }
 
         return null;
     }
 
-    private IEnumerable<SecurityKey> ParseJwksKeys(JsonElement keysElement)
+    private IEnumerable<SecurityKey> ParseJwksKeys(JsonWebKey[] keys)
     {
-        var keys = new List<SecurityKey>();
+        var securityKeys = new List<SecurityKey>();
 
-        foreach (var keyElement in keysElement.EnumerateArray())
+        foreach (var key in keys)
         {
-            if (keyElement.GetProperty("kty").GetString() != "RSA")
+            if (key.Kty != "RSA")
                 continue;
 
-            var n = Base64Url.DecodeBytes(keyElement.GetProperty("n").GetString()!);
-            var e = Base64Url.DecodeBytes(keyElement.GetProperty("e").GetString()!);
+            var n = Convert.FromBase64String(key.N);
+            var e = Convert.FromBase64String(key.E);
 
             var rsa = RSA.Create();
             rsa.ImportParameters(new RSAParameters
@@ -152,10 +125,10 @@ public class JwtValidationService
                 Exponent = e
             });
 
-            keys.Add(new RsaSecurityKey(rsa));
+            securityKeys.Add(new RsaSecurityKey(rsa));
         }
 
-        return keys;
+        return securityKeys;
     }
 
     private JwtClaims ExtractClaims(System.Security.Claims.ClaimsPrincipal principal)
