@@ -16,4 +16,8 @@
     <ProjectReference Include="..\NOF.Extensions.Auth.Jwt.Client\NOF.Extensions.Auth.Jwt.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Portable.BouncyCastle" />
+  </ItemGroup>
+
 </Project>

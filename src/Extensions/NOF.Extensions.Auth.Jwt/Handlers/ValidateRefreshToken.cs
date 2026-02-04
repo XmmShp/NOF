@@ -42,9 +42,8 @@ public class ValidateRefreshToken : IRequestHandler<ValidateRefreshTokenRequest,
                     return Result.Fail(400, "Invalid refresh token: missing audience");
                 }
 
-                // Derive refresh token key from master key
-                var refreshTokenKey = _keyDerivationService.DeriveRefreshTokenKey(audience);
-                var refreshSigningKey = _keyDerivationService.CreateRsaSecurityKey(refreshTokenKey);
+                // Get cached refresh token RSA key
+                var refreshSigningKey = _keyDerivationService.GetOrCreateRefreshTokenRsaSecurityKey(audience);
 
                 var tokenValidationParameters = new TokenValidationParameters
                 {

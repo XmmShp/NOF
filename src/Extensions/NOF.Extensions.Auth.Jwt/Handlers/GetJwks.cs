@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace NOF;
 
@@ -31,11 +33,13 @@ public class GetJwks : IRequestHandler<GetJwksRequest, GetJwksResponse>
 
     private Task<JsonWebKey[]> GetJwksAsync(string audience)
     {
-        // Derive client-specific key from master key based on audience
-        var clientKey = _keyDerivationService.DeriveClientKey(audience);
-        var signingKey = _keyDerivationService.CreateRsaSecurityKey(clientKey);
+        // Get cached RSA key for the audience
+        var signingKey = _keyDerivationService.GetOrCreateRsaSecurityKey(audience);
         var rsa = signingKey.Rsa;
         var parameters = rsa.ExportParameters(false);
+
+        // Compute key ID using public key DER encoding SHA-256 hash
+        var kid = _keyDerivationService.ComputeKeyId(signingKey);
 
         var keys = new[]
         {
@@ -44,9 +48,9 @@ public class GetJwks : IRequestHandler<GetJwksRequest, GetJwksResponse>
                 Kty = "RSA",
                 Use = "sig",
                 Alg = NOFJwtConstants.Algorithm,
-                Kid = clientKey[^16..], // Use last 16 characters of client key as key ID
-                N = Convert.ToBase64String(parameters.Modulus ?? throw new InvalidOperationException("RSA modulus cannot be null")),
-                E = Convert.ToBase64String(parameters.Exponent ?? throw new InvalidOperationException("RSA exponent cannot be null"))
+                Kid = kid,
+                N = Base64UrlEncoder.Encode(parameters.Modulus ?? throw new InvalidOperationException("RSA modulus cannot be null")),
+                E = Base64UrlEncoder.Encode(parameters.Exponent ?? throw new InvalidOperationException("RSA exponent cannot be null"))
             }
         };
 

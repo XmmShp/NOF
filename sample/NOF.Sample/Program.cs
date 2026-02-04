@@ -14,6 +14,8 @@ builder.Services.AddNOF_SampleAutoInjectServices();
 
 builder.Services.AddRedisCache();
 
+builder.AddJwtAuthentication();
+
 builder.AddMassTransit()
     .UseRabbitMQ();
 
@@ -22,6 +24,7 @@ builder.AddEFCore<ConfigurationDbContext, ConfigurationPublicDbContext>()
     .UsePostgreSQL();
 
 builder.Services.AddOptionsInConfiguration<IdGeneratorOptions>();
+builder.Services.AddScoped<NOF.Sample.WebUI.Services.JwtAuthService>();
 builder.Services.AddAntDesign()
     .AddRazorComponents()
     .AddInteractiveServerComponents();

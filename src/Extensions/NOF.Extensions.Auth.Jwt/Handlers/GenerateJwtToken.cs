@@ -34,10 +34,8 @@ public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, Generat
             var refreshTokenId = Guid.NewGuid().ToString();
 
             // Create access token
-            var clientKey = _keyDerivationService.DeriveClientKey(request.Audience);
-            var signingKey = _keyDerivationService.CreateRsaSecurityKey(clientKey);
-            var refreshTokenKey = _keyDerivationService.DeriveRefreshTokenKey(request.Audience);
-            var refreshSigningKey = _keyDerivationService.CreateRsaSecurityKey(refreshTokenKey);
+            var signingKey = _keyDerivationService.GetOrCreateRsaSecurityKey(request.Audience);
+            var refreshSigningKey = _keyDerivationService.GetOrCreateRefreshTokenRsaSecurityKey(request.Audience);
 
             var accessClaims = new JwtClaims
             {
