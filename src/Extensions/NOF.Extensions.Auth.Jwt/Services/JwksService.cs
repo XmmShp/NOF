@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace NOF;
@@ -8,12 +9,12 @@ namespace NOF;
 public interface IJwksService
 {
     /// <summary>
-    /// Gets the JSON Web Key Set for the specified audience.
+    /// Gets the JSON Web Key Set response for the specified audience.
     /// </summary>
     /// <param name="audience">The audience identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The JSON Web Key Set containing the public keys.</returns>
-    Task<JsonWebKey[]> GetJwksAsync(string audience, CancellationToken cancellationToken = default);
+    /// <returns>The JWKS response containing issuer and public keys.</returns>
+    Task<GetJwksResponse> GetJwksAsync(string audience, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -21,15 +22,17 @@ public interface IJwksService
 /// </summary>
 public class JwksService : IJwksService
 {
+    private readonly JwtOptions _options;
     private readonly IKeyDerivationService _keyDerivationService;
 
-    public JwksService(IKeyDerivationService keyDerivationService)
+    public JwksService(IOptions<JwtOptions> options, IKeyDerivationService keyDerivationService)
     {
+        _options = options.Value;
         _keyDerivationService = keyDerivationService;
     }
 
     /// <inheritdoc />
-    public Task<JsonWebKey[]> GetJwksAsync(string audience, CancellationToken cancellationToken = default)
+    public Task<GetJwksResponse> GetJwksAsync(string audience, CancellationToken cancellationToken = default)
     {
         // Get cached RSA key for the audience
         var signingKey = _keyDerivationService.GetOrCreateRsaSecurityKey(audience);
@@ -52,6 +55,8 @@ public class JwksService : IJwksService
             }
         };
 
-        return Task.FromResult(keys);
+        var response = new GetJwksResponse(_options.Issuer, keys);
+
+        return Task.FromResult(response);
     }
 }

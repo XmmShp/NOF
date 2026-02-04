@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-
 namespace NOF;
 
 /// <summary>
@@ -8,20 +6,18 @@ namespace NOF;
 public class GetJwks : IRequestHandler<GetJwksRequest, GetJwksResponse>
 {
     private readonly IJwksService _jwksService;
-    private readonly JwtOptions _jwtOptions;
 
-    public GetJwks(IJwksService jwksService, IOptions<JwtOptions> jwtOptions)
+    public GetJwks(IJwksService jwksService)
     {
         _jwksService = jwksService;
-        _jwtOptions = jwtOptions.Value;
     }
 
     public async Task<Result<GetJwksResponse>> HandleAsync(GetJwksRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            var keys = await _jwksService.GetJwksAsync(request.Audience, cancellationToken);
-            return Result.Success(new GetJwksResponse(_jwtOptions.Issuer, keys));
+            var jwksResponse = await _jwksService.GetJwksAsync(request.Audience, cancellationToken);
+            return Result.Success(new GetJwksResponse(jwksResponse.Issuer, jwksResponse.Keys));
         }
         catch (Exception ex)
         {

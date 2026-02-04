@@ -9,7 +9,7 @@ public abstract class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateR
         DbContext = dbContext;
     }
 
-    public ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken)
+    public virtual ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken)
     {
         return DbContext.Set<TAggregateRoot>().FindAsync(keyValues: keyValues, cancellationToken: cancellationToken);
     }

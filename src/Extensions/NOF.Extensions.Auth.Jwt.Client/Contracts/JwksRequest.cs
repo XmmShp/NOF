@@ -8,4 +8,4 @@ public record GetJwksRequest(string Audience) : IRequest<GetJwksResponse>;
 /// <summary>
 /// Response for getting JWKS (JSON Web Key Set).
 /// </summary>
-public record GetJwksResponse(string Issuer, JsonWebKey[]? Keys);
+public record GetJwksResponse(string Issuer, JsonWebKey[] Keys);
