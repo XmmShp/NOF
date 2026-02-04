@@ -27,7 +27,7 @@ internal static class IncrementalGeneratorExtensions
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
                 .ToList();
 
-            diagnostics.Should().BeEmpty("生成的代码应能成功编译");
+            diagnostics.Should().BeEmpty("Generated code should compile successfully");
 
             return driver.GetRunResult();
         }

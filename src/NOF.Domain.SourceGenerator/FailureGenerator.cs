@@ -9,26 +9,43 @@ using System.Text;
 namespace NOF.Domain.SourceGenerator;
 
 /// <summary>
-/// 源生成器：检测标记了FailureAttribute的类，并生成静态错误实例
+/// Source generator: Detects classes marked with FailureAttribute and generates static error instances
 /// </summary>
 [Generator]
 public class FailureGenerator : IIncrementalGenerator
 {
+    // Diagnostic descriptors for error reporting
+    private static readonly DiagnosticDescriptor DuplicateFailureNameDescriptor = new(
+        "NOF001",
+        "Duplicate Failure Name",
+        "Class '{0}' contains duplicate Failure names: {1}",
+        "FailureGenerator",
+        DiagnosticSeverity.Error,
+        true);
+
+    private static readonly DiagnosticDescriptor DuplicateFailureCodeDescriptor = new(
+        "NOF002",
+        "Duplicate Failure Code",
+        "Class '{0}' contains duplicate Failure codes: {1}",
+        "FailureGenerator",
+        DiagnosticSeverity.Error,
+        true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // 获取所有带有FailureAttribute的类
+        // Get all classes with FailureAttribute
         var classDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => IsSyntaxTargetForGeneration(s),
                 transform: static (ctx, _) => GetSemanticTargetForGeneration(ctx))
             .Where(static m => m is not null);
 
-        // 注册输出生成
+        // Register source output
         context.RegisterSourceOutput(classDeclarations.Collect(), static (spc, source) => Execute(source, spc));
     }
 
     /// <summary>
-    /// 判断语法节点是否是生成目标（带有Attribute的类或record声明）
+    /// Determines if a syntax node is a generation target (class or record declaration with attributes)
     /// </summary>
     private static bool IsSyntaxTargetForGeneration(SyntaxNode node)
     {
@@ -36,31 +53,51 @@ public class FailureGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 获取语义模型目标
+    /// Gets the semantic model target
     /// </summary>
     private static FailureClassInfo? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
     {
         var typeDeclaration = (TypeDeclarationSyntax)context.Node;
 
-        // 获取类型的语义符号
+        // Get the type's semantic symbol
         var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration) as INamedTypeSymbol;
         if (typeSymbol is null)
         {
             return null;
         }
 
-        // 检查是否有FailureAttribute
-        var errorAttributes = typeSymbol.GetAttributes()
-            .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.FailureAttribute")
-            .ToList();
-
-        if (errorAttributes.Count == 0)
+        // Check if it's a partial type
+        if (typeDeclaration.Modifiers.All(m => m.Text != "partial"))
         {
             return null;
         }
 
-        // 检查是否是partial类型
-        if (typeDeclaration.Modifiers.All(m => m.Text != "partial"))
+        // Get FailureAttribute from this specific syntax declaration only
+        var errorAttributes = new List<AttributeData>();
+        foreach (var attributeList in typeDeclaration.AttributeLists)
+        {
+            foreach (var attribute in attributeList.Attributes)
+            {
+                var attributeSymbol = context.SemanticModel.GetSymbolInfo(attribute).Symbol?.ContainingType;
+                if (attributeSymbol?.ToDisplayString() == "NOF.FailureAttribute")
+                {
+                    var attributeData = context.SemanticModel.GetSymbolInfo(attribute).Symbol as IMethodSymbol;
+                    if (attributeData?.ContainingType != null)
+                    {
+                        // Get the attribute data from the semantic model
+                        var semanticAttribute = typeSymbol.GetAttributes()
+                            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.FailureAttribute" &&
+                                                a.ApplicationSyntaxReference?.GetSyntax() == attribute);
+                        if (semanticAttribute != null)
+                        {
+                            errorAttributes.Add(semanticAttribute);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (errorAttributes.Count == 0)
         {
             return null;
         }
@@ -83,12 +120,13 @@ public class FailureGenerator : IIncrementalGenerator
             Namespace = typeSymbol.ContainingNamespace.ToDisplayString(),
             IsRecord = typeDeclaration is RecordDeclarationSyntax,
             IsAbstract = typeSymbol.IsAbstract,
-            Failures = errors
+            Failures = errors,
+            Location = typeDeclaration.GetLocation()
         };
     }
 
     /// <summary>
-    /// 执行代码生成
+    /// Execute code generation
     /// </summary>
     private static void Execute(ImmutableArray<FailureClassInfo?> errorClasses, SourceProductionContext context)
     {
@@ -106,18 +144,53 @@ public class FailureGenerator : IIncrementalGenerator
             return;
         }
 
-        // 为每个类生成代码
-        foreach (var errorClass in validClasses)
+        // Group by namespace and type name, merge all Failure info for the same class
+        var groupedClasses = validClasses
+            .GroupBy(c => new { c!.Namespace, c.TypeName })
+            .Select(g => new FailureClassInfo
+            {
+                TypeName = g.Key.TypeName,
+                Namespace = g.Key.Namespace,
+                IsRecord = g.First()!.IsRecord,
+                IsAbstract = g.First()!.IsAbstract,
+                Failures = g.SelectMany(c => c!.Failures).ToList(),
+                Location = g.First()!.Location
+            })
+            .ToList();
+
+        // Check for duplicate Name or ErrorCode in each merged class
+        foreach (var errorClass in groupedClasses)
         {
-            var source = GenerateFailureClass(errorClass!);
-            // 使用完全限定名避免文件名冲突（将命名空间中的点替换为下划线）
-            var safeFileName = $"{errorClass!.Namespace.Replace('.', '_')}_{errorClass.TypeName}.g.cs";
+            // Check for duplicate Name
+            var duplicateNames = errorClass.Failures.GroupBy(e => e.Name).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            if (duplicateNames.Count > 0)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DuplicateFailureNameDescriptor,
+                    errorClass.Location, errorClass.TypeName, string.Join(", ", duplicateNames)));
+                continue;
+            }
+
+            // Check for duplicate ErrorCode
+            var duplicateErrorCodes = errorClass.Failures.GroupBy(e => e.FailureCode).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            if (duplicateErrorCodes.Count > 0)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DuplicateFailureCodeDescriptor,
+                    errorClass.Location, errorClass.TypeName, string.Join(", ", duplicateErrorCodes)));
+                continue;
+            }
+
+            // Only generate code if there are no duplicates
+            var source = GenerateFailureClass(errorClass);
+            // Use namespace and type name to generate file name
+            var safeFileName = $"{errorClass.Namespace.Replace('.', '_')}_{errorClass.TypeName}.g.cs";
             context.AddSource(safeFileName, SourceText.From(source, Encoding.UTF8));
         }
     }
 
     /// <summary>
-    /// 生成错误类的部分类代码
+    /// Generate partial class code for error class
     /// </summary>
     private static string GenerateFailureClass(FailureClassInfo errorClass)
     {
@@ -128,14 +201,14 @@ public class FailureGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {errorClass.Namespace}");
         sb.AppendLine("{");
 
-        // 生成类或record声明
+        // Generate class or record declaration
         var typeKeyword = errorClass.IsRecord ? "record" : "class";
         var abstractKeyword = errorClass.IsAbstract ? "abstract " : "";
 
         sb.AppendLine($"    public {abstractKeyword}partial {typeKeyword} {errorClass.TypeName}");
         sb.AppendLine("    {");
 
-        // 生成静态错误实例
+        // Generate static error instances
         foreach (var error in errorClass.Failures)
         {
             sb.AppendLine("        /// <summary>");
@@ -152,7 +225,7 @@ public class FailureGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 错误类信息
+    /// Error class information
     /// </summary>
     private class FailureClassInfo
     {
@@ -161,10 +234,11 @@ public class FailureGenerator : IIncrementalGenerator
         public bool IsRecord { get; set; }
         public bool IsAbstract { get; set; }
         public List<FailureInfo> Failures { get; set; } = [];
+        public Location Location { get; set; } = Location.None;
     }
 
     /// <summary>
-    /// 单个错误信息
+    /// Single error information
     /// </summary>
     private class FailureInfo
     {
