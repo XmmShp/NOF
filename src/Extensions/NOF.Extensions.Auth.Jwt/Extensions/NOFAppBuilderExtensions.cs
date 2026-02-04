@@ -34,6 +34,9 @@ public static partial class __NOF_Extensions_Auth_Jwt_Extensions__
             // Register the key derivation service
             builder.Services.AddSingleton<IKeyDerivationService, KeyDerivationService>();
 
+            // Register the JWKS service
+            builder.Services.AddSingleton<IJwksService, JwksService>();
+
             return builder;
         }
 
