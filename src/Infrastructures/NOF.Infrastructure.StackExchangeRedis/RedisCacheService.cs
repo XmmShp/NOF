@@ -54,7 +54,7 @@ public class RedisCacheService : ICacheService
     {
         var prefixedKey = ApplyKeyPrefix(key);
         var expiry = GetExpiration(options);
-        _database.StringSet(prefixedKey, value, expiry);
+        _database.StringSet(prefixedKey, value, expiry, false);
     }
 
     /// <inheritdoc />
@@ -62,7 +62,7 @@ public class RedisCacheService : ICacheService
     {
         var prefixedKey = ApplyKeyPrefix(key);
         var expiry = GetExpiration(options);
-        await _database.StringSetAsync(prefixedKey, value, expiry);
+        await _database.StringSetAsync(prefixedKey, value, expiry, false);
     }
 
     /// <inheritdoc />
@@ -177,7 +177,7 @@ public class RedisCacheService : ICacheService
         var prefixedKey = ApplyKeyPrefix(key);
         var data = _serializer.Serialize(value);
         var expiry = GetExpiration(options ?? _options.DefaultEntryOptions);
-        await _database.StringSetAsync(prefixedKey, data.ToArray(), expiry);
+        await _database.StringSetAsync(prefixedKey, data.ToArray(), expiry, false);
     }
 
     /// <inheritdoc />
@@ -222,7 +222,7 @@ public class RedisCacheService : ICacheService
         {
             var prefixedKey = ApplyKeyPrefix(item.Key);
             var data = _serializer.Serialize(item.Value);
-            tasks.Add(batch.StringSetAsync(prefixedKey, data.ToArray(), expiry));
+            tasks.Add(batch.StringSetAsync(prefixedKey, data.ToArray(), expiry, false));
         }
 
         batch.Execute();
