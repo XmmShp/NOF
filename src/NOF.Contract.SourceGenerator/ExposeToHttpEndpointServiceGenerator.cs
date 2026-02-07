@@ -124,12 +124,18 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
             var methodName = endpoint.OperationName;
 
             sb.AppendLine("        /// <summary>");
-            sb.AppendLine($"        /// Calls {endpoint.Route} endpoint");
+            if (!string.IsNullOrEmpty(endpoint.DisplayName))
+                sb.AppendLine($"        /// {EscapeXmlComment(endpoint.DisplayName)}");
+            else
+                sb.AppendLine($"        /// Calls {endpoint.Route} endpoint");
+            if (!string.IsNullOrEmpty(endpoint.Summary))
+                sb.AppendLine($"        /// <para>{EscapeXmlComment(endpoint.Summary)}</para>");
+            if (!string.IsNullOrEmpty(endpoint.Description))
+                sb.AppendLine($"        /// <para>{EscapeXmlComment(endpoint.Description)}</para>");
             sb.AppendLine("        /// </summary>");
             sb.AppendLine("        /// <param name=\"request\">Request parameters</param>");
             sb.AppendLine("        /// <param name=\"completionOption\">When the operation should complete</param>");
             sb.AppendLine("        /// <param name=\"cancellationToken\">Cancellation token</param>");
-            sb.AppendLine("        /// <returns>Task result</returns>");
             sb.AppendLine($"        Task<{returnType}> {methodName}Async({requestType} request, HttpCompletionOption completionOption = default, CancellationToken cancellationToken = default);");
             sb.AppendLine();
         }
@@ -389,6 +395,12 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
 
     private static bool IsBodyMethod(HttpVerb verb) =>
         verb == HttpVerb.Post || verb == HttpVerb.Put || verb == HttpVerb.Patch;
+
+    private static string EscapeXmlComment(string? value)
+    {
+        if (value is null) return string.Empty;
+        return value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+    }
 }
 
 #region Helper
@@ -458,6 +470,26 @@ internal static class ExposeToHttpEndpointHelpers
         var allowAnonymous = attr.NamedArguments
             .FirstOrDefault(arg => arg.Key == "AllowAnonymous").Value.Value is true;
 
+        var allAttrs = classSymbol.GetAttributes();
+
+        var displayName = allAttrs
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.EndpointNameAttribute")
+            ?.ConstructorArguments.FirstOrDefault().Value as string;
+
+        var description = allAttrs
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.EndpointDescriptionAttribute")
+            ?.ConstructorArguments.FirstOrDefault().Value as string;
+
+        var summary = allAttrs
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.SummaryAttribute")
+            ?.ConstructorArguments.FirstOrDefault().Value as string;
+
+        var tags = allAttrs
+            .Where(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.CategoryAttribute")
+            .Select(a => a.ConstructorArguments.FirstOrDefault().Value as string)
+            .Where(v => v != null)
+            .ToArray();
+
         return new EndpointInfo
         {
             RequestType = classSymbol,
@@ -465,8 +497,12 @@ internal static class ExposeToHttpEndpointHelpers
             Method = method,
             Route = route,
             OperationName = operationName,
+            DisplayName = displayName,
             Permission = permission,
-            AllowAnonymous = allowAnonymous
+            AllowAnonymous = allowAnonymous,
+            Description = description,
+            Summary = summary,
+            Tags = tags!
         };
     }
 }
@@ -478,8 +514,12 @@ internal class EndpointInfo
     public HttpVerb Method { get; set; }
     public string Route { get; set; } = string.Empty;
     public string OperationName { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
     public string? Permission { get; set; }
     public bool AllowAnonymous { get; set; }
+    public string? Description { get; set; }
+    public string? Summary { get; set; }
+    public string[] Tags { get; set; } = System.Array.Empty<string>();
 }
 
 internal enum HttpVerb

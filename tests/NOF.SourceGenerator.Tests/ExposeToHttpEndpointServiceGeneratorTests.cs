@@ -332,4 +332,139 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         generatedCode.Should().Contain("JsonContent.Create(request,");
         generatedCode.Should().NotContain("Dictionary<string, object?>");
     }
+
+    [Fact]
+    public void RecordWithPrimaryCtorAndExtraProps_AllPropertiesVisible()
+    {
+        // Record primary ctor params become properties (readable), extra props also visible
+        const string source = """
+
+                              using NOF;
+
+                              namespace Items
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
+                                  public record UpdateItemRequest(long Id) : IRequest
+                                  {
+                                      public string? Value { get; set; }
+                                      public int? Priority { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Route param Id should be interpolated into URL
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+
+        // Non-route props should go to body dictionary
+        generatedCode.Should().Contain("Dictionary<string, object?>");
+        generatedCode.Should().Contain("body[\"Value\"] = request.Value");
+        generatedCode.Should().Contain("body[\"Priority\"] = request.Priority");
+
+        // Route param should NOT be in body
+        generatedCode.Should().NotContain("body[\"Id\"]");
+    }
+
+    [Fact]
+    public void RecordWithAllPropsInCtor_RouteAndBodyCorrectlySplit()
+    {
+        // All properties come from primary ctor — all are readable
+        const string source = """
+
+                              using NOF;
+
+                              namespace Files
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
+                                  public record AddFileRequest(long NodeId, string FileName, string Content) : IRequest;
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Route params should be interpolated
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.NodeId.ToString()!)");
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.FileName");
+
+        // Only Content should go to body
+        generatedCode.Should().Contain("body[\"Content\"] = request.Content");
+        generatedCode.Should().NotContain("body[\"NodeId\"]");
+        generatedCode.Should().NotContain("body[\"FileName\"]");
+    }
+
+    [Fact]
+    public void ClassWithPrimaryCtorParams_ParamsNotVisibleAsProperties()
+    {
+        // Class primary ctor params are NOT properties — they won't be found by GetAllPublicProperties
+        // Only explicitly declared properties are visible
+        const string source = """
+
+                              using NOF;
+
+                              namespace Items
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                                  public class UpdateItemClassRequest(long id) : IRequest
+                                  {
+                                      public string Name { get; set; } = default!;
+                                      public int Count { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Class primary ctor param 'id' (lowercase) is NOT a property, so GetAllPublicProperties won't find it.
+        // The route has {id} but there's no matching public property — hasRouteParams is false.
+        // Therefore the generator falls back to serializing the whole request as body (no dictionary).
+        generatedCode.Should().Contain("JsonContent.Create(request,");
+        generatedCode.Should().NotContain("Dictionary<string, object?>");
+
+        // The route placeholder {id} is NOT interpolated — it stays as a literal string
+        generatedCode.Should().Contain("var endpoint = \"/api/items/{id}\"");
+    }
+
+    [Fact]
+    public void ClassWithExplicitPropsMatchingRoute_WorksCorrectly()
+    {
+        // Class with explicit properties that match route params
+        const string source = """
+
+                              using NOF;
+
+                              namespace Items
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                                  public class UpdateItemRequest : IRequest
+                                  {
+                                      public long Id { get; set; }
+                                      public string Name { get; set; } = default!;
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Id should be interpolated into URL
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+
+        // Name should go to body
+        generatedCode.Should().Contain("body[\"Name\"] = request.Name");
+
+        // Id should NOT be in body
+        generatedCode.Should().NotContain("body[\"Id\"]");
+    }
 }

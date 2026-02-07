@@ -120,11 +120,17 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine("using Microsoft.AspNetCore.Builder;");
         sb.AppendLine("using Microsoft.AspNetCore.Http;");
         sb.AppendLine("using Microsoft.AspNetCore.Mvc;");
-        sb.AppendLine("using System.Text.Json;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine();
         sb.AppendLine($"namespace {targetNamespace}");
         sb.AppendLine("{");
+
+        // Generate Body DTO classes for non-GET endpoints with route params that have body properties
+        foreach (var ep in endpoints)
+        {
+            EmitBodyDtoIfNeeded(sb, ep);
+        }
+
         sb.AppendLine("    public static class __WebApplicationExtensions__");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
@@ -166,7 +172,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
         // Case 1: GET — always use [AsParameters], minimal API handles route + query binding
         // Case 2: Non-GET, no route params — use [FromBody] directly
-        // Case 3: Non-GET, with route params — bind route params individually + optional [FromBody] body + construct request
+        // Case 3: Non-GET, with route params — bind route params individually + optional [FromBody] body DTO + construct request
         if (isGet || !hasRouteParams)
         {
             var fromAttr = isGet ? "[AsParameters]" : "[FromBody]";
@@ -180,38 +186,21 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         }
         else
         {
-            // Non-GET with route params: need to split binding
+            // Non-GET with route params: use generated Body DTO for OpenAPI-friendly binding
             var allProperties = GetAllPublicProperties(ep.RequestType);
-
-            // Match route params to properties (case-insensitive)
-            var routeParamProps = new List<(string RouteParamName, IPropertySymbol Property)>();
-            var bodyProps = new List<IPropertySymbol>();
-
-            foreach (var prop in allProperties)
-            {
-                var matchedParam = routeParams.FirstOrDefault(rp =>
-                    string.Equals(rp, prop.Name, StringComparison.OrdinalIgnoreCase));
-                if (matchedParam != null)
-                {
-                    routeParamProps.Add((matchedParam, prop));
-                }
-                else
-                {
-                    bodyProps.Add(prop);
-                }
-            }
-
+            var (routeParamProps, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
             var hasBody = bodyProps.Count > 0;
+            var bodyDtoName = GetBodyDtoName(ep.RequestType);
 
             // Build lambda parameter list
             var lambdaParams = new List<string>();
-            foreach (var (routeParamName, prop) in routeParamProps)
+            foreach (var (_, prop) in routeParamProps)
             {
                 lambdaParams.Add($"{prop.Type.ToDisplayString()} {ToCamelCase(prop.Name)}");
             }
             if (hasBody)
             {
-                lambdaParams.Add($"[FromBody] System.Text.Json.JsonElement __body__");
+                lambdaParams.Add($"[FromBody] NOF.Generated.{bodyDtoName} __body__");
             }
             lambdaParams.Add("[FromServices] NOF.IRequestSender sender");
 
@@ -222,28 +211,20 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             sb.AppendLine($"                async ({lambdaParamStr}) =>");
             sb.AppendLine("                {");
 
-            // Deserialize body properties from JsonElement
-            if (hasBody)
-            {
-                sb.AppendLine("                    var __opts__ = System.Text.Json.JsonSerializerOptions.NOFDefaults;");
-                foreach (var prop in bodyProps)
-                {
-                    var propType = prop.Type.ToDisplayString();
-                    var bang = NullForgivingSuffix(prop.Type);
-                    var camel = ToCamelCase(prop.Name);
-                    sb.AppendLine($"                    var __{camel}__ = (__body__.TryGetProperty(\"{prop.Name}\", out var __el_{camel}__) || __body__.TryGetProperty(\"{camel}\", out __el_{camel}__))");
-                    sb.AppendLine($"                        ? __el_{camel}__.Deserialize<{propType}>(__opts__){bang}");
-                    sb.AppendLine($"                        : default({propType}){bang};");
-                }
-            }
-
             // Construct the request object
-            // Strategy: find a constructor that can accept all properties, or fall back to parameterless + property setters
+            // Supports three patterns:
+            //   1. Record with primary ctor covering all props: new Request(a, b, c)
+            //   2. Hybrid: ctor + extra settable props: new Request(a) { B = b, C = c }
+            //   3. Parameterless ctor + object initializer: new Request { A = a, B = b }
             var bestCtor = FindBestConstructor(ep.RequestType, allProperties);
+            var ctorParamNames = bestCtor != null
+                ? new HashSet<string>(bestCtor.Parameters.Select(p => p.Name), StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // Build constructor arguments
+            var ctorArgStr = "";
             if (bestCtor != null)
             {
-                // Use constructor — map each ctor param to either a route param or a body param
                 var ctorArgs = new List<string>();
                 foreach (var ctorParam in bestCtor.Parameters)
                 {
@@ -257,31 +238,29 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                     {
                         var bodyMatch = bodyProps.FirstOrDefault(bp =>
                             string.Equals(bp.Name, ctorParam.Name, StringComparison.OrdinalIgnoreCase));
-                        if (bodyMatch != null)
-                        {
-                            ctorArgs.Add($"__{ToCamelCase(bodyMatch.Name)}__");
-                        }
-                        else
-                        {
-                            ctorArgs.Add($"default");
-                        }
+                        ctorArgs.Add(bodyMatch != null ? $"__body__.{bodyMatch.Name}" : "default");
                     }
                 }
-                sb.AppendLine($"                    var request = new {requestType}({string.Join(", ", ctorArgs)});");
+                ctorArgStr = string.Join(", ", ctorArgs);
             }
-            else
+
+            // Collect remaining properties not covered by the constructor
+            var initLines = new List<string>();
+            foreach (var (_, prop) in routeParamProps)
             {
-                // Parameterless constructor + object initializer (supports both set and init properties)
-                var initLines = new List<string>();
-                foreach (var (_, prop) in routeParamProps)
-                {
+                if (!ctorParamNames.Contains(prop.Name))
                     initLines.Add($"                        {prop.Name} = {ToCamelCase(prop.Name)}");
-                }
-                foreach (var prop in bodyProps)
-                {
-                    initLines.Add($"                        {prop.Name} = __{ToCamelCase(prop.Name)}__");
-                }
-                sb.AppendLine($"                    var request = new {requestType}");
+            }
+            foreach (var prop in bodyProps)
+            {
+                if (!ctorParamNames.Contains(prop.Name))
+                    initLines.Add($"                        {prop.Name} = __body__.{prop.Name}");
+            }
+
+            // Emit: new RequestType(ctorArgs) { ExtraProp = value, ... };
+            if (initLines.Count > 0)
+            {
+                sb.AppendLine($"                    var request = new {requestType}({ctorArgStr})");
                 sb.AppendLine("                    {");
                 for (var i = 0; i < initLines.Count; i++)
                 {
@@ -289,6 +268,10 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                     sb.AppendLine(i < initLines.Count - 1 ? "," : "");
                 }
                 sb.AppendLine("                    };");
+            }
+            else
+            {
+                sb.AppendLine($"                    var request = new {requestType}({ctorArgStr});");
             }
 
             sb.AppendLine("                    var response = await sender.SendAsync(request);");
@@ -310,6 +293,36 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine(";");
+        sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Emits a Body DTO class for a non-GET endpoint with route params that has body properties.
+    /// The DTO contains only the non-route properties, giving OpenAPI full schema visibility.
+    /// </summary>
+    private static void EmitBodyDtoIfNeeded(StringBuilder sb, EndpointInfo ep)
+    {
+        if (ep.Method == HttpVerb.Get) return;
+
+        var routeParams = ExtractRouteParameters(ep.Route);
+        if (routeParams.Count == 0) return;
+
+        var allProperties = GetAllPublicProperties(ep.RequestType);
+        var (_, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
+        if (bodyProps.Count == 0) return;
+
+        var dtoName = GetBodyDtoName(ep.RequestType);
+        sb.AppendLine($"    public class {dtoName}");
+        sb.AppendLine("    {");
+        foreach (var prop in bodyProps)
+        {
+            var propType = prop.Type.ToDisplayString();
+            var defaultValue = prop.Type.IsValueType ? "" : " = default!;";
+            if (prop.Type.NullableAnnotation == NullableAnnotation.Annotated)
+                defaultValue = "";
+            sb.AppendLine($"        public {propType} {prop.Name} {{ get; set; }}{defaultValue}");
+        }
+        sb.AppendLine("    }");
         sb.AppendLine();
     }
 
@@ -361,24 +374,32 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             .FirstOrDefault();
     }
 
+    private static (List<(string RouteParamName, IPropertySymbol Property)> RouteProps, List<IPropertySymbol> BodyProps)
+        SplitRouteAndBodyProps(List<IPropertySymbol> allProperties, List<string> routeParams)
+    {
+        var routeParamProps = new List<(string RouteParamName, IPropertySymbol Property)>();
+        var bodyProps = new List<IPropertySymbol>();
+
+        foreach (var prop in allProperties)
+        {
+            var matchedParam = routeParams.FirstOrDefault(rp =>
+                string.Equals(rp, prop.Name, StringComparison.OrdinalIgnoreCase));
+            if (matchedParam != null)
+                routeParamProps.Add((matchedParam, prop));
+            else
+                bodyProps.Add(prop);
+        }
+
+        return (routeParamProps, bodyProps);
+    }
+
+    private static string GetBodyDtoName(INamedTypeSymbol requestType)
+        => $"__{requestType.Name}_Body__";
+
     private static string ToCamelCase(string name)
     {
         if (string.IsNullOrEmpty(name)) return name;
         return char.ToLowerInvariant(name[0]) + name.Substring(1);
-    }
-
-    /// <summary>
-    /// Returns "!" if the type is a non-nullable reference type, otherwise empty string.
-    /// This prevents CS8604 warnings when assigning Deserialize results to non-nullable parameters.
-    /// </summary>
-    private static string NullForgivingSuffix(ITypeSymbol type)
-    {
-        // Value types (int, long, etc.) don't need null-forgiving
-        if (type.IsValueType) return string.Empty;
-        // Nullable reference types (string?) don't need it either
-        if (type.NullableAnnotation == NullableAnnotation.Annotated) return string.Empty;
-        // Non-nullable reference types (string, MyClass) need "!"
-        return "!";
     }
 
     private static string EscapeString(string? value)
@@ -425,28 +446,23 @@ internal static class ExposeToHttpEndpointHelpers
 
         var allAttrs = classSymbol.GetAttributes();
 
-        var description = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.DescriptionAttribute")
+        var displayName = allAttrs
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.EndpointNameAttribute")
             ?.ConstructorArguments.FirstOrDefault().Value as string;
 
-        var displayName = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.DisplayNameAttribute")
+        var description = allAttrs
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.EndpointDescriptionAttribute")
             ?.ConstructorArguments.FirstOrDefault().Value as string;
 
         var summary = allAttrs
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.SummaryAttribute")
             ?.ConstructorArguments.FirstOrDefault().Value as string;
 
-        var category = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.CategoryAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var tags = !string.IsNullOrWhiteSpace(category)
-            ? category!.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .Where(t => t.Length > 0)
-                .ToArray()
-            : Array.Empty<string>();
+        var tags = allAttrs
+            .Where(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.CategoryAttribute")
+            .Select(a => a.ConstructorArguments.FirstOrDefault().Value as string)
+            .Where(v => v != null)
+            .ToArray();
 
         return new EndpointInfo
         {
@@ -455,10 +471,10 @@ internal static class ExposeToHttpEndpointHelpers
             Method = method,
             Route = route,
             OperationName = operationName,
-            Description = description,
             DisplayName = displayName,
+            Description = description,
             Summary = summary,
-            Tags = tags
+            Tags = tags!
         };
     }
 }
@@ -470,8 +486,8 @@ internal class EndpointInfo
     public HttpVerb Method { get; set; }
     public string Route { get; set; } = string.Empty;
     public string OperationName { get; set; } = string.Empty;
-    public string? Description { get; set; }
     public string? DisplayName { get; set; }
+    public string? Description { get; set; }
     public string? Summary { get; set; }
     public string[] Tags { get; set; } = Array.Empty<string>();
 }
