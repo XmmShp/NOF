@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/sample/">
+    <File Path="sample/Directory.Packages.props" />
     <Project Path="sample/NOF.Sample.AppHost/NOF.Sample.AppHost.csproj" Id="1a4e8e94-b2d1-47b2-a87d-eb4d146b8bf7" />
     <Project Path="sample/NOF.Sample.Application/NOF.Sample.Application.csproj" Id="df9909e4-d1da-4865-95d8-27d133d9d32c" />
     <Project Path="sample/NOF.Sample.Contract/NOF.Sample.Contract.csproj" Id="cfe0cc27-76f5-44de-804b-717a85e9a8b8" />

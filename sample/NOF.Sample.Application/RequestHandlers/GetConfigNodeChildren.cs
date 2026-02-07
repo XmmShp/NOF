@@ -13,12 +13,7 @@ public class GetConfigNodeChildren : IRequestHandler<GetConfigNodeChildrenReques
 
     public async Task<Result<GetConfigNodeChildrenResponse>> HandleAsync(GetConfigNodeChildrenRequest request, CancellationToken cancellationToken)
     {
-        if (!request.ParentId.HasValue)
-        {
-            return Result.Fail(400, "ParentId不能为空");
-        }
-
-        var nodeId = ConfigNodeId.From(request.ParentId.Value);
+        var nodeId = ConfigNodeId.From(request.Id);
         var children = await _viewRepository.GetChildrenAsync(nodeId, cancellationToken);
 
         if (children is null)

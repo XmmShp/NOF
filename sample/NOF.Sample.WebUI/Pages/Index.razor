@@ -22,10 +22,10 @@
                 </TitleTemplate>
                 <ChildContent>
                     <div style="overflow-y: auto; flex: 1;">
-                        <ConfigTree OnSelectNode="OnNodeSelected" 
-                                   OnAddChild="ShowCreateNodeModal" 
-                                   OnDeleteNode="DeleteNode" 
-                                   @ref="_tree" />
+                        <ConfigTree OnSelectNode="OnNodeSelected"
+                                    OnAddChild="ShowCreateNodeModal"
+                                    OnDeleteNode="DeleteNode"
+                                    @ref="_tree" />
                     </div>
                 </ChildContent>
             </Card>
@@ -48,7 +48,7 @@
                                             添加
                                         </Button>
                                     </div>
-                                    <Menu Mode="@MenuMode.Inline" 
+                                    <Menu Mode="@MenuMode.Inline"
                                           SelectedKeys="@(new[] { _selectedFile ?? "" })"
                                           OnMenuItemClicked="OnFileSelected">
                                         @if (_node?.ConfigFiles != null)
@@ -99,10 +99,10 @@
                                                     </SpaceItem>
                                                 </Space>
                                             </div>
-                                            <TextArea @bind-Value="@_fileContent" 
-                                                     Rows="20" 
-                                                     Style="font-family: 'Courier New', monospace; flex: 1;"
-                                                     OnBlur="SaveCurrentFile"></TextArea>
+                                            <TextArea @bind-Value="@_fileContent"
+                                                      Rows="20"
+                                                      Style="font-family: 'Courier New', monospace; flex: 1;"
+                                                      OnBlur="SaveCurrentFile"></TextArea>
                                         }
                                     }
                                     else
@@ -257,7 +257,8 @@
 
     private async Task LoadPreview()
     {
-        if (!_selectedNode.HasValue) return;
+        if (!_selectedNode.HasValue)
+            return;
 
         _previewLoading = true;
         StateHasChanged();
@@ -398,7 +399,7 @@
     {
         if (_selectedNode.HasValue)
         {
-            var result = await NOFService.DeleteConfigNodeAsync(new DeleteConfigNodeRequest(_selectedNode.Value));
+            var result = await NOFService.RemoveConfigFileAsync(new RemoveConfigFileRequest(_selectedNode.Value, _selectedFile!));
             if (result.IsSuccess)
             {
                 Message.Success("文件删除成功");

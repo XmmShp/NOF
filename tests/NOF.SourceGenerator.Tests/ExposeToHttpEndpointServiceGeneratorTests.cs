@@ -206,4 +206,130 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
         runResult.GeneratedTrees.Should().BeEmpty();
     }
+
+    [Fact]
+    public void GeneratesRouteParameterFillingForGetRequest()
+    {
+        const string source = """
+
+                              using NOF;
+
+                              namespace Users
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get, "/api/users/{id}/posts")]
+                                  public class GetUserPostsRequest : IRequest<string>
+                                  {
+                                      public int Id { get; set; }
+                                      public int Page { get; set; }
+                                      public int PageSize { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Route param should be interpolated into the URL
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+
+        // Non-route params should go to query string
+        generatedCode.Should().Contain("queryParts");
+        generatedCode.Should().Contain("Page");
+        generatedCode.Should().Contain("PageSize");
+
+        // Should NOT contain the raw {id} placeholder
+        generatedCode.Should().NotContain("\"{/api/users/{id}/posts}\"");
+    }
+
+    [Fact]
+    public void GeneratesRouteParameterFillingForPostRequest()
+    {
+        const string source = """
+
+                              using NOF;
+
+                              namespace Users
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Put, "/api/users/{id}")]
+                                  public class UpdateUserRequest : IRequest
+                                  {
+                                      public int Id { get; set; }
+                                      public string Name { get; set; } = default!;
+                                      public string Email { get; set; } = default!;
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Route param should be interpolated
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+
+        // Non-route params should go to body dictionary
+        generatedCode.Should().Contain("Dictionary<string, object?>");
+        generatedCode.Should().Contain("body[\"Name\"] = request.Name");
+        generatedCode.Should().Contain("body[\"Email\"] = request.Email");
+
+        // Body should NOT contain the route param
+        generatedCode.Should().NotContain("body[\"Id\"]");
+    }
+
+    [Fact]
+    public void GeneratesRouteParametersCaseInsensitive()
+    {
+        const string source = """
+
+                              using NOF;
+
+                              namespace Orders
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get, "/api/orders/{orderId}/items/{itemId}")]
+                                  public record GetOrderItemRequest(string OrderId, string ItemId) : IRequest<string>;
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Both route params should be interpolated
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.OrderId");
+        generatedCode.Should().Contain("Uri.EscapeDataString(request.ItemId");
+
+        // No query string needed since all properties are route params
+        generatedCode.Should().NotContain("queryParts");
+    }
+
+    [Fact]
+    public void GeneratesNoRouteParamHandlingWhenRouteHasNoPlaceholders()
+    {
+        const string source = """
+
+                              using NOF;
+
+                              namespace Products
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Post, "/api/products")]
+                                  public partial class CreateProductRequest : IRequest<int>
+                                  {
+                                      public string Name { get; set; } = default!;
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Should use the full request object as body, not a dictionary
+        generatedCode.Should().Contain("JsonContent.Create(request,");
+        generatedCode.Should().NotContain("Dictionary<string, object?>");
+    }
 }
