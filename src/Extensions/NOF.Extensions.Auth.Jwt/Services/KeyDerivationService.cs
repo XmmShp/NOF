@@ -95,10 +95,10 @@ public class KeyDerivationService : IKeyDerivationService
     /// <returns>The key ID.</returns>
     public string ComputeKeyId(RsaSecurityKey rsaKey)
     {
-        // 使用公钥 DER 编码的 SHA-256 摘要作为 kid
+        // Use SHA-256 digest of the public key DER encoding as kid
         var publicKeyDer = rsaKey.Rsa.ExportSubjectPublicKeyInfo();
         var hash = SHA256.HashData(publicKeyDer);
-        return Convert.ToBase64String(hash)[..16]; // 取前16个字符作为kid
+        return Convert.ToBase64String(hash)[..16]; // Take the first 16 characters as kid
     }
 
     private string DeriveClientKey(string audience)
@@ -117,31 +117,31 @@ public class KeyDerivationService : IKeyDerivationService
 
     private static RSAParameters GenerateDeterministicRsaParameters(byte[] seed)
     {
-        // 使用 SHA-256 扩展种子到足够长度（可选，增强熵）
+        // Extend the seed to sufficient length using SHA-256 (optional, enhances entropy)
         var extendedSeed = SHA256.HashData(seed);
 
-        // 创建确定性随机源（使用新的 API）
+        // Create a deterministic random source
         var randomGenerator = Org.BouncyCastle.Security.SecureRandom.GetInstance("SHA256PRNG");
         randomGenerator.SetSeed(extendedSeed);
 
-        // 配置 RSA 密钥生成参数
+        // Configure RSA key generation parameters
         var keyGenParams = new RsaKeyGenerationParameters(
-            publicExponent: BigInteger.ValueOf(65537), // 标准公钥指数
+            publicExponent: BigInteger.ValueOf(65537), // Standard public exponent
             random: randomGenerator,
-            strength: 2048,      // 密钥长度
-            certainty: 128       // 素性检测置信度（越高越安全，略慢）
+            strength: 2048,      // Key length
+            certainty: 128       // Primality test certainty (higher = more secure, slightly slower)
         );
 
-        // 生成密钥对
+        // Generate key pair
         var keyGen = new RsaKeyPairGenerator();
         keyGen.Init(keyGenParams);
         var keyPair = keyGen.GenerateKeyPair();
 
-        // 提取私钥和公钥参数
+        // Extract private and public key parameters
         var priv = (RsaPrivateCrtKeyParameters)keyPair.Private;
         var pub = (RsaKeyParameters)keyPair.Public;
 
-        // 转换为 .NET RSAParameters
+        // Convert to .NET RSAParameters
         return new RSAParameters
         {
             Modulus = priv.Modulus.ToByteArrayUnsigned(),

@@ -10,21 +10,21 @@ using System.Text;
 namespace NOF.Domain.SourceGenerator;
 
 /// <summary>
-/// 源生成器：检测标记了SnapshotableAttribute的类，并生成快照类和扩展方法
+/// Source generator: detects classes marked with SnapshotableAttribute and generates snapshot classes and extension methods.
 /// </summary>
 [Generator]
 public class SnapshotGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // 获取所有带有SnapshotableAttribute的类
+        // Get all classes with SnapshotableAttribute
         var classDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => IsSyntaxTargetForGeneration(s),
                 transform: static (ctx, _) => GetSemanticTargetForGeneration(ctx))
             .Where(static m => m is not null);
 
-        // 注册输出生成
+        // Register output generation
         var compilationAndClasses = context.CompilationProvider.Combine(classDeclarations.Collect());
 
         context.RegisterSourceOutput(compilationAndClasses,
@@ -32,34 +32,34 @@ public class SnapshotGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 判断语法节点是否是我们关注的目标（带有Attribute的类声明）
+    /// Determines whether the syntax node is a target (class declaration with attributes).
     /// </summary>
     private static bool IsSyntaxTargetForGeneration(SyntaxNode node)
     {
-        // 只关注类声明
+        // Only interested in class declarations
         if (node is ClassDeclarationSyntax classDeclaration)
         {
-            // 检查类是否有特性列表
+            // Check if the class has attribute lists
             return classDeclaration.AttributeLists.Count > 0;
         }
         return false;
     }
 
     /// <summary>
-    /// 获取语义模型中的目标类（带有SnapshotableAttribute的类）
+    /// Gets the target class from the semantic model (class with SnapshotableAttribute).
     /// </summary>
     private static INamedTypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
     {
         var classDeclaration = (ClassDeclarationSyntax)context.Node;
 
-        // 获取类的语义模型
+        // Get the semantic model of the class
         var classSymbol = context.SemanticModel.GetDeclaredSymbol(classDeclaration);
         if (classSymbol is null)
         {
             return null;
         }
 
-        // 检查类是否有SnapshotableAttribute
+        // Check if the class has SnapshotableAttribute
         var hasSnapshotableAttribute = classSymbol.GetAttributes()
             .Any(attr => attr.AttributeClass?.ToDisplayString().EndsWith("SnapshotableAttribute") == true);
 
@@ -67,7 +67,7 @@ public class SnapshotGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 执行代码生成
+    /// Executes code generation.
     /// </summary>
     private static void Execute(ImmutableArray<INamedTypeSymbol?> classes, SourceProductionContext context)
     {
@@ -76,7 +76,7 @@ public class SnapshotGenerator : IIncrementalGenerator
             return;
         }
 
-        // 过滤掉null值
+        // Filter out null values
         var snapshotableClasses = classes.Where(c => c is not null).Cast<INamedTypeSymbol>().ToList();
 
         if (snapshotableClasses.Count == 0)
@@ -84,14 +84,14 @@ public class SnapshotGenerator : IIncrementalGenerator
             return;
         }
 
-        // 构建所有可快照类型的集合（不包含可空注解）
+        // Build a set of all snapshotable type names (without nullable annotations)
         var snapshotableTypeNames = new HashSet<string>(snapshotableClasses.Select(c =>
             c.ToDisplayString(new SymbolDisplayFormat(
                 typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
                 miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes))));
 
-        // 为每个类生成快照类和扩展方法
+        // Generate snapshot class and extension methods for each class
         foreach (var classSymbol in snapshotableClasses)
         {
             var source = GenerateSnapshotAndExtension(classSymbol, snapshotableTypeNames);
@@ -101,7 +101,7 @@ public class SnapshotGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 生成快照类和扩展方法的代码
+    /// Generates the snapshot class and extension method code.
     /// </summary>
     private static string GenerateSnapshotAndExtension(INamedTypeSymbol classSymbol, HashSet<string> snapshotableTypeNames)
     {
@@ -114,17 +114,17 @@ public class SnapshotGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
 
-        // 获取所有公开属性
+        // Get all public properties
         var properties = GetPublicProperties(classSymbol);
 
-        // 生成快照类（使用 record 和 primary constructor）
+        // Generate snapshot class (using record with primary constructor)
         sb.AppendLine($"namespace {namespaceName}");
         sb.AppendLine("{");
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// {className} 的快照类");
+        sb.AppendLine($"    /// Snapshot class for {className}.");
         sb.AppendLine("    /// </summary>");
 
-        // 构建 primary constructor 参数列表
+        // Build primary constructor parameter list
         var constructorParams = properties
             .Select(property => new
             {
@@ -139,44 +139,43 @@ public class SnapshotGenerator : IIncrementalGenerator
         sb.AppendLine($"    public record {snapshotClassName}({paramsString});");
         sb.AppendLine();
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// {className} 的快照扩展方法");
+        sb.AppendLine($"    /// Snapshot extension methods for {className}.");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public static partial class SnapshotExtensions");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
-        sb.AppendLine($"        /// 创建 {className} 的快照");
+        sb.AppendLine($"        /// Creates a snapshot of {className}.");
         sb.AppendLine("        /// </summary>");
 
         var fullClassName = classSymbol.ToDisplayString();
         sb.AppendLine($"        public static {namespaceName}.{snapshotClassName} ToSnapshot(this {fullClassName} source)");
         sb.AppendLine("        {");
 
-        // 生成 record 构造函数调用
+        // Generate record constructor call
         sb.Append($"            return new {namespaceName}.{snapshotClassName}(");
 
-        // 生成构造函数参数
+        // Generate constructor arguments
         var paramMappings = properties.Select(property =>
         {
             var propertyName = property.Name;
-            // 获取不带可空注解的类型全名（用于判断是否是可快照类型）
+            // Get fully qualified type name without nullable annotation (for snapshotable type check)
             var propertyTypeFullName = property.Type.ToDisplayString(new SymbolDisplayFormat(
                 typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
                 genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
                 miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes));
             var isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated;
 
-            // 检查属性类型是否是可快照类型
+            // Check if the property type is a snapshotable type
             if (snapshotableTypeNames.Contains(propertyTypeFullName))
             {
-                // 如果是可快照类型，调用其ToSnapshot方法
-                // 严格模式：根据原始类型的可空性声明决定是否使用 ?. 操作符
-                // 不可空类型使用 .ToSnapshot()，可空类型使用 ?.ToSnapshot()
+                // If snapshotable, call its ToSnapshot method.
+                // Use ?. for nullable types, . for non-nullable types.
                 return isNullable
                     ? $"source.{propertyName}?.ToSnapshot()"
                     : $"source.{propertyName}.ToSnapshot()";
             }
 
-            // 否则直接赋值
+            // Otherwise, assign directly
             return $"source.{propertyName}";
         }).ToList();
 
@@ -191,7 +190,7 @@ public class SnapshotGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 获取类的所有公开属性
+    /// Gets all public properties of the class.
     /// </summary>
     private static List<IPropertySymbol> GetPublicProperties(INamedTypeSymbol classSymbol)
     {
@@ -215,32 +214,32 @@ public class SnapshotGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 获取完全限定的快照属性类型（如果属性类型是可快照类型，返回其快照类型的完全限定名称）
+    /// Gets the fully qualified snapshot property type (maps snapshotable types to their snapshot type names).
     /// </summary>
     private static string GetFullyQualifiedSnapshotPropertyType(ITypeSymbol typeSymbol, HashSet<string> snapshotableTypeNames)
     {
-        // 获取不带可空注解的类型全名（用于判断是否是可快照类型）
+        // Get fully qualified type name without nullable annotation (for snapshotable type check)
         var typeFullNameWithoutNullable = typeSymbol.ToDisplayString(new SymbolDisplayFormat(
             typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
             genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
             miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes));
 
-        // 检查原始类型是否可空
+        // Check if the original type is nullable
         var isNullable = typeSymbol.NullableAnnotation == NullableAnnotation.Annotated;
 
-        // 检查是否是可快照类型
+        // Check if it is a snapshotable type
         if (!snapshotableTypeNames.Contains(typeFullNameWithoutNullable.TrimEnd('?')))
         {
-            // 不是可快照类型，返回原始类型的完全限定名称（保留可空性）
+            // Not a snapshotable type, return the original fully qualified name (preserving nullability)
             return typeSymbol.ToDisplayString();
         }
 
-        // 是可快照类型，需要映射为快照类型
-        // 获取类型的命名空间和名称
+        // Is a snapshotable type, map to snapshot type
+        // Get the type's namespace and name
         var typeNamespace = typeSymbol.ContainingNamespace.ToDisplayString();
         var typeName = typeSymbol.Name;
 
-        // 返回完全限定的快照类型名称，保持原始的可空性
+        // Return the fully qualified snapshot type name, preserving original nullability
         return isNullable
             ? $"{typeNamespace}.{typeName}Snapshot?"
             : $"{typeNamespace}.{typeName}Snapshot";

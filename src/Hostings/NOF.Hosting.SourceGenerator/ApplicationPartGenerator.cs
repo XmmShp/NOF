@@ -7,14 +7,14 @@ using System.Text;
 namespace NOF;
 
 /// <summary>
-/// 源生成器：自动扫描所有引用的项目，并为前缀匹配的项目生成 ApplicationPart 注册代码
+/// Source generator: scans all referenced projects and generates ApplicationPart registration code for prefix-matching projects.
 /// </summary>
 [Generator]
 public class ApplicationPartGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // 获取当前项目的程序集名称和引用的程序集信息
+        // Get the current project's assembly name and referenced assembly info
         var assemblyInfoProvider = context.CompilationProvider
             .Select(static (compilation, _) =>
             {
@@ -22,24 +22,24 @@ public class ApplicationPartGenerator : IIncrementalGenerator
 
                 var matchingAssemblies = new List<AssemblyTypeInfo>();
 
-                // 首先注册当前程序集自己
+                // First register the current assembly itself
                 var currentType = FindFirstPublicType(compilation.Assembly.GlobalNamespace);
                 if (currentType != null)
                 {
                     matchingAssemblies.Add(new AssemblyTypeInfo(currentAssemblyName, currentType));
                 }
 
-                // 扫描所有引用的程序集
+                // Scan all referenced assemblies
                 foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
                 {
                     var assemblyName = assembly.Name;
 
-                    // 检查程序集名称是否以当前程序集名称开头（例如 A 可以匹配 A.Contract, A.Domain 等）
+                    // Check if the assembly name starts with the current assembly name (e.g. A matches A.Contract, A.Domain, etc.)
                     if (!string.IsNullOrEmpty(currentAssemblyName) &&
                         assemblyName.StartsWith(currentAssemblyName) &&
                         (assemblyName.Length == currentAssemblyName.Length || assemblyName[currentAssemblyName.Length] == '.'))
                     {
-                        // 从该程序集中查找一个合适的类型
+                        // Find a suitable type from this assembly
                         var typeSymbol = FindFirstPublicType(assembly.GlobalNamespace);
                         if (typeSymbol != null)
                         {
@@ -51,7 +51,7 @@ public class ApplicationPartGenerator : IIncrementalGenerator
                 return (Prefix: currentAssemblyName, Assemblies: matchingAssemblies.ToImmutableArray());
             });
 
-        // 生成代码
+        // Generate code
         context.RegisterSourceOutput(assemblyInfoProvider, static (spc, info) =>
         {
             if (info.Assemblies.IsEmpty)
@@ -65,7 +65,7 @@ public class ApplicationPartGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 递归查找命名空间中的第一个公共、非抽象类
+    /// Recursively finds the first public, non-abstract class in a namespace.
     /// </summary>
     private static INamedTypeSymbol? FindFirstPublicType(INamespaceSymbol ns)
     {
@@ -82,7 +82,7 @@ public class ApplicationPartGenerator : IIncrementalGenerator
                     break;
 
                 case INamedTypeSymbol { IsAbstract: false, DeclaredAccessibility: Accessibility.Public } type:
-                    // 找到第一个公共非抽象类就返回
+                    // Return the first public non-abstract class found
                     return type;
             }
         }
@@ -103,22 +103,22 @@ public class ApplicationPartGenerator : IIncrementalGenerator
         sb.AppendLine("{");
 
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// 自动生成的 ApplicationPart 注册扩展方法（前缀: {prefix}）");
+        sb.AppendLine($"    /// Auto-generated ApplicationPart registration extension methods (prefix: {prefix}).");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public static class __ApplicationPartExtensions__");
         sb.AppendLine("    {");
 
         sb.AppendLine("        /// <summary>");
-        sb.AppendLine($"        /// 自动注册所有前缀为 '{prefix}' 的引用项目作为 ApplicationPart");
+        sb.AppendLine($"        /// Auto-registers all referenced projects with prefix '{prefix}' as ApplicationParts.");
         sb.AppendLine("        /// </summary>");
-        sb.AppendLine("        /// <param name=\"builder\">NOF 应用构建器</param>");
-        sb.AppendLine("        /// <returns>用于链式调用的构建器</returns>");
+        sb.AppendLine("        /// <param name=\"builder\">The NOF application builder.</param>");
+        sb.AppendLine("        /// <returns>The builder for chaining.</returns>");
         sb.AppendLine("        public static NOF.INOFAppBuilder WithAutoApplicationParts(this NOF.INOFAppBuilder builder)");
         sb.AppendLine("        {");
 
         if (assemblies.Length > 0)
         {
-            sb.AppendLine("            // 自动注册以下程序集:");
+            sb.AppendLine("            // Auto-register the following assemblies:");
             foreach (var assemblyInfo in assemblies)
             {
                 sb.AppendLine($"            // - {assemblyInfo.AssemblyName}");

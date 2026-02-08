@@ -1,76 +1,79 @@
 namespace NOF;
 
+/// <summary>
+/// Represents a paginated result set.
+/// </summary>
 public interface IPaginatedResult
 {
     /// <summary>
-    /// 当前页码
+    /// The current page number.
     /// </summary>
     int PageNumber { get; init; }
 
     /// <summary>
-    /// 每页大小
+    /// The page size.
     /// </summary>
     int PageSize { get; init; }
 
     /// <summary>
-    /// 总记录数
+    /// The total number of records.
     /// </summary>
     int TotalCount { get; init; }
 
     /// <summary>
-    /// 总页数
+    /// The total number of pages.
     /// </summary>
     int TotalPages { get; init; }
 
     /// <summary>
-    /// 是否有上一页
+    /// Whether there is a previous page.
     /// </summary>
     bool HasPrevious { get; }
 
     /// <summary>
-    /// 是否有下一页
+    /// Whether there is a next page.
     /// </summary>
     bool HasNext { get; }
 }
 
 /// <summary>
-/// 分页结果数据传输对象
+/// Paginated result data transfer object.
 /// </summary>
-/// <typeparam name="T">分页项的类型</typeparam>
+/// <typeparam name="T">The type of the paginated items.</typeparam>
 public record PaginatedResult<T> : IPaginatedResult
 {
     /// <summary>
-    /// 当前页码
+    /// The current page number.
     /// </summary>
     public int PageNumber { get; init; }
 
     /// <summary>
-    /// 每页大小
+    /// The page size.
     /// </summary>
     public int PageSize { get; init; }
 
     /// <summary>
-    /// 总记录数
+    /// The total number of records.
     /// </summary>
     public int TotalCount { get; init; }
 
     /// <summary>
-    /// 总页数
+    /// The total number of pages.
     /// </summary>
     public int TotalPages { get; init; }
 
     /// <summary>
-    /// 是否有上一页
+    /// Whether there is a previous page.
     /// </summary>
     public bool HasPrevious => PageNumber > 1;
 
     /// <summary>
-    /// 是否有下一页
+    /// Whether there is a next page.
     /// </summary>
     public bool HasNext => PageNumber < TotalPages;
 
     /// <summary>
-    /// 分页数据项
+    /// The paginated items.
     /// </summary>
     public required T[] Items { get; init; }
 }

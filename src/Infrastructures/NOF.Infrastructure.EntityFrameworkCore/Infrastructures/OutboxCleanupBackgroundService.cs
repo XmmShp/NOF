@@ -6,8 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace NOF;
 
 /// <summary>
-/// Outbox 清理服务
-/// 定期清理已发送的旧命令，维持数据库性能
+/// Outbox cleanup service that periodically removes old sent messages to maintain database performance.
 /// </summary>
 internal sealed class OutboxCleanupBackgroundService : BackgroundService
 {
@@ -56,10 +55,10 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
         var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContextInternal>();
 
-        // 获取所有租户
+        // Get all tenants
         var tenants = await tenantRepository.GetAllAsync();
         
-        // 保存原始租户上下文
+        // Save the original tenant context
         var originalTenantId = invocationContext.TenantId;
         
         foreach (var tenant in tenants)
@@ -72,11 +71,11 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
 
             try
             {
-                // 设置租户上下文
+                // Set the tenant context
                 invocationContext.SetTenantId(tenant.Id);
                 _logger.LogDebug("Cleaning outbox messages for tenant {TenantId}", tenant.Id);
 
-                // 使用当前 scope 的 repository，它会自动使用设置的租户上下文
+                // Use the current scope's DbContext, which automatically uses the set tenant context
                 var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
 
                 var olderThan = DateTimeOffset.UtcNow - _retentionPeriod;
@@ -102,7 +101,7 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
             }
         }
 
-        // 恢复原始租户上下文
+        // Restore the original tenant context
         invocationContext.SetTenantId(originalTenantId);
     }
 }

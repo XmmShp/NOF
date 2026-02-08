@@ -3,20 +3,19 @@ using System.ComponentModel;
 namespace NOF;
 
 /// <summary>
-/// Handler 管道构建器
-/// 用于组合多个中间件形成执行管道
+/// Handler pipeline builder for composing multiple middleware into an execution pipeline.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IHandlerPipelineBuilder
 {
     /// <summary>
-    /// 添加中间件到管道
+    /// Adds a middleware to the pipeline.
     /// </summary>
     IHandlerPipelineBuilder Use(IHandlerMiddleware middleware);
 }
 
 /// <summary>
-/// Handler 管道构建器的默认实现
+/// Default implementation of the handler pipeline builder.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class HandlerPipelineBuilder : IHandlerPipelineBuilder
@@ -31,7 +30,7 @@ public sealed class HandlerPipelineBuilder : IHandlerPipelineBuilder
 
     internal HandlerDelegate Build(HandlerContext context, HandlerDelegate handler)
     {
-        // 从后向前构建管道
+        // Build the pipeline from back to front
         var pipeline = handler;
 
         for (var i = _middlewares.Count - 1; i >= 0; i--)

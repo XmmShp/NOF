@@ -2,10 +2,16 @@ using Microsoft.Extensions.Logging;
 
 namespace NOF;
 
+/// <summary>
+/// Extension methods for the NOF.Application layer.
+/// </summary>
 public static partial class __NOF_Application_Extensions__
 {
     extension(Result)
     {
+        /// <summary>Creates a failed result from a <see cref="Failure"/> descriptor.</summary>
+        /// <param name="failure">The failure descriptor.</param>
+        /// <returns>A failed result.</returns>
         public static FailResult Fail(Failure failure)
         {
             return Result.Fail(failure.ErrorCode, failure.Message);

@@ -27,7 +27,7 @@ internal sealed class EFCoreOutboxMessage
     [MaxLength(256)]
     public string? DestinationEndpointName { get; set; }
 
-    public string Headers { get; set; }
+    public string Headers { get; set; } = null!;
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
@@ -39,26 +39,26 @@ internal sealed class EFCoreOutboxMessage
     public int RetryCount { get; set; }
 
     /// <summary>
-    /// 抢占锁标识符（实例ID）
+    /// The claim lock identifier (instance ID).
     /// </summary>
     [MaxLength(256)]
     public string? ClaimedBy { get; set; }
 
     /// <summary>
-    /// 抢占锁过期时间
+    /// The claim lock expiration time.
     /// </summary>
     public DateTimeOffset? ClaimExpiresAt { get; set; }
 
     public OutboxMessageStatus Status { get; set; }
 
     /// <summary>
-    /// 分布式追踪 TraceId（用于恢复追踪上下文）
+    /// Distributed tracing TraceId (used to restore tracing context).
     /// </summary>
     [MaxLength(128)]
     public string? TraceId { get; set; }
 
     /// <summary>
-    /// 分布式追踪 SpanId（用于恢复追踪上下文）
+    /// Distributed tracing SpanId (used to restore tracing context).
     /// </summary>
     [MaxLength(128)]
     public string? SpanId { get; set; }

@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// 延迟命令发送器实现
+/// Command sender implementation.
 /// </summary>
 public sealed class CommandSender : ICommandSender
 {
@@ -58,7 +58,7 @@ public sealed class CommandSender : ICommandSender
 }
 
 /// <summary>
-/// 延迟命令发送器实现
+/// Deferred command sender implementation.
 /// </summary>
 public sealed class DeferredCommandSender : IDeferredCommandSender
 {

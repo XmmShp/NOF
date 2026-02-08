@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace NOF;
 
 /// <summary>
-/// EFCore 租户实体
+/// EF Core tenant entity.
 /// </summary>
 [HostOnly]
 [Table(nameof(EFCoreTenant))]
@@ -13,37 +13,37 @@ namespace NOF;
 internal sealed class EFCoreTenant
 {
     /// <summary>
-    /// 租户标识符
+    /// The tenant identifier.
     /// </summary>
     [Key]
     [MaxLength(256)]
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// 租户名称
+    /// The tenant name.
     /// </summary>
     [Required]
     [MaxLength(256)]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 租户描述
+    /// The tenant description.
     /// </summary>
     [MaxLength(1000)]
     public string? Description { get; set; }
 
     /// <summary>
-    /// 租户是否激活
+    /// Whether the tenant is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// 创建时间
+    /// The creation time.
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 更新时间
+    /// The last update time.
     /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

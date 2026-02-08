@@ -3,19 +3,19 @@ using System.ComponentModel.DataAnnotations;
 namespace NOF;
 
 /// <summary>
-/// 分页结果查询请求基类
+/// Base request for paginated queries.
 /// </summary>
 public record PaginatedRequest<T> : IRequest<T>
     where T : class, IPaginatedResult
 {
     /// <summary>
-    /// 页码，从1开始
+    /// The page number (1-based).
     /// </summary>
     [Required]
     public required int PageNumber { get; init; }
 
     /// <summary>
-    /// 每页大小
+    /// The page size.
     /// </summary>
     [Required]
     public required int PageSize { get; init; }

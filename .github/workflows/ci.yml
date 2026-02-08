@@ -1,8 +1,8 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop ]
   pull_request:
     branches: [ main, develop ]
 
@@ -13,29 +13,15 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Determine nightly version
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      id: version
-      run: |
-        LATEST_TAG=$(git tag --sort=-v:refname | grep '^v' | head -n 1)
-        BASE_VERSION="${LATEST_TAG#v}"
-        if [ -z "$BASE_VERSION" ]; then BASE_VERSION="0.0.0"; fi
-        SHORT_SHA=$(git rev-parse --short HEAD)
-        VERSION="${BASE_VERSION}-nightly.${SHORT_SHA}"
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "Nightly version: $VERSION"
 
     - name: Restore dependencies
       run: dotnet restore
@@ -53,30 +39,3 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: '**/coverage.cobertura.xml'
         fail_ci_if_error: false
-
-    - name: Pack NuGet packages
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        VERSION=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Annotation/NOF.Annotation.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-
-    - name: Publish nightly to NuGet.org
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        dotnet nuget push "./artifacts/*.nupkg" \
-          --api-key ${{ secrets.NUGET_API_KEY }} \
-          --source https://api.nuget.org/v3/index.json \
-          --skip-duplicate

@@ -44,7 +44,7 @@ public static class CSharpCompilationExtensions
         {
             using var ms = new MemoryStream();
             var result = compilation.Emit(ms);
-            result.Success.Should().BeTrue($"编译 {compilation.AssemblyName} 失败: {string.Join(", ", result.Diagnostics)}");
+            result.Success.Should().BeTrue($"Compilation of {compilation.AssemblyName} failed: {string.Join(", ", result.Diagnostics)}");
             ms.Position = 0;
             return MetadataReference.CreateFromStream(ms);
         }

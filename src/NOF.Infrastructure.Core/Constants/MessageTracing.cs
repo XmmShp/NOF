@@ -3,22 +3,22 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// 消息追踪常量
+/// Message tracing constants.
 /// </summary>
 public static class MessageTracing
 {
     /// <summary>
-    /// ActivitySource 名称
+    /// The ActivitySource name.
     /// </summary>
     public const string ActivitySourceName = "NOF.Messaging";
 
     /// <summary>
-    /// ActivitySource 实例
+    /// The ActivitySource instance.
     /// </summary>
     public static readonly ActivitySource Source = new(ActivitySourceName);
 
     /// <summary>
-    /// Activity 标签名称
+    /// Activity tag names.
     /// </summary>
     public static class Tags
     {
@@ -29,7 +29,7 @@ public static class MessageTracing
     }
 
     /// <summary>
-    /// Activity 名称
+    /// Activity names.
     /// </summary>
     public static class ActivityNames
     {

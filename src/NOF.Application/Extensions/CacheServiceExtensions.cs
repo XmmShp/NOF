@@ -2,6 +2,9 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace NOF;
 
+/// <summary>
+/// Extension methods for the NOF.Application layer.
+/// </summary>
 public static partial class __NOF_Application_Extensions__
 {
     /// <param name="cache">Distributed cache interface</param>

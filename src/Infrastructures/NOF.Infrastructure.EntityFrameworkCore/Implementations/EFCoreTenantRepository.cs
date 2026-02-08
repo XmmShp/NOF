@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace NOF;
 
 /// <summary>
-/// EFCore 租户仓储实现
+/// EF Core tenant repository implementation.
 /// </summary>
 internal sealed class EFCoreTenantRepository : ITenantRepository
 {

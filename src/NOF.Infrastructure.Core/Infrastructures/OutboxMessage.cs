@@ -5,49 +5,48 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// Outbox 消息
-/// 用于事务上下文中的消息添加和后台服务的消息读取
+/// Outbox message entity used for adding messages in transactional context and reading by background services.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class OutboxMessage
 {
     /// <summary>
-    /// 消息ID
+    /// The message ID.
     /// </summary>
     public long Id { get; init; }
 
     /// <summary>
-    /// 消息内容（包装后的消息）
+    /// The message content (wrapped message).
     /// </summary>
     public required IMessage Message { get; init; }
 
     /// <summary>
-    /// 头信息字典
+    /// The headers dictionary.
     /// </summary>
     public Dictionary<string, string?> Headers { get; init; } = [];
 
     /// <summary>
-    /// 目标端点名称
+    /// The destination endpoint name.
     /// </summary>
     public string? DestinationEndpointName { get; init; }
 
     /// <summary>
-    /// 创建时间
+    /// The creation time.
     /// </summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>
-    /// 重试次数（添加时默认为0）
+    /// The retry count (defaults to 0 when added).
     /// </summary>
     public int RetryCount { get; init; }
 
     /// <summary>
-    /// 分布式追踪 TraceId（用于恢复追踪上下文）
+    /// Distributed tracing TraceId (used to restore tracing context).
     /// </summary>
     public ActivityTraceId? TraceId { get; init; }
 
     /// <summary>
-    /// 分布式追踪 SpanId（用于恢复追踪上下文）
+    /// Distributed tracing SpanId (used to restore tracing context).
     /// </summary>
     public ActivitySpanId? SpanId { get; init; }
 }

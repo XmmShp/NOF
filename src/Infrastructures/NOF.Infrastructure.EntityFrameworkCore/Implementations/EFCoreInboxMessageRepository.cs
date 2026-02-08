@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace NOF;
 
 /// <summary>
-/// 收件箱消息仓储实现
+/// EF Core inbox message repository implementation.
 /// </summary>
 internal sealed class EFCoreInboxMessageRepository : IInboxMessageRepository
 {

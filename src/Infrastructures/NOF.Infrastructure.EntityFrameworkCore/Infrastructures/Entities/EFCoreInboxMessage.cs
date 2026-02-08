@@ -5,21 +5,20 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace NOF;
 
 /// <summary>
-/// 收件箱消息实体
-/// 用于记录需要可靠处理的消息
+/// Inbox message entity used for tracking reliably processed messages.
 /// </summary>
 [Table(nameof(EFCoreInboxMessage))]
 [Index(nameof(CreatedAt))]
 internal sealed class EFCoreInboxMessage
 {
     /// <summary>
-    /// 消息唯一标识
+    /// The unique message identifier.
     /// </summary>
     [Key]
     public Guid Id { get; set; }
 
     /// <summary>
-    /// 消息创建时间
+    /// The message creation time.
     /// </summary>
     public DateTime CreatedAt { get; set; }
 }

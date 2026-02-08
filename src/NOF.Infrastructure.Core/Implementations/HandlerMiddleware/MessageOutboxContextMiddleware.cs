@@ -1,8 +1,8 @@
 ﻿namespace NOF;
 
 /// <summary>
-/// 事务性消息上下文中间件
-/// 为 Command Handler 自动创建 TransactionalMessageContext Scope
+/// Transactional message outbox context middleware.
+/// Automatically creates a MessageOutboxContext scope for command handlers.
 /// </summary>
 public sealed class MessageOutboxContextMiddleware : IHandlerMiddleware
 {

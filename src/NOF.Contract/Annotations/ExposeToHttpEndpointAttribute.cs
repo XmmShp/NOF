@@ -33,12 +33,20 @@ public sealed class ExposeToHttpEndpointAttribute : Attribute
     }
 }
 
+/// <summary>
+/// Defines the HTTP method for an exposed endpoint.
+/// </summary>
 public enum HttpVerb
 {
+    /// <summary>HTTP GET method.</summary>
     Get,
+    /// <summary>HTTP POST method.</summary>
     Post,
+    /// <summary>HTTP PUT method.</summary>
     Put,
+    /// <summary>HTTP DELETE method.</summary>
     Delete,
+    /// <summary>HTTP PATCH method.</summary>
     Patch,
 }
 

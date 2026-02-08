@@ -1,12 +1,12 @@
 namespace NOF;
 
 /// <summary>
-/// NOF DbContext 工厂选项
+/// NOF DbContext factory options.
 /// </summary>
 public class DbContextFactoryOptions
 {
     /// <summary>
-    /// 是否自动迁移数据库
+    /// Whether to automatically migrate the database.
     /// </summary>
     public bool AutoMigrate { get; set; } = false;
 }

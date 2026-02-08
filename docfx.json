@@ -1,0 +1,64 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [
+            "src/NOF.Annotation/NOF.Annotation.csproj",
+            "src/NOF.Domain/NOF.Domain.csproj",
+            "src/NOF.Contract/NOF.Contract.csproj",
+            "src/NOF.Application/NOF.Application.csproj",
+            "src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj",
+            "src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj",
+            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj",
+            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj",
+            "src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj",
+            "src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj",
+            "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj",
+            "src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj",
+            "src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "properties": {
+        "TargetFramework": "net10.0"
+      }
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "api/**.yml",
+          "api/index.md"
+        ]
+      },
+      {
+        "files": [
+          "docs/**.md",
+          "docs/**.yml"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "docs/images/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "globalMetadataFiles": [],
+    "fileMetadataFiles": [],
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appTitle": "NOF Framework",
+      "_appFooter": "NOF Framework Documentation",
+      "_enableSearch": true
+    }
+  }
+}

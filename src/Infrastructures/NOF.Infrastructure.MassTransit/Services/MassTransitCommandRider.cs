@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// MassTransit命令传输实现
+/// MassTransit command transport implementation.
 /// </summary>
 public class MassTransitCommandRider : ICommandRider
 {
@@ -18,7 +18,7 @@ public class MassTransitCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ICommand command,
-        IDictionary<string, string>? headers = null,
+        IDictionary<string, string?>? headers = null,
         string? destinationEndpointName = null,
         CancellationToken cancellationToken = default)
     {

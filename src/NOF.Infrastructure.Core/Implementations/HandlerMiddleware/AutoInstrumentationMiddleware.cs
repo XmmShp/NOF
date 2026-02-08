@@ -5,8 +5,7 @@ using System.Diagnostics.Metrics;
 namespace NOF;
 
 /// <summary>
-/// 自动埋点中间件
-/// 自动记录 Handler 执行的日志、指标和性能数据
+/// Auto-instrumentation middleware that automatically records handler execution logs, metrics, and performance data.
 /// </summary>
 public sealed class AutoInstrumentationMiddleware : IHandlerMiddleware
 {

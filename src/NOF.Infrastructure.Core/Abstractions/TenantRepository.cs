@@ -3,88 +3,88 @@ using System.ComponentModel;
 namespace NOF;
 
 /// <summary>
-/// 租户仓储接口，支持对租户的增删改查操作
+/// Tenant repository interface supporting CRUD operations on tenants.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface ITenantRepository
 {
     /// <summary>
-    /// 根据租户ID获取租户信息
+    /// Finds a tenant by ID.
     /// </summary>
-    /// <param name="tenantId">租户标识符</param>
-    /// <returns>租户信息，如果不存在则返回null</returns>
+    /// <param name="tenantId">The tenant identifier.</param>
+    /// <returns>The tenant, or null if not found.</returns>
     ValueTask<Tenant?> FindAsync(string tenantId);
 
     /// <summary>
-    /// 获取所有租户信息
+    /// Gets all tenants.
     /// </summary>
-    /// <returns>所有租户的列表</returns>
+    /// <returns>A read-only list of all tenants.</returns>
     ValueTask<IReadOnlyList<Tenant>> GetAllAsync();
 
     /// <summary>
-    /// 添加新租户
+    /// Adds a new tenant.
     /// </summary>
-    /// <param name="tenant">要添加的租户信息</param>
+    /// <param name="tenant">The tenant to add.</param>
     void Add(Tenant tenant);
 
     /// <summary>
-    /// 更新租户信息
+    /// Updates a tenant.
     /// </summary>
-    /// <param name="tenant">要更新的租户信息</param>
+    /// <param name="tenant">The tenant to update.</param>
     void Update(Tenant tenant);
 
     /// <summary>
-    /// 删除租户（根据租户ID删除）
+    /// Deletes a tenant by ID.
     /// </summary>
-    /// <param name="tenantId">要删除的租户标识符</param>
+    /// <param name="tenantId">The tenant identifier to delete.</param>
     void Delete(string tenantId);
 
     /// <summary>
-    /// 移除租户（根据租户实体删除）
+    /// Removes a tenant entity.
     /// </summary>
-    /// <param name="tenant">要移除的租户实体</param>
+    /// <param name="tenant">The tenant entity to remove.</param>
     void Remove(Tenant tenant);
 
     /// <summary>
-    /// 检查租户是否存在
+    /// Checks whether a tenant exists.
     /// </summary>
-    /// <param name="tenantId">租户标识符</param>
-    /// <returns>租户是否存在</returns>
+    /// <param name="tenantId">The tenant identifier.</param>
+    /// <returns>True if the tenant exists; otherwise false.</returns>
     ValueTask<bool> ExistsAsync(string tenantId);
 }
 
 /// <summary>
-/// 租户实体
+/// Tenant entity.
 /// </summary>
 public class Tenant
 {
     /// <summary>
-    /// 租户标识符
+    /// The tenant identifier.
     /// </summary>
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// 租户名称
+    /// The tenant name.
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 租户描述
+    /// The tenant description.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// 租户是否激活
+    /// Whether the tenant is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// 创建时间
+    /// The creation time.
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 更新时间
+    /// The last update time.
     /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

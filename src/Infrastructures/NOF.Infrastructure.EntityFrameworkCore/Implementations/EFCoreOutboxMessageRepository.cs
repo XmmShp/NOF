@@ -60,7 +60,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
     }
 
     /// <summary>
-    /// 抢占式获取待发送的消息，避免多实例重复处理
+    /// Claims pending messages for delivery, preventing duplicate processing across instances.
     /// </summary>
     public async Task<IReadOnlyList<OutboxMessage>> ClaimPendingMessagesAsync(
         int batchSize,
@@ -72,7 +72,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
         var expiresAt = DateTimeOffset.UtcNow.Add(timeout);
 
         int rowsUpdated;
-        // 第一步：直接声明待处理消息（包括过期锁的消息）
+        // Step 1: Claim pending messages (including those with expired locks)
         try
         {
             rowsUpdated = await _dbContext.OutboxMessages
@@ -97,7 +97,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
             return new List<OutboxMessage>();
         }
 
-        // 第二步：获取成功声明的消息
+        // Step 2: Retrieve successfully claimed messages
         var claimedMessages = await _dbContext.OutboxMessages
             .Where(m => m.ClaimedBy == lockId)
             .ToListAsync(cancellationToken);
@@ -127,7 +127,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
                 _logger.LogError(ex, "Deserialization failed for claimed message {MessageId}, type: {TypeName}",
                     m.Id, m.PayloadType);
 
-                // 释放失败消息的锁并标记为永久失败
+                // Release the lock on the failed message and mark as permanently failed
                 await ReleaseClaimAndMarkAsFailedAsync(m.Id, $"Deserialization error: {ex.Message}", cancellationToken);
             }
         }
@@ -142,7 +142,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
         IEnumerable<long> messageIds,
         CancellationToken cancellationToken = default)
     {
-        // 避免重复标记（如已被其他实例处理）
+        // Avoid duplicate marking (e.g., already processed by another instance)
         await _dbContext.OutboxMessages
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
@@ -154,7 +154,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
     }
 
     /// <summary>
-    /// 记录发送失败，并根据重试次数决定是否继续重试或永久失败。
+    /// Records a delivery failure and determines whether to retry or permanently fail based on retry count.
     /// </summary>
     public async Task RecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
@@ -171,7 +171,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
             return;
         }
 
-        // 第二步：加载最新状态以计算最终状态
+        // Step 2: Load the latest state to determine the final status
         var message = await _dbContext.OutboxMessages
             .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
 
@@ -182,7 +182,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
 
         if (message.RetryCount >= _options.MaxRetryCount)
         {
-            // 永久失败
+            // Permanently failed
             message.Status = OutboxMessageStatus.Failed;
             message.ClaimedBy = null;
             message.ClaimExpiresAt = null;
@@ -224,7 +224,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
     }
 
     /// <summary>
-    /// 释放抢占锁并标记消息为失败状态
+    /// Releases the claim lock and marks the message as failed.
     /// </summary>
     private async Task ReleaseClaimAndMarkAsFailedAsync(
         long messageId,

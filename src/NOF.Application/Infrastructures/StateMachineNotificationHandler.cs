@@ -3,6 +3,11 @@ using System.Diagnostics;
 
 namespace NOF;
 
+/// <summary>
+/// Handles notifications by routing them to the appropriate state machine instances. Not intended for direct use.
+/// </summary>
+/// <typeparam name="TStateMachineDefinition">The state machine definition type.</typeparam>
+/// <typeparam name="TNotification">The notification type.</typeparam>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNotification> : INotificationHandler<TNotification>
     where TStateMachineDefinition : class, IStateMachineDefinition
@@ -13,6 +18,11 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
     private readonly IServiceProvider _serviceProvider;
     private readonly IStateMachineRegistry _stateMachineRegistry;
 
+    /// <summary>Initializes a new instance.</summary>
+    /// <param name="repository">The state machine context repository.</param>
+    /// <param name="uow">The unit of work.</param>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="stateMachineRegistry">The state machine registry.</param>
     public StateMachineNotificationHandler(
         IStateMachineContextRepository repository,
         IUnitOfWork uow,
@@ -25,6 +35,7 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
         _stateMachineRegistry = stateMachineRegistry;
     }
 
+    /// <inheritdoc />
     public async Task HandleAsync(TNotification notification, CancellationToken cancellationToken)
     {
         var blueprints = _stateMachineRegistry.GetBlueprints<TNotification>();
@@ -45,7 +56,7 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
                 };
                 await bp.TransferAsync(context, notification, _serviceProvider, cancellationToken);
 
-                // 创建更新后的状态机上下文
+                // Create the updated state machine context
                 var updatedContext = StateMachineContext.Create(
                     correlationId: correlationId,
                     definitionType: bp.DefinitionType,
@@ -59,7 +70,7 @@ public sealed class StateMachineNotificationHandler<TStateMachineDefinition, TNo
                 var context = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
                 if (context is not null)
                 {
-                    // 捕获当前追踪上下文
+                    // Capture the current tracing context
                     var currentActivity = Activity.Current;
                     var newStateMachineContext = StateMachineContext.Create(
                         correlationId: correlationId,

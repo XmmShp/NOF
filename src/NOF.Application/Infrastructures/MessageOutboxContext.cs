@@ -3,9 +3,9 @@ using System.ComponentModel;
 namespace NOF;
 
 /// <summary>
-/// 事务性消息收集上下文，通过 AsyncLocal 自动传播
-/// 为 HandlerBase 提供便捷的透传方法
-/// 依赖链: Context -> Sender -> Collector
+/// Transactional message outbox context, propagated automatically via AsyncLocal.
+/// Provides pass-through methods for HandlerBase.
+/// Dependency chain: Context -> Sender -> Collector
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class MessageOutboxContext
@@ -30,7 +30,7 @@ public sealed class MessageOutboxContext
     }
 
     /// <summary>
-    /// 创建新的上下文作用域
+    /// Creates a new outbox context scope.
     /// </summary>
     public static IDisposable BeginScope(
         IDeferredCommandSender commandSender,
@@ -42,7 +42,7 @@ public sealed class MessageOutboxContext
     }
 
     /// <summary>
-    /// 添加命令到事务性上下文（透传方法，供 HandlerBase 使用）
+    /// Adds a command to the transactional outbox context (pass-through for HandlerBase).
     /// </summary>
     public static void AddCommand(ICommand command, string? destinationEndpointName = null)
     {
@@ -59,7 +59,7 @@ public sealed class MessageOutboxContext
     }
 
     /// <summary>
-    /// 添加通知到事务性上下文（透传方法，供 HandlerBase 使用）
+    /// Adds a notification to the transactional outbox context (pass-through for HandlerBase).
     /// </summary>
     public static void AddNotification(INotification notification)
     {

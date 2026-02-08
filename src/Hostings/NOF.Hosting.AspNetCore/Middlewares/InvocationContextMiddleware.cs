@@ -4,16 +4,16 @@ using System.Security.Claims;
 namespace NOF;
 
 /// <summary>
-/// 认证上下文中间件，用于从认证信息中提取用户和租户信息并设置到 InvocationContext 中
+/// Authentication context middleware that extracts user and tenant information from claims and sets them on the InvocationContext.
 /// </summary>
 public class InvocationContextMiddleware : IMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
 
     /// <summary>
-    /// 构造函数
+    /// Initializes a new instance.
     /// </summary>
-    /// <param name="invocationContext">调用上下文</param>
+    /// <param name="invocationContext">The invocation context.</param>
     public InvocationContextMiddleware(IInvocationContextInternal invocationContext)
     {
         _invocationContext = invocationContext;
@@ -23,18 +23,18 @@ public class InvocationContextMiddleware : IMiddleware
     {
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            // 设置用户上下文
+            // Set user context
             await _invocationContext.SetUserAsync(context.User);
 
-            // 提取租户信息
+            // Extract tenant information
             var tenantId = context.User.FindFirstValue(NOFConstants.TenantId);
 
-            // 设置租户上下文
+            // Set tenant context
             _invocationContext.SetTenantId(tenantId);
         }
         else
         {
-            // 未认证状态下清空上下文
+            // Clear context when not authenticated
             await _invocationContext.UnsetUserAsync();
             _invocationContext.SetTenantId(null);
         }

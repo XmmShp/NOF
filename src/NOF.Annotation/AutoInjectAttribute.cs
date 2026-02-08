@@ -1,32 +1,38 @@
 namespace NOF;
 
+/// <summary>
+/// Defines the lifetime of a service registration.
+/// </summary>
 public enum Lifetime
 {
+    /// <summary>A single shared instance for the entire application lifetime.</summary>
     Singleton = 0,
+    /// <summary>A new instance per scope (e.g., per HTTP request).</summary>
     Scoped = 1,
+    /// <summary>A new instance every time the service is requested.</summary>
     Transient = 2
 }
 
 /// <summary>
-/// 服务提供者特性，用于标记可自动注册的服务类
+/// Attribute for marking service classes that should be auto-registered in the DI container.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public class AutoInjectAttribute : Attribute
 {
-    /// <summary> 
-    /// 服务生命周期，定义服务实例的作用域
+    /// <summary>
+    /// The service lifetime that defines the scope of the service instance.
     /// </summary>
     public Lifetime Lifetime { get; }
 
     /// <summary>
-    /// 要注册的服务类型数组，如果为空则自动使用该类实现的所有接口
+    /// The service types to register. If null, all implemented interfaces are used.
     /// </summary>
     public Type[]? RegisterTypes { get; set; }
 
     /// <summary>
-    /// 创建服务提供者特性的新实例
+    /// Initializes a new instance of the <see cref="AutoInjectAttribute"/> class.
     /// </summary>
-    /// <param name="lifetime">服务生命周期</param>
+    /// <param name="lifetime">The service lifetime.</param>
     public AutoInjectAttribute(Lifetime lifetime)
     {
         Lifetime = lifetime;

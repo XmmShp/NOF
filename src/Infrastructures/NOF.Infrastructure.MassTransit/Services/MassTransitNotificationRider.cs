@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// MassTransit通知传输实现
+/// MassTransit notification transport implementation.
 /// </summary>
 public class MassTransitNotificationRider : INotificationRider
 {

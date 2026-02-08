@@ -3,28 +3,28 @@
 namespace NOF;
 
 /// <summary>
-/// Handler 基类，提供事务性消息发送能力
-/// 无需注入任何依赖，通过 AsyncLocal 自动工作
+/// Base class for handlers, providing transactional message sending capabilities.
+/// Works automatically via AsyncLocal without requiring any injected dependencies.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public abstract class HandlerBase
 {
     /// <summary>
-    /// 添加命令到事务性上下文
-    /// 命令将在 UnitOfWork.SaveChangesAsync 时统一持久化到 Outbox
+    /// Adds a command to the transactional outbox context.
+    /// The command will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
     /// </summary>
-    /// <param name="command">要发送的命令</param>
-    /// <param name="destinationEndpointName">可选的目标端点名称</param>
+    /// <param name="command">The command to send.</param>
+    /// <param name="destinationEndpointName">Optional destination endpoint name.</param>
     protected void SendCommand(ICommand command, string? destinationEndpointName = null)
     {
         MessageOutboxContext.AddCommand(command, destinationEndpointName);
     }
 
     /// <summary>
-    /// 添加通知到事务性上下文
-    /// 通知将在 UnitOfWork.SaveChangesAsync 时统一持久化到 Outbox
+    /// Adds a notification to the transactional outbox context.
+    /// The notification will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
     /// </summary>
-    /// <param name="notification">要发送的通知</param>
+    /// <param name="notification">The notification to publish.</param>
     protected void PublishNotification(INotification notification)
     {
         MessageOutboxContext.AddNotification(notification);

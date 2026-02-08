@@ -22,6 +22,9 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         /// Extensions or modules can add their assemblies here to enable convention-based discovery during startup.
         /// </summary>
         public HashSet<Assembly> Assemblies => builder.Properties.GetOrAdd(Assemblies, _ => new HashSet<Assembly>());
+        /// <summary>
+        /// Gets or sets the endpoint name provider used for resolving message endpoint names.
+        /// </summary>
         public IEndpointNameProvider? EndpointNameProvider
         {
             get
@@ -71,7 +74,7 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         /// <returns>The current <see cref="INOFAppBuilder"/> instance.</returns>
         public INOFAppBuilder WithApplicationPart<T>()
         {
-            builder.WithApplicationPart(typeof(T).Assembly);
+            builder.WithApplicationPart([typeof(T).Assembly]);
             return builder;
         }
 
@@ -103,6 +106,9 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
                 .ToList()
                 .AsReadOnly();
 
+        /// <summary>
+        /// Gets the list of extra handler metadata registered manually (not discovered via assembly scanning).
+        /// </summary>
         public List<HandlerInfo> ExtraHandlerInfos => builder.Properties.GetOrAdd(ExtraHandlerInfos, _ => new List<HandlerInfo>());
 
         /// <summary>

@@ -6,7 +6,7 @@ namespace NOF;
 // ReSharper disable once InconsistentNaming
 public static partial class __NOF_Contract_Extensions__
 {
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     extension(IServiceCollection services)
     {
         /// <summary>

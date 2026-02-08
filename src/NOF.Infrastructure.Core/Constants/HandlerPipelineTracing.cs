@@ -4,32 +4,32 @@ using System.Diagnostics.Metrics;
 namespace NOF;
 
 /// <summary>
-/// Handler 管道追踪和指标常量
+/// Handler pipeline tracing and metrics constants.
 /// </summary>
 public static class HandlerPipelineTracing
 {
     /// <summary>
-    /// ActivitySource 名称
+    /// The ActivitySource name.
     /// </summary>
     public const string ActivitySourceName = "NOF.HandlerPipeline";
 
     /// <summary>
-    /// Meter 名称
+    /// The Meter name.
     /// </summary>
     public const string MeterName = "NOF.HandlerPipeline";
 
     /// <summary>
-    /// ActivitySource 实例
+    /// The ActivitySource instance.
     /// </summary>
     public static readonly ActivitySource Source = new(ActivitySourceName);
 
     /// <summary>
-    /// Meter 实例
+    /// The Meter instance.
     /// </summary>
     public static readonly Meter Meter = new(MeterName);
 
     /// <summary>
-    /// Activity 标签名称
+    /// Activity tag names.
     /// </summary>
     public static class Tags
     {
@@ -39,7 +39,7 @@ public static class HandlerPipelineTracing
     }
 
     /// <summary>
-    /// 指标名称
+    /// Metric names.
     /// </summary>
     public static class Metrics
     {
@@ -49,7 +49,7 @@ public static class HandlerPipelineTracing
     }
 
     /// <summary>
-    /// 指标描述
+    /// Metric descriptions.
     /// </summary>
     public static class MetricDescriptions
     {
@@ -59,7 +59,7 @@ public static class HandlerPipelineTracing
     }
 
     /// <summary>
-    /// 指标单位
+    /// Metric units.
     /// </summary>
     public static class MetricUnits
     {

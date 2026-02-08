@@ -7,7 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace NOF;
 
 /// <summary>
-/// Entity Framework Core 事务管理器实现，支持嵌套事务
+/// Entity Framework Core transaction manager implementation with nested transaction support.
 /// </summary>
 internal sealed class EFCoreTransactionManager : ITransactionManager
 {
@@ -25,7 +25,7 @@ internal sealed class EFCoreTransactionManager : ITransactionManager
     {
         if (_transactionStack.Count == 0)
         {
-            // 开始根事务
+            // Begin root transaction
             _logger.LogDebug("Beginning root transaction with isolation level {IsolationLevel}", isolationLevel);
 
             var efTransaction = await _dbContext.Database.BeginTransactionAsync(isolationLevel, cancellationToken);
@@ -36,7 +36,7 @@ internal sealed class EFCoreTransactionManager : ITransactionManager
         }
         else
         {
-            // 开始嵌套事务（使用保存点）
+            // Begin nested transaction (using savepoint)
             _logger.LogDebug("Beginning nested transaction (savepoint)");
 
             var currentTransaction = _transactionStack.Peek();
@@ -67,7 +67,7 @@ internal sealed class EFCoreTransactionManager : ITransactionManager
 
         if (transaction.IsRootTransaction)
         {
-            // 提交或回滚根事务
+            // Commit or rollback root transaction
             if (commit)
             {
                 _logger.LogDebug("Committing root transaction");
@@ -83,11 +83,11 @@ internal sealed class EFCoreTransactionManager : ITransactionManager
         }
         else
         {
-            // 提交或回滚嵌套事务（保存点）
+            // Commit or rollback nested transaction (savepoint)
             if (commit)
             {
                 _logger.LogDebug("Committing nested transaction (releasing savepoint {SavepointName})", transaction.SavepointName);
-                // 嵌套事务的"提交"实际上只是释放保存点，真正的提交在根事务时进行
+                // Nested transaction "commit" only releases the savepoint; actual commit happens at root transaction
                 _logger.LogDebug("Nested transaction committed (savepoint released)");
             }
             else
@@ -102,7 +102,7 @@ internal sealed class EFCoreTransactionManager : ITransactionManager
     }
 
     /// <summary>
-    /// Entity Framework Core 事务包装器，支持嵌套事务
+    /// Entity Framework Core transaction wrapper with nested transaction support.
     /// </summary>
     private sealed class EFCoreTransaction : ITransaction
     {
@@ -149,7 +149,7 @@ internal sealed class EFCoreTransactionManager : ITransactionManager
         {
             if (!_disposed)
             {
-                // 如果没有显式提交或回滚，则自动回滚
+                // If not explicitly committed or rolled back, automatically rollback
                 if (_manager._transactionStack.Contains(this))
                 {
                     await _manager.CompleteTransactionAsync(this, commit: false);

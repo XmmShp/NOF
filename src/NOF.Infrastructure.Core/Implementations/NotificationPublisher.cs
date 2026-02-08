@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace NOF;
 
 /// <summary>
-/// 通知发布器实现
+/// Notification publisher implementation.
 /// </summary>
 public sealed class NotificationPublisher : INotificationPublisher
 {
@@ -58,7 +58,7 @@ public sealed class NotificationPublisher : INotificationPublisher
 }
 
 /// <summary>
-/// 延迟通知发布器实现
+/// Deferred notification publisher implementation.
 /// </summary>
 public sealed class DeferredNotificationPublisher : IDeferredNotificationPublisher
 {

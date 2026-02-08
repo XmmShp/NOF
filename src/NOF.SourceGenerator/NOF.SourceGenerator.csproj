@@ -11,7 +11,7 @@
 
 		<!-- Source Generator Specific Settings -->
 		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<NoWarn>$(NoWarn);NU5128</NoWarn>
+		<NoWarn>$(NoWarn);NU5128;CS1591;RS2008</NoWarn>
 		
 		<DevelopmentDependency>true</DevelopmentDependency>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>

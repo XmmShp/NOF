@@ -1,32 +1,32 @@
 namespace NOF;
 
 /// <summary>
-/// 事务性消息仓储接口
-/// 在事务上下文中操作 Outbox 消息
-/// 基础设施层必须实现此接口以提供：
-/// 1. 持久化能力（Outbox 表）
-/// 2. 可靠发送能力（后台服务）
+/// Transactional outbox message repository interface.
+/// Operates on outbox messages within a transactional context.
+/// Infrastructure layers must implement this interface to provide:
+/// 1. Persistence (outbox table)
+/// 2. Reliable delivery (background service)
 /// </summary>
 public interface IOutboxMessageRepository
 {
     /// <summary>
-    /// 在当前事务上下文中添加消息到 Outbox
+    /// Adds messages to the outbox within the current transactional context.
     /// </summary>
     void Add(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 抢占式获取待发送的消息，避免多实例重复处理
-    /// 返回的消息会被标记为处理中状态，其他实例无法重复获取
+    /// Claims pending messages for delivery, preventing duplicate processing across instances.
+    /// Returned messages are marked as in-progress and cannot be claimed by other instances.
     /// </summary>
     Task<IReadOnlyList<OutboxMessage>> ClaimPendingMessagesAsync(int batchSize = 100, TimeSpan? claimTimeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 标记消息已发送
+    /// Marks messages as sent.
     /// </summary>
     Task MarkAsSentAsync(IEnumerable<long> messageIds, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 标记消息发送失败
+    /// Records a delivery failure for a message.
     /// </summary>
     Task RecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default);
 }

@@ -241,13 +241,13 @@ public static partial class __NOF_Infrastructure_Core_Extensions__
         }
 
         /// <summary>
-        /// 配置 Handler 管道中间件（可多次调用）
-        /// 用户自定义的中间件将被插入到核心中间件之间：
-        /// Activity 追踪 -> 自动埋点 -> [用户中间件] -> 事务性消息上下文
+        /// Configures handler pipeline middleware (can be called multiple times).
+        /// User-defined middleware is inserted between core middleware:
+        /// Activity tracing -> Auto-instrumentation -> [User middleware] -> Transactional message context
         /// </summary>
         public IServiceCollection ConfigureHandlerPipeline(Action<IHandlerPipelineBuilder, IServiceProvider> configure)
         {
-            // 获取或创建配置动作列表
+            // Get or create the configuration action list
             var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(List<Action<IHandlerPipelineBuilder, IServiceProvider>>));
             if (descriptor?.ImplementationInstance is List<Action<IHandlerPipelineBuilder, IServiceProvider>> actions)
             {

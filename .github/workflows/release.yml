@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  CONFIGURATION: Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Publishing version: $VERSION"
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore /p:Version=${{ steps.version.outputs.VERSION }}
+
+    - name: Run tests
+      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
+
+    - name: Pack NuGet packages
+      run: |
+        VERSION=${{ steps.version.outputs.VERSION }}
+        dotnet pack src/NOF.Annotation/NOF.Annotation.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+
+    - name: Upload NuGet packages to GitHub Release
+      if: github.event_name == 'release'
+      run: gh release upload "${{ github.event.release.tag_name }}" ./artifacts/*.nupkg --clobber
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish to NuGet.org
+      run: |
+        dotnet nuget push "./artifacts/*.nupkg" \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate

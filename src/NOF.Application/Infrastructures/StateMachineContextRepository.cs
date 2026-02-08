@@ -3,34 +3,33 @@
 namespace NOF;
 
 /// <summary>
-/// 状态机上下文实体
-/// 包含状态机上下文、状态和追踪信息
+/// State machine context entity containing the context, state, and tracing information.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class StateMachineContext
 {
     /// <summary>
-    /// 关联ID，用于标识状态机实例
+    /// The correlation ID that identifies the state machine instance.
     /// </summary>
     public required string CorrelationId { get; init; }
 
     /// <summary>
-    /// 状态机定义类型
+    /// The state machine definition type.
     /// </summary>
     public required Type DefinitionType { get; init; }
 
     /// <summary>
-    /// 状态机上下文实例
+    /// The state machine context instance.
     /// </summary>
     public required IStateMachineContext Context { get; init; }
 
     /// <summary>
-    /// 当前状态
+    /// The current state.
     /// </summary>
     public required int State { get; init; }
 
     /// <summary>
-    /// 创建新的状态机上下文实例
+    /// Creates a new state machine context instance.
     /// </summary>
     public static StateMachineContext Create(
         string correlationId,
@@ -50,10 +49,21 @@ public sealed class StateMachineContext
     }
 }
 
+/// <summary>
+/// Repository for persisting state machine contexts. Not intended for direct use.
+/// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IStateMachineContextRepository
 {
+    /// <summary>Finds a state machine context by correlation ID and definition type.</summary>
+    /// <param name="correlationId">The correlation identifier.</param>
+    /// <param name="definitionType">The state machine definition type.</param>
+    /// <returns>The state machine context, or <c>null</c> if not found.</returns>
     ValueTask<StateMachineContext?> FindAsync(string correlationId, Type definitionType);
+    /// <summary>Adds a new state machine context.</summary>
+    /// <param name="stateMachineContext">The context to add.</param>
     void Add(StateMachineContext stateMachineContext);
+    /// <summary>Updates an existing state machine context.</summary>
+    /// <param name="stateMachineContext">The context to update.</param>
     void Update(StateMachineContext stateMachineContext);
 }

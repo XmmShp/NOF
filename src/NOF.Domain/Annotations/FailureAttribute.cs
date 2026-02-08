@@ -1,32 +1,32 @@
 namespace NOF;
 
 /// <summary>
-/// 失败定义特性，用于标记失败类型并自动生成静态失败实例
+/// Attribute for defining failure entries that are auto-generated as static instances by the source generator.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class FailureAttribute : Attribute
 {
     /// <summary>
-    /// 失败名称（用作静态字段名）
+    /// The failure name (used as the static field name).
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// 失败消息
+    /// The failure message.
     /// </summary>
     public string Message { get; }
 
     /// <summary>
-    /// 失败代码
+    /// The failure error code.
     /// </summary>
     public int ErrorCode { get; }
 
     /// <summary>
-    /// 创建失败定义特性的新实例
+    /// Initializes a new instance of the <see cref="FailureAttribute"/> class.
     /// </summary>
-    /// <param name="name">失败名称</param>
-    /// <param name="message">失败消息</param>
-    /// <param name="errorCode">失败代码</param>
+    /// <param name="name">The failure name.</param>
+    /// <param name="message">The failure message.</param>
+    /// <param name="errorCode">The failure error code.</param>
     public FailureAttribute(string name, string message, int errorCode)
     {
         Name = name;

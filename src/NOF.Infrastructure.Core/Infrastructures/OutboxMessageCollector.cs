@@ -3,8 +3,8 @@ using System.ComponentModel;
 namespace NOF;
 
 /// <summary>
-/// 事务性消息收集器接口
-/// 负责收集事务性消息，不依赖任何其他组件
+/// Transactional message collector interface.
+/// Collects outbox messages without depending on any other components.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IOutboxMessageCollector
@@ -15,8 +15,8 @@ public interface IOutboxMessageCollector
 }
 
 /// <summary>
-/// 事务性消息收集器实现
-/// 作为最底层组件，不依赖任何其他业务组件
+/// Transactional message collector implementation.
+/// Serves as the lowest-level component with no business dependencies.
 /// </summary>
 public sealed class OutboxMessageCollector : IOutboxMessageCollector
 {

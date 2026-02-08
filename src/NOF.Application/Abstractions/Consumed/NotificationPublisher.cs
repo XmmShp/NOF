@@ -1,19 +1,25 @@
 namespace NOF;
 
+/// <summary>
+/// Publishes notification messages to all subscribers.
+/// </summary>
 public interface INotificationPublisher
 {
+    /// <summary>Publishes a notification asynchronously.</summary>
+    /// <param name="notification">The notification to publish.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task PublishAsync(INotification notification, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// 延迟通知发布器接口
-/// 用于在不使用 HandlerBase 的情况下手动添加通知到事务性上下文
+/// Deferred notification publisher for manually adding notifications to the transactional outbox context
+/// without using HandlerBase.
 /// </summary>
 public interface IDeferredNotificationPublisher
 {
     /// <summary>
-    /// 添加通知到事务性上下文
-    /// 通知将在 UnitOfWork.SaveChangesAsync 时统一持久化到 Outbox
+    /// Adds a notification to the transactional outbox context.
+    /// The notification will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
     /// </summary>
     void Publish(INotification notification);
 }

@@ -11,14 +11,14 @@ using System.Text;
 namespace NOF;
 
 /// <summary>
-/// 源生成器：检测标记了 AutoInjectAttribute 的服务类（包括引用项目），并生成 DI 注册代码
+/// Source generator: detects service classes marked with AutoInjectAttribute (including referenced projects) and generates DI registration code.
 /// </summary>
 [Generator]
 public class AutoInjectGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // 1. 从当前项目的源代码中提取带 AutoInject 的类（语法 + 语义）
+        // 1. Extract classes with AutoInject from current project source code (syntax + semantic)
         var sourceClasses = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax { AttributeLists.Count: > 0 },
@@ -38,7 +38,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 })
             .Where(static s => s is not null);
 
-        // 2. 从所有引用程序集（metadata）中提取带 AutoInject 的 public 非抽象类
+        // 2. Extract public non-abstract classes with AutoInject from all referenced assemblies (metadata)
         var referencedTypes = context.CompilationProvider
             .Select(static (compilation, _) =>
             {
@@ -50,7 +50,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 return builder.ToImmutable();
             });
 
-        // 3. 合并两部分结果，同时获取程序集名称
+        // 3. Merge both results and get the assembly name
         var allTypesWithAssembly = context.CompilationProvider
             .Combine(referencedTypes.Combine(sourceClasses.Collect()))
             .Select(static (data, _) =>
@@ -69,7 +69,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 return (AssemblyName: assemblyName, Types: set.ToImmutableArray());
             });
 
-        // 4. 生成代码
+        // 4. Generate code
         context.RegisterSourceOutput(allTypesWithAssembly, static (spc, data) =>
         {
             if (data.Types.IsEmpty)
@@ -102,7 +102,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
         => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == "NOF.AutoInjectAttribute");
 
     /// <summary>
-    /// 将程序集名称转换为安全的方法名（将不安全字符替换为下划线）
+    /// Converts an assembly name to a safe method name (replaces unsafe characters with underscores).
     /// </summary>
     private static string SanitizeAssemblyName(string assemblyName)
     {
@@ -139,15 +139,15 @@ public class AutoInjectGenerator : IIncrementalGenerator
         sb.AppendLine("{");
 
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// 自动生成的服务注册扩展方法 (程序集: {assemblyName})");
+        sb.AppendLine($"    /// Auto-generated service registration extension methods (assembly: {assemblyName}).");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public static class __ServiceCollectionExtensions__");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
-        sb.AppendLine($"        /// 自动注册 {assemblyName} 中所有标记了 AutoInjectAttribute 的服务");
+        sb.AppendLine($"        /// Auto-registers all services marked with AutoInjectAttribute in {assemblyName}.");
         sb.AppendLine("        /// </summary>");
-        sb.AppendLine("        /// <param name=\"services\">服务集合</param>");
-        sb.AppendLine("        /// <returns>用于链式调用的服务集合</returns>");
+        sb.AppendLine("        /// <param name=\"services\">The service collection.</param>");
+        sb.AppendLine("        /// <returns>The service collection for chaining.</returns>");
 
         sb.AppendLine($"        public static IServiceCollection {methodName}(this IServiceCollection services)");
         sb.AppendLine("        {");
@@ -178,7 +178,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
             return;
         }
 
-        // 解析生命周期
+        // Parse lifetime
         if (attribute.ConstructorArguments.Length <= 0 || attribute.ConstructorArguments[0].Value is not int intValue)
         {
             return;
@@ -192,14 +192,14 @@ public class AutoInjectGenerator : IIncrementalGenerator
             _ => throw new ArgumentOutOfRangeException()
         };
 
-        // 获取完全限定但无 global:: 的类型名
+        // Get fully qualified type name without global:: prefix
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Omitted)
             .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
 
         var serviceTypeName = serviceClass.ToDisplayString(typeFormat);
 
-        // 检查是否有显式 RegisterTypes
+        // Check if there are explicit RegisterTypes
         var registerTypesArg = attribute.NamedArguments.FirstOrDefault(kvp => kvp.Key == "RegisterTypes").Value;
         var hasExplicitRegisterTypes = !registerTypesArg.IsNull;
 
@@ -207,7 +207,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
 
         if (hasExplicitRegisterTypes)
         {
-            // RegisterTypes 是 Type[]，每个值是 ITypeSymbol
+            // RegisterTypes is Type[], each value is ITypeSymbol
             foreach (var typedConstant in registerTypesArg.Values)
             {
                 if (typedConstant.Value is ITypeSymbol regType && regType.ToDisplayString() != serviceTypeName)
@@ -218,11 +218,11 @@ public class AutoInjectGenerator : IIncrementalGenerator
         }
         else
         {
-            // 默认：注册所有实现的接口
+            // Default: register all implemented interfaces
             typesToRegister.AddRange(serviceClass.AllInterfaces.Select(i => i.ToDisplayString(typeFormat)));
         }
 
-        // 处理 Singleton / Scoped（需要共享实例）
+        // Handle Singleton / Scoped (shared instance needed)
         if (lifetime == Lifetime.Singleton || lifetime == Lifetime.Scoped)
         {
             if (typesToRegister.Count == 1)
@@ -231,9 +231,9 @@ public class AutoInjectGenerator : IIncrementalGenerator
             }
             else
             {
-                // 先注册自身
+                // Register self first
                 sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
-                // 再注册接口（工厂委托指向自身）
+                // Then register interfaces (factory delegate pointing to self)
                 foreach (var typeName in typesToRegister)
                 {
                     sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), sp => sp.GetRequiredService<{serviceTypeName}>(), {ToLifeTime(lifetime)}));");
@@ -263,7 +263,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 }
                 else
                 {
-                    // 没有接口，注册自身
+                    // No interfaces, register self
                     sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 }
             }

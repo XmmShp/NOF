@@ -1,18 +1,17 @@
 namespace NOF;
 
 /// <summary>
-/// 收件箱消息实体
-/// 用于记录需要可靠处理的消息
+/// Inbox message entity used for tracking reliably processed messages.
 /// </summary>
 public class InboxMessage
 {
     /// <summary>
-    /// 消息唯一标识
+    /// The unique message identifier.
     /// </summary>
     public Guid Id { get; }
 
     /// <summary>
-    /// 消息创建时间
+    /// The message creation time.
     /// </summary>
     public DateTime CreatedAt { get; }
 
@@ -24,22 +23,21 @@ public class InboxMessage
 }
 
 /// <summary>
-/// 收件箱消息仓储接口
-/// 负责管理收件箱消息的持久化
+/// Inbox message repository interface responsible for persisting inbox messages.
 /// </summary>
 public interface IInboxMessageRepository
 {
     /// <summary>
-    /// 添加收件箱消息
+    /// Adds an inbox message.
     /// </summary>
-    /// <param name="message">收件箱消息</param>
+    /// <param name="message">The inbox message.</param>
     void Add(InboxMessage message);
 
     /// <summary>
-    /// 根据消息ID检查消息是否存在
+    /// Checks whether a message exists by its ID.
     /// </summary>
-    /// <param name="messageId">消息ID</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>是否存在</returns>
+    /// <param name="messageId">The message ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the message exists; otherwise false.</returns>
     Task<bool> ExistByMessageIdAsync(Guid messageId, CancellationToken cancellationToken = default);
 }

@@ -56,7 +56,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
         var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
         var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 
-        // 保存原始租户上下文
+        // Save the original tenant context
         var originalTenantId = invocationContext.TenantId;
 
         // Process Host database first (TenantId = null)
@@ -92,14 +92,14 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
 
             try
             {
-                // 设置租户上下文
+                // Set the tenant context
                 invocationContext.SetTenantId(tenant.Id);
                 _logger.LogDebug("Processing outbox messages for tenant {TenantId}", tenant.Id);
 
-                // 使用当前 scope 的 repository，它会自动使用设置的租户上下文
+                // Use the current scope's repository, which automatically uses the set tenant context
                 var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
 
-                // 使用抢占式获取，避免多实例重复处理
+                // Use claim-based retrieval to avoid duplicate processing across instances
                 var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
 
                 if (pendingMessages.Count == 0)
@@ -117,7 +117,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
             }
         }
 
-        // 恢复原始租户上下文
+        // Restore the original tenant context
         invocationContext.SetTenantId(originalTenantId);
     }
 
@@ -136,7 +136,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
             return;
         }
 
-        // 恢复追踪上下文
+        // Restore the tracing context
         using var activity = RestoreTracingContext(message);
         var messageId = Guid.NewGuid();
 
@@ -181,7 +181,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // 服务正在关闭，不记录为失败，留待下次启动重试
+            // Service is shutting down, do not record as failure; leave for retry on next startup
             _logger.LogInformation("Message {MessageId} delivery canceled due to shutdown", message.Id);
             activity?.SetStatus(ActivityStatusCode.Ok);
             throw; // rethrow to prevent marking as succeeded
@@ -195,7 +195,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
             throw; // ensure not added to success list
         }
 
-        // 成功处理完成，设置 Activity 状态为成功
+        // Processing completed successfully, set Activity status to OK
         activity?.SetStatus(ActivityStatusCode.Ok);
     }
 
