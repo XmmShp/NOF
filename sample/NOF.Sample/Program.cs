@@ -19,7 +19,7 @@ builder.AddJwtAuthentication();
 builder.AddMassTransit()
     .UseRabbitMQ();
 
-builder.AddEFCore<ConfigurationDbContext, ConfigurationPublicDbContext>()
+builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 

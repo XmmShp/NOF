@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using System.Security.Authentication;
 using System.Security.Claims;
 
 namespace NOF;
@@ -29,10 +28,6 @@ public class InvocationContextMiddleware : IMiddleware
 
             // 提取租户信息
             var tenantId = context.User.FindFirstValue(NOFConstants.TenantId);
-            if (string.IsNullOrEmpty(tenantId))
-            {
-                throw new AuthenticationException("Tenant ID is required");
-            }
 
             // 设置租户上下文
             _invocationContext.SetTenantId(tenantId);
@@ -41,7 +36,7 @@ public class InvocationContextMiddleware : IMiddleware
         {
             // 未认证状态下清空上下文
             await _invocationContext.UnsetUserAsync();
-            _invocationContext.SetTenantId("default");
+            _invocationContext.SetTenantId(null);
         }
 
         await next(context);

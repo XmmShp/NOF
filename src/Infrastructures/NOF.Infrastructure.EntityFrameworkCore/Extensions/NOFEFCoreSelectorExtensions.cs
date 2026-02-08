@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace NOF;
 
 public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
@@ -6,8 +8,10 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
     {
         public INOFEFCoreSelector AutoMigrate()
         {
-            selector.Builder.AutoMigrateTenantDatabases = true;
-            selector.Builder.AddInitializationStep(new AutoMigrateInitializationStep());
+            selector.Builder.Services.Configure<DbContextFactoryOptions>(options =>
+            {
+                options.AutoMigrate = true;
+            });
             return selector;
         }
     }

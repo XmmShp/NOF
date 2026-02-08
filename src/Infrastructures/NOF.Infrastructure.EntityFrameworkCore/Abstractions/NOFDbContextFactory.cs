@@ -2,79 +2,84 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 
 namespace NOF;
 
 /// <summary>
-/// NOF 数据库上下文工厂接口
-/// 用于创建指定类型的数据库上下文
+/// NOF database context factory interface
+/// Used to create database contexts of the specified type
 /// </summary>
-public interface INOFDbContextFactory<TDbContext> : IDbContextFactory<TDbContext> where TDbContext : DbContext
+public interface INOFDbContextFactory<TDbContext> : IDbContextFactory<TDbContext> where TDbContext : NOFDbContext
 {
     /// <summary>
-    /// 创建指定租户的数据库上下文
+    /// Create a database context for the specified tenant
+    /// If tenantId is null or empty, will create Host database context
     /// </summary>
-    TDbContext CreateDbContext(string tenantId);
+    TDbContext CreateDbContext(string? tenantId);
 }
 
 internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDbContext>
-    where TDbContext : DbContext
+    where TDbContext : NOFDbContext
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IInvocationContext _invocationContext;
-    private readonly IStartupEventChannel _startupEventChannel;
-    private readonly bool _autoMigrate;
+    private readonly IDbContextConfigurator _dbContextConfigurator;
+    private readonly DbContextFactoryOptions _options;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         IInvocationContext invocationContext,
-        IStartupEventChannel startupEventChannel,
-        bool autoMigrate,
+        IDbContextConfigurator dbContextConfigurator,
+        IOptions<DbContextFactoryOptions> options,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
         _invocationContext = invocationContext;
-        _startupEventChannel = startupEventChannel;
-        _autoMigrate = autoMigrate;
+        _dbContextConfigurator = dbContextConfigurator;
+        _options = options.Value;
         _logger = logger;
     }
 
     public TDbContext CreateDbContext()
         => CreateDbContext(_invocationContext.TenantId);
 
-    public TDbContext CreateDbContext(string tenantId)
+    public TDbContext CreateDbContext(string? tenantId)
     {
-        if (string.IsNullOrEmpty(tenantId))
+        var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
+
+        // Add extension for Tenant context (when tenantId is provided)
+        // This extension triggers: model-level [HostOnly] entity filtering + migration SQL filtering
+        if (!string.IsNullOrWhiteSpace(tenantId))
         {
-            throw new ArgumentException("Tenant ID cannot be null or empty", nameof(tenantId));
+            var extension = new NOFTenantDbContextOptionsExtension();
+            ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
         }
 
-        var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
-        var extension = new NOFDbContextOptionsExtension(_startupEventChannel);
-        ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
+        // Use configurator to configure database-specific options
+        _dbContextConfigurator.Configure(optionsBuilder, tenantId);
 
-        var configurating = new DbContextConfigurating(_serviceProvider, tenantId, optionsBuilder);
-        _startupEventChannel.Publish(configurating);
         var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);
 
-        ConfigureDbContext(dbContext, tenantId);
+        var contextType = string.IsNullOrWhiteSpace(tenantId) ? "Host" : "Tenant";
+        ConfigureDbContext(dbContext, contextType);
 
-        _logger.LogDebug("Created {DbContextType} for tenant {TenantId}", typeof(TDbContext).Name, tenantId);
+        _logger.LogDebug("Created {DbContextType} for {ContextType}", typeof(TDbContext).Name, contextType);
         return dbContext;
     }
 
-    private void ConfigureDbContext(TDbContext dbContext, string tenantId)
+    private void ConfigureDbContext(TDbContext dbContext, string contextType)
     {
         if (Assembly.GetEntryAssembly()?.GetName().Name?.ToLowerInvariant() != "ef")
         {
-            if (_autoMigrate)
+            if (_options.AutoMigrate)
             {
                 if (dbContext.Database.IsRelational())
                 {
                     dbContext.Database.Migrate();
-                    _logger.LogDebug("Migrated database for tenant {TenantId}", tenantId);
+                    _logger.LogDebug("Migrated database for {ContextType}", contextType);
                 }
             }
             else
@@ -85,8 +90,8 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
                     if (pendingMigrations.Length != 0)
                     {
                         throw new InvalidOperationException(
-                            $"Tenant {tenantId} database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
-                            $"Enable auto-migration by setting builder.AutoMigrateTenantDatabases = true or run migrations manually.");
+                            $"{contextType} database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
+                            $"Enable auto-migration by configuring NOFDbContextFactoryOptions.AutoMigrate = true or run migrations manually.");
                     }
                 }
             }

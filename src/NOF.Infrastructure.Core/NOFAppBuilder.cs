@@ -230,8 +230,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         Services.AddScoped<IInvocationContextInternal, InvocationContext>();
         Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());
 
-        Services.AddScoped(typeof(IDataAccessContext<>), typeof(DataAccessContextWrapper<>));
-
         Services.AddScoped<ICommandSender, CommandSender>();
         Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 
@@ -289,7 +287,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
 
 
         AddRegistrationStep(new AddStateMachineRegistrationStep());
-        AddInitializationStep(new DefaultTenantInitializationStep());
     }
 
     #region Abstractions

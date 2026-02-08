@@ -1,9 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NOF;
 
 [Table(nameof(EFCoreStateMachineContext))]
+[PrimaryKey(nameof(CorrelationId), nameof(DefinitionType))]
 internal sealed class EFCoreStateMachineContext
 {
     [Required]

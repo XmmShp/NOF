@@ -1,9 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NOF;
 
 [Table(nameof(EFCoreOutboxMessage))]
+[Index(nameof(Status), nameof(CreatedAt))]
+[Index(nameof(Status), nameof(ClaimExpiresAt))]
+[Index(nameof(ClaimedBy))]
+[Index(nameof(TraceId))]
 internal sealed class EFCoreOutboxMessage
 {
     [Key]

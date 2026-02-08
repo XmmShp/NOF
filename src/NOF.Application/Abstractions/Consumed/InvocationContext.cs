@@ -15,10 +15,10 @@ public interface IInvocationContext
     ClaimsPrincipal User { get; }
 
     /// <summary>
-    /// The tenant ID under which this invocation is executing. Never null.
-    /// Defaults to "default" if not explicitly specified.
+    /// The tenant ID under which this invocation is executing.
+    /// Can be null for host-level operations, or a specific tenant ID for tenant operations.
     /// </summary>
-    string TenantId { get; }
+    string? TenantId { get; }
 
     /// <summary>
     /// Shared storage for components participating in this invocation.
@@ -69,8 +69,8 @@ public interface IInvocationContextInternal : IInvocationContext
     /// <summary>
     /// Sets the current tenant identifier.
     /// </summary>
-    /// <param name="tenantId">The tenant identifier. Must not be null or empty.</param>
-    void SetTenantId(string tenantId);
+    /// <param name="tenantId">The tenant identifier. Can be null for host-level operations.</param>
+    void SetTenantId(string? tenantId);
 
     /// <summary>
     /// Sets the tracing information for this invocation.
@@ -89,7 +89,7 @@ public class InvocationContext : IInvocationContextInternal
     public ClaimsPrincipal User { get; private set; } = new();
 
     /// <inheritdoc />
-    public string TenantId { get; private set; } = "default";
+    public string? TenantId { get; private set; }
 
     /// <inheritdoc />
     public IDictionary<string, object?> Items { get; } = new Dictionary<string, object?>();
@@ -121,11 +121,8 @@ public class InvocationContext : IInvocationContextInternal
         => Task.Run(UnsetUser);
 
     /// <inheritdoc />
-    public void SetTenantId(string tenantId)
+    public void SetTenantId(string? tenantId)
     {
-        if (string.IsNullOrEmpty(tenantId))
-            throw new InvalidOperationException("Tenant ID cannot be null or empty.");
-
         TenantId = tenantId;
     }
 

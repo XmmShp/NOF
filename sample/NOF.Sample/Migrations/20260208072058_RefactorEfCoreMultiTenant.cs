@@ -3,19 +3,16 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace NOF.Sample.Migrations.Public
+namespace NOF.Sample.Migrations.Tenant
 {
     /// <inheritdoc />
-    public partial class AddTenant : Migration
+    public partial class RefactorEfCoreMultiTenant : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "EFCoreInboxMessage");
-
             migrationBuilder.CreateTable(
-                name: "Tenants",
+                name: "EFCoreTenant",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
@@ -27,12 +24,12 @@ namespace NOF.Sample.Migrations.Public
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tenants", x => x.Id);
+                    table.PrimaryKey("PK_EFCoreTenant", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tenants_Name",
-                table: "Tenants",
+                name: "IX_EFCoreTenant_Name",
+                table: "EFCoreTenant",
                 column: "Name",
                 unique: true);
         }
@@ -41,24 +38,7 @@ namespace NOF.Sample.Migrations.Public
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Tenants");
-
-            migrationBuilder.CreateTable(
-                name: "EFCoreInboxMessage",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_EFCoreInboxMessage", x => x.Id);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_EFCoreInboxMessage_CreatedAt",
-                table: "EFCoreInboxMessage",
-                column: "CreatedAt");
+                name: "EFCoreTenant");
         }
     }
 }

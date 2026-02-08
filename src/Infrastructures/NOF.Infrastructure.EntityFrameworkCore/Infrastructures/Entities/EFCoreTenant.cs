@@ -1,23 +1,35 @@
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace NOF;
 
 /// <summary>
 /// EFCore 租户实体
 /// </summary>
+[HostOnly]
+[Table(nameof(EFCoreTenant))]
+[Index(nameof(Name), IsUnique = true)]
 internal sealed class EFCoreTenant
 {
     /// <summary>
     /// 租户标识符
     /// </summary>
+    [Key]
+    [MaxLength(256)]
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
     /// 租户名称
     /// </summary>
+    [Required]
+    [MaxLength(256)]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// 租户描述
     /// </summary>
+    [MaxLength(1000)]
     public string? Description { get; set; }
 
     /// <summary>

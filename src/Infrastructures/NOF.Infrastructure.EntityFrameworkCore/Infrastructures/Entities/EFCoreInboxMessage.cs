@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NOF;
@@ -8,6 +9,7 @@ namespace NOF;
 /// 用于记录需要可靠处理的消息
 /// </summary>
 [Table(nameof(EFCoreInboxMessage))]
+[Index(nameof(CreatedAt))]
 internal sealed class EFCoreInboxMessage
 {
     /// <summary>

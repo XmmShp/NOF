@@ -8,10 +8,10 @@ namespace NOF;
 /// </summary>
 internal sealed class EFCoreTenantRepository : ITenantRepository
 {
-    private readonly NOFPublicDbContext _dbContext;
+    private readonly NOFDbContext _dbContext;
     private readonly ILogger<EFCoreTenantRepository> _logger;
 
-    public EFCoreTenantRepository(NOFPublicDbContext dbContext, ILogger<EFCoreTenantRepository> logger)
+    public EFCoreTenantRepository(NOFDbContext dbContext, ILogger<EFCoreTenantRepository> logger)
     {
         _dbContext = dbContext;
         _logger = logger;
