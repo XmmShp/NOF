@@ -4,6 +4,10 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+
+		<!-- NuGet Package Settings -->
+		<PackageId>NOF.Infrastructure.EntityFrameworkCore</PackageId>
+		<Description>EF Core infrastructure for the NOF Framework — NOFDbContext, repository pattern, transactional outbox, and multi-tenancy support.</Description>
 	</PropertyGroup>
 
 	<ItemGroup>

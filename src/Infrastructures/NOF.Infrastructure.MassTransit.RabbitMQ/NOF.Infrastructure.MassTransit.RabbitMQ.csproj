@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.MassTransit.RabbitMQ</PackageId>
+    <Description>RabbitMQ transport for the NOF Framework MassTransit infrastructure.</Description>
   </PropertyGroup>
 
   <ItemGroup>

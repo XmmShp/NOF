@@ -13,6 +13,7 @@
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<NoWarn>$(NoWarn);NU5128;CS1591;RS2008</NoWarn>
 		<DevelopmentDependency>true</DevelopmentDependency>
+		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.StackExchangeRedis</PackageId>
+    <Description>Redis caching infrastructure for the NOF Framework, powered by StackExchange.Redis.</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Annotation</PackageId>
+    <Description>Shared attributes and enums for the NOF Framework, including [AutoInject] for automatic DI registration and the Lifetime enum.</Description>
   </PropertyGroup>
 
 </Project>

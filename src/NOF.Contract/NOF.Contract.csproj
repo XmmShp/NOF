@@ -9,7 +9,7 @@
     <!-- NuGet Package Settings -->
     <IsPackable>true</IsPackable>
     <PackageId>NOF.Contract</PackageId>
-    <Description>NOF Contract layer containing common application interfaces, DTOs, and shared logic.</Description>
+    <Description>Contract layer for the NOF Framework — requests, commands, notifications, Result type, and HTTP endpoint attributes with source generation.</Description>
   </PropertyGroup>	
 
   <ItemGroup>

@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.Core</PackageId>
+    <Description>Core infrastructure for the NOF Framework — INOFAppBuilder, dependency-aware step pipeline, OpenTelemetry integration, and service wiring.</Description>
   </PropertyGroup>
 
   <ItemGroup>

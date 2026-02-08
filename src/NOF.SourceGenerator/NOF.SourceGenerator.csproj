@@ -15,6 +15,10 @@
 		
 		<DevelopmentDependency>true</DevelopmentDependency>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+		<!-- NuGet Package Settings -->
+		<PackageId>NOF.SourceGenerator</PackageId>
+		<Description>Roslyn source generator for the NOF Framework — compile-time DI registration via [AutoInject].</Description>
 	</PropertyGroup>
 
 	<ItemGroup>

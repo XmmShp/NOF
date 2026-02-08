@@ -4,8 +4,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.MassTransit</PackageId>
+    <Description>MassTransit integration for the NOF Framework — message bus adapter for commands, events, and notifications.</Description>
   </PropertyGroup>
-		
 
 	<ItemGroup>
 		<PackageReference Include="MassTransit" />

@@ -5,14 +5,13 @@
     <Company>NOF</Company>
     <Product>NOF Framework</Product>
     <Copyright>Copyright © $(Company) $([System.DateTime]::Now.Year)</Copyright>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/XmmShp/NOF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/XmmShp/NOF</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>nof;framework;dotnet;aspnetcore</PackageTags>
     
     <!-- Version -->
-    <VersionPrefix>4.2.0</VersionPrefix>
+    <VersionPrefix>6.5.2</VersionPrefix>
     <VersionSuffix Condition="'$(Configuration)' == 'Debug'">dev</VersionSuffix>
     
     <!-- Build Properties -->
@@ -23,12 +22,5 @@
     <!-- Symbol Package -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    
-    <!-- Package README -->
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="$(MSBuildProjectDirectory)\README.md" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildProjectDirectory)\README.md')" />
-  </ItemGroup>
 </Project>

@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.EntityFrameworkCore.PostgreSQL</PackageId>
+    <Description>PostgreSQL provider for the NOF Framework EF Core infrastructure, powered by Npgsql.</Description>
   </PropertyGroup>
 
 	<ItemGroup>
