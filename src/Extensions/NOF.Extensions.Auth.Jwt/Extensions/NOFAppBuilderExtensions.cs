@@ -15,7 +15,7 @@ public static partial class __NOF_Extensions_Auth_Jwt_Extensions__
         /// </summary>
         /// <param name="configureOptions">Action to configure JWT options.</param>
         /// <returns>The NOF application builder for chaining.</returns>
-        public INOFAppBuilder AddJwtAuthentication(Action<JwtOptions>? configureOptions = null)
+        public INOFAppBuilder AddJwtAuthority(Action<JwtOptions>? configureOptions = null)
         {
             // Register this assembly for handler discovery
             builder.Assemblies.Add(typeof(KeyDerivationService).Assembly);
@@ -46,9 +46,9 @@ public static partial class __NOF_Extensions_Auth_Jwt_Extensions__
         /// <param name="issuer">The token issuer.</param>
         /// <param name="masterSecurityKey">The master security key for deriving client-specific keys.</param>
         /// <returns>The NOF application builder for chaining.</returns>
-        public INOFAppBuilder AddJwtAuthentication(string issuer, string masterSecurityKey)
+        public INOFAppBuilder AddJwtAuthority(string issuer, string masterSecurityKey)
         {
-            return builder.AddJwtAuthentication(options =>
+            return builder.AddJwtAuthority(options =>
             {
                 options.Issuer = issuer;
                 options.MasterSecurityKey = masterSecurityKey;

@@ -14,7 +14,7 @@ builder.Services.AddNOF_SampleAutoInjectServices();
 
 builder.Services.AddRedisCache();
 
-builder.AddJwtAuthentication();
+builder.AddJwtAuthority();
 
 builder.AddMassTransit()
     .UseRabbitMQ();
