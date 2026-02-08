@@ -12,13 +12,27 @@ namespace NOF;
 /// </summary>
 internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
+    /// <summary>
+    /// The tenant ID for this context. When null or whitespace, the context is considered to be in host mode.
+    /// </summary>
+    public string? TenantId { get; set; }
+
+    /// <summary>
+    /// Additional entity types to ignore in tenant mode, beyond those marked with <see cref="HostOnlyAttribute"/>.
+    /// </summary>
+    public Type[] TenantIgnoredEntityTypes { get; set; } = [];
+
     public void ApplyServices(IServiceCollection services)
     {
+        // Host mode — no filtering needed
+        if (string.IsNullOrWhiteSpace(TenantId))
+            return;
+
         // Find the existing IMigrationsSqlGenerator registration (added by the database provider)
         var originalDescriptor = services.LastOrDefault(
             d => d.ServiceType == typeof(IMigrationsSqlGenerator));
 
-        if (originalDescriptor?.ImplementationType == null)
+        if (originalDescriptor == null)
             return;
 
         // Remove the original registration
@@ -29,11 +43,21 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
             typeof(IMigrationsSqlGenerator),
             sp =>
             {
-                var inner = (IMigrationsSqlGenerator)ActivatorUtilities.CreateInstance(
-                    sp, originalDescriptor.ImplementationType);
-                return new NOFTenantMigrationsSqlGenerator(inner);
+                var inner = ResolveInner(sp, originalDescriptor);
+                return new NOFTenantMigrationsSqlGenerator(inner, TenantIgnoredEntityTypes);
             },
             originalDescriptor.Lifetime));
+    }
+
+    private static IMigrationsSqlGenerator ResolveInner(IServiceProvider sp, ServiceDescriptor descriptor)
+    {
+        if (descriptor.ImplementationType is not null)
+            return (IMigrationsSqlGenerator)ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType);
+
+        if (descriptor.ImplementationFactory is not null)
+            return (IMigrationsSqlGenerator)descriptor.ImplementationFactory(sp);
+
+        return (IMigrationsSqlGenerator)descriptor.ImplementationInstance!;
     }
 
     public void Validate(IDbContextOptions options) { }
@@ -44,15 +68,22 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
     {
         public ExtensionInfo(IDbContextOptionsExtension extension) : base(extension) { }
 
+        private new NOFTenantDbContextOptionsExtension Extension
+            => (NOFTenantDbContextOptionsExtension)base.Extension;
+
         public override bool IsDatabaseProvider => false;
-        public override string LogFragment => "TenantContext ";
+        public override string LogFragment => $"TenantContext(TenantId={Extension.TenantId}) ";
 
         public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
             => other is ExtensionInfo;
 
-        public override int GetServiceProviderHashCode() => 0;
+        public override int GetServiceProviderHashCode()
+            => (Extension.TenantId ?? string.Empty).GetHashCode();
 
         public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
-            => debugInfo["NOF:TenantContext"] = "true";
+        {
+            debugInfo["NOF:TenantContext"] = "true";
+            debugInfo["NOF:TenantId"] = Extension.TenantId ?? "(null)";
+        }
     }
 }

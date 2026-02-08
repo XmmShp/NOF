@@ -1,4 +1,4 @@
-﻿namespace NOF;
+namespace NOF;
 
 /// <summary>
 /// Marks a handler or message to allow anonymous access without authentication

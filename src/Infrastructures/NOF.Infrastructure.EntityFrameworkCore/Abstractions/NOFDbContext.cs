@@ -16,20 +16,24 @@ public abstract class NOFDbContext : DbContext
     internal DbSet<EFCoreOutboxMessage> OutboxMessages { get; set; }
     internal DbSet<EFCoreTenant> Tenants { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
+    /// <summary>
+    /// Override this method to specify additional entity types that should be ignored
+    /// in tenant mode, beyond those marked with <see cref="HostOnlyAttribute"/>.
+    /// </summary>
+    protected virtual Type[] GetTenantIgnoredEntityTypes() => [];
 
-        // Apply host-only filtering in tenant contexts (when NOFTenantDbContextOptionsExtension is present)
-        if (_options.FindExtension<NOFTenantDbContextOptionsExtension>() != null)
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+
+        // In tenant mode, register a finalizing convention that removes [HostOnly] entities
+        // after all OnModelCreating configurations have been applied
+        var tenantExtension = _options.FindExtension<NOFTenantDbContextOptionsExtension>();
+        if (tenantExtension is not null && !string.IsNullOrWhiteSpace(tenantExtension.TenantId))
         {
-            OnTenantModelCreating(modelBuilder);
+            var additionalIgnoredTypes = GetTenantIgnoredEntityTypes();
+            tenantExtension.TenantIgnoredEntityTypes = additionalIgnoredTypes;
+            configurationBuilder.Conventions.Add(_ => new HostOnlyModelFinalizingConvention(additionalIgnoredTypes));
         }
-    }
-
-    protected virtual void OnTenantModelCreating(ModelBuilder modelBuilder)
-    {
-        var customizer = new IgnoreHostOnlyModelCustomizer();
-        customizer.Customize(modelBuilder);
     }
 }

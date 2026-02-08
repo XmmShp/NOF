@@ -36,6 +36,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
+    - name: Verify code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+
     - name: Build solution
       run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
 
@@ -49,7 +52,8 @@ jobs:
         BASE_VERSION="${LATEST_TAG#v}"
         if [ -z "$BASE_VERSION" ]; then BASE_VERSION="0.0.0"; fi
         SHORT_SHA=$(git rev-parse --short HEAD)
-        VERSION="${BASE_VERSION}-nightly.${SHORT_SHA}"
+        MINUTES_SINCE=$(( ($(date -u +%s) - $(date -u -d '2024-01-01' +%s)) / 60 ))
+        VERSION="${BASE_VERSION}-nightly.${MINUTES_SINCE}.${SHORT_SHA}"
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Nightly version: $VERSION"
 

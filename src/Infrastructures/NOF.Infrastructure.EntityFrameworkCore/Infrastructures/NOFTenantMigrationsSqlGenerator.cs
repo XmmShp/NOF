@@ -14,10 +14,12 @@ namespace NOF;
 internal sealed class NOFTenantMigrationsSqlGenerator : IMigrationsSqlGenerator
 {
     private readonly IMigrationsSqlGenerator _inner;
+    private readonly HashSet<Type> _additionalIgnoredTypes;
 
-    public NOFTenantMigrationsSqlGenerator(IMigrationsSqlGenerator inner)
+    public NOFTenantMigrationsSqlGenerator(IMigrationsSqlGenerator inner, Type[] additionalIgnoredTypes)
     {
         _inner = inner;
+        _additionalIgnoredTypes = new HashSet<Type>(additionalIgnoredTypes);
     }
 
     public IReadOnlyList<MigrationCommand> Generate(
@@ -39,7 +41,7 @@ internal sealed class NOFTenantMigrationsSqlGenerator : IMigrationsSqlGenerator
         return _inner.Generate(filteredOperations, model, options);
     }
 
-    private static HashSet<string> ResolveHostOnlyTableNames(IModel? model)
+    private HashSet<string> ResolveHostOnlyTableNames(IModel? model)
     {
         var tableNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -48,10 +50,11 @@ internal sealed class NOFTenantMigrationsSqlGenerator : IMigrationsSqlGenerator
 
         foreach (var entityType in model.GetEntityTypes())
         {
-            if (entityType.ClrType.IsDefined(typeof(HostOnlyAttribute)))
+            if (entityType.ClrType.IsDefined(typeof(HostOnlyAttribute))
+                || _additionalIgnoredTypes.Contains(entityType.ClrType))
             {
                 var tableName = entityType.GetTableName();
-                if (tableName != null)
+                if (tableName is not null)
                 {
                     tableNames.Add(tableName);
                 }
@@ -64,7 +67,7 @@ internal sealed class NOFTenantMigrationsSqlGenerator : IMigrationsSqlGenerator
     private static bool IsHostOnlyOperation(MigrationOperation operation, HashSet<string> hostOnlyTableNames)
     {
         var tableName = GetTableName(operation);
-        return tableName != null && hostOnlyTableNames.Contains(tableName);
+        return tableName is not null && hostOnlyTableNames.Contains(tableName);
     }
 
     private static string? GetTableName(MigrationOperation operation) => operation switch

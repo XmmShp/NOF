@@ -398,7 +398,8 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
 
     private static string EscapeXmlComment(string? value)
     {
-        if (value is null) return string.Empty;
+        if (value is null)
+            return string.Empty;
         return value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 }

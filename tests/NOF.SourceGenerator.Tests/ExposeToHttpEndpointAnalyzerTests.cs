@@ -1,10 +1,10 @@
-using System.Collections.Immutable;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using NOF.Contract.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
+using System.Collections.Immutable;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;

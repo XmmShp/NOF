@@ -1,4 +1,4 @@
-﻿namespace NOF;
+namespace NOF;
 
 /// <summary>
 /// Transactional message outbox context middleware.

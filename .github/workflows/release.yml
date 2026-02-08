@@ -47,6 +47,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
+    - name: Verify code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+
     - name: Build solution
       run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore /p:Version=${{ steps.version.outputs.VERSION }}
 

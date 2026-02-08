@@ -18,8 +18,8 @@ public class JwtAuthService
     /// Generate JWT token pair for a user.
     /// </summary>
     public async Task<Result<GenerateJwtTokenResponse>> GenerateTokenAsync(
-        string userId, 
-        string tenantId, 
+        string userId,
+        string tenantId,
         string audience = "sample-client",
         string[]? roles = null,
         string[]? permissions = null)

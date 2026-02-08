@@ -57,10 +57,10 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
 
         // Get all tenants
         var tenants = await tenantRepository.GetAllAsync();
-        
+
         // Save the original tenant context
         var originalTenantId = invocationContext.TenantId;
-        
+
         foreach (var tenant in tenants)
         {
             if (!tenant.IsActive)

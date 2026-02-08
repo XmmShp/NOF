@@ -302,14 +302,17 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
     /// </summary>
     private static void EmitBodyDtoIfNeeded(StringBuilder sb, EndpointInfo ep)
     {
-        if (ep.Method == HttpVerb.Get) return;
+        if (ep.Method == HttpVerb.Get)
+            return;
 
         var routeParams = ExtractRouteParameters(ep.Route);
-        if (routeParams.Count == 0) return;
+        if (routeParams.Count == 0)
+            return;
 
         var allProperties = GetAllPublicProperties(ep.RequestType);
         var (_, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
-        if (bodyProps.Count == 0) return;
+        if (bodyProps.Count == 0)
+            return;
 
         var dtoName = GetBodyDtoName(ep.RequestType);
         sb.AppendLine($"    public class {dtoName}");
@@ -398,13 +401,15 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
     private static string ToCamelCase(string name)
     {
-        if (string.IsNullOrEmpty(name)) return name;
+        if (string.IsNullOrEmpty(name))
+            return name;
         return char.ToLowerInvariant(name[0]) + name.Substring(1);
     }
 
     private static string EscapeString(string? value)
     {
-        if (value is null) return string.Empty;
+        if (value is null)
+            return string.Empty;
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 }
