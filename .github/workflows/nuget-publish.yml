@@ -10,6 +10,11 @@ on:
         description: 'Version to publish (e.g., 1.0.0)'
         required: true
         type: string
+      force_all:
+        description: 'Force publish all packages regardless of changes'
+        required: false
+        type: boolean
+        default: false
 
 env:
   DOTNET_VERSION: '10.0.x'
@@ -41,6 +46,143 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Publishing version: $VERSION"
 
+    - name: Detect changed packages
+      id: changes
+      run: |
+        FORCE_ALL="${{ github.event.inputs.force_all }}"
+
+        # Find the previous tag to diff against
+        CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+        PREVIOUS_TAG=$(git tag --sort=-v:refname | grep '^v' | grep -v "^${CURRENT_TAG}$" | head -n 1)
+
+        if [ -z "$PREVIOUS_TAG" ] || [ "$FORCE_ALL" == "true" ]; then
+          echo "No previous tag found or force_all=true, publishing all packages"
+          echo "PUBLISH_ALL=true" >> $GITHUB_OUTPUT
+        else
+          echo "Comparing $PREVIOUS_TAG..HEAD"
+          CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG"..HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # ---------------------------------------------------------------
+          # Detect which source directories have changes.
+          # Each flag means "this project's own source code changed".
+          # ---------------------------------------------------------------
+          has_change() { echo "$CHANGED_FILES" | grep -q "^$1" && echo "true" || echo "false"; }
+
+          # Leaf / no-dependency projects
+          ANNOTATION_CHANGED=$(has_change "src/NOF.Annotation/")
+          DOMAIN_SG_CHANGED=$(has_change "src/NOF.Domain.SourceGenerator/")
+          CONTRACT_SG_CHANGED=$(has_change "src/NOF.Contract.SourceGenerator/")
+          HOSTING_SG_CHANGED=$(has_change "src/Hostings/NOF.Hosting.SourceGenerator/")
+          HOSTING_ASPNET_SG_CHANGED=$(has_change "src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/")
+          SOURCE_GEN_CHANGED=$(has_change "src/NOF.SourceGenerator/")
+
+          DOMAIN_CHANGED=$(has_change "src/NOF.Domain/")
+          CONTRACT_CHANGED=$(has_change "src/NOF.Contract/")
+          APPLICATION_CHANGED=$(has_change "src/NOF.Application/")
+          INFRA_CORE_CHANGED=$(has_change "src/NOF.Infrastructure.Core/")
+          HOSTING_ASPNET_CHANGED=$(has_change "src/Hostings/NOF.Hosting.AspNetCore/")
+          INFRA_EF_CHANGED=$(has_change "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/")
+          INFRA_EF_PG_CHANGED=$(has_change "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/")
+          INFRA_MT_CHANGED=$(has_change "src/Infrastructures/NOF.Infrastructure.MassTransit/")
+          INFRA_MT_RMQ_CHANGED=$(has_change "src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/")
+          INFRA_REDIS_CHANGED=$(has_change "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/")
+          EXT_JWT_CHANGED=$(has_change "src/Extensions/NOF.Extensions.Auth.Jwt/")
+          EXT_JWT_CLIENT_CHANGED=$(has_change "src/Extensions/NOF.Extensions.Auth.Jwt.Client/")
+
+          # Also check for solution-level changes (Directory.Build.props, etc.)
+          SOLUTION_CHANGED=$(echo "$CHANGED_FILES" | grep -qE "^(Directory\.Build\.props|Directory\.Packages\.props|global\.json|nuget\.config)" && echo "true" || echo "false")
+
+          # ---------------------------------------------------------------
+          # Propagate changes through the dependency graph.
+          #
+          # Dependency tree (→ = depends on):
+          #   NOF.Domain             → NOF.Annotation, NOF.Domain.SourceGenerator(bundled)
+          #   NOF.Contract           → NOF.Contract.SourceGenerator(bundled)
+          #   NOF.Application        → NOF.Annotation, NOF.Contract, NOF.Domain
+          #   NOF.Infrastructure.Core → NOF.Application
+          #   NOF.Hosting.AspNetCore → NOF.Annotation, NOF.Infrastructure.Core,
+          #                            NOF.Hosting.SourceGenerator(bundled),
+          #                            NOF.Hosting.AspNetCore.SourceGenerator(bundled),
+          #                            NOF.SourceGenerator(bundled)
+          #   NOF.Infrastructure.EFCore           → NOF.Infrastructure.Core
+          #   NOF.Infrastructure.EFCore.PostgreSQL → NOF.Infrastructure.EFCore
+          #   NOF.Infrastructure.MassTransit      → NOF.Infrastructure.Core
+          #   NOF.Infrastructure.MassTransit.RabbitMQ → NOF.Infrastructure.MassTransit
+          #   NOF.Infrastructure.StackExchangeRedis   → NOF.Infrastructure.Core
+          #   NOF.Extensions.Auth.Jwt.Client          → NOF.Infrastructure.Core
+          #   NOF.Extensions.Auth.Jwt                 → NOF.Infrastructure.Core, NOF.Extensions.Auth.Jwt.Client
+          # ---------------------------------------------------------------
+
+          # Solution-level changes force everything
+          if [ "$SOLUTION_CHANGED" == "true" ]; then
+            echo "Solution-level files changed, publishing all packages"
+            echo "PUBLISH_ALL=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "PUBLISH_ALL=false" >> $GITHUB_OUTPUT
+
+          # Helper: "true" if any argument is "true"
+          any_true() { for v in "$@"; do [ "$v" == "true" ] && echo "true" && return; done; echo "false"; }
+
+          # --- Layer 0: leaf packages ---
+          PUBLISH_ANNOTATION=$ANNOTATION_CHANGED
+          PUBLISH_SOURCE_GEN=$SOURCE_GEN_CHANGED
+
+          # --- Layer 1: depends on Annotation / bundled SGs ---
+          # NOF.Domain needs republish if its own code, Annotation, or its bundled SG changed
+          PUBLISH_DOMAIN=$(any_true $DOMAIN_CHANGED $ANNOTATION_CHANGED $DOMAIN_SG_CHANGED)
+          # NOF.Contract needs republish if its own code or its bundled SG changed
+          PUBLISH_CONTRACT=$(any_true $CONTRACT_CHANGED $CONTRACT_SG_CHANGED)
+
+          # --- Layer 2: depends on Layer 1 ---
+          PUBLISH_APPLICATION=$(any_true $APPLICATION_CHANGED $PUBLISH_ANNOTATION $PUBLISH_CONTRACT $PUBLISH_DOMAIN)
+
+          # --- Layer 3: depends on Application ---
+          PUBLISH_INFRA_CORE=$(any_true $INFRA_CORE_CHANGED $PUBLISH_APPLICATION)
+
+          # --- Layer 4: depends on Infrastructure.Core ---
+          PUBLISH_HOSTING_ASPNET=$(any_true $HOSTING_ASPNET_CHANGED $PUBLISH_ANNOTATION $PUBLISH_INFRA_CORE $HOSTING_SG_CHANGED $HOSTING_ASPNET_SG_CHANGED $SOURCE_GEN_CHANGED)
+          PUBLISH_INFRA_EF=$(any_true $INFRA_EF_CHANGED $PUBLISH_INFRA_CORE)
+          PUBLISH_INFRA_MT=$(any_true $INFRA_MT_CHANGED $PUBLISH_INFRA_CORE)
+          PUBLISH_INFRA_REDIS=$(any_true $INFRA_REDIS_CHANGED $PUBLISH_INFRA_CORE)
+          PUBLISH_EXT_JWT_CLIENT=$(any_true $EXT_JWT_CLIENT_CHANGED $PUBLISH_INFRA_CORE)
+
+          # --- Layer 5: depends on Layer 4 ---
+          PUBLISH_INFRA_EF_PG=$(any_true $INFRA_EF_PG_CHANGED $PUBLISH_INFRA_EF)
+          PUBLISH_INFRA_MT_RMQ=$(any_true $INFRA_MT_RMQ_CHANGED $PUBLISH_INFRA_MT)
+          PUBLISH_EXT_JWT=$(any_true $EXT_JWT_CHANGED $PUBLISH_INFRA_CORE $PUBLISH_EXT_JWT_CLIENT)
+
+          # Write outputs
+          echo "PUBLISH_ANNOTATION=$PUBLISH_ANNOTATION" >> $GITHUB_OUTPUT
+          echo "PUBLISH_DOMAIN=$PUBLISH_DOMAIN" >> $GITHUB_OUTPUT
+          echo "PUBLISH_CONTRACT=$PUBLISH_CONTRACT" >> $GITHUB_OUTPUT
+          echo "PUBLISH_APPLICATION=$PUBLISH_APPLICATION" >> $GITHUB_OUTPUT
+          echo "PUBLISH_SOURCE_GEN=$PUBLISH_SOURCE_GEN" >> $GITHUB_OUTPUT
+          echo "PUBLISH_HOSTING_ASPNET=$PUBLISH_HOSTING_ASPNET" >> $GITHUB_OUTPUT
+          echo "PUBLISH_INFRA_CORE=$PUBLISH_INFRA_CORE" >> $GITHUB_OUTPUT
+          echo "PUBLISH_INFRA_EF=$PUBLISH_INFRA_EF" >> $GITHUB_OUTPUT
+          echo "PUBLISH_INFRA_EF_PG=$PUBLISH_INFRA_EF_PG" >> $GITHUB_OUTPUT
+          echo "PUBLISH_INFRA_MT=$PUBLISH_INFRA_MT" >> $GITHUB_OUTPUT
+          echo "PUBLISH_INFRA_MT_RMQ=$PUBLISH_INFRA_MT_RMQ" >> $GITHUB_OUTPUT
+          echo "PUBLISH_INFRA_REDIS=$PUBLISH_INFRA_REDIS" >> $GITHUB_OUTPUT
+          echo "PUBLISH_EXT_JWT=$PUBLISH_EXT_JWT" >> $GITHUB_OUTPUT
+          echo "PUBLISH_EXT_JWT_CLIENT=$PUBLISH_EXT_JWT_CLIENT" >> $GITHUB_OUTPUT
+
+          # Summary
+          echo "### Packages to publish:" >> $GITHUB_STEP_SUMMARY
+          for pkg in ANNOTATION DOMAIN CONTRACT APPLICATION SOURCE_GEN HOSTING_ASPNET INFRA_CORE INFRA_EF INFRA_EF_PG INFRA_MT INFRA_MT_RMQ INFRA_REDIS EXT_JWT EXT_JWT_CLIENT; do
+            val=$(eval echo "\$PUBLISH_$pkg")
+            if [ "$val" == "true" ]; then
+              echo "- ✅ $pkg" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ $pkg (skipped)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        fi
+
     - name: Restore dependencies
       run: dotnet restore
 
@@ -50,45 +192,97 @@ jobs:
     - name: Run tests
       run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
 
-    - name: Pack NuGet packages
+    - name: Pack and publish changed packages
+      env:
+        VERSION: ${{ steps.version.outputs.VERSION }}
+        PUBLISH_ALL: ${{ steps.changes.outputs.PUBLISH_ALL }}
+        PUBLISH_ANNOTATION: ${{ steps.changes.outputs.PUBLISH_ANNOTATION }}
+        PUBLISH_DOMAIN: ${{ steps.changes.outputs.PUBLISH_DOMAIN }}
+        PUBLISH_CONTRACT: ${{ steps.changes.outputs.PUBLISH_CONTRACT }}
+        PUBLISH_APPLICATION: ${{ steps.changes.outputs.PUBLISH_APPLICATION }}
+        PUBLISH_SOURCE_GEN: ${{ steps.changes.outputs.PUBLISH_SOURCE_GEN }}
+        PUBLISH_HOSTING_ASPNET: ${{ steps.changes.outputs.PUBLISH_HOSTING_ASPNET }}
+        PUBLISH_INFRA_CORE: ${{ steps.changes.outputs.PUBLISH_INFRA_CORE }}
+        PUBLISH_INFRA_EF: ${{ steps.changes.outputs.PUBLISH_INFRA_EF }}
+        PUBLISH_INFRA_EF_PG: ${{ steps.changes.outputs.PUBLISH_INFRA_EF_PG }}
+        PUBLISH_INFRA_MT: ${{ steps.changes.outputs.PUBLISH_INFRA_MT }}
+        PUBLISH_INFRA_MT_RMQ: ${{ steps.changes.outputs.PUBLISH_INFRA_MT_RMQ }}
+        PUBLISH_INFRA_REDIS: ${{ steps.changes.outputs.PUBLISH_INFRA_REDIS }}
+        PUBLISH_EXT_JWT: ${{ steps.changes.outputs.PUBLISH_EXT_JWT }}
+        PUBLISH_EXT_JWT_CLIENT: ${{ steps.changes.outputs.PUBLISH_EXT_JWT_CLIENT }}
       run: |
-        # Annotation packages
-        dotnet pack src/NOF.Annotation/NOF.Annotation.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        mkdir -p ./artifacts
 
-        # Core packages - Domain layer with entities and business logic
-        dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-      
-        # Contract packages - API contracts and DTOs
-        dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-       
-        # Application layer - Use cases and application services
-        dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        
-        # Source Generator package - Code generation utilities
-        dotnet pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        
-        # Hosting packages - Application hosting and bootstrapping
-        dotnet pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        
-        # Infrastructure packages - Data access and persistence
-        dotnet pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        
-        # Extension packages - Authentication and authorization extensions
-        dotnet pack src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=${{ steps.version.outputs.VERSION }}
+        should_publish() {
+          [ "$PUBLISH_ALL" == "true" ] || [ "$1" == "true" ]
+        }
+
+        pack() {
+          local csproj="$1"
+          local name=$(basename "$csproj" .csproj)
+          echo "📦 Packing $name..."
+          dotnet pack "$csproj" --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        }
+
+        PACKED=0
+
+        if should_publish "$PUBLISH_ANNOTATION"; then
+          pack src/NOF.Annotation/NOF.Annotation.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_DOMAIN"; then
+          pack src/NOF.Domain/NOF.Domain.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_CONTRACT"; then
+          pack src/NOF.Contract/NOF.Contract.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_APPLICATION"; then
+          pack src/NOF.Application/NOF.Application.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_SOURCE_GEN"; then
+          pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_HOSTING_ASPNET"; then
+          pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_INFRA_CORE"; then
+          pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_INFRA_EF"; then
+          pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_INFRA_EF_PG"; then
+          pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_INFRA_MT"; then
+          pack src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_INFRA_MT_RMQ"; then
+          pack src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_INFRA_REDIS"; then
+          pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_EXT_JWT"; then
+          pack src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj; ((PACKED++))
+        fi
+        if should_publish "$PUBLISH_EXT_JWT_CLIENT"; then
+          pack src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj; ((PACKED++))
+        fi
+
+        echo "Total packages to publish: $PACKED"
+        if [ "$PACKED" -eq 0 ]; then
+          echo "⚠️ No packages need publishing"
+        fi
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
+      if: hashFiles('./artifacts/*.nupkg') != ''
       with:
         name: nuget-packages
         path: ./artifacts/*.nupkg
 
     - name: Publish to NuGet.org
+      if: hashFiles('./artifacts/*.nupkg') != ''
       run: |
         dotnet nuget push "./artifacts/*.nupkg" \
           --api-key ${{ secrets.NUGET_API_KEY }} \
