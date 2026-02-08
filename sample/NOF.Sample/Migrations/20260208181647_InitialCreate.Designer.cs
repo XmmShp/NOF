@@ -10,18 +10,18 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace NOF.Sample.Migrations.Tenant
+namespace NOF.Sample.Migrations
 {
     [DbContext(typeof(ConfigurationDbContext))]
-    [Migration("20260124074153_AdaptMultiTenantPattern")]
-    partial class AdaptMultiTenantPattern
+    [Migration("20260208181647_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.1")
+                .HasAnnotation("ProductVersion", "10.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -140,6 +140,38 @@ namespace NOF.Sample.Migrations.Tenant
                     b.HasKey("CorrelationId", "DefinitionType");
 
                     b.ToTable("EFCoreStateMachineContext");
+                });
+
+            modelBuilder.Entity("NOF.EFCoreTenant", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("EFCoreTenant");
                 });
 
             modelBuilder.Entity("NOF.Sample.Application.Entities.ConfigNodeChildren", b =>
