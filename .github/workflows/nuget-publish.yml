@@ -227,46 +227,46 @@ jobs:
         PACKED=0
 
         if should_publish "$PUBLISH_ANNOTATION"; then
-          pack src/NOF.Annotation/NOF.Annotation.csproj; ((PACKED++))
+          pack src/NOF.Annotation/NOF.Annotation.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_DOMAIN"; then
-          pack src/NOF.Domain/NOF.Domain.csproj; ((PACKED++))
+          pack src/NOF.Domain/NOF.Domain.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_CONTRACT"; then
-          pack src/NOF.Contract/NOF.Contract.csproj; ((PACKED++))
+          pack src/NOF.Contract/NOF.Contract.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_APPLICATION"; then
-          pack src/NOF.Application/NOF.Application.csproj; ((PACKED++))
+          pack src/NOF.Application/NOF.Application.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_SOURCE_GEN"; then
-          pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj; ((PACKED++))
+          pack src/NOF.SourceGenerator/NOF.SourceGenerator.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_HOSTING_ASPNET"; then
-          pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj; ((PACKED++))
+          pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_INFRA_CORE"; then
-          pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj; ((PACKED++))
+          pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_INFRA_EF"; then
-          pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj; ((PACKED++))
+          pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_INFRA_EF_PG"; then
-          pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj; ((PACKED++))
+          pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_INFRA_MT"; then
-          pack src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj; ((PACKED++))
+          pack src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_INFRA_MT_RMQ"; then
-          pack src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj; ((PACKED++))
+          pack src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_INFRA_REDIS"; then
-          pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj; ((PACKED++))
+          pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_EXT_JWT"; then
-          pack src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj; ((PACKED++))
+          pack src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj; PACKED=$((PACKED + 1))
         fi
         if should_publish "$PUBLISH_EXT_JWT_CLIENT"; then
-          pack src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj; ((PACKED++))
+          pack src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj; PACKED=$((PACKED + 1))
         fi
 
         echo "Total packages to publish: $PACKED"
