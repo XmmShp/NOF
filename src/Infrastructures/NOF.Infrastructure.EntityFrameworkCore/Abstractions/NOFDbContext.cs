@@ -23,8 +23,13 @@ public abstract class NOFDbContext : DbContext
         // Apply host-only filtering in tenant contexts (when NOFTenantDbContextOptionsExtension is present)
         if (_options.FindExtension<NOFTenantDbContextOptionsExtension>() != null)
         {
-            var customizer = new IgnoreHostOnlyModelCustomizer();
-            customizer.Customize(modelBuilder);
+            OnTenantModelCreating(modelBuilder);
         }
+    }
+
+    protected virtual void OnTenantModelCreating(ModelBuilder modelBuilder)
+    {
+        var customizer = new IgnoreHostOnlyModelCustomizer();
+        customizer.Customize(modelBuilder);
     }
 }
