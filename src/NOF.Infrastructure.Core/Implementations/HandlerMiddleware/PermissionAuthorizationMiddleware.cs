@@ -42,12 +42,7 @@ public sealed class PermissionAuthorizationMiddleware : IHandlerMiddleware
                 _logger.LogWarning("Unauthorized access attempt to {HandlerType}/{MessageType} by unauthenticated user",
                     context.HandlerType, context.MessageType);
 
-                var errorResult = new Result
-                {
-                    IsSuccess = false,
-                    ErrorCode = 401,
-                    Message = "Please login first"
-                };
+                var errorResult = Result.Fail(401, "Please login first");
 
                 context.Response = errorResult;
                 return;
@@ -59,12 +54,7 @@ public sealed class PermissionAuthorizationMiddleware : IHandlerMiddleware
                 _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
                     context.HandlerType, context.MessageType, permissionAttr.Permission);
 
-                var errorResult = new Result
-                {
-                    IsSuccess = false,
-                    ErrorCode = 403,
-                    Message = "Insufficient permissions"
-                };
+                var errorResult = Result.Fail(403, "Insufficient permissions");
 
                 context.Response = errorResult;
                 return;
