@@ -467,4 +467,133 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         // Id should NOT be in body
         generatedCode.Should().NotContain("body[\"Id\"]");
     }
+
+    [Fact]
+    public void NullableDateTimeQueryParam_UsesValueAccessor()
+    {
+        const string source = """
+
+                              using NOF;
+                              using System;
+
+                              namespace Reports
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get, "/api/reports")]
+                                  public class GetReportsRequest : IRequest<string>
+                                  {
+                                      public DateTime? SubmitTimeFrom { get; set; }
+                                      public DateTime? SubmitTimeTo { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Nullable DateTime should use .Value.ToString(...)
+        generatedCode.Should().Contain("request.SubmitTimeFrom.Value.ToString(\"O\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.SubmitTimeTo.Value.ToString(\"O\", CultureInfo.InvariantCulture)");
+
+        // Should have null checks
+        generatedCode.Should().Contain("if (request.SubmitTimeFrom is not null)");
+        generatedCode.Should().Contain("if (request.SubmitTimeTo is not null)");
+    }
+
+    [Fact]
+    public void NullableDateOnlyQueryParam_UsesValueAccessor()
+    {
+        const string source = """
+
+                              using NOF;
+                              using System;
+
+                              namespace Reports
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get, "/api/reports")]
+                                  public class GetReportsRequest : IRequest<string>
+                                  {
+                                      public DateOnly? StartDate { get; set; }
+                                      public DateOnly? EndDate { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Nullable DateOnly should use .Value.ToString(...)
+        generatedCode.Should().Contain("request.StartDate.Value.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.EndDate.Value.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)");
+    }
+
+    [Fact]
+    public void NullableTimeOnlyAndDateTimeOffsetQueryParams_UseValueAccessor()
+    {
+        const string source = """
+
+                              using NOF;
+                              using System;
+
+                              namespace Schedule
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get, "/api/schedule")]
+                                  public class GetScheduleRequest : IRequest<string>
+                                  {
+                                      public TimeOnly? StartTime { get; set; }
+                                      public DateTimeOffset? CreatedAfter { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Nullable TimeOnly should use .Value.ToString(...)
+        generatedCode.Should().Contain("request.StartTime.Value.ToString(\"HH:mm:ss.FFFFFFF\", CultureInfo.InvariantCulture)");
+
+        // Nullable DateTimeOffset should use .Value.ToString(...)
+        generatedCode.Should().Contain("request.CreatedAfter.Value.ToString(\"O\", CultureInfo.InvariantCulture)");
+    }
+
+    [Fact]
+    public void NonNullableDateTimeQueryParam_DoesNotUseValueAccessor()
+    {
+        const string source = """
+
+                              using NOF;
+                              using System;
+
+                              namespace Logs
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get, "/api/logs")]
+                                  public class GetLogsRequest : IRequest<string>
+                                  {
+                                      public DateTime Since { get; set; }
+                                      public DateOnly Date { get; set; }
+                                  }
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Non-nullable DateTime should use .ToString(...) directly, not .Value.ToString(...)
+        generatedCode.Should().Contain("request.Since.ToString(\"O\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().NotContain("request.Since.Value");
+
+        generatedCode.Should().Contain("request.Date.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().NotContain("request.Date.Value");
+
+        // Non-nullable should NOT have null checks
+        generatedCode.Should().NotContain("if (request.Since is not null)");
+        generatedCode.Should().NotContain("if (request.Date is not null)");
+    }
 }

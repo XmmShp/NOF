@@ -316,19 +316,22 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
     private static string FormatValueExpression(string accessor, ITypeSymbol type, bool isNullable)
     {
         var underlying = type;
+        var isNullableValueType = false;
         if (isNullable && type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } namedType)
         {
             underlying = namedType.TypeArguments[0];
+            isNullableValueType = true;
         }
 
         var display = underlying.ToDisplayString();
+        var valueAccessor = isNullableValueType ? $"{accessor}.Value" : accessor;
 
         return display switch
         {
-            "System.DateTime" => $"{accessor}.ToString(\"O\", CultureInfo.InvariantCulture)",
-            "System.DateTimeOffset" => $"{accessor}.ToString(\"O\", CultureInfo.InvariantCulture)",
-            "System.DateOnly" => $"{accessor}.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)",
-            "System.TimeOnly" => $"{accessor}.ToString(\"HH:mm:ss.FFFFFFF\", CultureInfo.InvariantCulture)",
+            "System.DateTime" => $"{valueAccessor}.ToString(\"O\", CultureInfo.InvariantCulture)",
+            "System.DateTimeOffset" => $"{valueAccessor}.ToString(\"O\", CultureInfo.InvariantCulture)",
+            "System.DateOnly" => $"{valueAccessor}.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)",
+            "System.TimeOnly" => $"{valueAccessor}.ToString(\"HH:mm:ss.FFFFFFF\", CultureInfo.InvariantCulture)",
             "string" => isNullable ? $"{accessor}!" : accessor,
             _ => $"{accessor}.ToString()!"
         };
