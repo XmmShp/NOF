@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace NOF;
 
@@ -11,25 +12,34 @@ public interface IResult;
 /// <summary>
 /// Represents the result of an operation that does not return a value.
 /// Contains information about whether the operation succeeded and, if not, the error details.
+/// Instances must be created via <see cref="Success()"/>, <see cref="Success{T}(T)"/>, or <see cref="Fail(int, string)"/>.
 /// </summary>
 public record Result : IResult
 {
+    [JsonConstructor]
+    private Result(bool isSuccess, int errorCode, string? message)
+    {
+        IsSuccess = isSuccess;
+        ErrorCode = errorCode;
+        Message = message ?? string.Empty;
+    }
+
     /// <summary>
     /// Gets a value indicating whether the operation succeeded.
     /// </summary>
-    public bool IsSuccess { get; init; }
+    public bool IsSuccess { get; }
 
     /// <summary>
     /// Gets the error code associated with a failed operation.
     /// Should be zero if <see cref="IsSuccess"/> is <see langword="true"/>.
     /// </summary>
-    public int ErrorCode { get; init; }
+    public int ErrorCode { get; }
 
     /// <summary>
     /// Gets the human-readable error message describing the failure.
     /// Empty if the operation succeeded.
     /// </summary>
-    public string Message { get; init; } = string.Empty;
+    public string Message { get; }
 
     #region Static Helpers
 
@@ -40,12 +50,7 @@ public record Result : IResult
     /// <param name="result">The failure result to convert.</param>
     public static implicit operator Result(FailResult result)
     {
-        return new Result
-        {
-            IsSuccess = false,
-            ErrorCode = result.ErrorCode,
-            Message = result.Message
-        };
+        return new Result(false, result.ErrorCode, result.Message);
     }
 
     /// <summary>
@@ -56,11 +61,7 @@ public record Result : IResult
     /// <returns>A <see cref="FailResult"/> representing the failure.</returns>
     public static FailResult Fail(int errorCode, string message)
     {
-        return new FailResult
-        {
-            ErrorCode = errorCode,
-            Message = message
-        };
+        return new FailResult(errorCode, message);
     }
 
     /// <summary>
@@ -69,11 +70,7 @@ public record Result : IResult
     /// <returns>A success result with <see cref="IsSuccess"/> set to <see langword="true"/>.</returns>
     public static Result Success()
     {
-        return new Result
-        {
-            IsSuccess = true,
-            ErrorCode = 0
-        };
+        return new Result(true, 0, string.Empty);
     }
 
     /// <summary>
@@ -84,13 +81,32 @@ public record Result : IResult
     /// <returns>A success result containing <paramref name="value"/>.</returns>
     public static Result<T> Success<T>(T value)
     {
-        return new Result<T>
-        {
-            IsSuccess = true,
-            ErrorCode = 0,
-            Message = string.Empty,
-            Value = value
-        };
+        return new Result<T>(value);
+    }
+
+    /// <summary>
+    /// Converts an <see cref="IResult"/> to <see cref="Result"/>.
+    /// Handles <see cref="FailResult"/> via implicit conversion, avoiding <see cref="InvalidCastException"/>.
+    /// </summary>
+    /// <param name="result">The result to convert.</param>
+    /// <returns>A <see cref="Result"/> instance.</returns>
+    public static Result From(IResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result is FailResult fail ? fail : (Result)result;
+    }
+
+    /// <summary>
+    /// Converts an <see cref="IResult"/> to <see cref="Result{T}"/>.
+    /// Handles <see cref="FailResult"/> via implicit conversion, avoiding <see cref="InvalidCastException"/>.
+    /// </summary>
+    /// <typeparam name="T">The expected response value type.</typeparam>
+    /// <param name="result">The result to convert.</param>
+    /// <returns>A <see cref="Result{T}"/> instance.</returns>
+    public static Result<T> From<T>(IResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result is FailResult fail ? fail : (Result<T>)result;
     }
 
     #endregion
@@ -99,51 +115,76 @@ public record Result : IResult
 /// <summary>
 /// Represents a failed operation result used primarily for construction and implicit conversion.
 /// Not intended for direct use in application logic—prefer <see cref="Result"/> or <see cref="Result{T}"/>.
+/// Instances must be created via <see cref="Result.Fail(int, string)"/>.
 /// </summary>
 public record FailResult : IResult
 {
-    /// <summary>
-    /// Gets the numeric error code. Required.
-    /// </summary>
-    public required int ErrorCode { get; init; }
+    internal FailResult(int errorCode, string message)
+    {
+        ErrorCode = errorCode;
+        Message = message;
+    }
 
     /// <summary>
-    /// Gets the descriptive error message. Required.
+    /// Gets the numeric error code.
     /// </summary>
-    public required string Message { get; init; }
+    public int ErrorCode { get; }
+
+    /// <summary>
+    /// Gets the descriptive error message.
+    /// </summary>
+    public string Message { get; }
 }
 
 /// <summary>
 /// Represents the result of an operation that returns a value of type <typeparamref name="T"/>.
 /// Encapsulates either a success with a value or a failure with error details.
+/// Instances must be created via <see cref="Result.Success{T}(T)"/> or <see cref="Result.Fail(int, string)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the value returned on success.</typeparam>
 public record Result<T> : IResult
 {
+    internal Result(T value)
+    {
+        IsSuccess = true;
+        ErrorCode = 0;
+        Message = string.Empty;
+        Value = value;
+    }
+
+    [JsonConstructor]
+    private Result(bool isSuccess, int errorCode, string? message, T? value)
+    {
+        IsSuccess = isSuccess;
+        ErrorCode = errorCode;
+        Message = message ?? string.Empty;
+        Value = value;
+    }
+
     /// <summary>
     /// Gets a value indicating whether the operation succeeded.
     /// When <see langword="true"/>, <see cref="Value"/> is guaranteed to be non-null.
     /// </summary>
     [MemberNotNullWhen(true, nameof(Value))]
-    public bool IsSuccess { get; init; }
+    public bool IsSuccess { get; }
 
     /// <summary>
     /// Gets the error code associated with a failed operation.
     /// Should be zero if <see cref="IsSuccess"/> is <see langword="true"/>.
     /// </summary>
-    public int ErrorCode { get; init; }
+    public int ErrorCode { get; }
 
     /// <summary>
     /// Gets the human-readable error message describing the failure.
     /// Empty if the operation succeeded.
     /// </summary>
-    public string Message { get; init; } = string.Empty;
+    public string Message { get; }
 
     /// <summary>
     /// Gets the value produced by the operation if it succeeded.
     /// May be <see langword="null"/> only if the operation failed.
     /// </summary>
-    public T? Value { get; init; }
+    public T? Value { get; }
 
     /// <summary>
     /// Defines an implicit conversion from <see cref="FailResult"/> to <see cref="Result{T}"/>.
@@ -152,13 +193,7 @@ public record Result<T> : IResult
     /// <param name="result">The failure result to convert.</param>
     public static implicit operator Result<T>(FailResult result)
     {
-        return new Result<T>
-        {
-            IsSuccess = false,
-            ErrorCode = result.ErrorCode,
-            Message = result.Message,
-            Value = default
-        };
+        return new Result<T>(false, result.ErrorCode, result.Message, default);
     }
 
     /// <summary>

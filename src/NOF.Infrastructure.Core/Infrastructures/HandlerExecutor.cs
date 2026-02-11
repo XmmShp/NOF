@@ -112,7 +112,7 @@ public sealed class HandlerExecutor : IHandlerExecutor
         });
         await pipeline(cancellationToken);
 
-        return (Result)context.Response!;
+        return Result.From(context.Response!);
     }
 
     public async ValueTask<Result<TResponse>> ExecuteRequestAsync<TRequest, TResponse>(
@@ -133,7 +133,7 @@ public sealed class HandlerExecutor : IHandlerExecutor
         });
         await pipeline(cancellationToken);
 
-        return (Result<TResponse>)context.Response!;
+        return Result.From<TResponse>(context.Response!);
     }
 
     private HandlerDelegate BuildPipeline(HandlerContext context, IDictionary<string, string?> headers, HandlerDelegate handler)

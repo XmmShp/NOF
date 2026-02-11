@@ -23,7 +23,7 @@ public sealed class HandlerContext
     /// <summary>
     /// Response result (only used for Request handlers)
     /// </summary>
-    public object? Response { get; set; }
+    public IResult? Response { get; set; }
 
     /// <summary>
     /// Handler type name
