@@ -110,6 +110,51 @@ public record Result : IResult
     }
 
     #endregion
+
+    /// <summary>
+    /// Pattern-matches on a <see cref="Result"/>, invoking the appropriate delegate based on success or failure.
+    /// Returns a value of type <typeparamref name="TResult"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The type of the value returned by the match delegates.</typeparam>
+    /// <param name="onSuccess">Function to execute if the operation succeeded.</param>
+    /// <param name="onFailure">Function to execute if the operation failed; receives error code and message.</param>
+    /// <returns>The result of invoking either <paramref name="onSuccess"/> or <paramref name="onFailure"/>.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
+    /// </exception>
+    public TResult Match<TResult>(Func<TResult> onSuccess, Func<int, string, TResult> onFailure)
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        return IsSuccess
+            ? onSuccess()
+            : onFailure(ErrorCode, Message);
+    }
+
+    /// <summary>
+    /// Pattern-matches on a <see cref="Result"/>, invoking the appropriate action based on success or failure.
+    /// Used for side-effect-only operations (returns <see langword="void"/>).
+    /// </summary>
+    /// <param name="onSuccess">Action to execute if the operation succeeded.</param>
+    /// <param name="onFailure">Action to execute if the operation failed; receives error code and message.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
+    /// </exception>
+    public void Match(Action onSuccess, Action<int, string> onFailure)
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        if (IsSuccess)
+        {
+            onSuccess();
+        }
+        else
+        {
+            onFailure(ErrorCode, Message);
+        }
+    }
 }
 
 /// <summary>
@@ -203,4 +248,51 @@ public record Result<T> : IResult
     /// <param name="value">The value to wrap.</param>
     public static implicit operator Result<T>(T value)
         => Result.Success(value);
+
+    /// <summary>
+    /// Pattern-matches on a <see cref="Result{T}"/>, invoking the appropriate delegate based on success or failure.
+    /// On success, the contained value is passed to <paramref name="onSuccess"/>.
+    /// Returns a value of type <typeparamref name="TResult"/>.
+    /// </summary>
+    /// <typeparam name="TResult">The type of the value returned by the match delegates.</typeparam>
+    /// <param name="onSuccess">Function to execute if the operation succeeded; receives the result value.</param>
+    /// <param name="onFailure">Function to execute if the operation failed; receives error code and message.</param>
+    /// <returns>The result of invoking either <paramref name="onSuccess"/> or <paramref name="onFailure"/>.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
+    /// </exception>
+    public TResult Match<TResult>(Func<T, TResult> onSuccess, Func<int, string, TResult> onFailure)
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        return IsSuccess
+            ? onSuccess(Value!)
+            : onFailure(ErrorCode, Message);
+    }
+
+    /// <summary>
+    /// Pattern-matches on a <see cref="Result{T}"/>, invoking the appropriate action based on success or failure.
+    /// On success, the contained value is passed to <paramref name="onSuccess"/>.
+    /// Used for side-effect-only operations (returns <see langword="void"/>).
+    /// </summary>
+    /// <param name="onSuccess">Action to execute if the operation succeeded; receives the result value.</param>
+    /// <param name="onFailure">Action to execute if the operation failed; receives error code and message.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
+    /// </exception>
+    public void Match(Action<T> onSuccess, Action<int, string> onFailure)
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        if (IsSuccess)
+        {
+            onSuccess(Value!);
+        }
+        else
+        {
+            onFailure(ErrorCode, Message);
+        }
+    }
 }

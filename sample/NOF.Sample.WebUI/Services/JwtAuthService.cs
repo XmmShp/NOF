@@ -63,7 +63,8 @@ public class JwtAuthService
     public async Task<JwksDocument?> GetJwksAsync()
     {
         var keys = await _jwksProvider.GetSecurityKeysAsync();
-        if (keys.Count == 0) return null;
+        if (keys.Count == 0)
+            return null;
 
         var jwks = keys.OfType<Microsoft.IdentityModel.Tokens.RsaSecurityKey>().Select(rsa =>
         {

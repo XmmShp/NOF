@@ -60,6 +60,11 @@ public interface IStartupEventChannel
     /// <param name="key">The key of the event bus. Use <see langword="null"/> for default scope.</param>
     /// <returns>The number of registered handlers.</returns>
     int GetHandlerCount<TEvent>(object? key = null) where TEvent : class;
+
+    void Publish<TEvent>(TEvent @event, object? key = null) where TEvent : class
+    {
+        PublishAsync(@event, key).GetAwaiter().GetResult();
+    }
 }
 
 /// <summary>

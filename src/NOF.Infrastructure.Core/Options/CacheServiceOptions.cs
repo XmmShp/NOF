@@ -56,4 +56,131 @@ public class CacheServiceOptions
     /// Gets or sets additional custom properties for implementation-specific configurations.
     /// </summary>
     public IDictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();
+
+    /// <summary>
+    /// Sets a custom serializer.
+    /// </summary>
+    /// <param name="serializer">The serializer to use.</param>
+    /// <returns>The options for chaining.</returns>
+    public CacheServiceOptions UseSerializer(ICacheSerializer serializer)
+    {
+        ArgumentNullException.ThrowIfNull(serializer);
+
+        Serializer = serializer;
+        SerializerFactory = null;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets a custom serializer factory.
+    /// </summary>
+    /// <param name="serializerFactory">The factory function to create the serializer.</param>
+    /// <returns>The options for chaining.</returns>
+    public CacheServiceOptions UseSerializer(Func<IServiceProvider, ICacheSerializer> serializerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(serializerFactory);
+
+        SerializerFactory = serializerFactory;
+        Serializer = null;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default key prefix for all cache operations.
+    /// </summary>
+    /// <param name="prefix">The key prefix.</param>
+    /// <returns>The options for chaining.</returns>
+    public CacheServiceOptions WithKeyPrefix(string prefix)
+    {
+        ArgumentNullException.ThrowIfNull(prefix);
+
+        KeyPrefix = prefix;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default cache entry options.
+    /// </summary>
+    /// <param name="entryOptions">The default cache entry options.</param>
+    /// <returns>The options for chaining.</returns>
+    public CacheServiceOptions WithDefaultOptions(DistributedCacheEntryOptions entryOptions)
+    {
+        ArgumentNullException.ThrowIfNull(entryOptions);
+
+        DefaultEntryOptions = entryOptions;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default cache entry options using a configuration action.
+    /// </summary>
+    /// <param name="configure">The action to configure the options.</param>
+    /// <returns>The options for chaining.</returns>
+    public CacheServiceOptions WithDefaultOptions(Action<DistributedCacheEntryOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        var entryOptions = new DistributedCacheEntryOptions();
+        configure(entryOptions);
+        DefaultEntryOptions = entryOptions;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets a custom property for implementation-specific configuration.
+    /// </summary>
+    /// <param name="key">The property key.</param>
+    /// <param name="value">The property value.</param>
+    /// <returns>The options for chaining.</returns>
+    public CacheServiceOptions WithProperty(string key, object? value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        Properties[key] = value;
+        return this;
+    }
+
+    /// <summary>
+    /// Gets the configured serializer, creating a default one if none is configured.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
+    /// <returns>The configured or default serializer.</returns>
+    public ICacheSerializer GetSerializer(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        if (Serializer is not null)
+        {
+            return Serializer;
+        }
+
+        if (SerializerFactory is not null)
+        {
+            return SerializerFactory(serviceProvider);
+        }
+
+        return new JsonCacheSerializer();
+    }
+
+    /// <summary>
+    /// Gets the configured lock retry strategy, creating a default one if none is configured.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
+    /// <returns>The configured or default lock retry strategy.</returns>
+    public ICacheLockRetryStrategy GetLockRetryStrategy(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        if (LockRetryStrategy is not null)
+        {
+            return LockRetryStrategy;
+        }
+
+        if (LockRetryStrategyFactory is not null)
+        {
+            return LockRetryStrategyFactory(serviceProvider);
+        }
+
+        return new ExponentialBackoffCacheLockRetryStrategy();
+    }
 }

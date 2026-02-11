@@ -1,4 +1,3 @@
-using NOF.Contract.Annotations;
 using System.ComponentModel;
 
 namespace NOF;
