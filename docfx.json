@@ -34,16 +34,21 @@
       },
       {
         "files": [
-          "docs/**.md",
-          "docs/**.yml"
-        ]
+          "**.md",
+          "**.yml"
+        ],
+        "exclude": [
+          "api/**"
+        ],
+        "src": "docs/"
       }
     ],
     "resource": [
       {
         "files": [
-          "docs/images/**"
-        ]
+          "images/**"
+        ],
+        "src": "docs/"
       }
     ],
     "output": "_site",

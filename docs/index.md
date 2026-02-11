@@ -1,15 +1,17 @@
 # NOF Framework
 
-NOF (**.NET Opinionated Framework**) is a convention-driven application framework for building modular, multi-tenant .NET applications.
+**NOF** (short for **N**eat **O**pinionated **F**ramework) is a modular, convention-driven application framework for .NET that embraces clean architecture principles. It provides a structured approach to building scalable applications with built-in support for CQRS, domain-driven design, transactional outbox, state machines, multi-tenancy, and more.
 
 ## Key Features
 
-- **Domain-Driven Design** — Aggregate roots, entities, domain events, and repositories out of the box.
-- **CQRS & Messaging** — Commands, requests, notifications with transactional outbox support.
-- **Multi-Tenancy** — Built-in tenant isolation at the database level with EF Core.
-- **State Machines** — Declarative state machine definitions driven by notifications.
-- **Source Generators** — Zero-reflection service registration, failure classes, HTTP endpoint mapping.
-- **Infrastructure Adapters** — PostgreSQL, MassTransit (RabbitMQ), Redis, JWT authentication.
+- **Clean Architecture** — Layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns.
+- **CQRS & Messaging** — First-class `IRequest`, `ICommand`, `INotification` abstractions with handler pipelines.
+- **Source Generators** — Compile-time code generation for HTTP endpoint mapping, DI registration, failure definitions, and more.
+- **Transactional Outbox** — Reliable message delivery with inbox/outbox pattern built into EF Core infrastructure.
+- **State Machines** — Declarative, event-driven state machine builder with persistent context.
+- **Multi-Tenancy** — Tenant-aware `DbContext` with automatic model filtering and migration isolation.
+- **Modular Pipeline** — Dependency-aware `IStep` system for ordered service registration and application initialization.
+- **OpenTelemetry** — Built-in tracing, metrics, and logging integration.
 
 ## Getting Started
 
