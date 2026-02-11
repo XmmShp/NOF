@@ -1,6 +1,8 @@
+using NOF.Application;
+using NOF.Contract;
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Handler execution context

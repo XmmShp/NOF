@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// State machine context entity containing the context, state, and tracing information.

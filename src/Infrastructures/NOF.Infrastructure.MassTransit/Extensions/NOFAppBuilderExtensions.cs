@@ -1,10 +1,12 @@
 using MassTransit.Logging;
 using MassTransit.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Application;
+using NOF.Infrastructure.Core;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public static partial class NOFInfrastructureMassTransitExtensions
 {

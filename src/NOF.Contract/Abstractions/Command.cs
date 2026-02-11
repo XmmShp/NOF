@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Marker interface for command messages (fire-and-forget).

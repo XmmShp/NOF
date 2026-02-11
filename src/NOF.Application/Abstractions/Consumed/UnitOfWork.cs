@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Coordinates the persistence of changes across repositories.

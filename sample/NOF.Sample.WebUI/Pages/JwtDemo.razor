@@ -1,8 +1,8 @@
 @page "/jwt-demo"
-@using NOF
+@using NOF.Contract
 @using NOF.Sample.WebUI.Services
-@using Result = NOF.Result
-@using AntDesign
+@using Result = NOF.Contract.Result
+@using NOF.Infrastructure.Core
 @inject JwtAuthService JwtAuthService
 @inject IJSRuntime JsRuntime
 @inject IMessageService MessageService
@@ -209,7 +209,7 @@
 </Row>
 
 @code {
-    private TokenRequestModel _tokenRequest = new();
+    private readonly TokenRequestModel _tokenRequest = new();
     private GenerateJwtTokenResponse? _tokenResult;
     private bool _isGenerating = false;
     private bool _isValidating = false;

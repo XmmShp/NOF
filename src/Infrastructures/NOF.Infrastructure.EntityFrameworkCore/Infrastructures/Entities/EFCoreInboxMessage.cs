@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// Inbox message entity used for tracking reliably processed messages.

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using NOF.Contract;
+using NOF.Domain;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Handler exception handling middleware

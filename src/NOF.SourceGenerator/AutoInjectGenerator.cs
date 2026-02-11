@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF;
+namespace NOF.SourceGenerator;
 
 /// <summary>
 /// Source generator: detects service classes marked with AutoInjectAttribute (including referenced projects) and generates DI registration code.
@@ -99,7 +99,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
     }
 
     private static bool HasAutoInjectAttribute(ISymbol symbol)
-        => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == "NOF.AutoInjectAttribute");
+        => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Annotation.AutoInjectAttribute");
 
     /// <summary>
     /// Converts an assembly name to a safe method name (replaces unsafe characters with underscores).
@@ -123,7 +123,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
 
     private static string GenerateServiceRegistrationExtension(string assemblyName, ImmutableArray<INamedTypeSymbol> serviceClasses)
     {
-        const string targetNamespace = "NOF.Generated";
+
         var sanitizedName = SanitizeAssemblyName(assemblyName);
         var methodName = $"Add{sanitizedName}AutoInjectServices";
 
@@ -135,13 +135,13 @@ public class AutoInjectGenerator : IIncrementalGenerator
         sb.AppendLine("using System;");
         sb.AppendLine();
 
-        sb.AppendLine($"namespace {targetNamespace}");
+        sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
 
         sb.AppendLine("    /// <summary>");
         sb.AppendLine($"    /// Auto-generated service registration extension methods (assembly: {assemblyName}).");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public static class __ServiceCollectionExtensions__");
+        sb.AppendLine($"    public static partial class {sanitizedName}Extensions");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
         sb.AppendLine($"        /// Auto-registers all services marked with AutoInjectAttribute in {assemblyName}.");
@@ -171,7 +171,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
         var attribute = serviceClass.GetAttributes()
             .FirstOrDefault(attr
                 => attr.AttributeClass is not null
-                   && attr.AttributeClass.ToDisplayString().Equals("NOF.AutoInjectAttribute"));
+                   && attr.AttributeClass.ToDisplayString().Equals("NOF.Annotation.AutoInjectAttribute"));
 
         if (attribute is null)
         {

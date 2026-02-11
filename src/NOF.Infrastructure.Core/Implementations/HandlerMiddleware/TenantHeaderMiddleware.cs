@@ -1,6 +1,7 @@
+using NOF.Application;
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Tenant header processing middleware

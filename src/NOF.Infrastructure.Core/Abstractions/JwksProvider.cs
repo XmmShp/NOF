@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Provides access to JSON Web Keys for token validation.

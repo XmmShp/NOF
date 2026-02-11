@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// A decorator for IMigrationsSqlGenerator that filters out migration operations

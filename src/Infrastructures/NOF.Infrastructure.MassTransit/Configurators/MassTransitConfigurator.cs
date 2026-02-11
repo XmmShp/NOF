@@ -1,9 +1,11 @@
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 using System.Data;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public record MassTransitConfiguring(IBusRegistrationConfigurator Configurator);
 

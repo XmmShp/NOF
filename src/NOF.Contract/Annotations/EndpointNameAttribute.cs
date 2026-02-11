@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Specifies a custom endpoint name for a message type.

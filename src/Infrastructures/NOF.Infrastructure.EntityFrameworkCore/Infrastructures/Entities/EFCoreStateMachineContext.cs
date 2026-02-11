@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 [Table(nameof(EFCoreStateMachineContext))]
 [PrimaryKey(nameof(CorrelationId), nameof(DefinitionType))]

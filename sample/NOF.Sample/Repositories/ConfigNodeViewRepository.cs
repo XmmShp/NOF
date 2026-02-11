@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
-using NOF;
+using NOF.Annotation;
+using NOF.Application;
 using NOF.Sample;
 using NOF.Sample.Application.CacheKeys;
 using NOF.Sample.Application.Entities;

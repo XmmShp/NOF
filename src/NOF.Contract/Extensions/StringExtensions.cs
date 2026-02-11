@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Extension methods for the NOF.Contract layer.

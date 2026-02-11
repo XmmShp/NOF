@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Application;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 public class AddStateMachineRegistrationStep : IDependentServiceRegistrationStep
 {

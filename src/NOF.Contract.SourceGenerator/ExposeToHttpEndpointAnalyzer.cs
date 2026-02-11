@@ -2,9 +2,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace NOF.Contract.SourceGenerator;
 
@@ -83,14 +83,14 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
 
         // Only analyze types with ExposeToHttpEndpointAttribute
         var endpointAttributes = typeSymbol.GetAttributes()
-            .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.ExposeToHttpEndpointAttribute")
+            .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Contract.ExposeToHttpEndpointAttribute")
             .ToList();
 
         if (endpointAttributes.Count == 0)
             return;
 
         // Only analyze types that implement IRequest or IRequest<T>
-        if (!IsRequestType(typeSymbol))
+        if (!ExposeToHttpEndpointHelpers.IsRequestType(typeSymbol))
             return;
 
         var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
@@ -114,8 +114,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         {
             var hasParameterlessCtor = typeSymbol.Constructors
                 .Any(c => c.DeclaredAccessibility == Accessibility.Public
-                          && !c.IsStatic
-                          && c.Parameters.Length == 0);
+                          && c is { IsStatic: false, Parameters.Length: 0 });
 
             // If there are no explicitly declared instance constructors, the compiler generates a default one
             var hasExplicitCtors = typeSymbol.Constructors
@@ -129,19 +128,18 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         }
 
         // Rule 3: For each attribute, check that all route parameters have matching public properties
-        var allProperties = GetAllPublicProperties(typeSymbol);
-        var propertyNames = new System.Collections.Generic.HashSet<string>(
+        var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(typeSymbol);
+        var propertyNames = new HashSet<string>(
             allProperties.Select(p => p.Name),
             System.StringComparer.OrdinalIgnoreCase);
 
         foreach (var attr in endpointAttributes)
         {
-            var attrLocation = attr.ApplicationSyntaxReference?.GetSyntax()?.GetLocation() ?? typeLocation;
+            var attrLocation = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? typeLocation;
 
             // Rule 4: OperationName must be a valid C# identifier
-            var operationName = attr.NamedArguments
-                .FirstOrDefault(arg => arg.Key == "OperationName").Value.Value as string;
-            if (operationName != null && !SyntaxFacts.IsValidIdentifier(operationName))
+            if (attr.NamedArguments
+                    .FirstOrDefault(arg => arg.Key == "OperationName").Value.Value is string operationName && !SyntaxFacts.IsValidIdentifier(operationName))
             {
                 context.ReportDiagnostic(
                     Diagnostic.Create(InvalidOperationName, attrLocation, operationName, typeSymbol.Name));
@@ -155,55 +153,14 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             if (string.IsNullOrEmpty(route))
                 continue;
 
-            var routeParams = ExtractRouteParameters(route!);
+            var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(route!);
 
-            foreach (var routeParam in routeParams)
+            foreach (var routeParam in routeParams.Where(routeParam => !propertyNames.Contains(routeParam)))
             {
-                if (!propertyNames.Contains(routeParam))
-                {
-                    context.ReportDiagnostic(
-                        Diagnostic.Create(MissingRouteParamProperty, attrLocation, typeSymbol.Name, routeParam));
-                }
+                context.ReportDiagnostic(
+                    Diagnostic.Create(MissingRouteParamProperty, attrLocation, typeSymbol.Name, routeParam));
             }
         }
     }
 
-    private static bool IsRequestType(INamedTypeSymbol typeSymbol)
-    {
-        return typeSymbol.AllInterfaces.Any(i =>
-            i.ToDisplayString() == "NOF.IRequest"
-            || (i is { IsGenericType: true }
-                && i.OriginalDefinition.ToDisplayString() == "NOF.IRequest<TResponse>"));
-    }
-
-    private static System.Collections.Generic.List<IPropertySymbol> GetAllPublicProperties(INamedTypeSymbol typeSymbol)
-    {
-        var properties = new System.Collections.Generic.List<IPropertySymbol>();
-        var seen = new System.Collections.Generic.HashSet<string>();
-        var current = typeSymbol;
-        while (current != null)
-        {
-            foreach (var member in current.GetMembers())
-            {
-                if (member is IPropertySymbol { DeclaredAccessibility: Accessibility.Public, IsStatic: false, IsIndexer: false, GetMethod: not null } prop
-                    && seen.Add(prop.Name))
-                {
-                    properties.Add(prop);
-                }
-            }
-            current = current.BaseType;
-        }
-        return properties;
-    }
-
-    private static System.Collections.Generic.List<string> ExtractRouteParameters(string route)
-    {
-        var result = new System.Collections.Generic.List<string>();
-        var matches = Regex.Matches(route, @"\{(\w+)\}");
-        foreach (Match match in matches)
-        {
-            result.Add(match.Groups[1].Value);
-        }
-        return result;
-    }
 }

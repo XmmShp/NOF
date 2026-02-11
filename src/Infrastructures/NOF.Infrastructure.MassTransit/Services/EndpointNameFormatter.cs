@@ -1,7 +1,8 @@
 using MassTransit;
+using NOF.Infrastructure.Core;
 using System.Collections.Concurrent;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public class EndpointNameFormatter : DefaultEndpointNameFormatter
 {

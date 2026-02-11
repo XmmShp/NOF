@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Represents the context of a logical invocation (e.g., HTTP request, command execution,

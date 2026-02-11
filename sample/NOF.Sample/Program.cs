@@ -1,7 +1,14 @@
-using MassTransit;
 using Microsoft.Extensions.Options;
 using NOF;
-using NOF.Generated;
+using NOF.Application;
+using NOF.Hosting.AspNetCore;
+using NOF.Hosting.AspNetCore.Extensions.Authority;
+using NOF.Infrastructure.Core;
+using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
+using NOF.Infrastructure.MassTransit;
+using NOF.Infrastructure.MassTransit.RabbitMQ;
+using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.WebUI;
 using Yitter.IdGenerator;

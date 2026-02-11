@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Configuration options for the JWT client (OIDC resource server).

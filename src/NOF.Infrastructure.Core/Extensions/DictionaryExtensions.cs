@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 // ReSharper disable once InconsistentNaming
 public static partial class NOFInfrastructureCoreExtensions

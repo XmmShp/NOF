@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Contract;
+
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Request for revoking a JWT refresh token using its TokenId (jti).

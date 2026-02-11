@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Annotation;
 
 /// <summary>
 /// Defines the lifetime of a service registration.

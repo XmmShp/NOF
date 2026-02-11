@@ -1,7 +1,8 @@
+using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Outbox message entity used for adding messages in transactional context and reading by background services.

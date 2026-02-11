@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Marker interface for state machine context data.

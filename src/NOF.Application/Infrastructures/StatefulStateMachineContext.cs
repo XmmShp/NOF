@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Holds the current state and context of a state machine instance. Not intended for direct use.

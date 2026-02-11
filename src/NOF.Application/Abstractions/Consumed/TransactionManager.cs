@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Manages database transactions.

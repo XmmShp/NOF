@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Defines a strategy for retrying lock acquisition with backoff.

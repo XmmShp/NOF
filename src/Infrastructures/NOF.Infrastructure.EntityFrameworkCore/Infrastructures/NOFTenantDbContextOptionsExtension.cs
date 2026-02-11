@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// DbContext options extension added for tenant contexts.
@@ -24,7 +24,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 
     public void ApplyServices(IServiceCollection services)
     {
-        // Host mode — no filtering needed
+        // Host mode �?no filtering needed
         if (string.IsNullOrWhiteSpace(TenantId))
             return;
 

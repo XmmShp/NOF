@@ -1,3 +1,5 @@
+using NOF.Domain;
+
 namespace NOF.Sample;
 
 public interface IConfigNodeRepository : IRepository<ConfigNode>

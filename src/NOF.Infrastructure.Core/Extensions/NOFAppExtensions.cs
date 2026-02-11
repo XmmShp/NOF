@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using NOF.Contract;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary />
 // ReSharper disable once InconsistentNaming

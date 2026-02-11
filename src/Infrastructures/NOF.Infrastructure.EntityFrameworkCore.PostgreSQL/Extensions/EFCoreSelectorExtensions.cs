@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Infrastructure.Core;
+
+namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 
 public static partial class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions
 {

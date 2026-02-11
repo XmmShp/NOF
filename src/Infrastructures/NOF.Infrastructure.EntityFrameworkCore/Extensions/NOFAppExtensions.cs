@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Application;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
 {

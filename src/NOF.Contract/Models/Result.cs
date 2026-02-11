@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Marker interface for result types that represent the outcome of an operation,

@@ -1,3 +1,6 @@
+using NOF.Contract;
+using NOF.Infrastructure.Core;
+
 namespace NOF.Sample;
 
 public static class NOFSample

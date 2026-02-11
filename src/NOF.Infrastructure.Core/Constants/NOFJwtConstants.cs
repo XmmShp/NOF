@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Constants for JWT authentication.

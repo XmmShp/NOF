@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Tenant repository interface supporting CRUD operations on tenants.

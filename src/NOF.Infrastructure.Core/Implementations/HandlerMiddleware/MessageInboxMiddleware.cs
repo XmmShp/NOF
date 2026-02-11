@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
+using NOF.Application;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Inbox middleware

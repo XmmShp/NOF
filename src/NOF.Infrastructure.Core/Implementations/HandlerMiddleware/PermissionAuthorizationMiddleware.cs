@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
+using NOF.Application;
+using NOF.Contract;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Handler permission authorization middleware

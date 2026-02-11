@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
+using NOF.Contract;
 using NOF.Contract.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using System.Collections.Immutable;
@@ -26,7 +27,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task StructRequest_ReportsError()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
@@ -48,7 +49,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     {
         // Class with primary ctor param 'id' — NOT a property, route param {id} has no match
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
@@ -71,7 +72,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     {
         // Class with primary ctor — no parameterless ctor
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
@@ -92,7 +93,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task ClassWithExplicitParameterlessCtor_NoDiagnostic()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
@@ -116,7 +117,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     {
         // Record primary ctor params become properties — no errors expected
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
@@ -138,7 +139,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task RecordWithAllPropsInCtor_NoDiagnostic()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
@@ -157,7 +158,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task MultipleRouteParams_OneMissing_ReportsErrorForMissingOnly()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
@@ -181,7 +182,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     {
         // Even without route params, a class with only a parameterized ctor is invalid
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
@@ -202,7 +203,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task ClassWithBothParameterlessAndParameterizedCtor_NoDiagnostic()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
@@ -225,7 +226,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     {
         // Route has {id} but property is Id — should match case-insensitively
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
@@ -242,7 +243,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task InvalidOperationName_ReportsError()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items", OperationName = "create-item")]
@@ -260,7 +261,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task ValidOperationName_NoDiagnostic()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items", OperationName = "CreateItem")]
@@ -278,7 +279,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     {
         // When OperationName is not specified, no validation needed
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
@@ -295,7 +296,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     public async Task OperationNameWithSpaces_ReportsError()
     {
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items", OperationName = "Create Item")]

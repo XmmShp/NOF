@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Represents an aggregate root entity that can raise domain events.

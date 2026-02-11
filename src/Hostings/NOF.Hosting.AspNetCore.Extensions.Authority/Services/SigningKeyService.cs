@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Represents a managed signing key with its metadata.

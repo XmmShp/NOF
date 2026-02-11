@@ -1,9 +1,12 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 
-namespace NOF;
+namespace NOF.Infrastructure.StackExchangeRedis;
 
 public class RedisCacheService : ICacheService
 {

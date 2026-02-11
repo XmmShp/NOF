@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.EventHandlers;

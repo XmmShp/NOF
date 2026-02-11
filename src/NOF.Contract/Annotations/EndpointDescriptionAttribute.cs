@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Specifies a description for the endpoint, used to enhance OpenAPI documentation.

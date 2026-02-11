@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using NOF.Infrastructure.Core;
 using Scalar.AspNetCore;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore;
 
 public class ScalarInitializationStep : IEndpointInitializationStep
 {

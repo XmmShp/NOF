@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Represents a marker interface for all configuration units in the application.

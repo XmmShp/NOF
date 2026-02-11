@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Attribute for defining failure entries that are auto-generated as static instances by the source generator.

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Auto-instrumentation middleware that automatically records handler execution logs, metrics, and performance data.

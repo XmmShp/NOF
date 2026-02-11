@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Extension methods for registering JWT authority services in an ASP.NET Core hosted NOF application.
@@ -32,7 +33,7 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
                 builder.Services.AddOptionsInConfiguration<JwtOptions>("Jwt");
             }
 
-            // Register the signing key service (singleton — holds the in-memory key ring)
+            // Register the signing key service (singleton 鈥?holds the in-memory key ring)
             builder.Services.AddSingleton<ISigningKeyService, SigningKeyService>();
 
             // Register the JWKS service

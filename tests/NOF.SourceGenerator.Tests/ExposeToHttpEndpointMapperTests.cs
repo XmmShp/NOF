@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NOF.Contract;
+using NOF.Hosting.AspNetCore.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -13,7 +15,7 @@ public class ExposeToHttpEndpointMapperTests
     {
         // --- 引用类库：包含一个 GET 请求（IRequest<Guid>） + AllowAnonymous ---
         const string libSource = """
-            using NOF;
+            using NOF.Contract;
             namespace Lib
             {
                 [ExposeToHttpEndpoint(HttpVerb.Get, "/api/user")]
@@ -33,7 +35,7 @@ public class ExposeToHttpEndpointMapperTests
 
         // --- 主项目：包含一个 POST 请求（IRequest） + Permission ---
         const string mainSource = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Post, "/api/user")]
@@ -58,7 +60,7 @@ public class ExposeToHttpEndpointMapperTests
         // 解析生成的语法树
         var root = trees.Single().GetRoot();
         var ns = root.DescendantNodes().OfType<NamespaceDeclarationSyntax>().Should().ContainSingle().Subject;
-        ns.Name.ToString().Should().Be("NOF.Generated");
+        ns.Name.ToString().Should().Be("App");
 
         var method = ns.DescendantNodes().OfType<MethodDeclarationSyntax>().Should().ContainSingle().Subject;
         method.Identifier.Text.Should().Be("MapAllHttpEndpoints");
@@ -110,7 +112,7 @@ public class ExposeToHttpEndpointMapperTests
         // record Request(long Id) { public string? Value { get; set; } }
         // Should generate: new Request(id) { Value = __body__.Value }
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
@@ -145,7 +147,7 @@ public class ExposeToHttpEndpointMapperTests
         // Route param should be a lambda parameter
         generatedCode.Should().Contain("long id");
         // Body DTO should be [FromBody]
-        generatedCode.Should().Contain("[FromBody] NOF.Generated.__UpdateItemRequest_Body__ __body__");
+        generatedCode.Should().Contain("[FromBody] __UpdateItemRequest_Body__ __body__");
     }
 
     [Fact]
@@ -154,7 +156,7 @@ public class ExposeToHttpEndpointMapperTests
         // record Request(long NodeId, string FileName, string Content) — all in ctor
         // Should generate: new Request(nodeId, fileName, __body__.Content)
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
@@ -187,7 +189,7 @@ public class ExposeToHttpEndpointMapperTests
     {
         // DELETE /api/items/{id} — only route param, no body
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
@@ -219,7 +221,7 @@ public class ExposeToHttpEndpointMapperTests
     {
         // Plain class with settable properties, no primary ctor
         const string source = """
-            using NOF;
+            using NOF.Contract;
             namespace App
             {
                 [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]

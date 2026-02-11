@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Hosting.AspNetCore;
 
 public class CorsSettingsOptions
 {

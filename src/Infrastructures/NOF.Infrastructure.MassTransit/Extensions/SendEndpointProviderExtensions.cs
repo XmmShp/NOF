@@ -1,6 +1,7 @@
 using MassTransit;
+using NOF.Contract;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 // ReSharper disable once InconsistentNaming
 public static partial class NOFInfrastructureMassTransitExtensions

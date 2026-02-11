@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Application;
+
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Cache key for revoked refresh tokens.

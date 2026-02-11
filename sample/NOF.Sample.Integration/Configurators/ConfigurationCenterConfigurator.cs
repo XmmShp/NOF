@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using NOF.Infrastructure.Core;
 using System.Text;
 
 namespace NOF.Sample;

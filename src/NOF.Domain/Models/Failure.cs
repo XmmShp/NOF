@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Represents a domain failure with a message and error code.

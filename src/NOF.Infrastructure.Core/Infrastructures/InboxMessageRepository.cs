@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Inbox message entity used for tracking reliably processed messages.

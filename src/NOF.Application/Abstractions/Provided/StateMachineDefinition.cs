@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Non-generic marker interface for state machine definitions. Not intended for direct use.

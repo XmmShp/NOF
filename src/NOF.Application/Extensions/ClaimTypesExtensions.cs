@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace NOF;
+namespace NOF.Application;
 
 public static partial class NOFApplicationExtensions
 {

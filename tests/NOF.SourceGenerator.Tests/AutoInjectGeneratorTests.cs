@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Annotation;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -15,7 +16,7 @@ public class AutoInjectGeneratorTests
         // --- 类库 ---
         const string libSource = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF;
+            using NOF.Annotation;
             namespace Lib
             {
                 public interface ILibSvc { }
@@ -31,7 +32,7 @@ public class AutoInjectGeneratorTests
         // --- 主项目 ---
         const string mainSource = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF;
+            using NOF.Annotation;
             namespace App
             {
                 public interface IAppSvc { }
@@ -50,7 +51,7 @@ public class AutoInjectGeneratorTests
         // 检查 App 的生成
         var appRoot = trees.Single().GetRoot();
         var appNs = appRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().Single();
-        appNs.Name.ToString().Should().Be("NOF.Generated");
+        appNs.Name.ToString().Should().Be("App");
 
         var appMethod = appNs.DescendantNodes().OfType<MethodDeclarationSyntax>().Single();
         appMethod.Identifier.Text.Should().Be("AddAppAutoInjectServices");

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Message tracing constants.

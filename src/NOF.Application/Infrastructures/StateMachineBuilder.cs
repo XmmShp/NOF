@@ -1,7 +1,8 @@
-using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Contract;
+using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IStateMachineBuilder;

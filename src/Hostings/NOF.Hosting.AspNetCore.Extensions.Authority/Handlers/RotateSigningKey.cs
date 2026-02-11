@@ -1,4 +1,7 @@
-namespace NOF;
+using NOF.Application;
+using NOF.Infrastructure.Core;
+
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Handles <see cref="KeyRotationNotification"/> by immediately rotating the signing key.

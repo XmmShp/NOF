@@ -1,7 +1,8 @@
+using NOF.Application;
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 public enum HandlerKind
 {

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Transactional message collector interface.

@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NOF.Infrastructure.Core;
 using System.Text.Json.Serialization;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
 /// Event published when OpenAPI is being configured

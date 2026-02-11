@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Represents JWT token claims (internal to the authority handlers).

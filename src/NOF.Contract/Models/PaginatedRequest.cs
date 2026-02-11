@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Base request for paginated queries.

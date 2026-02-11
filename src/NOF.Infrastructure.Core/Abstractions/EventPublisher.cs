@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Domain;
+
+namespace NOF.Infrastructure.Core;
 
 public interface IEventPublisher
 {

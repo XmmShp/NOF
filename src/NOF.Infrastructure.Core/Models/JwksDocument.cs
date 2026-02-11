@@ -1,6 +1,7 @@
+using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Standard JWKS (JSON Web Key Set) response model for the /.well-known/jwks.json endpoint.

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public readonly struct MassTransitSelector
 {

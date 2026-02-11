@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using NOF;
+using NOF.Annotation;
+using NOF.Infrastructure.EntityFrameworkCore;
 
 namespace NOF.Sample.Repositories;
 

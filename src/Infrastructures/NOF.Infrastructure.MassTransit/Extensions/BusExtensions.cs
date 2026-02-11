@@ -1,9 +1,10 @@
 using MassTransit;
+using NOF.Contract;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public static partial class NOFInfrastructureMassTransitExtensions
 {

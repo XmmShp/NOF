@@ -1,6 +1,7 @@
 using Microsoft.IdentityModel.Tokens;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Provides signing keys directly from the local <see cref="ISigningKeyService"/>

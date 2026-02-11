@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Application;
+
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Transactional message outbox context middleware.

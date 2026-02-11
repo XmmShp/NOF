@@ -1,6 +1,8 @@
+using NOF.Application;
+using NOF.Contract;
 using System.Text.Json;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal class EFCoreStateMachineContextRepository : IStateMachineContextRepository
 {

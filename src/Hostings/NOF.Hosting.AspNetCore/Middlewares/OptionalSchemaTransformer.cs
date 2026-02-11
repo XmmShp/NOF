@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
+using NOF.Contract;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore;
 
 internal class OptionalSchemaTransformer : IOpenApiSchemaTransformer
 {

@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// EF Core inbox message repository implementation.

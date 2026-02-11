@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Contract;
 
 /// <summary>
 /// Provides factory methods for creating <see cref="Optional{T}"/> instances.

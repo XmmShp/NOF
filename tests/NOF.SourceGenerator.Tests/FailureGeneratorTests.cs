@@ -1,4 +1,5 @@
 using FluentAssertions;
+using NOF.Domain;
 using NOF.Domain.SourceGenerator;
 using Xunit;
 
@@ -11,7 +12,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -51,7 +52,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -89,7 +90,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -114,7 +115,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -139,7 +140,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -166,7 +167,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -193,7 +194,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test1
             {
                 [Failure("InvalidInput", "输入无效", 1001)]
@@ -226,7 +227,7 @@ public class FailureGeneratorTests
     {
         // Arrange
         const string source = """
-            using NOF;
+            using NOF.Domain;
             namespace Test
             {
                 [Failure("InvalidInput", "输入无效", 1001)]

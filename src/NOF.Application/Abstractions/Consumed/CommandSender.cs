@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Contract;
+
+namespace NOF.Application;
 
 /// <summary>
 /// Sends command messages to their destination endpoints.

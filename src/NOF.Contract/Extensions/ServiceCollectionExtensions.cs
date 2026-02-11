@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace NOF;
+namespace NOF.Contract;
 
 // ReSharper disable once InconsistentNaming
 public static partial class NOFContractExtensions

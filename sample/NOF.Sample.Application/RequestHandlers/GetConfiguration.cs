@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Caching.Distributed;
+using NOF.Application;
+using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
 using NOF.Sample.Application.Repositories;
 using System.Text.Json.Nodes;

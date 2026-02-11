@@ -1,4 +1,7 @@
-using NOF;
+using Microsoft.IdentityModel.Tokens;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 
 namespace NOF.Sample.WebUI.Services;
 
@@ -66,7 +69,7 @@ public class JwtAuthService
         if (keys.Count == 0)
             return null;
 
-        var jwks = keys.OfType<Microsoft.IdentityModel.Tokens.RsaSecurityKey>().Select(rsa =>
+        var jwks = keys.OfType<RsaSecurityKey>().Select(rsa =>
         {
             var parameters = rsa.Rsa.ExportParameters(false);
             return new JsonWebKey
@@ -75,8 +78,8 @@ public class JwtAuthService
                 Use = "sig",
                 Alg = NOFJwtConstants.Algorithm,
                 Kid = rsa.KeyId,
-                N = Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Encode(parameters.Modulus!),
-                E = Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Encode(parameters.Exponent!)
+                N = Base64UrlEncoder.Encode(parameters.Modulus!),
+                E = Base64UrlEncoder.Encode(parameters.Exponent!)
             };
         }).ToArray();
 

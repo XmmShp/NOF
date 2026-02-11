@@ -1,6 +1,8 @@
+using NOF.Application;
+using NOF.Contract;
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Notification publisher implementation.

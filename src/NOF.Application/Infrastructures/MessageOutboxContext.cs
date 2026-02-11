@@ -1,6 +1,7 @@
+using NOF.Contract;
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Transactional message outbox context, propagated automatically via AsyncLocal.

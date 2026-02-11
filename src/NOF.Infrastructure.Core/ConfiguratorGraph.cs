@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Represents a directed acyclic graph (DAG) of configurators that supports topological sorting

@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 
 /// <summary>
 /// PostgreSQL database context configurator

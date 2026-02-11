@@ -1,7 +1,10 @@
 using MassTransit;
 using Microsoft.Extensions.Configuration;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit.RabbitMQ;
 
 public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
 {

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Distributed;
+using NOF.Application;
 using NOF.Sample.Application.CacheKeys;
 
 namespace NOF.Sample.Application.EventHandlers;

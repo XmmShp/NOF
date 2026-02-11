@@ -75,7 +75,7 @@ public class FailureAnalyzer : DiagnosticAnalyzer
     {
         var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
         var failureAttributes = namedTypeSymbol.GetAttributes()
-            .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.FailureAttribute")
+            .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Domain.FailureAttribute")
             .ToList();
 
         if (failureAttributes.Count == 0)

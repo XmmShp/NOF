@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using NOF.Application;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// Entity Framework Core transaction manager implementation with nested transaction support.

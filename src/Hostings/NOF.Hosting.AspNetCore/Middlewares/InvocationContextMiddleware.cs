@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http;
+using NOF.Application;
+using NOF.Infrastructure.Core;
 using System.Security.Claims;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
 /// Authentication context middleware that extracts user and tenant information from claims and sets them on the InvocationContext.

@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Marks a class for snapshot class generation by the source generator.

@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Strongly-typed cache key associated with a value type.

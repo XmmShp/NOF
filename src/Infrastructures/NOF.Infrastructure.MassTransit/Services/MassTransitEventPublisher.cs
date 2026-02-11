@@ -1,6 +1,8 @@
 using MassTransit.Mediator;
+using NOF.Domain;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public class MassTransitEventPublisher : IEventPublisher
 {

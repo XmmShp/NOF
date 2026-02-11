@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Contract;
+
+namespace NOF.Application;
 
 /// <summary>
 /// Publishes notification messages to all subscribers.

@@ -1,6 +1,7 @@
+using NOF.Contract;
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Base class for handlers, providing transactional message sending capabilities.

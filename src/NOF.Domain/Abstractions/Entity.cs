@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Marker interface for domain entities.

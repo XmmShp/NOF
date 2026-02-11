@@ -1,7 +1,9 @@
+using NOF.Application;
+using NOF.Contract;
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 public interface IEndpointNameProvider
 {

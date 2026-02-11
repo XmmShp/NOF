@@ -1,6 +1,7 @@
+using NOF.Contract;
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Non-generic marker interface for request handlers. Not intended for direct use.

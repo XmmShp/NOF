@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using NOF.Application;
+using NOF.Contract;
 using System.Collections.Concurrent;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// In-memory implementation of <see cref="ICacheService"/> for development and testing purposes.

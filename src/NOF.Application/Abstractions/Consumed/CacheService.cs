@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
+using NOF.Contract;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Provides caching operations with support for distributed locking and transactions.

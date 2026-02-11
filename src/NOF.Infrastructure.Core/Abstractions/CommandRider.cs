@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Contract;
+
+namespace NOF.Infrastructure.Core;
 
 public interface ICommandRider
 {

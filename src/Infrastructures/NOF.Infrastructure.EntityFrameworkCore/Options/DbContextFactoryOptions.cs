@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// NOF DbContext factory options.

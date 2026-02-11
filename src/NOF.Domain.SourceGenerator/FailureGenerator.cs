@@ -79,14 +79,14 @@ public class FailureGenerator : IIncrementalGenerator
             foreach (var attribute in attributeList.Attributes)
             {
                 var attributeSymbol = context.SemanticModel.GetSymbolInfo(attribute).Symbol?.ContainingType;
-                if (attributeSymbol?.ToDisplayString() == "NOF.FailureAttribute")
+                if (attributeSymbol?.ToDisplayString() == "NOF.Domain.FailureAttribute")
                 {
                     var attributeData = context.SemanticModel.GetSymbolInfo(attribute).Symbol as IMethodSymbol;
                     if (attributeData?.ContainingType != null)
                     {
                         // Get the attribute data from the semantic model
                         var semanticAttribute = typeSymbol.GetAttributes()
-                            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.FailureAttribute" &&
+                            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Domain.FailureAttribute" &&
                                                 a.ApplicationSyntaxReference?.GetSyntax() == attribute);
                         if (semanticAttribute != null)
                         {

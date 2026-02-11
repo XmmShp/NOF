@@ -1,9 +1,12 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Handler for generating JWT token pair requests.

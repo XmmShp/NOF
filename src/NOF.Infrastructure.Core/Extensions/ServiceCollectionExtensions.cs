@@ -2,8 +2,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using NOF.Application;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 // ReSharper disable once InconsistentNaming
 public static partial class NOFInfrastructureCoreExtensions

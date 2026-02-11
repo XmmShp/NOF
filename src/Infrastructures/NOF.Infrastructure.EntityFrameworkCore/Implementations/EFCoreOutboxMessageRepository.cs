@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
 {

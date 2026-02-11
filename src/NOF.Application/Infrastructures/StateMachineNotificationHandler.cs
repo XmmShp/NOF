@@ -1,7 +1,8 @@
+using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Handles notifications by routing them to the appropriate state machine instances. Not intended for direct use.

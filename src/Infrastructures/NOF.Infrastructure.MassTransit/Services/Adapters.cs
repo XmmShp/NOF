@@ -1,7 +1,11 @@
 using MassTransit;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Domain;
+using NOF.Infrastructure.Core;
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<TRequest>
     where THandler : IRequestHandler<TRequest>

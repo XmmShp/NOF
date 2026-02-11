@@ -1,6 +1,7 @@
+using NOF.Contract;
 using System.Text.Json;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 public interface ICacheSerializer
 {

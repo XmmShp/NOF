@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Application;
+
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Handles <see cref="KeyRotationNotification"/> by refreshing the cached JWKS from the authority.

@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Contract;
+
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Request for generating JWT token pair.

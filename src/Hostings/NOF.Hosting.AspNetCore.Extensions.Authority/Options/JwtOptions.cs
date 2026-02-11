@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// JWT authentication configuration options.

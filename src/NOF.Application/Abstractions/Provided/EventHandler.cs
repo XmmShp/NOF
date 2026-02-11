@@ -1,6 +1,7 @@
+using NOF.Domain;
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 /// <summary>
 /// Non-generic marker interface for event handlers. Not intended for direct use.

@@ -2,8 +2,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Maps the standard JWKS endpoint (/.well-known/jwks.json) directly as an HTTP GET endpoint.

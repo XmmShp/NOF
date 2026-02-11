@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using NOF.Contract;
 using NOF.Contract.SourceGenerator;
 using Xunit;
 
@@ -13,7 +14,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace MyApp
                               {
@@ -51,7 +52,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace MyApi
                               {
@@ -83,7 +84,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Tasks
                               {
@@ -114,7 +115,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Items
                               {
@@ -153,7 +154,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace MyApp.Features.Users.Api
                               {
@@ -192,7 +193,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Ignored
                               {
@@ -212,7 +213,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Users
                               {
@@ -248,7 +249,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Users
                               {
@@ -284,7 +285,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Orders
                               {
@@ -311,7 +312,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Products
                               {
@@ -339,7 +340,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         // Record primary ctor params become properties (readable), extra props also visible
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Items
                               {
@@ -375,7 +376,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         // All properties come from primary ctor — all are readable
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Files
                               {
@@ -406,7 +407,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         // Only explicitly declared properties are visible
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Items
                               {
@@ -440,7 +441,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         // Class with explicit properties that match route params
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
 
                               namespace Items
                               {
@@ -473,7 +474,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
                               using System;
 
                               namespace Reports
@@ -506,7 +507,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
                               using System;
 
                               namespace Reports
@@ -535,7 +536,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
                               using System;
 
                               namespace Schedule
@@ -566,7 +567,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     {
         const string source = """
 
-                              using NOF;
+                              using NOF.Contract;
                               using System;
 
                               namespace Logs

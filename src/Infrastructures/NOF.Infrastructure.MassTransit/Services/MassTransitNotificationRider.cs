@@ -1,7 +1,9 @@
 using MassTransit;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 using System.Diagnostics;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 /// <summary>
 /// MassTransit notification transport implementation.

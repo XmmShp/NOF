@@ -1,3 +1,5 @@
+using NOF.Domain;
+
 namespace NOF.Sample;
 
 public record ConfigNodeParentUpdatedEvent(

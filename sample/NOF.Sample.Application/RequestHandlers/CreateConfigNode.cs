@@ -1,3 +1,6 @@
+using NOF.Application;
+using NOF.Contract;
+
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class CreateConfigNode : IRequestHandler<CreateConfigNodeRequest>

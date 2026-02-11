@@ -1,4 +1,6 @@
-namespace NOF;
+using NOF.Domain;
+
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public abstract class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateRoot>
     where TAggregateRoot : class, IAggregateRoot

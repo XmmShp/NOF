@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Non-generic marker interface for repositories. Not intended for direct use.

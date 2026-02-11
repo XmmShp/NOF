@@ -1,8 +1,9 @@
 using MassTransit;
 using MassTransit.Mediator;
+using NOF.Contract;
 using System.Runtime.ExceptionServices;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public static partial class NOFInfrastructureMassTransitExtensions
 {

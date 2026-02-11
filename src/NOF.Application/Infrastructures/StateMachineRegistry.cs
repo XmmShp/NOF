@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF;
+namespace NOF.Application;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IStateMachineRegistry

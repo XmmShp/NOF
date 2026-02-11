@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public abstract class NOFDbContext : DbContext
 {

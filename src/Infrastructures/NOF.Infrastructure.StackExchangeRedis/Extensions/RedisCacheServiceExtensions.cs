@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Infrastructure.Core;
 using StackExchange.Redis;
 
-namespace NOF;
+namespace NOF.Infrastructure.StackExchangeRedis;
 
 public static partial class NOFInfrastructureExtensions
 {

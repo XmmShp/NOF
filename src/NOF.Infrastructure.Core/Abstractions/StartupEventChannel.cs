@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace NOF;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Defines a thread-safe, keyed event dispatcher that supports isolated event buses

@@ -1,4 +1,4 @@
-namespace NOF;
+namespace NOF.Domain;
 
 /// <summary>
 /// Exception thrown when a domain rule is violated.

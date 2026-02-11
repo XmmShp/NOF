@@ -1,11 +1,14 @@
 using MassTransit;
 using MassTransit.Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Infrastructure.Core;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace NOF;
+namespace NOF.Infrastructure.MassTransit;
 
 public class MassTransitRequestSender : IRequestSender
 {

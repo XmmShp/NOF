@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
 
-namespace NOF;
+namespace NOF.Hosting.SourceGenerator;
 
 /// <summary>
 /// Source generator: scans all referenced projects and generates ApplicationPart registration code for prefix-matching projects.
@@ -97,15 +97,17 @@ public class ApplicationPartGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
         sb.AppendLine("using System.Reflection;");
+        sb.AppendLine("using NOF.Infrastructure.Core;");
         sb.AppendLine();
 
-        sb.AppendLine("namespace NOF.Generated");
+        sb.AppendLine($"namespace {prefix}");
         sb.AppendLine("{");
 
         sb.AppendLine("    /// <summary>");
         sb.AppendLine($"    /// Auto-generated ApplicationPart registration extension methods (prefix: {prefix}).");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public static class __ApplicationPartExtensions__");
+        var sanitizedPrefix = prefix.Replace(".", "");
+        sb.AppendLine($"    public static partial class {sanitizedPrefix}Extensions");
         sb.AppendLine("    {");
 
         sb.AppendLine("        /// <summary>");
@@ -113,7 +115,7 @@ public class ApplicationPartGenerator : IIncrementalGenerator
         sb.AppendLine("        /// </summary>");
         sb.AppendLine("        /// <param name=\"builder\">The NOF application builder.</param>");
         sb.AppendLine("        /// <returns>The builder for chaining.</returns>");
-        sb.AppendLine("        public static NOF.INOFAppBuilder WithAutoApplicationParts(this NOF.INOFAppBuilder builder)");
+        sb.AppendLine("        public static NOF.Infrastructure.Core.INOFAppBuilder WithAutoApplicationParts(this NOF.Infrastructure.Core.INOFAppBuilder builder)");
         sb.AppendLine("        {");
 
         if (assemblies.Length > 0)

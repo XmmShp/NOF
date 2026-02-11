@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using NOF.Application;
+using NOF.Domain;
+using NOF.Infrastructure.Core;
 
-namespace NOF;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal class EFCoreUnitOfWork : IUnitOfWork
 {
