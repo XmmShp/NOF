@@ -2,7 +2,7 @@ namespace NOF;
 
 public static partial class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions
 {
-    extension(IEFCoreSelector selector)
+    extension(EFCoreSelector selector)
     {
         public INOFAppBuilder UsePostgreSQL(string connectStringName = "postgres")
         {

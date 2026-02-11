@@ -1,19 +1,22 @@
-using System.Runtime.CompilerServices;
-
-[assembly: InternalsVisibleTo("NOF.Test")]
+using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF;
 
-public interface IEFCoreSelector
-{
-    INOFAppBuilder Builder { get; }
-}
-
-internal class EFCoreSelector : IEFCoreSelector
+public readonly struct EFCoreSelector
 {
     public INOFAppBuilder Builder { get; }
+
     public EFCoreSelector(INOFAppBuilder builder)
     {
         Builder = builder;
+    }
+
+    public EFCoreSelector AutoMigrate()
+    {
+        Builder.Services.Configure<DbContextFactoryOptions>(options =>
+        {
+            options.AutoMigrate = true;
+        });
+        return this;
     }
 }

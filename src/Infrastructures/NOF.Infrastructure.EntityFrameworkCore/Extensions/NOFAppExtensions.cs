@@ -10,7 +10,7 @@ public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        public IEFCoreSelector AddEFCore<TDbContext>()
+        public EFCoreSelector AddEFCore<TDbContext>()
             where TDbContext : NOFDbContext
         {
             #region Common Services

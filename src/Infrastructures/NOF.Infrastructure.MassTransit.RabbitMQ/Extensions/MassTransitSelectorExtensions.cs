@@ -5,7 +5,7 @@ namespace NOF;
 
 public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
 {
-    extension(INOFMassTransitSelector selector)
+    extension(MassTransitSelector selector)
     {
         public INOFAppBuilder UseRabbitMQ(string connectStringName = "rabbitmq")
         {
