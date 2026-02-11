@@ -5,7 +5,7 @@ using StackExchange.Redis;
 
 namespace NOF;
 
-public static partial class __NOF_Infrastructure_Extensions__
+public static partial class NOFInfrastructureExtensions
 {
     /// <param name="services">The <see cref="IServiceCollection"/>.</param>
     extension(IServiceCollection services)

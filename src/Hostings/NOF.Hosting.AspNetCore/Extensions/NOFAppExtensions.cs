@@ -11,7 +11,7 @@ namespace NOF;
 /// </summary>
 public sealed record OpenApiConfigurating(OpenApiOptions Options);
 
-public static partial class __NOF_Hosting_AspNetCore_Extensions__
+public static partial class NOFHostingAspNetCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {

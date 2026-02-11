@@ -6,11 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace NOF;
 
-public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
+public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        public INOFEFCoreSelector AddEFCore<TDbContext>()
+        public IEFCoreSelector AddEFCore<TDbContext>()
             where TDbContext : NOFDbContext
         {
             #region Common Services
@@ -50,7 +50,7 @@ public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions_
 
             #endregion
 
-            return new NOFEFCoreSelector(builder);
+            return new EFCoreSelector(builder);
         }
     }
 }

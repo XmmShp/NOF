@@ -5,7 +5,7 @@ namespace NOF;
 /// <summary>
 /// Extension methods for the NOF.Application layer.
 /// </summary>
-public static partial class __NOF_Application_Extensions__
+public static partial class NOFApplicationExtensions
 {
     extension(Result)
     {

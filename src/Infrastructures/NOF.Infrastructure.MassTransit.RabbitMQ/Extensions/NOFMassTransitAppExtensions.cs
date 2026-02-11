@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace NOF;
 
-public static partial class __NOF_Infrastructure_MassTransit_RabbitMQ_Extensions__
+public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
 {
     extension(INOFMassTransitSelector selector)
     {

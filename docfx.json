@@ -16,8 +16,7 @@
             "src/Infrastructures/NOF.Infrastructure.MassTransit/bin/Release/net10.0/NOF.Infrastructure.MassTransit.dll",
             "src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/bin/Release/net10.0/NOF.Infrastructure.MassTransit.RabbitMQ.dll",
             "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/bin/Release/net10.0/NOF.Infrastructure.StackExchangeRedis.dll",
-            "src/Extensions/NOF.Extensions.Auth.Jwt/bin/Release/net10.0/NOF.Extensions.Auth.Jwt.dll",
-            "src/Extensions/NOF.Extensions.Auth.Jwt.Client/bin/Release/net10.0/NOF.Extensions.Auth.Jwt.Client.dll"
+            "src/Hostings/NOF.Hosting.AspNetCore.Extensions.Authority/bin/Release/net10.0/NOF.Hosting.AspNetCore.Extensions.Authority.dll"
           ]
         }
       ],

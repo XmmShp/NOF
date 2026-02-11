@@ -2,7 +2,7 @@ using System.Security.Claims;
 
 namespace NOF;
 
-public static partial class __NOF_Application_Extensions__
+public static partial class NOFApplicationExtensions
 {
     extension(ClaimTypes)
     {

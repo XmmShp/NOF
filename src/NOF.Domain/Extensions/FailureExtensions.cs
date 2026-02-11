@@ -5,7 +5,7 @@ namespace NOF;
 /// <summary>
 /// Extension methods for the NOF.Domain layer.
 /// </summary>
-public static partial class __NOF_Domain_Extensions__
+public static partial class NOFDomainExtensions
 {
     extension(Failure failure)
     {

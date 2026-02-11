@@ -284,7 +284,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
     }
 }
 
-enum Lifetime
+internal enum Lifetime
 {
     Singleton = 0,
     Scoped = 1,

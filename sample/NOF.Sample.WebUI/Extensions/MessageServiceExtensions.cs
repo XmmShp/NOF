@@ -2,7 +2,7 @@ using AntDesign;
 
 namespace NOF.Sample.WebUI;
 
-public static partial class __NOF_Sample_WebUI__Extensions__
+public static partial class NOFSampleWebUIExtensions
 {
     /// <param name="messageService">The message service to use.</param>
     extension(IMessageService messageService)

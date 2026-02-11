@@ -2,11 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF;
 
-public static partial class __NOF_Infrastructure_EntityFrameworkCore_Extensions__
+public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
 {
-    extension(INOFEFCoreSelector selector)
+    extension(IEFCoreSelector selector)
     {
-        public INOFEFCoreSelector AutoMigrate()
+        public IEFCoreSelector AutoMigrate()
         {
             selector.Builder.Services.Configure<DbContextFactoryOptions>(options =>
             {

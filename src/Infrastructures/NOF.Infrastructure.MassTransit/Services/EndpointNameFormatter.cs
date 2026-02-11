@@ -14,7 +14,7 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
         typeof(MassTransitNotificationHandlerAdapter<,>)
     ];
 
-    private readonly ConcurrentDictionary<Type, string> NameCache = new();
+    private readonly ConcurrentDictionary<Type, string> _nameCache = new();
     private readonly IEndpointNameProvider _nameProvider;
 
     public EndpointNameFormatter(IEndpointNameProvider nameProvider)
@@ -25,7 +25,7 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
 
     protected override string GetConsumerName(Type consumerType)
     {
-        if (NameCache.TryGetValue(consumerType, out var cached))
+        if (_nameCache.TryGetValue(consumerType, out var cached))
         {
             return cached;
         }
@@ -33,13 +33,13 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
         if (!consumerType.IsGenericType || !SupportedConsumerGenericTypes.Contains(consumerType.GetGenericTypeDefinition()))
         {
             var fallback = _nameProvider.GetEndpointName(consumerType);
-            return NameCache.GetOrAdd(consumerType, fallback);
+            return _nameCache.GetOrAdd(consumerType, fallback);
         }
 
         var handlerType = consumerType.GenericTypeArguments[0];
         var endpointName = _nameProvider.GetEndpointName(handlerType);
 
-        return NameCache.GetOrAdd(consumerType, endpointName);
+        return _nameCache.GetOrAdd(consumerType, endpointName);
     }
 
     protected override string GetMessageName(Type type)

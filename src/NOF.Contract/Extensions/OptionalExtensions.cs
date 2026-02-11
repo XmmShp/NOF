@@ -1,7 +1,7 @@
 namespace NOF;
 
 // ReSharper disable once InconsistentNaming
-public static partial class __NOF_Contract_Extensions__
+public static partial class NOFContractExtensions
 {
     ///
     extension<T>(Optional<T> optional)

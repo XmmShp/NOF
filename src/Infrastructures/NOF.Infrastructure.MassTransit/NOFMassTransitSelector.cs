@@ -6,7 +6,7 @@ namespace NOF;
 
 public interface INOFMassTransitSelector
 {
-    public INOFAppBuilder Builder { get; }
+    INOFAppBuilder Builder { get; }
 }
 
 public class NOFMassTransitSelector : INOFMassTransitSelector

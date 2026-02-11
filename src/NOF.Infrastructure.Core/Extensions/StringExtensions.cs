@@ -1,6 +1,6 @@
 namespace NOF;
 
-public static partial class __NOF_Infrastructure_Core_Extensions__
+public static partial class NOFInfrastructureCoreExtensions
 {
     extension(string str)
     {

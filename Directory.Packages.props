@@ -22,7 +22,6 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.12.35" />
     <!-- Extensions -->
-    <PackageVersion Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
     <!-- Infrastructure -->
     <PackageVersion Include="MassTransit" Version="8.5.7" />

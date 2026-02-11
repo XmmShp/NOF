@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace NOF;
 
 // ReSharper disable once InconsistentNaming
-public static partial class __NOF_Contract_Extensions__
+public static partial class NOFContractExtensions
 {
     /// <param name="services">The service collection.</param>
     extension(IServiceCollection services)

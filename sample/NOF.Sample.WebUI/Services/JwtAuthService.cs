@@ -8,10 +8,12 @@ namespace NOF.Sample.WebUI.Services;
 public class JwtAuthService
 {
     private readonly IRequestSender _requestSender;
+    private readonly IJwksProvider _jwksProvider;
 
-    public JwtAuthService(IRequestSender requestSender)
+    public JwtAuthService(IRequestSender requestSender, IJwksProvider jwksProvider)
     {
         _requestSender = requestSender;
+        _jwksProvider = jwksProvider;
     }
 
     /// <summary>
@@ -58,10 +60,25 @@ public class JwtAuthService
     /// <summary>
     /// Get JWKS for token validation.
     /// </summary>
-    public async Task<GetJwksResponse?> GetJwksAsync(string audience = "sample-client")
+    public async Task<JwksDocument?> GetJwksAsync()
     {
-        var request = new GetJwksRequest(audience);
-        var response = await _requestSender.SendAsync(request);
-        return response.Value;
+        var keys = await _jwksProvider.GetSecurityKeysAsync();
+        if (keys.Count == 0) return null;
+
+        var jwks = keys.OfType<Microsoft.IdentityModel.Tokens.RsaSecurityKey>().Select(rsa =>
+        {
+            var parameters = rsa.Rsa.ExportParameters(false);
+            return new JsonWebKey
+            {
+                Kty = "RSA",
+                Use = "sig",
+                Alg = NOFJwtConstants.Algorithm,
+                Kid = rsa.KeyId,
+                N = Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Encode(parameters.Modulus!),
+                E = Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Encode(parameters.Exponent!)
+            };
+        }).ToArray();
+
+        return new JwksDocument { Keys = jwks };
     }
 }

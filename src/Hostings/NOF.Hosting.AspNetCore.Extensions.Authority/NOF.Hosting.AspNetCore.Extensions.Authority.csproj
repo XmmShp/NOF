@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <IsPackable>true</IsPackable>
+    <PackageId>NOF.Hosting.AspNetCore.Extensions.Authority</PackageId>
+    <Description>ASP.NET Core JWT authority hosting for the NOF Framework — exposes standard JWKS endpoint and configures JWT Bearer authentication.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>

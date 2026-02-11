@@ -3,7 +3,7 @@ namespace NOF;
 /// <summary>
 /// Extension methods for the NOF.Contract layer.
 /// </summary>
-public static partial class __NOF_Contract_Extensions__
+public static partial class NOFContractExtensions
 {
     extension(string str)
     {

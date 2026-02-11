@@ -1,6 +1,6 @@
 namespace NOF.Sample;
 
-public static class __NOF_Sample__
+public static class NOFSample
 {
     extension(INOFAppBuilder builder)
     {

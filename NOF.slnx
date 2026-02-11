@@ -25,11 +25,8 @@
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
   </Folder>
-  <Folder Name="/src/Extensions/">
-    <Project Path="src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj" />
-    <Project Path="src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj" />
-  </Folder>
   <Folder Name="/src/Hostings/">
+    <Project Path="src/Hostings/NOF.Hosting.AspNetCore.Extensions.Authority/NOF.Hosting.AspNetCore.Extensions.Authority.csproj" />
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
     <Project Path="src/Hostings/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />

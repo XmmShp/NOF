@@ -7,7 +7,7 @@ namespace NOF;
 
 /// <summary />
 // ReSharper disable once InconsistentNaming
-public static partial class __NOF_Infrastructure_Core_Extensions__
+public static partial class NOFInfrastructureCoreExtensions
 {
     private const string Assemblies = "NOF.Integration.Core:Assemblies";
     private const string ExtraHandlerInfos = "NOF.Integration.Core:ExtraHandlerInfos";

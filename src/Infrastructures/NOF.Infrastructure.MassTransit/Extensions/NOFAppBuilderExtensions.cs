@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF;
 
-public static partial class __NOF_Infrastructure_MassTransit_Extensions__
+public static partial class NOFInfrastructureMassTransitExtensions
 {
     extension(INOFAppBuilder builder)
     {

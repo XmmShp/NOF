@@ -1,7 +1,7 @@
 namespace NOF;
 
 // ReSharper disable once InconsistentNaming
-public static partial class __NOF_Contract_Extensions__
+public static partial class NOFContractExtensions
 {
     /// <param name="result">The result to match against.</param>
     extension(Result result)

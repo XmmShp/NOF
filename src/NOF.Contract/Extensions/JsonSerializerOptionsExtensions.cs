@@ -6,15 +6,15 @@ namespace NOF;
 /// <summary>
 /// Extension methods for the NOF.Contract layer.
 /// </summary>
-public static partial class __NOF_Contract_Extensions__
+public static partial class NOFContractExtensions
 {
-    private static JsonSerializerOptions? _nofDefaults;
+    private static JsonSerializerOptions? NOFDefaults;
 
     extension(JsonSerializerOptions)
     {
         /// <summary>Gets the default <see cref="JsonSerializerOptions"/> used by the NOF framework.</summary>
         public static JsonSerializerOptions NOFDefaults =>
-            _nofDefaults ??= new JsonSerializerOptions
+            NOFDefaults ??= new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never,
