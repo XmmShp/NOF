@@ -1,29 +1,27 @@
 {
+  "_comment": "Using pre-built DLLs instead of .csproj due to DocFX lacking C# 14 support. See https://github.com/dotnet/docfx/issues/10808",
   "metadata": [
     {
       "src": [
         {
           "files": [
-            "src/NOF.Annotation/NOF.Annotation.csproj",
-            "src/NOF.Domain/NOF.Domain.csproj",
-            "src/NOF.Contract/NOF.Contract.csproj",
-            "src/NOF.Application/NOF.Application.csproj",
-            "src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj",
-            "src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj",
-            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj",
-            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj",
-            "src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj",
-            "src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj",
-            "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj",
-            "src/Extensions/NOF.Extensions.Auth.Jwt/NOF.Extensions.Auth.Jwt.csproj",
-            "src/Extensions/NOF.Extensions.Auth.Jwt.Client/NOF.Extensions.Auth.Jwt.Client.csproj"
+            "src/NOF.Annotation/bin/Release/net10.0/NOF.Annotation.dll",
+            "src/NOF.Domain/bin/Release/net10.0/NOF.Domain.dll",
+            "src/NOF.Contract/bin/Release/net10.0/NOF.Contract.dll",
+            "src/NOF.Application/bin/Release/net10.0/NOF.Application.dll",
+            "src/NOF.Infrastructure.Core/bin/Release/net10.0/NOF.Infrastructure.Core.dll",
+            "src/Hostings/NOF.Hosting.AspNetCore/bin/Release/net10.0/NOF.Hosting.AspNetCore.dll",
+            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.dll",
+            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.dll",
+            "src/Infrastructures/NOF.Infrastructure.MassTransit/bin/Release/net10.0/NOF.Infrastructure.MassTransit.dll",
+            "src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/bin/Release/net10.0/NOF.Infrastructure.MassTransit.RabbitMQ.dll",
+            "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/bin/Release/net10.0/NOF.Infrastructure.StackExchangeRedis.dll",
+            "src/Extensions/NOF.Extensions.Auth.Jwt/bin/Release/net10.0/NOF.Extensions.Auth.Jwt.dll",
+            "src/Extensions/NOF.Extensions.Auth.Jwt.Client/bin/Release/net10.0/NOF.Extensions.Auth.Jwt.Client.dll"
           ]
         }
       ],
-      "dest": "api",
-      "properties": {
-        "TargetFramework": "net10.0"
-      }
+      "dest": "api"
     }
   ],
   "build": {

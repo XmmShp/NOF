@@ -126,6 +126,14 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    # Build first so DocFX can read pre-built DLLs instead of .csproj files.
+    # Workaround for C# 14 support: https://github.com/dotnet/docfx/issues/10808
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
     - name: Install DocFX
       run: dotnet tool install -g docfx
 
