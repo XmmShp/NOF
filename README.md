@@ -24,7 +24,6 @@
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer — entities, aggregate roots, repositories, domain events |
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer — requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer — handler abstractions, state machines, caching, unit of work |
-| [`NOF.SourceGenerator`](https://www.nuget.org/packages/NOF.SourceGenerator) | Roslyn source generator for `[AutoInject]` DI registration |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting — middleware, OpenAPI, endpoint mapping, JSON configuration |
 | [`NOF.Infrastructure.Core`](https://www.nuget.org/packages/NOF.Infrastructure.Core) | Core infrastructure — `INOFAppBuilder`, step pipeline, OpenTelemetry, service wiring |
 | [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure — `NOFDbContext`, repositories, outbox, multi-tenancy |
@@ -32,8 +31,7 @@
 | [`NOF.Infrastructure.MassTransit`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit) | MassTransit integration — message bus adapter for commands, events, notifications |
 | [`NOF.Infrastructure.MassTransit.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit.RabbitMQ) | RabbitMQ transport for NOF MassTransit infrastructure |
 | [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis caching infrastructure via StackExchange.Redis |
-| [`NOF.Extensions.Auth.Jwt`](https://www.nuget.org/packages/NOF.Extensions.Auth.Jwt) | JWT authentication — token issuance, key derivation, lifecycle management |
-| [`NOF.Extensions.Auth.Jwt.Client`](https://www.nuget.org/packages/NOF.Extensions.Auth.Jwt.Client) | JWT client — token validation and client-side token management |
+| [`NOF.Hosting.AspNetCore.Extensions.Authority`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore.Extensions.Authority) | JWT authority extension — token issuance, key rotation, lifecycle management |
 
 ## Quick Start
 
@@ -65,9 +63,9 @@ await app.RunAsync();
 public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
 
 // Implement the handler
-public class GetOrderHandler : RequestHandler<GetOrderRequest, OrderDto>
+public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
 {
-    public override async Task<Result<OrderDto>> HandleAsync(
+    public async Task<Result<OrderDto>> HandleAsync(
         GetOrderRequest request, CancellationToken cancellationToken)
     {
         // ...

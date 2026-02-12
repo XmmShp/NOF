@@ -11,9 +11,9 @@ Contains the application service abstractions: request handlers, command handler
 ### Request Handlers
 
 ```csharp
-public class GetOrderHandler : RequestHandler<GetOrderRequest, OrderDto>
+public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
 {
-    public override async Task<Result<OrderDto>> HandleAsync(
+    public async Task<Result<OrderDto>> HandleAsync(
         GetOrderRequest request, CancellationToken cancellationToken)
     {
         var order = await _repository.FindAsync([request.Id], cancellationToken);
