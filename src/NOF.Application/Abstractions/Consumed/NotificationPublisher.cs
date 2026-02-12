@@ -16,8 +16,8 @@ public interface INotificationPublisher
 }
 
 /// <summary>
-/// Deferred notification publisher for manually adding notifications to the transactional outbox context
-/// without using HandlerBase.
+/// Deferred notification publisher for adding notifications to the transactional outbox context.
+/// Notifications will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
 /// </summary>
 public interface IDeferredNotificationPublisher
 {

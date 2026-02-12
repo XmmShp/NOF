@@ -37,25 +37,3 @@ public interface IRequestHandler<TRequest, TResponse> : IRequestHandler
     /// <returns>The operation result containing the response.</returns>
     Task<Result<TResponse>> HandleAsync(TRequest request, CancellationToken cancellationToken);
 }
-
-/// <summary>
-/// Base class for request handlers (no return value), providing transactional message sending capabilities.
-/// Works automatically via AsyncLocal without requiring any injected dependencies.
-/// </summary>
-public abstract class RequestHandler<TRequest> : HandlerBase, IRequestHandler<TRequest>
-    where TRequest : class, IRequest
-{
-    /// <inheritdoc />
-    public abstract Task<Result> HandleAsync(TRequest request, CancellationToken cancellationToken);
-}
-
-/// <summary>
-/// Base class for request handlers (with return value), providing transactional message sending capabilities.
-/// Works automatically via AsyncLocal without requiring any injected dependencies.
-/// </summary>
-public abstract class RequestHandler<TRequest, TResponse> : HandlerBase, IRequestHandler<TRequest, TResponse>
-    where TRequest : class, IRequest<TResponse>
-{
-    /// <inheritdoc />
-    public abstract Task<Result<TResponse>> HandleAsync(TRequest request, CancellationToken cancellationToken);
-}

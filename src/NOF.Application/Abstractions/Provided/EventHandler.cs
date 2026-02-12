@@ -22,13 +22,3 @@ public interface IEventHandler<in TEvent> : IEventHandler
     Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// Base class for event handlers, providing transactional message sending capabilities.
-/// Works automatically via AsyncLocal without requiring any injected dependencies.
-/// </summary>
-public abstract class EventHandler<TEvent> : HandlerBase, IEventHandler<TEvent>
-    where TEvent : class, IEvent
-{
-    /// <inheritdoc />
-    public abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
-}

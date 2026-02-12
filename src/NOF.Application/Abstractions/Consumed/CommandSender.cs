@@ -24,8 +24,8 @@ public interface ICommandSender
 }
 
 /// <summary>
-/// Deferred command sender for manually adding commands to the transactional outbox context
-/// without using HandlerBase.
+/// Deferred command sender for adding commands to the transactional outbox context.
+/// Commands will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
 /// </summary>
 public interface IDeferredCommandSender
 {

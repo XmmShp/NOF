@@ -22,13 +22,3 @@ public interface INotificationHandler<in TNotification> : INotificationHandler
     Task HandleAsync(TNotification notification, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// Base class for notification handlers, providing transactional message sending capabilities.
-/// Works automatically via AsyncLocal without requiring any injected dependencies.
-/// </summary>
-public abstract class NotificationHandler<TNotification> : HandlerBase, INotificationHandler<TNotification>
-    where TNotification : class, INotification
-{
-    /// <inheritdoc />
-    public abstract Task HandleAsync(TNotification notification, CancellationToken cancellationToken);
-}

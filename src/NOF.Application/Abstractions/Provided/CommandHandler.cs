@@ -28,13 +28,3 @@ public interface ICommandHandler<TCommand> : ICommandHandler
     Task HandleAsync(TCommand command, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// Base class for command handlers, providing transactional message sending capabilities.
-/// Works automatically via AsyncLocal without requiring any injected dependencies.
-/// </summary>
-public abstract class CommandHandler<TCommand> : HandlerBase, ICommandHandler<TCommand>
-    where TCommand : class, ICommand
-{
-    /// <inheritdoc />
-    public abstract Task HandleAsync(TCommand command, CancellationToken cancellationToken);
-}
