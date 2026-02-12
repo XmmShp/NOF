@@ -21,8 +21,8 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
 
         // Handler inbound pipeline: register ordered type list + executor
-        builder.Services.AddSingleton(new HandlerPipelineTypes());
-        builder.Services.AddScoped<IHandlerExecutor, HandlerExecutor>();
+        builder.Services.AddSingleton(new InboundPipelineTypes());
+        builder.Services.AddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();
 
         // Outbound pipeline: register ordered type list + executor
         builder.Services.AddSingleton(new OutboundPipelineTypes());

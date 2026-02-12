@@ -6,14 +6,14 @@ using System.Reflection;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Permission authorization step — checks [RequirePermission] / [AllowAnonymous].</summary>
-public class PermissionAuthorizationMiddlewareStep : IHandlerMiddlewareStep<PermissionAuthorizationMiddleware>, IAfter<InvocationContextMiddlewareStep>;
+public class PermissionAuthorizationMiddlewareStep : IInboundMiddlewareStep<PermissionAuthorizationMiddleware>, IAfter<InvocationContextMiddlewareStep>;
 
 /// <summary>
 /// Handler middleware that enforces permission-based authorization.
 /// Checks <see cref="AllowAnonymousAttribute"/> and <see cref="RequirePermissionAttribute"/>
 /// on the message/handler types and short-circuits with an error response when unauthorized.
 /// </summary>
-public sealed class PermissionAuthorizationMiddleware : IHandlerMiddleware
+public sealed class PermissionAuthorizationMiddleware : IInboundMiddleware
 {
     private readonly IInvocationContext _invocationContext;
     private readonly ILogger<PermissionAuthorizationMiddleware> _logger;
@@ -26,7 +26,7 @@ public sealed class PermissionAuthorizationMiddleware : IHandlerMiddleware
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var messageType = context.Message.GetType();
         var handlerType = context.Handler.GetType();

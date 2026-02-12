@@ -4,7 +4,7 @@ namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Executes the outbound middleware pipeline for messages being sent out.
-/// Mirrors <see cref="HandlerExecutor"/> for the outbound direction.
+/// Mirrors <see cref="InboundPipelineExecutor"/> for the outbound direction.
 /// Middleware instances are resolved from DI (scoped) in the order determined
 /// by the topological sort of <see cref="IOutboundMiddlewareStep"/> instances.
 /// </summary>

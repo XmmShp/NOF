@@ -1,16 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Auto instrumentation step — records execution metrics and logging.</summary>
-public class AutoInstrumentationMiddlewareStep : IHandlerMiddlewareStep<AutoInstrumentationMiddleware>, IAfter<ActivityTracingMiddlewareStep>;
+public class AutoInstrumentationMiddlewareStep : IInboundMiddlewareStep<AutoInstrumentationMiddleware>, IAfter<ActivityTracingMiddlewareStep>;
 
 /// <summary>
 /// Auto-instrumentation middleware that automatically records handler execution logs, metrics, and performance data.
 /// </summary>
-public sealed class AutoInstrumentationMiddleware : IHandlerMiddleware
+public sealed class AutoInstrumentationMiddleware : IInboundMiddleware
 {
     private static readonly Counter<long> ExecutionCounter = HandlerPipelineTracing.Meter.CreateCounter<long>(
         HandlerPipelineTracing.Metrics.ExecutionCounter,
@@ -30,7 +30,7 @@ public sealed class AutoInstrumentationMiddleware : IHandlerMiddleware
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var tags = new KeyValuePair<string, object?>[]
         {

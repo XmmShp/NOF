@@ -28,22 +28,22 @@ public interface IDependentServiceRegistrationStep : IServiceRegistrationStep, I
 /// The topological execution order of steps IS the pipeline order.
 /// </para>
 /// </summary>
-public interface IHandlerMiddlewareStep : IServiceRegistrationStep, IAfter<IDependentServiceRegistrationStep>
+public interface IInboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDependentServiceRegistrationStep>
 {
     /// <summary>
-    /// The concrete <see cref="IHandlerMiddleware"/> type this step contributes to the pipeline.
+    /// The concrete <see cref="IInboundMiddleware"/> type this step contributes to the pipeline.
     /// </summary>
     Type MiddlewareType { get; }
 
     /// <summary>
     /// Default implementation: registers the middleware as scoped in DI
-    /// and appends it to the <see cref="HandlerPipelineTypes"/> ordered list.
+    /// and appends it to the <see cref="InboundPipelineTypes"/> ordered list.
     /// </summary>
     ValueTask IServiceRegistrationStep.ExecuteAsync(INOFAppBuilder builder)
     {
         builder.Services.TryAddScoped(MiddlewareType);
-        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(HandlerPipelineTypes));
-        if (descriptor!.ImplementationInstance is HandlerPipelineTypes list)
+        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(InboundPipelineTypes));
+        if (descriptor!.ImplementationInstance is InboundPipelineTypes list)
         {
             list.Add(MiddlewareType);
         }
@@ -52,19 +52,19 @@ public interface IHandlerMiddlewareStep : IServiceRegistrationStep, IAfter<IDepe
 }
 
 /// <summary>
-/// Strongly-typed variant of <see cref="IHandlerMiddlewareStep"/> that infers
-/// <see cref="IHandlerMiddlewareStep.MiddlewareType"/> from the generic parameter.
+/// Strongly-typed variant of <see cref="IInboundMiddlewareStep"/> that infers
+/// <see cref="IInboundMiddlewareStep.MiddlewareType"/> from the generic parameter.
 /// </summary>
-/// <typeparam name="TMiddleware">The concrete <see cref="IHandlerMiddleware"/> type.</typeparam>
-public interface IHandlerMiddlewareStep<TMiddleware> : IHandlerMiddlewareStep
-    where TMiddleware : IHandlerMiddleware
+/// <typeparam name="TMiddleware">The concrete <see cref="IInboundMiddleware"/> type.</typeparam>
+public interface IInboundMiddlewareStep<TMiddleware> : IInboundMiddlewareStep
+    where TMiddleware : IInboundMiddleware
 {
-    Type IHandlerMiddlewareStep.MiddlewareType => typeof(TMiddleware);
+    Type IInboundMiddlewareStep.MiddlewareType => typeof(TMiddleware);
 }
 
 /// <summary>
 /// Declares an outbound middleware type to be included in the outbound pipeline.
-/// Mirrors <see cref="IHandlerMiddlewareStep"/> for the outbound direction.
+/// Mirrors <see cref="IInboundMiddlewareStep"/> for the outbound direction.
 /// The topological execution order of steps IS the outbound pipeline order.
 /// </summary>
 public interface IOutboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDependentServiceRegistrationStep>

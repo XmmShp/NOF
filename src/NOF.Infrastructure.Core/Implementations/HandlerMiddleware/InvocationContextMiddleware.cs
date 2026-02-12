@@ -4,11 +4,11 @@ using System.Diagnostics;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Invocation context step — JWT validation, tenant resolution, tracing.</summary>
-public class InvocationContextMiddlewareStep : IHandlerMiddlewareStep<InvocationContextMiddleware>, IAfter<ExceptionMiddlewareStep>;
+public class InvocationContextMiddlewareStep : IInboundMiddlewareStep<InvocationContextMiddleware>, IAfter<ExceptionMiddlewareStep>;
 
 /// <summary>
 /// Handler middleware that populates the <see cref="IInvocationContext"/> from
-/// transport-agnostic <see cref="HandlerContext.Headers"/>.
+/// transport-agnostic <see cref="InboundContext.Headers"/>.
 /// <para>
 /// Responsibilities:
 /// <list type="bullet">
@@ -19,7 +19,7 @@ public class InvocationContextMiddlewareStep : IHandlerMiddlewareStep<Invocation
 /// Authorization is handled separately by <see cref="PermissionAuthorizationMiddleware"/>.
 /// </para>
 /// </summary>
-public sealed class InvocationContextMiddleware : IHandlerMiddleware
+public sealed class InvocationContextMiddleware : IInboundMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
     private readonly IJwtValidationService? _jwtValidationService;
@@ -32,7 +32,7 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
         _jwtValidationService = jwtValidationService;
     }
 
-    public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         // 1. Populate identity: parse JWT Bearer token from headers
         await PopulateIdentityAsync(context, cancellationToken);
@@ -46,7 +46,7 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
         await next(cancellationToken);
     }
 
-    private async Task PopulateIdentityAsync(HandlerContext context, CancellationToken cancellationToken)
+    private async Task PopulateIdentityAsync(InboundContext context, CancellationToken cancellationToken)
     {
         // Try to extract Bearer token from Authorization header
         if (context.Headers.TryGetValue(NOFConstants.Headers.Authorization, out var authHeader) &&
@@ -70,7 +70,7 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
         _invocationContext.UnsetUser();
     }
 
-    private void ResolveTenant(HandlerContext context)
+    private void ResolveTenant(InboundContext context)
     {
         // Prioritize tenant from JWT claims; fall back to header
         string? tenantId = null;
@@ -100,7 +100,7 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
         }
     }
 
-    private void ResolveTracing(HandlerContext context)
+    private void ResolveTracing(InboundContext context)
     {
         context.Headers.TryGetValue(NOFConstants.Headers.TraceId, out var traceId);
         context.Headers.TryGetValue(NOFConstants.Headers.SpanId, out var spanId);

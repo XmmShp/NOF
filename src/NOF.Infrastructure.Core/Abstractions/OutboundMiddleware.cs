@@ -36,7 +36,7 @@ public sealed class OutboundContext
 public delegate ValueTask OutboundDelegate(CancellationToken cancellationToken);
 
 /// <summary>
-/// Outbound middleware interface — mirrors <see cref="IHandlerMiddleware"/> for the outbound direction.
+/// Outbound middleware interface — mirrors <see cref="IInboundMiddleware"/> for the outbound direction.
 /// Used to insert cross-cutting concerns (JWT propagation, tracing, tenant, etc.) into outbound messages.
 /// </summary>
 public interface IOutboundMiddleware

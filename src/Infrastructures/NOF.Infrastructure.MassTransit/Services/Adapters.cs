@@ -12,9 +12,9 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
     where TRequest : class, IRequest
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
+    private readonly IInboundPipelineExecutor _executor;
 
-    public MassTransitRequestHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitRequestHandlerAdapter(THandler handler, IInboundPipelineExecutor executor)
     {
         _handler = handler;
         _executor = executor;
@@ -22,20 +22,14 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var headers = context.Headers.ToDictionary(
-            h => h.Key,
-            h => h.Value.ToString()
-        );
+        var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, _handler);
 
-        var activity = Activity.Current;
-        if (activity is not null)
+        await _executor.ExecuteAsync(handlerContext, async ct =>
         {
-            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
-        }
+            handlerContext.Response = await _handler.HandleAsync(context.Message, ct);
+        }, context.CancellationToken).ConfigureAwait(false);
 
-        var result = await _executor.ExecuteRequestAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
-        await context.RespondAsync(result).ConfigureAwait(false);
+        await context.RespondAsync(Result.From(handlerContext.Response!)).ConfigureAwait(false);
     }
 }
 
@@ -44,9 +38,9 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
     where TRequest : class, IRequest<TResponse>
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
+    private readonly IInboundPipelineExecutor _executor;
 
-    public MassTransitRequestHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitRequestHandlerAdapter(THandler handler, IInboundPipelineExecutor executor)
     {
         _handler = handler;
         _executor = executor;
@@ -54,20 +48,14 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var headers = context.Headers.ToDictionary(
-            h => h.Key,
-            h => h.Value.ToString()
-        );
+        var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, _handler);
 
-        var activity = Activity.Current;
-        if (activity is not null)
+        await _executor.ExecuteAsync(handlerContext, async ct =>
         {
-            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
-        }
+            handlerContext.Response = await _handler.HandleAsync(context.Message, ct);
+        }, context.CancellationToken).ConfigureAwait(false);
 
-        var result = await _executor.ExecuteRequestAsync<TRequest, TResponse>(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
-        await context.RespondAsync(result).ConfigureAwait(false);
+        await context.RespondAsync(Result.From<TResponse>(handlerContext.Response!)).ConfigureAwait(false);
     }
 }
 
@@ -92,9 +80,9 @@ internal class MassTransitCommandHandlerAdapter<THandler, TCommand> : IConsumer<
     where TCommand : class, ICommand
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
+    private readonly IInboundPipelineExecutor _executor;
 
-    public MassTransitCommandHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitCommandHandlerAdapter(THandler handler, IInboundPipelineExecutor executor)
     {
         _handler = handler;
         _executor = executor;
@@ -102,19 +90,11 @@ internal class MassTransitCommandHandlerAdapter<THandler, TCommand> : IConsumer<
 
     public async Task Consume(ConsumeContext<TCommand> context)
     {
-        var headers = context.Headers.ToDictionary(
-            h => h.Key,
-            h => h.Value.ToString()
-        );
+        var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, _handler);
 
-        var activity = Activity.Current;
-        if (activity is not null)
-        {
-            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
-        }
-
-        await _executor.ExecuteCommandAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
+        await _executor.ExecuteAsync(handlerContext,
+            ct => new ValueTask(_handler.HandleAsync(context.Message, ct)),
+            context.CancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -123,15 +103,28 @@ internal class MassTransitNotificationHandlerAdapter<THandler, TNotification> : 
     where TNotification : class, INotification
 {
     private readonly THandler _handler;
-    private readonly IHandlerExecutor _executor;
+    private readonly IInboundPipelineExecutor _executor;
 
-    public MassTransitNotificationHandlerAdapter(THandler handler, IHandlerExecutor executor)
+    public MassTransitNotificationHandlerAdapter(THandler handler, IInboundPipelineExecutor executor)
     {
         _handler = handler;
         _executor = executor;
     }
 
     public async Task Consume(ConsumeContext<TNotification> context)
+    {
+        var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, _handler);
+
+        await _executor.ExecuteAsync(handlerContext,
+            ct => new ValueTask(_handler.HandleAsync(context.Message, ct)),
+            context.CancellationToken).ConfigureAwait(false);
+    }
+}
+
+internal static class MassTransitAdapterHelper
+{
+    public static InboundContext BuildHandlerContext<TMessage>(ConsumeContext<TMessage> context, IMessageHandler handler)
+        where TMessage : class
     {
         var headers = context.Headers.ToDictionary(
             h => h.Key,
@@ -145,6 +138,11 @@ internal class MassTransitNotificationHandlerAdapter<THandler, TNotification> : 
             headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
         }
 
-        await _executor.ExecuteNotificationAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
+        return new InboundContext
+        {
+            Message = (IMessage)context.Message,
+            Handler = handler,
+            Headers = headers
+        };
     }
 }

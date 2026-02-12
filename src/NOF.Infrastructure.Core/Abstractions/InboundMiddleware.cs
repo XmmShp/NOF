@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// Contains metadata during handler execution
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class HandlerContext
+public sealed class InboundContext
 {
     /// <summary>
     /// Message instance
@@ -67,7 +67,7 @@ public delegate ValueTask HandlerDelegate(CancellationToken cancellationToken);
 /// Handler middleware interface
 /// Used to insert cross-cutting concerns (such as transactions, logging, validation, etc.) before and after Handler execution
 /// </summary>
-public interface IHandlerMiddleware
+public interface IInboundMiddleware
 {
     /// <summary>
     /// Execute middleware logic
@@ -75,13 +75,13 @@ public interface IHandlerMiddleware
     /// <param name="context">Handler execution context</param>
     /// <param name="next">Next middleware in the pipeline or the final Handler</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken);
+    ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken);
 }
 
 public static partial class NOFConstants
 {
     /// <summary>
-    /// Standard HTTP / transport-level header keys used in <see cref="HandlerContext.Headers"/>.
+    /// Standard HTTP / transport-level header keys used in <see cref="InboundContext.Headers"/>.
     /// </summary>
     public static class Headers
     {

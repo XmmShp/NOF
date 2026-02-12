@@ -6,7 +6,7 @@ using NOF.Infrastructure.Core;
 namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
-/// Handler middleware step that populates <see cref="HandlerContext.Headers"/> from HTTP request headers.
+/// Handler middleware step that populates <see cref="InboundContext.Headers"/> from HTTP request headers.
 /// Runs before <see cref="InvocationContextMiddlewareStep"/> so that identity/tenant resolution can read them.
 /// <para>
 /// A configurable blacklist of wildcard patterns prevents external HTTP callers from forging
@@ -14,7 +14,7 @@ namespace NOF.Hosting.AspNetCore;
 /// internal service-to-service calls via the message bus.
 /// </para>
 /// </summary>
-public class HttpHeaderMiddlewareStep : IHandlerMiddlewareStep<HttpHeaderMiddleware>,
+public class HttpHeaderMiddlewareStep : IInboundMiddlewareStep<HttpHeaderMiddleware>,
     IAfter<ExceptionMiddlewareStep>, IBefore<InvocationContextMiddlewareStep>;
 
 /// <summary>
@@ -31,10 +31,10 @@ public class HttpHeaderMiddlewareOptions
 }
 
 /// <summary>
-/// Copies HTTP request headers into <see cref="HandlerContext.Headers"/>,
+/// Copies HTTP request headers into <see cref="InboundContext.Headers"/>,
 /// filtering out blacklisted headers (matched by wildcard patterns) to prevent request forgery.
 /// </summary>
-public sealed class HttpHeaderMiddleware : IHandlerMiddleware
+public sealed class HttpHeaderMiddleware : IInboundMiddleware
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly HttpHeaderMiddlewareOptions _options;
@@ -45,7 +45,7 @@ public sealed class HttpHeaderMiddleware : IHandlerMiddleware
         _options = options.Value;
     }
 
-    public ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is not null)

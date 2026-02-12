@@ -4,13 +4,13 @@ using System.Diagnostics;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Activity tracing step — creates distributed tracing Activity per handler execution.</summary>
-public class ActivityTracingMiddlewareStep : IHandlerMiddlewareStep<ActivityTracingMiddleware>, IAfter<PermissionAuthorizationMiddlewareStep>;
+public class ActivityTracingMiddlewareStep : IInboundMiddlewareStep<ActivityTracingMiddleware>, IAfter<PermissionAuthorizationMiddlewareStep>;
 
 /// <summary>
 /// Activity tracing middleware
 /// Creates distributed tracing Activity for each Handler execution
 /// </summary>
-public sealed class ActivityTracingMiddleware : IHandlerMiddleware
+public sealed class ActivityTracingMiddleware : IInboundMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
 
@@ -19,7 +19,7 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
         _invocationContext = invocationContext;
     }
 
-    public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         // Merge tracing context and create Activity
         using var activity = RestoreTraceContext(context);
@@ -53,7 +53,7 @@ public sealed class ActivityTracingMiddleware : IHandlerMiddleware
     /// </summary>
     /// <param name="context">Handler execution context</param>
     /// <returns>Created Activity, returns null if no tracing information</returns>
-    private Activity? RestoreTraceContext(HandlerContext context)
+    private Activity? RestoreTraceContext(InboundContext context)
     {
         var traceId = _invocationContext.TraceId;
         var spanId = _invocationContext.SpanId;

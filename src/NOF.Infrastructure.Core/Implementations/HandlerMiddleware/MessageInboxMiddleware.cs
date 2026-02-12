@@ -4,13 +4,13 @@ using NOF.Application;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Inbox message processing step — deduplication via inbox pattern.</summary>
-public class MessageInboxMiddlewareStep : IHandlerMiddlewareStep<MessageInboxMiddleware>, IAfter<AutoInstrumentationMiddlewareStep>;
+public class MessageInboxMiddlewareStep : IInboundMiddlewareStep<MessageInboxMiddleware>, IAfter<AutoInstrumentationMiddlewareStep>;
 
 /// <summary>
 /// Inbox middleware
 /// Responsible for recording inbox messages in transactions to ensure reliable message processing
 /// </summary>
-public sealed class MessageInboxMiddleware : IHandlerMiddleware
+public sealed class MessageInboxMiddleware : IInboundMiddleware
 {
     private readonly ITransactionManager _transactionManager;
     private readonly IInboxMessageRepository _inboxMessageRepository;
@@ -27,7 +27,7 @@ public sealed class MessageInboxMiddleware : IHandlerMiddleware
         _invocationContext = invocationContext;
     }
 
-    public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         await using var transaction = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
 

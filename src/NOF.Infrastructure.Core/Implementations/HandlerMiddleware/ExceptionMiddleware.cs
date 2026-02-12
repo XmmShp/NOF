@@ -5,13 +5,13 @@ using NOF.Domain;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Outermost middleware step — catches all exceptions.</summary>
-public class ExceptionMiddlewareStep : IHandlerMiddlewareStep<ExceptionMiddleware>;
+public class ExceptionMiddlewareStep : IInboundMiddlewareStep<ExceptionMiddleware>;
 
 /// <summary>
 /// Handler exception handling middleware
 /// Catches and converts exceptions to unified error responses
 /// </summary>
-public sealed class ExceptionMiddleware : IHandlerMiddleware
+public sealed class ExceptionMiddleware : IInboundMiddleware
 {
     private readonly ILogger<ExceptionMiddleware> _logger;
 
@@ -20,7 +20,7 @@ public sealed class ExceptionMiddleware : IHandlerMiddleware
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         try
         {
