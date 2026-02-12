@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF;
 using NOF.Application;
 using NOF.Hosting.AspNetCore;
 using NOF.Hosting.AspNetCore.Extensions.Authority;
@@ -17,7 +16,8 @@ var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
 
 builder.WithAutoApplicationParts();
 
-builder.Services.AddNOF_SampleAutoInjectServices();
+builder.Services.AddNOFSampleAutoInjectServices();
+builder.Services.AddAllHandlers();
 
 builder.AddRedisCache();
 

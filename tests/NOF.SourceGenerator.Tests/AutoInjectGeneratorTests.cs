@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Annotation;
+using NOF.Hosting.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 

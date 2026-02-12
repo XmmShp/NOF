@@ -42,11 +42,7 @@ public interface IInboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDepe
     ValueTask IServiceRegistrationStep.ExecuteAsync(INOFAppBuilder builder)
     {
         builder.Services.TryAddScoped(MiddlewareType);
-        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(InboundPipelineTypes));
-        if (descriptor!.ImplementationInstance is InboundPipelineTypes list)
-        {
-            list.Add(MiddlewareType);
-        }
+        builder.Services.GetOrAddSingleton<InboundPipelineTypes>().Add(MiddlewareType);
         return ValueTask.CompletedTask;
     }
 }
@@ -81,11 +77,7 @@ public interface IOutboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDep
     ValueTask IServiceRegistrationStep.ExecuteAsync(INOFAppBuilder builder)
     {
         builder.Services.TryAddScoped(MiddlewareType);
-        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(OutboundPipelineTypes));
-        if (descriptor!.ImplementationInstance is OutboundPipelineTypes list)
-        {
-            list.Add(MiddlewareType);
-        }
+        builder.Services.GetOrAddSingleton<OutboundPipelineTypes>().Add(MiddlewareType);
         return ValueTask.CompletedTask;
     }
 }

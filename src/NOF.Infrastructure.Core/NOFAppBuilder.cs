@@ -77,11 +77,6 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     IEndpointNameProvider EndpointNameProvider { get; set; }
 
     /// <summary>
-    /// Gets the list of extra handler metadata registered manually (not discovered via assembly scanning).
-    /// </summary>
-    List<HandlerInfo> ExtraHandlerInfos { get; }
-
-    /// <summary>
     /// Registers the assembly containing the specified type as an application part for HTTP endpoint discovery.
     /// This enables the framework to scan the assembly for request types marked with <see cref="ExposeToHttpEndpointAttribute"/>.
     /// </summary>
@@ -112,14 +107,10 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     }
 
     /// <summary>
-    /// Gets the list of handler metadata (e.g., command, event, request handlers) discovered in the assemblies 
-    /// configured for this builder. The scan is performed on-demand and results are cached per assembly.
+    /// Gets the set of handler metadata (e.g., command, event, request handlers) registered via
+    /// source-generated <c>AddAllHandlers</c> or manually via <see cref="NOFInfrastructureCoreExtensions.AddHandlerInfo"/>.
     /// </summary>
-    IReadOnlyList<HandlerInfo> HandlerInfos
-        => HandlerScanner.ScanHandlers(Assemblies)
-            .Union(ExtraHandlerInfos)
-            .ToList()
-            .AsReadOnly();
+    HandlerInfos HandlerInfos => Services.GetOrAddSingleton<HandlerInfos>();
 
     /// <summary>
     /// Adds a service configuration delegate that will be executed during the service registration phase.
@@ -227,8 +218,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// <inheritdoc/>
     public IEndpointNameProvider EndpointNameProvider { get; set; }
 
-    /// <inheritdoc/>
-    public List<HandlerInfo> ExtraHandlerInfos { get; } = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NOFAppBuilder{THostApplication}"/> class.

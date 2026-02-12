@@ -66,7 +66,9 @@ public class AddStateMachineRegistrationStep : IDependentServiceRegistrationStep
                 foreach (var notificationType in blueprint.ObservedNotificationTypes)
                 {
                     var handlerType = typeof(StateMachineNotificationHandler<,>).MakeGenericType(type, notificationType);
-                    builder.ExtraHandlerInfos.Add(new HandlerInfo(HandlerKind.Notification, handlerType, notificationType, null));
+#pragma warning disable CS8620 // https://github.com/dotnet/roslyn/issues/80024
+                    builder.Services.AddHandlerInfo(new HandlerInfo(HandlerKind.Notification, handlerType, notificationType, null));
+#pragma warning restore CS8620
                 }
                 blueprints.Add(blueprint);
             }

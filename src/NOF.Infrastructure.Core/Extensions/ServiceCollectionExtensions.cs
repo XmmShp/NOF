@@ -241,6 +241,38 @@ public static partial class NOFInfrastructureCoreExtensions
             return services;
         }
 
+        /// <summary>
+        /// Retrieves the singleton instance of <typeparamref name="T"/> already registered in the service collection,
+        /// or creates a new instance using the parameterless constructor, registers it, and returns it.
+        /// </summary>
+        /// <typeparam name="T">The singleton service type. Must have a parameterless constructor.</typeparam>
+        /// <returns>The existing or newly created singleton instance.</returns>
+        public T GetOrAddSingleton<T>() where T : class, new()
+        {
+            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
+            if (descriptor?.ImplementationInstance is T existing)
+            {
+                return existing;
+            }
+            var instance = new T();
+            services.AddSingleton(instance);
+            return instance;
+        }
+
+        /// <summary>
+        /// Adds one or more <see cref="HandlerInfo"/> entries to the <see cref="HandlerInfos"/> singleton registered in DI.
+        /// </summary>
+        /// <param name="handlerInfos">The handler metadata entries to add.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection AddHandlerInfo(params HandlerInfo[] handlerInfos)
+        {
+            var set = services.GetOrAddSingleton<HandlerInfos>();
+            foreach (var info in handlerInfos)
+            {
+                set.Add(info);
+            }
+            return services;
+        }
     }
 }
 

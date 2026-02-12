@@ -1,4 +1,4 @@
-﻿using NOF.Application;
+using NOF.Application;
 
 namespace NOF.Infrastructure.Core;
 

@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace NOF.SourceGenerator;
+namespace NOF.Hosting.SourceGenerator;
 
 /// <summary>
 /// Source generator: detects service classes marked with AutoInjectAttribute (including referenced projects) and generates DI registration code.
@@ -101,30 +101,9 @@ public class AutoInjectGenerator : IIncrementalGenerator
     private static bool HasAutoInjectAttribute(ISymbol symbol)
         => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Annotation.AutoInjectAttribute");
 
-    /// <summary>
-    /// Converts an assembly name to a safe method name (replaces unsafe characters with underscores).
-    /// </summary>
-    private static string SanitizeAssemblyName(string assemblyName)
-    {
-        var sb = new StringBuilder();
-        foreach (var c in assemblyName)
-        {
-            if (char.IsLetterOrDigit(c))
-            {
-                sb.Append(c);
-            }
-            else
-            {
-                sb.Append('_');
-            }
-        }
-        return sb.ToString();
-    }
-
     private static string GenerateServiceRegistrationExtension(string assemblyName, ImmutableArray<INamedTypeSymbol> serviceClasses)
     {
-
-        var sanitizedName = SanitizeAssemblyName(assemblyName);
+        var sanitizedName = assemblyName.Replace(".", "");
         var methodName = $"Add{sanitizedName}AutoInjectServices";
 
         var sb = new StringBuilder();
