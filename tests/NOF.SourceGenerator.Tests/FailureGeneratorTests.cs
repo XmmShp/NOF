@@ -41,10 +41,10 @@ public class FailureGeneratorTests
         fields.Should().HaveCount(2);
 
         var invalidInputField = fields.First(f => f.Declaration.Variables.First().Identifier.Text == "InvalidInput");
-        invalidInputField.ToString().Should().Contain("public static readonly NOF.Failure InvalidInput = new(\"输入无效\", 1001);");
+        invalidInputField.ToString().Should().Contain("public static readonly global::NOF.Domain.Failure InvalidInput = new(\"输入无效\", 1001);");
 
         var notFoundField = fields.First(f => f.Declaration.Variables.First().Identifier.Text == "NotFound");
-        notFoundField.ToString().Should().Contain("public static readonly NOF.Failure NotFound = new(\"资源未找到\", 1002);");
+        notFoundField.ToString().Should().Contain("public static readonly global::NOF.Domain.Failure NotFound = new(\"资源未找到\", 1002);");
     }
 
     [Fact]

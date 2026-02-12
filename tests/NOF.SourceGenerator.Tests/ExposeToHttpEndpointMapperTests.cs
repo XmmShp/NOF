@@ -79,15 +79,15 @@ public class ExposeToHttpEndpointMapperTests
 
         getBlock.Should()
             .Contain("app.MapGet(\"/api/user\"")
-            .And.Contain("[AsParameters] Lib.GetUserRequest request")
+            .And.Contain("[global::Microsoft.AspNetCore.Http.AsParametersAttribute] Lib.GetUserRequest request")
             .And.Contain("sender.SendAsync(request)");
 
         postBlock.Should()
             .Contain("app.MapPost(\"/api/user\"")
-            .And.Contain("[FromBody] App.CreateUserRequest request")
+            .And.Contain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] App.CreateUserRequest request")
             .And.Contain("sender.SendAsync(request)");
 
-        bodyText.Should().Contain("return TypedResults.Ok(response);");
+        bodyText.Should().Contain("return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class ExposeToHttpEndpointMapperTests
         // Route param should be a lambda parameter
         generatedCode.Should().Contain("long id");
         // Body DTO should be [FromBody]
-        generatedCode.Should().Contain("[FromBody] __UpdateItemRequest_Body__ __body__");
+        generatedCode.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] __UpdateItemRequest_Body__ __body__");
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class ExposeToHttpEndpointMapperTests
         // No Body DTO should be generated
         generatedCode.Should().NotContain("__DeleteItemRequest_Body__");
         // No [FromBody] parameter
-        generatedCode.Should().NotContain("[FromBody]");
+        generatedCode.Should().NotContain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]");
         // Should construct request from route param only
         generatedCode.Should().Contain("new App.DeleteItemRequest(id)");
         generatedCode.Should().Contain("long id");

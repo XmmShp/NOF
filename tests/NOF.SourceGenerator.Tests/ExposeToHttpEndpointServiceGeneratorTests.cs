@@ -35,10 +35,10 @@ public class ExposeToHttpEndpointServiceGeneratorTests
 
         // Client: interface and implementation
         clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
-            .Should().Contain(i => i.Identifier.Text == "IMyAppService");
+            .Should().Contain(i => i.Identifier.Text == "ITestAssemblyService");
 
         clientRoot.DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Should().Contain(c => c.Identifier.Text == "MyAppServiceClient");
+            .Should().Contain(c => c.Identifier.Text == "TestAssemblyServiceClient");
 
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
@@ -77,6 +77,9 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                 m.Identifier.Text == "GetProfileAsync"
                 && m.ParameterList.Parameters.Count == 3
                 && m.ParameterList.Parameters[0].Type!.ToString() == "MyApi.UserProfileRequest");
+
+        clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
+            .Should().Contain(i => i.Identifier.Text == "ITestAssemblyService");
     }
 
     [Fact]
@@ -108,6 +111,9 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                 m.Identifier.Text == "DeleteTaskAsync"
                 && m.ParameterList.Parameters.Count == 3
                 && m.ParameterList.Parameters[0].Type!.ToString() == "Tasks.DeleteTaskRequest");
+
+        clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
+            .Should().Contain(i => i.Identifier.Text == "ITestAssemblyService");
     }
 
     [Fact]
@@ -138,6 +144,9 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var clientRoot = clientTree.GetRoot();
 
         // Two methods in client
+        clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
+            .Should().Contain(i => i.Identifier.Text == "ITestAssemblyService");
+
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
                 m.Identifier.Text == "CreateAsync"
@@ -175,12 +184,12 @@ public class ExposeToHttpEndpointServiceGeneratorTests
 
         var clientRoot = clientTree.GetRoot();
 
-        // Service name based on root namespace "MyApp"
+        // Service name based on root namespace of assembly name "TestAssembly"
         clientRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>()
-            .Should().Contain(i => i.Identifier.Text == "IMyAppService");
+            .Should().Contain(i => i.Identifier.Text == "ITestAssemblyService");
 
         clientRoot.DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Should().Contain(c => c.Identifier.Text == "MyAppServiceClient");
+            .Should().Contain(c => c.Identifier.Text == "TestAssemblyServiceClient");
 
         clientRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
             .Should().Contain(m =>
@@ -233,7 +242,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Route param should be interpolated into the URL
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
 
         // Non-route params should go to query string
         generatedCode.Should().Contain("queryParts");
@@ -269,7 +278,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Route param should be interpolated
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
 
         // Non-route params should go to body dictionary
         generatedCode.Should().Contain("Dictionary<string, object?>");
@@ -300,8 +309,8 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Both route params should be interpolated
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.OrderId");
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.ItemId");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.OrderId");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.ItemId");
 
         // No query string needed since all properties are route params
         generatedCode.Should().NotContain("queryParts");
@@ -359,7 +368,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Route param Id should be interpolated into URL
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
 
         // Non-route props should go to body dictionary
         generatedCode.Should().Contain("Dictionary<string, object?>");
@@ -391,8 +400,8 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Route params should be interpolated
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.NodeId.ToString()!)");
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.FileName");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.NodeId.ToString()!)");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.FileName");
 
         // Only Content should go to body
         generatedCode.Should().Contain("body[\"Content\"] = request.Content");
@@ -460,7 +469,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Id should be interpolated into URL
-        generatedCode.Should().Contain("Uri.EscapeDataString(request.Id.ToString()!)");
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
 
         // Name should go to body
         generatedCode.Should().Contain("body[\"Name\"] = request.Name");
@@ -494,8 +503,8 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Nullable DateTime should use .Value.ToString(...)
-        generatedCode.Should().Contain("request.SubmitTimeFrom.Value.ToString(\"O\", CultureInfo.InvariantCulture)");
-        generatedCode.Should().Contain("request.SubmitTimeTo.Value.ToString(\"O\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.SubmitTimeFrom.Value.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.SubmitTimeTo.Value.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)");
 
         // Should have null checks
         generatedCode.Should().Contain("if (request.SubmitTimeFrom is not null)");
@@ -527,8 +536,8 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Nullable DateOnly should use .Value.ToString(...)
-        generatedCode.Should().Contain("request.StartDate.Value.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)");
-        generatedCode.Should().Contain("request.EndDate.Value.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.StartDate.Value.ToString(\"yyyy-MM-dd\", global::System.Globalization.CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.EndDate.Value.ToString(\"yyyy-MM-dd\", global::System.Globalization.CultureInfo.InvariantCulture)");
     }
 
     [Fact]
@@ -556,10 +565,10 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Nullable TimeOnly should use .Value.ToString(...)
-        generatedCode.Should().Contain("request.StartTime.Value.ToString(\"HH:mm:ss.FFFFFFF\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.StartTime.Value.ToString(\"HH:mm:ss.FFFFFFF\", global::System.Globalization.CultureInfo.InvariantCulture)");
 
         // Nullable DateTimeOffset should use .Value.ToString(...)
-        generatedCode.Should().Contain("request.CreatedAfter.Value.ToString(\"O\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.CreatedAfter.Value.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)");
     }
 
     [Fact]
@@ -587,14 +596,87 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Non-nullable DateTime should use .ToString(...) directly, not .Value.ToString(...)
-        generatedCode.Should().Contain("request.Since.ToString(\"O\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.Since.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)");
         generatedCode.Should().NotContain("request.Since.Value");
 
-        generatedCode.Should().Contain("request.Date.ToString(\"yyyy-MM-dd\", CultureInfo.InvariantCulture)");
+        generatedCode.Should().Contain("request.Date.ToString(\"yyyy-MM-dd\", global::System.Globalization.CultureInfo.InvariantCulture)");
         generatedCode.Should().NotContain("request.Date.Value");
 
         // Non-nullable should NOT have null checks
         generatedCode.Should().NotContain("if (request.Since is not null)");
         generatedCode.Should().NotContain("if (request.Date is not null)");
+    }
+
+    [Fact]
+    public void GeneratesOneFilePerAssembly_WithAssemblyNameAsNamespace()
+    {
+        const string source = """
+                              using NOF.Contract;
+
+                              namespace MyApp.Features
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get)]
+                                  public record GetUsersRequest : IRequest<string>;
+                              }
+
+                              namespace MyApp.Admin
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Post)]
+                                  public record CreateAdminRequest(string Name) : IRequest;
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+
+        // Should generate exactly ONE file (per assembly, not per namespace)
+        runResult.GeneratedTrees.Should().HaveCount(1);
+
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Namespace should be the assembly name "TestAssembly"
+        generatedCode.Should().Contain("namespace TestAssembly");
+
+        // Both endpoints should be in the same file
+        generatedCode.Should().Contain("GetUsersAsync");
+        generatedCode.Should().Contain("CreateAdminAsync");
+
+        // Service name derived from root of assembly name
+        generatedCode.Should().Contain("ITestAssemblyService");
+        generatedCode.Should().Contain("TestAssemblyServiceClient");
+    }
+
+    [Fact]
+    public void GeneratedCode_UsesFqnWithGlobalPrefix_NoBareFqnTypes()
+    {
+        const string source = """
+                              using NOF.Contract;
+
+                              namespace MyApp
+                              {
+                                  [ExposeToHttpEndpoint(HttpVerb.Get)]
+                                  public record GetItemsRequest(int Page) : IRequest<string>;
+                              }
+                              """;
+
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, typeof(ExposeToHttpEndpointAttribute));
+        var generatedCode = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+
+        // Should use global:: prefix for all System types
+        generatedCode.Should().Contain("global::System.Threading.Tasks.Task<");
+        generatedCode.Should().Contain("global::System.Net.Http.HttpCompletionOption");
+        generatedCode.Should().Contain("global::System.Threading.CancellationToken");
+        generatedCode.Should().Contain("global::System.Net.Http.HttpClient");
+        generatedCode.Should().Contain("global::System.Text.Json.JsonSerializerOptions");
+        generatedCode.Should().Contain("global::System.Net.Http.HttpRequestMessage");
+        generatedCode.Should().Contain("global::System.Text.Json.JsonException");
+        generatedCode.Should().Contain("global::NOF.Contract.Result");
+
+        // Should use global:: for query param helpers
+        generatedCode.Should().Contain("global::System.Uri.EscapeDataString");
+        generatedCode.Should().Contain("global::System.Collections.Generic.List<string>");
+
+        // Should NOT have bare System.* without global:: (except inside string literals)
+        // The using NOF.Contract is allowed for extension property NOFDefaults
+        generatedCode.Should().Contain("using NOF.Contract;");
     }
 }

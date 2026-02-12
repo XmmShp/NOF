@@ -111,7 +111,6 @@ public class AutoInjectGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine("using System;");
         sb.AppendLine();
 
         sb.AppendLine($"namespace {assemblyName}");
@@ -128,7 +127,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
         sb.AppendLine("        /// <param name=\"services\">The service collection.</param>");
         sb.AppendLine("        /// <returns>The service collection for chaining.</returns>");
 
-        sb.AppendLine($"        public static IServiceCollection {methodName}(this IServiceCollection services)");
+        sb.AppendLine($"        public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection {methodName}(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
 
         foreach (var serviceClass in serviceClasses)
@@ -206,16 +205,16 @@ public class AutoInjectGenerator : IIncrementalGenerator
         {
             if (typesToRegister.Count == 1)
             {
-                sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typesToRegister[0]}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
+                sb.AppendLine($"            services.Add(new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof({typesToRegister[0]}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
             }
             else
             {
                 // Register self first
-                sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
+                sb.AppendLine($"            services.Add(new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 // Then register interfaces (factory delegate pointing to self)
                 foreach (var typeName in typesToRegister)
                 {
-                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), sp => sp.GetRequiredService<{serviceTypeName}>(), {ToLifeTime(lifetime)}));");
+                    sb.AppendLine($"            services.Add(new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof({typeName}), sp => sp.GetRequiredService<{serviceTypeName}>(), {ToLifeTime(lifetime)}));");
                 }
             }
         }
@@ -228,7 +227,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                              .Where(t => t != null)
                              .Select(t => t!.ToDisplayString(typeFormat)))
                 {
-                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
+                    sb.AppendLine($"            services.Add(new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 }
             }
             else
@@ -237,13 +236,13 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 {
                     foreach (var typeName in typesToRegister)
                     {
-                        sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
+                        sb.AppendLine($"            services.Add(new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof({typeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                     }
                 }
                 else
                 {
                     // No interfaces, register self
-                    sb.AppendLine($"            services.Add(new ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
+                    sb.AppendLine($"            services.Add(new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof({serviceTypeName}), typeof({serviceTypeName}), {ToLifeTime(lifetime)}));");
                 }
             }
         }
@@ -255,9 +254,9 @@ public class AutoInjectGenerator : IIncrementalGenerator
     {
         return lifetime switch
         {
-            Lifetime.Singleton => "ServiceLifetime.Singleton",
-            Lifetime.Scoped => "ServiceLifetime.Scoped",
-            Lifetime.Transient => "ServiceLifetime.Transient",
+            Lifetime.Singleton => "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+            Lifetime.Scoped => "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
+            Lifetime.Transient => "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
             _ => throw new ArgumentOutOfRangeException(nameof(lifetime), lifetime, null)
         };
     }

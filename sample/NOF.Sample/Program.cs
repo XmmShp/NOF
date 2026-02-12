@@ -9,6 +9,7 @@ using NOF.Infrastructure.MassTransit;
 using NOF.Infrastructure.MassTransit.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
+using NOF.Sample.Contract;
 using NOF.Sample.WebUI;
 using Yitter.IdGenerator;
 

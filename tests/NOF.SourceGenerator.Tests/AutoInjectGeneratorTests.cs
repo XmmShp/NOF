@@ -59,4 +59,62 @@ public class AutoInjectGeneratorTests
         appMethod.Body!.ToString().Should().Contain("IAppSvc").And.Contain("AppService").And.Contain("ServiceLifetime.Transient");
         appMethod.Body!.ToString().Should().Contain("ILibSvc").And.Contain("LibService").And.Contain("ServiceLifetime.Singleton");
     }
+
+    [Fact]
+    public void GeneratedCode_UsesFqnForServiceDescriptorAndServiceLifetime()
+    {
+        const string source = """
+            using Microsoft.Extensions.DependencyInjection;
+            using NOF.Annotation;
+            namespace App
+            {
+                public interface IMyService { }
+                [AutoInject(Lifetime.Scoped)]
+                public class MyService : IMyService { }
+            }
+            """;
+
+        var depRefs = new[] { typeof(IServiceCollection).ToMetadataReference(), typeof(AutoInjectAttribute).ToMetadataReference() };
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);
+
+        var result = new AutoInjectGenerator().GetResult(comp);
+        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
+
+        // Should use global:: FQN for ServiceDescriptor
+        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor");
+        // Should use global:: FQN for ServiceLifetime
+        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped");
+        // Should use global:: FQN for IServiceCollection in method signature
+        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
+        // Should NOT have bare using Microsoft.Extensions.DependencyInjection at the top
+        // (we allow it for GetRequiredService extension method)
+        generatedCode.Should().Contain("using Microsoft.Extensions.DependencyInjection;");
+    }
+
+    [Fact]
+    public void GeneratedCode_SingletonWithMultipleInterfaces_UsesGetRequiredServiceExtension()
+    {
+        const string source = """
+            using Microsoft.Extensions.DependencyInjection;
+            using NOF.Annotation;
+            namespace App
+            {
+                public interface IFoo { }
+                public interface IBar { }
+                [AutoInject(Lifetime.Singleton)]
+                public class FooBar : IFoo, IBar { }
+            }
+            """;
+
+        var depRefs = new[] { typeof(IServiceCollection).ToMetadataReference(), typeof(AutoInjectAttribute).ToMetadataReference() };
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);
+
+        var result = new AutoInjectGenerator().GetResult(comp);
+        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
+
+        // Singleton with multiple interfaces: register self, then factory delegates
+        generatedCode.Should().Contain("sp.GetRequiredService<");
+        // Self registration
+        generatedCode.Should().Contain("typeof(App.FooBar), typeof(App.FooBar)");
+    }
 }
