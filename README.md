@@ -20,7 +20,6 @@
 
 | Package | Description |
 |---------|-------------|
-| [`NOF.Annotation`](https://www.nuget.org/packages/NOF.Annotation) | Shared attributes (`[AutoInject]`) and enums (`Lifetime`) used across layers |
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer — entities, aggregate roots, repositories, domain events |
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer — requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer — handler abstractions, state machines, caching, unit of work |
@@ -76,7 +75,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
 ## Architecture
 
 ```
-NOF.Annotation          ← Shared attributes (no dependencies)
+NOF.Annotation          ← Shared attributes (embedded in other packages, not published separately)
 NOF.Domain              ← Domain entities, aggregate roots, events
 NOF.Contract            ← Requests, commands, notifications, DTOs
 NOF.Application         ← Handlers, state machines, application services
