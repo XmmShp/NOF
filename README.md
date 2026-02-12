@@ -75,8 +75,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
 ## Architecture
 
 ```
-NOF.Annotation          ← Shared attributes (embedded in other packages, not published separately)
-NOF.Domain              ← Domain entities, aggregate roots, events
+NOF.Domain              ← Domain entities, aggregate roots, events, shared attributes ([AutoInject])
 NOF.Contract            ← Requests, commands, notifications, DTOs
 NOF.Application         ← Handlers, state machines, application services
 NOF.Infrastructure.Core ← App builder, pipeline, OpenTelemetry

@@ -22,11 +22,11 @@ public record StartProcessingCommand(string TaskId) : ICommand;
 
 public class SampleStateMachineContext : IStateMachineContext
 {
-    public string TaskId { get; set; }
+    public string TaskId { get; set; } = null!;
     public DateTime StartOn { get; set; }
     public DateTime? SucceededOn { get; set; }
     public DateTime? FailedOn { get; set; }
-    public string FailReason { get; set; }
+    public string FailReason { get; set; } = null!;
 }
 
 public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
@@ -66,7 +66,7 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
 
 public class SampleStateMachine : IStateMachineDefinition<SampleState, SampleStateMachineContext>
 {
-    private string TaskKey(string taskId) => $"Task-{taskId}";
+    private static string TaskKey(string taskId) => $"Task-{taskId}";
 
     public void Build(IStateMachineBuilder<SampleState, SampleStateMachineContext> builder)
     {

@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NOF.Annotation\NOF.Annotation.csproj" />
     <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\NOF.Domain\NOF.Domain.csproj" />
 

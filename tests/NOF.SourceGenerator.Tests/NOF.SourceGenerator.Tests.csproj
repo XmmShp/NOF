@@ -24,7 +24,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\NOF.Annotation\NOF.Annotation.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Domain.SourceGenerator\NOF.Domain.SourceGenerator.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
 		<ProjectReference Include="..\..\src\NOF.Contract.SourceGenerator\NOF.Contract.SourceGenerator.csproj" />
