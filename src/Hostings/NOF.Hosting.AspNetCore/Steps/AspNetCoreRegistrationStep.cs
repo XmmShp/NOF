@@ -24,7 +24,8 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddScoped<ITransportHeaderProvider, HttpTransportHeaderProvider>();
+        builder.Services.AddOptions<HttpHeaderMiddlewareOptions>();
+        builder.AddRegistrationStep(new HttpHeaderMiddlewareStep());
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
         builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>
             tracing.AddAspNetCoreInstrumentation(options =>

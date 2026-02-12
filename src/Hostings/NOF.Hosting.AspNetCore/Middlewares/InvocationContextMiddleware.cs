@@ -1,39 +1,78 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using NOF.Contract;
 using NOF.Infrastructure.Core;
 
 namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
-/// ASP.NET Core implementation of <see cref="ITransportHeaderProvider"/> that reads
-/// HTTP request headers from the current <see cref="HttpContext"/> via <see cref="IHttpContextAccessor"/>.
+/// Handler middleware step that populates <see cref="HandlerContext.Headers"/> from HTTP request headers.
+/// Runs before <see cref="InvocationContextMiddlewareStep"/> so that identity/tenant resolution can read them.
 /// <para>
-/// Registered as scoped so the handler pipeline can pull transport headers
-/// without coupling to ASP.NET Core directly.
+/// A configurable blacklist of wildcard patterns prevents external HTTP callers from forging
+/// internal headers (e.g., <c>NOF.*</c>). These headers are only trusted when set by
+/// internal service-to-service calls via the message bus.
 /// </para>
 /// </summary>
-public class HttpTransportHeaderProvider : ITransportHeaderProvider
+public class HttpHeaderMiddlewareStep : IHandlerMiddlewareStep<HttpHeaderMiddleware>,
+    IAfter<ExceptionMiddlewareStep>, IBefore<InvocationContextMiddlewareStep>;
+
+/// <summary>
+/// Configuration options for <see cref="HttpHeaderMiddleware"/>.
+/// </summary>
+public class HttpHeaderMiddlewareOptions
+{
+    /// <summary>
+    /// Wildcard patterns for headers that should be blocked from external HTTP requests.
+    /// Supports <c>*</c> wildcards (e.g., <c>NOF.*</c>, <c>X-Internal-*</c>).
+    /// Matching is case-insensitive.
+    /// </summary>
+    public List<string> BlacklistedPatterns { get; set; } = ["NOF.*"];
+}
+
+/// <summary>
+/// Copies HTTP request headers into <see cref="HandlerContext.Headers"/>,
+/// filtering out blacklisted headers (matched by wildcard patterns) to prevent request forgery.
+/// </summary>
+public sealed class HttpHeaderMiddleware : IHandlerMiddleware
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly HttpHeaderMiddlewareOptions _options;
 
-    public HttpTransportHeaderProvider(IHttpContextAccessor httpContextAccessor)
+    public HttpHeaderMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderMiddlewareOptions> options)
     {
         _httpContextAccessor = httpContextAccessor;
+        _options = options.Value;
     }
 
-    /// <inheritdoc />
-    public IReadOnlyDictionary<string, string?> GetHeaders()
+    public ValueTask InvokeAsync(HandlerContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext is null)
+        if (httpContext is not null)
         {
-            return new Dictionary<string, string?>();
+            foreach (var header in httpContext.Request.Headers)
+            {
+                if (IsBlacklisted(header.Key))
+                    continue;
+
+                // Caller-provided headers (e.g., from message bus) take precedence
+                if (!context.Headers.ContainsKey(header.Key))
+                {
+                    context.Headers[header.Key] = header.Value.ToString();
+                }
+            }
         }
 
-        var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var header in httpContext.Request.Headers)
+        return next(cancellationToken);
+    }
+
+    private bool IsBlacklisted(string headerName)
+    {
+        foreach (var pattern in _options.BlacklistedPatterns)
         {
-            headers[header.Key] = header.Value.ToString();
+            if (headerName.MatchWildcard(pattern, StringComparison.OrdinalIgnoreCase))
+                return true;
         }
-        return headers;
+        return false;
     }
 }

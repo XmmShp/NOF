@@ -58,12 +58,11 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     IStartupEventChannel StartupEventChannel { get; }
 
     /// <summary>
-    /// Gets or sets the request sender instance provided by the Rider (the bus provider) to dispatch
-    /// application requests to their corresponding handlers. This property is typically set during
-    /// service configuration or startup and enables decoupled invocation of use cases without
-    /// direct handler references.
+    /// Gets or sets the request rider instance provided by the bus provider to dispatch
+    /// application requests to their corresponding handlers at startup time.
+    /// This property is typically set during service configuration.
     /// </summary>
-    IRequestSender? RequestSender { get; set; }
+    IRequestRider? RequestSender { get; set; }
 
     /// <summary>
     /// Gets the list of assemblies registered for scanning (e.g., for handlers, validators, or configuration types).
@@ -220,7 +219,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     public IStartupEventChannel StartupEventChannel { get; protected set; }
 
     /// <inheritdoc/>
-    public IRequestSender? RequestSender { get; set; }
+    public IRequestRider? RequestSender { get; set; }
 
     /// <inheritdoc/>
     public HashSet<Assembly> Assemblies { get; } = [];
@@ -254,6 +253,12 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new AutoInstrumentationMiddlewareStep(),
             new MessageInboxMiddlewareStep(),
             new MessageOutboxMiddlewareStep(),
+            
+            // Default outbound middleware steps
+            new MessageIdOutboundMiddlewareStep(),
+            new TracingOutboundMiddlewareStep(),
+            new AuthorizationOutboundMiddlewareStep(),
+            new TenantOutboundMiddlewareStep(),
         ];
         EndpointNameProvider = new EndpointNameProvider();
         ApplicationConfigs = [];

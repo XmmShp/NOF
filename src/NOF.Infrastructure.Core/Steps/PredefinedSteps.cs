@@ -63,6 +63,45 @@ public interface IHandlerMiddlewareStep<TMiddleware> : IHandlerMiddlewareStep
 }
 
 /// <summary>
+/// Declares an outbound middleware type to be included in the outbound pipeline.
+/// Mirrors <see cref="IHandlerMiddlewareStep"/> for the outbound direction.
+/// The topological execution order of steps IS the outbound pipeline order.
+/// </summary>
+public interface IOutboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDependentServiceRegistrationStep>
+{
+    /// <summary>
+    /// The concrete <see cref="IOutboundMiddleware"/> type this step contributes to the pipeline.
+    /// </summary>
+    Type MiddlewareType { get; }
+
+    /// <summary>
+    /// Default implementation: registers the middleware as scoped in DI
+    /// and appends it to the <see cref="OutboundPipelineTypes"/> ordered list.
+    /// </summary>
+    ValueTask IServiceRegistrationStep.ExecuteAsync(INOFAppBuilder builder)
+    {
+        builder.Services.TryAddScoped(MiddlewareType);
+        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(OutboundPipelineTypes));
+        if (descriptor!.ImplementationInstance is OutboundPipelineTypes list)
+        {
+            list.Add(MiddlewareType);
+        }
+        return ValueTask.CompletedTask;
+    }
+}
+
+/// <summary>
+/// Strongly-typed variant of <see cref="IOutboundMiddlewareStep"/> that infers
+/// <see cref="IOutboundMiddlewareStep.MiddlewareType"/> from the generic parameter.
+/// </summary>
+/// <typeparam name="TMiddleware">The concrete <see cref="IOutboundMiddleware"/> type.</typeparam>
+public interface IOutboundMiddlewareStep<TMiddleware> : IOutboundMiddlewareStep
+    where TMiddleware : IOutboundMiddleware
+{
+    Type IOutboundMiddlewareStep.MiddlewareType => typeof(TMiddleware);
+}
+
+/// <summary>
 /// Configures synchronous data seeding or initial state setup (e.g., database seeders, cache warm-up).
 /// This is the first step in the application configuration pipeline.
 /// </summary>

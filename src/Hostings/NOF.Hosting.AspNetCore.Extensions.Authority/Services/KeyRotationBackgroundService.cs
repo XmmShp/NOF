@@ -52,7 +52,7 @@ public sealed class KeyRotationBackgroundService : BackgroundService
                     signingKeyService.CurrentSigningKey.Kid);
 
                 var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
-                await notificationPublisher.PublishAsync(new KeyRotationNotification(), stoppingToken);
+                await notificationPublisher.PublishAsync(new KeyRotationNotification(), cancellationToken: stoppingToken);
                 _logger.LogInformation("Key rotation notification published");
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

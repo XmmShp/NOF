@@ -6,56 +6,34 @@ namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Command sender implementation.
+/// Runs the outbound pipeline to populate headers, then dispatches via the rider.
 /// </summary>
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
-    private readonly IInvocationContext _invocationContext;
+    private readonly IOutboundPipelineExecutor _outboundPipeline;
 
-    public CommandSender(ICommandRider rider, IInvocationContext invocationContext)
+    public CommandSender(ICommandRider rider, IOutboundPipelineExecutor outboundPipeline)
     {
         _rider = rider;
-        _invocationContext = invocationContext;
+        _outboundPipeline = outboundPipeline;
     }
 
-    public Task SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+    public async Task SendAsync(ICommand command, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken = default)
     {
-        using var activity = MessageTracing.Source.StartActivity(
-            $"{MessageTracing.ActivityNames.MessageSending}: {command.GetType().FullName}",
-            ActivityKind.Producer);
-
-        var messageId = Guid.NewGuid().ToString();
-        var tenantId = _invocationContext.TenantId;
-        var currentActivity = Activity.Current;
-        var headers = new Dictionary<string, string?>
+        var context = new OutboundContext
         {
-            [NOFConstants.Headers.MessageId] = messageId,
-            [NOFConstants.Headers.TraceId] = currentActivity?.TraceId.ToString(),
-            [NOFConstants.Headers.SpanId] = currentActivity?.SpanId.ToString(),
-
-            [NOFConstants.Headers.TenantId] = tenantId
+            Message = command,
+            DestinationEndpointName = destinationEndpointName,
+            Headers = headers is not null
+                ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         };
 
-        if (activity is { IsAllDataRequested: true })
+        await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            activity.SetTag(MessageTracing.Tags.MessageId, messageId);
-            activity.SetTag(MessageTracing.Tags.MessageType, command.GetType().Name);
-            activity.SetTag(MessageTracing.Tags.Destination, destinationEndpointName ?? "default");
-
-            activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
-        }
-
-        try
-        {
-            var result = _rider.SendAsync(command, headers, destinationEndpointName, cancellationToken);
-            activity?.SetStatus(ActivityStatusCode.Ok);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            throw;
-        }
+            await _rider.SendAsync(command, context.Headers, destinationEndpointName, ct);
+        }, cancellationToken);
     }
 }
 

@@ -111,7 +111,7 @@ public interface IStateMachineBuilderWhenClause<in TState, out TContext, out TNo
         return ExecuteAsync(async (context, notification, sp, cancellationToken) =>
         {
             var commandSender = sp.GetRequiredService<ICommandSender>();
-            await commandSender.SendAsync(commandFactory(context, notification), cancellationToken: cancellationToken);
+            await commandSender.SendAsync(commandFactory(context, notification), cancellationToken: cancellationToken).ConfigureAwait(false);
         });
     }
 
@@ -125,7 +125,7 @@ public interface IStateMachineBuilderWhenClause<in TState, out TContext, out TNo
         return ExecuteAsync(async (context, notification, sp, cancellationToken) =>
         {
             var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
-            await notificationPublisher.PublishAsync(notificationFactory(context, notification), cancellationToken);
+            await notificationPublisher.PublishAsync(notificationFactory(context, notification), cancellationToken: cancellationToken).ConfigureAwait(false);
         });
     }
 }

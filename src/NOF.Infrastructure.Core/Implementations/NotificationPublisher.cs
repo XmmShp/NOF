@@ -6,56 +6,33 @@ namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Notification publisher implementation.
+/// Runs the outbound pipeline (which handles tracing, headers, etc.) then dispatches via the rider.
 /// </summary>
 public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
-    private readonly IInvocationContext _invocationContext;
+    private readonly IOutboundPipelineExecutor _outboundPipeline;
 
-    public NotificationPublisher(INotificationRider rider, IInvocationContext invocationContext)
+    public NotificationPublisher(INotificationRider rider, IOutboundPipelineExecutor outboundPipeline)
     {
         _rider = rider;
-        _invocationContext = invocationContext;
+        _outboundPipeline = outboundPipeline;
     }
 
-    public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(INotification notification, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
     {
-        using var activity = MessageTracing.Source.StartActivity(
-            $"{MessageTracing.ActivityNames.MessageSending}: {notification.GetType().FullName}",
-            ActivityKind.Producer);
-
-        var messageId = Guid.NewGuid().ToString();
-        var currentActivity = Activity.Current;
-        var tenantId = _invocationContext.TenantId;
-
-        var headers = new Dictionary<string, string?>
+        var context = new OutboundContext
         {
-            [NOFConstants.Headers.MessageId] = messageId,
-            [NOFConstants.Headers.TraceId] = currentActivity?.TraceId.ToString(),
-            [NOFConstants.Headers.SpanId] = currentActivity?.SpanId.ToString(),
-            [NOFConstants.Headers.TenantId] = tenantId
+            Message = notification,
+            Headers = headers is not null
+                ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         };
 
-        if (activity is { IsAllDataRequested: true })
+        await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            activity.SetTag(MessageTracing.Tags.MessageId, messageId);
-            activity.SetTag(MessageTracing.Tags.MessageType, notification.GetType().Name);
-            activity.SetTag(MessageTracing.Tags.Destination, "broadcast");
-
-            activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
-        }
-
-        try
-        {
-            var result = _rider.PublishAsync(notification, headers, cancellationToken);
-            activity?.SetStatus(ActivityStatusCode.Ok);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            throw;
-        }
+            await _rider.PublishAsync(notification, context.Headers, ct);
+        }, cancellationToken);
     }
 }
 

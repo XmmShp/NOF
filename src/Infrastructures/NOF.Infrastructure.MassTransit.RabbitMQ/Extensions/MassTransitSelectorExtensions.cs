@@ -14,7 +14,7 @@ public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
         {
             var nameProvider = selector.Builder.EndpointNameProvider;
             ArgumentNullException.ThrowIfNull(nameProvider);
-            selector.Builder.RequestSender = new MassTransitRabbitMQStartupRequestSender(selector.Builder, connectStringName, nameProvider);
+            selector.Builder.RequestSender = new MassTransitRabbitMQStartupRequestRider(selector.Builder, connectStringName, nameProvider);
             selector.Builder.StartupEventChannel.Subscribe<MassTransitConfiguring>(e =>
             {
                 var config = e.Configurator;
@@ -36,13 +36,13 @@ public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
     }
 }
 
-public class MassTransitRabbitMQStartupRequestSender : IRequestSender
+public class MassTransitRabbitMQStartupRequestRider : IRequestRider
 {
     private readonly INOFAppBuilder _builder;
     private readonly IEndpointNameProvider _nameProvider;
     private readonly string _connectStringName;
 
-    public MassTransitRabbitMQStartupRequestSender(INOFAppBuilder builder, string connectStringName, IEndpointNameProvider nameProvider)
+    public MassTransitRabbitMQStartupRequestRider(INOFAppBuilder builder, string connectStringName, IEndpointNameProvider nameProvider)
     {
         _builder = builder;
         _connectStringName = connectStringName;
@@ -58,7 +58,7 @@ public class MassTransitRabbitMQStartupRequestSender : IRequestSender
         return bus;
     }
 
-    public async Task<Result> SendAsync(IRequest request, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+    public async Task<Result> SendAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());
         var bus = GetBusControl();
@@ -68,7 +68,7 @@ public class MassTransitRabbitMQStartupRequestSender : IRequestSender
         return result;
     }
 
-    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName = null,
+    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null,
         CancellationToken cancellationToken = default)
     {
         destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());

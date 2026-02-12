@@ -10,23 +10,27 @@ using System.Reflection;
 
 namespace NOF.Infrastructure.MassTransit;
 
-public class MassTransitRequestSender : IRequestSender
+/// <summary>
+/// MassTransit request transport implementation.
+/// Delegates to the chain-of-responsibility <see cref="IRequestHandleNodeFactory"/>.
+/// </summary>
+public class MassTransitRequestRider : IRequestRider
 {
     private readonly IRequestHandleNodeFactory _factory;
 
-    public MassTransitRequestSender(IRequestHandleNodeFactory factory)
+    public MassTransitRequestRider(IRequestHandleNodeFactory factory)
     {
         _factory = factory;
     }
 
-    public Task<Result> SendAsync(IRequest request, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+    public Task<Result> SendAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
-        return _factory.SendAsync(request, destinationEndpointName, cancellationToken);
+        return _factory.SendAsync(request, headers, destinationEndpointName, cancellationToken);
     }
 
-    public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+    public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
-        return _factory.SendAsync(request, destinationEndpointName, cancellationToken);
+        return _factory.SendAsync(request, headers, destinationEndpointName, cancellationToken);
     }
 }
 
@@ -40,9 +44,9 @@ public class RequestHandleNodeRegistry : IRequestHandleNodeRegistry
     public LinkedList<Type> Registry { get; } = [];
 }
 
-public interface IRequestHandleNodeFactory : IRequestSender;
+public interface IRequestHandleNodeFactory : IRequestRider;
 
-public interface IRequestHandleNode : IRequestSender
+public interface IRequestHandleNode : IRequestRider
 {
     /// <summary>
     /// Determines whether this handler can process the given request and endpoint.
@@ -70,12 +74,12 @@ internal class MediatorRequestHandleNode : IRequestHandleNode
         return SupportedRequestTypes.Contains(requestType);
     }
 
-    public Task<Result> SendAsync(IRequest request, string? destinationEndpointName, CancellationToken cancellationToken)
+    public Task<Result> SendAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         return _mediator.SendRequest(request, cancellationToken);
     }
 
-    public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName, CancellationToken cancellationToken)
+    public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         return _mediator.SendRequest(request, cancellationToken);
     }
@@ -99,7 +103,7 @@ internal class RiderRequestHandleNode : IRequestHandleNode
 
     public bool CanHandle(Type requestType, string? destinationEndpointName) => true;
 
-    public async Task<Result> SendAsync(IRequest request, string? destinationEndpointName, CancellationToken cancellationToken)
+    public async Task<Result> SendAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());
         var commandType = request.GetType();
@@ -108,7 +112,7 @@ internal class RiderRequestHandleNode : IRequestHandleNode
         return await executor(_clientFactory, request, destinationEndpointName.ToQueueUri(), cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName, CancellationToken cancellationToken)
+    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());
         var commandType = request.GetType();
@@ -173,7 +177,7 @@ internal class RequestHandleNodeFactory : IRequestHandleNodeFactory
         }
         return false;
     }
-    public async Task<Result> SendAsync(IRequest request, string? destinationEndpointName, CancellationToken cancellationToken = default)
+    public async Task<Result> SendAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         var keyPair = (type: request.GetType(), destinationEndpointName);
 
@@ -184,9 +188,9 @@ internal class RequestHandleNodeFactory : IRequestHandleNodeFactory
 
         var nodeType = _cache[(request.GetType(), destinationEndpointName)];
         var node = (IRequestHandleNode)ActivatorUtilities.CreateInstance(_serviceProvider, nodeType);
-        return await node.SendAsync(request, destinationEndpointName, cancellationToken).ConfigureAwait(false);
+        return await node.SendAsync(request, headers, destinationEndpointName, cancellationToken).ConfigureAwait(false);
     }
-    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, string? destinationEndpointName, CancellationToken cancellationToken = default)
+    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
     {
         var keyPair = (type: request.GetType(), destinationEndpointName);
 
@@ -197,6 +201,6 @@ internal class RequestHandleNodeFactory : IRequestHandleNodeFactory
 
         var nodeType = _cache[(request.GetType(), destinationEndpointName)];
         var node = (IRequestHandleNode)ActivatorUtilities.CreateInstance(_serviceProvider, nodeType);
-        return await node.SendAsync(request, destinationEndpointName, cancellationToken).ConfigureAwait(false);
+        return await node.SendAsync(request, headers, destinationEndpointName, cancellationToken).ConfigureAwait(false);
     }
 }

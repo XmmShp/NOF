@@ -21,7 +21,7 @@ public static partial class NOFInfrastructureMassTransitExtensions
             builder.Services.AddScoped<ICommandRider, MassTransitCommandRider>();
             builder.Services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
             builder.Services.AddScoped<INotificationRider, MassTransitNotificationRider>();
-            builder.Services.AddScoped<IRequestSender, MassTransitRequestSender>();
+            builder.Services.AddScoped<IRequestRider, MassTransitRequestRider>();
             builder.AddRegistrationStep(new MassTransitRegistrationStep());
 
             builder.Services.AddSingleton<IRequestHandleNodeRegistry, RequestHandleNodeRegistry>();

@@ -7,10 +7,12 @@ namespace NOF.Application;
 /// </summary>
 public interface INotificationPublisher
 {
-    /// <summary>Publishes a notification asynchronously.</summary>
-    /// <param name="notification">The notification to publish.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task PublishAsync(INotification notification, CancellationToken cancellationToken = default);
+    /// <summary>Publishes a notification with extra headers.</summary>
+    Task PublishAsync(INotification notification, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default);
+
+    /// <summary>Publishes a notification.</summary>
+    Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
+        => PublishAsync(notification, null, cancellationToken);
 }
 
 /// <summary>

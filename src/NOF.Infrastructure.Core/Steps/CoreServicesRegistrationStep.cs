@@ -16,12 +16,17 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.AddScoped<ICommandSender, CommandSender>();
         builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
+        builder.Services.AddScoped<IRequestSender, RequestSender>();
 
         builder.Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
 
-        // Handler pipeline: register ordered type list + executor
+        // Handler inbound pipeline: register ordered type list + executor
         builder.Services.AddSingleton(new HandlerPipelineTypes());
         builder.Services.AddScoped<IHandlerExecutor, HandlerExecutor>();
+
+        // Outbound pipeline: register ordered type list + executor
+        builder.Services.AddSingleton(new OutboundPipelineTypes());
+        builder.Services.AddScoped<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
 
         return ValueTask.CompletedTask;
     }

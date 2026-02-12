@@ -146,20 +146,6 @@ public sealed class HandlerExecutor : IHandlerExecutor
 
     private HandlerDelegate BuildPipeline(HandlerContext context, HandlerDelegate handler)
     {
-        // Merge transport headers from the hosting adapter (e.g., HTTP via IHttpContextAccessor)
-        // Transport-provided headers (from IHandlerExecutor callers like MassTransit) take precedence.
-        var transportHeaderProvider = _serviceProvider.GetService<ITransportHeaderProvider>();
-        if (transportHeaderProvider is not null)
-        {
-            foreach (var header in transportHeaderProvider.GetHeaders())
-            {
-                if (!context.Headers.ContainsKey(header.Key))
-                {
-                    context.Headers[header.Key] = header.Value;
-                }
-            }
-        }
-
         // Resolve all middleware from DI in the order determined by the dependency graph
         var pipeline = handler;
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)

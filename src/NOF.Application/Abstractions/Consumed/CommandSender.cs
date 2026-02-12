@@ -7,11 +7,20 @@ namespace NOF.Application;
 /// </summary>
 public interface ICommandSender
 {
-    /// <summary>Sends a command asynchronously.</summary>
-    /// <param name="command">The command to send.</param>
-    /// <param name="destinationEndpointName">Optional destination endpoint name override.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task SendAsync(ICommand command, string? destinationEndpointName = null, CancellationToken cancellationToken = default);
+    /// <summary>Sends a command with headers and destination.</summary>
+    Task SendAsync(ICommand command, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken = default);
+
+    /// <summary>Sends a command.</summary>
+    Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
+        => SendAsync(command, null, null, cancellationToken);
+
+    /// <summary>Sends a command with extra headers.</summary>
+    Task SendAsync(ICommand command, IDictionary<string, string?> headers, CancellationToken cancellationToken = default)
+        => SendAsync(command, headers, null, cancellationToken);
+
+    /// <summary>Sends a command to a specific destination.</summary>
+    Task SendAsync(ICommand command, string destinationEndpointName, CancellationToken cancellationToken = default)
+        => SendAsync(command, null, destinationEndpointName, cancellationToken);
 }
 
 /// <summary>

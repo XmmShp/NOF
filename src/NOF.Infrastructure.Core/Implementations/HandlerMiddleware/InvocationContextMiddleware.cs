@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using NOF.Application;
 using System.Diagnostics;
 
@@ -24,15 +23,12 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
     private readonly IJwtValidationService? _jwtValidationService;
-    private readonly ILogger<InvocationContextMiddleware> _logger;
 
     public InvocationContextMiddleware(
         IInvocationContextInternal invocationContext,
-        ILogger<InvocationContextMiddleware> logger,
         IJwtValidationService? jwtValidationService = null)
     {
         _invocationContext = invocationContext;
-        _logger = logger;
         _jwtValidationService = jwtValidationService;
     }
 
@@ -41,7 +37,7 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
         // 1. Populate identity: parse JWT Bearer token from headers
         await PopulateIdentityAsync(context, cancellationToken);
 
-        // 2. Resolve tenant from headers
+        // 2. Resolve tenant: JWT claims first, then header fallback
         ResolveTenant(context);
 
         // 3. Resolve tracing info from headers
@@ -76,18 +72,20 @@ public sealed class InvocationContextMiddleware : IHandlerMiddleware
 
     private void ResolveTenant(HandlerContext context)
     {
-        // Prefer tenant from headers; fall back to claim from authenticated user
+        // Prioritize tenant from JWT claims; fall back to header
         string? tenantId = null;
 
-        if (context.Headers.TryGetValue(NOFConstants.Headers.TenantId, out var headerTenantId) &&
-            !string.IsNullOrEmpty(headerTenantId))
-        {
-            tenantId = headerTenantId;
-        }
-        else if (_invocationContext.User.IsAuthenticated)
+        if (_invocationContext.User.IsAuthenticated)
         {
             tenantId = _invocationContext.User.Principal
                 .FindFirst(NOFJwtConstants.ClaimTypes.TenantId)?.Value;
+        }
+
+        if (string.IsNullOrEmpty(tenantId) &&
+            context.Headers.TryGetValue(NOFConstants.Headers.TenantId, out var headerTenantId) &&
+            !string.IsNullOrEmpty(headerTenantId))
+        {
+            tenantId = headerTenantId;
         }
 
         _invocationContext.SetTenantId(tenantId);
