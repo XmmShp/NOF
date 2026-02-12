@@ -1,5 +1,5 @@
-using System.Collections.Concurrent;
 using NOF.Application;
+using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure.Core;
 
