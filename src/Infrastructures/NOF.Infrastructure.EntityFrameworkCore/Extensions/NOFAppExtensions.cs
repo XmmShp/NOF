@@ -36,7 +36,7 @@ public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
             #endregion
 
             #region Infrastructure Services
-            builder.Services.AddOptionsInConfiguration<DbContextFactoryOptions>();
+            builder.Services.AddOptionsInConfiguration<DbContextFactoryOptions>("NOF:DbContextFactory");
 
             builder.Services.AddScoped<INOFDbContextFactory<TDbContext>>(sp => new NOFDbContextFactory<TDbContext>(
                 sp,

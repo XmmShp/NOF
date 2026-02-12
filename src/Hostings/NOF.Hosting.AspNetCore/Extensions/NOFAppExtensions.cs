@@ -46,7 +46,7 @@ public static partial class NOFHostingAspNetCoreExtensions
 
         public INOFAppBuilder UseCors()
         {
-            builder.Services.AddOptionsInConfiguration<CorsSettingsOptions>();
+            builder.Services.AddOptionsInConfiguration<CorsSettingsOptions>("NOF:CorsSettings");
             builder.Services.AddCors();
             builder.AddInitializationStep(new CorsInitializationStep());
             return builder;

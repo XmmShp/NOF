@@ -44,7 +44,7 @@ public class JwksService : IJwksService
             {
                 Kty = "RSA",
                 Use = "sig",
-                Alg = NOFJwtConstants.Algorithm,
+                Alg = NOFInfrastructureCoreConstants.Jwt.Algorithm,
                 Kid = managedKey.Kid,
                 N = Base64UrlEncoder.Encode(parameters.Modulus ?? throw new InvalidOperationException("RSA modulus cannot be null")),
                 E = Base64UrlEncoder.Encode(parameters.Exponent ?? throw new InvalidOperationException("RSA exponent cannot be null"))

@@ -5,7 +5,7 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 /// <summary>
 /// JWT authentication configuration options.
 /// </summary>
-public class JwtOptions
+public class AuthorityOptions
 {
     /// <summary>
     /// Gets or sets the issuer of the JWT tokens (immutable - identifies the auth center).

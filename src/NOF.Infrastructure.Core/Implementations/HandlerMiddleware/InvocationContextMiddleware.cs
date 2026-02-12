@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using NOF.Application;
 using System.Diagnostics;
 
@@ -23,12 +24,15 @@ public sealed class InvocationContextMiddleware : IInboundMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
     private readonly IJwtValidationService? _jwtValidationService;
+    private readonly AuthorizationOptions _authOptions;
 
     public InvocationContextMiddleware(
         IInvocationContextInternal invocationContext,
+        IOptions<AuthorizationOptions> authOptions,
         IJwtValidationService? jwtValidationService = null)
     {
         _invocationContext = invocationContext;
+        _authOptions = authOptions.Value;
         _jwtValidationService = jwtValidationService;
     }
 
@@ -49,11 +53,12 @@ public sealed class InvocationContextMiddleware : IInboundMiddleware
     private async Task PopulateIdentityAsync(InboundContext context, CancellationToken cancellationToken)
     {
         // Try to extract Bearer token from Authorization header
-        if (context.Headers.TryGetValue(NOFConstants.Headers.Authorization, out var authHeader) &&
+        if (context.Headers.TryGetValue(_authOptions.HeaderName, out var authHeader) &&
             !string.IsNullOrEmpty(authHeader))
         {
-            var token = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-                ? authHeader["Bearer ".Length..]
+            var prefix = _authOptions.TokenType + " ";
+            var token = authHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                ? authHeader[prefix.Length..]
                 : authHeader;
 
             if (_jwtValidationService is not null && !string.IsNullOrEmpty(token))
@@ -78,11 +83,11 @@ public sealed class InvocationContextMiddleware : IInboundMiddleware
         if (_invocationContext.User.IsAuthenticated)
         {
             tenantId = _invocationContext.User.Principal
-                .FindFirst(NOFJwtConstants.ClaimTypes.TenantId)?.Value;
+                .FindFirst(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.TenantId)?.Value;
         }
 
         if (string.IsNullOrEmpty(tenantId) &&
-            context.Headers.TryGetValue(NOFConstants.Headers.TenantId, out var headerTenantId) &&
+            context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, out var headerTenantId) &&
             !string.IsNullOrEmpty(headerTenantId))
         {
             tenantId = headerTenantId;
@@ -102,8 +107,8 @@ public sealed class InvocationContextMiddleware : IInboundMiddleware
 
     private void ResolveTracing(InboundContext context)
     {
-        context.Headers.TryGetValue(NOFConstants.Headers.TraceId, out var traceId);
-        context.Headers.TryGetValue(NOFConstants.Headers.SpanId, out var spanId);
+        context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, out var traceId);
+        context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, out var spanId);
         _invocationContext.SetTracingInfo(traceId, spanId);
     }
 }

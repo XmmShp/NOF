@@ -53,12 +53,12 @@ public interface ISigningKeyService
 /// </summary>
 public class SigningKeyService : ISigningKeyService
 {
-    private readonly JwtOptions _options;
+    private readonly AuthorityOptions _options;
     private readonly Lock _lock = new();
     private ManagedSigningKey _currentKey;
     private readonly List<ManagedSigningKey> _allKeys;
 
-    public SigningKeyService(IOptions<JwtOptions> options)
+    public SigningKeyService(IOptions<AuthorityOptions> options)
     {
         _options = options.Value;
         _currentKey = GenerateNewKey();

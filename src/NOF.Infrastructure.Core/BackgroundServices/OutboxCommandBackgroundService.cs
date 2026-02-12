@@ -143,9 +143,9 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
         var messageId = Guid.NewGuid();
 
         var headers = new Dictionary<string, string?>(message.Headers);
-        headers.TryAdd(NOFConstants.Headers.MessageId, messageId.ToString());
-        headers.TryAdd(NOFConstants.Headers.SpanId, activity?.SpanId.ToString());
-        headers.TryAdd(NOFConstants.Headers.TraceId, activity?.TraceId.ToString());
+        headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.MessageId, messageId.ToString());
+        headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
+        headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
 
         if (activity is { IsAllDataRequested: true })
         {
@@ -153,7 +153,7 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
             activity.SetTag(MessageTracing.Tags.MessageType, message.Message.GetType().Name);
             activity.SetTag(MessageTracing.Tags.Destination, message.DestinationEndpointName ?? "default");
             activity.SetTag("OutboxMessageId", message.Id);
-            if (headers.TryGetValue(NOFConstants.Headers.TenantId, out var tenantId))
+            if (headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, out var tenantId))
             {
                 activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
             }

@@ -78,17 +78,20 @@ public interface IInboundMiddleware
     ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken);
 }
 
-public static partial class NOFConstants
+public static partial class NOFInfrastructureCoreConstants
 {
-    /// <summary>
-    /// Standard HTTP / transport-level header keys used in <see cref="InboundContext.Headers"/>.
-    /// </summary>
-    public static class Headers
+    public static partial class Transport
     {
-        public const string Authorization = "Authorization";
-        public const string TenantId = "NOF.TenantId";
-        public const string TraceId = "NOF.Message.TraceId";
-        public const string SpanId = "NOF.Message.SpanId";
-        public const string MessageId = "NOF.Message.MessageId";
+        /// <summary>
+        /// Standard HTTP / transport-level header keys used in <see cref="InboundContext.Headers"/>.
+        /// </summary>
+        public static class Headers
+        {
+            public const string Authorization = "Authorization";
+            public const string TenantId = "NOF.TenantId";
+            public const string TraceId = "NOF.Message.TraceId";
+            public const string SpanId = "NOF.Message.SpanId";
+            public const string MessageId = "NOF.Message.MessageId";
+        }
     }
 }

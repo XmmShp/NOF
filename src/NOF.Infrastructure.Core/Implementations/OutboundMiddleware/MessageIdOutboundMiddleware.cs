@@ -12,7 +12,7 @@ public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
 {
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        context.Headers.TryAdd(NOFConstants.Headers.MessageId, Guid.NewGuid().ToString());
+        context.Headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.MessageId, Guid.NewGuid().ToString());
         return next(cancellationToken);
     }
 }

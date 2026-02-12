@@ -43,8 +43,8 @@ public class MassTransitCommandRider : ICommandRider
             var activity = Activity.Current;
             if (activity is not null)
             {
-                context.Headers.Set(NOFConstants.Headers.TraceId, activity.TraceId.ToString());
-                context.Headers.Set(NOFConstants.Headers.SpanId, activity.SpanId.ToString());
+                context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity.TraceId.ToString());
+                context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity.SpanId.ToString());
             }
         }, cancellationToken);
     }

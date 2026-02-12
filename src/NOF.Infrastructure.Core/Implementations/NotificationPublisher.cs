@@ -57,8 +57,8 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.Headers.MessageId] = Guid.NewGuid().ToString(),
-            [NOFConstants.Headers.TenantId] = tenantId
+            [NOFInfrastructureCoreConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString(),
+            [NOFInfrastructureCoreConstants.Transport.Headers.TenantId] = tenantId
         };
 
         _collector.AddMessage(new OutboxMessage

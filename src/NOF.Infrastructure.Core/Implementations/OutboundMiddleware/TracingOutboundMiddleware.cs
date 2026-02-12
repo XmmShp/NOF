@@ -28,8 +28,8 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
         var currentActivity = Activity.Current;
         if (currentActivity is not null)
         {
-            context.Headers.TryAdd(NOFConstants.Headers.TraceId, currentActivity.TraceId.ToString());
-            context.Headers.TryAdd(NOFConstants.Headers.SpanId, currentActivity.SpanId.ToString());
+            context.Headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, currentActivity.TraceId.ToString());
+            context.Headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, currentActivity.SpanId.ToString());
         }
 
         try
@@ -40,12 +40,12 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
             // Set tags from populated headers after successful dispatch
             if (activity is { IsAllDataRequested: true })
             {
-                context.Headers.TryGetValue(NOFConstants.Headers.MessageId, out var messageId);
+                context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.MessageId, out var messageId);
                 activity.SetTag(MessageTracing.Tags.MessageId, messageId);
                 activity.SetTag(MessageTracing.Tags.MessageType, context.Message.GetType().Name);
                 activity.SetTag(MessageTracing.Tags.Destination, context.DestinationEndpointName ?? "default");
 
-                context.Headers.TryGetValue(NOFConstants.Headers.TenantId, out var tenantId);
+                context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, out var tenantId);
                 activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
             }
 

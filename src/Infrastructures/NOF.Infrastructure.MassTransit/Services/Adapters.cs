@@ -134,8 +134,8 @@ internal static class MassTransitAdapterHelper
         var activity = Activity.Current;
         if (activity is not null)
         {
-            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
+            headers[NOFInfrastructureCoreConstants.Transport.Headers.TraceId] = activity.TraceId.ToString();
+            headers[NOFInfrastructureCoreConstants.Transport.Headers.SpanId] = activity.SpanId.ToString();
         }
 
         return new InboundContext

@@ -58,7 +58,7 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.Headers.TenantId] = tenantId
+            [NOFInfrastructureCoreConstants.Transport.Headers.TenantId] = tenantId
         };
 
         _collector.AddMessage(new OutboxMessage

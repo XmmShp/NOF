@@ -15,12 +15,12 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 /// </summary>
 public class ValidateRefreshToken : IRequestHandler<ValidateRefreshTokenRequest, ValidateRefreshTokenResponse>
 {
-    private readonly JwtOptions _options;
+    private readonly AuthorityOptions _options;
     private readonly ICacheService _cache;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ISigningKeyService _signingKeyService;
 
-    public ValidateRefreshToken(IOptions<JwtOptions> options, ICacheService cache, ISigningKeyService signingKeyService)
+    public ValidateRefreshToken(IOptions<AuthorityOptions> options, ICacheService cache, ISigningKeyService signingKeyService)
     {
         _options = options.Value;
         _cache = cache;
@@ -71,9 +71,9 @@ public class ValidateRefreshToken : IRequestHandler<ValidateRefreshTokenRequest,
             }
 
             // Extract essential claims from the validated token
-            var tokenId = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFJwtConstants.ClaimTypes.JwtId)?.Value;
-            var userId = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFJwtConstants.ClaimTypes.Subject)?.Value;
-            var tenantId = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFJwtConstants.ClaimTypes.TenantId)?.Value;
+            var tokenId = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFInfrastructureCoreConstants.Jwt.ClaimTypes.JwtId)?.Value;
+            var userId = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFInfrastructureCoreConstants.Jwt.ClaimTypes.Subject)?.Value;
+            var tenantId = jwtToken.Claims.FirstOrDefault(c => c.Type == NOFInfrastructureCoreConstants.Jwt.ClaimTypes.TenantId)?.Value;
 
             if (string.IsNullOrEmpty(tokenId) || string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(tenantId))
             {

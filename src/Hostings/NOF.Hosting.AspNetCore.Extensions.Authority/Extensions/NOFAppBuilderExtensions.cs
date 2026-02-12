@@ -18,7 +18,7 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
         /// </summary>
         /// <param name="configureOptions">Action to configure JWT options.</param>
         /// <returns>The NOF application builder for chaining.</returns>
-        public INOFAppBuilder AddJwtAuthority(Action<JwtOptions>? configureOptions = null)
+        public INOFAppBuilder AddJwtAuthority(Action<AuthorityOptions>? configureOptions = null)
         {
             // Register the core JWT extension assembly for handler discovery
             builder.Assemblies.Add(typeof(SigningKeyService).Assembly);
@@ -30,7 +30,7 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
             }
             else
             {
-                builder.Services.AddOptionsInConfiguration<JwtOptions>("Jwt");
+                builder.Services.AddOptionsInConfiguration<AuthorityOptions>("NOF:Authority");
             }
 
             // Register the signing key service (singleton 鈥?holds the in-memory key ring)
@@ -52,7 +52,7 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
             builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<JwtClientOptions>>(
                 sp =>
                 {
-                    var jwtOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtOptions>>().Value;
+                    var jwtOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorityOptions>>().Value;
                     return new Microsoft.Extensions.Options.ConfigureOptions<JwtClientOptions>(clientOpts =>
                     {
                         clientOpts.Issuer ??= jwtOptions.Issuer;

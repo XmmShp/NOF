@@ -20,6 +20,9 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
 
+        builder.Services.AddOptionsInConfiguration<AuthorizationOptions>("NOF:Authorization");
+        builder.Services.AddOptionsInConfiguration<OutboxOptions>("NOF:Outbox");
+
         // Handler inbound pipeline: register ordered type list + executor
         builder.Services.AddSingleton(new InboundPipelineTypes());
         builder.Services.AddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();

@@ -28,5 +28,5 @@ public class TokenPair
     /// <summary>
     /// Gets or sets the token type.
     /// </summary>
-    public string TokenType { get; set; } = NOFJwtConstants.TokenType;
+    public string TokenType { get; set; } = NOFInfrastructureCoreConstants.Jwt.TokenType;
 }

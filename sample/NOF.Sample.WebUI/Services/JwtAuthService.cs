@@ -76,7 +76,7 @@ public class JwtAuthService
             {
                 Kty = "RSA",
                 Use = "sig",
-                Alg = NOFJwtConstants.Algorithm,
+                Alg = NOFInfrastructureCoreConstants.Jwt.Algorithm,
                 Kid = rsa.KeyId,
                 N = Base64UrlEncoder.Encode(parameters.Modulus!),
                 E = Base64UrlEncoder.Encode(parameters.Exponent!)

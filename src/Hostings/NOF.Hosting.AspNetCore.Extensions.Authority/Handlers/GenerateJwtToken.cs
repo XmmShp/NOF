@@ -13,11 +13,11 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 /// </summary>
 public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, GenerateJwtTokenResponse>
 {
-    private readonly JwtOptions _options;
+    private readonly AuthorityOptions _options;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ISigningKeyService _signingKeyService;
 
-    public GenerateJwtToken(IOptions<JwtOptions> options, ISigningKeyService signingKeyService)
+    public GenerateJwtToken(IOptions<AuthorityOptions> options, ISigningKeyService signingKeyService)
     {
         _options = options.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
@@ -73,7 +73,7 @@ public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, Generat
                 RefreshToken = refreshToken,
                 AccessTokenExpiresAt = accessTokenExpires,
                 RefreshTokenExpiresAt = refreshTokenExpires,
-                TokenType = NOFJwtConstants.TokenType
+                TokenType = NOFInfrastructureCoreConstants.Jwt.TokenType
             };
 
             return Task.FromResult(Result.Success(new GenerateJwtTokenResponse(tokenPair)));
@@ -88,36 +88,36 @@ public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, Generat
     {
         var claimList = new List<Claim>
         {
-            new(NOFJwtConstants.ClaimTypes.JwtId, claims.Jti),
-            new(NOFJwtConstants.ClaimTypes.Subject, claims.Sub),
-            new(NOFJwtConstants.ClaimTypes.IssuedAt, new DateTimeOffset(claims.Iat).ToUnixTimeSeconds().ToString()),
-            new(NOFJwtConstants.ClaimTypes.ExpiresAt, new DateTimeOffset(claims.Exp).ToUnixTimeSeconds().ToString()),
-            new(NOFJwtConstants.ClaimTypes.Issuer, claims.Iss),
-            new(NOFJwtConstants.ClaimTypes.Audience, claims.Aud)
+            new(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.JwtId, claims.Jti),
+            new(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.Subject, claims.Sub),
+            new(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.IssuedAt, new DateTimeOffset(claims.Iat).ToUnixTimeSeconds().ToString()),
+            new(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.ExpiresAt, new DateTimeOffset(claims.Exp).ToUnixTimeSeconds().ToString()),
+            new(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.Issuer, claims.Iss),
+            new(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.Audience, claims.Aud)
         };
 
         // Add tenant ID if provided
         if (!string.IsNullOrEmpty(claims.TenantId))
         {
-            claimList.Add(new Claim(NOFJwtConstants.ClaimTypes.TenantId, claims.TenantId));
+            claimList.Add(new Claim(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.TenantId, claims.TenantId));
         }
 
         // Add roles if provided
         if (claims.Roles is not null)
         {
-            claimList.AddRange(claims.Roles.Select(role => new Claim(NOFJwtConstants.ClaimTypes.Role, role)));
+            claimList.AddRange(claims.Roles.Select(role => new Claim(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.Role, role)));
         }
 
         // Add permissions if provided
         if (claims.Permissions is not null)
         {
-            claimList.AddRange(claims.Permissions.Select(permission => new Claim(NOFJwtConstants.ClaimTypes.Permission, permission)));
+            claimList.AddRange(claims.Permissions.Select(permission => new Claim(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.Permission, permission)));
         }
 
         // Add custom claims if provided
         claimList.AddRange(claims.CustomClaims.Select(kv => new Claim(kv.Key, kv.Value)));
 
-        var signingCredentials = new SigningCredentials(managedKey.Key, NOFJwtConstants.Algorithm)
+        var signingCredentials = new SigningCredentials(managedKey.Key, NOFInfrastructureCoreConstants.Jwt.Algorithm)
         {
             Key = { KeyId = managedKey.Kid }
         };

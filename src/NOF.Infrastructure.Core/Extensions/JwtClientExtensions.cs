@@ -24,7 +24,7 @@ public static partial class NOFInfrastructureCoreExtensions
             }
             else
             {
-                builder.Services.AddOptionsInConfiguration<JwtClientOptions>("JwtClient");
+                builder.Services.AddOptionsInConfiguration<JwtClientOptions>("NOF:JwtClient");
             }
 
             // Register the JWKS HTTP client

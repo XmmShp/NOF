@@ -8,7 +8,7 @@ public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutbou
 
 /// <summary>
 /// Outbound middleware that propagates the current <see cref="IInvocationContext.TenantId"/>
-/// into the <see cref="NOFConstants.Headers.TenantId"/> header.
+/// into the <see cref="NOFInfrastructureCoreConstants.Transport.Headers.TenantId"/> header.
 /// </summary>
 public sealed class TenantOutboundMiddleware : IOutboundMiddleware
 {
@@ -23,7 +23,7 @@ public sealed class TenantOutboundMiddleware : IOutboundMiddleware
     {
         if (!string.IsNullOrEmpty(_invocationContext.TenantId))
         {
-            context.Headers.TryAdd(NOFConstants.Headers.TenantId, _invocationContext.TenantId);
+            context.Headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, _invocationContext.TenantId);
         }
 
         return next(cancellationToken);

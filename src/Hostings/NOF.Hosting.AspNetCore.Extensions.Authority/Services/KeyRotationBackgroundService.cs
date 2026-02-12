@@ -15,12 +15,12 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 public sealed class KeyRotationBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly JwtOptions _options;
+    private readonly AuthorityOptions _options;
     private readonly ILogger<KeyRotationBackgroundService> _logger;
 
     public KeyRotationBackgroundService(
         IServiceProvider serviceProvider,
-        IOptions<JwtOptions> options,
+        IOptions<AuthorityOptions> options,
         ILogger<KeyRotationBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
