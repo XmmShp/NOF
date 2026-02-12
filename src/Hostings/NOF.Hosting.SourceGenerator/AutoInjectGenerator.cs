@@ -38,14 +38,23 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 })
             .Where(static s => s is not null);
 
-        // 2. Extract public non-abstract classes with AutoInject from all referenced assemblies (metadata)
+        // 2. Extract public non-abstract classes with AutoInject from prefix-matching referenced assemblies (metadata)
         var referencedTypes = context.CompilationProvider
             .Select(static (compilation, _) =>
             {
+                var currentAssemblyName = compilation.AssemblyName ?? string.Empty;
                 var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
                 foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
                 {
-                    CollectAutoInjectTypes(assembly.GlobalNamespace, builder);
+                    var assemblyName = assembly.Name;
+
+                    // Only scan assemblies whose name starts with the current assembly name prefix
+                    if (!string.IsNullOrEmpty(currentAssemblyName) &&
+                        assemblyName.StartsWith(currentAssemblyName) &&
+                        (assemblyName.Length == currentAssemblyName.Length || assemblyName[currentAssemblyName.Length] == '.'))
+                    {
+                        CollectAutoInjectTypes(assembly.GlobalNamespace, builder);
+                    }
                 }
                 return builder.ToImmutable();
             });
@@ -98,8 +107,10 @@ public class AutoInjectGenerator : IIncrementalGenerator
         }
     }
 
+    private const string AutoInjectAttributeFullName = "NOF.Annotation.AutoInjectAttribute";
+
     private static bool HasAutoInjectAttribute(ISymbol symbol)
-        => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Annotation.AutoInjectAttribute");
+        => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == AutoInjectAttributeFullName);
 
     private static string GenerateServiceRegistrationExtension(string assemblyName, ImmutableArray<INamedTypeSymbol> serviceClasses)
     {
@@ -149,7 +160,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
         var attribute = serviceClass.GetAttributes()
             .FirstOrDefault(attr
                 => attr.AttributeClass is not null
-                   && attr.AttributeClass.ToDisplayString().Equals("NOF.Annotation.AutoInjectAttribute"));
+                   && attr.AttributeClass.ToDisplayString().Equals(AutoInjectAttributeFullName));
 
         if (attribute is null)
         {

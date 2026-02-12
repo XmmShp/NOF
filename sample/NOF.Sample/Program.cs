@@ -36,7 +36,7 @@ builder.Services.AddAntDesign()
     .AddInteractiveServerComponents();
 
 // Here, we self-call for test
-builder.Services.AddHttpClient<INOFService, NOFServiceClient>(client => client.BaseAddress = new Uri("http://localhost:55892/"));
+builder.Services.AddHttpClient<INOFSampleService, NOFSampleServiceClient>(client => client.BaseAddress = new Uri("http://localhost:55892/"));
 
 builder.Services.AddHostedService(async (sp, ct) =>
 {

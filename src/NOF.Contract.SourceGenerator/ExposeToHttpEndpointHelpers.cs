@@ -71,17 +71,27 @@ internal static class ExposeToHttpEndpointHelpers
     }
 
     /// <summary>
-    /// Derives the service name from the root namespace.
-    /// If rootNamespace already ends with "Service", returns it as-is; otherwise appends "Service".
-    /// The interface name is "I" + serviceName.
+    /// Derives the service name from the assembly name.
+    /// Removes dots, strips trailing "Contract" if present, appends "Service" if not already ending with it,
+    /// then derives interface and client names.
+    /// e.g. "NOF.Sample.Contract" → ServiceName="NOFSampleService", InterfaceName="INOFSampleService", ClientName="NOFSampleServiceClient"
     /// </summary>
-    public static (string ServiceName, string InterfaceName, string ClientName) GetServiceNames(string rootNamespace)
+    public static (string ServiceName, string InterfaceName, string ClientName) GetServiceNames(string assemblyName)
     {
-        const string service = "Service";
-        var serviceName = rootNamespace.EndsWith(service) ? rootNamespace : $"{rootNamespace}{service}";
-        var interfaceName = $"I{serviceName}";
-        var clientName = $"{serviceName}Client";
-        return (serviceName, interfaceName, clientName);
+        var sanitized = assemblyName.Replace(".", "");
+        const string contractSuffix = "Contract";
+        if (sanitized.EndsWith(contractSuffix))
+        {
+            sanitized = sanitized.Substring(0, sanitized.Length - contractSuffix.Length);
+        }
+        const string serviceSuffix = "Service";
+        if (!sanitized.EndsWith(serviceSuffix))
+        {
+            sanitized = sanitized + serviceSuffix;
+        }
+        var interfaceName = $"I{sanitized}";
+        var clientName = $"{sanitized}Client";
+        return (sanitized, interfaceName, clientName);
     }
 
     public static ITypeSymbol? GetResponseType(INamedTypeSymbol requestType)

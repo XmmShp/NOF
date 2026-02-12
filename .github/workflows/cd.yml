@@ -90,7 +90,6 @@ jobs:
     - name: Pack NuGet packages
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
-        dotnet pack src/NOF.Annotation/NOF.Annotation.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
