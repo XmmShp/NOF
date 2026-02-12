@@ -4,9 +4,7 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
-using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
+using NOF.Contract;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -66,35 +64,116 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     /// direct handler references.
     /// </summary>
     IRequestSender? RequestSender { get; set; }
-}
 
-/// <summary>
-/// Represents a configurable application host builder for the NOF framework,
-/// providing a fluent API to customize service registration, application startup,
-/// metadata, and integration with infrastructure.
-/// </summary>
-public interface INOFAppBuilder<THostApplication> : INOFAppBuilder
-    where THostApplication : class, IHost
-{
     /// <summary>
-    /// Asynchronously constructs and initializes the final host application instance.
-    /// This method finalizes the configuration pipeline, applies all registered service
-    /// and application configurators, and prepares the underlying host for execution.
-    /// The returned instance is ready to be started (e.g., via <c>RunAsync</c>).
+    /// Gets the list of assemblies registered for scanning (e.g., for handlers, validators, or configuration types).
+    /// This collection is lazily initialized and shared across the application builder's lifetime.
+    /// Extensions or modules can add their assemblies here to enable convention-based discovery during startup.
     /// </summary>
-    /// <returns>
-    /// A task that resolves to the fully configured host application of type <typeparamref name="THostApplication"/>.
-    /// </returns>
-    /// <remarks>
-    /// Call this method once all desired configurations have been added via
-    /// <see cref="INOFAppBuilder.AddRegistrationStep"/> and <see cref="INOFAppBuilder.AddInitializationStep"/>.
-    /// It should typically be followed by invoking <c>RunAsync()</c> or manually managing the host lifetime.
-    /// </remarks>
-    Task<THostApplication> BuildAsync();
+    HashSet<Assembly> Assemblies { get; }
+
+    /// <summary>
+    /// Gets or sets the endpoint name provider used for resolving message endpoint names.
+    /// </summary>
+    IEndpointNameProvider? EndpointNameProvider { get; set; }
+
+    /// <summary>
+    /// Gets the list of extra handler metadata registered manually (not discovered via assembly scanning).
+    /// </summary>
+    List<HandlerInfo> ExtraHandlerInfos { get; }
+
+    /// <summary>
+    /// Registers the assembly containing the specified type as an application part for HTTP endpoint discovery.
+    /// This enables the framework to scan the assembly for request types marked with <see cref="ExposeToHttpEndpointAttribute"/>.
+    /// </summary>
+    /// <typeparam name="T">A type whose containing assembly will be added.</typeparam>
+    /// <returns>The current <see cref="INOFAppBuilder"/> instance.</returns>
+    INOFAppBuilder WithApplicationPart<T>()
+    {
+        WithApplicationPart([typeof(T).Assembly]);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers one or more assemblies as application parts for HTTP endpoint discovery.
+    /// The framework will scan these assemblies for request types marked with <see cref="ExposeToHttpEndpointAttribute"/>.
+    /// </summary>
+    /// <param name="assemblies">The assemblies to include in endpoint scanning.</param>
+    /// <returns>The current <see cref="INOFAppBuilder"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="assemblies"/> is null.</exception>
+    INOFAppBuilder WithApplicationPart(params Assembly[] assemblies)
+    {
+        ArgumentNullException.ThrowIfNull(assemblies);
+
+        foreach (var assembly in assemblies)
+        {
+            Assemblies.Add(assembly);
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Gets the list of handler metadata (e.g., command, event, request handlers) discovered in the assemblies 
+    /// configured for this builder. The scan is performed on-demand and results are cached per assembly.
+    /// </summary>
+    IReadOnlyList<HandlerInfo> HandlerInfos
+        => HandlerScanner.ScanHandlers(Assemblies)
+            .Union(ExtraHandlerInfos)
+            .ToList()
+            .AsReadOnly();
+
+    /// <summary>
+    /// Adds a service configuration delegate that will be executed during the service registration phase.
+    /// The delegate receives the current application builder and can register services into the DI container.
+    /// This overload supports asynchronous initialization via <see cref="ValueTask"/>.
+    /// </summary>
+    /// <param name="func">
+    /// A delegate that configures services. It is wrapped in a <see cref="DelegateServiceRegistrationStep"/>
+    /// and scheduled to run when the host application builds its service collection.
+    /// </param>
+    /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
+    INOFAppBuilder AddRegistrationStep(Func<INOFAppBuilder, ValueTask> func)
+        => AddRegistrationStep(new DelegateServiceRegistrationStep(func));
+
+    /// <summary>
+    /// Removes all registered service configurations of the specified type <typeparamref name="T"/>.
+    /// This allows dynamic customization or override of previously added configurations (e.g., in testing or modular composition).
+    /// </summary>
+    /// <typeparam name="T">
+    /// The service configuration type to remove. Must derive from <see cref="IServiceRegistrationStep"/>.
+    /// </typeparam>
+    /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
+    INOFAppBuilder RemoveRegistrationStep<T>() where T : IServiceRegistrationStep
+        => RemoveRegistrationStep(t => t is T);
+
+    /// <summary>
+    /// Adds an application configuration delegate that will be executed after the host is built but before it starts.
+    /// The delegate receives the application builder and the constructed host application instance,
+    /// allowing final adjustments (e.g., middleware pipeline, event subscriptions).
+    /// This overload supports full asynchronous execution via <see cref="Task"/>.
+    /// </summary>
+    /// <param name="func">
+    /// A delegate that performs post-build application configuration. It is wrapped in a
+    /// <see cref="DelegateApplicationInitializationStep"/> and invoked during the application startup phase.
+    /// </param>
+    /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
+    INOFAppBuilder AddInitializationStep(Func<INOFAppBuilder, IHost, Task> func)
+        => AddInitializationStep(new DelegateApplicationInitializationStep(func));
+
+    /// <summary>
+    /// Removes all registered application configurations of the specified type <typeparamref name="T"/>.
+    /// Enables runtime adjustment of startup behavior, such as disabling a feature module during integration tests.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The application configuration type to remove. Must derive from <see cref="IApplicationInitializationStep"/>.
+    /// </typeparam>
+    /// <returns>The same <see cref="INOFAppBuilder{THostApplication}"/> instance for fluent chaining.</returns>
+    INOFAppBuilder RemoveInitializationStep<T>() where T : IApplicationInitializationStep
+        => RemoveInitializationStep(t => t is T);
 }
 
 /// <summary>
-/// Provides a base implementation of <see cref="INOFAppBuilder{THostApplication}"/> that coordinates
+/// Provides a base implementation of <see cref="INOFAppBuilder"/> that coordinates
 /// the application construction lifecycle through modular, dependency-aware configuration units.
 /// </summary>
 /// <remarks>
@@ -119,7 +198,7 @@ public interface INOFAppBuilder<THostApplication> : INOFAppBuilder
 /// <typeparam name="THostApplication">
 /// The concrete type of the host application being built. Must be a class implementing <see cref="IHost"/>.
 /// </typeparam>
-public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostApplication>
+public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     where THostApplication : class, IHost
 {
     /// <summary>
@@ -143,18 +222,36 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// <inheritdoc/>
     public virtual IRequestSender? RequestSender { get; set; }
 
+    /// <inheritdoc/>
+    public HashSet<Assembly> Assemblies { get; } = [];
+
+    /// <inheritdoc/>
+    public IEndpointNameProvider? EndpointNameProvider { get; set; }
+
+    /// <inheritdoc/>
+    public List<HandlerInfo> ExtraHandlerInfos { get; } = [];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NOFAppBuilder{THostApplication}"/> class.
-    /// Sets up a default implementation of <see cref="IStartupEventChannel"/> for internal configuration events.
+    /// Sets up a default implementation of <see cref="IStartupEventChannel"/> for internal configuration events
+    /// and registers all default service registration steps.
     /// </summary>
     protected NOFAppBuilder()
     {
         StartupEventChannel = new StartupEventChannel();
-        ServiceConfigs = [];
+        ServiceConfigs =
+        [
+            new CoreServicesRegistrationStep(),
+            new CacheServiceRegistrationStep(),
+            new OutboxRegistrationStep(),
+            new HandlerPipelineRegistrationStep(),
+            new OpenTelemetryRegistrationStep(),
+            new AddStateMachineRegistrationStep(),
+        ];
         ApplicationConfigs = [];
         if (Assembly.GetEntryAssembly() is { } assembly)
         {
-            this.Assemblies.Add(assembly);
+            Assemblies.Add(assembly);
         }
     }
 
@@ -190,10 +287,14 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
         return this;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Asynchronously constructs and initializes the final host application instance.
+    /// Executes all registered service registration steps in dependency order,
+    /// builds the host, then executes all application initialization steps.
+    /// </summary>
+    /// <returns>A task that resolves to the fully configured host application.</returns>
     public virtual async Task<THostApplication> BuildAsync()
     {
-        ConfigureDefaultServices();
         var regGraph = new ConfiguratorGraph<IServiceRegistrationStep>(ServiceConfigs);
         foreach (var task in regGraph.GetExecutionOrder())
         {
@@ -217,78 +318,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder<THostAppl
     /// </summary>
     /// <returns>A task that resolves to the built host application instance.</returns>
     protected abstract Task<THostApplication> BuildApplicationAsync();
-
-    protected bool DefaultServicesConfigured;
-    protected virtual void ConfigureDefaultServices()
-    {
-        if (DefaultServicesConfigured)
-        {
-            return;
-        }
-
-        DefaultServicesConfigured = true;
-
-        Services.AddScoped<IInvocationContextInternal, InvocationContext>();
-        Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());
-
-        Services.AddScoped<ICommandSender, CommandSender>();
-        Services.AddScoped<INotificationPublisher, NotificationPublisher>();
-
-        Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
-
-        Services.ReplaceOrAddCacheService<MemoryCacheService>();
-
-        Services.AddHostedService<OutboxCommandBackgroundService>();
-
-        Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
-        Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
-
-        Services.AddScoped<IOutboxMessageCollector, OutboxMessageCollector>();
-
-        // Ensure the collection of pipeline configuration actions is registered
-        if (Services.All(d => d.ServiceType != typeof(IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>)))
-        {
-            Services.AddSingleton<IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>>>(sp =>
-            {
-                var actions = sp.GetService<List<Action<IHandlerPipelineBuilder, IServiceProvider>>>();
-                return actions ?? [];
-            });
-            Services.AddSingleton(new List<Action<IHandlerPipelineBuilder, IServiceProvider>>());
-        }
-        Services.AddScoped<IHandlerExecutor, HandlerExecutor>();
-
-        const string otelExporterOtlpEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT";
-        Logging.AddOpenTelemetry(logging =>
-        {
-            logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
-        });
-
-        Services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
-            {
-                metrics.AddMeter(HandlerPipelineTracing.MeterName);
-                metrics.AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
-            })
-            .WithTracing(tracing =>
-            {
-                tracing.AddSource(HandlerPipelineTracing.ActivitySourceName);
-                tracing.AddSource(MessageTracing.ActivitySourceName);
-                tracing.AddSource(Environment.ApplicationName)
-                    .AddHttpClientInstrumentation();
-            });
-
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(Configuration[otelExporterOtlpEndpoint]);
-
-        if (useOtlpExporter)
-        {
-            Services.AddOpenTelemetry().UseOtlpExporter();
-        }
-
-
-        AddRegistrationStep(new AddStateMachineRegistrationStep());
-    }
 
     #region Abstractions
     /// <inheritdoc/>

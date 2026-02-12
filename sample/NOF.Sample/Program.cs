@@ -19,7 +19,7 @@ builder.WithAutoApplicationParts();
 
 builder.Services.AddNOF_SampleAutoInjectServices();
 
-builder.Services.AddRedisCache();
+builder.AddRedisCache();
 
 builder.AddJwtAuthority();
 
