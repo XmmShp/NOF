@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NOF.Contract;
 using NOF.Infrastructure.Core;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace NOF.Hosting.AspNetCore;
@@ -20,8 +22,12 @@ public static partial class NOFHostingAspNetCoreExtensions
         {
             builder.Services.ConfigureHttpJsonOptions(options =>
             {
-                options.SerializerOptions.PropertyNameCaseInsensitive = true;
-                options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                var defaults = JsonSerializerOptions.NOFDefaults;
+                options.SerializerOptions.PropertyNameCaseInsensitive = defaults.PropertyNameCaseInsensitive;
+                options.SerializerOptions.DefaultIgnoreCondition = defaults.DefaultIgnoreCondition;
+                options.SerializerOptions.ReferenceHandler = defaults.ReferenceHandler;
+                options.SerializerOptions.PropertyNamingPolicy = defaults.PropertyNamingPolicy;
+                options.SerializerOptions.AddNOFConverters();
             });
             return builder;
         }

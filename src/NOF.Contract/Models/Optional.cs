@@ -31,7 +31,6 @@ public readonly struct NoneOptional;
 /// and enables explicit handling of missing values for value types.
 /// </summary>
 /// <typeparam name="T">The type of the optional value.</typeparam>
-[OptionalJsonConverter]
 public readonly struct Optional<T>
 {
     internal Optional(T value, bool hasValue)

@@ -21,6 +21,21 @@ public static partial class NOFContractExtensions
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
-            };
+            }.AddNOFConverters();
+    }
+
+    extension(JsonSerializerOptions options)
+    {
+        /// <summary>
+        /// Registers all NOF framework JSON converters and converter factories
+        /// into the specified <see cref="JsonSerializerOptions"/>.
+        /// </summary>
+        /// <returns>The same <see cref="JsonSerializerOptions"/> instance for fluent chaining.</returns>
+        public JsonSerializerOptions AddNOFConverters()
+        {
+            options.Converters.Add(new OptionalConverterFactory());
+            options.Converters.Add(new PatchRequestConverterFactory());
+            return options;
+        }
     }
 }
