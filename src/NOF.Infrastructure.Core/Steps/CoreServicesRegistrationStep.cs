@@ -19,6 +19,10 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
 
+        // Handler pipeline: register ordered type list + executor
+        builder.Services.AddSingleton(new HandlerPipelineTypes());
+        builder.Services.AddScoped<IHandlerExecutor, HandlerExecutor>();
+
         return ValueTask.CompletedTask;
     }
 }

@@ -241,22 +241,6 @@ public static partial class NOFInfrastructureCoreExtensions
             return services;
         }
 
-        /// <summary>
-        /// Configures handler pipeline middleware (can be called multiple times).
-        /// User-defined middleware is inserted between core middleware:
-        /// Invocation context -> Permission authorization -> Activity tracing -> Auto-instrumentation -> [User middleware] -> Transactional message context
-        /// </summary>
-        public IServiceCollection ConfigureHandlerPipeline(Action<IHandlerPipelineBuilder, IServiceProvider> configure)
-        {
-            // Get or create the configuration action list
-            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(List<Action<IHandlerPipelineBuilder, IServiceProvider>>));
-            if (descriptor?.ImplementationInstance is List<Action<IHandlerPipelineBuilder, IServiceProvider>> actions)
-            {
-                actions.Add(configure);
-            }
-
-            return services;
-        }
     }
 }
 

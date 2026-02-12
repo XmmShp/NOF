@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NOF.Application;
 using NOF.Contract;
 
@@ -49,19 +48,22 @@ public interface IHandlerExecutor
 }
 
 /// <summary>
-/// Default implementation of Handler executor
+/// Default implementation of Handler executor.
+/// Middleware instances are resolved from DI (scoped, like ASP.NET Core's <c>IMiddleware</c>).
+/// Middleware ordering is determined at startup by the topological sort of
+/// <see cref="IHandlerMiddlewareStep"/> instances, stored in <see cref="HandlerPipelineTypes"/>.
 /// </summary>
 public sealed class HandlerExecutor : IHandlerExecutor
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly List<Action<IHandlerPipelineBuilder, IServiceProvider>> _configureActions;
+    private readonly HandlerPipelineTypes _middlewareTypes;
 
     public HandlerExecutor(
         IServiceProvider serviceProvider,
-        IEnumerable<Action<IHandlerPipelineBuilder, IServiceProvider>> configureActions)
+        HandlerPipelineTypes middlewareTypes)
     {
         _serviceProvider = serviceProvider;
-        _configureActions = configureActions.ToList();
+        _middlewareTypes = middlewareTypes;
     }
 
     public async ValueTask ExecuteCommandAsync<TCommand>(
@@ -144,8 +146,6 @@ public sealed class HandlerExecutor : IHandlerExecutor
 
     private HandlerDelegate BuildPipeline(HandlerContext context, HandlerDelegate handler)
     {
-        var invocationContext = _serviceProvider.GetRequiredService<IInvocationContextInternal>();
-
         // Merge transport headers from the hosting adapter (e.g., HTTP via IHttpContextAccessor)
         // Transport-provided headers (from IHandlerExecutor callers like MassTransit) take precedence.
         var transportHeaderProvider = _serviceProvider.GetService<ITransportHeaderProvider>();
@@ -160,48 +160,15 @@ public sealed class HandlerExecutor : IHandlerExecutor
             }
         }
 
-        var builder = new HandlerPipelineBuilder();
-
-        // 0. Exception handling (outermost to catch all exceptions)
-        var exceptionLogger = _serviceProvider.GetRequiredService<ILogger<ExceptionMiddleware>>();
-        builder.Use(new ExceptionMiddleware(exceptionLogger));
-
-        // 1. Invocation context: identity (JWT), tenant resolution, tracing
-        builder.Use(new InvocationContextMiddleware(
-            invocationContext,
-            _serviceProvider.GetRequiredService<ILogger<InvocationContextMiddleware>>(),
-            _serviceProvider.GetService<IJwtValidationService>()));
-
-        // 2. Permission authorization
-        builder.Use(new PermissionAuthorizationMiddleware(
-            invocationContext,
-            _serviceProvider.GetRequiredService<ILogger<PermissionAuthorizationMiddleware>>()));
-
-        // 3. Activity tracing
-        builder.Use(new ActivityTracingMiddleware(invocationContext));
-
-        // 4. Auto instrumentation
-        var logger = _serviceProvider.GetRequiredService<ILogger<AutoInstrumentationMiddleware>>();
-        builder.Use(new AutoInstrumentationMiddleware(logger));
-
-        // 5. Inbox message processing
-        var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();
-        var inboxMessageRepository = _serviceProvider.GetRequiredService<IInboxMessageRepository>();
-        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
-        var inboxLogger = _serviceProvider.GetRequiredService<ILogger<MessageInboxMiddleware>>();
-        builder.Use(new MessageInboxMiddleware(transactionManager, inboxMessageRepository, unitOfWork, inboxLogger, invocationContext));
-
-        // 6. Transactional message context
-        var deferredCommandSender = _serviceProvider.GetRequiredService<IDeferredCommandSender>();
-        var deferredNotificationPublisher = _serviceProvider.GetRequiredService<IDeferredNotificationPublisher>();
-        builder.Use(new MessageOutboxContextMiddleware(deferredCommandSender, deferredNotificationPublisher));
-
-        // 7. User-defined middleware extension points (can call Configure multiple times)
-        foreach (var configure in _configureActions)
+        // Resolve all middleware from DI in the order determined by the dependency graph
+        var pipeline = handler;
+        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            configure(builder, _serviceProvider);
+            var middleware = (IHandlerMiddleware)_serviceProvider.GetRequiredService(_middlewareTypes[i]);
+            var next = pipeline;
+            pipeline = ct => middleware.InvokeAsync(context, ct2 => next(ct2), ct);
         }
 
-        return builder.Build(context, handler);
+        return pipeline;
     }
 }

@@ -4,6 +4,9 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
 
+/// <summary>Invocation context step — JWT validation, tenant resolution, tracing.</summary>
+public class InvocationContextMiddlewareStep : IHandlerMiddlewareStep<InvocationContextMiddleware>, IAfter<ExceptionMiddlewareStep>;
+
 /// <summary>
 /// Handler middleware that populates the <see cref="IInvocationContext"/> from
 /// transport-agnostic <see cref="HandlerContext.Headers"/>.

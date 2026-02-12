@@ -3,6 +3,9 @@ using NOF.Application;
 
 namespace NOF.Infrastructure.Core;
 
+/// <summary>Inbox message processing step — deduplication via inbox pattern.</summary>
+public class MessageInboxMiddlewareStep : IHandlerMiddlewareStep<MessageInboxMiddleware>, IAfter<AutoInstrumentationMiddlewareStep>;
+
 /// <summary>
 /// Inbox middleware
 /// Responsible for recording inbox messages in transactions to ensure reliable message processing

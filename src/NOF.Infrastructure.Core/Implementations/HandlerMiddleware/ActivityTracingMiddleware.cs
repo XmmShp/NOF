@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
 
+/// <summary>Activity tracing step — creates distributed tracing Activity per handler execution.</summary>
+public class ActivityTracingMiddlewareStep : IHandlerMiddlewareStep<ActivityTracingMiddleware>, IAfter<PermissionAuthorizationMiddlewareStep>;
+
 /// <summary>
 /// Activity tracing middleware
 /// Creates distributed tracing Activity for each Handler execution

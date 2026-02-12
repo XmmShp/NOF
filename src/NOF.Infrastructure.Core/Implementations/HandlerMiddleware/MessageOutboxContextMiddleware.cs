@@ -1,6 +1,9 @@
-using NOF.Application;
+﻿using NOF.Application;
 
 namespace NOF.Infrastructure.Core;
+
+/// <summary>Transactional outbox context step — wraps handler in outbox scope.</summary>
+public class MessageOutboxMiddlewareStep : IHandlerMiddlewareStep<MessageOutboxContextMiddleware>, IAfter<MessageInboxMiddlewareStep>;
 
 /// <summary>
 /// Transactional message outbox context middleware.

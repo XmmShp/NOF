@@ -75,7 +75,7 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     /// <summary>
     /// Gets or sets the endpoint name provider used for resolving message endpoint names.
     /// </summary>
-    IEndpointNameProvider? EndpointNameProvider { get; set; }
+    IEndpointNameProvider EndpointNameProvider { get; set; }
 
     /// <summary>
     /// Gets the list of extra handler metadata registered manually (not discovered via assembly scanning).
@@ -217,16 +217,16 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs;
 
     /// <inheritdoc/>
-    public virtual IStartupEventChannel StartupEventChannel { get; }
+    public IStartupEventChannel StartupEventChannel { get; protected set; }
 
     /// <inheritdoc/>
-    public virtual IRequestSender? RequestSender { get; set; }
+    public IRequestSender? RequestSender { get; set; }
 
     /// <inheritdoc/>
     public HashSet<Assembly> Assemblies { get; } = [];
 
     /// <inheritdoc/>
-    public IEndpointNameProvider? EndpointNameProvider { get; set; }
+    public IEndpointNameProvider EndpointNameProvider { get; set; }
 
     /// <inheritdoc/>
     public List<HandlerInfo> ExtraHandlerInfos { get; } = [];
@@ -244,10 +244,18 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new CoreServicesRegistrationStep(),
             new CacheServiceRegistrationStep(),
             new OutboxRegistrationStep(),
-            new HandlerPipelineRegistrationStep(),
             new OpenTelemetryRegistrationStep(),
             new AddStateMachineRegistrationStep(),
+
+            new ExceptionMiddlewareStep(),
+            new InvocationContextMiddlewareStep(),
+            new PermissionAuthorizationMiddlewareStep(),
+            new ActivityTracingMiddlewareStep(),
+            new AutoInstrumentationMiddlewareStep(),
+            new MessageInboxMiddlewareStep(),
+            new MessageOutboxMiddlewareStep(),
         ];
+        EndpointNameProvider = new EndpointNameProvider();
         ApplicationConfigs = [];
         if (Assembly.GetEntryAssembly() is { } assembly)
         {
