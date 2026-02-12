@@ -33,6 +33,9 @@ public static partial class NOFInfrastructureCoreExtensions
             // Register the JWKS provider as singleton (caches keys, supports refresh)
             builder.Services.AddSingleton<IJwksProvider, HttpJwksProvider>();
 
+            // Register the JWT validation service for transport-agnostic token validation
+            builder.Services.AddSingleton<IJwtValidationService, JwtValidationService>();
+
             return builder;
         }
 

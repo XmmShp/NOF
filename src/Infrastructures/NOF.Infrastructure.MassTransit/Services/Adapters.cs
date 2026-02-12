@@ -30,8 +30,8 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
         var activity = Activity.Current;
         if (activity is not null)
         {
-            headers[NOFConstants.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.SpanId] = activity.SpanId.ToString();
+            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
+            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
         }
 
         var result = await _executor.ExecuteRequestAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
@@ -62,8 +62,8 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
         var activity = Activity.Current;
         if (activity is not null)
         {
-            headers[NOFConstants.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.SpanId] = activity.SpanId.ToString();
+            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
+            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
         }
 
         var result = await _executor.ExecuteRequestAsync<TRequest, TResponse>(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
@@ -110,8 +110,8 @@ internal class MassTransitCommandHandlerAdapter<THandler, TCommand> : IConsumer<
         var activity = Activity.Current;
         if (activity is not null)
         {
-            headers[NOFConstants.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.SpanId] = activity.SpanId.ToString();
+            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
+            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
         }
 
         await _executor.ExecuteCommandAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);
@@ -141,8 +141,8 @@ internal class MassTransitNotificationHandlerAdapter<THandler, TNotification> : 
         var activity = Activity.Current;
         if (activity is not null)
         {
-            headers[NOFConstants.TraceId] = activity.TraceId.ToString();
-            headers[NOFConstants.SpanId] = activity.SpanId.ToString();
+            headers[NOFConstants.Headers.TraceId] = activity.TraceId.ToString();
+            headers[NOFConstants.Headers.SpanId] = activity.SpanId.ToString();
         }
 
         await _executor.ExecuteNotificationAsync(_handler, context.Message, headers, context.CancellationToken).ConfigureAwait(false);

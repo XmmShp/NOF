@@ -29,11 +29,11 @@ public sealed class CommandSender : ICommandSender
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = messageId,
-            [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
-            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString(),
+            [NOFConstants.Headers.MessageId] = messageId,
+            [NOFConstants.Headers.TraceId] = currentActivity?.TraceId.ToString(),
+            [NOFConstants.Headers.SpanId] = currentActivity?.SpanId.ToString(),
 
-            [NOFConstants.TenantId] = tenantId
+            [NOFConstants.Headers.TenantId] = tenantId
         };
 
         if (activity is { IsAllDataRequested: true })
@@ -80,7 +80,7 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.TenantId] = tenantId
+            [NOFConstants.Headers.TenantId] = tenantId
         };
 
         _collector.AddMessage(new OutboxMessage

@@ -30,15 +30,10 @@ public sealed class MessageInboxMiddleware : IHandlerMiddleware
 
         try
         {
-            _invocationContext.Items.TryGetValue(NOFConstants.MessageId, out var messageIdObj);
-            var messageId = messageIdObj switch
-            {
-                Guid existingGuid => existingGuid,
-                string existingString => Guid.TryParse(existingString, out var value) ? value : Guid.NewGuid(),
-                _ => Guid.NewGuid()
-            };
+            context.Headers.TryGetValue(NOFConstants.Headers.MessageId, out var messageIdStr);
+            var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
 
-            _invocationContext.Items[NOFConstants.MessageId] = messageId;
+            context.Headers[NOFConstants.Headers.MessageId] = messageId.ToString();
 
             var messageExists = await _inboxMessageRepository.ExistByMessageIdAsync(messageId, cancellationToken);
             if (messageExists)

@@ -73,10 +73,11 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = command,
-            Handler = handler
+            Handler = handler,
+            Headers = headers
         };
 
-        var pipeline = BuildPipeline(context, headers, ct => new ValueTask(handler.HandleAsync(command, ct)));
+        var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(command, ct)));
         await pipeline(cancellationToken);
     }
 
@@ -89,10 +90,11 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = notification,
-            Handler = handler
+            Handler = handler,
+            Headers = headers
         };
 
-        var pipeline = BuildPipeline(context, headers, ct => new ValueTask(handler.HandleAsync(notification, ct)));
+        var pipeline = BuildPipeline(context, ct => new ValueTask(handler.HandleAsync(notification, ct)));
         await pipeline(cancellationToken);
     }
 
@@ -105,10 +107,11 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = request,
-            Handler = handler
+            Handler = handler,
+            Headers = headers
         };
 
-        var pipeline = BuildPipeline(context, headers, async ct =>
+        var pipeline = BuildPipeline(context, async ct =>
         {
             context.Response = await handler.HandleAsync(request, ct);
         });
@@ -126,10 +129,11 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var context = new HandlerContext
         {
             Message = request,
-            Handler = handler
+            Handler = handler,
+            Headers = headers
         };
 
-        var pipeline = BuildPipeline(context, headers, async ct =>
+        var pipeline = BuildPipeline(context, async ct =>
         {
             context.Response = await handler.HandleAsync(request, ct);
         });
@@ -138,19 +142,23 @@ public sealed class HandlerExecutor : IHandlerExecutor
         return Result.From<TResponse>(context.Response!);
     }
 
-    private HandlerDelegate BuildPipeline(HandlerContext context, IDictionary<string, string?> headers, HandlerDelegate handler)
+    private HandlerDelegate BuildPipeline(HandlerContext context, HandlerDelegate handler)
     {
-        // Copy headers to InvocationContext.Items for middleware access
         var invocationContext = _serviceProvider.GetRequiredService<IInvocationContextInternal>();
-        foreach (var header in headers)
-        {
-            invocationContext.Items[header.Key] = header.Value;
-        }
 
-        // Set tracing information from headers to InvocationContext properties
-        headers.TryGetValue(NOFConstants.TraceId, out var traceId);
-        headers.TryGetValue(NOFConstants.SpanId, out var spanId);
-        invocationContext.SetTracingInfo(traceId, spanId);
+        // Merge transport headers from the hosting adapter (e.g., HTTP via IHttpContextAccessor)
+        // Transport-provided headers (from IHandlerExecutor callers like MassTransit) take precedence.
+        var transportHeaderProvider = _serviceProvider.GetService<ITransportHeaderProvider>();
+        if (transportHeaderProvider is not null)
+        {
+            foreach (var header in transportHeaderProvider.GetHeaders())
+            {
+                if (!context.Headers.ContainsKey(header.Key))
+                {
+                    context.Headers[header.Key] = header.Value;
+                }
+            }
+        }
 
         var builder = new HandlerPipelineBuilder();
 
@@ -158,20 +166,23 @@ public sealed class HandlerExecutor : IHandlerExecutor
         var exceptionLogger = _serviceProvider.GetRequiredService<ILogger<ExceptionMiddleware>>();
         builder.Use(new ExceptionMiddleware(exceptionLogger));
 
-        // 1. Permission authorization
+        // 1. Invocation context: identity (JWT), tenant resolution, tracing
+        builder.Use(new InvocationContextMiddleware(
+            invocationContext,
+            _serviceProvider.GetRequiredService<ILogger<InvocationContextMiddleware>>(),
+            _serviceProvider.GetService<IJwtValidationService>()));
+
+        // 2. Permission authorization
         builder.Use(new PermissionAuthorizationMiddleware(
             invocationContext,
             _serviceProvider.GetRequiredService<ILogger<PermissionAuthorizationMiddleware>>()));
 
-        // 2. Activity tracing
+        // 3. Activity tracing
         builder.Use(new ActivityTracingMiddleware(invocationContext));
 
-        // 3. Auto instrumentation
+        // 4. Auto instrumentation
         var logger = _serviceProvider.GetRequiredService<ILogger<AutoInstrumentationMiddleware>>();
         builder.Use(new AutoInstrumentationMiddleware(logger));
-
-        // 4. Tenant header processing
-        builder.Use(new TenantHeaderMiddleware(invocationContext));
 
         // 5. Inbox message processing
         var transactionManager = _serviceProvider.GetRequiredService<ITransactionManager>();

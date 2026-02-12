@@ -30,10 +30,10 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = messageId,
-            [NOFConstants.TraceId] = currentActivity?.TraceId.ToString(),
-            [NOFConstants.SpanId] = currentActivity?.SpanId.ToString(),
-            [NOFConstants.TenantId] = tenantId
+            [NOFConstants.Headers.MessageId] = messageId,
+            [NOFConstants.Headers.TraceId] = currentActivity?.TraceId.ToString(),
+            [NOFConstants.Headers.SpanId] = currentActivity?.SpanId.ToString(),
+            [NOFConstants.Headers.TenantId] = tenantId
         };
 
         if (activity is { IsAllDataRequested: true })
@@ -80,8 +80,8 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFConstants.MessageId] = Guid.NewGuid().ToString(),
-            [NOFConstants.TenantId] = tenantId
+            [NOFConstants.Headers.MessageId] = Guid.NewGuid().ToString(),
+            [NOFConstants.Headers.TenantId] = tenantId
         };
 
         _collector.AddMessage(new OutboxMessage

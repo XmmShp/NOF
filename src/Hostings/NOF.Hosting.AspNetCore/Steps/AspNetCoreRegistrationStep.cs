@@ -23,6 +23,8 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     public ValueTask ExecuteAsync(INOFAppBuilder builder)
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ITransportHeaderProvider, HttpTransportHeaderProvider>();
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
         builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>
             tracing.AddAspNetCoreInstrumentation(options =>

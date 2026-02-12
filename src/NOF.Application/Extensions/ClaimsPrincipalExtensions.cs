@@ -5,27 +5,27 @@ namespace NOF.Application;
 
 public static partial class NOFApplicationExtensions
 {
-    extension(ClaimsPrincipal user)
+    extension(ManagedUser user)
     {
         /// <summary>
         /// Gets a value indicating whether the user is authenticated.
         /// </summary>
-        public bool IsAuthenticated => user.Identity?.IsAuthenticated == true;
+        public bool IsAuthenticated => user.Principal.Identity?.IsAuthenticated == true;
 
         /// <summary>
         /// Gets the unique identifier of the current user from the NameIdentifier claim, or <c>null</c> if not authenticated.
         /// </summary>
-        public string? Id => user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        public string? Id => user.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         /// <summary>
         /// Gets the username of the current user from the Name claim, or <c>null</c> if not authenticated.
         /// </summary>
-        public string? Name => user.Identity?.Name;
+        public string? Name => user.Principal.Identity?.Name;
 
         /// <summary>
         /// Gets the list of permissions from the custom permission claims of the current user.
         /// </summary>
-        public IReadOnlyList<string> Permissions => user.FindAll(ClaimTypes.Permission)
+        public IReadOnlyList<string> Permissions => user.Principal.FindAll(ClaimTypes.Permission)
             .Select(claim => claim.Value)
             .ToList()
             .AsReadOnly();

@@ -244,7 +244,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <summary>
         /// Configures handler pipeline middleware (can be called multiple times).
         /// User-defined middleware is inserted between core middleware:
-        /// Activity tracing -> Auto-instrumentation -> [User middleware] -> Transactional message context
+        /// Invocation context -> Permission authorization -> Activity tracing -> Auto-instrumentation -> [User middleware] -> Transactional message context
         /// </summary>
         public IServiceCollection ConfigureHandlerPipeline(Action<IHandlerPipelineBuilder, IServiceProvider> configure)
         {

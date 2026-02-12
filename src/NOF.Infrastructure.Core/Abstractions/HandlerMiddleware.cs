@@ -22,6 +22,13 @@ public sealed class HandlerContext
     public required IMessageHandler Handler { get; init; }
 
     /// <summary>
+    /// Transport-level headers passed from the hosting adapter (HTTP, message bus, etc.).
+    /// These are distinct from <see cref="IInvocationContext.Items"/> which is for
+    /// cross-cutting application-level state within the invocation scope.
+    /// </summary>
+    public IDictionary<string, string?> Headers { get; init; } = new Dictionary<string, string?>();
+
+    /// <summary>
     /// Response result (only used for Request handlers)
     /// </summary>
     public IResult? Response { get; set; }
@@ -73,8 +80,15 @@ public interface IHandlerMiddleware
 
 public static partial class NOFConstants
 {
-    public const string MessageId = "NOF.Message.MessageId";
-    public const string TraceId = "NOF.Message.TraceId";
-    public const string SpanId = "NOF.Message.SpanId";
-    public const string TenantId = "NOF.TenantId";
+    /// <summary>
+    /// Standard HTTP / transport-level header keys used in <see cref="HandlerContext.Headers"/>.
+    /// </summary>
+    public static class Headers
+    {
+        public const string Authorization = "Authorization";
+        public const string TenantId = "NOF.TenantId";
+        public const string TraceId = "NOF.Message.TraceId";
+        public const string SpanId = "NOF.Message.SpanId";
+        public const string MessageId = "NOF.Message.MessageId";
+    }
 }

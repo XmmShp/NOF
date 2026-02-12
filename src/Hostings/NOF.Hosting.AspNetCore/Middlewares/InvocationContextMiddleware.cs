@@ -1,46 +1,39 @@
 using Microsoft.AspNetCore.Http;
-using NOF.Application;
 using NOF.Infrastructure.Core;
-using System.Security.Claims;
 
 namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
-/// Authentication context middleware that extracts user and tenant information from claims and sets them on the InvocationContext.
+/// ASP.NET Core implementation of <see cref="ITransportHeaderProvider"/> that reads
+/// HTTP request headers from the current <see cref="HttpContext"/> via <see cref="IHttpContextAccessor"/>.
+/// <para>
+/// Registered as scoped so the handler pipeline can pull transport headers
+/// without coupling to ASP.NET Core directly.
+/// </para>
 /// </summary>
-public class InvocationContextMiddleware : IMiddleware
+public class HttpTransportHeaderProvider : ITransportHeaderProvider
 {
-    private readonly IInvocationContextInternal _invocationContext;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    /// <summary>
-    /// Initializes a new instance.
-    /// </summary>
-    /// <param name="invocationContext">The invocation context.</param>
-    public InvocationContextMiddleware(IInvocationContextInternal invocationContext)
+    public HttpTransportHeaderProvider(IHttpContextAccessor httpContextAccessor)
     {
-        _invocationContext = invocationContext;
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, string?> GetHeaders()
     {
-        if (context.User.Identity?.IsAuthenticated == true)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is null)
         {
-            // Set user context
-            await _invocationContext.SetUserAsync(context.User);
-
-            // Extract tenant information
-            var tenantId = context.User.FindFirstValue(NOFConstants.TenantId);
-
-            // Set tenant context
-            _invocationContext.SetTenantId(tenantId);
-        }
-        else
-        {
-            // Clear context when not authenticated
-            await _invocationContext.UnsetUserAsync();
-            _invocationContext.SetTenantId(null);
+            return new Dictionary<string, string?>();
         }
 
-        await next(context);
+        var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var header in httpContext.Request.Headers)
+        {
+            headers[header.Key] = header.Value.ToString();
+        }
+        return headers;
     }
 }

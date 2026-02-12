@@ -9,10 +9,11 @@ namespace NOF.Application;
 public interface IInvocationContext
 {
     /// <summary>
-    /// The authenticated user principal associated with this invocation.
+    /// The managed user identity associated with this invocation.
+    /// Contains the claims principal and the raw JWT token for downstream propagation.
     /// May be unauthenticated (e.g., system-triggered events).
     /// </summary>
-    ClaimsPrincipal User { get; }
+    ManagedUser User { get; }
 
     /// <summary>
     /// The tenant ID under which this invocation is executing.
@@ -45,26 +46,13 @@ public interface IInvocationContextInternal : IInvocationContext
     /// <summary>
     /// Sets the current user context.
     /// </summary>
-    /// <param name="user">The claims principal representing the authenticated user.</param>
-    void SetUser(ClaimsPrincipal user);
-
-    /// <summary>
-    /// Sets the current user context asynchronously.
-    /// </summary>
-    /// <param name="user">The claims principal representing the authenticated user.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task SetUserAsync(ClaimsPrincipal user);
+    /// <param name="user">The managed user identity.</param>
+    void SetUser(ManagedUser user);
 
     /// <summary>
     /// Clears the current user context, marking the user as unauthenticated.
     /// </summary>
     void UnsetUser();
-
-    /// <summary>
-    /// Clears the current user context asynchronously, marking the user as unauthenticated.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task UnsetUserAsync();
 
     /// <summary>
     /// Sets the current tenant identifier.
@@ -86,7 +74,7 @@ public interface IInvocationContextInternal : IInvocationContext
 public class InvocationContext : IInvocationContextInternal
 {
     /// <inheritdoc />
-    public ClaimsPrincipal User { get; private set; } = new();
+    public ManagedUser User { get; private set; } = ManagedUser.Anonymous;
 
     /// <inheritdoc />
     public string? TenantId { get; private set; }
@@ -101,24 +89,16 @@ public class InvocationContext : IInvocationContextInternal
     public string? SpanId { get; private set; }
 
     /// <inheritdoc />
-    public void SetUser(ClaimsPrincipal user)
+    public void SetUser(ManagedUser user)
     {
         User = user;
     }
 
     /// <inheritdoc />
-    public Task SetUserAsync(ClaimsPrincipal user)
-        => Task.Run(() => SetUser(user));
-
-    /// <inheritdoc />
     public void UnsetUser()
     {
-        User = new ClaimsPrincipal();
+        User = ManagedUser.Anonymous;
     }
-
-    /// <inheritdoc />
-    public Task UnsetUserAsync()
-        => Task.Run(UnsetUser);
 
     /// <inheritdoc />
     public void SetTenantId(string? tenantId)

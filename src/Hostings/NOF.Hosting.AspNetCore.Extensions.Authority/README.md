@@ -13,7 +13,7 @@ Provides a complete JWT authority for ASP.NET Core hosted NOF applications. Incl
 - **Standard JWKS Endpoint** — `/.well-known/jwks.json` served directly via minimal API, compatible with OIDC clients
 - **Local Token Validation** — the authority validates its own tokens using `LocalJwksProvider` without HTTP calls
 - **Refresh Token Lifecycle** — validate and revoke refresh tokens with cache-based revocation
-- **Key Rotation** — via NOF notification pub/sub (`KeyRotationNotification`)
+- **Automatic Key Rotation** — background service rotates keys on a configurable interval and publishes `KeyRotationNotification` for distributed JWKS refresh
 - **Service Registration** — `AddJwtAuthority()` registers all required services and the JWKS endpoint in one call
 
 ## Usage
