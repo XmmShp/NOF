@@ -11,6 +11,7 @@
     <ProjectReference Include="..\NOF.Sample.Integration.Contract\NOF.Sample.Integration.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

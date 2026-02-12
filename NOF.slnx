@@ -18,6 +18,7 @@
   <Folder Name="/src/">
     <Project Path="src/NOF.Annotation/NOF.Annotation.csproj" Id="89674e5f-d1e8-4a92-b9e8-6f1c2d547219" />
     <Project Path="src/NOF.Application/NOF.Application.csproj" />
+    <Project Path="src/NOF.Application.SourceGenerator/NOF.Application.SourceGenerator.csproj" />
     <Project Path="src/NOF.Contract.SourceGenerator/NOF.Contract.SourceGenerator.csproj" Id="7710e156-f3b2-4eab-b3a6-cbd868826543" />
     <Project Path="src/NOF.Contract/NOF.Contract.csproj" />
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />

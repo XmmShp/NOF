@@ -40,13 +40,6 @@ public sealed class InboundContext
     {
         get
         {
-            var type = Handler.GetType();
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(StateMachineNotificationHandler<,>))
-            {
-                var stateMachineType = type.GenericTypeArguments[0];
-                return stateMachineType.FullName ?? stateMachineType.Name;
-            }
-
             return Handler.GetType().FullName ?? Handler.GetType().Name;
         }
     }

@@ -35,8 +35,3 @@ public abstract class StateMachineBlueprint
         where TNotification : class, INotification;
 }
 
-[EditorBrowsable(EditorBrowsableState.Never)]
-public interface IStateMachineBuilderInternal
-{
-    StateMachineBlueprint Build();
-}

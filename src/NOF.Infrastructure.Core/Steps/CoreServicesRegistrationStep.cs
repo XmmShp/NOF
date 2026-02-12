@@ -29,6 +29,9 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         // Outbound pipeline: executor
         builder.Services.AddScoped<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
 
+        // State machine registry
+        builder.Services.AddSingleton<IStateMachineRegistry, StateMachineRegistry>();
+
         return ValueTask.CompletedTask;
     }
 }

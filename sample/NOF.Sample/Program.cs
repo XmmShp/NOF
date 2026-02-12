@@ -14,8 +14,6 @@ using Yitter.IdGenerator;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
 
-builder.WithAutoApplicationParts();
-
 builder.Services.AddNOFSampleAutoInjectServices();
 builder.Services.AddAllHandlers();
 

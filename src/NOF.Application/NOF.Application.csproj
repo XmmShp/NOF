@@ -19,6 +19,8 @@
     <ProjectReference Include="..\NOF.Annotation\NOF.Annotation.csproj" />
     <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\NOF.Domain\NOF.Domain.csproj" />
+
+    <None Include="..\NOF.Application.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Application.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
 using NOF.Contract;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("NOF.Integration.Tests")]
@@ -65,46 +64,9 @@ public interface INOFAppBuilder : IHostApplicationBuilder
     IRequestRider? RequestSender { get; set; }
 
     /// <summary>
-    /// Gets the list of assemblies registered for scanning (e.g., for handlers, validators, or configuration types).
-    /// This collection is lazily initialized and shared across the application builder's lifetime.
-    /// Extensions or modules can add their assemblies here to enable convention-based discovery during startup.
-    /// </summary>
-    HashSet<Assembly> Assemblies { get; }
-
-    /// <summary>
     /// Gets or sets the endpoint name provider used for resolving message endpoint names.
     /// </summary>
     IEndpointNameProvider EndpointNameProvider { get; set; }
-
-    /// <summary>
-    /// Registers the assembly containing the specified type as an application part for HTTP endpoint discovery.
-    /// This enables the framework to scan the assembly for request types marked with <see cref="ExposeToHttpEndpointAttribute"/>.
-    /// </summary>
-    /// <typeparam name="T">A type whose containing assembly will be added.</typeparam>
-    /// <returns>The current <see cref="INOFAppBuilder"/> instance.</returns>
-    INOFAppBuilder WithApplicationPart<T>()
-    {
-        WithApplicationPart([typeof(T).Assembly]);
-        return this;
-    }
-
-    /// <summary>
-    /// Registers one or more assemblies as application parts for HTTP endpoint discovery.
-    /// The framework will scan these assemblies for request types marked with <see cref="ExposeToHttpEndpointAttribute"/>.
-    /// </summary>
-    /// <param name="assemblies">The assemblies to include in endpoint scanning.</param>
-    /// <returns>The current <see cref="INOFAppBuilder"/> instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="assemblies"/> is null.</exception>
-    INOFAppBuilder WithApplicationPart(params Assembly[] assemblies)
-    {
-        ArgumentNullException.ThrowIfNull(assemblies);
-
-        foreach (var assembly in assemblies)
-        {
-            Assemblies.Add(assembly);
-        }
-        return this;
-    }
 
     /// <summary>
     /// Gets the set of handler metadata (e.g., command, event, request handlers) registered via
@@ -213,9 +175,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     public IRequestRider? RequestSender { get; set; }
 
     /// <inheritdoc/>
-    public HashSet<Assembly> Assemblies { get; } = [];
-
-    /// <inheritdoc/>
     public IEndpointNameProvider EndpointNameProvider { get; set; }
 
 
@@ -233,7 +192,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new CacheServiceRegistrationStep(),
             new OutboxRegistrationStep(),
             new OpenTelemetryRegistrationStep(),
-            new AddStateMachineRegistrationStep(),
 
             new ExceptionMiddlewareStep(),
             new InvocationContextMiddlewareStep(),
@@ -251,10 +209,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ];
         EndpointNameProvider = new EndpointNameProvider();
         ApplicationConfigs = [];
-        if (Assembly.GetEntryAssembly() is { } assembly)
-        {
-            Assemblies.Add(assembly);
-        }
     }
 
     /// <inheritdoc />

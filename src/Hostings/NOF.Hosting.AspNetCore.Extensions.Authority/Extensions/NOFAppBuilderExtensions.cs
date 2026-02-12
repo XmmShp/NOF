@@ -20,9 +20,6 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
         /// <returns>The NOF application builder for chaining.</returns>
         public INOFAppBuilder AddJwtAuthority(Action<AuthorityOptions>? configureOptions = null)
         {
-            // Register the core JWT extension assembly for handler discovery
-            builder.Assemblies.Add(typeof(SigningKeyService).Assembly);
-
             // Configure and validate JWT options
             if (configureOptions is not null)
             {
