@@ -100,7 +100,7 @@ public sealed class InvocationContextMiddleware : IInboundMiddleware
             var activity = Activity.Current;
             if (activity is { IsAllDataRequested: true })
             {
-                activity.SetTag(HandlerPipelineTracing.Tags.TenantId, tenantId);
+                activity.SetTag(NOFInfrastructureCoreConstants.InboundPipeline.Tags.TenantId, tenantId);
             }
         }
     }

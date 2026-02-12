@@ -24,14 +24,14 @@ public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationSte
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
-                metrics.AddMeter(HandlerPipelineTracing.MeterName);
+                metrics.AddMeter(NOFInfrastructureCoreConstants.InboundPipeline.MeterName);
                 metrics.AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
             })
             .WithTracing(tracing =>
             {
-                tracing.AddSource(HandlerPipelineTracing.ActivitySourceName);
-                tracing.AddSource(MessageTracing.ActivitySourceName);
+                tracing.AddSource(NOFInfrastructureCoreConstants.InboundPipeline.ActivitySourceName);
+                tracing.AddSource(NOFInfrastructureCoreConstants.Messaging.ActivitySourceName);
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddHttpClientInstrumentation();
             });

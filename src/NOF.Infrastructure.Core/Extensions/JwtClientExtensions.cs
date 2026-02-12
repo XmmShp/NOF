@@ -28,7 +28,7 @@ public static partial class NOFInfrastructureCoreExtensions
             }
 
             // Register the JWKS HTTP client
-            builder.Services.AddHttpClient(JwtClientConstants.JwksHttpClientName);
+            builder.Services.AddHttpClient(NOFInfrastructureCoreConstants.JwtClient.JwksHttpClientName);
 
             // Register the JWKS provider as singleton (caches keys, supports refresh)
             builder.Services.AddSingleton<IJwksProvider, HttpJwksProvider>();

@@ -149,13 +149,13 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
 
         if (activity is { IsAllDataRequested: true })
         {
-            activity.SetTag(MessageTracing.Tags.MessageId, messageId);
-            activity.SetTag(MessageTracing.Tags.MessageType, message.Message.GetType().Name);
-            activity.SetTag(MessageTracing.Tags.Destination, message.DestinationEndpointName ?? "default");
+            activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageId, messageId);
+            activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageType, message.Message.GetType().Name);
+            activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.Destination, message.DestinationEndpointName ?? "default");
             activity.SetTag("OutboxMessageId", message.Id);
             if (headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, out var tenantId))
             {
-                activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
+                activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.TenantId, tenantId);
             }
         }
 
@@ -214,8 +214,8 @@ public sealed class OutboxCommandBackgroundService : BackgroundService
             traceFlags: ActivityTraceFlags.Recorded,
             isRemote: true);
 
-        var activity = MessageTracing.Source.StartActivity(
-            $"{MessageTracing.ActivityNames.MessageSending}: {message.Message.GetType().FullName}",
+        var activity = NOFInfrastructureCoreConstants.Messaging.Source.StartActivity(
+            $"{NOFInfrastructureCoreConstants.Messaging.ActivityNames.MessageSending}: {message.Message.GetType().FullName}",
             kind: ActivityKind.Producer,
             parentContext: activityContext);
 

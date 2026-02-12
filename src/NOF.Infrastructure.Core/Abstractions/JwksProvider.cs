@@ -62,8 +62,8 @@ public class HttpJwksProvider : IJwksProvider
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            var client = _httpClientFactory.CreateClient(JwtClientConstants.JwksHttpClientName);
-            var jwksUrl = _options.Authority.TrimEnd('/') + JwtClientConstants.JwksEndpointPath;
+            var client = _httpClientFactory.CreateClient(NOFInfrastructureCoreConstants.JwtClient.JwksHttpClientName);
+            var jwksUrl = _options.Authority.TrimEnd('/') + NOFInfrastructureCoreConstants.JwtClient.JwksEndpointPath;
 
             var jwksDocument = await client.GetFromJsonAsync<JwksDocument>(jwksUrl, cancellationToken);
             if (jwksDocument?.Keys is null || jwksDocument.Keys.Length == 0)

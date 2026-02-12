@@ -12,16 +12,16 @@ public class AutoInstrumentationMiddlewareStep : IInboundMiddlewareStep<AutoInst
 /// </summary>
 public sealed class AutoInstrumentationMiddleware : IInboundMiddleware
 {
-    private static readonly Counter<long> ExecutionCounter = HandlerPipelineTracing.Meter.CreateCounter<long>(
-        HandlerPipelineTracing.Metrics.ExecutionCounter,
-        description: HandlerPipelineTracing.MetricDescriptions.ExecutionCounter);
-    private static readonly Histogram<double> ExecutionDuration = HandlerPipelineTracing.Meter.CreateHistogram<double>(
-        HandlerPipelineTracing.Metrics.ExecutionDuration,
-        unit: HandlerPipelineTracing.MetricUnits.Milliseconds,
-        description: HandlerPipelineTracing.MetricDescriptions.ExecutionDuration);
-    private static readonly Counter<long> ErrorCounter = HandlerPipelineTracing.Meter.CreateCounter<long>(
-        HandlerPipelineTracing.Metrics.ErrorCounter,
-        description: HandlerPipelineTracing.MetricDescriptions.ErrorCounter);
+    private static readonly Counter<long> ExecutionCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
+        NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ExecutionCounter,
+        description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ExecutionCounter);
+    private static readonly Histogram<double> ExecutionDuration = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateHistogram<double>(
+        NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ExecutionDuration,
+        unit: NOFInfrastructureCoreConstants.InboundPipeline.MetricUnits.Milliseconds,
+        description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ExecutionDuration);
+    private static readonly Counter<long> ErrorCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
+        NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ErrorCounter,
+        description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
 
     private readonly ILogger<AutoInstrumentationMiddleware> _logger;
 
@@ -34,8 +34,8 @@ public sealed class AutoInstrumentationMiddleware : IInboundMiddleware
     {
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType),
-            new(HandlerPipelineTracing.Tags.MessageType, context.MessageType)
+            new(NOFInfrastructureCoreConstants.InboundPipeline.Tags.HandlerType, context.HandlerType),
+            new(NOFInfrastructureCoreConstants.InboundPipeline.Tags.MessageType, context.MessageType)
         };
 
         _logger.LogDebug(

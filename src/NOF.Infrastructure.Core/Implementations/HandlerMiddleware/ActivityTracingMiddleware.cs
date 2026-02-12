@@ -26,8 +26,8 @@ public sealed class ActivityTracingMiddleware : IInboundMiddleware
 
         if (activity is { IsAllDataRequested: true })
         {
-            activity.SetTag(HandlerPipelineTracing.Tags.HandlerType, context.HandlerType);
-            activity.SetTag(HandlerPipelineTracing.Tags.MessageType, context.MessageType);
+            activity.SetTag(NOFInfrastructureCoreConstants.InboundPipeline.Tags.HandlerType, context.HandlerType);
+            activity.SetTag(NOFInfrastructureCoreConstants.InboundPipeline.Tags.MessageType, context.MessageType);
         }
 
         try
@@ -64,7 +64,7 @@ public sealed class ActivityTracingMiddleware : IInboundMiddleware
             traceFlags: ActivityTraceFlags.Recorded,
             isRemote: true);
 
-        var activity = HandlerPipelineTracing.Source.StartActivity(
+        var activity = NOFInfrastructureCoreConstants.InboundPipeline.Source.StartActivity(
             $"{context.HandlerType}.Handle: {context.MessageType}",
             kind: ActivityKind.Consumer,
             parentContext: activityContext);

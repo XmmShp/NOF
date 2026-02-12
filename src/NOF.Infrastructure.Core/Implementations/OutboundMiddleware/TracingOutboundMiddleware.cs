@@ -20,8 +20,8 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 {
     public async ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        using var activity = MessageTracing.Source.StartActivity(
-            $"{MessageTracing.ActivityNames.MessageSending}: {context.Message.GetType().FullName}",
+        using var activity = NOFInfrastructureCoreConstants.Messaging.Source.StartActivity(
+            $"{NOFInfrastructureCoreConstants.Messaging.ActivityNames.MessageSending}: {context.Message.GetType().FullName}",
             ActivityKind.Producer);
 
         // Propagate trace/span IDs into headers before inner middleware run
@@ -41,12 +41,12 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
             if (activity is { IsAllDataRequested: true })
             {
                 context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.MessageId, out var messageId);
-                activity.SetTag(MessageTracing.Tags.MessageId, messageId);
-                activity.SetTag(MessageTracing.Tags.MessageType, context.Message.GetType().Name);
-                activity.SetTag(MessageTracing.Tags.Destination, context.DestinationEndpointName ?? "default");
+                activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageId, messageId);
+                activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageType, context.Message.GetType().Name);
+                activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.Destination, context.DestinationEndpointName ?? "default");
 
                 context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, out var tenantId);
-                activity.SetTag(MessageTracing.Tags.TenantId, tenantId);
+                activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.TenantId, tenantId);
             }
 
             activity?.SetStatus(ActivityStatusCode.Ok);
