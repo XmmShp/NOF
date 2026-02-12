@@ -3,26 +3,31 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
 
-/// <summary>Activity tracing step — creates distributed tracing Activity per handler execution.</summary>
-public class ActivityTracingMiddlewareStep : IInboundMiddlewareStep<ActivityTracingMiddleware>, IAfter<PermissionAuthorizationMiddlewareStep>;
+/// <summary>Activity tracing step — resolves trace/span IDs from headers and creates distributed tracing Activity per handler execution.</summary>
+public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
 
 /// <summary>
-/// Activity tracing middleware
-/// Creates distributed tracing Activity for each Handler execution
+/// Inbound middleware that resolves tracing information from transport headers
+/// and creates a distributed tracing <see cref="Activity"/> for each handler execution.
 /// </summary>
-public sealed class ActivityTracingMiddleware : IInboundMiddleware
+public sealed class TracingInboundMiddleware : IInboundMiddleware
 {
     private readonly IInvocationContextInternal _invocationContext;
 
-    public ActivityTracingMiddleware(IInvocationContextInternal invocationContext)
+    public TracingInboundMiddleware(IInvocationContextInternal invocationContext)
     {
         _invocationContext = invocationContext;
     }
 
     public async ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        // Merge tracing context and create Activity
-        using var activity = RestoreTraceContext(context);
+        // Resolve trace/span IDs from headers
+        context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, out var traceId);
+        context.Headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, out var spanId);
+        _invocationContext.SetTracingInfo(traceId, spanId);
+
+        // Create Activity with resolved tracing context
+        using var activity = CreateActivity(context, traceId, spanId);
 
         if (activity is { IsAllDataRequested: true })
         {
@@ -47,28 +52,17 @@ public sealed class ActivityTracingMiddleware : IInboundMiddleware
         }
     }
 
-    /// <summary>
-    /// Restore tracing context and create Activity: if InvocationContext has TraceId/SpanId, restore tracing context
-    /// If there is other existing tracing, try to merge, merge fails silently
-    /// </summary>
-    /// <param name="context">Handler execution context</param>
-    /// <returns>Created Activity, returns null if no tracing information</returns>
-    private Activity? RestoreTraceContext(InboundContext context)
+    private static Activity? CreateActivity(InboundContext context, string? traceId, string? spanId)
     {
-        var traceId = _invocationContext.TraceId;
-        var spanId = _invocationContext.SpanId;
-
         var activityContext = new ActivityContext(
             traceId: string.IsNullOrEmpty(traceId) ? ActivityTraceId.CreateRandom() : ActivityTraceId.CreateFromString(traceId),
             spanId: string.IsNullOrEmpty(spanId) ? ActivitySpanId.CreateRandom() : ActivitySpanId.CreateFromString(spanId),
             traceFlags: ActivityTraceFlags.Recorded,
             isRemote: true);
 
-        var activity = NOFInfrastructureCoreConstants.InboundPipeline.Source.StartActivity(
+        return NOFInfrastructureCoreConstants.InboundPipeline.Source.StartActivity(
             $"{context.HandlerType}.Handle: {context.MessageType}",
             kind: ActivityKind.Consumer,
             parentContext: activityContext);
-
-        return activity;
     }
 }

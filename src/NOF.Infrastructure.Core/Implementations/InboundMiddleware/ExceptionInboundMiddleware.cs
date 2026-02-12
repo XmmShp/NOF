@@ -5,17 +5,17 @@ using NOF.Domain;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Outermost middleware step — catches all exceptions.</summary>
-public class ExceptionMiddlewareStep : IInboundMiddlewareStep<ExceptionMiddleware>;
+public class ExceptionInboundMiddlewareStep : IInboundMiddlewareStep<ExceptionInboundMiddleware>;
 
 /// <summary>
 /// Handler exception handling middleware
 /// Catches and converts exceptions to unified error responses
 /// </summary>
-public sealed class ExceptionMiddleware : IInboundMiddleware
+public sealed class ExceptionInboundMiddleware : IInboundMiddleware
 {
-    private readonly ILogger<ExceptionMiddleware> _logger;
+    private readonly ILogger<ExceptionInboundMiddleware> _logger;
 
-    public ExceptionMiddleware(ILogger<ExceptionMiddleware> logger)
+    public ExceptionInboundMiddleware(ILogger<ExceptionInboundMiddleware> logger)
     {
         _logger = logger;
     }

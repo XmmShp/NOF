@@ -8,16 +8,16 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
 
-public sealed class OutboxCommandBackgroundService : BackgroundService
+public sealed class OutboxMessageBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly OutboxOptions _options;
-    private readonly ILogger<OutboxCommandBackgroundService> _logger;
+    private readonly ILogger<OutboxMessageBackgroundService> _logger;
 
-    public OutboxCommandBackgroundService(
+    public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<OutboxOptions> options,
-        ILogger<OutboxCommandBackgroundService> logger)
+        ILogger<OutboxMessageBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value;

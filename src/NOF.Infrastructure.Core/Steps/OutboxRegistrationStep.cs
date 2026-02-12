@@ -11,7 +11,7 @@ public class OutboxRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(INOFAppBuilder builder)
     {
-        builder.Services.AddHostedService<OutboxCommandBackgroundService>();
+        builder.Services.AddHostedService<OutboxMessageBackgroundService>();
 
         builder.Services.AddScoped<IDeferredCommandSender, DeferredCommandSender>();
         builder.Services.AddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();

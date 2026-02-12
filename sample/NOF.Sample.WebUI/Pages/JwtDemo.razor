@@ -1,9 +1,10 @@
 @page "/jwt-demo"
 @using NOF.Contract
-@using NOF.Sample.WebUI.Services
 @using Result = NOF.Contract.Result
 @using NOF.Infrastructure.Core
-@inject JwtAuthService JwtAuthService
+@using Microsoft.IdentityModel.Tokens
+@inject NOF.Application.IRequestSender RequestSender
+@inject IJwksProvider JwksProvider
 @inject IJSRuntime JsRuntime
 @inject IMessageService MessageService
 
@@ -217,7 +218,7 @@
     private bool _isLoadingJwks = false;
 
     private string _refreshTokenToValidate = "";
-    private Result<ValidateRefreshTokenResponse>? _validationResult;
+    private Result<JwtValidateRefreshTokenResponse>? _validationResult;
 
     private string _tokenIdToRevoke = "";
     private int _revokeExpirationHours = 24;
@@ -249,13 +250,16 @@
                 ? null 
                 : _tokenRequest.PermissionsInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-            var result = await JwtAuthService.GenerateTokenAsync(
+            var request = new GenerateJwtTokenRequest(
                 _tokenRequest.UserId,
                 _tokenRequest.TenantId,
                 _tokenRequest.Audience,
+                TimeSpan.FromMinutes(30),
+                TimeSpan.FromDays(7),
                 roles,
                 permissions
             );
+            var result = await RequestSender.SendAsync(request);
 
             if (result.IsSuccess)
             {
@@ -290,7 +294,7 @@
 
         try
         {
-            var result = await JwtAuthService.ValidateRefreshTokenAsync(_refreshTokenToValidate);
+            var result = await RequestSender.SendAsync(new JwtValidateRefreshTokenRequest(_refreshTokenToValidate));
             _validationResult = result;
 
             if (result.IsSuccess)
@@ -327,9 +331,8 @@
 
         try
         {
-            var result = await JwtAuthService.RevokeRefreshTokenAsync(
-                _tokenIdToRevoke, 
-                TimeSpan.FromHours(_revokeExpirationHours)
+            var result = await RequestSender.SendAsync(
+                new JwtRevokeRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
             );
             _revokeResult = result;
 
@@ -362,7 +365,24 @@
 
         try
         {
-            _jwksResponse = await JwtAuthService.GetJwksAsync();
+            var keys = await JwksProvider.GetSecurityKeysAsync();
+            _jwksResponse = keys.Count > 0
+                ? new JwksDocument
+                {
+                    Keys = keys.OfType<RsaSecurityKey>().Select(rsa =>
+                    {
+                        var parameters = rsa.Rsa.ExportParameters(false);
+                        return new JsonWebKey
+                        {
+                            Kty = "RSA", Use = "sig",
+                            Alg = NOFInfrastructureCoreConstants.Jwt.Algorithm,
+                            Kid = rsa.KeyId,
+                            N = Base64UrlEncoder.Encode(parameters.Modulus!),
+                            E = Base64UrlEncoder.Encode(parameters.Exponent!)
+                        };
+                    }).ToArray()
+                }
+                : null;
             if (_jwksResponse != null)
             {
                 MessageService.Success("JWKS retrieved successfully!");

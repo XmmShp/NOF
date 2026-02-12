@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>
-/// Configuration options for the JWT client (OIDC resource server).
+/// Configuration options for JWT authorization (OIDC resource server).
 /// </summary>
-public class JwtClientOptions
+public class JwtAuthorizationOptions
 {
     /// <summary>
     /// Gets or sets the authority URL (e.g., https://auth.example.com).

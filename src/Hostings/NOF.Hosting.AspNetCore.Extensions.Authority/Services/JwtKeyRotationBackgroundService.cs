@@ -9,19 +9,19 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 
 /// <summary>
 /// Background service that periodically rotates the JWT signing key
-/// and publishes a <see cref="KeyRotationNotification"/> so that all instances
+/// and publishes a <see cref="JwtKeyRotationNotification"/> so that all instances
 /// in a distributed deployment refresh their cached JWKS.
 /// </summary>
-public sealed class KeyRotationBackgroundService : BackgroundService
+public sealed class JwtKeyRotationBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly AuthorityOptions _options;
-    private readonly ILogger<KeyRotationBackgroundService> _logger;
+    private readonly ILogger<JwtKeyRotationBackgroundService> _logger;
 
-    public KeyRotationBackgroundService(
+    public JwtKeyRotationBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<AuthorityOptions> options,
-        ILogger<KeyRotationBackgroundService> logger)
+        ILogger<JwtKeyRotationBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value;
@@ -52,7 +52,7 @@ public sealed class KeyRotationBackgroundService : BackgroundService
                     signingKeyService.CurrentSigningKey.Kid);
 
                 var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
-                await notificationPublisher.PublishAsync(new KeyRotationNotification(), cancellationToken: stoppingToken);
+                await notificationPublisher.PublishAsync(new JwtKeyRotationNotification(), cancellationToken: stoppingToken);
                 _logger.LogInformation("Key rotation notification published");
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

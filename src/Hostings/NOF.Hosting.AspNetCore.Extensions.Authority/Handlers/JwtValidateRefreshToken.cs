@@ -13,14 +13,14 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 /// It performs read-only operations and never modifies the cache state.
 /// Refresh tokens are long-lived and require revocation checking for security.
 /// </summary>
-public class ValidateRefreshToken : IRequestHandler<ValidateRefreshTokenRequest, ValidateRefreshTokenResponse>
+public class JwtValidateRefreshToken : IRequestHandler<JwtValidateRefreshTokenRequest, JwtValidateRefreshTokenResponse>
 {
     private readonly AuthorityOptions _options;
     private readonly ICacheService _cache;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ISigningKeyService _signingKeyService;
 
-    public ValidateRefreshToken(IOptions<AuthorityOptions> options, ICacheService cache, ISigningKeyService signingKeyService)
+    public JwtValidateRefreshToken(IOptions<AuthorityOptions> options, ICacheService cache, ISigningKeyService signingKeyService)
     {
         _options = options.Value;
         _cache = cache;
@@ -28,7 +28,7 @@ public class ValidateRefreshToken : IRequestHandler<ValidateRefreshTokenRequest,
         _signingKeyService = signingKeyService;
     }
 
-    public async Task<Result<ValidateRefreshTokenResponse>> HandleAsync(ValidateRefreshTokenRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<JwtValidateRefreshTokenResponse>> HandleAsync(JwtValidateRefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -88,7 +88,7 @@ public class ValidateRefreshToken : IRequestHandler<ValidateRefreshTokenRequest,
                 return Result.Fail(400, "Refresh token has been revoked");
             }
 
-            return Result.Success(new ValidateRefreshTokenResponse(tokenId, userId, tenantId));
+            return Result.Success(new JwtValidateRefreshTokenResponse(tokenId, userId, tenantId));
         }
         catch (Exception ex)
         {

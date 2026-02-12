@@ -7,7 +7,7 @@ namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
 /// Handler middleware step that populates <see cref="InboundContext.Headers"/> from HTTP request headers.
-/// Runs before <see cref="InvocationContextMiddlewareStep"/> so that identity/tenant resolution can read them.
+/// Runs before <see cref="IdentityInboundMiddlewareStep"/> so that identity/tenant resolution can read them.
 /// <para>
 /// A configurable blacklist of wildcard patterns prevents external HTTP callers from forging
 /// internal headers (e.g., <c>NOF.*</c>). These headers are only trusted when set by
@@ -15,7 +15,7 @@ namespace NOF.Hosting.AspNetCore;
 /// </para>
 /// </summary>
 public class HttpHeaderMiddlewareStep : IInboundMiddlewareStep<HttpHeaderMiddleware>,
-    IAfter<ExceptionMiddlewareStep>, IBefore<InvocationContextMiddlewareStep>;
+    IAfter<ExceptionInboundMiddlewareStep>, IBefore<IdentityInboundMiddlewareStep>;
 
 /// <summary>
 /// Configuration options for <see cref="HttpHeaderMiddleware"/>.

@@ -31,14 +31,14 @@ public interface IJwksProvider
 /// </summary>
 public class HttpJwksProvider : IJwksProvider
 {
-    private readonly JwtClientOptions _options;
+    private readonly JwtAuthorizationOptions _options;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     private volatile IReadOnlyList<SecurityKey>? _cachedKeys;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
 
-    public HttpJwksProvider(IOptions<JwtClientOptions> options, IHttpClientFactory httpClientFactory)
+    public HttpJwksProvider(IOptions<JwtAuthorizationOptions> options, IHttpClientFactory httpClientFactory)
     {
         _options = options.Value;
         _httpClientFactory = httpClientFactory;

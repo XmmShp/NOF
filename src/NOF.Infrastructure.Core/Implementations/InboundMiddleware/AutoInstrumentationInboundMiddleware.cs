@@ -5,12 +5,12 @@ using System.Diagnostics.Metrics;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Auto instrumentation step — records execution metrics and logging.</summary>
-public class AutoInstrumentationMiddlewareStep : IInboundMiddlewareStep<AutoInstrumentationMiddleware>, IAfter<ActivityTracingMiddlewareStep>;
+public class AutoInstrumentationInboundMiddlewareStep : IInboundMiddlewareStep<AutoInstrumentationInboundMiddleware>, IAfter<TracingInboundMiddlewareStep>;
 
 /// <summary>
 /// Auto-instrumentation middleware that automatically records handler execution logs, metrics, and performance data.
 /// </summary>
-public sealed class AutoInstrumentationMiddleware : IInboundMiddleware
+public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
 {
     private static readonly Counter<long> ExecutionCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ExecutionCounter,
@@ -23,9 +23,9 @@ public sealed class AutoInstrumentationMiddleware : IInboundMiddleware
         NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ErrorCounter,
         description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
 
-    private readonly ILogger<AutoInstrumentationMiddleware> _logger;
+    private readonly ILogger<AutoInstrumentationInboundMiddleware> _logger;
 
-    public AutoInstrumentationMiddleware(ILogger<AutoInstrumentationMiddleware> logger)
+    public AutoInstrumentationInboundMiddleware(ILogger<AutoInstrumentationInboundMiddleware> logger)
     {
         _logger = logger;
     }

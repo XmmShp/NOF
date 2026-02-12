@@ -4,7 +4,7 @@ namespace NOF.Infrastructure.Core;
 
 /// <summary>Propagates tenant context to outbound messages.</summary>
 public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutboundMiddleware>,
-    IAfter<AuthorizationOutboundMiddlewareStep>;
+    IAfter<TracingOutboundMiddlewareStep>;
 
 /// <summary>
 /// Outbound middleware that propagates the current <see cref="IInvocationContext.TenantId"/>

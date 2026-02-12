@@ -6,21 +6,21 @@ using System.Reflection;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Permission authorization step — checks [RequirePermission] / [AllowAnonymous].</summary>
-public class PermissionAuthorizationMiddlewareStep : IInboundMiddlewareStep<PermissionAuthorizationMiddleware>, IAfter<InvocationContextMiddlewareStep>;
+public class AuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<AuthorizationInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
 
 /// <summary>
 /// Handler middleware that enforces permission-based authorization.
 /// Checks <see cref="AllowAnonymousAttribute"/> and <see cref="RequirePermissionAttribute"/>
 /// on the message/handler types and short-circuits with an error response when unauthorized.
 /// </summary>
-public sealed class PermissionAuthorizationMiddleware : IInboundMiddleware
+public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
 {
     private readonly IInvocationContext _invocationContext;
-    private readonly ILogger<PermissionAuthorizationMiddleware> _logger;
+    private readonly ILogger<AuthorizationInboundMiddleware> _logger;
 
-    public PermissionAuthorizationMiddleware(
+    public AuthorizationInboundMiddleware(
         IInvocationContext invocationContext,
-        ILogger<PermissionAuthorizationMiddleware> logger)
+        ILogger<AuthorizationInboundMiddleware> logger)
     {
         _invocationContext = invocationContext;
         _logger = logger;

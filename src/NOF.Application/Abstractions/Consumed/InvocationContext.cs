@@ -9,11 +9,10 @@ namespace NOF.Application;
 public interface IInvocationContext
 {
     /// <summary>
-    /// The managed user identity associated with this invocation.
-    /// Contains the claims principal and the raw JWT token for downstream propagation.
+    /// The claims principal representing the current user.
     /// May be unauthenticated (e.g., system-triggered events).
     /// </summary>
-    ManagedUser User { get; }
+    ClaimsPrincipal User { get; }
 
     /// <summary>
     /// The tenant ID under which this invocation is executing.
@@ -46,8 +45,8 @@ public interface IInvocationContextInternal : IInvocationContext
     /// <summary>
     /// Sets the current user context.
     /// </summary>
-    /// <param name="user">The managed user identity.</param>
-    void SetUser(ManagedUser user);
+    /// <param name="user">The claims principal representing the authenticated user.</param>
+    void SetUser(ClaimsPrincipal user);
 
     /// <summary>
     /// Clears the current user context, marking the user as unauthenticated.
@@ -73,8 +72,13 @@ public interface IInvocationContextInternal : IInvocationContext
 /// </summary>
 public class InvocationContext : IInvocationContextInternal
 {
+    /// <summary>
+    /// A shared, unauthenticated <see cref="ClaimsPrincipal"/> instance.
+    /// </summary>
+    public static ClaimsPrincipal Anonymous { get; } = new();
+
     /// <inheritdoc />
-    public ManagedUser User { get; private set; } = ManagedUser.Anonymous;
+    public ClaimsPrincipal User { get; private set; } = Anonymous;
 
     /// <inheritdoc />
     public string? TenantId { get; private set; }
@@ -89,7 +93,7 @@ public class InvocationContext : IInvocationContextInternal
     public string? SpanId { get; private set; }
 
     /// <inheritdoc />
-    public void SetUser(ManagedUser user)
+    public void SetUser(ClaimsPrincipal user)
     {
         User = user;
     }
@@ -97,7 +101,7 @@ public class InvocationContext : IInvocationContextInternal
     /// <inheritdoc />
     public void UnsetUser()
     {
-        User = ManagedUser.Anonymous;
+        User = Anonymous;
     }
 
     /// <inheritdoc />

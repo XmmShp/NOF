@@ -10,16 +10,16 @@ namespace NOF.Hosting.AspNetCore.Extensions.Authority;
 /// This handler only revokes refresh tokens using their TokenId (jti).
 /// Access tokens are short-lived and do not need revocation support.
 /// </summary>
-public class RevokeRefreshToken : IRequestHandler<RevokeRefreshTokenRequest>
+public class JwtRevokeRefreshToken : IRequestHandler<JwtRevokeRefreshTokenRequest>
 {
     private readonly ICacheService _cache;
 
-    public RevokeRefreshToken(ICacheService cache)
+    public JwtRevokeRefreshToken(ICacheService cache)
     {
         _cache = cache;
     }
 
-    public async Task<Result> HandleAsync(RevokeRefreshTokenRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result> HandleAsync(JwtRevokeRefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
         try
         {

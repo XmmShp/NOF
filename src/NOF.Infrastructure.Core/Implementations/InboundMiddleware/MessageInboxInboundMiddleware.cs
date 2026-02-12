@@ -4,21 +4,21 @@ using NOF.Application;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Inbox message processing step — deduplication via inbox pattern.</summary>
-public class MessageInboxMiddlewareStep : IInboundMiddlewareStep<MessageInboxMiddleware>, IAfter<AutoInstrumentationMiddlewareStep>;
+public class MessageInboxInboundMiddlewareStep : IInboundMiddlewareStep<MessageInboxInboundMiddleware>, IAfter<AutoInstrumentationInboundMiddlewareStep>;
 
 /// <summary>
 /// Inbox middleware
 /// Responsible for recording inbox messages in transactions to ensure reliable message processing
 /// </summary>
-public sealed class MessageInboxMiddleware : IInboundMiddleware
+public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
 {
     private readonly ITransactionManager _transactionManager;
     private readonly IInboxMessageRepository _inboxMessageRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<MessageInboxMiddleware> _logger;
+    private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IInvocationContext _invocationContext;
 
-    public MessageInboxMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxMiddleware> logger, IInvocationContext invocationContext)
+    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IInvocationContext invocationContext)
     {
         _transactionManager = transactionManager;
         _inboxMessageRepository = inboxMessageRepository;

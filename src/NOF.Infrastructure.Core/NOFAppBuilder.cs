@@ -193,17 +193,17 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new OutboxRegistrationStep(),
             new OpenTelemetryRegistrationStep(),
 
-            new ExceptionMiddlewareStep(),
-            new InvocationContextMiddlewareStep(),
-            new PermissionAuthorizationMiddlewareStep(),
-            new ActivityTracingMiddlewareStep(),
-            new AutoInstrumentationMiddlewareStep(),
-            new MessageInboxMiddlewareStep(),
+            new ExceptionInboundMiddlewareStep(),
+            new IdentityInboundMiddlewareStep(),
+            new TenantInboundMiddlewareStep(),
+            new AuthorizationInboundMiddlewareStep(),
+            new TracingInboundMiddlewareStep(),
+            new AutoInstrumentationInboundMiddlewareStep(),
+            new MessageInboxInboundMiddlewareStep(),
             
             // Default outbound middleware steps
             new MessageIdOutboundMiddlewareStep(),
             new TracingOutboundMiddlewareStep(),
-            new AuthorizationOutboundMiddlewareStep(),
             new TenantOutboundMiddlewareStep(),
         ];
         EndpointNameProvider = new EndpointNameProvider();

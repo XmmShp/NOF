@@ -20,7 +20,6 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
         /// <returns>The NOF application builder for chaining.</returns>
         public INOFAppBuilder AddJwtAuthority(Action<AuthorityOptions>? configureOptions = null)
         {
-            // Configure and validate JWT options
             if (configureOptions is not null)
             {
                 builder.Services.Configure(configureOptions);
@@ -30,31 +29,7 @@ public static partial class NOFHostingAspNetCoreExtensionsAuthorityExtensions
                 builder.Services.AddOptionsInConfiguration<AuthorityOptions>("NOF:Authority");
             }
 
-            // Register the signing key service (singleton 鈥?holds the in-memory key ring)
-            builder.Services.AddSingleton<ISigningKeyService, SigningKeyService>();
-
-            // Register the JWKS service
-            builder.Services.AddSingleton<IJwksService, JwksService>();
-
-            // Register the key rotation background service
-            builder.Services.AddHostedService<KeyRotationBackgroundService>();
-
-            // Register the local JWKS provider so the authority can validate tokens without HTTP round-trip
-            builder.Services.AddSingleton<IJwksProvider, LocalJwksProvider>();
-
-            // Register the JWT validation service so the handler pipeline can validate tokens locally
-            builder.Services.AddSingleton<IJwtValidationService, JwtValidationService>();
-
-            // Bridge JwtOptions.Issuer into JwtClientOptions so JwtValidationService knows the issuer
-            builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<JwtClientOptions>>(
-                sp =>
-                {
-                    var jwtOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AuthorityOptions>>().Value;
-                    return new Microsoft.Extensions.Options.ConfigureOptions<JwtClientOptions>(clientOpts =>
-                    {
-                        clientOpts.Issuer ??= jwtOptions.Issuer;
-                    });
-                });
+            builder.AddRegistrationStep(new JwtAuthorityRegistrationStep());
 
             // Map the /.well-known/jwks.json endpoint
             builder.AddInitializationStep(new JwksEndpointInitializationStep());

@@ -3,10 +3,10 @@ using NOF.Application;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>
-/// Handles <see cref="KeyRotationNotification"/> by refreshing the cached JWKS from the authority.
+/// Handles <see cref="JwtKeyRotationNotification"/> by refreshing the cached JWKS from the authority.
 /// This ensures clients pick up new signing keys promptly after a key rotation event.
 /// </summary>
-public class RefreshJwksOnKeyRotation : INotificationHandler<KeyRotationNotification>
+public class RefreshJwksOnKeyRotation : INotificationHandler<JwtKeyRotationNotification>
 {
     private readonly IJwksProvider _jwksProvider;
 
@@ -15,7 +15,7 @@ public class RefreshJwksOnKeyRotation : INotificationHandler<KeyRotationNotifica
         _jwksProvider = jwksProvider;
     }
 
-    public async Task HandleAsync(KeyRotationNotification notification, CancellationToken cancellationToken)
+    public async Task HandleAsync(JwtKeyRotationNotification notification, CancellationToken cancellationToken)
     {
         await _jwksProvider.RefreshAsync(cancellationToken);
     }
