@@ -10,27 +10,31 @@ namespace NOF.Infrastructure.Core;
 public interface IApplicationInitializationStep : IStep
 {
     /// <summary>
-    /// Asynchronously executes the application configuration logic using both the application builder
+    /// Asynchronously executes the application configuration logic using both the initialization context
     /// and the fully built host application instance.
     /// This method is typically invoked just before the host starts, enabling final runtime customizations.
+    /// <para>
+    /// The <paramref name="context"/> is an <see cref="IApplicationInitializationContext"/> which provides
+    /// read-only access to services, configuration, and metadata but does NOT allow adding any steps.
+    /// </para>
     /// </summary>
-    /// <param name="builder">The application builder used for contextual information and services.</param>
-    /// <param name="app">The constructed host application instance </param>
+    /// <param name="context">The initialization context used for contextual information and services.</param>
+    /// <param name="app">The constructed host application instance.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ExecuteAsync(INOFAppBuilder builder, IHost app);
+    Task ExecuteAsync(IApplicationInitializationContext context, IHost app);
 }
 
 public class ApplicationInitializationStep : IApplicationInitializationStep
 {
-    private readonly Func<INOFAppBuilder, IHost, Task> _configurator;
+    private readonly Func<IApplicationInitializationContext, IHost, Task> _configurator;
 
-    public ApplicationInitializationStep(Func<INOFAppBuilder, IHost, Task> configurator)
+    public ApplicationInitializationStep(Func<IApplicationInitializationContext, IHost, Task> configurator)
     {
         _configurator = configurator;
     }
 
-    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
+    public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
     {
-        return _configurator(builder, app);
+        return _configurator(context, app);
     }
 }

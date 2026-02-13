@@ -8,24 +8,28 @@ namespace NOF.Infrastructure.Core;
 public interface IServiceRegistrationStep : IStep
 {
     /// <summary>
-    /// Asynchronously executes the service configuration logic using the provided application builder.
+    /// Asynchronously executes the service configuration logic using the provided registration context.
     /// This method is called during the service registration stage and should not perform I/O-bound
     /// operations that block host startup unless necessary.
+    /// <para>
+    /// The <paramref name="builder"/> is an <see cref="IServiceRegistrationContext"/> which allows
+    /// adding initialization steps but NOT additional registration steps.
+    /// </para>
     /// </summary>
-    /// <param name="builder">The application builder used to access services, configuration, and extension points.</param>
+    /// <param name="builder">The registration context used to access services, configuration, and extension points.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    ValueTask ExecuteAsync(INOFAppBuilder builder);
+    ValueTask ExecuteAsync(IServiceRegistrationContext builder);
 }
 
 public class ServiceRegistrationStep : IServiceRegistrationStep
 {
-    private readonly Func<INOFAppBuilder, ValueTask> _configurator;
+    private readonly Func<IServiceRegistrationContext, ValueTask> _configurator;
 
-    public ServiceRegistrationStep(Func<INOFAppBuilder, ValueTask> configurator)
+    public ServiceRegistrationStep(Func<IServiceRegistrationContext, ValueTask> configurator)
     {
         _configurator = configurator;
     }
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         return _configurator(builder);
     }

@@ -20,12 +20,11 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     private const string AlivenessEndpointPath = "/alive";
     private const string Tag = "live";
 
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddOptionsInConfiguration<HttpHeaderMiddlewareOptions>("NOF:HttpHeaderMiddleware");
-        builder.AddRegistrationStep(new HttpHeaderMiddlewareStep());
+        builder.Services.AddOptionsInConfiguration<HttpHeaderInboundMiddlewareOptions>("NOF:HttpHeaderMiddleware");
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
         builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>
             tracing.AddAspNetCoreInstrumentation(options =>
@@ -41,7 +40,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
 
     private class HealthCheckInitializationStep : IBusinessLogicInitializationStep
     {
-        public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
+        public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
         {
             if (app is IEndpointRouteBuilder rt)
             {

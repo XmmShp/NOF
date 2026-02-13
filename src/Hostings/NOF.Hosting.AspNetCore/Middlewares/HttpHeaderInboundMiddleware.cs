@@ -14,13 +14,13 @@ namespace NOF.Hosting.AspNetCore;
 /// internal service-to-service calls via the message bus.
 /// </para>
 /// </summary>
-public class HttpHeaderMiddlewareStep : IInboundMiddlewareStep<HttpHeaderMiddleware>,
+public class HttpHeaderInboundMiddlewareStep : IInboundMiddlewareStep<HttpHeaderInboundMiddleware>,
     IAfter<ExceptionInboundMiddlewareStep>, IBefore<IdentityInboundMiddlewareStep>;
 
 /// <summary>
-/// Configuration options for <see cref="HttpHeaderMiddleware"/>.
+/// Configuration options for <see cref="HttpHeaderInboundMiddleware"/>.
 /// </summary>
-public class HttpHeaderMiddlewareOptions
+public class HttpHeaderInboundMiddlewareOptions
 {
     /// <summary>
     /// Wildcard patterns for headers that should be blocked from external HTTP requests.
@@ -34,12 +34,12 @@ public class HttpHeaderMiddlewareOptions
 /// Copies HTTP request headers into <see cref="InboundContext.Headers"/>,
 /// filtering out blacklisted headers (matched by wildcard patterns) to prevent request forgery.
 /// </summary>
-public sealed class HttpHeaderMiddleware : IInboundMiddleware
+public sealed class HttpHeaderInboundMiddleware : IInboundMiddleware
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly HttpHeaderMiddlewareOptions _options;
+    private readonly HttpHeaderInboundMiddlewareOptions _options;
 
-    public HttpHeaderMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderMiddlewareOptions> options)
+    public HttpHeaderInboundMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderInboundMiddlewareOptions> options)
     {
         _httpContextAccessor = httpContextAccessor;
         _options = options.Value;

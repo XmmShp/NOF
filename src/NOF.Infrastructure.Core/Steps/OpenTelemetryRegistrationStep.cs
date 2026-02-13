@@ -13,7 +13,7 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {

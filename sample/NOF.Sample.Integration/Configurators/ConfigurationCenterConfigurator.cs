@@ -13,7 +13,7 @@ internal class ConfigurationCenterRegistrationStep : IBaseSettingsServiceRegistr
         _systemName = systemName;
     }
 
-    public async ValueTask ExecuteAsync(INOFAppBuilder buider)
+    public async ValueTask ExecuteAsync(IServiceRegistrationContext buider)
     {
         ArgumentNullException.ThrowIfNull(buider.RequestSender);
         var response = await buider.RequestSender.SendAsync(new GetConfigurationRequest(_systemName));

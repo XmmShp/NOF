@@ -9,7 +9,7 @@ public record MassTransitConfiguring(IBusRegistrationConfigurator Configurator);
 internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
 {
     /// <inheritdoc/>
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         var handlerInfos = builder.HandlerInfos;
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();

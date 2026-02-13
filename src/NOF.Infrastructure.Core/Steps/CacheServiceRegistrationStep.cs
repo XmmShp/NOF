@@ -6,7 +6,7 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 public class CacheServiceRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.ReplaceOrAddCacheService<MemoryCacheService>();
         return ValueTask.CompletedTask;

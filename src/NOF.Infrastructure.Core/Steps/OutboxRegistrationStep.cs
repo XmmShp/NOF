@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 public class OutboxRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddHostedService<OutboxMessageBackgroundService>();
 

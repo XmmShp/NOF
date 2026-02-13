@@ -23,7 +23,7 @@ public class RedisCacheRegistrationStep : IBaseSettingsServiceRegistrationStep
         _configureOptions = configureOptions;
     }
 
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         var options = new CacheServiceOptions();
         _configureOptions?.Invoke(options);

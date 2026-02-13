@@ -39,7 +39,7 @@ public interface IInboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDepe
     /// Default implementation: registers the middleware as scoped in DI
     /// and appends it to the <see cref="InboundPipelineTypes"/> ordered list.
     /// </summary>
-    ValueTask IServiceRegistrationStep.ExecuteAsync(INOFAppBuilder builder)
+    ValueTask IServiceRegistrationStep.ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.TryAddScoped(MiddlewareType);
         builder.Services.GetOrAddSingleton<InboundPipelineTypes>().Add(MiddlewareType);
@@ -74,7 +74,7 @@ public interface IOutboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDep
     /// Default implementation: registers the middleware as scoped in DI
     /// and appends it to the <see cref="OutboundPipelineTypes"/> ordered list.
     /// </summary>
-    ValueTask IServiceRegistrationStep.ExecuteAsync(INOFAppBuilder builder)
+    ValueTask IServiceRegistrationStep.ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.TryAddScoped(MiddlewareType);
         builder.Services.GetOrAddSingleton<OutboundPipelineTypes>().Add(MiddlewareType);

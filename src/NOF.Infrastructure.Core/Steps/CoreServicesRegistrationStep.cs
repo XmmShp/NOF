@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
-    public ValueTask ExecuteAsync(INOFAppBuilder builder)
+    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddScoped<IInvocationContextInternal, InvocationContext>();
         builder.Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());

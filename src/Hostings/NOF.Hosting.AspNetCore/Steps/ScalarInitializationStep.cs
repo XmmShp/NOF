@@ -8,7 +8,7 @@ namespace NOF.Hosting.AspNetCore;
 
 public class ScalarInitializationStep : IEndpointInitializationStep
 {
-    public Task ExecuteAsync(INOFAppBuilder builder, IHost app)
+    public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
     {
         (app as IEndpointRouteBuilder)?.MapOpenApi();
         (app as IEndpointRouteBuilder)?.MapScalarApiReference();
