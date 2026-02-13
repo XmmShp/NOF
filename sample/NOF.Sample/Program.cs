@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Hosting.AspNetCore;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
 using NOF.Infrastructure.Core;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
+using NOF.Infrastructure.Extension.Authorization.Jwt;
 using NOF.Infrastructure.MassTransit;
 using NOF.Infrastructure.MassTransit.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;

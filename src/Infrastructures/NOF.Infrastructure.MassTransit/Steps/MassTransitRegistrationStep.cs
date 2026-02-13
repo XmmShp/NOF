@@ -1,9 +1,6 @@
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Contract;
 using NOF.Infrastructure.Core;
-using System.Data;
-using System.Reflection;
 
 namespace NOF.Infrastructure.MassTransit;
 
@@ -15,6 +12,8 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
     public ValueTask ExecuteAsync(INOFAppBuilder builder)
     {
         var handlerInfos = builder.HandlerInfos;
+        var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
+        var nameProvider = builder.EndpointNameProvider!;
 
         // Register all distinct handler types as scoped services
         var handlers = handlerInfos.Select(i => i.HandlerType).Distinct();
@@ -23,46 +22,46 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
             builder.Services.AddScoped(handler);
         }
 
-        var internalConsumers = new List<Type>();  // For Mediator (internal processing, e.g., HTTP-triggered)
-        var externalConsumers = new List<Type>();  // For MassTransit (message queue consumers)
+        var mediatorConsumers = new List<Type>();
+        var busConsumers = new List<Type>();
 
         foreach (var handlerInfo in handlerInfos)
         {
-            // Event handlers are always processed internally via Mediator and never exposed to MassTransit
-            if (handlerInfo.Kind == HandlerKind.Event)
-            {
-                MediatorRequestHandleNode.SupportedRequestTypes.Add(handlerInfo.MessageType);
-                internalConsumers.Add(CreateHandlerAdapter(handlerInfo));
-            }
-            else
-            {
-                externalConsumers.Add(CreateHandlerAdapter(handlerInfo));
+            var adapter = CreateHandlerAdapter(handlerInfo);
 
-                if (handlerInfo.Kind == HandlerKind.RequestWithResponse ||
-                    handlerInfo.Kind == HandlerKind.RequestWithoutResponse)
-                {
-                    // Determine if this request type is exposed via HTTP
-                    var isExposedToHttp = handlerInfo.MessageType.GetCustomAttributes<ExposeToHttpEndpointAttribute>().Any();
+            switch (handlerInfo.Kind)
+            {
+                // Event: always local mediator only
+                case HandlerKind.Event:
+                    localHandlers.Register(handlerInfo.MessageType, nameProvider.GetEndpointName(handlerInfo.HandlerType));
+                    mediatorConsumers.Add(adapter);
+                    break;
 
-                    if (isExposedToHttp)
-                    {
-                        // HTTP-exposed requests are handled internally by Mediator
-                        MediatorRequestHandleNode.SupportedRequestTypes.Add(handlerInfo.MessageType);
-                        internalConsumers.Add(CreateHandlerAdapter(handlerInfo));
-                    }
-                }
+                // Notification: always bus publish only
+                case HandlerKind.Notification:
+                    busConsumers.Add(adapter);
+                    break;
+
+                // Command / Request: always register on BOTH mediator AND bus
+                case HandlerKind.Command:
+                case HandlerKind.RequestWithoutResponse:
+                case HandlerKind.RequestWithResponse:
+                    localHandlers.Register(handlerInfo.MessageType, nameProvider.GetEndpointName(handlerInfo.HandlerType));
+                    mediatorConsumers.Add(adapter);
+                    busConsumers.Add(adapter);
+                    break;
             }
         }
 
         builder.Services.AddMediator(config =>
         {
-            config.AddConsumers(internalConsumers.ToArray());
+            config.AddConsumers(mediatorConsumers.ToArray());
         });
 
         builder.Services.AddMassTransit(config =>
         {
             config.SetEndpointNameFormatter(new EndpointNameFormatter(builder.EndpointNameProvider!));
-            config.AddConsumers(externalConsumers.ToArray());
+            config.AddConsumers(busConsumers.ToArray());
             builder.StartupEventChannel.Publish(new MassTransitConfiguring(config));
         });
 
@@ -72,7 +71,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
     #region Helper Methods
 
     /// <summary>
-    /// Creates the appropriate MassTransit request/command/notification handler adapter type
+    /// Creates the appropriate MassTransit handler adapter type
     /// based on the handler kind and response type.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown if the handler kind is not supported.</exception>

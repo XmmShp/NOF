@@ -1,7 +1,6 @@
 using MassTransit.Logging;
 using MassTransit.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
 using NOF.Infrastructure.Core;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -17,18 +16,13 @@ public static partial class NOFInfrastructureMassTransitExtensions
             builder.Services.ConfigureOpenTelemetryMeterProvider(meter => meter.AddMeter(InstrumentationOptions.MeterName));
             builder.Services.ConfigureOpenTelemetryTracerProvider(tracer => tracer.AddSource(DiagnosticHeaders.DefaultListenerName));
 
-            builder.Services.AddScoped<IRequestHandleNodeFactory, RequestHandleNodeFactory>();
             builder.Services.AddScoped<ICommandRider, MassTransitCommandRider>();
             builder.Services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
             builder.Services.AddScoped<INotificationRider, MassTransitNotificationRider>();
             builder.Services.AddScoped<IRequestRider, MassTransitRequestRider>();
             builder.AddRegistrationStep(new MassTransitRegistrationStep());
 
-            builder.Services.AddSingleton<IRequestHandleNodeRegistry, RequestHandleNodeRegistry>();
-            var selector = new MassTransitSelector(builder);
-            selector.AddRequestHandleNode(typeof(RiderRequestHandleNode));
-            selector.AddRequestHandleNode(typeof(MediatorRequestHandleNode));
-            return selector;
+            return new MassTransitSelector(builder);
         }
     }
 }

@@ -32,7 +32,7 @@ public sealed class CommandSender : ICommandSender
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, context.Headers, destinationEndpointName, ct);
+            await _rider.SendAsync(command, context.Headers, context.DestinationEndpointName, ct);
         }, cancellationToken);
     }
 }

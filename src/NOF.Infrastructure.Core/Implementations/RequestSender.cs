@@ -6,6 +6,7 @@ namespace NOF.Infrastructure.Core;
 /// <summary>
 /// Request sender implementation.
 /// Runs the outbound pipeline (which handles tracing, headers, etc.) then dispatches via the rider.
+/// Outbound middleware may short-circuit by setting <see cref="OutboundContext.Response"/>.
 /// </summary>
 public sealed class RequestSender : IRequestSender
 {
@@ -29,13 +30,12 @@ public sealed class RequestSender : IRequestSender
                 : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         };
 
-        Result? result = null;
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            result = await _rider.SendAsync(request, context.Headers, destinationEndpointName, ct);
+            context.Response = await _rider.SendAsync(request, context.Headers, destinationEndpointName, ct);
         }, cancellationToken);
 
-        return result!;
+        return Result.From(context.Response!);
     }
 
     public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken = default)
@@ -49,12 +49,11 @@ public sealed class RequestSender : IRequestSender
                 : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         };
 
-        Result<TResponse>? result = null;
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            result = await _rider.SendAsync(request, context.Headers, destinationEndpointName, ct);
+            context.Response = await _rider.SendAsync(request, context.Headers, destinationEndpointName, ct);
         }, cancellationToken);
 
-        return result!;
+        return Result.From<TResponse>(context.Response!);
     }
 }
