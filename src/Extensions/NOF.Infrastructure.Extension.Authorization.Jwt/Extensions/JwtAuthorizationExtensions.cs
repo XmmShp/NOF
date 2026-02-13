@@ -44,7 +44,7 @@ public static partial class NOFJwtAuthorizationExtensions
 #pragma warning disable CS8620
             // Key rotation handler
             builder.Services.AddHandlerInfo(
-                new HandlerInfo(HandlerKind.Event, typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification), null));
+                new HandlerInfo(HandlerKind.Notification, typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification), null));
 #pragma warning restore CS8620
 
             return new JwtAuthorizationSelector(builder);

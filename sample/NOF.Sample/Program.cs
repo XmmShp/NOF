@@ -23,6 +23,8 @@ builder.AddRedisCache();
 builder.AddJwtAuthority()
     .AddJwksRequestHandler();
 
+builder.AddJwtAuthorization();
+
 builder.AddMassTransit()
     .UseRabbitMQ();
 
