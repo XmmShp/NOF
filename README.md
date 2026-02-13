@@ -25,12 +25,12 @@
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer — handler abstractions, state machines, caching, unit of work |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting — middleware, OpenAPI, endpoint mapping, JSON configuration |
 | [`NOF.Infrastructure.Core`](https://www.nuget.org/packages/NOF.Infrastructure.Core) | Core infrastructure — `INOFAppBuilder`, step pipeline, OpenTelemetry, service wiring |
+| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization & authority — OIDC resource server, token issuance, key rotation, JWKS |
 | [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure — `NOFDbContext`, repositories, outbox, multi-tenancy |
 | [`NOF.Infrastructure.EntityFrameworkCore.PostgreSQL`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL) | PostgreSQL provider for NOF EF Core infrastructure |
 | [`NOF.Infrastructure.MassTransit`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit) | MassTransit integration — message bus adapter for commands, events, notifications |
 | [`NOF.Infrastructure.MassTransit.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit.RabbitMQ) | RabbitMQ transport for NOF MassTransit infrastructure |
 | [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis caching infrastructure via StackExchange.Redis |
-| [`NOF.Hosting.AspNetCore.Extensions.Authority`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore.Extensions.Authority) | JWT authority extension — token issuance, key rotation, lifecycle management |
 
 ## Quick Start
 

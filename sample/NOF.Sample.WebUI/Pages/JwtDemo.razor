@@ -1,10 +1,8 @@
 @page "/jwt-demo"
 @using NOF.Contract
 @using Result = NOF.Contract.Result
-@using NOF.Infrastructure.Core
-@using Microsoft.IdentityModel.Tokens
+@using NOF.Infrastructure.Extension.Authorization.Jwt
 @inject NOF.Application.IRequestSender RequestSender
-@inject IJwksProvider JwksProvider
 @inject IJSRuntime JsRuntime
 @inject IMessageService MessageService
 
@@ -49,9 +47,6 @@
                 <FormItem Label="Audience">
                     <Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
                 </FormItem>
-                <FormItem Label="Roles">
-                    <Input @bind-Value="_tokenRequest.RolesInput" Placeholder="e.g., User,Admin" />
-                </FormItem>
                 <FormItem Label="Permissions">
                     <Input @bind-Value="_tokenRequest.PermissionsInput" Placeholder="e.g., read,write,delete" />
                 </FormItem>
@@ -88,9 +83,6 @@
                             </DescriptionsItem>
                             <DescriptionsItem Title="Refresh Token Expires">
                                 <Tag Color="TagColor.Green">@_tokenResult.TokenPair.RefreshTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
-                            </DescriptionsItem>
-                            <DescriptionsItem Title="Token Type">
-                                <Tag Color="TagColor.Orange">@_tokenResult.TokenPair.TokenType</Tag>
                             </DescriptionsItem>
                         </Descriptions>
                     </ChildContent>
@@ -218,7 +210,7 @@
     private bool _isLoadingJwks = false;
 
     private string _refreshTokenToValidate = "";
-    private Result<JwtValidateRefreshTokenResponse>? _validationResult;
+    private Result<ValidateJwtRefreshTokenResponse>? _validationResult;
 
     private string _tokenIdToRevoke = "";
     private int _revokeExpirationHours = 24;
@@ -231,7 +223,6 @@
         public string UserId { get; set; } = "user123";
         public string TenantId { get; set; } = "tenant456";
         public string Audience { get; set; } = "sample-client";
-        public string RolesInput { get; set; } = "User,Admin";
         public string PermissionsInput { get; set; } = "read,write,delete";
     }
 
@@ -242,10 +233,6 @@
 
         try
         {
-            var roles = string.IsNullOrEmpty(_tokenRequest.RolesInput) 
-                ? null 
-                : _tokenRequest.RolesInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
             var permissions = string.IsNullOrEmpty(_tokenRequest.PermissionsInput) 
                 ? null 
                 : _tokenRequest.PermissionsInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -256,7 +243,6 @@
                 _tokenRequest.Audience,
                 TimeSpan.FromMinutes(30),
                 TimeSpan.FromDays(7),
-                roles,
                 permissions
             );
             var result = await RequestSender.SendAsync(request);
@@ -294,7 +280,7 @@
 
         try
         {
-            var result = await RequestSender.SendAsync(new JwtValidateRefreshTokenRequest(_refreshTokenToValidate));
+            var result = await RequestSender.SendAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
             _validationResult = result;
 
             if (result.IsSuccess)
@@ -332,7 +318,7 @@
         try
         {
             var result = await RequestSender.SendAsync(
-                new JwtRevokeRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
+                new RevokeJwtRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
             );
             _revokeResult = result;
 
@@ -365,31 +351,15 @@
 
         try
         {
-            var keys = await JwksProvider.GetSecurityKeysAsync();
-            _jwksResponse = keys.Count > 0
-                ? new JwksDocument
-                {
-                    Keys = keys.OfType<RsaSecurityKey>().Select(rsa =>
-                    {
-                        var parameters = rsa.Rsa.ExportParameters(false);
-                        return new JsonWebKey
-                        {
-                            Kty = "RSA", Use = "sig",
-                            Alg = NOFInfrastructureCoreConstants.Jwt.Algorithm,
-                            Kid = rsa.KeyId,
-                            N = Base64UrlEncoder.Encode(parameters.Modulus!),
-                            E = Base64UrlEncoder.Encode(parameters.Exponent!)
-                        };
-                    }).ToArray()
-                }
-                : null;
-            if (_jwksResponse != null)
+            var result = await RequestSender.SendAsync(new GetJwksRequest());
+            if (result.IsSuccess)
             {
+                _jwksResponse = result.Value.Jwks;
                 MessageService.Success("JWKS retrieved successfully!");
             }
             else
             {
-                MessageService.Error("Failed to retrieve JWKS");
+                MessageService.Error($"Failed to retrieve JWKS: {result.Message}");
             }
         }
         catch (Exception ex)

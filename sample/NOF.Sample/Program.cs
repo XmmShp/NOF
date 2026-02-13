@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Hosting.AspNetCore;
-using NOF.Hosting.AspNetCore.Extensions.Authority;
+using NOF.Infrastructure.Extension.Authorization.Jwt;
 using NOF.Infrastructure.Core;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
@@ -20,7 +20,8 @@ builder.Services.AddAllHandlers();
 
 builder.AddRedisCache();
 
-builder.AddJwtAuthority();
+builder.AddJwtAuthority()
+    .AddJwksRequestHandler();
 
 builder.AddMassTransit()
     .UseRabbitMQ();

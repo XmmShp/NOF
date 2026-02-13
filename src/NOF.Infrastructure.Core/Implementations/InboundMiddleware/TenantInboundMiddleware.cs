@@ -1,5 +1,6 @@
 using NOF.Application;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace NOF.Infrastructure.Core;
 
@@ -26,7 +27,7 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware
         if (_invocationContext.User.IsAuthenticated)
         {
             tenantId = _invocationContext.User
-                .FindFirst(NOFInfrastructureCoreConstants.Jwt.ClaimTypes.TenantId)?.Value;
+                .FindFirst(ClaimTypes.TenantId)?.Value;
         }
 
         if (string.IsNullOrEmpty(tenantId) &&

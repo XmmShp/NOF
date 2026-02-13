@@ -15,7 +15,7 @@
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
 	  <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />
-	  <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore.Extensions.Authority\NOF.Hosting.AspNetCore.Extensions.Authority.csproj" />
+	  <ProjectReference Include="..\..\src\Extensions\NOF.Infrastructure.Extension.Authorization.Jwt\NOF.Infrastructure.Extension.Authorization.Jwt.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
 	  <ProjectReference Include="..\NOF.Sample.WebUI\NOF.Sample.WebUI.csproj" />
