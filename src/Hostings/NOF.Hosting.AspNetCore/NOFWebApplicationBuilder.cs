@@ -25,7 +25,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     {
         var builder = new NOFWebApplicationBuilder(args);
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
-        builder.AddRegistrationStep(new HttpHeaderInboundMiddlewareStep());
+        builder.AddRegistrationStep(new HttpHeaderOutboundMiddlewareStep());
         if (useDefaultConfigs)
         {
             builder.UseDefaultSettings();

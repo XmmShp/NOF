@@ -2,7 +2,6 @@ using MassTransit;
 using MassTransit.Mediator;
 using NOF.Contract;
 using NOF.Infrastructure.Core;
-using System.Diagnostics;
 
 namespace NOF.Infrastructure.MassTransit;
 
@@ -38,29 +37,13 @@ public class MassTransitCommandRider : ICommandRider
     {
         if (_localHandlers.ShouldDispatchLocally(command.GetType(), destinationEndpointName))
         {
-            await _mediator.Send(command, cancellationToken);
+            await _mediator.Send(command, context => context.ApplyHeaders(headers), cancellationToken);
             return;
         }
 
         destinationEndpointName ??= _nameProvider.GetEndpointName(command.GetType());
         var sendEndpoint = await _sendEndpointProvider.GetSendEndpoint(destinationEndpointName.ToQueueUri());
 
-        await sendEndpoint.Send(command as object, context =>
-        {
-            if (headers is not null)
-            {
-                foreach (var header in headers)
-                {
-                    context.Headers.Set(header.Key, header.Value);
-                }
-            }
-
-            var activity = Activity.Current;
-            if (activity is not null)
-            {
-                context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity.TraceId.ToString());
-                context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity.SpanId.ToString());
-            }
-        }, cancellationToken);
+        await sendEndpoint.Send(command as object, context => context.ApplyHeaders(headers), cancellationToken);
     }
 }

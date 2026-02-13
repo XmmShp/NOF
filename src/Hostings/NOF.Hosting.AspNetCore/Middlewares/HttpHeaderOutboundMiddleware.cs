@@ -6,21 +6,22 @@ using NOF.Infrastructure.Core;
 namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
-/// Handler middleware step that populates <see cref="InboundContext.Headers"/> from HTTP request headers.
-/// Runs before <see cref="IdentityInboundMiddlewareStep"/> so that identity/tenant resolution can read them.
+/// Outbound middleware step that populates <see cref="OutboundContext.Headers"/> from HTTP request headers.
+/// Runs before <see cref="TracingOutboundMiddlewareStep"/> so that internal headers (tracing, tenant, etc.)
+/// written by later middleware take precedence over raw HTTP headers.
 /// <para>
 /// A configurable blacklist of wildcard patterns prevents external HTTP callers from forging
 /// internal headers (e.g., <c>NOF.*</c>). These headers are only trusted when set by
 /// internal service-to-service calls via the message bus.
 /// </para>
 /// </summary>
-public class HttpHeaderInboundMiddlewareStep : IInboundMiddlewareStep<HttpHeaderInboundMiddleware>,
-    IAfter<ExceptionInboundMiddlewareStep>, IBefore<IdentityInboundMiddlewareStep>;
+public class HttpHeaderOutboundMiddlewareStep : IOutboundMiddlewareStep<HttpHeaderOutboundMiddleware>,
+    IBefore<TracingOutboundMiddlewareStep>;
 
 /// <summary>
-/// Configuration options for <see cref="HttpHeaderInboundMiddleware"/>.
+/// Configuration options for <see cref="HttpHeaderOutboundMiddleware"/>.
 /// </summary>
-public class HttpHeaderInboundMiddlewareOptions
+public class HttpHeaderOutboundMiddlewareOptions
 {
     /// <summary>
     /// Wildcard patterns for headers that should be blocked from external HTTP requests.
@@ -31,21 +32,21 @@ public class HttpHeaderInboundMiddlewareOptions
 }
 
 /// <summary>
-/// Copies HTTP request headers into <see cref="InboundContext.Headers"/>,
+/// Copies HTTP request headers into <see cref="OutboundContext.Headers"/>,
 /// filtering out blacklisted headers (matched by wildcard patterns) to prevent request forgery.
 /// </summary>
-public sealed class HttpHeaderInboundMiddleware : IInboundMiddleware
+public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly HttpHeaderInboundMiddlewareOptions _options;
+    private readonly HttpHeaderOutboundMiddlewareOptions _options;
 
-    public HttpHeaderInboundMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderInboundMiddlewareOptions> options)
+    public HttpHeaderOutboundMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderOutboundMiddlewareOptions> options)
     {
         _httpContextAccessor = httpContextAccessor;
         _options = options.Value;
     }
 
-    public ValueTask InvokeAsync(InboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is not null)
@@ -55,7 +56,7 @@ public sealed class HttpHeaderInboundMiddleware : IInboundMiddleware
                 if (IsBlacklisted(header.Key))
                     continue;
 
-                // Caller-provided headers (e.g., from message bus) take precedence
+                // Caller-provided headers take precedence
                 if (!context.Headers.ContainsKey(header.Key))
                 {
                     context.Headers[header.Key] = header.Value.ToString();

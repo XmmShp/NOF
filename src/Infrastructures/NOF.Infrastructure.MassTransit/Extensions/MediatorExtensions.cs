@@ -9,11 +9,12 @@ public static partial class NOFInfrastructureMassTransitExtensions
 {
     extension(IMediator mediator)
     {
-        public async Task<Result> SendRequest(IRequest request, CancellationToken cancellationToken = default, RequestTimeout timeout = default)
+        public async Task<Result> SendRequest(IRequest request, IDictionary<string, string?>? headers = null, RequestTimeout timeout = default, CancellationToken cancellationToken = default)
         {
             try
             {
                 using var handle = mediator.CreateRequest(request, cancellationToken, timeout);
+                SetHeaders(handle, headers);
                 var response = await handle.GetResponse<Result>().ConfigureAwait(false);
                 return response.Message;
             }
@@ -29,11 +30,12 @@ public static partial class NOFInfrastructureMassTransitExtensions
             }
         }
 
-        public async Task<Result<TResponse>> SendRequest<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default, RequestTimeout timeout = default)
+        public async Task<Result<TResponse>> SendRequest<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, RequestTimeout timeout = default, CancellationToken cancellationToken = default)
         {
             try
             {
                 using var handle = mediator.CreateRequest(request, cancellationToken, timeout);
+                SetHeaders(handle, headers);
                 var response = await handle.GetResponse<Result<TResponse>>().ConfigureAwait(false);
                 return response.Message;
             }
@@ -48,5 +50,20 @@ public static partial class NOFInfrastructureMassTransitExtensions
                 throw;
             }
         }
+    }
+
+    private static void SetHeaders<T>(RequestHandle<T> handle, IDictionary<string, string?>? headers)
+        where T : class
+    {
+        if (headers is null || headers.Count == 0)
+            return;
+
+        handle.UseExecute(context =>
+        {
+            foreach (var header in headers)
+            {
+                context.Headers.Set(header.Key, header.Value);
+            }
+        });
     }
 }
