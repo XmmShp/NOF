@@ -79,6 +79,8 @@ public static partial class NOFInfrastructureCoreExtensions
                 return ActivatorUtilities.CreateInstance<TImplementation>(sp, serializer, lockRetryStrategy, opts);
             });
 
+            services.TryAddScoped<ICacheService>(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
+
             // Factory singleton (safe to call multiple times)
             services.TryAddSingleton<ICacheServiceFactory, DefaultCacheServiceFactory>();
 

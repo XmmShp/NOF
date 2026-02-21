@@ -8,12 +8,11 @@ namespace NOF.Application;
 public interface IStateMachineBuilder;
 
 /// <summary>
-/// Provides a fluent API to configure state machine behavior for a given state type and context.
+/// Provides a fluent API to configure state machine behavior for a given state type.
+/// The framework is only responsible for state transitions; context management is the caller's responsibility.
 /// </summary>
 /// <typeparam name="TState">The enum type representing states.</typeparam>
-/// <typeparam name="TContext">The context object that holds state and other domain data.</typeparam>
-public interface IStateMachineBuilder<TState, TContext> : IStateMachineBuilder
-    where TContext : class
+public interface IStateMachineBuilder<TState> : IStateMachineBuilder
     where TState : struct, Enum
 {
     /// <summary>
@@ -22,16 +21,8 @@ public interface IStateMachineBuilder<TState, TContext> : IStateMachineBuilder
     /// </summary>
     /// <typeparam name="TNotification">The notification type that triggers the startup rule.</typeparam>
     /// <param name="initialState">The initial state to transition to upon receiving the notification.</param>
-    /// <param name="contextFactory">
-    /// A factory function that creates the state machine context from the incoming <typeparamref name="TNotification"/>.
-    /// This context will be persisted and used throughout the lifecycle of the state machine instance.
-    /// It must not return null.
-    /// </param>
     /// <returns>A clause to further configure actions and transitions.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="contextFactory"/> is null
-    /// </exception>
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> StartWhen<TNotification>(TState initialState, Func<TNotification, TContext> contextFactory)
+    IStateMachineBuilderWhenClause<TState, TNotification> StartWhen<TNotification>(TState initialState)
         where TNotification : class, INotification;
 
     /// <summary>
@@ -39,7 +30,7 @@ public interface IStateMachineBuilder<TState, TContext> : IStateMachineBuilder
     /// </summary>
     /// <param name="state">The source state for the transition rule.</param>
     /// <returns>A clause to specify the triggering notification and subsequent behavior.</returns>
-    IStateMachineBuilderOnClause<TState, TContext> On(TState state);
+    IStateMachineBuilderOnClause<TState> On(TState state);
 
     /// <summary>
     /// Configures how to extract the correlation ID from a specific notification type.
@@ -50,82 +41,53 @@ public interface IStateMachineBuilder<TState, TContext> : IStateMachineBuilder
     /// The returned string must uniquely identify the state machine instance associated with this notification.
     /// </param>
     /// <returns>The same builder instance, allowing for fluent configuration chaining.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="correlationIdSelector"/> is null.
-    /// </exception>
-    /// <remarks>
-    /// This method must be called for every notification type that can initiate or interact with
-    /// the state machine. If a notification is received at runtime but no correlation ID selector
-    /// was registered for its type, the state machine engine will fail to process it.
-    /// </remarks>
-    IStateMachineBuilder<TState, TContext> Correlate<TNotification>(Func<TNotification, string> correlationIdSelector)
+    IStateMachineBuilder<TState> Correlate<TNotification>(Func<TNotification, string> correlationIdSelector)
         where TNotification : class, INotification;
 }
 
-public interface IStateMachineBuilderOnClause<in TState, out TContext>
-    where TContext : class
+public interface IStateMachineBuilderOnClause<in TState>
     where TState : struct, Enum
 {
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> When<TNotification>()
+    IStateMachineBuilderWhenClause<TState, TNotification> When<TNotification>()
         where TNotification : class, INotification;
 }
 
-public interface IStateMachineBuilderWhenClause<in TState, out TContext, out TNotification>
+public interface IStateMachineBuilderWhenClause<in TState, out TNotification>
     where TNotification : class, INotification
-    where TContext : class
     where TState : struct, Enum
 {
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> ExecuteAsync(Func<TContext, TNotification, IServiceProvider, CancellationToken, Task> actionFunc);
+    IStateMachineBuilderWhenClause<TState, TNotification> ExecuteAsync(Func<TNotification, IServiceProvider, CancellationToken, Task> actionFunc);
     void TransitionTo(TState state);
 
     /// <summary>Executes a synchronous action when the state machine transition is triggered.</summary>
-    /// <param name="action">The action to execute with context, notification, and service provider.</param>
-    /// <returns>The when clause for further chaining.</returns>
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> Execute(Action<TContext, TNotification, IServiceProvider> action)
+    IStateMachineBuilderWhenClause<TState, TNotification> Execute(Action<TNotification, IServiceProvider> action)
     {
-        return ExecuteAsync((context, notification, sp, _) =>
+        return ExecuteAsync((notification, sp, _) =>
         {
-            action(context, notification, sp);
+            action(notification, sp);
             return Task.CompletedTask;
         });
     }
 
-    /// <summary>Modifies the state machine context when the transition is triggered.</summary>
-    /// <param name="action">The action to modify the context.</param>
-    /// <returns>The when clause for further chaining.</returns>
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> Modify(Action<TContext, TNotification> action)
-    {
-        return Execute((context, notification, sp) =>
-        {
-            action(context, notification);
-        });
-    }
-
     /// <summary>Sends a command asynchronously when the transition is triggered.</summary>
-    /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <param name="commandFactory">Factory to create the command from context and notification.</param>
-    /// <returns>The when clause for further chaining.</returns>
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> SendCommandAsync<TCommand>(Func<TContext, TNotification, TCommand> commandFactory)
+    IStateMachineBuilderWhenClause<TState, TNotification> SendCommandAsync<TCommand>(Func<TNotification, TCommand> commandFactory)
         where TCommand : class, ICommand
     {
-        return ExecuteAsync(async (context, notification, sp, cancellationToken) =>
+        return ExecuteAsync(async (notification, sp, cancellationToken) =>
         {
             var commandSender = sp.GetRequiredService<ICommandSender>();
-            await commandSender.SendAsync(commandFactory(context, notification), cancellationToken: cancellationToken).ConfigureAwait(false);
+            await commandSender.SendAsync(commandFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
         });
     }
 
     /// <summary>Publishes a notification asynchronously when the transition is triggered.</summary>
-    /// <typeparam name="TAnotherNotification">The notification type to publish.</typeparam>
-    /// <param name="notificationFactory">Factory to create the notification from context and notification.</param>
-    /// <returns>The when clause for further chaining.</returns>
-    IStateMachineBuilderWhenClause<TState, TContext, TNotification> PublishNotificationAsync<TAnotherNotification>(Func<TContext, TNotification, TAnotherNotification> notificationFactory)
+    IStateMachineBuilderWhenClause<TState, TNotification> PublishNotificationAsync<TAnotherNotification>(Func<TNotification, TAnotherNotification> notificationFactory)
         where TAnotherNotification : class, INotification
     {
-        return ExecuteAsync(async (context, notification, sp, cancellationToken) =>
+        return ExecuteAsync(async (notification, sp, cancellationToken) =>
         {
             var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
-            await notificationPublisher.PublishAsync(notificationFactory(context, notification), cancellationToken: cancellationToken).ConfigureAwait(false);
+            await notificationPublisher.PublishAsync(notificationFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
         });
     }
 }
@@ -135,125 +97,93 @@ internal interface IStateMachineBuilderInternal
     StateMachineBlueprint Build();
 }
 
-internal sealed class StateMachineBuilder<TState, TContext> : IStateMachineBuilder<TState, TContext>, IStateMachineBuilderInternal
-    where TContext : class
+internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>, IStateMachineBuilderInternal
     where TState : struct, Enum
 {
     #region Internal Helpers
-    internal delegate Task Operation(TContext context, INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken);
+    internal delegate Task Operation(INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken);
+
     internal class StateMachineOperation
     {
-        public int? TargetState;
+        public TState? TargetState;
         public List<Operation> Operations { get; } = [];
 
-        public async Task ExecuteAsync(StatefulStateMachineContext context, INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        public async Task<TState> ExecuteAsync(TState currentState, INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
-            foreach (var operation in Operations)
+            foreach (var op in Operations)
             {
-                await operation((TContext)context.Context, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
+                await op(notification, serviceProvider, cancellationToken).ConfigureAwait(false);
             }
 
-            if (TargetState is not null)
-            {
-                if (context.State != TargetState.Value)
-                {
-                    context.State = TargetState.Value;
-                }
-            }
+            return TargetState ?? currentState;
         }
     }
 
-    internal sealed class StartStateMachineOperation : StateMachineOperation
-    {
-        public required Func<object, TContext> Factory { get; init; }
-    }
     internal sealed class BuilderBlueprint : StateMachineBlueprint
     {
-        public Dictionary<Type, StartStateMachineOperation> StartOperations { get; } = [];
-        public Dictionary<int, Dictionary<Type, StateMachineOperation>> TransferOperations { get; } = [];
+        public Dictionary<Type, StateMachineOperation> StartOperations { get; } = [];
+        public Dictionary<TState, Dictionary<Type, StateMachineOperation>> TransferOperations { get; } = [];
 
-        public override async Task<StatefulStateMachineContext?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        public override async Task<int?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
             if (!StartOperations.TryGetValue(typeof(TNotification), out var operation))
-            {
                 return null;
-            }
 
-            var context = operation.Factory(notification);
-            var statefulContext = new StatefulStateMachineContext { Context = context };
-            await operation.ExecuteAsync(statefulContext, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
-            return statefulContext;
+            var state = await operation.ExecuteAsync(default, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
+            return Convert.ToInt32(state);
         }
 
-        public override async Task TransferAsync<TNotification>(StatefulStateMachineContext context, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        public override async Task<int> TransferAsync<TNotification>(int currentState, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
-            if (context.Context is not TContext typedContext)
-            {
-                return;
-            }
-            if (!TransferOperations.TryGetValue(context.State, out var operations))
-            {
-                return;
-            }
-            if (operations.TryGetValue(typeof(TNotification), out var operation))
-            {
-                await operation.ExecuteAsync(context, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
-            }
+            var typedState = (TState)(object)currentState;
+            if (!TransferOperations.TryGetValue(typedState, out var operations))
+                return currentState;
+            if (!operations.TryGetValue(typeof(TNotification), out var operation))
+                return currentState;
+
+            var newState = await operation.ExecuteAsync(typedState, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
+            return Convert.ToInt32(newState);
         }
     }
     #endregion
 
     private readonly BuilderBlueprint _blueprint = new();
 
-    public IStateMachineBuilderWhenClause<TState, TContext, TNotification> StartWhen<TNotification>(TState initialState, Func<TNotification, TContext> contextFactory)
+    public IStateMachineBuilderWhenClause<TState, TNotification> StartWhen<TNotification>(TState initialState)
         where TNotification : class, INotification
     {
         var notificationType = typeof(TNotification);
-        if (_blueprint.StartOperations.TryGetValue(notificationType, out var operation))
-        {
+        if (_blueprint.StartOperations.ContainsKey(notificationType))
             throw new InvalidOperationException($"Startup rule for notification '{notificationType}' already exists.");
-        }
 
         _blueprint.ObservedTypes.Add(notificationType);
-        operation = new StartStateMachineOperation { TargetState = Convert.ToInt32(initialState), Factory = o => contextFactory((TNotification)o) };
+        var operation = new StateMachineOperation { TargetState = initialState };
         _blueprint.StartOperations.Add(notificationType, operation);
-        var clause = new StateMachineBuilderWhenClause<TState, TContext, TNotification>(SetTargetState, AddAction);
-        return clause;
 
-        static void SetTargetState(TState state)
-        {
-            throw new InvalidOperationException(
-                $"Startup rules do not support explicit 'TransitionTo'. " +
-                $"The target state is fixed as the 'initialState' passed to 'StartWhen<TNotification>'." +
-                $" If you need a different target, call 'StartWhen' with that state.");
-        }
-
-        void AddAction(Func<TContext, TNotification, IServiceProvider, CancellationToken, Task> actionFunc)
-        {
-            operation.Operations.Add((context, notification, serviceProvider, cancellationToken) => actionFunc(context, (TNotification)notification, serviceProvider, cancellationToken));
-        }
+        return new StateMachineBuilderWhenClause<TState, TNotification>(
+            _ => throw new InvalidOperationException(
+                "Startup rules do not support explicit 'TransitionTo'. " +
+                "The target state is fixed as the 'initialState' passed to 'StartWhen<TNotification>'."),
+            actionFunc => operation.Operations.Add((n, sp, ct) => actionFunc((TNotification)n, sp, ct)));
     }
 
-    public IStateMachineBuilderOnClause<TState, TContext> On(TState state)
+    public IStateMachineBuilderOnClause<TState> On(TState state)
     {
-        var stateInt = Convert.ToInt32(state);
-        if (!_blueprint.TransferOperations.TryGetValue(stateInt, out var dict))
+        if (!_blueprint.TransferOperations.TryGetValue(state, out var dict))
         {
             dict = [];
-            _blueprint.TransferOperations.Add(stateInt, dict);
+            _blueprint.TransferOperations.Add(state, dict);
         }
 
-        return new StateMachineBuilderOnClause<TState, TContext>(state, GetFactory);
+        return new StateMachineBuilderOnClause<TState>(state, GetFactory);
 
         (Action<TState> SetTargetState, Action<Operation> AddAction) GetFactory(Type notificationType)
         {
-            if (dict.TryGetValue(notificationType, out var operation))
-            {
+            if (dict.ContainsKey(notificationType))
                 throw new InvalidOperationException($"Transfer rule for notification '{notificationType}' already exists.");
-            }
 
             _blueprint.ObservedTypes.Add(notificationType);
-            operation = new StateMachineOperation();
+            var operation = new StateMachineOperation();
             dict.Add(notificationType, operation);
 
             return (SetTargetState, AddAction);
@@ -261,30 +191,25 @@ internal sealed class StateMachineBuilder<TState, TContext> : IStateMachineBuild
             void SetTargetState(TState targetState)
             {
                 if (operation.TargetState is not null)
-                {
                     throw new InvalidOperationException(
                         $"Transition target state for notification '{notificationType.Name}' " +
                         $"from source state '{state}' has already been set to '{operation.TargetState.Value}'. " +
                         $"Each 'When<{notificationType.Name}>().TransitionTo(...)' can only be called once.");
-                }
-                operation.TargetState = Convert.ToInt32(targetState);
+                operation.TargetState = targetState;
             }
 
-            void AddAction(Operation actionFunc)
-            {
-                operation.Operations.Add(actionFunc);
-            }
+            void AddAction(Operation actionFunc) => operation.Operations.Add(actionFunc);
         }
     }
 
-    public IStateMachineBuilder<TState, TContext> Correlate<TNotification>(Func<TNotification, string> correlationIdSelector) where TNotification : class, INotification
+    public IStateMachineBuilder<TState> Correlate<TNotification>(Func<TNotification, string> correlationIdSelector)
+        where TNotification : class, INotification
     {
         var notificationType = typeof(TNotification);
         if (_blueprint.CorrelationIdSelectors.ContainsKey(notificationType))
-        {
-            throw new InvalidOperationException($"Correlation ID selector for notification type '{typeof(TNotification).Name}' has already been configured. " +
-                                                "Each notification type can only be associated with one correlation ID extraction strategy.");
-        }
+            throw new InvalidOperationException(
+                $"Correlation ID selector for notification type '{typeof(TNotification).Name}' has already been configured. " +
+                "Each notification type can only be associated with one correlation ID extraction strategy.");
         _blueprint.CorrelationIdSelectors.Add(notificationType, o => correlationIdSelector((TNotification)o));
         return this;
     }
@@ -295,67 +220,52 @@ internal sealed class StateMachineBuilder<TState, TContext> : IStateMachineBuild
         var requiredTypes = new HashSet<Type>(_blueprint.ObservedNotificationTypes);
 
         if (configuredTypes.SetEquals(requiredTypes))
-        {
             return _blueprint;
-        }
 
         var missing = requiredTypes.Except(configuredTypes).ToList();
         var extra = configuredTypes.Except(requiredTypes).ToList();
 
         var message = "Correlation ID configuration does not match the set of observed notification types.";
         if (missing.Count != 0)
-        {
             message += $" Missing for: {string.Join(", ", missing.Select(t => $"'{t.Name}'"))}.";
-        }
         if (extra.Count != 0)
-        {
             message += $" Unexpectedly configured for: {string.Join(", ", extra.Select(t => $"'{t.Name}'"))}.";
-        }
 
         throw new InvalidOperationException(message);
     }
 }
 
-internal class StateMachineBuilderOnClause<TState, TContext> : IStateMachineBuilderOnClause<TState, TContext>
-    where TContext : class
+internal class StateMachineBuilderOnClause<TState> : IStateMachineBuilderOnClause<TState>
     where TState : struct, Enum
 {
     private readonly TState _state;
+    private readonly Func<Type, (Action<TState> SetTargetState, Action<StateMachineBuilder<TState>.Operation> AddAction)> _factory;
 
-    private readonly Func<Type, (Action<TState> SetTargetState, Action<StateMachineBuilder<TState, TContext>.Operation> AddAction)> _factory;
-    public StateMachineBuilderOnClause(TState state, Func<Type, (Action<TState> SetTargetState, Action<StateMachineBuilder<TState, TContext>.Operation> AddAction)> factory)
+    public StateMachineBuilderOnClause(TState state, Func<Type, (Action<TState> SetTargetState, Action<StateMachineBuilder<TState>.Operation> AddAction)> factory)
     {
         _state = state;
         _factory = factory;
     }
 
-    public IStateMachineBuilderWhenClause<TState, TContext, TNotification> When<TNotification>()
+    public IStateMachineBuilderWhenClause<TState, TNotification> When<TNotification>()
         where TNotification : class, INotification
     {
         var (setTargetState, addAction) = _factory(typeof(TNotification));
-        var clause = new StateMachineBuilderWhenClause<TState, TContext, TNotification>(setTargetState, f =>
-        {
-            addAction(Func);
-            return;
-
-            Task Func(TContext context, INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-            {
-                return f(context, (TNotification)notification, serviceProvider, cancellationToken);
-            }
-        });
-        return clause;
+        return new StateMachineBuilderWhenClause<TState, TNotification>(setTargetState,
+            actionFunc => addAction((n, sp, ct) => actionFunc((TNotification)n, sp, ct)));
     }
 }
 
-internal class StateMachineBuilderWhenClause<TState, TContext, TNotification> : IStateMachineBuilderWhenClause<TState, TContext, TNotification>
+internal class StateMachineBuilderWhenClause<TState, TNotification> : IStateMachineBuilderWhenClause<TState, TNotification>
     where TState : struct, Enum
     where TNotification : class, INotification
-    where TContext : class
 {
     private readonly Action<TState> _setTargetState;
-    private readonly Action<Func<TContext, TNotification, IServiceProvider, CancellationToken, Task>> _addAction;
+    private readonly Action<Func<TNotification, IServiceProvider, CancellationToken, Task>> _addAction;
 
-    public StateMachineBuilderWhenClause(Action<TState> setTargetState, Action<Func<TContext, TNotification, IServiceProvider, CancellationToken, Task>> addAction)
+    public StateMachineBuilderWhenClause(
+        Action<TState> setTargetState,
+        Action<Func<TNotification, IServiceProvider, CancellationToken, Task>> addAction)
     {
         ArgumentNullException.ThrowIfNull(setTargetState);
         ArgumentNullException.ThrowIfNull(addAction);
@@ -363,16 +273,12 @@ internal class StateMachineBuilderWhenClause<TState, TContext, TNotification> : 
         _addAction = addAction;
     }
 
-    public IStateMachineBuilderWhenClause<TState, TContext, TNotification> ExecuteAsync(Func<TContext, TNotification, IServiceProvider, CancellationToken, Task> actionFunc)
+    public IStateMachineBuilderWhenClause<TState, TNotification> ExecuteAsync(Func<TNotification, IServiceProvider, CancellationToken, Task> actionFunc)
     {
         ArgumentNullException.ThrowIfNull(actionFunc);
-
         _addAction(actionFunc);
         return this;
     }
 
-    public void TransitionTo(TState state)
-    {
-        _setTargetState(state);
-    }
+    public void TransitionTo(TState state) => _setTargetState(state);
 }

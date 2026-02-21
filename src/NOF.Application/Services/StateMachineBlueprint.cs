@@ -29,9 +29,12 @@ public abstract class StateMachineBlueprint
             : null;
     }
 
-    public abstract Task<StatefulStateMachineContext?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    /// <returns>The initial state value, or <c>null</c> if no startup rule matched.</returns>
+    public abstract Task<int?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         where TNotification : class, INotification;
-    public abstract Task TransferAsync<TNotification>(StatefulStateMachineContext context, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+
+    /// <returns>The new state value after the transition.</returns>
+    public abstract Task<int> TransferAsync<TNotification>(int currentState, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         where TNotification : class, INotification;
 }
 

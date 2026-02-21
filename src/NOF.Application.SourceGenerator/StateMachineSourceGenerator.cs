@@ -10,7 +10,7 @@ using System.Text;
 namespace NOF.Application.SourceGenerator;
 
 /// <summary>
-/// Source generator that discovers <c>IStateMachineDefinition&lt;TState, TContext&gt;</c> implementations,
+/// Source generator that discovers <c>IStateMachineDefinition&lt;TState&gt;</c> implementations,
 /// analyzes their <c>Build()</c> method to extract observed notification types, and generates:
 /// <list type="bullet">
 ///   <item>Concrete notification handler classes per (definition, notification) pair</item>
@@ -20,7 +20,8 @@ namespace NOF.Application.SourceGenerator;
 [Generator]
 public class StateMachineSourceGenerator : IIncrementalGenerator
 {
-    private const string StateMachineDefinitionInterface = "NOF.Application.IStateMachineDefinition<TState, TContext>";
+    private const string StateMachineDefinitionInterface = "NOF.Application.IStateMachineDefinition<TState>";
+    // Note: IStateMachineDefinition<TState> has exactly 1 type argument (TState only)
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -45,7 +46,6 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                         return null;
                     }
                     var stateType = (INamedTypeSymbol)smIface.TypeArguments[0];
-                    var contextType = (INamedTypeSymbol)smIface.TypeArguments[1];
                     // Extract notification types from Build() method body
                     var buildMethod = cds.Members
                         .OfType<MethodDeclarationSyntax>()
@@ -59,7 +59,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                     {
                         return null;
                     }
-                    return new DefinitionInfo(symbol, stateType, contextType, notificationTypes);
+                    return new DefinitionInfo(symbol, stateType, notificationTypes);
                 })
             .Where(static s => s is not null);
 
@@ -179,7 +179,6 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
             var defName = def.Symbol.Name;
             var defFullName = def.Symbol.ToDisplayString(typeFormat);
             var stateFullName = def.StateType.ToDisplayString(typeFormat);
-            var contextFullName = def.ContextType.ToDisplayString(typeFormat);
 
             foreach (var notificationType in def.NotificationTypes)
             {
@@ -188,7 +187,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                 var handlerClassName = $"__{defName}_{notificationName}_Handler";
 
                 sb.AppendLine($"    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]");
-                sb.AppendLine($"    public sealed class {handlerClassName} : global::NOF.Application.StateMachineNotificationHandler<{defFullName}, {stateFullName}, {contextFullName}, {notificationFullName}>");
+                sb.AppendLine($"    public sealed class {handlerClassName} : global::NOF.Application.StateMachineNotificationHandler<{defFullName}, {stateFullName}, {notificationFullName}>");
                 sb.AppendLine("    {");
                 sb.AppendLine($"        public {handlerClassName}(");
                 sb.AppendLine($"            global::NOF.Application.IStateMachineContextRepository repository,");
@@ -210,14 +209,12 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
     {
         public INamedTypeSymbol Symbol { get; }
         public INamedTypeSymbol StateType { get; }
-        public INamedTypeSymbol ContextType { get; }
         public List<INamedTypeSymbol> NotificationTypes { get; }
 
-        public DefinitionInfo(INamedTypeSymbol symbol, INamedTypeSymbol stateType, INamedTypeSymbol contextType, List<INamedTypeSymbol> notificationTypes)
+        public DefinitionInfo(INamedTypeSymbol symbol, INamedTypeSymbol stateType, List<INamedTypeSymbol> notificationTypes)
         {
             Symbol = symbol;
             StateType = stateType;
-            ContextType = contextType;
             NotificationTypes = notificationTypes;
         }
     }

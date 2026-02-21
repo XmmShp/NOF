@@ -64,43 +64,31 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
     }
 }
 
-public class SampleStateMachine : IStateMachineDefinition<SampleState, SampleStateMachineContext>
+public class SampleStateMachine : IStateMachineDefinition<SampleState>
 {
     private static string TaskKey(string taskId) => $"Task-{taskId}";
 
-    public void Build(IStateMachineBuilder<SampleState, SampleStateMachineContext> builder)
+    public void Build(IStateMachineBuilder<SampleState> builder)
     {
         builder.Correlate<TaskStarted>(n => TaskKey(n.TaskId));
         builder.Correlate<TaskContinued>(n => TaskKey(n.TaskId));
         builder.Correlate<ProcessingSucceeded>(n => TaskKey(n.TaskId));
         builder.Correlate<ProcessingFailed>(n => TaskKey(n.TaskId));
 
-        builder.StartWhen<TaskStarted>(
-                SampleState.Processing,
-                n => new SampleStateMachineContext
-                {
-                    StartOn = DateTime.UtcNow,
-                    TaskId = n.TaskId
-                })
-            .SendCommandAsync((_, notification) => new StartProcessingCommand(notification.TaskId));
+        builder.StartWhen<TaskStarted>(SampleState.Processing)
+            .SendCommandAsync(notification => new StartProcessingCommand(notification.TaskId));
 
         builder.On(SampleState.Processing)
             .When<ProcessingSucceeded>()
-            .Modify((ctx, _) => ctx.SucceededOn = DateTime.UtcNow)
             .TransitionTo(SampleState.Completed);
 
         builder.On(SampleState.Processing)
                 .When<ProcessingFailed>()
-                .Modify((ctx, notification) =>
-                {
-                    ctx.FailedOn = DateTime.UtcNow;
-                    ctx.FailReason = notification.Reason;
-                })
                 .TransitionTo(SampleState.Failed);
 
         builder.On(SampleState.Completed)
             .When<TaskContinued>()
-            .Execute((_, n, sp) =>
+            .Execute((n, sp) =>
             {
                 sp.GetRequiredService<ILogger<SampleStateMachine>>()
                     .LogInformation("Task-{TaskId} Continued.", n.TaskId);
@@ -109,7 +97,7 @@ public class SampleStateMachine : IStateMachineDefinition<SampleState, SampleSta
 
         builder.On(SampleState.Failed)
             .When<TaskContinued>()
-            .Execute((_, n, sp) =>
+            .Execute((n, sp) =>
             {
                 sp.GetRequiredService<ILogger<SampleStateMachine>>()
                     .LogInformation("Task-{TaskId} Continued.", n.TaskId);

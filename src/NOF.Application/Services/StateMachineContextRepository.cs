@@ -19,11 +19,6 @@ public sealed class StateMachineContext
     public required Type DefinitionType { get; init; }
 
     /// <summary>
-    /// The state machine context instance.
-    /// </summary>
-    public required object Context { get; init; }
-
-    /// <summary>
     /// The current state.
     /// </summary>
     public required int State { get; init; }
@@ -34,7 +29,6 @@ public sealed class StateMachineContext
     public static StateMachineContext Create(
         string correlationId,
         Type definitionType,
-        object context,
         int state,
         string? traceId = null,
         string? spanId = null)
@@ -43,7 +37,6 @@ public sealed class StateMachineContext
         {
             CorrelationId = correlationId,
             DefinitionType = definitionType,
-            Context = context,
             State = state
         };
     }

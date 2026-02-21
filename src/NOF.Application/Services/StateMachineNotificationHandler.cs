@@ -10,13 +10,11 @@ namespace NOF.Application;
 /// </summary>
 /// <typeparam name="TStateMachineDefinition">The state machine definition type.</typeparam>
 /// <typeparam name="TState">The state enum type.</typeparam>
-/// <typeparam name="TContext">The state machine context type.</typeparam>
 /// <typeparam name="TNotification">The notification type.</typeparam>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public abstract class StateMachineNotificationHandler<TStateMachineDefinition, TState, TContext, TNotification> : INotificationHandler<TNotification>
-    where TStateMachineDefinition : IStateMachineDefinition<TState, TContext>, new()
+public abstract class StateMachineNotificationHandler<TStateMachineDefinition, TState, TNotification> : INotificationHandler<TNotification>
+    where TStateMachineDefinition : IStateMachineDefinition<TState>, new()
     where TState : struct, Enum
-    where TContext : class
     where TNotification : class, INotification
 {
     private readonly IStateMachineContextRepository _repository;
@@ -43,7 +41,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
 
     private static StateMachineBlueprint CreateBlueprint()
     {
-        var builder = new StateMachineBuilder<TState, TContext>();
+        var builder = new StateMachineBuilder<TState>();
         new TStateMachineDefinition().Build(builder);
         var blueprint = ((IStateMachineBuilderInternal)builder).Build();
         blueprint.DefinitionType = typeof(TStateMachineDefinition);
@@ -71,38 +69,25 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
         var existing = await _repository.FindAsync(correlationId, typeof(TStateMachineDefinition));
         if (existing is not null)
         {
-            var context = new StatefulStateMachineContext
-            {
-                Context = existing.Context,
-                State = existing.State
-            };
-            await bp.TransferAsync(context, notification, _serviceProvider, cancellationToken);
+            var newState = await bp.TransferAsync(existing.State, notification, _serviceProvider, cancellationToken);
 
-            // Create the updated state machine context
-            var updatedContext = StateMachineContext.Create(
+            _repository.Update(StateMachineContext.Create(
                 correlationId: correlationId,
                 definitionType: typeof(TStateMachineDefinition),
-                context: context.Context,
-                state: context.State);
-
-            _repository.Update(updatedContext);
+                state: newState));
         }
         else
         {
-            var context = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
-            if (context is not null)
+            var initialState = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
+            if (initialState is not null)
             {
-                // Capture the current tracing context
                 var currentActivity = Activity.Current;
-                var newStateMachineContext = StateMachineContext.Create(
+                _repository.Add(StateMachineContext.Create(
                     correlationId: correlationId,
                     definitionType: typeof(TStateMachineDefinition),
-                    context: context.Context,
-                    state: context.State,
+                    state: initialState.Value,
                     traceId: currentActivity?.TraceId.ToString(),
-                    spanId: currentActivity?.SpanId.ToString());
-
-                _repository.Add(newStateMachineContext);
+                    spanId: currentActivity?.SpanId.ToString()));
             }
         }
 
