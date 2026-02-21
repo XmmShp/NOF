@@ -39,14 +39,14 @@ public class HandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         // Should use global:: FQN for HandlerInfo and HandlerKind
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Core.HandlerInfo");
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Core.HandlerKind.Command");
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.HandlerInfo");
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.HandlerKind.Command");
 
         // Should use global:: FQN for IServiceCollection in method signature
         generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
         // Should keep using NOF.Infrastructure.Core for AddHandlerInfo extension method
-        generatedCode.Should().Contain("using NOF.Infrastructure.Core;");
+        generatedCode.Should().Contain("using NOF.Infrastructure.Abstraction;");
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Core.HandlerKind.RequestWithResponse");
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithResponse");
         generatedCode.Should().Contain("typeof(global::App.MyRequestHandler)");
     }
 }
