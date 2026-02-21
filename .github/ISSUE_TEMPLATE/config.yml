@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://xmmshp.github.io/NOF/
+    about: Check the official documentation before opening an issue.
+  - name: NuGet Packages
+    url: https://www.nuget.org/profiles/XmmShp
+    about: View published NOF packages on NuGet.org.

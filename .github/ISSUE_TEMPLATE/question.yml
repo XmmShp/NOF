@@ -1,0 +1,34 @@
+name: Question
+description: Ask a question about using the NOF framework.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about using NOF? Please check the [documentation](https://xmmshp.github.io/NOF/) first.
+
+  - type: input
+    id: package
+    attributes:
+      label: Related Package(s)
+      description: Which NOF package(s) is your question about?
+      placeholder: "e.g. NOF.Contract, NOF.Infrastructure.EntityFrameworkCore"
+    validations:
+      required: false
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: Describe what you're trying to achieve and what's unclear.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Relevant code snippets, configuration, or error messages.
+    validations:
+      required: false

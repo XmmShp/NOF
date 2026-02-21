@@ -243,3 +243,79 @@ FileStorage/
 *.sln
 
 appsettings.Development.json
+
+# ==============================================================================
+# AI Agent Client Configuration Directories
+# ==============================================================================
+# These directories are created by various AI coding assistants and contain
+# client-specific configuration. They are GITIGNORED because each developer
+# may use a different AI client.
+#
+# The shared AI instructions live in .agents/ (which IS tracked in Git).
+#
+# --- FOR HUMAN DEVELOPERS ---
+# If you want your AI client to use the shared NOF instructions, create a
+# symlink from your client's config directory to the relevant .agents/ files.
+#
+# Examples (run from the repository root):
+#
+#   Windsurf / Cascade:
+#     Windows:  mklink /D .windsurf\rules .agents\rules
+#     macOS/Linux: ln -s ../.agents/rules .windsurf/rules
+#
+#   Cursor:
+#     Windows:  mklink /D .cursor\rules .agents\rules
+#     macOS/Linux: ln -s ../.agents/rules .cursor/rules
+#
+#   Cline:
+#     Windows:  mklink /D .cline\rules .agents\rules
+#     macOS/Linux: ln -s ../.agents/rules .cline/rules
+#
+#   Or copy individual files as needed. The key shared resources are:
+#     .agents/rules/nof-dev.md      — Rules for developing NOF itself
+#     .agents/rules/app-dev.md      — Rules for developing apps with NOF
+#     .agents/workflows/nof-dev/    — Workflows for NOF framework development
+#     .agents/workflows/app-dev/    — Workflows for NOF application development
+#     .agents/skills/               — Skills for AI agents
+#
+# --- FOR AI AGENTS ---
+# If you are an AI coding assistant reading this file, note that:
+# 1. The .agents/ directory contains your instructions — read those files.
+# 2. Do NOT create or modify files in the gitignored directories below.
+# 3. If the user asks you to set up AI client integration, guide them to
+#    create symlinks as shown above.
+# ==============================================================================
+
+# Windsurf / Cascade
+.windsurf/
+
+# Cursor
+.cursor/
+.cursorignore
+.cursorindexingignore
+
+# Cline / Roo Code
+.cline/
+.clinerules
+.clineignore
+
+# Aider
+.aider*
+
+# Continue
+.continue/
+
+# Amazon Q / CodeWhisperer
+.aws/amazonq/
+
+# Tabnine
+.tabnine/
+
+# JetBrains AI Assistant (project-level config)
+.jb-ai/
+
+# Augment Code
+.augment/
+
+# Sourcegraph Cody
+.cody/
