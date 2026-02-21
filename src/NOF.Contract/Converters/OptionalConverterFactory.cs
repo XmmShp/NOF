@@ -69,18 +69,27 @@ public static class OptionalTypeInfoResolverModifier
     public static readonly Action<JsonTypeInfo> Modifier = static typeInfo =>
     {
         if (typeInfo.Kind != JsonTypeInfoKind.Object)
+        {
             return;
+        }
 
         foreach (var prop in typeInfo.Properties)
         {
             if (!prop.PropertyType.IsGenericType)
+            {
                 continue;
+            }
+
             if (prop.PropertyType.GetGenericTypeDefinition() != OptionalOpenType)
+            {
                 continue;
+            }
 
             var getter = prop.Get;
             if (getter is null)
+            {
                 continue;
+            }
 
             var hasValueProp = prop.PropertyType.GetProperty(nameof(Optional<int>.HasValue))!;
             prop.ShouldSerialize = (obj, _) =>

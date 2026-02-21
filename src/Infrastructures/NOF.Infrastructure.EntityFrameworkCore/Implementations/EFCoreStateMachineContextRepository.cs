@@ -14,16 +14,22 @@ internal class EFCoreStateMachineContextRepository : IStateMachineContextReposit
     public async ValueTask<StateMachineContext?> FindAsync(string correlationId, Type definitionType)
     {
         if (string.IsNullOrWhiteSpace(correlationId))
+        {
             return null;
+        }
 
         ArgumentNullException.ThrowIfNull(definitionType);
         var definitionTypeString = definitionType.AssemblyQualifiedName;
         if (string.IsNullOrWhiteSpace(definitionTypeString))
+        {
             return null;
+        }
 
         var dbEntity = await _dbContext.StateMachineContexts.FindAsync(correlationId, definitionTypeString);
         if (dbEntity is null)
+        {
             return null;
+        }
 
         return StateMachineContext.Create(
             correlationId: correlationId,
@@ -59,9 +65,13 @@ internal class EFCoreStateMachineContextRepository : IStateMachineContextReposit
 
         var dbEntity = _dbContext.StateMachineContexts.Find(stateMachineContext.CorrelationId, definitionTypeString);
         if (dbEntity is null)
+        {
             return;
+        }
 
         if (stateMachineContext.State != dbEntity.State)
+        {
             dbEntity.State = stateMachineContext.State;
+        }
     }
 }

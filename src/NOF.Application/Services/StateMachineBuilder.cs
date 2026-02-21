@@ -127,7 +127,9 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
         public override async Task<int?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
             if (!StartOperations.TryGetValue(typeof(TNotification), out var operation))
+            {
                 return null;
+            }
 
             var state = await operation.ExecuteAsync(default, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
             return Convert.ToInt32(state);
@@ -137,9 +139,14 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
         {
             var typedState = (TState)(object)currentState;
             if (!TransferOperations.TryGetValue(typedState, out var operations))
+            {
                 return currentState;
+            }
+
             if (!operations.TryGetValue(typeof(TNotification), out var operation))
+            {
                 return currentState;
+            }
 
             var newState = await operation.ExecuteAsync(typedState, notification, serviceProvider, cancellationToken).ConfigureAwait(false);
             return Convert.ToInt32(newState);
@@ -154,7 +161,9 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
     {
         var notificationType = typeof(TNotification);
         if (_blueprint.StartOperations.ContainsKey(notificationType))
+        {
             throw new InvalidOperationException($"Startup rule for notification '{notificationType}' already exists.");
+        }
 
         _blueprint.ObservedTypes.Add(notificationType);
         var operation = new StateMachineOperation { TargetState = initialState };
@@ -180,7 +189,9 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
         (Action<TState> SetTargetState, Action<Operation> AddAction) GetFactory(Type notificationType)
         {
             if (dict.ContainsKey(notificationType))
+            {
                 throw new InvalidOperationException($"Transfer rule for notification '{notificationType}' already exists.");
+            }
 
             _blueprint.ObservedTypes.Add(notificationType);
             var operation = new StateMachineOperation();
@@ -191,10 +202,13 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
             void SetTargetState(TState targetState)
             {
                 if (operation.TargetState is not null)
+                {
                     throw new InvalidOperationException(
                         $"Transition target state for notification '{notificationType.Name}' " +
                         $"from source state '{state}' has already been set to '{operation.TargetState.Value}'. " +
                         $"Each 'When<{notificationType.Name}>().TransitionTo(...)' can only be called once.");
+                }
+
                 operation.TargetState = targetState;
             }
 
@@ -207,9 +221,12 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
     {
         var notificationType = typeof(TNotification);
         if (_blueprint.CorrelationIdSelectors.ContainsKey(notificationType))
+        {
             throw new InvalidOperationException(
                 $"Correlation ID selector for notification type '{typeof(TNotification).Name}' has already been configured. " +
                 "Each notification type can only be associated with one correlation ID extraction strategy.");
+        }
+
         _blueprint.CorrelationIdSelectors.Add(notificationType, o => correlationIdSelector((TNotification)o));
         return this;
     }
@@ -220,16 +237,23 @@ internal sealed class StateMachineBuilder<TState> : IStateMachineBuilder<TState>
         var requiredTypes = new HashSet<Type>(_blueprint.ObservedNotificationTypes);
 
         if (configuredTypes.SetEquals(requiredTypes))
+        {
             return _blueprint;
+        }
 
         var missing = requiredTypes.Except(configuredTypes).ToList();
         var extra = configuredTypes.Except(requiredTypes).ToList();
 
         var message = "Correlation ID configuration does not match the set of observed notification types.";
         if (missing.Count != 0)
+        {
             message += $" Missing for: {string.Join(", ", missing.Select(t => $"'{t.Name}'"))}.";
+        }
+
         if (extra.Count != 0)
+        {
             message += $" Unexpectedly configured for: {string.Join(", ", extra.Select(t => $"'{t.Name}'"))}.";
+        }
 
         throw new InvalidOperationException(message);
     }

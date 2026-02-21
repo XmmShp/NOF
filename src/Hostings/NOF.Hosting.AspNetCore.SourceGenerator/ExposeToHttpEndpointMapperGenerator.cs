@@ -20,7 +20,10 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 transform: static (ctx, _) =>
                 {
                     if (ctx.Node is not TypeDeclarationSyntax tds)
+                    {
                         return null;
+                    }
+
                     if (ctx.SemanticModel.GetDeclaredSymbol(tds) is INamedTypeSymbol { IsAbstract: false, DeclaredAccessibility: Accessibility.Public } symbol
                         && ExposeToHttpEndpointHelpers.HasExposeToHttpEndpointAttribute(symbol)
                         && ExposeToHttpEndpointHelpers.IsRequestType(symbol))
@@ -48,9 +51,15 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 var (fromRefs, fromSource) = pair;
                 var set = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
                 foreach (var t in fromRefs)
+                {
                     set.Add(t);
+                }
+
                 foreach (var t in Enumerable.OfType<INamedTypeSymbol>(fromSource))
+                {
                     set.Add(t);
+                }
+
                 return set.ToImmutableArray();
             });
 
@@ -235,12 +244,16 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             foreach (var (_, prop) in routeParamProps)
             {
                 if (!ctorParamNames.Contains(prop.Name))
+                {
                     initLines.Add($"                        {prop.Name} = {ToCamelCase(prop.Name)}");
+                }
             }
             foreach (var prop in bodyProps)
             {
                 if (!ctorParamNames.Contains(prop.Name))
+                {
                     initLines.Add($"                        {prop.Name} = __body__.{prop.Name}");
+                }
             }
 
             // Emit: new RequestType(ctorArgs) { ExtraProp = value, ... };
@@ -267,11 +280,20 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
         // Append OpenAPI metadata
         if (!string.IsNullOrEmpty(ep.DisplayName))
+        {
             sb.Append($".WithName(\"{EscapeString(ep.DisplayName)}\")");
+        }
+
         if (!string.IsNullOrEmpty(ep.Summary))
+        {
             sb.Append($".WithSummary(\"{EscapeString(ep.Summary)}\")");
+        }
+
         if (!string.IsNullOrEmpty(ep.Description))
+        {
             sb.Append($".WithDescription(\"{EscapeString(ep.Description)}\")");
+        }
+
         if (ep.Tags.Length > 0)
         {
             var tagArgs = string.Join(", ", ep.Tags.Select(t => $"\"{EscapeString(t)}\""));
@@ -289,16 +311,22 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
     private static void EmitBodyDtoIfNeeded(StringBuilder sb, EndpointInfo ep)
     {
         if (ep.Method == HttpVerb.Get)
+        {
             return;
+        }
 
         var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(ep.Route);
         if (routeParams.Count == 0)
+        {
             return;
+        }
 
         var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(ep.RequestType);
         var (_, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
         if (bodyProps.Count == 0)
+        {
             return;
+        }
 
         var dtoName = GetBodyDtoName(ep.RequestType);
         sb.AppendLine($"    public class {dtoName}");
@@ -308,7 +336,10 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             var propType = prop.Type.ToDisplayString();
             var defaultValue = prop.Type.IsValueType ? "" : " = default!;";
             if (prop.Type.NullableAnnotation == NullableAnnotation.Annotated)
+            {
                 defaultValue = "";
+            }
+
             sb.AppendLine($"        public {propType} {prop.Name} {{ get; set; }}{defaultValue}");
         }
         sb.AppendLine("    }");
@@ -343,9 +374,13 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             var matchedParam = routeParams.FirstOrDefault(rp =>
                 string.Equals(rp, prop.Name, StringComparison.OrdinalIgnoreCase));
             if (matchedParam != null)
+            {
                 routeParamProps.Add((matchedParam, prop));
+            }
             else
+            {
                 bodyProps.Add(prop);
+            }
         }
 
         return (routeParamProps, bodyProps);
@@ -357,14 +392,20 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
     private static string ToCamelCase(string name)
     {
         if (string.IsNullOrEmpty(name))
+        {
             return name;
+        }
+
         return char.ToLowerInvariant(name[0]) + name.Substring(1);
     }
 
     private static string EscapeString(string? value)
     {
         if (value is null)
+        {
             return string.Empty;
+        }
+
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 }

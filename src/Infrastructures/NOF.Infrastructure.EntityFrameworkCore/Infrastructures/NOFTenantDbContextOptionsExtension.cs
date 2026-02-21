@@ -26,14 +26,18 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
     {
         // Host mode �?no filtering needed
         if (string.IsNullOrWhiteSpace(TenantId))
+        {
             return;
+        }
 
         // Find the existing IMigrationsSqlGenerator registration (added by the database provider)
         var originalDescriptor = services.LastOrDefault(
             d => d.ServiceType == typeof(IMigrationsSqlGenerator));
 
         if (originalDescriptor == null)
+        {
             return;
+        }
 
         // Remove the original registration
         services.Remove(originalDescriptor);
@@ -52,10 +56,14 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
     private static IMigrationsSqlGenerator ResolveInner(IServiceProvider sp, ServiceDescriptor descriptor)
     {
         if (descriptor.ImplementationType is not null)
+        {
             return (IMigrationsSqlGenerator)ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType);
+        }
 
         if (descriptor.ImplementationFactory is not null)
+        {
             return (IMigrationsSqlGenerator)descriptor.ImplementationFactory(sp);
+        }
 
         return (IMigrationsSqlGenerator)descriptor.ImplementationInstance!;
     }

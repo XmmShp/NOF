@@ -67,7 +67,9 @@ internal class ConfiguratorGraph<T> where T : IStep
     public IReadOnlyList<T> GetExecutionOrder()
     {
         if (_orderedConfigs is not null)
+        {
             return _orderedConfigs;
+        }
 
         var graph = _nodes.ToDictionary(n => n, _ => new HashSet<T>());
         var inDegree = _nodes.ToDictionary(n => n, _ => 0);

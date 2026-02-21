@@ -76,7 +76,9 @@ public class HttpJwksProvider : IJwksProvider
             foreach (var jwk in jwksDocument.Keys)
             {
                 if (jwk.Kty != "RSA")
+                {
                     continue;
+                }
 
                 var rsa = RSA.Create();
                 rsa.ImportParameters(new RSAParameters
@@ -164,7 +166,9 @@ public class RequestSenderJwksProvider : IJwksProvider
             foreach (var jwk in jwkKeys)
             {
                 if (jwk.Kty != "RSA")
+                {
                     continue;
+                }
 
                 var rsa = RSA.Create();
                 rsa.ImportParameters(new RSAParameters

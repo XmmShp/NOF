@@ -19,7 +19,9 @@ public static partial class NOFSampleWebUIExtensions
             if (result.IsSuccess)
             {
                 if (showSuccess)
+                {
                     messageService.Success(successMessage ?? result.Message);
+                }
             }
             else
             {

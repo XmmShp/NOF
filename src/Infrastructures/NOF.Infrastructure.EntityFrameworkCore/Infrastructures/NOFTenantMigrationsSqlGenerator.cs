@@ -46,7 +46,9 @@ internal sealed class NOFTenantMigrationsSqlGenerator : IMigrationsSqlGenerator
         var tableNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (model == null)
+        {
             return tableNames;
+        }
 
         foreach (var entityType in model.GetEntityTypes())
         {

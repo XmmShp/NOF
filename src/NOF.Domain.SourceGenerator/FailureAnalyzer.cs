@@ -79,7 +79,9 @@ public class FailureAnalyzer : DiagnosticAnalyzer
             .ToList();
 
         if (failureAttributes.Count == 0)
+        {
             return;
+        }
 
         // Check if the type is partial
         var syntaxReferences = namedTypeSymbol.DeclaringSyntaxReferences;
@@ -107,7 +109,9 @@ public class FailureAnalyzer : DiagnosticAnalyzer
         {
             var attributeSyntax = attribute.ApplicationSyntaxReference?.GetSyntax() as AttributeSyntax;
             if (attributeSyntax == null)
+            {
                 continue;
+            }
 
             // Validate constructor arguments
             if (attribute.ConstructorArguments.Length != 3)

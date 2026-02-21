@@ -33,10 +33,14 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 
         var info = _cache.GetOrAdd(underlyingType, BuildConverterInfo);
         if (info is null)
+        {
             return baseConverters;
+        }
 
         if (providerClrType is not null && providerClrType != info.Value.ProviderClrType)
+        {
             return baseConverters;
+        }
 
         return baseConverters.Prepend(info.Value);
     }
@@ -44,17 +48,26 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
     private static ValueConverterInfo? BuildConverterInfo(Type voType)
     {
         var primitiveType = GetPrimitiveType(voType);
-        if (primitiveType is null) return null;
+        if (primitiveType is null)
+        {
+            return null;
+        }
 
         var ofMethod = voType.GetMethod("Of",
             BindingFlags.Public | BindingFlags.Static,
             null, [primitiveType], null);
-        if (ofMethod is null) return null;
+        if (ofMethod is null)
+        {
+            return null;
+        }
 
         var castMethod = voType.GetMethod("op_Explicit",
             BindingFlags.Public | BindingFlags.Static,
             null, [voType], null);
-        if (castMethod is null || castMethod.ReturnType != primitiveType) return null;
+        if (castMethod is null || castMethod.ReturnType != primitiveType)
+        {
+            return null;
+        }
 
         var converterType = typeof(ValueObjectConverter<,>).MakeGenericType(voType, primitiveType);
         var converterInstance = (ValueConverter)Activator.CreateInstance(converterType, ofMethod, castMethod)!;
@@ -71,7 +84,9 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
         {
             if (attr.AttributeType.IsGenericType &&
                 attr.AttributeType.GetGenericTypeDefinition() == AttributeOpenType)
+            {
                 return attr.AttributeType.GenericTypeArguments[0];
+            }
         }
         return null;
     }

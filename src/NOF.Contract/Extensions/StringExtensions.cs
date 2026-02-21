@@ -69,7 +69,9 @@ public static partial class NOFContractExtensions
             {
                 var seg = segments[i];
                 if (string.IsNullOrEmpty(seg))
+                {
                     continue;
+                }
 
                 var index = middle.IndexOf(seg, comparison);
                 if (index == -1)

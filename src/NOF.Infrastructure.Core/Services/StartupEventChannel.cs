@@ -42,10 +42,14 @@ public sealed class StartupEventChannel : IStartupEventChannel
         ArgumentNullException.ThrowIfNull(@event);
 
         if (!_handlers.TryGetValue(key, out var handlersForKey))
+        {
             return;
+        }
 
         if (!handlersForKey.TryGetValue(typeof(TEvent), out var handlers))
+        {
             return;
+        }
 
         var exceptions = new List<Exception>();
         var snapshot = handlers.ToArray(); // Avoid concurrent modification

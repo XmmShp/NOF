@@ -55,7 +55,9 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
             foreach (var header in httpContext.Request.Headers)
             {
                 if (IsBlacklisted(header.Key))
+                {
                     continue;
+                }
 
                 // Caller-provided headers take precedence
                 if (!context.Headers.ContainsKey(header.Key))
@@ -73,7 +75,9 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
         foreach (var pattern in _options.BlacklistedPatterns)
         {
             if (headerName.MatchWildcard(pattern, StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
+            }
         }
         return false;
     }

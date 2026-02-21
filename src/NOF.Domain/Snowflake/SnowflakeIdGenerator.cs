@@ -38,11 +38,19 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
         var sequenceBits = options.SequenceBits;
 
         if (machineIdBits < 1 || machineIdBits > 20)
+        {
             throw new ArgumentOutOfRangeException(nameof(options), "MachineIdBits must be between 1 and 20.");
+        }
+
         if (sequenceBits < 1 || sequenceBits > 20)
+        {
             throw new ArgumentOutOfRangeException(nameof(options), "SequenceBits must be between 1 and 20.");
+        }
+
         if (machineIdBits + sequenceBits >= 63)
+        {
             throw new ArgumentOutOfRangeException(nameof(options), "MachineIdBits + SequenceBits must be less than 63.");
+        }
 
         _maxMachineId = (1L << machineIdBits) - 1;
         _maxSequence = (1L << sequenceBits) - 1;
@@ -50,7 +58,9 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
         _timestampShift = machineIdBits + sequenceBits;
 
         if (options.MachineId < 0 || options.MachineId > _maxMachineId)
+        {
             throw new ArgumentOutOfRangeException(nameof(options), $"MachineId must be in range [0, {_maxMachineId}].");
+        }
 
         _machineId = options.MachineId;
         _epochMs = options.Epoch.ToUnixTimeMilliseconds();
@@ -65,14 +75,18 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
             var now = CurrentTimestampMs();
 
             if (now < _lastTimestamp)
+            {
                 throw new InvalidOperationException(
                     $"Clock moved backwards. Refusing to generate ID for {_lastTimestamp - now} ms.");
+            }
 
             if (now == _lastTimestamp)
             {
                 _sequence = (_sequence + 1) & _maxSequence;
                 if (_sequence == 0)
+                {
                     now = WaitNextMillisecond(_lastTimestamp);
+                }
             }
             else
             {
@@ -94,7 +108,10 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
     {
         var ts = CurrentTimestampMs();
         while (ts <= lastTimestamp)
+        {
             ts = CurrentTimestampMs();
+        }
+
         return ts;
     }
 }

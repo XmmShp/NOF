@@ -107,9 +107,15 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
                 ? $"        /// {EscapeXmlComment(endpoint.DisplayName)}"
                 : $"        /// Calls {endpoint.Route} endpoint");
             if (!string.IsNullOrEmpty(endpoint.Summary))
+            {
                 sb.AppendLine($"        /// <para>{EscapeXmlComment(endpoint.Summary)}</para>");
+            }
+
             if (!string.IsNullOrEmpty(endpoint.Description))
+            {
                 sb.AppendLine($"        /// <para>{EscapeXmlComment(endpoint.Description)}</para>");
+            }
+
             sb.AppendLine("        /// </summary>");
             sb.AppendLine("        /// <param name=\"request\">Request parameters</param>");
             sb.AppendLine("        /// <param name=\"completionOption\">When the operation should complete</param>");
@@ -356,7 +362,10 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
     private static string EscapeXmlComment(string? value)
     {
         if (value is null)
+        {
             return string.Empty;
+        }
+
         return value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 }

@@ -56,7 +56,9 @@ public static partial class NOFInfrastructureMassTransitExtensions
         where T : class
     {
         if (headers is null || headers.Count == 0)
+        {
             return;
+        }
 
         handle.UseExecute(context =>
         {

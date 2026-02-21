@@ -53,7 +53,9 @@ public class ValueObjectGenerator : IIncrementalGenerator
             foreach (var result in items.Where(x => x is not null).Cast<ValueObjectResult>())
             {
                 foreach (var diag in result.Diagnostics)
+                {
                     spc.ReportDiagnostic(diag);
+                }
 
                 if (result.Info is not null)
                 {
@@ -69,22 +71,40 @@ public class ValueObjectGenerator : IIncrementalGenerator
     {
         var syntax = (StructDeclarationSyntax)ctx.Node;
         var symbol = ctx.SemanticModel.GetDeclaredSymbol(syntax) as INamedTypeSymbol;
-        if (symbol is null) return null;
+        if (symbol is null)
+        {
+            return null;
+        }
 
         // Find [ValueObject<TPrimitive>]
         INamedTypeSymbol? primitiveType = null;
         var primitiveNullableAnnotation = NullableAnnotation.None;
         foreach (var attr in symbol.GetAttributes())
         {
-            if (attr.AttributeClass is null) continue;
-            if (attr.AttributeClass.OriginalDefinition.ToDisplayString() != AttributeMetadataName) continue;
-            if (attr.AttributeClass.TypeArguments.Length != 1) continue;
+            if (attr.AttributeClass is null)
+            {
+                continue;
+            }
+
+            if (attr.AttributeClass.OriginalDefinition.ToDisplayString() != AttributeMetadataName)
+            {
+                continue;
+            }
+
+            if (attr.AttributeClass.TypeArguments.Length != 1)
+            {
+                continue;
+            }
+
             primitiveType = attr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
             primitiveNullableAnnotation = attr.AttributeClass.TypeArgumentNullableAnnotations[0];
             break;
         }
 
-        if (primitiveType is null) return null;
+        if (primitiveType is null)
+        {
+            return null;
+        }
 
         var result = new ValueObjectResult();
 
@@ -104,9 +124,20 @@ public class ValueObjectGenerator : IIncrementalGenerator
         var hasValidateMethod = false;
         foreach (var member in symbol.GetMembers("Validate"))
         {
-            if (member is not IMethodSymbol method) continue;
-            if (method.Parameters.Length != 1) continue;
-            if (!SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, primitiveType)) continue;
+            if (member is not IMethodSymbol method)
+            {
+                continue;
+            }
+
+            if (method.Parameters.Length != 1)
+            {
+                continue;
+            }
+
+            if (!SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, primitiveType))
+            {
+                continue;
+            }
 
             if (!method.IsStatic)
             {
@@ -184,9 +215,15 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine($"        public static {info.TypeName} Of({info.PrimitiveFullName} value)");
         sb.AppendLine("        {");
         if (info.PrimitiveRequiresNullCheck)
+        {
             sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(value);");
+        }
+
         if (info.HasValidateMethod)
+        {
             sb.AppendLine("            Validate(value);");
+        }
+
         sb.AppendLine($"            return new {info.TypeName}(value);");
         sb.AppendLine("        }");
         sb.AppendLine();

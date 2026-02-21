@@ -87,11 +87,15 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             .ToList();
 
         if (endpointAttributes.Count == 0)
+        {
             return;
+        }
 
         // Only analyze types that implement IRequest or IRequest<T>
         if (!ExposeToHttpEndpointHelpers.IsRequestType(typeSymbol))
+        {
             return;
+        }
 
         var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
 
@@ -151,7 +155,9 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
                 : null;
 
             if (string.IsNullOrEmpty(route))
+            {
                 continue;
+            }
 
             var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(route!);
 
