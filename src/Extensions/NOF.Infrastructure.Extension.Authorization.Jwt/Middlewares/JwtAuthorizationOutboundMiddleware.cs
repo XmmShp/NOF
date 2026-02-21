@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;

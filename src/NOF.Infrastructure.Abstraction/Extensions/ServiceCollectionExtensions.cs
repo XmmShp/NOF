@@ -1,0 +1,185 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using NOF.Infrastructure.Core;
+
+namespace NOF.Infrastructure.Abstraction;
+
+// ReSharper disable once InconsistentNaming
+public static partial class NOFInfrastructureCoreExtensions
+{
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the service to.</param>
+    extension(IServiceCollection services)
+    {
+        /// <summary>
+        /// Configures strongly-typed options using configuration binding, automatic section naming,
+        /// data annotation validation, and startup-time validation.
+        /// If no <paramref name="configSectionPath"/> is provided, the section name is inferred
+        /// from the type name of <typeparamref name="TOptions"/> (e.g., "MyFeature" for MyFeatureOptions).
+        /// </summary>
+        /// <typeparam name="TOptions">The options type to configure. Must be a reference type.</typeparam>
+        /// <param name="configSectionPath">
+        /// Optional path to the configuration section. If <see langword="null"/> or empty,
+        /// the section name is derived from <typeparamref name="TOptions"/> using convention.
+        /// </param>
+        /// <returns>An <see cref="OptionsBuilder{TOptions}"/> for further configuration chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the inferred configuration section does not exist or fails validation at startup.
+        /// </exception>
+        public OptionsBuilder<TOptions> AddOptionsInConfiguration<TOptions>(string? configSectionPath = null) where TOptions : class
+        {
+            // ReSharper disable once InvertIf
+            if (string.IsNullOrEmpty(configSectionPath))
+            {
+                configSectionPath = string.GetSectionNameFromOptions<TOptions>();
+            }
+
+            return services.AddOptions<TOptions>()
+                .BindConfiguration(configSectionPath)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+        }
+
+        /// <summary>
+        /// Replaces an existing service descriptor or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <param name="descriptor">The service descriptor to replace or add.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAdd(ServiceDescriptor descriptor)
+        {
+            ArgumentNullException.ThrowIfNull(descriptor);
+
+            var existingDescriptor = services.FirstOrDefault(d => d.Lifetime == descriptor.Lifetime && d.ServiceType == descriptor.ServiceType);
+            if (existingDescriptor is not null)
+            {
+                services.Remove(existingDescriptor);
+            }
+
+            services.Add(descriptor);
+            return services;
+        }
+
+        /// <summary>
+        /// Replaces an existing singleton service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddSingleton<TService, TImplementation>()
+            where TService : class
+            where TImplementation : class, TService
+        {
+            return services.ReplaceOrAdd(ServiceDescriptor.Singleton<TService, TImplementation>());
+        }
+
+        /// <summary>
+        /// Replaces an existing singleton service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationFactory">The factory that creates the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddSingleton<TService>(Func<IServiceProvider, TService> implementationFactory)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationFactory);
+            return services.ReplaceOrAdd(ServiceDescriptor.Singleton(implementationFactory));
+        }
+
+        /// <summary>
+        /// Replaces an existing singleton service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationInstance">The instance of the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddSingleton<TService>(TService implementationInstance)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationInstance);
+            return services.ReplaceOrAdd(ServiceDescriptor.Singleton(implementationInstance));
+        }
+
+        /// <summary>
+        /// Replaces an existing scoped service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddScoped<TService, TImplementation>()
+            where TService : class
+            where TImplementation : class, TService
+        {
+            return services.ReplaceOrAdd(ServiceDescriptor.Scoped<TService, TImplementation>());
+        }
+
+        /// <summary>
+        /// Replaces an existing scoped service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationFactory">The factory that creates the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddScoped<TService>(Func<IServiceProvider, TService> implementationFactory)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationFactory);
+            return services.ReplaceOrAdd(ServiceDescriptor.Scoped(implementationFactory));
+        }
+
+        /// <summary>
+        /// Replaces an existing transient service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddTransient<TService, TImplementation>()
+            where TService : class
+            where TImplementation : class, TService
+        {
+            return services.ReplaceOrAdd(ServiceDescriptor.Transient<TService, TImplementation>());
+        }
+
+        /// <summary>
+        /// Replaces an existing transient service or adds a new one if it doesn't exist.
+        /// </summary>
+        /// <typeparam name="TService">The type of the service to register.</typeparam>
+        /// <param name="implementationFactory">The factory that creates the service.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection ReplaceOrAddTransient<TService>(Func<IServiceProvider, TService> implementationFactory)
+            where TService : class
+        {
+            ArgumentNullException.ThrowIfNull(implementationFactory);
+            return services.ReplaceOrAdd(ServiceDescriptor.Transient(implementationFactory));
+        }
+
+        /// <summary>
+        /// Retrieves the singleton instance of <typeparamref name="T"/> already registered in the service collection,
+        /// or creates a new instance using the parameterless constructor, registers it, and returns it.
+        /// </summary>
+        /// <typeparam name="T">The singleton service type. Must have a parameterless constructor.</typeparam>
+        /// <returns>The existing or newly created singleton instance.</returns>
+        public T GetOrAddSingleton<T>() where T : class, new()
+        {
+            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
+            if (descriptor?.ImplementationInstance is T existing)
+            {
+                return existing;
+            }
+            var instance = new T();
+            services.AddSingleton(instance);
+            return instance;
+        }
+
+        /// <summary>
+        /// Adds one or more <see cref="HandlerInfo"/> entries to the <see cref="HandlerInfos"/> singleton registered in DI.
+        /// </summary>
+        /// <param name="handlerInfos">The handler metadata entries to add.</param>
+        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
+        public IServiceCollection AddHandlerInfo(params HandlerInfo[] handlerInfos)
+        {
+            var set = services.GetOrAddSingleton<HandlerInfos>();
+            foreach (var info in handlerInfos)
+            {
+                set.Add(info);
+            }
+            return services;
+        }
+    }
+}

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 using Xunit;
 

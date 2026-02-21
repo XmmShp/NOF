@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

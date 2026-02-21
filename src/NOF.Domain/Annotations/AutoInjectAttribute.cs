@@ -1,5 +1,3 @@
-using System;
-
 namespace NOF.Annotation;
 
 /// <summary>

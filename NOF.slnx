@@ -22,6 +22,7 @@
     <Project Path="src/NOF.Contract/NOF.Contract.csproj" />
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
+    <Project Path="src/NOF.Infrastructure.Abstraction/NOF.Infrastructure.Abstraction.csproj" />
     <Project Path="src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
   </Folder>
   <Folder Name="/src/Hostings/">

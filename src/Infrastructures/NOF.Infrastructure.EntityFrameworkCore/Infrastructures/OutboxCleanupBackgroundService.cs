@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

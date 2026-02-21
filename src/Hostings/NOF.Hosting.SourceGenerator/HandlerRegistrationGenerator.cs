@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -139,7 +138,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine("#pragma warning disable CS8620");
         sb.AppendLine();
-        sb.AppendLine("using NOF.Infrastructure.Core;");
+        sb.AppendLine("using NOF.Infrastructure.Abstraction;");
         sb.AppendLine();
 
         sb.AppendLine($"namespace {assemblyName}");
@@ -203,28 +202,28 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             if (display == "NOF.Application.ICommandHandler<TCommand>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Core.HandlerInfo(global::NOF.Infrastructure.Core.HandlerKind.Command, typeof({handlerTypeName}), typeof({messageType}), null)");
+                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Command, typeof({handlerTypeName}), typeof({messageType}), null)");
             }
             else if (display == "NOF.Application.IEventHandler<TEvent>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Core.HandlerInfo(global::NOF.Infrastructure.Core.HandlerKind.Event, typeof({handlerTypeName}), typeof({messageType}), null)");
+                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Event, typeof({handlerTypeName}), typeof({messageType}), null)");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Core.HandlerInfo(global::NOF.Infrastructure.Core.HandlerKind.Notification, typeof({handlerTypeName}), typeof({messageType}), null)");
+                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Notification, typeof({handlerTypeName}), typeof({messageType}), null)");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
                 var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Core.HandlerInfo(global::NOF.Infrastructure.Core.HandlerKind.RequestWithResponse, typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
+                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithResponse, typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Core.HandlerInfo(global::NOF.Infrastructure.Core.HandlerKind.RequestWithoutResponse, typeof({handlerTypeName}), typeof({messageType}), null)");
+                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithoutResponse, typeof({handlerTypeName}), typeof({messageType}), null)");
             }
         }
     }

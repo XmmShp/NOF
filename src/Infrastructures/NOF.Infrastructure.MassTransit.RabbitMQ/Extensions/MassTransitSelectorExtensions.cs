@@ -1,8 +1,7 @@
 using MassTransit;
 using Microsoft.Extensions.Configuration;
-using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.MassTransit.RabbitMQ;
 

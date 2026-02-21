@@ -1,7 +1,7 @@
 using MassTransit;
 using MassTransit.Mediator;
 using NOF.Contract;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;

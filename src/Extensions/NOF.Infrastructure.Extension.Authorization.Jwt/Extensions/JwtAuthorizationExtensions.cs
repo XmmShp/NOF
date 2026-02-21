@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 

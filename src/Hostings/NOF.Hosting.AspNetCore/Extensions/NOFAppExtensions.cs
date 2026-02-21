@@ -2,9 +2,8 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Contract;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace NOF.Hosting.AspNetCore;
 

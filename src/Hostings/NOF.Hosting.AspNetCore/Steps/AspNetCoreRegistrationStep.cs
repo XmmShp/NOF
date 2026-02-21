@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 

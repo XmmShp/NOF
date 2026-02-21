@@ -20,7 +20,7 @@ public record ProcessingSucceeded(string TaskId) : INotification;
 public record ProcessingFailed(string TaskId, string Reason) : INotification;
 public record StartProcessingCommand(string TaskId) : ICommand;
 
-public class SampleStateMachineContext : IStateMachineContext
+public class SampleStateMachineContext
 {
     public string TaskId { get; set; } = null!;
     public DateTime StartOn { get; set; }

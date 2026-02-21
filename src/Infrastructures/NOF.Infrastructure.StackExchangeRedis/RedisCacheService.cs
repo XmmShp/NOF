@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 
@@ -19,18 +18,18 @@ public class RedisCacheService : ICacheService
     public RedisCacheService(
         IConnectionMultiplexer connectionMultiplexer,
         ICacheSerializer serializer,
-        IOptions<CacheServiceOptions> options,
-        ICacheLockRetryStrategy lockRetryStrategy)
+        ICacheLockRetryStrategy lockRetryStrategy,
+        CacheServiceOptions options)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
         ArgumentNullException.ThrowIfNull(serializer);
-        ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
+        ArgumentNullException.ThrowIfNull(options);
 
         _database = connectionMultiplexer.GetDatabase();
         _serializer = serializer;
-        _options = options.Value;
         _lockRetryStrategy = lockRetryStrategy;
+        _options = options;
     }
 
     private string ApplyKeyPrefix(string key)

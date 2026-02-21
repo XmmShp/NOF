@@ -2,6 +2,7 @@ using MassTransit;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
+using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 using System.Diagnostics;
 

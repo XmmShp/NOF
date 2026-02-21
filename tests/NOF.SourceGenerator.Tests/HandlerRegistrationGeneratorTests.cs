@@ -1,11 +1,10 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting.SourceGenerator;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 

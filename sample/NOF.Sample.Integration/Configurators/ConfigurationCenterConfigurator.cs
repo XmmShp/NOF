@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using System.Text;
 
 namespace NOF.Sample;

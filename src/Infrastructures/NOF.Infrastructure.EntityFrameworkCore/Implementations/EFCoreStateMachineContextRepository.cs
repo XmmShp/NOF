@@ -34,12 +34,12 @@ internal class EFCoreStateMachineContextRepository : IStateMachineContextReposit
         }
 
         var type = Type.GetType(dbEntity.ContextType, throwOnError: true);
-        if (type is null || !typeof(IStateMachineContext).IsAssignableFrom(type))
+        if (type is null)
         {
             throw new InvalidOperationException($"Invalid context type: {dbEntity.ContextType}");
         }
 
-        if (JsonSerializer.Deserialize(dbEntity.ContextData, type, JsonSerializerOptions.NOFDefaults) is not IStateMachineContext context)
+        if (JsonSerializer.Deserialize(dbEntity.ContextData, type, JsonSerializerOptions.NOFDefaults) is not { } context)
         {
             return null;
         }

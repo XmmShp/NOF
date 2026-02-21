@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

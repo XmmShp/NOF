@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Domain;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Hosting.AspNetCore;
+using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;

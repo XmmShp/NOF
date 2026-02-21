@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 

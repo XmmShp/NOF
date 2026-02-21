@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
@@ -25,12 +25,12 @@ public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
             #endregion
 
             #region DbContext Services
-            builder.Services.AddScoped<TDbContext>(sp =>
+            builder.Services.AddScoped((Func<IServiceProvider, TDbContext>)(sp =>
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory<TDbContext>>();
-                var invocationContext = sp.GetRequiredService<IInvocationContext>();
-                return factory.CreateDbContext(invocationContext.TenantId);
-            });
+                var invocationContext = sp.GetRequiredService<Application.IInvocationContext>();
+                return factory.CreateDbContext((string?)invocationContext.TenantId);
+            }));
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
             #endregion

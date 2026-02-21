@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Abstraction;
 using Scalar.AspNetCore;
 
 namespace NOF.Hosting.AspNetCore;

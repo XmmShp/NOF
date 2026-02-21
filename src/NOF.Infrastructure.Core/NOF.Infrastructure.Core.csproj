@@ -7,21 +7,19 @@
 
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Core</PackageId>
-    <Description>Core infrastructure for the NOF Framework — INOFAppBuilder, dependency-aware step pipeline, OpenTelemetry integration, and service wiring.</Description>
+    <Description>Core infrastructure for the NOF Framework — concrete implementations, step pipeline, OpenTelemetry integration, and service wiring.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NOF.Infrastructure.Abstraction\NOF.Infrastructure.Abstraction.csproj" />
+  </ItemGroup>
 
 </Project>

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Infrastructure.Abstraction;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
