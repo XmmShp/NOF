@@ -22,7 +22,7 @@ public class DeleteConfigNode : IRequestHandler<DeleteConfigNodeRequest>
 
     public async Task<Result> HandleAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
     {
-        var id = ConfigNodeId.From(request.Id);
+        var id = ConfigNodeId.Of(request.Id);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
         if (node is null)
         {

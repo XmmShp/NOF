@@ -64,6 +64,14 @@ public readonly struct Optional<T>
     public static implicit operator Optional<T>(NoneOptional optional) => new(default!, false);
 
     /// <summary>
+    /// Defines an implicit conversion from <typeparamref name="T"/> to <see cref="Optional{T}"/>,
+    /// enabling syntax like <c>Optional&lt;int&gt; x = 42;</c>.
+    /// </summary>
+    /// <param name="value">The value to wrap.</param>
+    /// <returns>An <see cref="Optional{T}"/> containing <paramref name="value"/>.</returns>
+    public static implicit operator Optional<T>(T value) => new(value, true);
+
+    /// <summary>
     /// Returns the contained value if present; otherwise, returns the specified default value.
     /// </summary>
     /// <param name="defaultValue">The value to return if no value is present.</param>

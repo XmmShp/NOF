@@ -27,15 +27,15 @@ public class ConfigNodeChildren
 
     public void AddChild(ConfigNodeId childId)
     {
-        if (!ChildrenIds.Contains(childId.Value))
+        if (!ChildrenIds.Contains((long)childId))
         {
-            ChildrenIds.Add(childId.Value);
+            ChildrenIds.Add((long)childId);
         }
     }
 
     public void RemoveChild(ConfigNodeId childId)
     {
-        ChildrenIds.Remove(childId.Value);
+        ChildrenIds.Remove((long)childId);
     }
 
     public bool HasChildren() => ChildrenIds.Count > 0;

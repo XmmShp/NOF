@@ -1,9 +1,2 @@
-using Vogen;
-
-namespace NOF.Sample;
-
-[EfCoreConverter<ConfigNodeId>]
-[EfCoreConverter<ConfigNodeName>]
-[EfCoreConverter<ConfigFileName>]
-[EfCoreConverter<ConfigContent>]
-internal partial class EfCoreConverters;
+// Value object converters are registered automatically via
+// NOF.Infrastructure.EntityFrameworkCore.ValueObjectValueConverterSelector.

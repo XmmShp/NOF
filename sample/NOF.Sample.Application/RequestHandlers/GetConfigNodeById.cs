@@ -15,7 +15,7 @@ public class GetConfigNodeById : IRequestHandler<GetConfigNodeByIdRequest, GetCo
 
     public async Task<Result<GetConfigNodeByIdResponse>> HandleAsync(GetConfigNodeByIdRequest request, CancellationToken cancellationToken)
     {
-        var nodeId = ConfigNodeId.From(request.Id);
+        var nodeId = ConfigNodeId.Of(request.Id);
         var node = await _viewRepository.GetByIdAsync(nodeId, cancellationToken);
 
         if (node is null)

@@ -16,7 +16,7 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
 
     public async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
     {
-        var nodeId = ConfigNodeId.From(request.NodeId);
+        var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(nodeId, cancellationToken);
 
         if (node is null)
@@ -25,7 +25,7 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
         }
 
         var newParentId = request.NewParentId.HasValue
-            ? ConfigNodeId.From(request.NewParentId.Value)
+            ? ConfigNodeId.Of(request.NewParentId.Value)
             : (ConfigNodeId?)null;
 
         // 检查新父节点是否存在（如果不是设为根节点）

@@ -16,7 +16,7 @@ public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
 
     public async Task<Result> HandleAsync(RemoveConfigFileRequest request, CancellationToken cancellationToken)
     {
-        var id = ConfigNodeId.From(request.NodeId);
+        var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
 
         if (node is null)
@@ -24,7 +24,7 @@ public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
             return Result.Fail(404, "Node not found.");
         }
 
-        var fileName = ConfigFileName.From(request.FileName);
+        var fileName = ConfigFileName.Of(request.FileName);
         node.RemoveConfigFile(fileName);
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();

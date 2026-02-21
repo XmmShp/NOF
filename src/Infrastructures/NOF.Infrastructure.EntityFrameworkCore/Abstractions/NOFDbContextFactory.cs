@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -57,6 +58,10 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
         // Use configurator to configure database-specific options
         _dbContextConfigurator.Configure(optionsBuilder, tenantId);
+
+        // Register value object converter selector so EF Core automatically
+        // converts NOF value objects to/from their primitive types
+        optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 
         var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);
 

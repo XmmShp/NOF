@@ -81,6 +81,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new CacheServiceRegistrationStep(),
             new OutboxRegistrationStep(),
             new OpenTelemetryRegistrationStep(),
+            new SnowflakeIdGeneratorRegistrationStep(),
 
             new ExceptionInboundMiddlewareStep(),
             new IdentityInboundMiddlewareStep(),
@@ -96,7 +97,10 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new TenantOutboundMiddlewareStep(),
         ];
         EndpointNameProvider = new EndpointNameProvider();
-        ApplicationConfigs = [];
+        ApplicationConfigs =
+        [
+            new IdGeneratorInitializationStep(),
+        ];
     }
 
     /// <inheritdoc />

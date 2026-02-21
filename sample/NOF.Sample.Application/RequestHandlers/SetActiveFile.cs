@@ -16,7 +16,7 @@ public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
 
     public async Task<Result> HandleAsync(SetActiveFileRequest request, CancellationToken cancellationToken)
     {
-        var id = ConfigNodeId.From(request.NodeId);
+        var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
 
         if (node is null)
@@ -24,7 +24,7 @@ public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
             return Result.Fail(404, "Node not found.");
         }
 
-        var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.From(request.FileName);
+        var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);
         node.SetActiveFileName(fileName);
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();

@@ -16,7 +16,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
         var appCacheKey = new ConfigResultCacheKey(appNameStr);
 
         // 1. Find App Node
-        var appName = ConfigNodeName.From(appNameStr);
+        var appName = ConfigNodeName.Of(appNameStr);
         var appNode = await viewRepository.GetByNameAsync(appName, cancellationToken);
 
         if (appNode is null)
@@ -29,7 +29,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         // Check versions
         var maxVersion = 0L;
-        foreach (var versionKey in fullPath.Select(node => new ConfigNodeVersionCacheKey(ConfigNodeId.From(node.Id))))
+        foreach (var versionKey in fullPath.Select(node => new ConfigNodeVersionCacheKey(ConfigNodeId.Of(node.Id))))
         {
             var version = await cache.GetAsync(versionKey, cancellationToken: cancellationToken);
             version.IfSome(versionVal =>
@@ -73,7 +73,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         while (current.ParentId.HasValue)
         {
-            var parent = await viewRepository.GetByIdAsync(ConfigNodeId.From(current.ParentId.Value), cancellationToken);
+            var parent = await viewRepository.GetByIdAsync(ConfigNodeId.Of(current.ParentId.Value), cancellationToken);
             if (parent is null)
             {
                 break;

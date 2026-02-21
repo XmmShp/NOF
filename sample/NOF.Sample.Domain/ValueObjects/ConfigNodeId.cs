@@ -1,13 +1,7 @@
-using Vogen;
-using Yitter.IdGenerator;
+using NOF.Domain;
 
 namespace NOF.Sample;
 
 [ValueObject<long>]
-public readonly partial struct ConfigNodeId
-{
-    public static ConfigNodeId New()
-    {
-        return From(YitIdHelper.NextId());
-    }
-}
+[NewableValueObject]
+public readonly partial struct ConfigNodeId;

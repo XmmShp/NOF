@@ -16,8 +16,8 @@ public class CreateConfigNode : IRequestHandler<CreateConfigNodeRequest>
 
     public async Task<Result> HandleAsync(CreateConfigNodeRequest request, CancellationToken cancellationToken)
     {
-        var name = ConfigNodeName.From(request.Name);
-        var parentId = request.ParentId.HasValue ? ConfigNodeId.From(request.ParentId.Value) : (ConfigNodeId?)null;
+        var name = ConfigNodeName.Of(request.Name);
+        var parentId = request.ParentId.HasValue ? ConfigNodeId.Of(request.ParentId.Value) : (ConfigNodeId?)null;
 
         if (await _configNodeRepository.ExistsByNameAsync(name, cancellationToken))
         {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Contract;
 
@@ -35,6 +36,19 @@ public static partial class NOFContractExtensions
         {
             options.Converters.Add(new OptionalConverterFactory());
             options.Converters.Add(new PatchRequestConverterFactory());
+
+            var defaultResolver = options.TypeInfoResolverChain
+                .OfType<DefaultJsonTypeInfoResolver>()
+                .FirstOrDefault();
+
+            if (defaultResolver is null)
+            {
+                defaultResolver = new DefaultJsonTypeInfoResolver();
+                options.TypeInfoResolverChain.Add(defaultResolver);
+            }
+
+            defaultResolver.Modifiers.Add(OptionalTypeInfoResolverModifier.Modifier);
+
             return options;
         }
     }

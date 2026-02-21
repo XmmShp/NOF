@@ -16,7 +16,7 @@ public class AddOrUpdateConfigFile : IRequestHandler<AddOrUpdateConfigFileReques
 
     public async Task<Result> HandleAsync(AddOrUpdateConfigFileRequest request, CancellationToken cancellationToken)
     {
-        var id = ConfigNodeId.From(request.NodeId);
+        var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
 
         if (node is null)
@@ -24,8 +24,8 @@ public class AddOrUpdateConfigFile : IRequestHandler<AddOrUpdateConfigFileReques
             return Result.Fail(404, "Node not found.");
         }
 
-        var fileName = ConfigFileName.From(request.FileName);
-        var content = ConfigContent.From(request.Content);
+        var fileName = ConfigFileName.Of(request.FileName);
+        var content = ConfigContent.Of(request.Content);
 
         node.AddOrUpdateConfigFile(fileName, content);
         await _uow.SaveChangesAsync(cancellationToken);

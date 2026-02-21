@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure.Abstraction;
@@ -12,7 +11,6 @@ using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Contract;
 using NOF.Sample.WebUI;
-using Yitter.IdGenerator;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
 
@@ -33,7 +31,6 @@ builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 
-builder.Services.AddOptionsInConfiguration<IdGeneratorOptions>();
 builder.Services.AddAntDesign()
     .AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -56,7 +53,6 @@ builder.Services.AddHostedService(async (sp, ct) =>
 });
 
 var app = await builder.BuildAsync();
-YitIdHelper.SetIdGenerator(app.Services.GetRequiredService<IOptions<IdGeneratorOptions>>().Value);
 
 app.UseAntiforgery();
 

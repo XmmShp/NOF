@@ -171,11 +171,11 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
     private static ConfigNodeDto MapToDto(ConfigNode node)
     {
         return new ConfigNodeDto(
-            node.Id.Value,
-            node.ParentId?.Value,
-            node.Name.Value,
-            node.ActiveFileName?.Value,
-            node.ConfigFiles.Select(f => new ConfigFileDto(f.Name.Value, f.Content.Value)).ToList()
+            (long)node.Id,
+            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
+            (string)node.Name,
+            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
+            node.ConfigFiles.Select(f => new ConfigFileDto((string)f.Name, (string)f.Content)).ToList()
         );
     }
 }

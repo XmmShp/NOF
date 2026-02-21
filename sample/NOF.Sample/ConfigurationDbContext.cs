@@ -13,13 +13,6 @@ public class ConfigurationDbContext : NOFDbContext
     public DbSet<ConfigNode> ConfigNodes { get; set; }
     public DbSet<ConfigNodeChildren> ConfigNodeChildren { get; set; }
 
-    protected override void ConfigureConventions(
-        ModelConfigurationBuilder configurationBuilder)
-    {
-        base.ConfigureConventions(configurationBuilder);
-        configurationBuilder.RegisterAllInEfCoreConverters();
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
