@@ -7,8 +7,8 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// An EF Core <see cref="IValueConverterSelector"/> that automatically provides
-/// <see cref="ValueConverter"/> instances for any type decorated with
-/// <c>[ValueObject&lt;TPrimitive&gt;]</c> from NOF.Domain.
+/// <see cref="ValueConverter"/> instances for any type implementing
+/// <c>IValueObject&lt;TPrimitive&gt;</c> from NOF.Domain.
 /// <para>
 /// The value object must expose:
 /// <list type="bullet">
@@ -20,7 +20,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 {
     private static readonly ConcurrentDictionary<Type, ValueConverterInfo?> _cache = new();
-    private static readonly Type AttributeOpenType = typeof(ValueObjectAttribute<>);
+    private static readonly Type InterfaceOpenType = typeof(IValueObject<>);
 
     public ValueObjectValueConverterSelector(ValueConverterSelectorDependencies dependencies)
         : base(dependencies) { }
@@ -80,12 +80,12 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 
     private static Type? GetPrimitiveType(Type voType)
     {
-        foreach (var attr in voType.GetCustomAttributesData())
+        foreach (var iface in voType.GetInterfaces())
         {
-            if (attr.AttributeType.IsGenericType &&
-                attr.AttributeType.GetGenericTypeDefinition() == AttributeOpenType)
+            if (iface.IsGenericType &&
+                iface.GetGenericTypeDefinition() == InterfaceOpenType)
             {
-                return attr.AttributeType.GenericTypeArguments[0];
+                return iface.GenericTypeArguments[0];
             }
         }
         return null;

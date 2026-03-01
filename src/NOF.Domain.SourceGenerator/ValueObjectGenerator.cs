@@ -7,35 +7,27 @@ using System.Text;
 namespace NOF.Domain.SourceGenerator;
 
 /// <summary>
-/// Generates value object boilerplate for structs annotated with
-/// <c>[ValueObject&lt;TPrimitive&gt;]</c>.
+/// Generates value object boilerplate for structs implementing
+/// <c>IValueObject&lt;TPrimitive&gt;</c>.
 /// </summary>
 [Generator]
 public class ValueObjectGenerator : IIncrementalGenerator
 {
-    private const string AttributeMetadataName = "NOF.Domain.ValueObjectAttribute<TPrimitive>";
+    private const string InterfaceMetadataName = "NOF.Domain.IValueObject<T>";
     private const string NewableAttributeMetadataName = "NOF.Domain.NewableValueObjectAttribute";
 
     private static readonly DiagnosticDescriptor MustBePartialDescriptor = new(
         id: "NOF010",
         title: "ValueObject struct must be partial",
-        messageFormat: "'{0}' is annotated with [ValueObject] but is not declared as partial",
-        category: "ValueObjectGenerator",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    private static readonly DiagnosticDescriptor ValidateMustBeStaticDescriptor = new(
-        id: "NOF011",
-        title: "ValueObject Validate method must be static",
-        messageFormat: "'{0}.Validate({1})' must be a static method",
+        messageFormat: "'{0}' implements IValueObject<T> but is not declared as partial",
         category: "ValueObjectGenerator",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor NewableMustBeLongDescriptor = new(
         id: "NOF012",
-        title: "[NewableValueObject] requires ValueObject<long>",
-        messageFormat: "'{0}' is annotated with [NewableValueObject] but its primitive type is '{1}'. Only ValueObject<long> is supported.",
+        title: "[NewableValueObject] requires IValueObject<long>",
+        messageFormat: "'{0}' is annotated with [NewableValueObject] but its primitive type is '{1}'. Only IValueObject<long> is supported.",
         category: "ValueObjectGenerator",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -44,7 +36,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
     {
         var candidates = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => node is StructDeclarationSyntax { AttributeLists.Count: > 0 },
+                predicate: static (node, _) => node is StructDeclarationSyntax { BaseList.Types.Count: > 0 },
                 transform: static (ctx, _) => GetValueObjectInfo(ctx))
             .Where(static x => x is not null);
 
@@ -76,28 +68,23 @@ public class ValueObjectGenerator : IIncrementalGenerator
             return null;
         }
 
-        // Find [ValueObject<TPrimitive>]
+        // Find IValueObject<TPrimitive> in the interface list
         INamedTypeSymbol? primitiveType = null;
         var primitiveNullableAnnotation = NullableAnnotation.None;
-        foreach (var attr in symbol.GetAttributes())
+        foreach (var iface in symbol.Interfaces)
         {
-            if (attr.AttributeClass is null)
+            if (iface.OriginalDefinition.ToDisplayString() != InterfaceMetadataName)
             {
                 continue;
             }
 
-            if (attr.AttributeClass.OriginalDefinition.ToDisplayString() != AttributeMetadataName)
+            if (iface.TypeArguments.Length != 1)
             {
                 continue;
             }
 
-            if (attr.AttributeClass.TypeArguments.Length != 1)
-            {
-                continue;
-            }
-
-            primitiveType = attr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
-            primitiveNullableAnnotation = attr.AttributeClass.TypeArgumentNullableAnnotations[0];
+            primitiveType = iface.TypeArguments[0] as INamedTypeSymbol;
+            primitiveNullableAnnotation = iface.TypeArgumentNullableAnnotations[0];
             break;
         }
 
@@ -120,44 +107,12 @@ public class ValueObjectGenerator : IIncrementalGenerator
 
         var primitiveName = primitiveType.ToDisplayString(typeFormat);
 
-        // Detect optional static void Validate(TPrimitive value) — emit error if non-static
-        var hasValidateMethod = false;
-        foreach (var member in symbol.GetMembers("Validate"))
-        {
-            if (member is not IMethodSymbol method)
-            {
-                continue;
-            }
-
-            if (method.Parameters.Length != 1)
-            {
-                continue;
-            }
-
-            if (!SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, primitiveType))
-            {
-                continue;
-            }
-
-            if (!method.IsStatic)
-            {
-                result.Diagnostics.Add(Diagnostic.Create(
-                    ValidateMustBeStaticDescriptor,
-                    member.Locations.FirstOrDefault() ?? Location.None,
-                    symbol.Name, primitiveName));
-                return result; // no code gen
-            }
-
-            hasValidateMethod = true;
-            break;
-        }
-
         // Non-nullable reference type primitive → emit null-guard in Of()
         // Annotated = string?, NotAnnotated = string, None = no nullable context
         var primitiveRequiresNullCheck = !primitiveType.IsValueType
             && primitiveNullableAnnotation != NullableAnnotation.Annotated;
 
-        // Detect [NewableValueObject] — only valid on ValueObject<long>
+        // Detect [NewableValueObject] — only valid on IValueObject<long>
         var hasNewableAttribute = symbol.GetAttributes()
             .Any(a => a.AttributeClass?.ToDisplayString() == NewableAttributeMetadataName);
 
@@ -176,7 +131,6 @@ public class ValueObjectGenerator : IIncrementalGenerator
             Namespace = symbol.ContainingNamespace.ToDisplayString(),
             PrimitiveFullName = primitiveName,
             IsReadonly = syntax.Modifiers.Any(m => m.Text == "readonly"),
-            HasValidateMethod = hasValidateMethod,
             PrimitiveIsValueType = primitiveType.IsValueType,
             PrimitiveRequiresNullCheck = primitiveRequiresNullCheck,
             HasNewMethod = hasNewableAttribute,
@@ -219,13 +173,17 @@ public class ValueObjectGenerator : IIncrementalGenerator
             sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(value);");
         }
 
-        if (info.HasValidateMethod)
-        {
-            sb.AppendLine("            Validate(value);");
-        }
+        // Validate via static virtual on IValueObject<T> — dispatches to user override or default no-op
+        sb.AppendLine($"            __CallValidate<{info.TypeName}>(value);");
 
         sb.AppendLine($"            return new {info.TypeName}(value);");
         sb.AppendLine("        }");
+        sb.AppendLine();
+
+        // Helper to call static virtual Validate through constrained generic dispatch
+        sb.AppendLine($"        private static void __CallValidate<TSelf>({info.PrimitiveFullName} value)");
+        sb.AppendLine($"            where TSelf : global::NOF.Domain.IValueObject<{info.PrimitiveFullName}>");
+        sb.AppendLine("            => TSelf.Validate(value);");
         sb.AppendLine();
 
         // Of(TPrimitive?) overload — only for value type primitives (e.g. int?, long?)
@@ -240,6 +198,11 @@ public class ValueObjectGenerator : IIncrementalGenerator
         // Explicit cast: value object → primitive (only direction kept)
         sb.AppendLine($"        public static explicit operator {info.PrimitiveFullName}({info.TypeName} vo)");
         sb.AppendLine("            => vo._value;");
+        sb.AppendLine();
+
+        // IValueObject<T>.GetUnderlyingValue()
+        // IValueObject.GetUnderlyingValue() and GetUnderlyingType() are provided by the interface defaults
+        sb.AppendLine($"        public {info.PrimitiveFullName} GetUnderlyingValue() => _value;");
         sb.AppendLine();
 
         // Equals / GetHashCode / ToString
@@ -304,7 +267,6 @@ public class ValueObjectGenerator : IIncrementalGenerator
         public string Namespace { get; set; } = string.Empty;
         public string PrimitiveFullName { get; set; } = string.Empty;
         public bool IsReadonly { get; set; }
-        public bool HasValidateMethod { get; set; }
         public bool PrimitiveIsValueType { get; set; }
         public bool PrimitiveRequiresNullCheck { get; set; }
         public bool HasNewMethod { get; set; }

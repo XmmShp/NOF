@@ -8,32 +8,30 @@ NOF follows DDD patterns with aggregate roots, entities, value objects, and doma
 
 ## Adding a Value Object
 
-Value objects are immutable types wrapping a primitive. The source generator produces constructors, factory methods, JSON converters, equality, and casts.
+Value objects are immutable types wrapping a primitive. Implement `IValueObject<T>` and the source generator produces constructors, factory methods, JSON converters, equality, and casts.
 
 1. Create a file in `Domain/ValueObjects/`:
    ```csharp
    using NOF.Domain;
 
-   [ValueObject<long>]
    [NewableValueObject]  // Adds a static New() method (for SnowflakeId generation)
-   public readonly partial struct OrderId;
+   public readonly partial struct OrderId : IValueObject<long>;
    ```
 
-2. For value objects with validation:
+2. For value objects with validation (override the `static virtual Validate` method):
    ```csharp
    using NOF.Domain;
 
-   [ValueObject<string>]
-   public readonly partial struct EmailAddress
+   public readonly partial struct EmailAddress : IValueObject<string>
    {
-       private static void Validate(string input)
+       public static void Validate(string value)
        {
-           if (string.IsNullOrWhiteSpace(input))
+           if (string.IsNullOrWhiteSpace(value))
            {
                throw new DomainException(-1, "Email cannot be empty.");
            }
 
-           if (!input.Contains('@'))
+           if (!value.Contains('@'))
            {
                throw new DomainException(-1, "Invalid email format.");
            }
@@ -45,7 +43,9 @@ Value objects are immutable types wrapping a primitive. The source generator pro
    ```csharp
    var id = OrderId.New();           // SnowflakeId (requires [NewableValueObject])
    var id = OrderId.Of(12345L);      // From primitive
-   long raw = (long)id;              // Back to primitive
+   long raw = (long)id;              // Back to primitive (explicit cast)
+   long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
+   Type t = OrderId.GetUnderlyingType();// typeof(long)
    var email = EmailAddress.Of("a@b.com");  // Validated
    ```
 
@@ -95,12 +95,11 @@ Value objects are immutable types wrapping a primitive. The source generator pro
 
 ## Adding a Child Entity
 
-For entities owned by an aggregate root, use `Entity` base class and optionally `[Snapshotable]` for read-only snapshots:
+For entities owned by an aggregate root, use `Entity` base class:
 
 ```csharp
 using NOF.Domain;
 
-[Snapshotable]  // Generates a <ClassName>Snapshot record with all public properties
 public class OrderItem : Entity
 {
     public string ProductName { get; init; }
@@ -160,7 +159,7 @@ public static partial class OrderFailures;
 ## Notes
 
 - Aggregate roots raise domain events via `AddEvent()` — events are dispatched when `IUnitOfWork.SaveChangesAsync()` is called.
-- `[Snapshotable]` generates a read-only `record` snapshot — expose via `entity.ToSnapshot()`.
 - `[NewableValueObject]` requires the SnowflakeId generator to be configured (it is by default in `NOFAppBuilder`).
-- Value objects use explicit casts, not implicit — `(long)orderId` to get the primitive.
+- Value objects use explicit casts, not implicit — `(long)orderId` to get the primitive, or `id.GetUnderlyingValue()`.
+- Override `static void Validate(T value)` on the struct to add custom validation (it's a `static virtual` on the interface — default is no-op).
 - Always keep the parameterless constructor `private` or `internal` for EF Core compatibility.

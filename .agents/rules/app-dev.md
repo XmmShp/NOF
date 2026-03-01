@@ -50,7 +50,6 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 | `[AutoInject(Lifetime)]` | DI registration | Any |
 | `[ExposeToHttpEndpoint(verb, route)]` | HTTP endpoint mapping | Contract |
 | `[Failure(name, message, statusCode)]` | Static `Failure` instances | Contract/Domain |
-| `[Snapshotable]` | Read-only snapshot record | Domain |
 
 ## Coding Conventions
 
@@ -95,50 +94,29 @@ return Result.Fail(404, "Order not found");
 
 ### Object Mapping (IMapper)
 
-Zero-reflection, manually configured mapper. Register mappings in constructor (first-wins, no GC pressure):
+Zero-reflection mapper. Delegates return `Optional<T>` — multiple per key (last-added first, first `HasValue` wins).
+Registration: `Add` (append), `TryAdd` (skip if exists), `ReplaceOrAdd` (clear + set).
+
+**Pre-build**: `services.Configure<MapperOptions>(o => o.Add<A, B>(...))`.
+**Runtime**: inject `IMapper`, call `TryAdd` in constructors (no-op if key exists).
 
 ```csharp
-public class ConfigNodeViewRepository : IConfigNodeViewRepository
-{
-    private readonly IMapper _mapper;
+// Named mappings
+_mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id), name: "summary");
+var dto = _mapper.Map<Order, OrderDto>(order, name: "summary");
 
-    public ConfigNodeViewRepository(IMapper mapper)
-    {
-        _mapper = mapper;
-        
-        // Register in constructor - safe to call multiple times (first-wins)
-        _mapper.CreateMap<ConfigFileSnapshot, ConfigFileDto>(f => 
-            new ConfigFileDto((string)f.Name, (string)f.Content));
-        
-        _mapper.CreateMap<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(
-            (long)node.Id,
-            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
-            (string)node.Name,
-            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
-            node.ConfigFiles.Select(f => _mapper.Map<ConfigFileSnapshot, ConfigFileDto>(f)).ToList()
-        ));
-    }
+// Non-generic (delegates return Optional<object?>)
+_mapper.Add(typeof(Order), typeof(OrderDto), src => Optional.Of<object?>(MapOrder((Order)src)));
 
-    public async Task<ConfigNodeDto?> GetByIdAsync(ConfigNodeId id)
-    {
-        var node = await _repository.FindAsync(id);
-        return node is null ? null : _mapper.Map<ConfigNode, ConfigNodeDto>(node);
-    }
-}
+// Fluent extensions
+var dto = entity.Map.To<EntityDto>();                      // Registered mapping, fallback to cast
+var dto = entity.Map.As<DerivedEntity>().To<EntityDto>();   // Change source type for lookup
+var dto = entity.Map.AsRuntime.To<EntityDto>();             // Runtime type for lookup
+var obj = entity.Map.To(typeof(EntityDto));                 // Non-generic
 ```
 
-**Fluent syntax:**
-
-```csharp
-var dto = entity.Map.To<EntityDto>();        // Registered mapping, fallback to cast
-var baseEntity = derived.Map.As<BaseEntity>(); // Inheritance cast only
-```
-
-**MapOrCreate** - register if missing, then map:
-
-```csharp
-var dto = _mapper.MapOrCreate(entity, e => new EntityDto(e.Id, e.Name));
-```
+**Built-in mappings** (no registration needed, unnamed only, user mappings take priority):
+`IValueObject<T>`→`T`, `Result<T>`→`T`, `Optional<T>`→`T`, numeric↔numeric, enum↔int/long, any T→string (ToString), `A`→`T?` falls back to `A`→`T`.
 
 ### Dispatch APIs
 

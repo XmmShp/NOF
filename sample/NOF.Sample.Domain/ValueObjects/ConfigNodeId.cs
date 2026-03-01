@@ -2,6 +2,5 @@ using NOF.Domain;
 
 namespace NOF.Sample;
 
-[ValueObject<long>]
 [NewableValueObject]
-public readonly partial struct ConfigNodeId;
+public readonly partial struct ConfigNodeId : IValueObject<long>;

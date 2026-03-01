@@ -4,10 +4,9 @@ using System.Text.Json.Nodes;
 
 namespace NOF.Sample;
 
-[ValueObject<string>]
-public readonly partial struct ConfigNodeName
+public readonly partial struct ConfigNodeName : IValueObject<string>
 {
-    private static void Validate(string input)
+    public static void Validate(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -21,10 +20,9 @@ public readonly partial struct ConfigNodeName
     }
 }
 
-[ValueObject<string>]
-public readonly partial struct ConfigFileName
+public readonly partial struct ConfigFileName : IValueObject<string>
 {
-    private static void Validate(string input)
+    public static void Validate(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -38,10 +36,9 @@ public readonly partial struct ConfigFileName
     }
 }
 
-[ValueObject<string>]
-public readonly partial struct ConfigContent
+public readonly partial struct ConfigContent : IValueObject<string>
 {
-    private static void Validate(string input)
+    public static void Validate(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {

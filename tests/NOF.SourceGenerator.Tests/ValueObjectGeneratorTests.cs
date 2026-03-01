@@ -16,13 +16,14 @@ public class ValueObjectGeneratorTests
 
     private static readonly Type[] ExtraRefs =
     [
-        typeof(ValueObjectAttribute<>),
+        typeof(IValueObject<>),
         typeof(NewableValueObjectAttribute),
         typeof(IdGenerator),
+        typeof(System.Text.Json.Serialization.JsonConverterAttribute),
     ];
 
     private static GeneratorDriverRunResult RunGenerator(string source)
-        => new ValueObjectGenerator().GetResult(source, ExtraRefs);
+        => new ValueObjectGenerator().GetResultPostGen(source, ExtraRefs);
 
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
@@ -48,39 +49,13 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<string>]
-                public readonly struct NotPartial { }
+                public readonly struct NotPartial : IValueObject<string> { }
             }
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
 
         diagnostics.Should().ContainSingle(d => d.Id == "NOF010");
-        result.GeneratedTrees.Should().BeEmpty();
-    }
-
-    // -----------------------------------------------------------------------
-    // NOF011 — Validate must be static
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    public void NonStaticValidate_EmitsNOF011_AndNoSource()
-    {
-        const string source = """
-            using NOF.Domain;
-            namespace Test
-            {
-                [ValueObject<string>]
-                public readonly partial struct MyVo
-                {
-                    private void Validate(string value) { }
-                }
-            }
-            """;
-
-        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF011");
         result.GeneratedTrees.Should().BeEmpty();
     }
 
@@ -95,9 +70,8 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<string>]
                 [NewableValueObject]
-                public readonly partial struct MyVo { }
+                public readonly partial struct MyVo : IValueObject<string> { }
             }
             """;
 
@@ -114,9 +88,8 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<int>]
                 [NewableValueObject]
-                public readonly partial struct MyVo { }
+                public readonly partial struct MyVo : IValueObject<int> { }
             }
             """;
 
@@ -138,8 +111,7 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<string>]
-                public readonly partial struct Name { }
+                public readonly partial struct Name : IValueObject<string> { }
             }
             """;
 
@@ -167,8 +139,7 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<int>]
-                public readonly partial struct Score { }
+                public readonly partial struct Score : IValueObject<int> { }
             }
             """;
 
@@ -185,8 +156,7 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<long>]
-                public readonly partial struct OrderId { }
+                public readonly partial struct OrderId : IValueObject<long> { }
             }
             """;
 
@@ -201,16 +171,36 @@ public class ValueObjectGeneratorTests
     }
 
     [Fact]
-    public void LongVo_WithValidate_CallsValidateInOf()
+    public void AlwaysCallsValidateInOf()
+    {
+        // Validate is a static virtual on IValueObject<T> — always called even without override
+        const string source = """
+            using NOF.Domain;
+            namespace Test
+            {
+                public readonly partial struct OrderId : IValueObject<long> { }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        var code = result.GeneratedTrees[0].GetText().ToString();
+        code.Should().Contain("__CallValidate<OrderId>(value);");
+    }
+
+    [Fact]
+    public void UserOverriddenValidate_IsCalledInOf()
     {
         const string source = """
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<long>]
-                public readonly partial struct OrderId
+                public readonly partial struct OrderId : IValueObject<long>
                 {
-                    private static void Validate(long value) { }
+                    public static void Validate(long value)
+                    {
+                        if (value <= 0) throw new System.ArgumentException("must be positive");
+                    }
                 }
             }
             """;
@@ -218,7 +208,7 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = result.GeneratedTrees[0].GetText().ToString();
-        code.Should().Contain("Validate(value);");
+        code.Should().Contain("__CallValidate<OrderId>(value);");
     }
 
     [Fact]
@@ -228,9 +218,8 @@ public class ValueObjectGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<long>]
                 [NewableValueObject]
-                public readonly partial struct EntityId { }
+                public readonly partial struct EntityId : IValueObject<long> { }
             }
             """;
 
@@ -242,18 +231,14 @@ public class ValueObjectGeneratorTests
     }
 
     [Fact]
-    public void StringVo_WithValidate_CallsValidate_NoNullGuardBeforeValidate()
+    public void StringVo_NullGuardBeforeValidate()
     {
         const string source = """
             #nullable enable
             using NOF.Domain;
             namespace Test
             {
-                [ValueObject<string>]
-                public readonly partial struct Tag
-                {
-                    private static void Validate(string value) { }
-                }
+                public readonly partial struct Tag : IValueObject<string> { }
             }
             """;
 
@@ -262,7 +247,7 @@ public class ValueObjectGeneratorTests
 
         // null guard must come before Validate
         var nullGuardIdx = code.IndexOf("ArgumentNullException.ThrowIfNull", StringComparison.Ordinal);
-        var validateIdx = code.IndexOf("Validate(value);", StringComparison.Ordinal);
+        var validateIdx = code.IndexOf("__CallValidate<Tag>(value);", StringComparison.Ordinal);
         nullGuardIdx.Should().BeLessThan(validateIdx);
     }
 }

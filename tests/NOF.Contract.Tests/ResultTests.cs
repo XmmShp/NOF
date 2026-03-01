@@ -240,7 +240,7 @@ public class ResultTests
         var deserialized = JsonSerializer.Deserialize<Result>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.IsSuccess.Should().BeTrue();
+        deserialized.IsSuccess.Should().BeTrue();
         deserialized.ErrorCode.Should().Be(0);
     }
 
@@ -252,7 +252,7 @@ public class ResultTests
         var deserialized = JsonSerializer.Deserialize<Result>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.IsSuccess.Should().BeFalse();
+        deserialized.IsSuccess.Should().BeFalse();
         deserialized.ErrorCode.Should().Be(404);
         deserialized.Message.Should().Be("Not found");
     }
@@ -265,7 +265,7 @@ public class ResultTests
         var deserialized = JsonSerializer.Deserialize<Result<string>>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.IsSuccess.Should().BeTrue();
+        deserialized.IsSuccess.Should().BeTrue();
         deserialized.Value.Should().Be("hello");
     }
 
@@ -277,7 +277,7 @@ public class ResultTests
         var deserialized = JsonSerializer.Deserialize<Result<string>>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.IsSuccess.Should().BeFalse();
+        deserialized.IsSuccess.Should().BeFalse();
         deserialized.ErrorCode.Should().Be(500);
         deserialized.Message.Should().Be("Error");
         deserialized.Value.Should().BeNull();
@@ -292,7 +292,7 @@ public class ResultTests
         var deserialized = JsonSerializer.Deserialize<Result<TestDto>>(json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.IsSuccess.Should().BeTrue();
+        deserialized.IsSuccess.Should().BeTrue();
         deserialized.Value.Should().NotBeNull();
         deserialized.Value!.Id.Should().Be(1);
         deserialized.Value.Name.Should().Be("test");

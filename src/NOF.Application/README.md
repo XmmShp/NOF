@@ -82,50 +82,55 @@ Handler base classes provide built-in transactional outbox support — commands 
 
 ### Object Mapping (IMapper)
 
-Zero-reflection, manually configured object mapper. All mappings must be explicitly registered — no reflection or conventions are used.
+Zero-reflection, manually configured object mapper. Each mapping delegate returns `Optional<T>` — multiple delegates per key are supported (last-added evaluated first, first `HasValue` wins).
+
+**Registration** — `Add` (append), `TryAdd` (skip if key exists), `ReplaceOrAdd` (clear + set):
 
 ```csharp
-public class ConfigNodeViewRepository : IConfigNodeViewRepository
-{
-    private readonly IMapper _mapper;
+// Pre-build (Options pattern)
+builder.Services.Configure<MapperOptions>(o =>
+    o.Add<ConfigFile, ConfigFileDto>(f =>
+        new ConfigFileDto((string)f.Name, (string)f.Content)));
 
-    public ConfigNodeViewRepository(IMapper mapper)
-    {
-        _mapper = mapper;
+// Runtime — TryAdd is safe in constructors (no-op if key already registered)
+_mapper.TryAdd<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(...));
 
-        // Register mappings in constructor (first-wins, no GC pressure on duplicates)
-        _mapper.CreateMap<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(
-            (long)node.Id,
-            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
-            (string)node.Name,
-            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
-            node.ConfigFiles.Select(f => _mapper.Map<ConfigFileSnapshot, ConfigFileDto>(f)).ToList()
-        ));
-    }
+// Non-generic
+_mapper.Add(typeof(Order), typeof(OrderDto), src => Optional.Of<object?>(MapOrder((Order)src)));
+```
 
-    public async Task<ConfigNodeDto?> GetByIdAsync(ConfigNodeId id)
-    {
-        var node = await _repository.FindAsync(id);
-        return node is null ? null : _mapper.Map<ConfigNode, ConfigNodeDto>(node);
-    }
-}
+**Named mappings** — multiple names per type pair:
+
+```csharp
+_mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id), name: "summary");
+_mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id, o.Details), name: "full");
+var dto = _mapper.Map<Order, OrderDto>(order, name: "full");
 ```
 
 **Fluent extension syntax:**
 
 ```csharp
-// .To<T>() - uses registered mapping, falls back to cast
-var dto = domainEntity.Map.To<EntityDto>();
-
-// .As<T>() - inheritance/interface cast only (no mapping lookup)
-var baseEntity = derivedEntity.Map.As<BaseEntity>();
+var dto = entity.Map.To<EntityDto>();                   // Registered mapping, fallback to cast
+var dto = entity.Map.To<EntityDto>(name: "v2");         // Named mapping
+var obj = entity.Map.To(typeof(EntityDto));              // Non-generic
+var dto = entity.Map.As<DerivedEntity>().To<EntityDto>(); // Change source type for lookup
+var dto = entity.Map.AsRuntime.To<EntityDto>();           // Use runtime type for lookup
 ```
 
-**MapOrCreate** - ensures mapping exists without caring if it was already registered:
+**Built-in mappings** (automatic, no registration required):
 
-```csharp
-var dto = _mapper.MapOrCreate(entity, e => new EntityDto(e.Id, e.Name));
-```
+| Conversion | Example |
+|------------|---------|
+| `IValueObject<T>` → `T` | `OrderId` → `long` (via `GetUnderlyingValue()`) |
+| `IValueObject<T>` → chain | `OrderId` → `string` (underlying → ToString) |
+| `Result<T>` → `T` | Extract `Value` if `IsSuccess` |
+| `Optional<T>` → `T` | Extract `Value` if `HasValue` |
+| Numeric ↔ numeric | `int` → `long`, `decimal` → `int`, etc. |
+| Enum ↔ numeric | `DayOfWeek` → `int`, `int` → `DayOfWeek` |
+| Any `T` → `string` | Calls `ToString()` (lowest priority) |
+| `A` → `T?` | Falls back to `A` → `T` mapping |
+
+User-registered mappings always take priority over built-ins. Built-ins only apply to unnamed (default) mappings.
 
 ## Installation
 

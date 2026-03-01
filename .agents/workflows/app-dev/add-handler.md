@@ -20,6 +20,10 @@ NOF uses a CQRS messaging pattern with `IRequest`, `ICommand`, and `INotificatio
 public record GetOrderRequest(long Id) : IRequest<GetOrderResponse>;
 public record GetOrderResponse(long Id, string CustomerName);
 
+// Pre-build mapping registration (Options pattern, in Program.cs or extension method)
+builder.Services.Configure<MapperOptions>(o =>
+    o.Add<Order, GetOrderResponse>(order => new GetOrderResponse((long)order.Id, order.CustomerName)));
+
 // Handler
 public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse>
 {
@@ -30,10 +34,6 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
     {
         _repo = repo;
         _mapper = mapper;
-        
-        // Register mapping in constructor (first-wins, no GC pressure)
-        _mapper.CreateMap<Order, GetOrderResponse>(o => 
-            new GetOrderResponse((long)o.Id, o.CustomerName));
     }
 
     public async Task<Result<GetOrderResponse>> HandleAsync(

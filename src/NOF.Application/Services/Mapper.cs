@@ -18,7 +18,7 @@ public static class Mapper
     public static IMapper Current
         => _current ?? throw new InvalidOperationException(
             "Mapper has not been initialized. " +
-            "Register mappings via ManualMapper during application setup.");
+            "Configure mappings via services.Configure<MapperOptions>() during application setup.");
 
     /// <summary>
     /// Sets the global <see cref="IMapper"/> instance.

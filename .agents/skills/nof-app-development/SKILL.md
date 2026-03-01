@@ -52,9 +52,8 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 
 | Attribute | What It Generates |
 |-----------|-------------------|
-| `[ValueObject<T>]` | Constructors, `Of()`, equality, JSON converter, explicit casts |
+| `: IValueObject<T>` | `Of()`, `GetUnderlyingValue()`, `GetUnderlyingType()`, `static virtual Validate`, equality, JSON converter, explicit casts |
 | `[NewableValueObject]` | Static `New()` method (SnowflakeId) |
-| `[Snapshotable]` | Read-only snapshot record with `ToSnapshot()` |
 | `[AutoInject(Lifetime)]` | DI registration (Singleton/Scoped/Transient) |
 | `[ExposeToHttpEndpoint(verb, route)]` | HTTP endpoint mapping |
 | `[Failure(name, message, statusCode)]` | Static `Failure` instances |
@@ -71,10 +70,10 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 | React to entity changes (in-transaction) | `IEvent` + `IEventHandler` |
 | Reliably publish after DB commit | `IDeferredNotificationPublisher` |
 | Cache data | `CacheKey<T>` + `ICacheService` |
-| Map domain entities to DTOs | `IMapper` + `CreateMap<TSource, TDest>()` |
+| Map domain entities to DTOs | `services.Configure<MapperOptions>(...)` + `IMapper` |
 | Manage complex workflows | `IStateMachineDefinition<TState>` |
-| Generate unique IDs | `[ValueObject<long>]` + `[NewableValueObject]` |
-| Validate input values | `[ValueObject<T>]` with `Validate()` method |
+| Generate unique IDs | `: IValueObject<long>` + `[NewableValueObject]` |
+| Validate input values | `: IValueObject<T>` with `static void Validate(T)` override |
 | Define error types | `[Failure(name, message, code)]` |
 | Register a service in DI | `[AutoInject(Lifetime)]` |
 

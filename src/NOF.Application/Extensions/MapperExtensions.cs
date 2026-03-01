@@ -1,3 +1,5 @@
+using NOF.Contract;
+
 namespace NOF.Application;
 
 /// <summary>
@@ -9,71 +11,92 @@ public static partial class NOFApplicationExtensions
     {
         /// <summary>
         /// Gets a <see cref="MapSelector{TSource}"/> bound to the current global <see cref="IMapper"/>
-        /// instance, providing fluent mapping via <c>.To&lt;T&gt;()</c> and <c>.As&lt;T&gt;()</c>.
-        /// The <see cref="IMapper"/> reference is captured at the point this property is accessed.
+        /// instance, providing fluent mapping via <c>.As&lt;T&gt;()</c> and <c>.To&lt;T&gt;()</c>.
         /// </summary>
-        public MapSelector<TSource> Map => new(source, Mapper.Current);
+        public MapSelector<TSource> Map => new(source!, typeof(TSource), Mapper.Current);
     }
 }
 
 /// <summary>
 /// Fluent selector returned by the <c>.Map</c> extension property.
-/// Provides <see cref="To{TDestination}"/> (registered mapping, fallback to cast)
-/// and <see cref="As{TDestination}"/> (inheritance / unboxing cast only).
 /// <para>
-/// For user-defined implicit/explicit conversion operators, register them as mappings
-/// via <see cref="IMapper.CreateMap{TSource, TDestination}"/>, e.g.
-/// <c>mapper.CreateMap&lt;A, B&gt;(a =&gt; (B)a)</c>.
+/// <see cref="As{TNewSource}"/> changes the source type used for mapping lookup (returns a new selector).
+/// <see cref="AsRuntime"/> switches to using the runtime type of the source object.
+/// <see cref="To{TDestination}"/> performs the mapping (registered mapping, fallback to cast).
+/// <see cref="To(Type, string?)"/> performs a non-generic mapping.
 /// </para>
 /// </summary>
-/// <typeparam name="TSource">The source type.</typeparam>
-public readonly struct MapSelector<TSource> where TSource : notnull
+/// <typeparam name="TSource">The compile-time source type.</typeparam>
+public readonly struct MapSelector<TSource>
 {
-    private readonly TSource _source;
+    private readonly object _source;
+    private readonly Type _sourceType;
     private readonly IMapper _mapper;
 
-    internal MapSelector(TSource source, IMapper mapper)
+    internal MapSelector(object source, Type sourceType, IMapper mapper)
     {
         _source = source;
+        _sourceType = sourceType;
         _mapper = mapper;
     }
 
     /// <summary>
-    /// Maps to <typeparamref name="TDestination"/> using a registered mapping function.
-    /// If no mapping is registered, falls back to a language-native cast (<see cref="As{TDestination}"/>).
+    /// Returns a new selector that uses <typeparamref name="TNewSource"/> as the source type
+    /// for mapping lookup. The source object reference is unchanged.
+    /// <para>Usage: <c>source.Map.As&lt;DerivedType&gt;().To&lt;TDest&gt;()</c></para>
     /// </summary>
-    /// <typeparam name="TDestination">The destination type.</typeparam>
-    /// <returns>The mapped or cast result.</returns>
-    /// <exception cref="InvalidCastException">
-    /// Thrown if no registered mapping exists and the runtime cast also fails.
-    /// </exception>
-    public TDestination To<TDestination>()
+    public MapSelector<TNewSource> As<TNewSource>()
     {
-        if (_mapper.TryMap<TSource, TDestination>(_source, out var result))
-        {
-            return result!;
-        }
-
-        return (TDestination)(object)_source!;
+        return new MapSelector<TNewSource>(_source, typeof(TNewSource), _mapper);
     }
 
     /// <summary>
-    /// Converts to <typeparamref name="TDestination"/> using only runtime-supported conversions
-    /// (inheritance casts, interface casts, unboxing).
-    /// No registered mapping functions are consulted.
-    /// <para>
-    /// This does <b>not</b> invoke user-defined implicit/explicit operators — those are
-    /// compile-time constructs. To support them, register a mapping via
-    /// <see cref="IMapper.CreateMap{TSource, TDestination}"/> and use <see cref="To{TDestination}"/> instead.
-    /// </para>
+    /// Returns a new selector that uses <paramref name="newSourceType"/> as the source type
+    /// for mapping lookup. The source object reference is unchanged.
+    /// <para>Usage: <c>source.Map.As(typeof(Derived)).To&lt;TDest&gt;()</c></para>
     /// </summary>
-    /// <typeparam name="TDestination">The destination type.</typeparam>
-    /// <returns>The cast result.</returns>
-    /// <exception cref="InvalidCastException">
-    /// Thrown if the runtime cast fails.
-    /// </exception>
-    public TDestination As<TDestination>()
+    public MapSelector<TSource> As(Type newSourceType)
     {
-        return (TDestination)(object)_source!;
+        return new MapSelector<TSource>(_source, newSourceType, _mapper);
+    }
+
+    /// <summary>
+    /// Returns a new selector that uses the runtime type (<c>source.GetType()</c>) for mapping lookup.
+    /// <para>Usage: <c>source.Map.AsRuntime.To&lt;TDest&gt;()</c> or <c>source.Map.AsRuntime.To(someType)</c></para>
+    /// </summary>
+    public MapSelector<TSource> AsRuntime
+        => new(_source, _source.GetType(), _mapper);
+
+    /// <summary>
+    /// Maps to <typeparamref name="TDestination"/> using a registered mapping.
+    /// Falls back to a language-native cast if no mapping is found.
+    /// </summary>
+    /// <param name="name">Optional mapping name.</param>
+    public TDestination To<TDestination>(string? name = null)
+    {
+        var result = _mapper.TryMap(_sourceType, typeof(TDestination), _source, name);
+        if (result.HasValue)
+        {
+            return (TDestination)result.Value;
+        }
+
+        return (TDestination)_source;
+    }
+
+    /// <summary>
+    /// Non-generic mapping to <paramref name="destinationType"/>.
+    /// Falls back to a language-native cast if no mapping is found.
+    /// </summary>
+    /// <param name="destinationType">The destination type.</param>
+    /// <param name="name">Optional mapping name.</param>
+    public object To(Type destinationType, string? name = null)
+    {
+        var result = _mapper.TryMap(_sourceType, destinationType, _source, name);
+        if (result.HasValue)
+        {
+            return result.Value;
+        }
+
+        return _source;
     }
 }

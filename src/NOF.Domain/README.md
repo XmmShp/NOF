@@ -48,9 +48,43 @@ public partial class OrderFailures;
 return OrderFailures.NotFound;
 ```
 
-### `[Snapshotable]`
+### `IValueObject<T>` Interface
 
-Marks an aggregate root for snapshot-based persistence optimization.
+Implement `IValueObject<T>` on a `readonly partial struct` to define a value object. The source generator produces:
+- Private constructor + `Of(T)` factory that calls `Validate(T)`
+- Explicit cast to the primitive type
+- `GetUnderlyingValue()` returning the underlying primitive
+- `Equals`, `GetHashCode`, `ToString` delegating to the primitive
+- Nested `JsonConverter` for System.Text.Json
+- Optional `New()` factory via `[NewableValueObject]` (for snowflake IDs on `IValueObject<long>`)
+
+The interface provides:
+- **`static virtual void Validate(T value)`** — override to add custom validation (default is no-op)
+- **`static virtual Type GetUnderlyingType()`** — returns `typeof(T)` by default
+- **`object IValueObject.GetUnderlyingValue()`** — default implementation forwarding to `T GetUnderlyingValue()`
+
+```csharp
+[NewableValueObject]
+public readonly partial struct OrderId : IValueObject<long>;
+
+public readonly partial struct CustomerName : IValueObject<string>
+{
+    public static void Validate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new DomainException("Customer name cannot be empty");
+    }
+}
+
+// Usage
+var id = OrderId.New();              // Snowflake ID
+var name = CustomerName.Of("Alice"); // Validated
+long raw = (long)id;                 // Explicit cast to primitive
+long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
+Type t = OrderId.GetUnderlyingType();// typeof(long)
+```
+
+The `IValueObject` / `IValueObject<T>` interfaces enable the mapper's built-in `ValueObject → primitive` conversion without reflection.
 
 ## Installation
 

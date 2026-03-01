@@ -24,7 +24,19 @@ public record GetOrderRequest(long Id) : IRequest<GetOrderResponse>;
 public record GetOrderResponse(long Id, string CustomerName, string Status);
 ```
 
-### 2. Implement the handler in the Application project
+### 2. Register mappings (Options pattern — in Program.cs or extension method)
+
+```csharp
+builder.Services.Configure<MapperOptions>(o =>
+    o.Add<Order, GetOrderResponse>(order => new GetOrderResponse(
+        (long)order.Id,
+        order.CustomerName,
+        order.Status.ToString())));
+```
+
+> Alternatively, register at runtime in the handler constructor via `_mapper.TryAdd(...)` (no-op if key already exists).
+
+### 3. Implement the handler in the Application project
 
 ```csharp
 using NOF.Application;
@@ -39,12 +51,6 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
     {
         _orderRepository = orderRepository;
         _mapper = mapper;
-
-        // Register mapping (first-wins, safe to call in constructor)
-        _mapper.CreateMap<Order, GetOrderResponse>(order => new GetOrderResponse(
-            (long)order.Id,
-            order.CustomerName,
-            order.Status.ToString()));
     }
 
     public async Task<Result<GetOrderResponse>> HandleAsync(
@@ -58,11 +64,8 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
             return Result.Fail(404, "Order not found");
         }
 
-        // Use mapper instead of manual construction
         return _mapper.Map<Order, GetOrderResponse>(order);
-        
-        // Or use fluent syntax:
-        // return order.Map.To<GetOrderResponse>();
+        // Or fluent: return order.Map.To<GetOrderResponse>();
     }
 }
 ```

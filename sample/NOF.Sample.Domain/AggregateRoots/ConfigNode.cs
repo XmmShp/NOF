@@ -10,7 +10,7 @@ public class ConfigNode : AggregateRoot
     public ConfigFileName? ActiveFileName { get; private set; }
 
     private readonly List<ConfigFile> _configFiles = [];
-    public IReadOnlyList<ConfigFileSnapshot> ConfigFiles => _configFiles.Select(c => c.ToSnapshot()).ToList().AsReadOnly();
+    public IReadOnlyList<ConfigFile> ConfigFiles => _configFiles.AsReadOnly();
 
     private ConfigNode() { }
 

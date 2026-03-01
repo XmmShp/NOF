@@ -2,7 +2,6 @@ using NOF.Domain;
 
 namespace NOF.Sample;
 
-[Snapshotable]
 public class ConfigFile : Entity
 {
     public ConfigFileName Name { get; init; }
