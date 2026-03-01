@@ -71,6 +71,7 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 | React to entity changes (in-transaction) | `IEvent` + `IEventHandler` |
 | Reliably publish after DB commit | `IDeferredNotificationPublisher` |
 | Cache data | `CacheKey<T>` + `ICacheService` |
+| Map domain entities to DTOs | `IMapper` + `CreateMap<TSource, TDest>()` |
 | Manage complex workflows | `IStateMachineDefinition<TState>` |
 | Generate unique IDs | `[ValueObject<long>]` + `[NewableValueObject]` |
 | Validate input values | `[ValueObject<T>]` with `Validate()` method |

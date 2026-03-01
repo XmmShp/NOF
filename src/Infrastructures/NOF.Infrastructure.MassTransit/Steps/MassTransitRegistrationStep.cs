@@ -13,7 +13,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
     {
         var handlerInfos = builder.HandlerInfos;
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
-        var nameProvider = builder.EndpointNameProvider!;
+        var nameProvider = builder.EndpointNameProvider;
 
         // Register all distinct handler types as scoped services
         var handlers = handlerInfos.Select(i => i.HandlerType).Distinct();
@@ -60,7 +60,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
 
         builder.Services.AddMassTransit(config =>
         {
-            config.SetEndpointNameFormatter(new EndpointNameFormatter(builder.EndpointNameProvider!));
+            config.SetEndpointNameFormatter(new EndpointNameFormatter(builder.EndpointNameProvider));
             config.AddConsumers(busConsumers.ToArray());
             builder.StartupEventChannel.Publish(new MassTransitConfiguring(config));
         });

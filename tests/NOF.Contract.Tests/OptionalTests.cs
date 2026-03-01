@@ -123,7 +123,7 @@ public class OptionalJsonTests
     [Fact]
     public void Serialize_WhenHasValue_WritesValue()
     {
-        var dto = new DtoWithOptional { Name = Optional.Of("Alice") };
+        var dto = new DtoWithOptional { Name = Optional.Of<string?>("Alice") };
         var json = JsonSerializer.Serialize(dto, Options());
         json.Should().Contain("\"name\":\"Alice\"", because: $"actual json was: {json}");
     }
@@ -139,7 +139,7 @@ public class OptionalJsonTests
     [Fact]
     public void Serialize_NoStackOverflow_OnComplexObject()
     {
-        var dto = new DtoWithOptional { Name = Optional.Of("test"), Age = Optional.Of(30) };
+        var dto = new DtoWithOptional { Name = Optional.Of<string?>("test"), Age = Optional.Of(30) };
         var act = () => JsonSerializer.Serialize(dto, Options());
         act.Should().NotThrow();
     }

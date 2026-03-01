@@ -14,11 +14,22 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
 {
     private readonly ConfigurationDbContext _dbContext;
     private readonly ICacheService _cache;
+    private readonly IMapper _mapper;
 
-    public ConfigNodeViewRepository(ConfigurationDbContext dbContext, ICacheService cache)
+    public ConfigNodeViewRepository(ConfigurationDbContext dbContext, ICacheService cache, IMapper mapper)
     {
         _dbContext = dbContext;
         _cache = cache;
+        _mapper = mapper;
+
+        _mapper.CreateMap<ConfigFileSnapshot, ConfigFileDto>(f => new ConfigFileDto((string)f.Name, (string)f.Content));
+        _mapper.CreateMap<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(
+            (long)node.Id,
+            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
+            (string)node.Name,
+            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
+            node.ConfigFiles.Select(f => _mapper.Map<ConfigFileSnapshot, ConfigFileDto>(f)).ToList()
+        ));
     }
 
     public async Task<ConfigNodeDto?> GetByIdAsync(ConfigNodeId id, CancellationToken cancellationToken = default)
@@ -30,7 +41,7 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
                 .AsNoTracking()
                 .FirstOrDefaultAsync(n => n.Id == id, cancellationToken);
 
-            return node is null ? null : MapToDto(node);
+            return node is null ? null : _mapper.Map<ConfigNode, ConfigNodeDto>(node);
         }, cancellationToken);
     }
 
@@ -43,7 +54,7 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
                 .AsNoTracking()
                 .FirstOrDefaultAsync(n => n.Name == name, cancellationToken);
 
-            return node is null ? null : MapToDto(node);
+            return node is null ? null : _mapper.Map<ConfigNode, ConfigNodeDto>(node);
         }, cancellationToken);
     }
 
@@ -54,7 +65,7 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
             .Where(n => n.ParentId == null)
             .ToListAsync(cancellationToken);
 
-        return rootNodes.Select(MapToDto).ToList();
+        return rootNodes.Select(n => _mapper.Map<ConfigNode, ConfigNodeDto>(n)).ToList();
     }
 
     public async Task<ConfigNodeChildren?> GetChildrenAsync(ConfigNodeId id, CancellationToken cancellationToken = default)
@@ -168,14 +179,4 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
         return dto;
     }
 
-    private static ConfigNodeDto MapToDto(ConfigNode node)
-    {
-        return new ConfigNodeDto(
-            (long)node.Id,
-            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
-            (string)node.Name,
-            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
-            node.ConfigFiles.Select(f => new ConfigFileDto((string)f.Name, (string)f.Content)).ToList()
-        );
-    }
 }

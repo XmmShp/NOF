@@ -33,10 +33,18 @@ using NOF.Contract;
 public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse>
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly IMapper _mapper;
 
-    public GetOrderHandler(IOrderRepository orderRepository)
+    public GetOrderHandler(IOrderRepository orderRepository, IMapper mapper)
     {
         _orderRepository = orderRepository;
+        _mapper = mapper;
+
+        // Register mapping (first-wins, safe to call in constructor)
+        _mapper.CreateMap<Order, GetOrderResponse>(order => new GetOrderResponse(
+            (long)order.Id,
+            order.CustomerName,
+            order.Status.ToString()));
     }
 
     public async Task<Result<GetOrderResponse>> HandleAsync(
@@ -50,10 +58,11 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
             return Result.Fail(404, "Order not found");
         }
 
-        return new GetOrderResponse(
-            (long)order.Id,
-            order.CustomerName,
-            order.Status.ToString());
+        // Use mapper instead of manual construction
+        return _mapper.Map<Order, GetOrderResponse>(order);
+        
+        // Or use fluent syntax:
+        // return order.Map.To<GetOrderResponse>();
     }
 }
 ```

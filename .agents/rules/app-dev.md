@@ -38,6 +38,7 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 | `IDeferredNotificationPublisher` | Outbox-based deferred notifications | Application |
 | `IDeferredCommandSender` | Outbox-based deferred commands | Application |
 | `CacheKey<T>` | Typed cache key | Application |
+| `IMapper` | Zero-reflection object mapper | Application |
 | `Result<T>` / `Result` | Operation result with failure support | Contract |
 
 ## Source Generator Attributes
@@ -90,6 +91,53 @@ return new GetOrderResponse(id, name);  // implicit conversion to Result<T>
 // Failure
 return Result.Fail(OrderFailures.OrderNotFound);
 return Result.Fail(404, "Order not found");
+```
+
+### Object Mapping (IMapper)
+
+Zero-reflection, manually configured mapper. Register mappings in constructor (first-wins, no GC pressure):
+
+```csharp
+public class ConfigNodeViewRepository : IConfigNodeViewRepository
+{
+    private readonly IMapper _mapper;
+
+    public ConfigNodeViewRepository(IMapper mapper)
+    {
+        _mapper = mapper;
+        
+        // Register in constructor - safe to call multiple times (first-wins)
+        _mapper.CreateMap<ConfigFileSnapshot, ConfigFileDto>(f => 
+            new ConfigFileDto((string)f.Name, (string)f.Content));
+        
+        _mapper.CreateMap<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(
+            (long)node.Id,
+            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
+            (string)node.Name,
+            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
+            node.ConfigFiles.Select(f => _mapper.Map<ConfigFileSnapshot, ConfigFileDto>(f)).ToList()
+        ));
+    }
+
+    public async Task<ConfigNodeDto?> GetByIdAsync(ConfigNodeId id)
+    {
+        var node = await _repository.FindAsync(id);
+        return node is null ? null : _mapper.Map<ConfigNode, ConfigNodeDto>(node);
+    }
+}
+```
+
+**Fluent syntax:**
+
+```csharp
+var dto = entity.Map.To<EntityDto>();        // Registered mapping, fallback to cast
+var baseEntity = derived.Map.As<BaseEntity>(); // Inheritance cast only
+```
+
+**MapOrCreate** - register if missing, then map:
+
+```csharp
+var dto = _mapper.MapOrCreate(entity, e => new EntityDto(e.Id, e.Name));
 ```
 
 ### Dispatch APIs

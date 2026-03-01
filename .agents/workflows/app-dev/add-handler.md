@@ -23,10 +23,27 @@ public record GetOrderResponse(long Id, string CustomerName);
 // Handler
 public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse>
 {
+    private readonly IOrderRepository _repo;
+    private readonly IMapper _mapper;
+
+    public GetOrderHandler(IOrderRepository repo, IMapper mapper)
+    {
+        _repo = repo;
+        _mapper = mapper;
+        
+        // Register mapping in constructor (first-wins, no GC pressure)
+        _mapper.CreateMap<Order, GetOrderResponse>(o => 
+            new GetOrderResponse((long)o.Id, o.CustomerName));
+    }
+
     public async Task<Result<GetOrderResponse>> HandleAsync(
         GetOrderRequest request, CancellationToken cancellationToken)
     {
-        // ...
+        var order = await _repo.FindAsync(OrderId.Of(request.Id), cancellationToken);
+        if (order is null) return Result.Fail(404, "Not found");
+        
+        return _mapper.Map<Order, GetOrderResponse>(order);
+        // Or: return order.Map.To<GetOrderResponse>();
     }
 }
 ```

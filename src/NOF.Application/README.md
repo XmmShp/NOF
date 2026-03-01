@@ -80,6 +80,53 @@ public class OrderStateMachine : IStateMachineDefinition<OrderState, OrderContex
 
 Handler base classes provide built-in transactional outbox support — commands and notifications sent within a handler are automatically batched with the unit of work.
 
+### Object Mapping (IMapper)
+
+Zero-reflection, manually configured object mapper. All mappings must be explicitly registered — no reflection or conventions are used.
+
+```csharp
+public class ConfigNodeViewRepository : IConfigNodeViewRepository
+{
+    private readonly IMapper _mapper;
+
+    public ConfigNodeViewRepository(IMapper mapper)
+    {
+        _mapper = mapper;
+
+        // Register mappings in constructor (first-wins, no GC pressure on duplicates)
+        _mapper.CreateMap<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(
+            (long)node.Id,
+            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
+            (string)node.Name,
+            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
+            node.ConfigFiles.Select(f => _mapper.Map<ConfigFileSnapshot, ConfigFileDto>(f)).ToList()
+        ));
+    }
+
+    public async Task<ConfigNodeDto?> GetByIdAsync(ConfigNodeId id)
+    {
+        var node = await _repository.FindAsync(id);
+        return node is null ? null : _mapper.Map<ConfigNode, ConfigNodeDto>(node);
+    }
+}
+```
+
+**Fluent extension syntax:**
+
+```csharp
+// .To<T>() - uses registered mapping, falls back to cast
+var dto = domainEntity.Map.To<EntityDto>();
+
+// .As<T>() - inheritance/interface cast only (no mapping lookup)
+var baseEntity = derivedEntity.Map.As<BaseEntity>();
+```
+
+**MapOrCreate** - ensures mapping exists without caring if it was already registered:
+
+```csharp
+var dto = _mapper.MapOrCreate(entity, e => new EntityDto(e.Id, e.Name));
+```
+
 ## Installation
 
 ```shell
