@@ -82,6 +82,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new OutboxRegistrationStep(),
             new OpenTelemetryRegistrationStep(),
             new SnowflakeIdGeneratorRegistrationStep(),
+            new MapperRegistrationStep(),
 
             new ExceptionInboundMiddlewareStep(),
             new IdentityInboundMiddlewareStep(),
@@ -100,6 +101,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ApplicationConfigs =
         [
             new IdGeneratorInitializationStep(),
+            new MapperInitializationStep(),
         ];
     }
 
