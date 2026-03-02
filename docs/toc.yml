@@ -1,4 +1,6 @@
 - name: Home
   href: index.md
+- name: Design
+  href: design/
 - name: API Reference
   href: api/
