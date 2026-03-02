@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Infrastructure.Abstraction;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Core;
 
@@ -10,6 +11,8 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
+    [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
+    [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddScoped<IInvocationContextInternal, InvocationContext>();
@@ -18,6 +21,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.AddScoped<ICommandSender, CommandSender>();
         builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.AddScoped<IRequestSender, RequestSender>();
+        builder.Services.AddScoped<IEventPublisher, InMemoryEventPublisher>();
 
         builder.Services.AddOptions<EndpointNameOptions>();
         builder.Services.AddSingleton<IEndpointNameProvider, ManualEndpointNameProvider>();

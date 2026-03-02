@@ -17,7 +17,6 @@ public static partial class NOFInfrastructureMassTransitExtensions
             builder.Services.ConfigureOpenTelemetryTracerProvider(tracer => tracer.AddSource(DiagnosticHeaders.DefaultListenerName));
 
             builder.Services.AddScoped<ICommandRider, MassTransitCommandRider>();
-            builder.Services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
             builder.Services.AddScoped<INotificationRider, MassTransitNotificationRider>();
             builder.Services.AddScoped<IRequestRider, MassTransitRequestRider>();
             builder.AddRegistrationStep(new MassTransitRegistrationStep());

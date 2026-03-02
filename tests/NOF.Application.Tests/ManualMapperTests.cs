@@ -289,7 +289,11 @@ public class ManualMapperTests
             {
                 var list = (System.Collections.IList)src;
                 var set = new HashSet<object>();
-                foreach (var item in list) set.Add(item);
+                foreach (var item in list)
+                {
+                    set.Add(item);
+                }
+
                 return Optional.Of<object?>(set);
             }));
 

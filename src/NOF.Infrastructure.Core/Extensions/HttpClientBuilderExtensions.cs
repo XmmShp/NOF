@@ -1,7 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Infrastructure.Abstraction;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Core;
 

@@ -60,22 +60,6 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
     }
 }
 
-internal class MassTransitEventHandlerAdapter<THandler, TEvent> : IConsumer<TEvent>
-    where THandler : IEventHandler<TEvent>
-    where TEvent : class, IEvent
-{
-    private readonly THandler _handler;
-    public MassTransitEventHandlerAdapter(THandler consumer)
-    {
-        _handler = consumer;
-    }
-
-    public Task Consume(ConsumeContext<TEvent> context)
-    {
-        return _handler.HandleAsync(context.Message, context.CancellationToken);
-    }
-}
-
 internal class MassTransitCommandHandlerAdapter<THandler, TCommand> : IConsumer<TCommand>
     where THandler : ICommandHandler<TCommand>
     where TCommand : class, ICommand

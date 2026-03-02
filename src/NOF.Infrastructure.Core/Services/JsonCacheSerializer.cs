@@ -1,5 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using NOF.Contract;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace NOF.Infrastructure.Abstraction;

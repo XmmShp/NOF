@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Core;
 
@@ -12,6 +13,8 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 internal sealed class SnowflakeIdGeneratorRegistrationStep : IServiceRegistrationStep
 {
+    [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
+    [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()

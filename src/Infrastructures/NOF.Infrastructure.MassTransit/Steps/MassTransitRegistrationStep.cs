@@ -18,8 +18,8 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
         var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameOptions>();
         var nameProvider = new ManualEndpointNameProvider(Options.Create(endpointNameOptions));
 
-        // Register all distinct handler types as scoped services
-        var handlers = handlerInfos.Select(i => i.HandlerType).Distinct();
+        // Register all distinct non-event handler types as scoped services
+        var handlers = handlerInfos.Where(i => i.Kind != HandlerKind.Event).Select(i => i.HandlerType).Distinct();
         foreach (var handler in handlers)
         {
             builder.Services.AddScoped(handler);
@@ -30,16 +30,16 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
 
         foreach (var handlerInfo in handlerInfos)
         {
+            // Events are handled in-memory by NOF.Infrastructure.Core — skip MassTransit registration
+            if (handlerInfo.Kind == HandlerKind.Event)
+            {
+                continue;
+            }
+
             var adapter = CreateHandlerAdapter(handlerInfo);
 
             switch (handlerInfo.Kind)
             {
-                // Event: always local mediator only
-                case HandlerKind.Event:
-                    localHandlers.Register(handlerInfo.MessageType, nameProvider.GetEndpointName(handlerInfo.HandlerType));
-                    mediatorConsumers.Add(adapter);
-                    break;
-
                 // Notification: always bus publish only
                 case HandlerKind.Notification:
                     busConsumers.Add(adapter);
@@ -82,10 +82,6 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
     {
         return info.Kind switch
         {
-            HandlerKind.Event =>
-                typeof(MassTransitEventHandlerAdapter<,>)
-                    .MakeGenericType(info.HandlerType, info.MessageType),
-
             HandlerKind.Command =>
                 typeof(MassTransitCommandHandlerAdapter<,>)
                     .MakeGenericType(info.HandlerType, info.MessageType),

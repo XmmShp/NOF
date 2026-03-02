@@ -18,8 +18,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// from the type name of <typeparamref name="TOptions"/> (e.g., "MyFeature" for MyFeatureOptions).
         /// <para>
         /// This overload uses reflection-based <see cref="OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations{TOptions}"/>
-        /// and is <b>not AOT-safe</b>. For AOT-compatible scenarios, use the
-        /// <see cref="AddOptionsInConfiguration{TOptions, TValidator}"/> overload with a source-generated validator.
+        /// and is <b>not AOT-safe</b>.
         /// </para>
         /// </summary>
         /// <typeparam name="TOptions">The options type to configure. Must be a reference type.</typeparam>

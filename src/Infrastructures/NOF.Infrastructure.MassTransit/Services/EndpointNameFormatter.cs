@@ -10,7 +10,6 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
     [
         typeof(MassTransitRequestHandlerAdapter<,>),
         typeof(MassTransitRequestHandlerAdapter<,,>),
-        typeof(MassTransitEventHandlerAdapter<,>),
         typeof(MassTransitCommandHandlerAdapter<,>),
         typeof(MassTransitNotificationHandlerAdapter<,>)
     ];

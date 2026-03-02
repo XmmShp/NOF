@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using NOF.Infrastructure.Abstraction;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting.AspNetCore;
 
@@ -20,6 +21,8 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     private const string AlivenessEndpointPath = "/alive";
     private const string Tag = "live";
 
+    [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
+    [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
