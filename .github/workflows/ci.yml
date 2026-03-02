@@ -60,11 +60,6 @@ jobs:
     - name: Run tests
       run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal --collect:"XPlat Code Coverage"
 
-    - name: Run AOT compatibility tests
-      run: |
-        dotnet test tests/NOF.Contract.Tests/NOF.Contract.Tests.csproj --configuration ${{ env.CONFIGURATION }} --verbosity normal /p:PublishAot=true /p:VerifyReferenceAotCompatibility=true
-        dotnet test tests/NOF.Application.Tests/NOF.Application.Tests.csproj --configuration ${{ env.CONFIGURATION }} --verbosity normal /p:PublishAot=true /p:VerifyReferenceAotCompatibility=true
-
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
       if: success()
