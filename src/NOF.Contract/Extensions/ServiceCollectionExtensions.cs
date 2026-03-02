@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Contract;
 
-// ReSharper disable once InconsistentNaming
 public static partial class NOFContractExtensions
 {
     /// <param name="services">The service collection.</param>
@@ -22,7 +22,7 @@ public static partial class NOFContractExtensions
         /// <exception cref="InvalidOperationException">
         /// Thrown if the derived service name is null, empty, or whitespace.
         /// </exception>
-        public IHttpClientBuilder AddHttpClientWithBaseAddress<TClient>(Action<IServiceProvider, HttpClient>? configurator = null)
+        public IHttpClientBuilder AddHttpClientWithBaseAddress<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TClient>(Action<IServiceProvider, HttpClient>? configurator = null)
             where TClient : class
             => services.AddHttpClientWithBaseAddress<TClient, TClient>(configurator);
 
@@ -43,7 +43,7 @@ public static partial class NOFContractExtensions
         /// <exception cref="ArgumentException">
         /// Thrown if <paramref name="serviceName"/> is null, empty, or consists only of whitespace.
         /// </exception>
-        public IHttpClientBuilder AddHttpClientWithBaseAddress<TClient>(string serviceName, Action<IServiceProvider, HttpClient>? configurator = null)
+        public IHttpClientBuilder AddHttpClientWithBaseAddress<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TClient>(string serviceName, Action<IServiceProvider, HttpClient>? configurator = null)
             where TClient : class
             => services.AddHttpClientWithBaseAddress<TClient, TClient>(serviceName, configurator);
 
@@ -61,7 +61,7 @@ public static partial class NOFContractExtensions
         /// <exception cref="InvalidOperationException">
         /// Thrown if the derived service name from <typeparamref name="TImplementation"/> is null, empty, or whitespace.
         /// </exception>
-        public IHttpClientBuilder AddHttpClientWithBaseAddress<TClient, TImplementation>(Action<IServiceProvider, HttpClient>? configurator = null)
+        public IHttpClientBuilder AddHttpClientWithBaseAddress<TClient, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(Action<IServiceProvider, HttpClient>? configurator = null)
             where TClient : class
             where TImplementation : class, TClient
         {
@@ -96,7 +96,7 @@ public static partial class NOFContractExtensions
         /// <exception cref="InvalidOperationException">
         /// Thrown if the connection string exists but is not a valid absolute URI.
         /// </exception>
-        public IHttpClientBuilder AddHttpClientWithBaseAddress<TClient, TImplementation>(string serviceName, Action<IServiceProvider, HttpClient>? configurator = null)
+        public IHttpClientBuilder AddHttpClientWithBaseAddress<TClient, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(string serviceName, Action<IServiceProvider, HttpClient>? configurator = null)
             where TClient : class
             where TImplementation : class, TClient
         {

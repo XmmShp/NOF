@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -55,6 +56,8 @@ public abstract record PatchRequest
     /// <returns>
     /// <see cref="Optional{T}"/> containing the deserialized value if the key was present; otherwise <see cref="Optional.None"/>.
     /// </returns>
+    [RequiresDynamicCode("JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
+    [RequiresUnreferencedCode("JSON serialization and deserialization might require types that cannot be statically analyzed.")]
     public Optional<T> Get<T>(
         [CallerMemberName] string? propertyName = null,
         JsonSerializerOptions? options = null)
@@ -96,6 +99,8 @@ public abstract record PatchRequest
     /// Optional <see cref="JsonSerializerOptions"/> for key resolution and serialization.
     /// Defaults to <see cref="NOFContractExtensions.NOFDefaults"/>.
     /// </param>
+    [RequiresDynamicCode("JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
+    [RequiresUnreferencedCode("JSON serialization and deserialization might require types that cannot be statically analyzed.")]
     public void Set<T>(
         Optional<T> value,
         [CallerMemberName] string? propertyName = null,

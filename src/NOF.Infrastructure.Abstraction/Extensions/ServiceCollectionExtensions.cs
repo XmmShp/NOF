@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Infrastructure.Core;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Abstraction;
 
@@ -15,6 +16,11 @@ public static partial class NOFInfrastructureCoreExtensions
         /// data annotation validation, and startup-time validation.
         /// If no <paramref name="configSectionPath"/> is provided, the section name is inferred
         /// from the type name of <typeparamref name="TOptions"/> (e.g., "MyFeature" for MyFeatureOptions).
+        /// <para>
+        /// This overload uses reflection-based <see cref="OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations{TOptions}"/>
+        /// and is <b>not AOT-safe</b>. For AOT-compatible scenarios, use the
+        /// <see cref="AddOptionsInConfiguration{TOptions, TValidator}"/> overload with a source-generated validator.
+        /// </para>
         /// </summary>
         /// <typeparam name="TOptions">The options type to configure. Must be a reference type.</typeparam>
         /// <param name="configSectionPath">
@@ -25,7 +31,10 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <exception cref="InvalidOperationException">
         /// Thrown if the inferred configuration section does not exist or fails validation at startup.
         /// </exception>
-        public OptionsBuilder<TOptions> AddOptionsInConfiguration<TOptions>(string? configSectionPath = null) where TOptions : class
+        [RequiresDynamicCode("Configuration binding may require dynamic code generation. Use AddOptionsInConfiguration<TOptions, TValidator> for AOT scenarios.")]
+        [RequiresUnreferencedCode("Validation via DataAnnotations may require unreferenced types. Use AddOptionsInConfiguration<TOptions, TValidator> for AOT scenarios.")]
+        public OptionsBuilder<TOptions> AddOptionsInConfiguration<TOptions>(string? configSectionPath = null)
+            where TOptions : class
         {
             // ReSharper disable once InvertIf
             if (string.IsNullOrEmpty(configSectionPath))
@@ -64,7 +73,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <typeparam name="TService">The type of the service to register.</typeparam>
         /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
         /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
-        public IServiceCollection ReplaceOrAddSingleton<TService, TImplementation>()
+        public IServiceCollection ReplaceOrAddSingleton<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>()
             where TService : class
             where TImplementation : class, TService
         {
@@ -103,7 +112,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <typeparam name="TService">The type of the service to register.</typeparam>
         /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
         /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
-        public IServiceCollection ReplaceOrAddScoped<TService, TImplementation>()
+        public IServiceCollection ReplaceOrAddScoped<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>()
             where TService : class
             where TImplementation : class, TService
         {
@@ -129,7 +138,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <typeparam name="TService">The type of the service to register.</typeparam>
         /// <typeparam name="TImplementation">The implementation type of the service.</typeparam>
         /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
-        public IServiceCollection ReplaceOrAddTransient<TService, TImplementation>()
+        public IServiceCollection ReplaceOrAddTransient<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>()
             where TService : class
             where TImplementation : class, TService
         {

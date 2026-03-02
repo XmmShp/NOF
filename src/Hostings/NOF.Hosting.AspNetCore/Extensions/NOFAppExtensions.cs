@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
@@ -17,6 +18,8 @@ public static partial class NOFHostingAspNetCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {
+        [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "NOF converters are intentionally reflection-based; AOT users can provide custom options.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "NOF converters are intentionally reflection-based; AOT users can provide custom options.")]
         public INOFAppBuilder ConfigureJsonOptions()
         {
             builder.Services.ConfigureHttpJsonOptions(options =>
@@ -45,7 +48,9 @@ public static partial class NOFHostingAspNetCoreExtensions
 
         public INOFAppBuilder UseCors()
         {
-            builder.Services.AddOptionsInConfiguration<CorsSettingsOptions>("NOF:CorsSettings");
+            builder.Services.AddOptions<CorsSettingsOptions>()
+                .BindConfiguration("NOF:CorsSettings")
+                .ValidateOnStart();
             builder.Services.AddCors();
             builder.AddInitializationStep(new CorsInitializationStep());
             return builder;

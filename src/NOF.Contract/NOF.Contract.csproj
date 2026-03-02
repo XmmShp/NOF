@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
+
+    <!-- AOT Compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>
     
     <!-- NuGet Package Settings -->
     <IsPackable>true</IsPackable>

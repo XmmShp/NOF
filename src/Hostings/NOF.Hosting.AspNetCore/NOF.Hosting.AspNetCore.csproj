@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <!-- AOT Compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+
 	  <IsPackable>true</IsPackable>
 	  <PackageId>NOF.Hosting.AspNetCore</PackageId>
 	  <Description>ASP.NET Core hosting for the NOF Framework — automatic endpoint mapping, OpenAPI with Scalar, JSON configuration, and CORS.</Description>

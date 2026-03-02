@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Infrastructure.Abstraction;
@@ -20,7 +21,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// method are completely unaffected.
         /// </para>
         /// </summary>
-        public IHttpClientBuilder AddScopeAwareHttpMessageHandler<THandler>()
+        public IHttpClientBuilder AddScopeAwareHttpMessageHandler<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>()
             where THandler : DelegatingHandler
         {
             builder.Services.TryAddTransient<THandler>();

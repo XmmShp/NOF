@@ -129,7 +129,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static string GenerateAddAllHandlersExtension(string assemblyName, ImmutableArray<INamedTypeSymbol> handlerClasses)
+    private static string GenerateAddAllHandlersExtension(string assemblyName,
+        ImmutableArray<INamedTypeSymbol> handlerClasses)
     {
         var sanitizedName = assemblyName.Replace(".", "");
 
@@ -150,22 +151,29 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine($"    public static partial class {sanitizedName}Extensions");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
-        sb.AppendLine($"        /// Registers all handler types discovered in {assemblyName} and its prefix-matching referenced assemblies");
-        sb.AppendLine("        /// into the HandlerInfos singleton in DI.");
+        sb.AppendLine(
+            $"        /// Registers all handler types discovered in {assemblyName} and its prefix-matching referenced assemblies");
+        sb.AppendLine("        /// into the HandlerInfos and EndpointNameOptions singletons in DI.");
+        sb.AppendLine(
+            "        /// Endpoint names are resolved at compile time from <c>[EndpointName]</c> attributes or type names.");
         sb.AppendLine("        /// </summary>");
         sb.AppendLine("        /// <param name=\"services\">The service collection.</param>");
-        sb.AppendLine("        /// <returns>The service collection for chaining.</returns>");
-        sb.AppendLine("        public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddAllHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
+        sb.AppendLine(
+            "        /// <returns>A <see cref=\"HandlerSelector\"/> for further endpoint name customization.</returns>");
+        sb.AppendLine(
+            "        public static global::NOF.Infrastructure.Abstraction.HandlerSelector AddAllHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
 
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
 
-        // Collect all handler info entries
+        // Collect handler info entries and endpoint name mappings
         var entries = new List<string>();
+        var endpointNames = new List<(string TypeExpr, string EndpointName)>();
+
         foreach (var handlerClass in handlerClasses)
         {
-            CollectHandlerRegistrations(entries, handlerClass, typeFormat);
+            CollectHandlerRegistrations(entries, endpointNames, handlerClass, typeFormat);
         }
 
         if (entries.Count > 0)
@@ -178,7 +186,15 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             }
         }
 
-        sb.AppendLine("            return services;");
+        // Populate EndpointNameOptions
+        sb.AppendLine("            services.Configure<global::NOF.Infrastructure.Abstraction.EndpointNameOptions>(endpointNameOptions => {");
+        foreach (var (typeExpr, name) in endpointNames)
+        {
+            sb.AppendLine($"                endpointNameOptions.TrySet(typeof({typeExpr}), \"{EscapeString(name)}\");");
+        }
+        sb.AppendLine("            });");
+
+        sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services);");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}");
@@ -186,7 +202,19 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
-    private static void CollectHandlerRegistrations(List<string> entries, INamedTypeSymbol handlerClass, SymbolDisplayFormat typeFormat)
+    private static readonly HashSet<string> HandlerInterfaceNames =
+    new HashSet<string>
+    {
+        "NOF.Application.ICommandHandler<TCommand>",
+        "NOF.Application.IRequestHandler<TRequest>",
+        "NOF.Application.IRequestHandler<TRequest, TResponse>"
+    };
+
+    private static void CollectHandlerRegistrations(
+        List<string> entries,
+        List<(string TypeExpr, string EndpointName)> endpointNames,
+        INamedTypeSymbol handlerClass,
+        SymbolDisplayFormat typeFormat)
     {
         var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
 
@@ -201,30 +229,161 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
 
             if (display == "NOF.Application.ICommandHandler<TCommand>")
             {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
+                var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
+                var messageType = messageSymbol.ToDisplayString(typeFormat);
                 entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Command, typeof({handlerTypeName}), typeof({messageType}), null)");
+                endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
             }
             else if (display == "NOF.Application.IEventHandler<TEvent>")
             {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
+                var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
+                var messageType = messageSymbol.ToDisplayString(typeFormat);
                 entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Event, typeof({handlerTypeName}), typeof({messageType}), null)");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
+                var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
+                var messageType = messageSymbol.ToDisplayString(typeFormat);
                 entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Notification, typeof({handlerTypeName}), typeof({messageType}), null)");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
             {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
+                var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
+                var messageType = messageSymbol.ToDisplayString(typeFormat);
                 var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
                 entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithResponse, typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
+                endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest>")
             {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
+                var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
+                var messageType = messageSymbol.ToDisplayString(typeFormat);
                 entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithoutResponse, typeof({handlerTypeName}), typeof({messageType}), null)");
+                endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
             }
         }
+
+        // Resolve endpoint name for the handler type itself (mirrors original GetEndpointName logic):
+        // 1. [EndpointName] on handler → use it
+        // 2. Exactly one ICommandHandler<>/IRequestHandler<> interface → use message type's endpoint name
+        // 3. Fallback → BuildSafeTypeName(handler)
+        endpointNames.Add((handlerTypeName, ResolveEndpointNameForHandlerType(handlerClass)));
+    }
+
+    /// <summary>
+    /// Resolves the endpoint name for a handler type at compile time.
+    /// Mirrors the original reflection-based GetEndpointName logic:
+    /// 1. Check [EndpointName] attribute on the handler type
+    /// 2. Find ICommandHandler/IRequestHandler interfaces → use message type's endpoint name
+    /// 3. Fallback to BuildSafeTypeName
+    /// </summary>
+    private static string ResolveEndpointNameForHandlerType(INamedTypeSymbol handlerSymbol)
+    {
+        // 1. Check for [EndpointName("...")] attribute
+        var attrName = GetEndpointNameAttribute(handlerSymbol);
+        if (attrName != null)
+        {
+            return attrName;
+        }
+
+        // 2. Filter to only ICommandHandler<>/IRequestHandler<>/IRequestHandler<,> message types
+        //    (mirrors the original code which only looks at these three, NOT IEventHandler/INotificationHandler)
+        var handlerMessageTypes = new List<INamedTypeSymbol>();
+        foreach (var iface in handlerSymbol.AllInterfaces)
+        {
+            if (!iface.IsGenericType)
+            {
+                continue;
+            }
+            var display = iface.OriginalDefinition.ToDisplayString();
+            if (HandlerInterfaceNames.Contains(display))
+            {
+                handlerMessageTypes.Add((INamedTypeSymbol)iface.TypeArguments[0]);
+            }
+        }
+
+        if (handlerMessageTypes.Count == 1)
+        {
+            return ResolveEndpointNameForLeafType(handlerMessageTypes[0]);
+        }
+
+        // 3. Fallback
+        return BuildSafeTypeName(handlerSymbol);
+    }
+
+    /// <summary>
+    /// Resolves the endpoint name for a leaf type (message type, not a handler type).
+    /// Checks [EndpointName] attribute first, then falls back to BuildSafeTypeName.
+    /// </summary>
+    private static string ResolveEndpointNameForLeafType(INamedTypeSymbol symbol)
+    {
+        return GetEndpointNameAttribute(symbol) ?? BuildSafeTypeName(symbol);
+    }
+
+    /// <summary>
+    /// Returns the [EndpointName("...")] value if present, or null.
+    /// </summary>
+    private static string? GetEndpointNameAttribute(INamedTypeSymbol symbol)
+    {
+        foreach (var attr in symbol.GetAttributes())
+        {
+            if (attr.AttributeClass?.ToDisplayString() == "NOF.Contract.EndpointNameAttribute" &&
+                attr.ConstructorArguments.Length > 0 &&
+                attr.ConstructorArguments[0].Value is string name)
+            {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Compile-time equivalent of EndpointNameProvider.BuildSafeTypeName.
+    /// Produces a stable, safe string from the fully qualified type name.
+    /// </summary>
+    private static string BuildSafeTypeName(INamedTypeSymbol symbol)
+    {
+        if (!symbol.IsGenericType)
+        {
+            var fullName = GetFullMetadataName(symbol);
+            return fullName.Replace('.', '_').Replace("+", "____");
+        }
+
+        var originalDef = symbol.OriginalDefinition;
+        var defName = GetFullMetadataName(originalDef);
+        // Remove the arity suffix (e.g., `2)
+        var backtickIndex = defName.LastIndexOf('`');
+        if (backtickIndex >= 0)
+        {
+            defName = defName.Substring(0, backtickIndex);
+        }
+        defName = defName.Replace('.', '_').Replace("+", "____");
+
+        var args = symbol.TypeArguments
+            .Select(a => a is INamedTypeSymbol nts ? BuildSafeTypeName(nts) : a.Name)
+            .ToArray();
+
+        return $"{defName}__{string.Join("___", args)}";
+    }
+
+    /// <summary>
+    /// Gets the fully qualified metadata name (namespace + nested types) for a symbol.
+    /// </summary>
+    private static string GetFullMetadataName(ISymbol symbol)
+    {
+        if (symbol.ContainingType != null)
+        {
+            return GetFullMetadataName(symbol.ContainingType) + "+" + symbol.MetadataName;
+        }
+        if (symbol.ContainingNamespace != null && !symbol.ContainingNamespace.IsGlobalNamespace)
+        {
+            return GetFullMetadataName(symbol.ContainingNamespace) + "." + symbol.MetadataName;
+        }
+        return symbol.MetadataName;
+    }
+
+    private static string EscapeString(string value)
+    {
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 }

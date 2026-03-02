@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Abstraction;
 
@@ -33,6 +34,7 @@ public interface IInboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDepe
     /// <summary>
     /// The concrete <see cref="IInboundMiddleware"/> type this step contributes to the pipeline.
     /// </summary>
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     Type MiddlewareType { get; }
 
     /// <summary>
@@ -52,9 +54,10 @@ public interface IInboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDepe
 /// <see cref="IInboundMiddlewareStep.MiddlewareType"/> from the generic parameter.
 /// </summary>
 /// <typeparam name="TMiddleware">The concrete <see cref="IInboundMiddleware"/> type.</typeparam>
-public interface IInboundMiddlewareStep<TMiddleware> : IInboundMiddlewareStep
+public interface IInboundMiddlewareStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware> : IInboundMiddlewareStep
     where TMiddleware : IInboundMiddleware
 {
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     Type IInboundMiddlewareStep.MiddlewareType => typeof(TMiddleware);
 }
 
@@ -68,6 +71,7 @@ public interface IOutboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDep
     /// <summary>
     /// The concrete <see cref="IOutboundMiddleware"/> type this step contributes to the pipeline.
     /// </summary>
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     Type MiddlewareType { get; }
 
     /// <summary>
@@ -87,9 +91,10 @@ public interface IOutboundMiddlewareStep : IServiceRegistrationStep, IAfter<IDep
 /// <see cref="IOutboundMiddlewareStep.MiddlewareType"/> from the generic parameter.
 /// </summary>
 /// <typeparam name="TMiddleware">The concrete <see cref="IOutboundMiddleware"/> type.</typeparam>
-public interface IOutboundMiddlewareStep<TMiddleware> : IOutboundMiddlewareStep
+public interface IOutboundMiddlewareStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware> : IOutboundMiddlewareStep
     where TMiddleware : IOutboundMiddleware
 {
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     Type IOutboundMiddlewareStep.MiddlewareType => typeof(TMiddleware);
 }
 

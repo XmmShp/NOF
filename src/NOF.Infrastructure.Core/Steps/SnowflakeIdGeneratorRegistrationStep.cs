@@ -14,7 +14,9 @@ internal sealed class SnowflakeIdGeneratorRegistrationStep : IServiceRegistratio
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        builder.Services.AddOptionsInConfiguration<SnowflakeIdGeneratorOptions>("NOF:Snowflake");
+        builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()
+            .BindConfiguration("NOF:Snowflake")
+            .ValidateOnStart();
 
         builder.Services.AddSingleton<IIdGenerator>(sp =>
         {

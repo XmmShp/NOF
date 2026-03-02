@@ -5,16 +5,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <!-- AOT Compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>    
+
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Abstraction</PackageId>
     <Description>Abstractions for the NOF Framework infrastructure — interfaces, pipeline contracts, context types, and options shared across infrastructure implementations.</Description>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Abstractions\**" />
-    <EmbeddedResource Remove="Abstractions\**" />
-    <None Remove="Abstractions\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />

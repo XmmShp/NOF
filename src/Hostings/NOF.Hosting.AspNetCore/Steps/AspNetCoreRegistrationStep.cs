@@ -24,7 +24,11 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddOptionsInConfiguration<HttpHeaderOutboundMiddlewareOptions>("NOF:HttpHeaderMiddleware");
+
+        builder.Services.AddOptions<HttpHeaderOutboundMiddlewareOptions>()
+            .BindConfiguration("NOF:HttpHeaderMiddleware")
+            .ValidateOnStart();
+
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
         builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>
             tracing.AddAspNetCoreInstrumentation(options =>

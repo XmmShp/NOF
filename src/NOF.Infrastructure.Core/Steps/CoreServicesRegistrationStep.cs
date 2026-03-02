@@ -19,9 +19,12 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.AddScoped<IRequestSender, RequestSender>();
 
-        builder.Services.AddSingleton<IEndpointNameProvider>(new EndpointNameProvider());
+        builder.Services.AddOptions<EndpointNameOptions>();
+        builder.Services.AddSingleton<IEndpointNameProvider, ManualEndpointNameProvider>();
 
-        builder.Services.AddOptionsInConfiguration<OutboxOptions>("NOF:Outbox");
+        builder.Services.AddOptions<OutboxOptions>()
+            .BindConfiguration("NOF:Outbox")
+            .ValidateOnStart();
 
         // Handler inbound pipeline: executor
         builder.Services.AddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();

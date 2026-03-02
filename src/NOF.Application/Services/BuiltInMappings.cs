@@ -1,5 +1,6 @@
 using NOF.Contract;
 using NOF.Domain;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
 
@@ -15,6 +16,7 @@ internal static class BuiltInMappings
     /// Attempts a built-in mapping from <paramref name="source"/> (of type <paramref name="sourceType"/>)
     /// to <paramref name="destType"/>. Returns <see cref="Optional.None"/> if no built-in applies.
     /// </summary>
+    [UnconditionalSuppressMessage("AOT", "IL2070", Justification = "GetProperty calls only access well-known properties on Result<T> and Optional<T> which are defined in NOF assemblies and always preserved.")]
     internal static Optional<object?> TryMap(Type sourceType, Type destType, object source)
     {
         // ── IValueObject → underlying primitive ─────────────────────────
@@ -45,8 +47,8 @@ internal static class BuiltInMappings
             var resultType = sourceType.GetGenericArguments()[0];
             if (destType.IsAssignableFrom(resultType))
             {
-                var isSuccessProp = sourceType.GetProperty(nameof(Result<object>.IsSuccess))!;
-                var valueProp = sourceType.GetProperty(nameof(Result<object>.Value))!;
+                var isSuccessProp = sourceType.GetProperty(nameof(Result<>.IsSuccess))!;
+                var valueProp = sourceType.GetProperty(nameof(Result<>.Value))!;
 
                 if (isSuccessProp.GetValue(source) is true)
                 {
@@ -63,8 +65,8 @@ internal static class BuiltInMappings
             var innerType = sourceType.GetGenericArguments()[0];
             if (destType.IsAssignableFrom(innerType))
             {
-                var hasValueProp = sourceType.GetProperty(nameof(Optional<object>.HasValue))!;
-                var valueProp = sourceType.GetProperty(nameof(Optional<object>.Value))!;
+                var hasValueProp = sourceType.GetProperty(nameof(Optional<>.HasValue))!;
+                var valueProp = sourceType.GetProperty(nameof(Optional<>.Value))!;
 
                 if (hasValueProp.GetValue(source) is true)
                 {

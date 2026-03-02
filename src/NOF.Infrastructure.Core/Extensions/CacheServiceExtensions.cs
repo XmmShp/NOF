@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -50,7 +51,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <param name="name">The logical name / service key for this registration.</param>
         /// <param name="configure">Optional action to configure <see cref="CacheServiceOptions"/> for this name.</param>
         /// <returns>An <see cref="ICacheServiceBuilder"/> for further configuration.</returns>
-        public ICacheServiceBuilder AddCacheService<TImplementation>(
+        public ICacheServiceBuilder AddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
             string name,
             Action<CacheServiceOptions>? configure = null)
             where TImplementation : class, ICacheService

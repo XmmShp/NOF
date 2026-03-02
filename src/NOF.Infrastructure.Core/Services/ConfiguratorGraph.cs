@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.Core;
@@ -35,6 +36,7 @@ internal class ConfiguratorGraph<T> where T : IStep
         _nodes = tasksSet;
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL2075", Justification = "Concrete step types are always preserved; GetInterfaces is safe.")]
     private void IndexNode(T node)
     {
         var type = node.GetType();
@@ -64,6 +66,7 @@ internal class ConfiguratorGraph<T> where T : IStep
         }
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL2075", Justification = "Concrete step types are always preserved; GetInterfaces is safe.")]
     public IReadOnlyList<T> GetExecutionOrder()
     {
         if (_orderedConfigs is not null)

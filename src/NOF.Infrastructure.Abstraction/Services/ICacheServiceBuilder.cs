@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 
@@ -32,7 +33,7 @@ public interface ICacheServiceBuilder
     }
 
     /// <summary>Uses a DI-resolved serializer of type <typeparamref name="T"/>.</summary>
-    ICacheServiceBuilder WithSerializer<T>() where T : class, ICacheSerializer
+    ICacheServiceBuilder WithSerializer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, ICacheSerializer
     {
         Services.AddKeyedScoped<ICacheSerializer, T>(Name);
         return this;
@@ -55,7 +56,7 @@ public interface ICacheServiceBuilder
     }
 
     /// <summary>Uses a DI-resolved lock retry strategy of type <typeparamref name="T"/>.</summary>
-    ICacheServiceBuilder WithLockRetryStrategy<T>() where T : class, ICacheLockRetryStrategy
+    ICacheServiceBuilder WithLockRetryStrategy<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, ICacheLockRetryStrategy
     {
         Services.AddKeyedScoped<ICacheLockRetryStrategy, T>(Name);
         return this;

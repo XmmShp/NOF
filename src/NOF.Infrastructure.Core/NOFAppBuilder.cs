@@ -59,12 +59,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     public IStartupEventChannel StartupEventChannel { get; protected set; }
 
     /// <inheritdoc/>
-    public IRequestRider? RequestSender { get; set; }
-
-    /// <inheritdoc/>
-    public IEndpointNameProvider EndpointNameProvider { get; set; }
-
-    /// <inheritdoc/>
     public HandlerInfos HandlerInfos => Services.GetOrAddSingleton<HandlerInfos>();
 
     /// <summary>
@@ -97,7 +91,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new TracingOutboundMiddlewareStep(),
             new TenantOutboundMiddlewareStep(),
         ];
-        EndpointNameProvider = new EndpointNameProvider();
         ApplicationConfigs =
         [
             new IdGeneratorInitializationStep(),

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -13,7 +14,8 @@ public class OptionalConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert)
         => typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(Optional<>);
 
-    public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "MakeGenericType is used to create a closed generic converter; the types are known at runtime.")]
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var valueType = typeToConvert.GenericTypeArguments[0];
         var converterType = typeof(OptionalConverter<>).MakeGenericType(valueType);
@@ -23,6 +25,8 @@ public class OptionalConverterFactory : JsonConverterFactory
 
 internal class OptionalConverter<T> : JsonConverter<Optional<T>>
 {
+    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "The caller is responsible for ensuring T is compatible.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The caller is responsible for ensuring T is compatible.")]
     public override Optional<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Null)
@@ -34,6 +38,8 @@ internal class OptionalConverter<T> : JsonConverter<Optional<T>>
         return Optional.Of(value);
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "The caller is responsible for ensuring T is compatible.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The caller is responsible for ensuring T is compatible.")]
     public override void Write(Utf8JsonWriter writer, Optional<T> value, JsonSerializerOptions options)
     {
         if (!value.HasValue)
@@ -66,7 +72,10 @@ public static class OptionalTypeInfoResolverModifier
     /// It patches every <see cref="Optional{T}"/> property so that the property is omitted
     /// when <see cref="Optional{T}.HasValue"/> is <c>false</c>.
     /// </summary>
-    public static readonly Action<JsonTypeInfo> Modifier = static typeInfo =>
+    public static readonly Action<JsonTypeInfo> Modifier = ModifyTypeInfo;
+
+    [UnconditionalSuppressMessage("AOT", "IL2075", Justification = "Optional<T>.HasValue is always preserved because Optional<T> is defined in this assembly.")]
+    private static void ModifyTypeInfo(JsonTypeInfo typeInfo)
     {
         if (typeInfo.Kind != JsonTypeInfoKind.Object)
         {
@@ -91,12 +100,12 @@ public static class OptionalTypeInfoResolverModifier
                 continue;
             }
 
-            var hasValueProp = prop.PropertyType.GetProperty(nameof(Optional<int>.HasValue))!;
+            var hasValueProp = prop.PropertyType.GetProperty(nameof(Optional<>.HasValue))!;
             prop.ShouldSerialize = (obj, _) =>
             {
                 var optional = getter(obj);
                 return optional is not null && (bool)hasValueProp.GetValue(optional)!;
             };
         }
-    };
+    }
 }

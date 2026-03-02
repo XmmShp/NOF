@@ -5,10 +5,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <!-- AOT Compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Core</PackageId>
     <Description>Core infrastructure for the NOF Framework — concrete implementations, step pipeline, OpenTelemetry integration, and service wiring.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Validators\**" />
+    <EmbeddedResource Remove="Validators\**" />
+    <None Remove="Validators\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" />

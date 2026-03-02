@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -13,6 +14,8 @@ public class PatchRequestConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert)
         => typeToConvert.IsAssignableTo(typeof(PatchRequest));
 
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "MakeGenericType is used to create a closed generic converter; the types are known at runtime.")]
+    [UnconditionalSuppressMessage("AOT", "IL2071", Justification = "PatchRequestConverter<T> constraint new() ensures the type has a public parameterless constructor.")]
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var converterType = typeof(PatchRequestConverter<>).MakeGenericType(typeToConvert);

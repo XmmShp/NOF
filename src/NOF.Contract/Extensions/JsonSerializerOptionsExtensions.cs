@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -9,20 +10,23 @@ namespace NOF.Contract;
 /// </summary>
 public static partial class NOFContractExtensions
 {
-    private static JsonSerializerOptions? NOFDefaults;
+    private static readonly Lazy<JsonSerializerOptions> NOFDefaults = new(CreateNOFDefaults);
+
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "JsonStringEnumConverter is required for enum serialization; specific enum converters are registered by downstream JsonSerializerContexts.")]
+    private static JsonSerializerOptions CreateNOFDefaults() =>
+        new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+        }.AddNOFConverters();
 
     extension(JsonSerializerOptions)
     {
         /// <summary>Gets the default <see cref="JsonSerializerOptions"/> used by the NOF framework.</summary>
-        public static JsonSerializerOptions NOFDefaults =>
-            NOFDefaults ??= new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-                ReferenceHandler = ReferenceHandler.IgnoreCycles,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
-            }.AddNOFConverters();
+        public static JsonSerializerOptions NOFDefaults => NOFDefaults.Value;
     }
 
     extension(JsonSerializerOptions options)
@@ -32,6 +36,8 @@ public static partial class NOFContractExtensions
         /// into the specified <see cref="JsonSerializerOptions"/>.
         /// </summary>
         /// <returns>The same <see cref="JsonSerializerOptions"/> instance for fluent chaining.</returns>
+        [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "DefaultJsonTypeInfoResolver is used as a fallback; AOT apps should add their JsonSerializerContext to the resolver chain.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "DefaultJsonTypeInfoResolver is used as a fallback; AOT apps should add their JsonSerializerContext to the resolver chain.")]
         public JsonSerializerOptions AddNOFConverters()
         {
             options.Converters.Add(new OptionalConverterFactory());

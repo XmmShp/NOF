@@ -1,6 +1,8 @@
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NOF.Infrastructure.Abstraction;
+using NOF.Infrastructure.Core;
 
 namespace NOF.Infrastructure.MassTransit;
 
@@ -13,7 +15,8 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
     {
         var handlerInfos = builder.HandlerInfos;
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
-        var nameProvider = builder.EndpointNameProvider;
+        var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameOptions>();
+        var nameProvider = new ManualEndpointNameProvider(Options.Create(endpointNameOptions));
 
         // Register all distinct handler types as scoped services
         var handlers = handlerInfos.Select(i => i.HandlerType).Distinct();
@@ -60,7 +63,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
 
         builder.Services.AddMassTransit(config =>
         {
-            config.SetEndpointNameFormatter(new EndpointNameFormatter(builder.EndpointNameProvider));
+            config.SetEndpointNameFormatter(new EndpointNameFormatter(nameProvider));
             config.AddConsumers(busConsumers.ToArray());
             builder.StartupEventChannel.Publish(new MassTransitConfiguring(config));
         });

@@ -17,18 +17,6 @@ public interface IApplicationInitializationContext : IHostApplicationBuilder
     IStartupEventChannel StartupEventChannel { get; }
 
     /// <summary>
-    /// Gets or sets the request rider instance provided by the bus provider to dispatch
-    /// application requests to their corresponding handlers at startup time.
-    /// This property is typically set during service configuration.
-    /// </summary>
-    IRequestRider? RequestSender { get; set; }
-
-    /// <summary>
-    /// Gets or sets the endpoint name provider used for resolving message endpoint names.
-    /// </summary>
-    IEndpointNameProvider EndpointNameProvider { get; set; }
-
-    /// <summary>
     /// Gets the set of handler metadata (e.g., command, event, request handlers) registered via
     /// source-generated <c>AddAllHandlers</c> or manually via <c>AddHandlerInfo</c>.
     /// </summary>
