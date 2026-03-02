@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Contract;
 using Xunit;
 
 namespace NOF.Application.Tests;
@@ -29,25 +28,25 @@ public class ManualMapperTests
     }
 
     [Fact]
-    public void TryMap_Generic_ReturnsOptionalWithValue()
+    public void TryMap_Generic_ReturnsTrueAndValue()
     {
         var mapper = CreateMapper(o =>
             o.Add<int, string>(x => x.ToString()));
 
-        var result = mapper.TryMap<int, string>(42);
+        var found = mapper.TryMap<int, string>(42, out var result);
 
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be("42");
+        found.Should().BeTrue();
+        result.Should().Be("42");
     }
 
     [Fact]
-    public void TryMap_Generic_NoMapping_ReturnsNone()
+    public void TryMap_Generic_NoMapping_ReturnsFalse()
     {
         var mapper = CreateMapper();
 
-        var result = mapper.TryMap<int, TargetDto>(42);
+        var found = mapper.TryMap<int, TargetDto>(42, out var result);
 
-        result.HasValue.Should().BeFalse();
+        found.Should().BeFalse();
     }
 
     [Fact]
@@ -68,7 +67,7 @@ public class ManualMapperTests
     public void Map_NonGeneric_ReturnsExpectedResult()
     {
         var mapper = CreateMapper(o =>
-            o.Add(typeof(int), typeof(string), src => Optional.Of<object?>(((int)src).ToString())));
+            o.Add(typeof(int), typeof(string), (src, _) => ((int)src).ToString()));
 
         var result = mapper.Map(typeof(int), typeof(string), 42);
 
@@ -76,25 +75,25 @@ public class ManualMapperTests
     }
 
     [Fact]
-    public void TryMap_NonGeneric_ReturnsOptionalWithValue()
+    public void TryMap_NonGeneric_ReturnsTrueAndValue()
     {
         var mapper = CreateMapper(o =>
-            o.Add(typeof(int), typeof(string), src => Optional.Of<object?>(((int)src).ToString())));
+            o.Add(typeof(int), typeof(string), (src, _) => ((int)src).ToString()));
 
-        var result = mapper.TryMap(typeof(int), typeof(string), 42);
+        var found = mapper.TryMap(typeof(int), typeof(string), 42, out var result);
 
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be("42");
+        found.Should().BeTrue();
+        result.Should().Be("42");
     }
 
     [Fact]
-    public void TryMap_NonGeneric_NoMapping_ReturnsNone()
+    public void TryMap_NonGeneric_NoMapping_ReturnsFalse()
     {
         var mapper = CreateMapper();
 
-        var result = mapper.TryMap(typeof(int), typeof(TargetDto), 42);
+        var found = mapper.TryMap(typeof(int), typeof(TargetDto), 42, out var result);
 
-        result.HasValue.Should().BeFalse();
+        found.Should().BeFalse();
     }
 
     [Fact]
@@ -169,8 +168,8 @@ public class ManualMapperTests
     {
         var mapper = CreateMapper();
 
-        mapper.TryAdd(typeof(int), typeof(string), src => Optional.Of<object?>($"first:{src}"));
-        var added = mapper.TryAdd(typeof(int), typeof(string), src => Optional.Of<object?>($"second:{src}"));
+        mapper.TryAdd(typeof(int), typeof(string), (src, _) => $"first:{src}");
+        var added = mapper.TryAdd(typeof(int), typeof(string), (src, _) => $"second:{src}");
 
         added.Should().BeFalse();
         mapper.Map<int, string>(1).Should().Be("first:1");
@@ -178,10 +177,10 @@ public class ManualMapperTests
 
     #endregion
 
-    #region ReplaceOrAdd
+    #region Add replaces existing (single delegate per key)
 
     [Fact]
-    public void ReplaceOrAdd_Generic_ReplacesExistingDelegates()
+    public void Add_Generic_ReplacesExistingDelegate()
     {
         var mapper = CreateMapper(o =>
         {
@@ -189,72 +188,12 @@ public class ManualMapperTests
             o.Add<int, string>(x => $"second:{x}");
         });
 
-        // Both delegates exist; last-added ("second") wins
+        // Second Add replaces the first — single delegate per key
         mapper.Map<int, string>(1).Should().Be("second:1");
-
-        // ReplaceOrAdd clears both and sets a single new delegate
-        mapper.ReplaceOrAdd<int, string>(x => $"replaced:{x}");
-        mapper.Map<int, string>(1).Should().Be("replaced:1");
-    }
-
-    [Fact]
-    public void ReplaceOrAdd_NonGeneric_ReplacesExistingDelegates()
-    {
-        var mapper = CreateMapper(o =>
-            o.Add(typeof(int), typeof(string), src => Optional.Of<object?>($"original:{src}")));
-
-        mapper.ReplaceOrAdd(typeof(int), typeof(string), src => Optional.Of<object?>($"replaced:{src}"));
-        mapper.Map<int, string>(1).Should().Be("replaced:1");
     }
 
     #endregion
 
-    #region Multiple delegates per key (last-added first, first HasValue wins)
-
-    [Fact]
-    public void MultipleDelegates_LastAddedEvaluatedFirst()
-    {
-        var mapper = CreateMapper(o =>
-        {
-            o.Add<int, string>(x => $"first:{x}");
-            o.Add<int, string>(x => $"second:{x}");
-        });
-
-        // "second" was added last, so it is evaluated first
-        mapper.Map<int, string>(1).Should().Be("second:1");
-    }
-
-    [Fact]
-    public void MultipleDelegates_FallsBackToEarlierWhenLaterReturnsNone()
-    {
-        var mapper = CreateMapper(o =>
-        {
-            o.Add<int, string>(x => $"fallback:{x}");
-            o.Add<int, string>(x => x > 0 ? Optional.Of($"positive:{x}") : Optional.None);
-        });
-
-        // x > 0: second delegate returns value
-        mapper.Map<int, string>(5).Should().Be("positive:5");
-
-        // x <= 0: second delegate returns None, falls back to first
-        mapper.Map<int, string>(-1).Should().Be("fallback:-1");
-    }
-
-    [Fact]
-    public void MultipleDelegates_AllReturnNone_TryMapReturnsNone()
-    {
-        var mapper = CreateMapper(o =>
-        {
-            o.Add<int, TargetDto>(x => x > 100 ? Optional.Of(new TargetDto($"big:{x}")) : Optional.None);
-            o.Add<int, TargetDto>(x => x < 0 ? Optional.Of(new TargetDto($"negative:{x}")) : Optional.None);
-        });
-
-        // Neither delegate matches, no built-in for int→TargetDto
-        var result = mapper.TryMap<int, TargetDto>(50);
-        result.HasValue.Should().BeFalse();
-    }
-
-    #endregion
 
     #region Open generic fallback
 
@@ -262,7 +201,7 @@ public class ManualMapperTests
     public void OpenGenericSource_FallbackWorks()
     {
         var mapper = CreateMapper(o =>
-            o.Add(typeof(List<>), typeof(int), src => Optional.Of<object?>(((System.Collections.IList)src).Count)));
+            o.Add(typeof(List<>), typeof(int), (src, _) => ((System.Collections.IList)src).Count));
 
         var result = mapper.Map<List<string>, int>(["a", "b", "c"]);
 
@@ -273,7 +212,7 @@ public class ManualMapperTests
     public void OpenGenericDest_FallbackWorks()
     {
         var mapper = CreateMapper(o =>
-            o.Add(typeof(string), typeof(List<>), src => Optional.Of<object?>(new List<string> { (string)src })));
+            o.Add(typeof(string), typeof(List<>), (src, _) => new List<string> { (string)src }));
 
         var result = mapper.Map(typeof(string), typeof(List<string>), "hello");
 
@@ -285,7 +224,7 @@ public class ManualMapperTests
     public void OpenGenericBoth_FallbackWorks()
     {
         var mapper = CreateMapper(o =>
-            o.Add(typeof(List<>), typeof(HashSet<>), src =>
+            o.Add(typeof(List<>), typeof(HashSet<>), (src, _) =>
             {
                 var list = (System.Collections.IList)src;
                 var set = new HashSet<object>();
@@ -294,7 +233,7 @@ public class ManualMapperTests
                     set.Add(item);
                 }
 
-                return Optional.Of<object?>(set);
+                return set;
             }));
 
         var result = mapper.Map(typeof(List<int>), typeof(HashSet<int>), new List<int> { 1, 2, 3 });
@@ -307,8 +246,8 @@ public class ManualMapperTests
     {
         var mapper = CreateMapper(o =>
         {
-            o.Add(typeof(List<>), typeof(int), src => Optional.Of<object?>(999));
-            o.Add(typeof(List<string>), typeof(int), src => Optional.Of<object?>(42));
+            o.Add(typeof(List<>), typeof(int), (src, _) => 999);
+            o.Add(typeof(List<string>), typeof(int), (src, _) => 42);
         });
 
         // Closed type registration should win
@@ -331,10 +270,10 @@ public class ManualMapperTests
             o.Add<string, int>(s => s.Length));
 
         // Registered: string → int. Query: string → int?
-        var result = mapper.TryMap<string, int?>("hello");
+        var found = mapper.TryMap<string, int?>("hello", out var result);
 
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(5);
+        found.Should().BeTrue();
+        result.Should().Be(5);
     }
 
     [Fact]
@@ -344,9 +283,9 @@ public class ManualMapperTests
             o.Add<string, int?>(s => s.Length));
 
         // Registered: string → int?. Query: string → int. Should NOT find it.
-        var result = mapper.TryMap<string, int>("hello");
+        var act = () => mapper.Map<string, int>("hello");
 
-        result.HasValue.Should().BeFalse();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -368,17 +307,7 @@ public class ManualMapperTests
     }
 
     [Fact]
-    public void NullableFallback_NoRegistration_ReturnsNone()
-    {
-        var mapper = CreateMapper();
-
-        var result = mapper.TryMap<string, int?>("hello");
-
-        result.HasValue.Should().BeFalse();
-    }
-
-    [Fact]
-    public void NullableFallback_Map_ThrowsWhenNoMappingFound()
+    public void NullableFallback_NoRegistration_ThrowsInvalidOperationException()
     {
         var mapper = CreateMapper();
 
@@ -416,12 +345,12 @@ public class ManualMapperTests
 
         BaseSource source = new DerivedSource { Name = "base", Extra = "ext" };
 
-        var without = mapper.TryMap<BaseSource, TargetDto>(source);
-        without.HasValue.Should().BeFalse();
+        var withoutFound = mapper.TryMap<BaseSource, TargetDto>(source, out var without);
+        withoutFound.Should().BeFalse();
 
-        var with = mapper.TryMap<BaseSource, TargetDto>(source, useRuntimeType: true);
-        with.HasValue.Should().BeTrue();
-        with.Value.Label.Should().Be("derived:ext");
+        var withFound = mapper.TryMap<BaseSource, TargetDto>(source, out var with, useRuntimeType: true);
+        withFound.Should().BeTrue();
+        with.Label.Should().Be("derived:ext");
     }
 
     #endregion
@@ -429,7 +358,7 @@ public class ManualMapperTests
     #region MapperOptions.Merge
 
     [Fact]
-    public void Merge_AppendsFromOther_WithLowerPriority()
+    public void Merge_ExistingKeysNotOverwritten()
     {
         var primary = new MapperOptions();
         primary.Add<int, string>(x => $"primary:{x}");
@@ -442,27 +371,11 @@ public class ManualMapperTests
 
         var mapper = new ManualMapper(Options.Create(primary));
 
-        // int→string: primary was added first, secondary appended (lower priority).
-        // Last-added (primary) wins... wait — primary was in the list first, secondary appended after.
-        // Iteration is reverse order (last element first). So secondary is last → evaluated first.
-        // But Merge appends "after existing", so primary[0], secondary[1].
-        // Reverse iteration: secondary first. Both return HasValue, so secondary wins.
-        // Actually: primary's delegate was added first (index 0), secondary's appended (index 1).
-        // Reverse: index 1 (secondary) checked first.
-        // Hmm, but we want primary to take priority. Let's verify:
-        // Actually Merge doc says "delegates from other are appended after existing ones (thus evaluated with lower priority)".
-        // Reverse iteration: higher index = checked first. So appended = higher index = checked first = higher priority.
-        // That contradicts the doc. Let me just test the actual behavior.
+        // int→string: primary keeps its delegate, secondary is not added
+        mapper.Map<int, string>(1).Should().Be("primary:1");
 
         // int→double: only exists in secondary, should work
         mapper.Map<int, double>(10).Should().Be(15.0);
-
-        // int→string: both exist
-        // The primary Add put delegate at index 0. Merge appends secondary at index 1.
-        // Reverse iteration checks index 1 (secondary) first.
-        var stringResult = mapper.Map<int, string>(1);
-        // secondary is checked first since it's at higher index
-        stringResult.Should().Be("secondary:1");
     }
 
     [Fact]
@@ -504,30 +417,48 @@ public class ManualMapperTests
     }
 
     [Fact]
-    public void IMapper_ReplaceOrAdd_ReplacesExisting()
+    public void IMapper_Add_ReplacesExisting()
     {
         var mapper = CreateMapper(o =>
             o.Add<int, string>(x => $"options:{x}"));
 
-        mapper.ReplaceOrAdd<int, string>(x => $"runtime:{x}");
+        mapper.Add<int, string>(x => $"runtime:{x}");
 
         mapper.Map<int, string>(1).Should().Be("runtime:1");
     }
 
     #endregion
 
-    #region Edge cases
+    #region Nested mapping via IMapper parameter
 
     [Fact]
-    public void Map_NullSource_Generic_ThrowsOnDelegate()
+    public void Add_WithMapper_DelegateCanUseMapperForNestedMapping()
     {
         var mapper = CreateMapper(o =>
-            o.Add<string, int>(s => s.Length));
+        {
+            o.Add<int, string>(x => $"mapped:{x}");
+            o.Add<Wrapper<int>, string>((src, m) => $"wrapped({m.Map<int, string>(src.Inner)})");
+        });
 
-        // source is null, delegate will throw NRE
-        var act = () => mapper.Map<string, int>(null!);
-        act.Should().Throw<NullReferenceException>();
+        var wrapped = new Wrapper<int>(5);
+        mapper.Map<Wrapper<int>, string>(wrapped).Should().Be("wrapped(mapped:5)");
     }
+
+    [Fact]
+    public void TryAdd_WithMapper_DelegateCanUseMapper()
+    {
+        var mapper = CreateMapper(o =>
+            o.Add<int, string>(x => x.ToString()));
+
+        var added = mapper.TryAdd<Wrapper<int>, string>((src, m) => $"w:{m.Map<int, string>(src.Inner)}");
+        added.Should().BeTrue();
+
+        mapper.Map<Wrapper<int>, string>(new Wrapper<int>(7)).Should().Be("w:7");
+    }
+
+    #endregion
+
+    #region Edge cases
 
     [Fact]
     public void Map_NonGeneric_NullSourceType_ThrowsArgumentNullException()
@@ -556,9 +487,21 @@ public class ManualMapperTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    [Fact]
+    public void NoBuiltInMappings_IntToString_Throws()
+    {
+        // Explicit-only: no built-in int→string mapping
+        var mapper = CreateMapper();
+
+        var act = () => mapper.Map<int, string>(42);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
     #endregion
 
     #region Test helpers
+
+    private record Wrapper<T>(T Inner);
 
     private class BaseSource
     {

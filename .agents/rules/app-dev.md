@@ -94,19 +94,30 @@ return Result.Fail(404, "Order not found");
 
 ### Object Mapping (IMapper)
 
-Zero-reflection mapper. Delegates return `Optional<T>` — multiple per key (last-added first, first `HasValue` wins).
-Registration: `Add` (append), `TryAdd` (skip if exists), `ReplaceOrAdd` (clear + set).
+Zero-reflection, explicit-only mapper. Each `MapKey(Source, Destination, Name?)` holds exactly one delegate.
+No built-in mappings — all mappings must be explicitly registered (explicit > implicit).
+
+Registration: `Add` (set/replace), `TryAdd` (skip if exists).
 
 **Pre-build**: `services.Configure<MapperOptions>(o => o.Add<A, B>(...))`.
 **Runtime**: inject `IMapper`, call `TryAdd` in constructors (no-op if key exists).
 
 ```csharp
+// Simple registration
+o.Add<Order, OrderDto>(o => new OrderDto(o.Id));
+
+// With IMapper for nested mapping
+o.Add<Order, OrderSummary>((o, mapper) => new OrderSummary(mapper.Map<Address, AddressDto>(o.Address)));
+
+// Non-generic (MapFunc: (object, IMapper) → object)
+o.Add(typeof(Order), typeof(OrderDto), (src, mapper) => MapOrder((Order)src));
+
 // Named mappings
 _mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id), name: "summary");
 var dto = _mapper.Map<Order, OrderDto>(order, name: "summary");
 
-// Non-generic (delegates return Optional<object?>)
-_mapper.Add(typeof(Order), typeof(OrderDto), src => Optional.Of<object?>(MapOrder((Order)src)));
+// TryMap (standard C# Try pattern)
+if (_mapper.TryMap<Order, OrderDto>(order, out var mapped)) { /* use mapped */ }
 
 // Fluent extensions
 var dto = entity.Map.To<EntityDto>();                      // Registered mapping, fallback to cast
@@ -115,8 +126,7 @@ var dto = entity.Map.AsRuntime.To<EntityDto>();             // Runtime type for 
 var obj = entity.Map.To(typeof(EntityDto));                 // Non-generic
 ```
 
-**Built-in mappings** (no registration needed, unnamed only, user mappings take priority):
-`IValueObject<T>`→`T`, `Result<T>`→`T`, `Optional<T>`→`T`, numeric↔numeric, enum↔int/long, any T→string (ToString), `A`→`T?` falls back to `A`→`T`.
+**Nullable fallback**: A mapping `A → T` is automatically used for `A → T?` when no direct `A → T?` registration exists.
 
 ### Dispatch APIs
 

@@ -1,5 +1,3 @@
-using NOF.Contract;
-
 namespace NOF.Application;
 
 /// <summary>
@@ -13,7 +11,7 @@ public static partial class NOFApplicationExtensions
         /// Gets a <see cref="MapSelector{TSource}"/> bound to the current global <see cref="IMapper"/>
         /// instance, providing fluent mapping via <c>.As&lt;T&gt;()</c> and <c>.To&lt;T&gt;()</c>.
         /// </summary>
-        public MapSelector<TSource> Map => new(source!, typeof(TSource), Mapper.Current);
+        public MapSelector<TSource> Map => new(source, typeof(TSource), Mapper.Current);
     }
 }
 
@@ -74,10 +72,9 @@ public readonly struct MapSelector<TSource>
     /// <param name="name">Optional mapping name.</param>
     public TDestination To<TDestination>(string? name = null)
     {
-        var result = _mapper.TryMap(_sourceType, typeof(TDestination), _source, name);
-        if (result.HasValue)
+        if (_mapper.TryMap(_sourceType, typeof(TDestination), _source, out var result, name))
         {
-            return (TDestination)result.Value;
+            return (TDestination)result!;
         }
 
         return (TDestination)_source;
@@ -91,12 +88,6 @@ public readonly struct MapSelector<TSource>
     /// <param name="name">Optional mapping name.</param>
     public object To(Type destinationType, string? name = null)
     {
-        var result = _mapper.TryMap(_sourceType, destinationType, _source, name);
-        if (result.HasValue)
-        {
-            return result.Value;
-        }
-
-        return _source;
+        return _mapper.TryMap(_sourceType, destinationType, _source, out var result, name) ? result! : _source;
     }
 }

@@ -1,17 +1,15 @@
 using Microsoft.Extensions.Options;
-using NOF.Contract;
 
 namespace NOF.Application;
 
 /// <summary>
 /// Implements <see cref="IMapper"/> using explicitly registered mapping functions.
 /// <para>
-/// Thread-safe. Each <see cref="MapKey"/> may hold multiple delegates; during mapping
-/// they are invoked in reverse-registration order (last-added first) and the first
-/// result with <see cref="Optional{T}.HasValue"/> wins.
+/// Thread-safe. Each <see cref="MapKey"/> holds exactly one delegate.
 /// </para>
 /// <para>
-/// Mapping lookup priority: closed type → open generic definition.
+/// Mapping lookup priority: exact type pair → open generic source → open generic dest
+/// → open generic both → <c>Nullable&lt;T&gt;</c> fallback (<c>A → T?</c> uses <c>A → T</c>).
 /// </para>
 /// </summary>
 public sealed class ManualMapper : IMapper
@@ -30,44 +28,41 @@ public sealed class ManualMapper : IMapper
     #region Generic registration
 
     /// <inheritdoc />
-    public IMapper Add<TSource, TDestination>(Func<TSource, Optional<TDestination>> mappingFunc, string? name = null)
+    public IMapper Add<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null)
     {
         _options.Add(mappingFunc, name);
         return this;
     }
 
     /// <inheritdoc />
-    public bool TryAdd<TSource, TDestination>(Func<TSource, Optional<TDestination>> mappingFunc, string? name = null)
+    public IMapper Add<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
+    {
+        _options.Add(mappingFunc, name);
+        return this;
+    }
+
+    /// <inheritdoc />
+    public bool TryAdd<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null)
         => _options.TryAdd(mappingFunc, name);
 
     /// <inheritdoc />
-    public IMapper ReplaceOrAdd<TSource, TDestination>(Func<TSource, Optional<TDestination>> mappingFunc, string? name = null)
-    {
-        _options.ReplaceOrAdd(mappingFunc, name);
-        return this;
-    }
+    public bool TryAdd<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
+        => _options.TryAdd(mappingFunc, name);
 
     #endregion
 
     #region Non-generic registration
 
     /// <inheritdoc />
-    public IMapper Add(Type sourceType, Type destinationType, Func<object, Optional<object?>> mappingFunc, string? name = null)
+    public IMapper Add(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
     {
         _options.Add(sourceType, destinationType, mappingFunc, name);
         return this;
     }
 
     /// <inheritdoc />
-    public bool TryAdd(Type sourceType, Type destinationType, Func<object, Optional<object?>> mappingFunc, string? name = null)
+    public bool TryAdd(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
         => _options.TryAdd(sourceType, destinationType, mappingFunc, name);
-
-    /// <inheritdoc />
-    public IMapper ReplaceOrAdd(Type sourceType, Type destinationType, Func<object, Optional<object?>> mappingFunc, string? name = null)
-    {
-        _options.ReplaceOrAdd(sourceType, destinationType, mappingFunc, name);
-        return this;
-    }
 
     #endregion
 
@@ -76,47 +71,31 @@ public sealed class ManualMapper : IMapper
     /// <inheritdoc />
     public TDestination Map<TSource, TDestination>(TSource source, bool useRuntimeType = false, string? name = null)
     {
-        var result = TryMap<TSource, TDestination>(source, useRuntimeType, name);
-        if (result.HasValue)
+        var sourceType = useRuntimeType && source is not null ? source.GetType() : typeof(TSource);
+        var func = ResolveDelegate(sourceType, typeof(TDestination), name);
+        if (func is not null)
         {
-            return result.Value;
+            return (TDestination)func(source!, this);
         }
 
-        var sourceType = useRuntimeType && source is not null ? source.GetType() : typeof(TSource);
         throw new InvalidOperationException(
             $"No mapping registered from {sourceType.FullName} to {typeof(TDestination).FullName}" +
             (name is null ? "." : $" with name '{name}'."));
     }
 
     /// <inheritdoc />
-    public Optional<TDestination> TryMap<TSource, TDestination>(TSource source, bool useRuntimeType = false, string? name = null)
+    public bool TryMap<TSource, TDestination>(TSource source, out TDestination result, bool useRuntimeType = false, string? name = null)
     {
         var sourceType = useRuntimeType && source is not null ? source.GetType() : typeof(TSource);
-        var delegates = ResolveDelegates(sourceType, typeof(TDestination), name);
-        if (delegates is not null)
+        var func = ResolveDelegate(sourceType, typeof(TDestination), name);
+        if (func is not null)
         {
-            // Iterate in reverse: last-added first
-            for (var i = delegates.Count - 1; i >= 0; i--)
-            {
-                var result = delegates[i](source!);
-                if (result.HasValue)
-                {
-                    return (TDestination)result.Value!;
-                }
-            }
+            result = (TDestination)func(source!, this);
+            return true;
         }
 
-        // Built-in fallback (unnamed mappings only)
-        if (name is null && source is not null)
-        {
-            var builtIn = BuiltInMappings.TryMap(sourceType, typeof(TDestination), source);
-            if (builtIn.HasValue)
-            {
-                return (TDestination)builtIn.Value!;
-            }
-        }
-
-        return Optional.None;
+        result = default!;
+        return false;
     }
 
     #endregion
@@ -126,10 +105,14 @@ public sealed class ManualMapper : IMapper
     /// <inheritdoc />
     public object Map(Type sourceType, Type destinationType, object source, string? name = null)
     {
-        var result = TryMap(sourceType, destinationType, source, name);
-        if (result.HasValue)
+        ArgumentNullException.ThrowIfNull(sourceType);
+        ArgumentNullException.ThrowIfNull(destinationType);
+        ArgumentNullException.ThrowIfNull(source);
+
+        var func = ResolveDelegate(sourceType, destinationType, name);
+        if (func is not null)
         {
-            return result.Value!;
+            return func(source, this);
         }
 
         throw new InvalidOperationException(
@@ -138,50 +121,35 @@ public sealed class ManualMapper : IMapper
     }
 
     /// <inheritdoc />
-    public Optional<object> TryMap(Type sourceType, Type destinationType, object source, string? name = null)
+    public bool TryMap(Type sourceType, Type destinationType, object source, out object? result, string? name = null)
     {
         ArgumentNullException.ThrowIfNull(sourceType);
         ArgumentNullException.ThrowIfNull(destinationType);
         ArgumentNullException.ThrowIfNull(source);
 
-        var delegates = ResolveDelegates(sourceType, destinationType, name);
-        if (delegates is not null)
+        var func = ResolveDelegate(sourceType, destinationType, name);
+        if (func is not null)
         {
-            for (var i = delegates.Count - 1; i >= 0; i--)
-            {
-                var result = delegates[i](source);
-                if (result.HasValue)
-                {
-                    return Optional.Of(result.Value!);
-                }
-            }
+            result = func(source, this);
+            return true;
         }
 
-        // Built-in fallback (unnamed mappings only)
-        if (name is null)
-        {
-            var builtIn = BuiltInMappings.TryMap(sourceType, destinationType, source);
-            if (builtIn.HasValue)
-            {
-                return Optional.Of(builtIn.Value!);
-            }
-        }
-
-        return Optional.None;
+        result = null;
+        return false;
     }
 
     #endregion
 
-    #region Lookup: closed type first, then open generic definition
+    #region Lookup: exact → open generic → Nullable<T> fallback
 
-    private List<Func<object, Optional<object?>>>? ResolveDelegates(Type sourceType, Type destType, string? name)
+    private MapFunc? ResolveDelegate(Type sourceType, Type destType, string? name)
     {
         while (true)
         {
             var key = new MapKey(sourceType, destType, name);
-            if (_options.TryGetValue(key, out var delegates))
+            if (_options.TryGetValue(key, out var func))
             {
-                return delegates;
+                return func;
             }
 
             // Open generic fallback
@@ -191,27 +159,27 @@ public sealed class ManualMapper : IMapper
             if (openSource is not null)
             {
                 key = new MapKey(openSource, destType, name);
-                if (_options.TryGetValue(key, out delegates))
+                if (_options.TryGetValue(key, out func))
                 {
-                    return delegates;
+                    return func;
                 }
             }
 
             if (openDest is not null)
             {
                 key = new MapKey(sourceType, openDest, name);
-                if (_options.TryGetValue(key, out delegates))
+                if (_options.TryGetValue(key, out func))
                 {
-                    return delegates;
+                    return func;
                 }
             }
 
             if (openSource is not null && openDest is not null)
             {
                 key = new MapKey(openSource, openDest, name);
-                if (_options.TryGetValue(key, out delegates))
+                if (_options.TryGetValue(key, out func))
                 {
-                    return delegates;
+                    return func;
                 }
             }
 

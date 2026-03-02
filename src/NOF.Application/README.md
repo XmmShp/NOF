@@ -82,9 +82,10 @@ Handler base classes provide built-in transactional outbox support — commands 
 
 ### Object Mapping (IMapper)
 
-Zero-reflection, manually configured object mapper. Each mapping delegate returns `Optional<T>` — multiple delegates per key are supported (last-added evaluated first, first `HasValue` wins).
+Zero-reflection, explicit-only object mapper. Each `MapKey(Source, Destination, Name?)` holds exactly one delegate.
+No built-in mappings are provided — all mappings must be explicitly registered (explicit > implicit).
 
-**Registration** — `Add` (append), `TryAdd` (skip if key exists), `ReplaceOrAdd` (clear + set):
+**Registration** — `Add` (set/replace), `TryAdd` (skip if key exists):
 
 ```csharp
 // Pre-build (Options pattern)
@@ -92,11 +93,14 @@ builder.Services.Configure<MapperOptions>(o =>
     o.Add<ConfigFile, ConfigFileDto>(f =>
         new ConfigFileDto((string)f.Name, (string)f.Content)));
 
+// With IMapper for nested mapping
+o.Add<Order, OrderSummary>((o, mapper) => new OrderSummary(mapper.Map<Address, AddressDto>(o.Address)));
+
 // Runtime — TryAdd is safe in constructors (no-op if key already registered)
 _mapper.TryAdd<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(...));
 
-// Non-generic
-_mapper.Add(typeof(Order), typeof(OrderDto), src => Optional.Of<object?>(MapOrder((Order)src)));
+// Non-generic (MapFunc: (object, IMapper) → object)
+_mapper.Add(typeof(Order), typeof(OrderDto), (src, mapper) => MapOrder((Order)src));
 ```
 
 **Named mappings** — multiple names per type pair:
@@ -105,6 +109,15 @@ _mapper.Add(typeof(Order), typeof(OrderDto), src => Optional.Of<object?>(MapOrde
 _mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id), name: "summary");
 _mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id, o.Details), name: "full");
 var dto = _mapper.Map<Order, OrderDto>(order, name: "full");
+```
+
+**TryMap** — standard C# `Try` pattern with `out` parameter:
+
+```csharp
+if (_mapper.TryMap<Order, OrderDto>(order, out var dto))
+{
+    // dto is the mapped value
+}
 ```
 
 **Fluent extension syntax:**
@@ -117,20 +130,7 @@ var dto = entity.Map.As<DerivedEntity>().To<EntityDto>(); // Change source type 
 var dto = entity.Map.AsRuntime.To<EntityDto>();           // Use runtime type for lookup
 ```
 
-**Built-in mappings** (automatic, no registration required):
-
-| Conversion | Example |
-|------------|---------|
-| `IValueObject<T>` → `T` | `OrderId` → `long` (via `GetUnderlyingValue()`) |
-| `IValueObject<T>` → chain | `OrderId` → `string` (underlying → ToString) |
-| `Result<T>` → `T` | Extract `Value` if `IsSuccess` |
-| `Optional<T>` → `T` | Extract `Value` if `HasValue` |
-| Numeric ↔ numeric | `int` → `long`, `decimal` → `int`, etc. |
-| Enum ↔ numeric | `DayOfWeek` → `int`, `int` → `DayOfWeek` |
-| Any `T` → `string` | Calls `ToString()` (lowest priority) |
-| `A` → `T?` | Falls back to `A` → `T` mapping |
-
-User-registered mappings always take priority over built-ins. Built-ins only apply to unnamed (default) mappings.
+**Nullable fallback**: A mapping `A → T` is automatically used for `A → T?` when no direct `A → T?` registration exists.
 
 ## Installation
 
