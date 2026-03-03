@@ -51,7 +51,7 @@ public abstract record PatchRequest
     /// </param>
     /// <param name="options">
     /// Optional <see cref="JsonSerializerOptions"/> for key resolution and deserialization.
-    /// Defaults to <see cref="NOFContractExtensions.NOFDefaults"/>.
+    /// Defaults to <see cref="NOFContractExtensions.NOF"/>.
     /// </param>
     /// <returns>
     /// <see cref="Optional{T}"/> containing the deserialized value if the key was present; otherwise <see cref="Optional.None"/>.
@@ -69,7 +69,7 @@ public abstract record PatchRequest
             return Optional.None;
         }
 
-        options ??= JsonSerializerOptions.NOFDefaults;
+        options ??= JsonSerializerOptions.NOF;
 
         if (!TryGetElement(propertyName, options, out var element))
         {
@@ -97,7 +97,7 @@ public abstract record PatchRequest
     /// </param>
     /// <param name="options">
     /// Optional <see cref="JsonSerializerOptions"/> for key resolution and serialization.
-    /// Defaults to <see cref="NOFContractExtensions.NOFDefaults"/>.
+    /// Defaults to <see cref="NOFContractExtensions.NOF"/>.
     /// </param>
     [RequiresDynamicCode("JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
     [RequiresUnreferencedCode("JSON serialization and deserialization might require types that cannot be statically analyzed.")]
@@ -108,7 +108,7 @@ public abstract record PatchRequest
     {
         ArgumentNullException.ThrowIfNull(propertyName);
 
-        options ??= JsonSerializerOptions.NOFDefaults;
+        options ??= JsonSerializerOptions.NOF;
         var key = options.PropertyNamingPolicy?.ConvertName(propertyName) ?? propertyName;
 
         if (!value.HasValue)

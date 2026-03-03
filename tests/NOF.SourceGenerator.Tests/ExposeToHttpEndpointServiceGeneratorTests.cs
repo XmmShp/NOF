@@ -676,7 +676,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         generatedCode.Should().Contain("global::System.Collections.Generic.List<string>");
 
         // Should NOT have bare System.* without global:: (except inside string literals)
-        // The using NOF.Contract is allowed for extension property NOFDefaults
+        // The using NOF.Contract is allowed for extension property NOF
         generatedCode.Should().Contain("using NOF.Contract;");
     }
 }

@@ -1,6 +1,6 @@
 using NOF.Contract;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure.Abstraction;
 
@@ -8,9 +8,7 @@ public class JsonCacheSerializer : ICacheSerializer
 {
     private readonly JsonSerializerOptions _options;
 
-    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "NOFDefaults is intentionally used as fallback; callers can provide AOT-safe options.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "NOFDefaults is intentionally used as fallback; callers can provide AOT-safe options.")]
-    public JsonCacheSerializer() : this(JsonSerializerOptions.NOFDefaults)
+    public JsonCacheSerializer() : this(JsonSerializerOptions.NOF)
     {
     }
 
@@ -21,8 +19,6 @@ public class JsonCacheSerializer : ICacheSerializer
     }
 
     /// <inheritdoc />
-    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "Serialization uses pre-configured options; types are preserved by the application.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Serialization uses pre-configured options; types are preserved by the application.")]
     public ReadOnlyMemory<byte> Serialize<T>(T value)
     {
         if (value is null)
@@ -30,20 +26,20 @@ public class JsonCacheSerializer : ICacheSerializer
             return ReadOnlyMemory<byte>.Empty;
         }
 
-        return JsonSerializer.SerializeToUtf8Bytes(value, _options);
+        var typeInfo = (JsonTypeInfo<T>)_options.GetTypeInfo(typeof(T));
+        return JsonSerializer.SerializeToUtf8Bytes(value, typeInfo);
     }
 
     /// <inheritdoc />
-    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "Deserialization uses pre-configured options; types are preserved by the application.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Deserialization uses pre-configured options; types are preserved by the application.")]
     public T? Deserialize<T>(ReadOnlyMemory<byte> data)
     {
-        if (data.IsEmpty || JsonSerializer.Deserialize<T>(data.Span, _options) is not { } value)
+        if (data.IsEmpty)
         {
             return default;
         }
 
-        return value;
+        var typeInfo = (JsonTypeInfo<T>)_options.GetTypeInfo(typeof(T));
+        return JsonSerializer.Deserialize(data.Span, typeInfo) is not { } value ? default : value;
     }
 }
 

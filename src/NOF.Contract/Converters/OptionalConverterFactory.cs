@@ -14,7 +14,9 @@ public class OptionalConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert)
         => typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(Optional<>);
 
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "MakeGenericType is used to create a closed generic converter; the types are known at runtime.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050",
+        Justification = "MakeGenericType for OptionalConverter<T> where T is the inner type argument of Optional<T>. " +
+                        "The T is always a type that STJ already resolved metadata for, so the generic instantiation is safe.")]
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var valueType = typeToConvert.GenericTypeArguments[0];
@@ -25,8 +27,6 @@ public class OptionalConverterFactory : JsonConverterFactory
 
 internal class OptionalConverter<T> : JsonConverter<Optional<T>>
 {
-    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "The caller is responsible for ensuring T is compatible.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The caller is responsible for ensuring T is compatible.")]
     public override Optional<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Null)
@@ -34,12 +34,11 @@ internal class OptionalConverter<T> : JsonConverter<Optional<T>>
             return Optional.Of<T>(default!);
         }
 
-        var value = JsonSerializer.Deserialize<T>(ref reader, options)!;
+        var typeInfo = options.GetTypeInfo(typeof(T));
+        var value = (T)JsonSerializer.Deserialize(ref reader, typeInfo)!;
         return Optional.Of(value);
     }
 
-    [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "The caller is responsible for ensuring T is compatible.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The caller is responsible for ensuring T is compatible.")]
     public override void Write(Utf8JsonWriter writer, Optional<T> value, JsonSerializerOptions options)
     {
         if (!value.HasValue)
@@ -47,7 +46,8 @@ internal class OptionalConverter<T> : JsonConverter<Optional<T>>
             return;
         }
 
-        JsonSerializer.Serialize(writer, value.Value, options);
+        var typeInfo = options.GetTypeInfo(typeof(T));
+        JsonSerializer.Serialize(writer, value.Value, typeInfo);
     }
 }
 
@@ -74,7 +74,6 @@ public static class OptionalTypeInfoResolverModifier
     /// </summary>
     public static readonly Action<JsonTypeInfo> Modifier = ModifyTypeInfo;
 
-    [UnconditionalSuppressMessage("AOT", "IL2075", Justification = "Optional<T>.HasValue is always preserved because Optional<T> is defined in this assembly.")]
     private static void ModifyTypeInfo(JsonTypeInfo typeInfo)
     {
         if (typeInfo.Kind != JsonTypeInfoKind.Object)
@@ -100,11 +99,10 @@ public static class OptionalTypeInfoResolverModifier
                 continue;
             }
 
-            var hasValueProp = prop.PropertyType.GetProperty(nameof(Optional<>.HasValue))!;
             prop.ShouldSerialize = (obj, _) =>
             {
                 var optional = getter(obj);
-                return optional is not null && (bool)hasValueProp.GetValue(optional)!;
+                return optional is IOptionalMarker { HasValue: true };
             };
         }
     }

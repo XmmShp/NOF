@@ -109,12 +109,7 @@ public class OptionalTests
 
 public class OptionalJsonTests
 {
-    private static JsonSerializerOptions Options() =>
-        new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-        }.AddNOFConverters();
+    private static JsonSerializerOptions Options() => JsonSerializerOptions.NOF;
 
     // -----------------------------------------------------------------------
     // Serialization — Optional<T> present

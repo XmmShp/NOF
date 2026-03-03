@@ -133,7 +133,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine($"    public partial class {clientName} : {interfaceName}");
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
-        sb.AppendLine("        private static readonly global::System.Text.Json.JsonSerializerOptions _jsonOptions = global::System.Text.Json.JsonSerializerOptions.NOFDefaults;");
+        sb.AppendLine("        private static readonly global::System.Text.Json.JsonSerializerOptions _jsonOptions = global::System.Text.Json.JsonSerializerOptions.NOF;");
         sb.AppendLine();
         sb.AppendLine("        /// <summary>");
         sb.AppendLine($"        /// Initializes a new instance of {clientName}");

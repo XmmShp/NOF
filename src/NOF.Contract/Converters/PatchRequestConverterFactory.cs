@@ -14,8 +14,12 @@ public class PatchRequestConverterFactory : JsonConverterFactory
     public override bool CanConvert(Type typeToConvert)
         => typeToConvert.IsAssignableTo(typeof(PatchRequest));
 
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "MakeGenericType is used to create a closed generic converter; the types are known at runtime.")]
-    [UnconditionalSuppressMessage("AOT", "IL2071", Justification = "PatchRequestConverter<T> constraint new() ensures the type has a public parameterless constructor.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050",
+        Justification = "MakeGenericType for PatchRequestConverter<T> where T is a PatchRequest subclass. " +
+                        "The T is always a concrete type that the caller already instantiates, so the generic instantiation is safe.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2071",
+        Justification = "PatchRequest subclasses always have a public parameterless constructor (enforced by the new() constraint). " +
+                        "Cannot annotate override parameter because base JsonConverterFactory.CreateConverter lacks the annotation.")]
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var converterType = typeof(PatchRequestConverter<>).MakeGenericType(typeToConvert);
@@ -23,7 +27,9 @@ public class PatchRequestConverterFactory : JsonConverterFactory
     }
 }
 
-internal class PatchRequestConverter<T> : JsonConverter<T> where T : PatchRequest, new()
+internal class PatchRequestConverter<
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T
+> : JsonConverter<T> where T : PatchRequest, new()
 {
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

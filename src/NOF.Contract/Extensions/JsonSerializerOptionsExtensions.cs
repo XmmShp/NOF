@@ -10,51 +10,100 @@ namespace NOF.Contract;
 /// </summary>
 public static partial class NOFContractExtensions
 {
-    private static readonly Lazy<JsonSerializerOptions> NOFDefaults = new(CreateNOFDefaults);
+    private static readonly List<Action<JsonSerializerOptions>> _nofConfigurators = [];
 
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "JsonStringEnumConverter is required for enum serialization; specific enum converters are registered by downstream JsonSerializerContexts.")]
-    private static JsonSerializerOptions CreateNOFDefaults() =>
-        new JsonSerializerOptions
+    private static readonly Lazy<JsonSerializerOptions> _nof = new(() =>
+    {
+        var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.Never,
             ReferenceHandler = ReferenceHandler.IgnoreCycles,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
-        }.AddNOFConverters();
+            TypeInfoResolver = NOFJsonSerializerContext.Default
+        };
+        options.Converters.Add(new OptionalConverterFactory());
+        options.Converters.Add(new PatchRequestConverterFactory());
+
+        foreach (var configure in _nofConfigurators)
+        {
+            configure(options);
+        }
+
+        options.TypeInfoResolver = options.TypeInfoResolver!
+            .WithAddedModifier(OptionalTypeInfoResolverModifier.Modifier);
+
+        return options;
+    });
 
     extension(JsonSerializerOptions)
     {
-        /// <summary>Gets the default <see cref="JsonSerializerOptions"/> used by the NOF framework.</summary>
-        public static JsonSerializerOptions NOFDefaults => NOFDefaults.Value;
+        /// <summary>
+        /// Gets the shared <see cref="JsonSerializerOptions"/> instance used by the NOF framework.
+        /// </summary>
+        /// <remarks>
+        /// By default this includes <see cref="NOFJsonSerializerContext"/> for common primitive types,
+        /// <see cref="OptionalConverterFactory"/>, <see cref="PatchRequestConverterFactory"/>,
+        /// and the <see cref="OptionalTypeInfoResolverModifier"/>.
+        /// Call <see cref="ConfigureNOFJsonSerializerOptions"/> before first access to customize
+        /// (e.g. add source-generated contexts for your domain types, value object converters, etc.).
+        /// The options are frozen by STJ on first use.
+        /// </remarks>
+        public static JsonSerializerOptions NOF => _nof.Value;
+
+        /// <summary>
+        /// Registers a configurator for the shared <see cref="NOF"/> options instance.
+        /// Can be called multiple times; configurators are applied in registration order
+        /// when <see cref="NOF"/> is first accessed (like the options pattern).
+        /// Must be called before <see cref="NOF"/> is first accessed.
+        /// </summary>
+        /// <param name="configure">
+        /// An action that receives the <see cref="JsonSerializerOptions"/> instance to configure.
+        /// Use this to add source-generated <c>JsonSerializerContext</c> instances to the resolver chain,
+        /// register value object converters, or apply any other customizations.
+        /// </param>
+        /// <example>
+        /// <code>
+        /// JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
+        /// {
+        ///     options.TypeInfoResolverChain.Add(MyAppJsonContext.Default);
+        ///     options.ConfigureValueObjectJsonSerializerOptions();
+        /// });
+        /// </code>
+        /// </example>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if <see cref="NOF"/> has already been materialized.
+        /// </exception>
+        public static void ConfigureNOFJsonSerializerOptions(Action<JsonSerializerOptions> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            if (_nof.IsValueCreated)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(ConfigureNOFJsonSerializerOptions)} must be called before {nameof(NOF)} is first accessed.");
+            }
+            _nofConfigurators.Add(configure);
+        }
     }
 
     extension(JsonSerializerOptions options)
     {
         /// <summary>
-        /// Registers all NOF framework JSON converters and converter factories
-        /// into the specified <see cref="JsonSerializerOptions"/>.
+        /// Appends a <see cref="DefaultJsonTypeInfoResolver"/> to the
+        /// <see cref="JsonSerializerOptions.TypeInfoResolverChain"/>.
         /// </summary>
+        /// <remarks>
+        /// This is a convenience method for non-AOT scenarios that need reflection-based
+        /// metadata resolution for arbitrary types. Existing resolvers in the chain
+        /// (e.g. source-generated contexts) take priority.
+        /// AOT applications should register their own <c>JsonSerializerContext</c> instead.
+        /// </remarks>
         /// <returns>The same <see cref="JsonSerializerOptions"/> instance for fluent chaining.</returns>
-        [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "DefaultJsonTypeInfoResolver is used as a fallback; AOT apps should add their JsonSerializerContext to the resolver chain.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "DefaultJsonTypeInfoResolver is used as a fallback; AOT apps should add their JsonSerializerContext to the resolver chain.")]
-        public JsonSerializerOptions AddNOFConverters()
+        [RequiresDynamicCode("DefaultJsonTypeInfoResolver requires runtime code generation. Use a source-generated JsonSerializerContext for AOT applications.")]
+        [RequiresUnreferencedCode("DefaultJsonTypeInfoResolver requires unreferenced code. Use a source-generated JsonSerializerContext for trimmed applications.")]
+        public JsonSerializerOptions UseDefaultJsonTypeInfoResolver()
         {
-            options.Converters.Add(new OptionalConverterFactory());
-            options.Converters.Add(new PatchRequestConverterFactory());
-
-            var defaultResolver = options.TypeInfoResolverChain
-                .OfType<DefaultJsonTypeInfoResolver>()
-                .FirstOrDefault();
-
-            if (defaultResolver is null)
-            {
-                defaultResolver = new DefaultJsonTypeInfoResolver();
-                options.TypeInfoResolverChain.Add(defaultResolver);
-            }
-
-            defaultResolver.Modifiers.Add(OptionalTypeInfoResolverModifier.Modifier);
-
+            options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
             return options;
         }
     }

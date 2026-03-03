@@ -49,7 +49,7 @@ public class PatchRequestTests
     public void Deserialize_MissingProperty_ReturnsNone()
     {
         var json = """{}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Name.HasValue.Should().BeFalse();
         patch.Age.HasValue.Should().BeFalse();
@@ -59,7 +59,7 @@ public class PatchRequestTests
     public void Deserialize_PropertyWithValue_ReturnsSome()
     {
         var json = """{"name": "Alice"}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Name.HasValue.Should().BeTrue();
         patch.Name.Value.Should().Be("Alice");
@@ -69,7 +69,7 @@ public class PatchRequestTests
     public void Deserialize_PropertyWithNull_ReturnsSomeWithDefault()
     {
         var json = """{"nickName": null}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.NickName.HasValue.Should().BeTrue();
         patch.NickName.Value.Should().BeNull();
@@ -79,7 +79,7 @@ public class PatchRequestTests
     public void Deserialize_IntProperty_ReturnsSome()
     {
         var json = """{"age": 30}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Age.HasValue.Should().BeTrue();
         patch.Age.Value.Should().Be(30);
@@ -89,7 +89,7 @@ public class PatchRequestTests
     public void Deserialize_NullableIntWithNull_ReturnsSomeWithDefault()
     {
         var json = """{"age": null}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Age.HasValue.Should().BeTrue();
         patch.Age.Value.Should().BeNull();
@@ -99,7 +99,7 @@ public class PatchRequestTests
     public void Deserialize_MultipleProperties_MixedPresence()
     {
         var json = """{"name": "Bob", "age": null}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Name.HasValue.Should().BeTrue();
         patch.Name.Value.Should().Be("Bob");
@@ -114,7 +114,7 @@ public class PatchRequestTests
     public void Deserialize_ComplexType_ReturnsSome()
     {
         var json = """{"address": {"city": "Shanghai", "street": "Nanjing Rd"}}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Address.HasValue.Should().BeTrue();
         patch.Address.Value.City.Should().Be("Shanghai");
@@ -125,7 +125,7 @@ public class PatchRequestTests
     public void Deserialize_ComplexTypeWithNull_ReturnsSomeWithDefault()
     {
         var json = """{"address": null}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Address.HasValue.Should().BeTrue();
         patch.Address.Value.Should().BeNull();
@@ -151,7 +151,7 @@ public class PatchRequestTests
     public void Set_None_RemovesFromExtensionData()
     {
         var json = """{"name": "Alice"}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Name.HasValue.Should().BeTrue();
 
@@ -177,7 +177,7 @@ public class PatchRequestTests
     public void Set_ReadModifyWrite_Works()
     {
         var json = """{"address": {"city": "Shanghai", "street": "Nanjing Rd"}}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         var addr = patch.Address.Value;
         addr = addr with { City = "Beijing" };
@@ -194,9 +194,9 @@ public class PatchRequestTests
     [Fact]
     public void Serialize_OnlyIncludesSetProperties()
     {
-        var patch = new TestPatchRequest { Name = Optional.Of("Alice") };
+        var patch = new TestPatchRequest() { Name = Optional.Of("Alice") };
 
-        var json = JsonSerializer.Serialize(patch, JsonSerializerOptions.NOFDefaults);
+        var json = JsonSerializer.Serialize(patch, JsonSerializerOptions.NOF);
         var doc = JsonDocument.Parse(json);
 
         doc.RootElement.TryGetProperty("name", out _).Should().BeTrue();
@@ -207,14 +207,14 @@ public class PatchRequestTests
     [Fact]
     public void Serialize_Deserialize_RoundTrip()
     {
-        var original = new TestPatchRequest
+        var original = new TestPatchRequest()
         {
             Name = Optional.Of("Alice"),
             Age = Optional.Of<int?>(25)
         };
 
-        var json = JsonSerializer.Serialize(original, JsonSerializerOptions.NOFDefaults);
-        var deserialized = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var json = JsonSerializer.Serialize(original, JsonSerializerOptions.NOF);
+        var deserialized = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         deserialized.Name.HasValue.Should().BeTrue();
         deserialized.Name.Value.Should().Be("Alice");
@@ -232,17 +232,11 @@ public class PatchRequestTests
     [Fact]
     public void Get_WithCaseInsensitiveOptions_MatchesDifferentCase()
     {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        }.AddNOFConverters();
-
         // Simulate extension data with PascalCase key (e.g., from a non-standard source)
         var json = """{"Name": "Alice"}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, options)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
-        var name = patch.Get<string>("Name", options);
+        var name = patch.Get<string>("Name", JsonSerializerOptions.NOF);
         name.HasValue.Should().BeTrue();
         name.Value.Should().Be("Alice");
     }
@@ -250,13 +244,13 @@ public class PatchRequestTests
     [Fact]
     public void Get_WithCaseSensitiveOptions_DoesNotMatchDifferentCase()
     {
-        // Default NOFDefaults uses camelCase naming policy and is case-insensitive
+        // Default NOF options use camelCase naming policy and is case-insensitive
         // Create strict options for this test
         var strictOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = false,
             PropertyNamingPolicy = null
-        };
+        }.UseDefaultJsonTypeInfoResolver();
 
         var patch = new TestPatchRequest
         {
@@ -290,7 +284,7 @@ public class PatchRequestTests
     public void Deserialize_EmptyJson_AllPropertiesNone()
     {
         var json = """{}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Name.HasValue.Should().BeFalse();
         patch.Age.HasValue.Should().BeFalse();
@@ -302,7 +296,7 @@ public class PatchRequestTests
     public void Deserialize_UnknownProperties_CapturedInExtensionData()
     {
         var json = """{"name": "Alice", "unknownField": 42}""";
-        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOFDefaults)!;
+        var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         patch.Name.HasValue.Should().BeTrue();
         patch.ExtensionData.Should().ContainKey("unknownField");

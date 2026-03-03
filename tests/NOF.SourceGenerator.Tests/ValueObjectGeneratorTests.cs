@@ -25,6 +25,11 @@ public class ValueObjectGeneratorTests
     private static GeneratorDriverRunResult RunGenerator(string source)
         => new ValueObjectGenerator().GetResultPostGen(source, ExtraRefs);
 
+    private static string GetVoCode(GeneratorDriverRunResult result)
+        => result.GeneratedTrees
+            .Select(t => t.GetText().ToString())
+            .Single(c => !c.Contains("ConfigureValueObjectJsonSerializerOptions"));
+
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
     {
@@ -117,8 +122,8 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        result.GeneratedTrees.Should().ContainSingle();
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        result.GeneratedTrees.Should().HaveCount(2);
+        var code = GetVoCode(result);
 
         code.Should().Contain("public static Name Of(string value)");
         code.Should().Contain("global::System.ArgumentNullException.ThrowIfNull(value)");
@@ -145,7 +150,7 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        var code = GetVoCode(result);
         code.Should().NotContain("ArgumentNullException.ThrowIfNull");
     }
 
@@ -162,7 +167,7 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        var code = GetVoCode(result);
         code.Should().Contain("public static OrderId? Of(long? value)");
         code.Should().Contain("value.HasValue ? Of(value.Value) : null");
         code.Should().NotContain("ArgumentNullException.ThrowIfNull");
@@ -184,7 +189,7 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        var code = GetVoCode(result);
         code.Should().Contain("__CallValidate<OrderId>(value);");
     }
 
@@ -207,7 +212,7 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        var code = GetVoCode(result);
         code.Should().Contain("__CallValidate<OrderId>(value);");
     }
 
@@ -225,7 +230,7 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        var code = GetVoCode(result);
         code.Should().Contain("public static EntityId New()");
         code.Should().Contain("global::NOF.Domain.IdGenerator.Current.NextId()");
     }
@@ -243,7 +248,7 @@ public class ValueObjectGeneratorTests
             """;
 
         var result = RunGenerator(source);
-        var code = result.GeneratedTrees[0].GetText().ToString();
+        var code = GetVoCode(result);
 
         // null guard must come before Validate
         var nullGuardIdx = code.IndexOf("ArgumentNullException.ThrowIfNull", StringComparison.Ordinal);

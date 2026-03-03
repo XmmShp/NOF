@@ -1,6 +1,17 @@
 namespace NOF.Contract;
 
 /// <summary>
+/// Non-generic marker interface for <see cref="Optional{T}"/> that exposes <see cref="HasValue"/>
+/// without requiring knowledge of the type parameter. Used internally by
+/// <see cref="OptionalTypeInfoResolverModifier"/> to avoid reflection.
+/// </summary>
+public interface IOptionalMarker
+{
+    /// <summary>Gets a value indicating whether this instance contains a valid value.</summary>
+    bool HasValue { get; }
+}
+
+/// <summary>
 /// Provides factory methods for creating <see cref="Optional{T}"/> instances.
 /// </summary>
 public readonly struct Optional
@@ -31,7 +42,7 @@ public readonly struct NoneOptional;
 /// and enables explicit handling of missing values for value types.
 /// </summary>
 /// <typeparam name="T">The type of the optional value.</typeparam>
-public readonly struct Optional<T>
+public readonly struct Optional<T> : IOptionalMarker
 {
     internal Optional(T value, bool hasValue)
     {

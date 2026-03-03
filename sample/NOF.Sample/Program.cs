@@ -1,4 +1,7 @@
+using ConfigurationCenter;
 using NOF.Application;
+using NOF.Contract;
+using NOF.Domain;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure.Core;
 using NOF.Infrastructure.EntityFrameworkCore;
@@ -10,9 +13,15 @@ using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Contract;
 using NOF.Sample.WebUI;
-using ConfigurationCenter;
+using System.Text.Json;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+
+JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(
+    options =>
+        options.UseDefaultJsonTypeInfoResolver()
+            .ConfigureValueObjectJsonSerializerOptions()
+        );
 
 builder.Services.AddNOFSampleAutoInjectServices();
 builder.Services.AddAllHandlers();

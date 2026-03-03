@@ -18,18 +18,22 @@ public static partial class NOFHostingAspNetCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        [UnconditionalSuppressMessage("AOT", "IL2026", Justification = "NOF converters are intentionally reflection-based; AOT users can provide custom options.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "NOF converters are intentionally reflection-based; AOT users can provide custom options.")]
         public INOFAppBuilder ConfigureJsonOptions()
         {
             builder.Services.ConfigureHttpJsonOptions(options =>
             {
-                var defaults = JsonSerializerOptions.NOFDefaults;
-                options.SerializerOptions.PropertyNameCaseInsensitive = defaults.PropertyNameCaseInsensitive;
-                options.SerializerOptions.DefaultIgnoreCondition = defaults.DefaultIgnoreCondition;
-                options.SerializerOptions.ReferenceHandler = defaults.ReferenceHandler;
-                options.SerializerOptions.PropertyNamingPolicy = defaults.PropertyNamingPolicy;
-                options.SerializerOptions.AddNOFConverters();
+                var nof = JsonSerializerOptions.NOF;
+                options.SerializerOptions.PropertyNameCaseInsensitive = nof.PropertyNameCaseInsensitive;
+                options.SerializerOptions.DefaultIgnoreCondition = nof.DefaultIgnoreCondition;
+                options.SerializerOptions.ReferenceHandler = nof.ReferenceHandler;
+                options.SerializerOptions.PropertyNamingPolicy = nof.PropertyNamingPolicy;
+
+                foreach (var converter in nof.Converters)
+                {
+                    options.SerializerOptions.Converters.Add(converter);
+                }
+
+                options.SerializerOptions.TypeInfoResolver = nof.TypeInfoResolver;
             });
             return builder;
         }

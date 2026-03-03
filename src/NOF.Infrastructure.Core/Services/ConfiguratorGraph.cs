@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// This ensures configurators are executed in a valid order where dependencies run before their dependents.
 /// </summary>
 /// <typeparam name="T">The type of configurator, which must implement <see cref="IStep"/>.</typeparam>
-internal class ConfiguratorGraph<T> where T : IStep
+internal class ConfiguratorGraph<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] T> where T : IStep
 {
     private readonly HashSet<T> _nodes;
     private IReadOnlyList<T>? _orderedConfigs;
@@ -36,7 +36,6 @@ internal class ConfiguratorGraph<T> where T : IStep
         _nodes = tasksSet;
     }
 
-    [UnconditionalSuppressMessage("AOT", "IL2075", Justification = "Concrete step types are always preserved; GetInterfaces is safe.")]
     private void IndexNode(T node)
     {
         var type = node.GetType();
@@ -49,7 +48,7 @@ internal class ConfiguratorGraph<T> where T : IStep
         }
 
         // Collect all interfaces
-        foreach (var iface in type.GetInterfaces())
+        foreach (var iface in GetInterfaces(type))
         {
             ancestors.Add(iface);
         }
@@ -66,7 +65,16 @@ internal class ConfiguratorGraph<T> where T : IStep
         }
     }
 
-    [UnconditionalSuppressMessage("AOT", "IL2075", Justification = "Concrete step types are always preserved; GetInterfaces is safe.")]
+    /// <summary>
+    /// Wrapper that isolates the trimmer annotation gap between <see cref="object.GetType"/> (unannotated)
+    /// and <see cref="Type.GetInterfaces"/> (requires <see cref="DynamicallyAccessedMemberTypes.Interfaces"/>).
+    /// Callers pass the result of <c>GetType()</c>; the concrete step types are always preserved by the DI container.
+    /// </summary>
+    [UnconditionalSuppressMessage("AOT", "IL2070",
+        Justification = "Concrete step types are registered via DI and always preserved. " +
+                        "Object.GetType() cannot be annotated; this wrapper is the minimal suppression scope.")]
+    private static Type[] GetInterfaces(Type type) => type.GetInterfaces();
+
     public IReadOnlyList<T> GetExecutionOrder()
     {
         if (_orderedConfigs is not null)
@@ -81,7 +89,7 @@ internal class ConfiguratorGraph<T> where T : IStep
         {
             var nodeType = node.GetType();
 
-            foreach (var iface in nodeType.GetInterfaces())
+            foreach (var iface in GetInterfaces(nodeType))
             {
                 if (!iface.IsGenericType)
                 {
