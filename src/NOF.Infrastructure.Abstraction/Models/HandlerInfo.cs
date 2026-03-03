@@ -1,12 +1,11 @@
 namespace NOF.Infrastructure.Abstraction;
 
-public enum HandlerKind
-{
-    Command,
-    Event,
-    Notification,
-    RequestWithoutResponse,
-    RequestWithResponse
-}
+public record CommandHandlerInfo(Type HandlerType, Type CommandType);
 
-public record HandlerInfo(HandlerKind Kind, Type HandlerType, Type MessageType, Type? ResponseType);
+public record EventHandlerInfo(Type HandlerType, Type EventType);
+
+public record NotificationHandlerInfo(Type HandlerType, Type NotificationType);
+
+public record RequestWithoutResponseHandlerInfo(Type HandlerType, Type RequestType);
+
+public record RequestWithResponseHandlerInfo(Type HandlerType, Type RequestType, Type ResponseType);

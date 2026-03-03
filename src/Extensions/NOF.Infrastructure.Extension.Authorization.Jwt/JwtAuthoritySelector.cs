@@ -23,7 +23,7 @@ public readonly struct JwtAuthoritySelector
     {
 #pragma warning disable CS8620
         Builder.Services.AddHandlerInfo(
-            new HandlerInfo(HandlerKind.RequestWithResponse, typeof(GetJwks), typeof(GetJwksRequest), typeof(GetJwksResponse)));
+            new RequestWithResponseHandlerInfo(typeof(GetJwks), typeof(GetJwksRequest), typeof(GetJwksResponse)));
 #pragma warning restore CS8620
 
         return this;

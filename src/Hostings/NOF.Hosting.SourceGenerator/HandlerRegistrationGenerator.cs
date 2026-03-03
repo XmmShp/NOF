@@ -153,7 +153,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("        /// <summary>");
         sb.AppendLine(
             $"        /// Registers all handler types discovered in {assemblyName} and its prefix-matching referenced assemblies");
-        sb.AppendLine("        /// into the HandlerInfos and EndpointNameOptions singletons in DI.");
+        sb.AppendLine("        /// as keyed services and into typed HandlerInfos singletons in DI.");
         sb.AppendLine(
             "        /// Endpoint names are resolved at compile time from <c>[EndpointName]</c> attributes or type names.");
         sb.AppendLine("        /// </summary>");
@@ -167,51 +167,33 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
 
-        // Collect handler info entries and endpoint name mappings
-        var entries = new List<string>();
+        // Collect typed handler info entries, keyed service registrations, and endpoint name mappings
+        var commandInfos = new List<string>();
+        var eventInfos = new List<string>();
+        var notificationInfos = new List<string>();
+        var requestWithoutResponseInfos = new List<string>();
+        var requestWithResponseInfos = new List<string>();
+        var keyedRegistrations = new List<string>();
         var endpointNames = new HashSet<(string TypeExpr, string EndpointName)>();
 
         foreach (var handlerClass in handlerClasses)
         {
-            CollectHandlerRegistrations(entries, endpointNames, handlerClass, typeFormat);
+            CollectHandlerRegistrations(commandInfos, eventInfos, notificationInfos,
+                requestWithoutResponseInfos, requestWithResponseInfos,
+                keyedRegistrations, endpointNames, handlerClass, typeFormat);
         }
 
-        if (entries.Count > 0)
-        {
-            sb.AppendLine("            services.AddHandlerInfo(");
-            for (var i = 0; i < entries.Count; i++)
-            {
-                var comma = i < entries.Count - 1 ? "," : ");";
-                sb.AppendLine($"                {entries[i]}{comma}");
-            }
-        }
+        // Register handler infos into typed singletons
+        EmitAddInfoCalls(sb, "AddHandlerInfo", commandInfos);
+        EmitAddInfoCalls(sb, "AddHandlerInfo", eventInfos);
+        EmitAddInfoCalls(sb, "AddHandlerInfo", notificationInfos);
+        EmitAddInfoCalls(sb, "AddHandlerInfo", requestWithoutResponseInfos);
+        EmitAddInfoCalls(sb, "AddHandlerInfo", requestWithResponseInfos);
 
-        // Register event handlers as keyed scoped services in the root container (keyed by composite EventHandlerKey)
-        var eventRegistrations = new HashSet<(string HandlerType, string EventType)>();
-        foreach (var handlerClass in handlerClasses)
+        // Register all handlers as keyed scoped services
+        foreach (var registration in keyedRegistrations)
         {
-            foreach (var iface in handlerClass.AllInterfaces)
-            {
-                if (!iface.IsGenericType)
-                {
-                    continue;
-                }
-
-                if (iface.OriginalDefinition.ToDisplayString() == "NOF.Application.IEventHandler<TEvent>")
-                {
-                    var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
-                    var eventTypeName = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                    eventRegistrations.Add((handlerTypeName, eventTypeName));
-                }
-            }
-        }
-
-        if (eventRegistrations.Count > 0)
-        {
-            foreach (var (handlerTypeName, eventTypeName) in eventRegistrations)
-            {
-                sb.AppendLine($"            services.AddKeyedScoped<global::NOF.Application.IEventHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(typeof({eventTypeName})));");
-            }
+            sb.AppendLine($"            {registration}");
         }
 
         // Populate EndpointNameOptions
@@ -230,6 +212,21 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
+    private static void EmitAddInfoCalls(StringBuilder sb, string methodName, List<string> infos)
+    {
+        if (infos.Count == 0)
+        {
+            return;
+        }
+
+        sb.AppendLine($"            services.{methodName}(");
+        for (var i = 0; i < infos.Count; i++)
+        {
+            var comma = i < infos.Count - 1 ? "," : ");";
+            sb.AppendLine($"                {infos[i]}{comma}");
+        }
+    }
+
     private static readonly HashSet<string> HandlerInterfaceNames =
     new HashSet<string>
     {
@@ -239,7 +236,12 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
     };
 
     private static void CollectHandlerRegistrations(
-        List<string> entries,
+        List<string> commandInfos,
+        List<string> eventInfos,
+        List<string> notificationInfos,
+        List<string> requestWithoutResponseInfos,
+        List<string> requestWithResponseInfos,
+        List<string> keyedRegistrations,
         HashSet<(string TypeExpr, string EndpointName)> endpointNames,
         INamedTypeSymbol handlerClass,
         SymbolDisplayFormat typeFormat)
@@ -260,7 +262,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             {
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Command, typeof({handlerTypeName}), typeof({messageType}), null)");
+                commandInfos.Add($"new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.ICommandHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of(typeof({messageType})));");
                 endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
                 hasNonEventHandler = true;
             }
@@ -268,13 +271,15 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             {
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Event, typeof({handlerTypeName}), typeof({messageType}), null)");
+                eventInfos.Add($"new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IEventHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(typeof({messageType})));");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.Notification, typeof({handlerTypeName}), typeof({messageType}), null)");
+                notificationInfos.Add($"new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.INotificationHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(typeof({messageType})));");
                 hasNonEventHandler = true;
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
@@ -282,7 +287,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
                 var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithResponse, typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
+                requestWithResponseInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IRequestHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of(typeof({messageType})));");
                 endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
                 hasNonEventHandler = true;
             }
@@ -290,7 +296,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             {
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
-                entries.Add($"new global::NOF.Infrastructure.Abstraction.HandlerInfo(global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithoutResponse, typeof({handlerTypeName}), typeof({messageType}), null)");
+                requestWithoutResponseInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IRequestHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.RequestHandlerKey.Of(typeof({messageType})));");
                 endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
                 hasNonEventHandler = true;
             }

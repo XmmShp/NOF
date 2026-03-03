@@ -13,7 +13,7 @@ namespace NOF.SourceGenerator.Tests;
 public class HandlerRegistrationGeneratorTests
 {
     [Fact]
-    public void GeneratedCode_UsesFqnForHandlerInfoAndHandlerKind()
+    public void GeneratedCode_UsesFqnForTypedHandlerInfo()
     {
         const string source = """
             using NOF.Application;
@@ -32,20 +32,22 @@ public class HandlerRegistrationGeneratorTests
             typeof(IServiceCollection),
             typeof(ICommandHandler<>),
             typeof(ICommand),
-            typeof(HandlerInfo)
+            typeof(CommandHandlerInfo)
         );
 
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Should use global:: FQN for HandlerInfo and HandlerKind
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.HandlerInfo");
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.HandlerKind.Command");
+        // Should use global:: FQN for typed CommandHandlerInfo
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.CommandHandlerInfo");
+
+        // Should register as keyed service
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of");
 
         // Should use global:: FQN for IServiceCollection in method signature
         generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
-        // Should keep using NOF.Infrastructure.Core for AddHandlerInfo extension method
+        // Should keep using NOF.Infrastructure.Abstraction for AddHandlerInfo extension method
         generatedCode.Should().Contain("using NOF.Infrastructure.Abstraction;");
     }
 
@@ -70,13 +72,14 @@ public class HandlerRegistrationGeneratorTests
             typeof(IRequestHandler<,>),
             typeof(NOF.Contract.IRequest<>),
             typeof(NOF.Contract.Result),
-            typeof(HandlerInfo)
+            typeof(RequestWithResponseHandlerInfo)
         );
 
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.HandlerKind.RequestWithResponse");
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo");
+        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of");
         generatedCode.Should().Contain("typeof(global::App.MyRequestHandler)");
     }
 }

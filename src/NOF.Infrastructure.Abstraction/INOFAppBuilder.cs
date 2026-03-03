@@ -16,11 +16,6 @@ public interface IApplicationInitializationContext : IHostApplicationBuilder
     /// </summary>
     IStartupEventChannel StartupEventChannel { get; }
 
-    /// <summary>
-    /// Gets the set of handler metadata (e.g., command, event, request handlers) registered via
-    /// source-generated <c>AddAllHandlers</c> or manually via <c>AddHandlerInfo</c>.
-    /// </summary>
-    HandlerInfos HandlerInfos { get; }
 }
 
 /// <summary>

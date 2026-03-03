@@ -13,14 +13,38 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
     /// <inheritdoc/>
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var handlerInfos = builder.HandlerInfos;
+        var commandInfos = builder.Services.GetOrAddSingleton<CommandHandlerInfos>();
+        var notificationInfos = builder.Services.GetOrAddSingleton<NotificationHandlerInfos>();
+        var requestWithoutResponseInfos = builder.Services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>();
+        var requestWithResponseInfos = builder.Services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
+
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
         var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameOptions>();
         var nameProvider = new ManualEndpointNameProvider(Options.Create(endpointNameOptions));
 
-        // Register all distinct non-event handler types as scoped services
-        var handlers = handlerInfos.Where(i => i.Kind != HandlerKind.Event).Select(i => i.HandlerType).Distinct();
-        foreach (var handler in handlers)
+        // Collect all non-event handler types for scoped registration
+        var handlerTypes = new HashSet<Type>();
+        foreach (var info in commandInfos)
+        {
+            handlerTypes.Add(info.HandlerType);
+        }
+
+        foreach (var info in notificationInfos)
+        {
+            handlerTypes.Add(info.HandlerType);
+        }
+
+        foreach (var info in requestWithoutResponseInfos)
+        {
+            handlerTypes.Add(info.HandlerType);
+        }
+
+        foreach (var info in requestWithResponseInfos)
+        {
+            handlerTypes.Add(info.HandlerType);
+        }
+
+        foreach (var handler in handlerTypes)
         {
             builder.Services.AddScoped(handler);
         }
@@ -28,32 +52,42 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         var mediatorConsumers = new List<Type>();
         var busConsumers = new List<Type>();
 
-        foreach (var handlerInfo in handlerInfos)
+        // Command: mediator + bus
+        foreach (var info in commandInfos)
         {
-            // Events are handled in-memory by NOF.Infrastructure.Core — skip MassTransit registration
-            if (handlerInfo.Kind == HandlerKind.Event)
-            {
-                continue;
-            }
+            var adapter = typeof(MassTransitCommandHandlerAdapter<,>)
+                .MakeGenericType(info.HandlerType, info.CommandType);
+            localHandlers.Register(info.CommandType, nameProvider.GetEndpointName(info.HandlerType));
+            mediatorConsumers.Add(adapter);
+            busConsumers.Add(adapter);
+        }
 
-            var adapter = CreateHandlerAdapter(handlerInfo);
+        // Notification: bus only
+        foreach (var info in notificationInfos)
+        {
+            var adapter = typeof(MassTransitNotificationHandlerAdapter<,>)
+                .MakeGenericType(info.HandlerType, info.NotificationType);
+            busConsumers.Add(adapter);
+        }
 
-            switch (handlerInfo.Kind)
-            {
-                // Notification: always bus publish only
-                case HandlerKind.Notification:
-                    busConsumers.Add(adapter);
-                    break;
+        // RequestWithoutResponse: mediator + bus
+        foreach (var info in requestWithoutResponseInfos)
+        {
+            var adapter = typeof(MassTransitRequestHandlerAdapter<,>)
+                .MakeGenericType(info.HandlerType, info.RequestType);
+            localHandlers.Register(info.RequestType, nameProvider.GetEndpointName(info.HandlerType));
+            mediatorConsumers.Add(adapter);
+            busConsumers.Add(adapter);
+        }
 
-                // Command / Request: always register on BOTH mediator AND bus
-                case HandlerKind.Command:
-                case HandlerKind.RequestWithoutResponse:
-                case HandlerKind.RequestWithResponse:
-                    localHandlers.Register(handlerInfo.MessageType, nameProvider.GetEndpointName(handlerInfo.HandlerType));
-                    mediatorConsumers.Add(adapter);
-                    busConsumers.Add(adapter);
-                    break;
-            }
+        // RequestWithResponse: mediator + bus
+        foreach (var info in requestWithResponseInfos)
+        {
+            var adapter = typeof(MassTransitRequestHandlerAdapter<,,>)
+                .MakeGenericType(info.HandlerType, info.RequestType, info.ResponseType);
+            localHandlers.Register(info.RequestType, nameProvider.GetEndpointName(info.HandlerType));
+            mediatorConsumers.Add(adapter);
+            busConsumers.Add(adapter);
         }
 
         builder.Services.AddMediator(config =>
@@ -70,36 +104,4 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
 
         return ValueTask.CompletedTask;
     }
-
-    #region Helper Methods
-
-    /// <summary>
-    /// Creates the appropriate MassTransit handler adapter type
-    /// based on the handler kind and response type.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown if the handler kind is not supported.</exception>
-    private static Type CreateHandlerAdapter(HandlerInfo info)
-    {
-        return info.Kind switch
-        {
-            HandlerKind.Command =>
-                typeof(MassTransitCommandHandlerAdapter<,>)
-                    .MakeGenericType(info.HandlerType, info.MessageType),
-
-            HandlerKind.RequestWithoutResponse =>
-                typeof(MassTransitRequestHandlerAdapter<,>)
-                    .MakeGenericType(info.HandlerType, info.MessageType),
-
-            HandlerKind.RequestWithResponse when info.ResponseType is not null =>
-                typeof(MassTransitRequestHandlerAdapter<,,>)
-                    .MakeGenericType(info.HandlerType, info.MessageType, info.ResponseType),
-
-            HandlerKind.Notification =>
-                typeof(MassTransitNotificationHandlerAdapter<,>)
-                    .MakeGenericType(info.HandlerType, info.MessageType),
-
-            _ => throw new InvalidOperationException($"Unsupported handler kind: {info.Kind}")
-        };
-    }
-    #endregion
 }

@@ -176,17 +176,72 @@ public static partial class NOFInfrastructureCoreExtensions
         }
 
         /// <summary>
-        /// Adds one or more <see cref="HandlerInfo"/> entries to the <see cref="HandlerInfos"/> singleton registered in DI.
+        /// Adds one or more <see cref="CommandHandlerInfo"/> entries to the <see cref="CommandHandlerInfos"/> singleton registered in DI.
         /// </summary>
-        /// <param name="handlerInfos">The handler metadata entries to add.</param>
-        /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
-        public IServiceCollection AddHandlerInfo(params HandlerInfo[] handlerInfos)
+        public IServiceCollection AddHandlerInfo(params CommandHandlerInfo[] infos)
         {
-            var set = services.GetOrAddSingleton<HandlerInfos>();
-            foreach (var info in handlerInfos)
+            var set = services.GetOrAddSingleton<CommandHandlerInfos>();
+            foreach (var info in infos)
             {
                 set.Add(info);
             }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds one or more <see cref="EventHandlerInfo"/> entries to the <see cref="EventHandlerInfos"/> singleton registered in DI.
+        /// </summary>
+        public IServiceCollection AddHandlerInfo(params EventHandlerInfo[] infos)
+        {
+            var set = services.GetOrAddSingleton<EventHandlerInfos>();
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds one or more <see cref="NotificationHandlerInfo"/> entries to the <see cref="NotificationHandlerInfos"/> singleton registered in DI.
+        /// </summary>
+        public IServiceCollection AddHandlerInfo(params NotificationHandlerInfo[] infos)
+        {
+            var set = services.GetOrAddSingleton<NotificationHandlerInfos>();
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds one or more <see cref="RequestWithoutResponseHandlerInfo"/> entries to the <see cref="RequestWithoutResponseHandlerInfos"/> singleton registered in DI.
+        /// </summary>
+        public IServiceCollection AddHandlerInfo(params RequestWithoutResponseHandlerInfo[] infos)
+        {
+            var set = services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>();
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds one or more <see cref="RequestWithResponseHandlerInfo"/> entries to the <see cref="RequestWithResponseHandlerInfos"/> singleton registered in DI.
+        /// </summary>
+        public IServiceCollection AddHandlerInfo(params RequestWithResponseHandlerInfo[] infos)
+        {
+            var set = services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
             return services;
         }
     }

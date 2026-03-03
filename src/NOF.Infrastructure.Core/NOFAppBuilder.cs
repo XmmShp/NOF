@@ -58,9 +58,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// <inheritdoc/>
     public IStartupEventChannel StartupEventChannel { get; protected set; }
 
-    /// <inheritdoc/>
-    public HandlerInfos HandlerInfos => Services.GetOrAddSingleton<HandlerInfos>();
-
     /// <summary>
     /// Initializes a new instance of the <see cref="NOFAppBuilder{THostApplication}"/> class.
     /// Sets up a default implementation of <see cref="IStartupEventChannel"/> for internal configuration events

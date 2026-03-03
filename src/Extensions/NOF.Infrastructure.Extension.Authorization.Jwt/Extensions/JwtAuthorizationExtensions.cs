@@ -58,7 +58,7 @@ public static partial class NOFJwtAuthorizationExtensions
 #pragma warning disable CS8620
             // Key rotation handler
             builder.Services.AddHandlerInfo(
-                new HandlerInfo(HandlerKind.Notification, typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification), null));
+                new NotificationHandlerInfo(typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification)));
 #pragma warning restore CS8620
 
             return new JwtAuthorizationSelector(builder);
@@ -128,9 +128,10 @@ public static partial class NOFJwtAuthorizationExtensions
 #pragma warning disable CS8620
             // Register handlers
             builder.Services.AddHandlerInfo(
-                new HandlerInfo(HandlerKind.RequestWithResponse, typeof(GenerateJwtToken), typeof(GenerateJwtTokenRequest), typeof(GenerateJwtTokenResponse)),
-                new HandlerInfo(HandlerKind.RequestWithResponse, typeof(ValidateJwtRefreshToken), typeof(ValidateJwtRefreshTokenRequest), typeof(ValidateJwtRefreshTokenResponse)),
-                new HandlerInfo(HandlerKind.RequestWithoutResponse, typeof(RevokeJwtRefreshToken), typeof(RevokeJwtRefreshTokenRequest), null));
+                new RequestWithResponseHandlerInfo(typeof(GenerateJwtToken), typeof(GenerateJwtTokenRequest), typeof(GenerateJwtTokenResponse)),
+                new RequestWithResponseHandlerInfo(typeof(ValidateJwtRefreshToken), typeof(ValidateJwtRefreshTokenRequest), typeof(ValidateJwtRefreshTokenResponse)));
+            builder.Services.AddHandlerInfo(
+                new RequestWithoutResponseHandlerInfo(typeof(RevokeJwtRefreshToken), typeof(RevokeJwtRefreshTokenRequest)));
 #pragma warning restore CS8620
 
             return new JwtAuthoritySelector(builder);
