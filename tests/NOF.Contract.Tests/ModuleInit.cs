@@ -1,6 +1,6 @@
+using NOF.Contract;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using NOF.Contract;
 
 namespace NOF.Contract.Tests;
 
