@@ -6,7 +6,7 @@ using NOF.Infrastructure.Abstraction;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Outermost middleware step — catches all exceptions.</summary>
-public class ExceptionInboundMiddlewareStep : IInboundMiddlewareStep<ExceptionInboundMiddleware>;
+public class ExceptionInboundMiddlewareStep : IInboundMiddlewareStep<ExceptionInboundMiddlewareStep, ExceptionInboundMiddleware>;
 
 /// <summary>
 /// Handler exception handling middleware

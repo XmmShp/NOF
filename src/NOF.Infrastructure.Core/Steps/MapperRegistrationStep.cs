@@ -13,7 +13,7 @@ namespace NOF.Infrastructure.Core;
 /// Runtime: inject <see cref="IMapper"/> and call <c>Add</c> / <c>Map</c> as needed.
 /// </para>
 /// </summary>
-internal sealed class MapperRegistrationStep : IServiceRegistrationStep
+internal sealed class MapperRegistrationStep : IServiceRegistrationStep<MapperRegistrationStep>
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {

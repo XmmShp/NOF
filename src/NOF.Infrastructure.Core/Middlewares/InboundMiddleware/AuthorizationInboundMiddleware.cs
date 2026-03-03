@@ -7,7 +7,7 @@ using System.Reflection;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Permission authorization step — checks [RequirePermission] / [AllowAnonymous].</summary>
-public class AuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<AuthorizationInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
+public class AuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<AuthorizationInboundMiddlewareStep, AuthorizationInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
 
 /// <summary>
 /// Handler middleware that enforces permission-based authorization.

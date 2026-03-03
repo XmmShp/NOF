@@ -8,7 +8,7 @@ namespace NOF.Infrastructure.MassTransit;
 
 public record MassTransitConfiguring(IBusRegistrationConfigurator Configurator);
 
-internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep
+internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<MassTransitRegistrationStep>
 {
     /// <inheritdoc/>
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)

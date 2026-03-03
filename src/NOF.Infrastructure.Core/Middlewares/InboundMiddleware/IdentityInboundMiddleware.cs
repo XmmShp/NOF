@@ -4,7 +4,7 @@ using NOF.Infrastructure.Abstraction;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Identity resolution step — resolves user identity from inbound context.</summary>
-public class IdentityInboundMiddlewareStep : IInboundMiddlewareStep<IdentityInboundMiddleware>, IAfter<ExceptionInboundMiddlewareStep>;
+public class IdentityInboundMiddlewareStep : IInboundMiddlewareStep<IdentityInboundMiddlewareStep, IdentityInboundMiddleware>, IAfter<ExceptionInboundMiddlewareStep>;
 
 /// <summary>
 /// Inbound middleware that resolves user identity via a pluggable <see cref="IIdentityResolver"/>.

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace NOF.Infrastructure.Abstraction;
 
-public class ApplicationInitializationStep : IApplicationInitializationStep
+public class ApplicationInitializationStep : IApplicationInitializationStep<ApplicationInitializationStep>
 {
     private readonly Func<IApplicationInitializationContext, IHost, Task> _configurator;
 

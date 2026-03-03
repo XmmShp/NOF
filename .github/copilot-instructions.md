@@ -64,10 +64,14 @@ tests/                         — Unit and integration tests
 
 ### Builder Pipeline
 - `INOFAppBuilder` — main builder interface, extends `IHostApplicationBuilder`
-- `IServiceRegistrationStep` — runs during DI container setup
-- `IApplicationInitializationStep` — runs after host is built, before start
+- `IStep` — base marker; exposes `Type Type` instance property for AOT-safe interface discovery
+- `IStep<TSelf>` — CRTP helper; provides default `Type` via `typeof(TSelf)`
+- `IServiceRegistrationStep` / `IServiceRegistrationStep<TSelf>` — runs during DI container setup
+- `IApplicationInitializationStep` / `IApplicationInitializationStep<TSelf>` — runs after host is built, before start
+- `IInboundMiddlewareStep<TSelf, TMiddleware>` / `IOutboundMiddlewareStep<TSelf, TMiddleware>` — middleware pipeline steps
 - `IAfter<T>` / `IBefore<T>` — dependency ordering between steps
 - Steps are executed in topological order based on declared dependencies
+- Concrete steps should use the CRTP `<TSelf>` variant (e.g. `MyStep : IServiceRegistrationStep<MyStep>`)
 
 ### Source Generator Attributes
 - `[AutoInject(Lifetime)]` — auto-register class in DI container

@@ -1,6 +1,6 @@
 namespace NOF.Infrastructure.Abstraction;
 
-public class ServiceRegistrationStep : IServiceRegistrationStep
+public class ServiceRegistrationStep : IServiceRegistrationStep<ServiceRegistrationStep>
 {
     private readonly Func<IServiceRegistrationContext, ValueTask> _configurator;
 

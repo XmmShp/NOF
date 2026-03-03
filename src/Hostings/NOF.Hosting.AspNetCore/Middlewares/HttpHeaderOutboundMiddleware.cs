@@ -16,7 +16,7 @@ namespace NOF.Hosting.AspNetCore;
 /// internal service-to-service calls via the message bus.
 /// </para>
 /// </summary>
-public class HttpHeaderOutboundMiddlewareStep : IOutboundMiddlewareStep<HttpHeaderOutboundMiddleware>,
+public class HttpHeaderOutboundMiddlewareStep : IOutboundMiddlewareStep<HttpHeaderOutboundMiddlewareStep, HttpHeaderOutboundMiddleware>,
     IBefore<TracingOutboundMiddlewareStep>;
 
 /// <summary>

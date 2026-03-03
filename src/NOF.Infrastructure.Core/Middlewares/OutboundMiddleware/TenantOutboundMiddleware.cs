@@ -4,7 +4,7 @@ using NOF.Infrastructure.Abstraction;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Propagates tenant context to outbound messages.</summary>
-public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutboundMiddleware>,
+public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutboundMiddlewareStep, TenantOutboundMiddleware>,
     IAfter<TracingOutboundMiddlewareStep>;
 
 /// <summary>

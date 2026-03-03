@@ -3,7 +3,7 @@ using NOF.Infrastructure.Abstraction;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Assigns a unique message ID to outbound messages.</summary>
-public class MessageIdOutboundMiddlewareStep : IOutboundMiddlewareStep<MessageIdOutboundMiddleware>,
+public class MessageIdOutboundMiddlewareStep : IOutboundMiddlewareStep<MessageIdOutboundMiddlewareStep, MessageIdOutboundMiddleware>,
     IAfter<TracingOutboundMiddlewareStep>;
 
 /// <summary>

@@ -6,7 +6,7 @@ using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Hosting.AspNetCore;
 
-public class CorsInitializationStep : ISecurityInitializationStep
+public class CorsInitializationStep : ISecurityInitializationStep<CorsInitializationStep>
 {
     public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
     {

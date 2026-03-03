@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// Sets <see cref="Mapper.Current"/> from the DI container after the host is built.
 /// Added to the builder by default.
 /// </summary>
-internal sealed class MapperInitializationStep : IApplicationInitializationStep
+internal sealed class MapperInitializationStep : IApplicationInitializationStep<MapperInitializationStep>
 {
     public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
     {

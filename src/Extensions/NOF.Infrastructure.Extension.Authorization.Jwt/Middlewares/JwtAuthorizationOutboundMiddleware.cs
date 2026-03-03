@@ -6,7 +6,7 @@ using NOF.Infrastructure.Core;
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>Propagates JWT authorization token to outbound messages.</summary>
-public class JwtAuthorizationOutboundMiddlewareStep : IOutboundMiddlewareStep<JwtAuthorizationOutboundMiddleware>,
+public class JwtAuthorizationOutboundMiddlewareStep : IOutboundMiddlewareStep<JwtAuthorizationOutboundMiddlewareStep, JwtAuthorizationOutboundMiddleware>,
     IAfter<MessageIdOutboundMiddlewareStep>;
 
 /// <summary>

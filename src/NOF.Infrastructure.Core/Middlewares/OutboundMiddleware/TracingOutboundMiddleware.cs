@@ -1,5 +1,6 @@
 using NOF.Infrastructure.Abstraction;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Core;
 
@@ -8,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// the entire outbound pipeline (header population + dispatch).
 /// Runs first so it can wrap everything.
 /// </summary>
-public class TracingOutboundMiddlewareStep : IOutboundMiddlewareStep<TracingOutboundMiddleware>;
+public class TracingOutboundMiddlewareStep : IOutboundMiddlewareStep<TracingOutboundMiddlewareStep, TracingOutboundMiddleware>;
 
 /// <summary>
 /// Outbound middleware that:

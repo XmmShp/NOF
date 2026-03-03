@@ -6,7 +6,7 @@ using System.Diagnostics.Metrics;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Auto instrumentation step — records execution metrics and logging.</summary>
-public class AutoInstrumentationInboundMiddlewareStep : IInboundMiddlewareStep<AutoInstrumentationInboundMiddleware>, IAfter<TracingInboundMiddlewareStep>;
+public class AutoInstrumentationInboundMiddlewareStep : IInboundMiddlewareStep<AutoInstrumentationInboundMiddlewareStep, AutoInstrumentationInboundMiddleware>, IAfter<TracingInboundMiddlewareStep>;
 
 /// <summary>
 /// Auto-instrumentation middleware that automatically records handler execution logs, metrics, and performance data.

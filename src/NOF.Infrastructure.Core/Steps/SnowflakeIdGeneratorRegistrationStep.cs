@@ -11,7 +11,7 @@ namespace NOF.Infrastructure.Core;
 /// bound from the <c>NOF:Snowflake</c> configuration section. Added to the builder by default.
 /// Use <c>builder.Services.Configure&lt;SnowflakeIdGeneratorOptions&gt;</c> to override values in code.
 /// </summary>
-internal sealed class SnowflakeIdGeneratorRegistrationStep : IServiceRegistrationStep
+internal sealed class SnowflakeIdGeneratorRegistrationStep : IServiceRegistrationStep<SnowflakeIdGeneratorRegistrationStep>
 {
     [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]

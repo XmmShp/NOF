@@ -32,7 +32,7 @@ You are working in the **NOF (Neat Opinionated Framework)** repository — a mod
 ## Key Patterns
 
 - **CQRS**: `IRequest`/`ICommand`/`INotification` with typed handlers
-- **Step Pipeline**: `IServiceRegistrationStep` / `IApplicationInitializationStep` with `IAfter<T>`/`IBefore<T>` ordering
+- **Step Pipeline**: `IServiceRegistrationStep` / `IApplicationInitializationStep` with `IAfter<T>`/`IBefore<T>` ordering, CRTP `IStep<TSelf>` for AOT-safe type metadata
 - **Source Gen Attributes**: `[AutoInject]`, `[ExposeToHttpEndpoint]`, `[Failure]`, `[ValueObject]`
 - **Transactional Outbox**: `IDeferredNotificationPublisher` via EF Core
 

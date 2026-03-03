@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Abstraction;
 
@@ -23,3 +24,12 @@ public interface IApplicationInitializationStep : IStep
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     Task ExecuteAsync(IApplicationInitializationContext context, IHost app);
 }
+
+/// <summary>
+/// CRTP variant of <see cref="IApplicationInitializationStep"/> that automatically provides the
+/// <see cref="IStep.Type"/> implementation via <see cref="IStep{TSelf}"/>.
+/// Concrete initialization steps should implement this interface to be fully AOT-compatible.
+/// </summary>
+/// <typeparam name="TSelf">The concrete step type itself.</typeparam>
+public interface IApplicationInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TSelf> : IStep<TSelf>, IApplicationInitializationStep
+    where TSelf : IApplicationInitializationStep<TSelf>;

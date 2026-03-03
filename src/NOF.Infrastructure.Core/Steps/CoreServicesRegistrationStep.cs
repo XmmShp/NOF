@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 /// Registers core framework services including invocation context, command sender,
 /// notification publisher, and endpoint name provider.
 /// </summary>
-public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
+public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep<CoreServicesRegistrationStep>
 {
     [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]

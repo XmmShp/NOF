@@ -1,11 +1,13 @@
 using NOF.Application;
 using NOF.Infrastructure.Abstraction;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Activity tracing step — resolves trace/span IDs from headers and creates distributed tracing Activity per handler execution.</summary>
-public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
+public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboundMiddlewareStep, TracingInboundMiddleware>,
+    IAfter<TenantInboundMiddlewareStep>;
 
 /// <summary>
 /// Inbound middleware that resolves tracing information from transport headers

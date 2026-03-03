@@ -8,7 +8,7 @@ namespace NOF.Infrastructure.Core;
 /// Registers outbox-related services including the background service for outbox command processing,
 /// deferred command/notification senders, and the outbox message collector.
 /// </summary>
-public class OutboxRegistrationStep : IBaseSettingsServiceRegistrationStep
+public class OutboxRegistrationStep : IBaseSettingsServiceRegistrationStep<OutboxRegistrationStep>
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {

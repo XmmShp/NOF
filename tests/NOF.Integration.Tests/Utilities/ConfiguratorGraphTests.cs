@@ -11,29 +11,29 @@ public interface IStepB : IStep;
 public interface IStepC : IStep;
 public interface IStepD : IStep;
 
-public class StepA : IStepA;
-public class StepB : IStepB, IAfter<IStepA>;
-public class StepC : IStepC, IAfter<IStepB>;
-public class StepD : IStepD, IAfter<IStepA>, IAfter<IStepC>;
+public class StepA : IStepA, IStep<StepA>;
+public class StepB : IStepB, IStep<StepB>, IAfter<IStepA>;
+public class StepC : IStepC, IStep<StepC>, IAfter<IStepB>;
+public class StepD : IStepD, IStep<StepD>, IAfter<IStepA>, IAfter<IStepC>;
 
 // Circular dependency test tasks
-public class CircularStepA : IStep, IAfter<CircularStepB>;
-public class CircularStepB : IStep, IAfter<CircularStepA>;
+public class CircularStepA : IStep<CircularStepA>, IAfter<CircularStepB>;
+public class CircularStepB : IStep<CircularStepB>, IAfter<CircularStepA>;
 
 // Multiple dependencies test tasks
-public class MultiDepsStep : IStep, IAfter<IStepA>, IAfter<IStepB>;
+public class MultiDepsStep : IStep<MultiDepsStep>, IAfter<IStepA>, IAfter<IStepB>;
 
 // No dependency task
-public class IndependentStep : IStep;
+public class IndependentStep : IStep<IndependentStep>;
 
 // Multiple tasks implementing same interface
-public class StepA1 : IStepA;
-public class StepA2 : IStepA;
-public class StepDependsOnMultipleA : IStep, IAfter<IStepA>;
+public class StepA1 : IStepA, IStep<StepA1>;
+public class StepA2 : IStepA, IStep<StepA2>;
+public class StepDependsOnMultipleA : IStep<StepDependsOnMultipleA>, IAfter<IStepA>;
 
 // Missing dependency test - dependency not in graph
 public interface IStepE : IStep;
-public class StepWithMissingDependency : IStep, IAfter<IStepE>;
+public class StepWithMissingDependency : IStep<StepWithMissingDependency>, IAfter<IStepE>;
 
 public class ConfiguratorGraphTests
 {

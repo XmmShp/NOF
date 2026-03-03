@@ -5,7 +5,7 @@ using NOF.Infrastructure.Abstraction;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Inbox message processing step — deduplication via inbox pattern.</summary>
-public class MessageInboxInboundMiddlewareStep : IInboundMiddlewareStep<MessageInboxInboundMiddleware>, IAfter<AutoInstrumentationInboundMiddlewareStep>;
+public class MessageInboxInboundMiddlewareStep : IInboundMiddlewareStep<MessageInboxInboundMiddlewareStep, MessageInboxInboundMiddleware>, IAfter<AutoInstrumentationInboundMiddlewareStep>;
 
 /// <summary>
 /// Inbox middleware

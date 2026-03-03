@@ -1,4 +1,6 @@
 - name: Mapper
   href: mapper.md
+- name: Step Pipeline
+  href: step.md
 - name: Value Object
   href: value-object.md

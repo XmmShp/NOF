@@ -6,7 +6,7 @@ namespace NOF.Infrastructure.Core;
 /// Registers the default in-memory cache service under <see cref="ICacheServiceFactory.DefaultName"/>.
 /// Can be replaced by adding a different cache implementation (e.g., Redis) after this step.
 /// </summary>
-public class CacheServiceRegistrationStep : IBaseSettingsServiceRegistrationStep
+public class CacheServiceRegistrationStep : IBaseSettingsServiceRegistrationStep<CacheServiceRegistrationStep>
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {

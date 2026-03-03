@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace NOF.Infrastructure.Abstraction;
 
 /// <summary>
@@ -20,3 +22,12 @@ public interface IServiceRegistrationStep : IStep
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     ValueTask ExecuteAsync(IServiceRegistrationContext builder);
 }
+
+/// <summary>
+/// CRTP variant of <see cref="IServiceRegistrationStep"/> that automatically provides the
+/// <see cref="IStep.Type"/> implementation via <see cref="IStep{TSelf}"/>.
+/// Concrete registration steps should implement this interface to be fully AOT-compatible.
+/// </summary>
+/// <typeparam name="TSelf">The concrete step type itself.</typeparam>
+public interface IServiceRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TSelf> : IServiceRegistrationStep, IStep<TSelf>
+    where TSelf : IServiceRegistrationStep<TSelf>;
