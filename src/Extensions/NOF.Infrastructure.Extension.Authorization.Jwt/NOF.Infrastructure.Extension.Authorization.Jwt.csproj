@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <!-- AOT Compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Extension.Authorization.Jwt</PackageId>
     <Description>JWT authorization extension for the NOF Framework — OIDC resource server, JWKS fetching, token validation, and identity resolution.</Description>

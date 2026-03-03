@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
@@ -33,3 +34,9 @@ public class JwtAuthorityOptions
     /// </summary>
     public TimeSpan KeyRotationInterval { get; set; } = TimeSpan.FromDays(30);
 }
+
+/// <summary>
+/// AOT-safe source-generated validator for <see cref="JwtAuthorityOptions"/>.
+/// </summary>
+[OptionsValidator]
+public partial class JwtAuthorityOptionsValidator : IValidateOptions<JwtAuthorityOptions>;

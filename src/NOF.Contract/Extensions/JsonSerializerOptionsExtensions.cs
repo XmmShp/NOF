@@ -30,6 +30,17 @@ public static partial class NOFContractExtensions
             configure(options);
         }
 
+        // Ensure DefaultJsonTypeInfoResolver is always the last resolver in the chain
+        // (last-resort fallback) regardless of configurator registration order.
+        var defaultResolver = options.TypeInfoResolverChain
+            .OfType<DefaultJsonTypeInfoResolver>()
+            .FirstOrDefault();
+        if (defaultResolver is not null)
+        {
+            options.TypeInfoResolverChain.Remove(defaultResolver);
+            options.TypeInfoResolverChain.Add(defaultResolver);
+        }
+
         options.TypeInfoResolver = options.TypeInfoResolver!
             .WithAddedModifier(OptionalTypeInfoResolverModifier.Modifier);
 

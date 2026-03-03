@@ -66,7 +66,7 @@ public class HttpJwksProvider : IJwksProvider
             var client = _httpClientFactory.CreateClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
             var jwksUrl = _options.JwksEndpoint;
 
-            var jwksDocument = await client.GetFromJsonAsync<JwksDocument>(jwksUrl, cancellationToken);
+            var jwksDocument = await client.GetFromJsonAsync(jwksUrl, JwksJsonContext.Default.JwksHttpDocument, cancellationToken);
             if (jwksDocument?.Keys is null || jwksDocument.Keys.Length == 0)
             {
                 return;

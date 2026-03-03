@@ -1,6 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -18,6 +22,8 @@ public static partial class NOFJwtAuthorizationExtensions
         /// </summary>
         /// <param name="configureOptions">Action to configure JWT authorization options.</param>
         /// <returns>A <see cref="JwtAuthorizationSelector"/> for further configuration.</returns>
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
+        [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
         public JwtAuthorizationSelector AddJwtAuthorization(Action<JwtAuthorizationOptions>? configureOptions = null)
         {
             if (configureOptions is not null)
@@ -26,8 +32,16 @@ public static partial class NOFJwtAuthorizationExtensions
             }
             else
             {
-                builder.Services.AddOptionsInConfiguration<JwtAuthorizationOptions>("NOF:Jwt:Authorization");
+                builder.Services.AddOptions<JwtAuthorizationOptions>()
+                    .BindConfiguration("NOF:Jwt:Authorization")
+                    .ValidateOnStart();
             }
+
+            // Register JwksJsonContext into the shared NOF JSON resolver chain
+            JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
+            {
+                options.TypeInfoResolverChain.Add(JwksJsonContext.Default);
+            });
 
             // JWKS HTTP client
             builder.Services.AddHttpClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
@@ -69,6 +83,8 @@ public static partial class NOFJwtAuthorizationExtensions
         /// </summary>
         /// <param name="configureOptions">Action to configure authority options.</param>
         /// <returns>The NOF application builder for chaining.</returns>
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
+        [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
         public JwtAuthoritySelector AddJwtAuthority(Action<JwtAuthorityOptions>? configureOptions = null)
         {
             if (configureOptions is not null)
@@ -77,7 +93,10 @@ public static partial class NOFJwtAuthorizationExtensions
             }
             else
             {
-                builder.Services.AddOptionsInConfiguration<JwtAuthorityOptions>("NOF:Jwt:Authority");
+                builder.Services.AddSingleton<IValidateOptions<JwtAuthorityOptions>, JwtAuthorityOptionsValidator>();
+                builder.Services.AddOptions<JwtAuthorityOptions>()
+                    .BindConfiguration("NOF:Jwt:Authority")
+                    .ValidateOnStart();
             }
 
             // Signing key service (in-memory key ring)
