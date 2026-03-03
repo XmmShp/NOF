@@ -13,7 +13,7 @@ namespace NOF.SourceGenerator.Tests;
 public class HandlerRegistrationGeneratorTests
 {
     [Fact]
-    public void GeneratedCode_UsesFqnForTypedHandlerInfo()
+    public void GeneratedCode_CommandHandler_RegistersConcreteOnly()
     {
         const string source = """
             using NOF.Application;
@@ -38,21 +38,19 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Should use global:: FQN for typed CommandHandlerInfo
+        // Should use typed CommandHandlerInfo
         generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.CommandHandlerInfo");
 
-        // Should register as keyed service
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of");
+        // Point-to-point: registers concrete type only (no interface)
+        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyCommandHandler>(global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of(");
+        generatedCode.Should().NotContain("AddKeyedScoped<global::NOF.Application.ICommandHandler>");
 
-        // Should use global:: FQN for IServiceCollection in method signature
-        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
-
-        // Should keep using NOF.Infrastructure.Abstraction for AddHandlerInfo extension method
-        generatedCode.Should().Contain("using NOF.Infrastructure.Abstraction;");
+        // Should populate EndpointNameRegistry
+        generatedCode.Should().Contain("EndpointNameRegistry");
     }
 
     [Fact]
-    public void GeneratedCode_RegistersRequestHandlerWithResponseType()
+    public void GeneratedCode_RequestHandler_RegistersConcreteOnly()
     {
         const string source = """
             using NOF.Application;
@@ -78,8 +76,75 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo");
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of");
-        generatedCode.Should().Contain("typeof(global::App.MyRequestHandler)");
+        // Point-to-point: registers concrete type only
+        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyRequestHandler>(global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of(");
+        generatedCode.Should().NotContain("AddKeyedScoped<global::NOF.Application.IRequestHandler>");
+    }
+
+    [Fact]
+    public void GeneratedCode_EventHandler_RegistersBothConcreteAndInterfaceFactory()
+    {
+        const string source = """
+            using NOF.Application;
+            using NOF.Domain;
+            namespace App
+            {
+                public record MyEvent : IEvent;
+                public class MyEventHandler : IEventHandler<MyEvent>
+                {
+                    public System.Threading.Tasks.Task HandleAsync(MyEvent @event, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                }
+            }
+            """;
+
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
+            typeof(IServiceCollection),
+            typeof(IEventHandler<>),
+            typeof(NOF.Domain.IEvent),
+            typeof(EventHandlerInfo)
+        );
+
+        var result = new HandlerRegistrationGenerator().GetResult(comp);
+        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
+
+        // Multicast: registers both concrete and interface factory
+        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyEventHandler>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(");
+        generatedCode.Should().Contain("AddKeyedScoped<global::NOF.Application.IEventHandler>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(");
+        generatedCode.Should().Contain("GetRequiredKeyedService<global::App.MyEventHandler>(key)");
+
+        // Event handlers should NOT register endpoint names
+        generatedCode.Should().NotContain("EndpointNameRegistry");
+    }
+
+    [Fact]
+    public void GeneratedCode_NotificationHandler_RegistersBothConcreteAndInterfaceFactory()
+    {
+        const string source = """
+            using NOF.Application;
+            using NOF.Contract;
+            namespace App
+            {
+                public record MyNotification : INotification;
+                public class MyNotificationHandler : INotificationHandler<MyNotification>
+                {
+                    public System.Threading.Tasks.Task HandleAsync(MyNotification notification, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                }
+            }
+            """;
+
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
+            typeof(IServiceCollection),
+            typeof(INotificationHandler<>),
+            typeof(INotification),
+            typeof(NotificationHandlerInfo)
+        );
+
+        var result = new HandlerRegistrationGenerator().GetResult(comp);
+        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
+
+        // Multicast: registers both concrete and interface factory
+        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyNotificationHandler>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(");
+        generatedCode.Should().Contain("AddKeyedScoped<global::NOF.Application.INotificationHandler>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(");
+        generatedCode.Should().Contain("GetRequiredKeyedService<global::App.MyNotificationHandler>(key)");
     }
 }

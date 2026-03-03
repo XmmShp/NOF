@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <IsAotCompatible>true</IsAotCompatible>
+
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.StackExchangeRedis</PackageId>
     <Description>Redis caching infrastructure for the NOF Framework, powered by StackExchange.Redis.</Description>

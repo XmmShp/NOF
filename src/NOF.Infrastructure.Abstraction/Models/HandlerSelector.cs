@@ -12,10 +12,19 @@ public sealed class HandlerSelector
     /// Gets the underlying service collection.
     /// </summary>
     public IServiceCollection Services { get; }
+    private readonly Lazy<EndpointNameRegistry> _endpointNameRegistry;
 
     public HandlerSelector(IServiceCollection services)
     {
         Services = services;
+        _endpointNameRegistry = new Lazy<EndpointNameRegistry>(
+            () => Services.GetOrAddSingleton<EndpointNameRegistry>());
+    }
+
+    public HandlerSelector(IServiceCollection services, EndpointNameRegistry endpointNameRegistry)
+    {
+        Services = services;
+        _endpointNameRegistry = new Lazy<EndpointNameRegistry>(endpointNameRegistry);
     }
 
     /// <summary>
@@ -29,10 +38,7 @@ public sealed class HandlerSelector
     /// </summary>
     public HandlerSelector SetEndpointName(Type type, string endpointName)
     {
-        Services.Configure<EndpointNameOptions>(endpointNameOptions =>
-        {
-            endpointNameOptions.Set(type, endpointName);
-        });
+        _endpointNameRegistry.Value.Set(type, endpointName);
         return this;
     }
 }

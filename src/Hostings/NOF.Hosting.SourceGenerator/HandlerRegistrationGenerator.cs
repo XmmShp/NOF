@@ -139,6 +139,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine("#pragma warning disable CS8620");
         sb.AppendLine();
+        sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
         sb.AppendLine("using NOF.Infrastructure.Abstraction;");
         sb.AppendLine();
 
@@ -196,15 +197,21 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             sb.AppendLine($"            {registration}");
         }
 
-        // Populate EndpointNameOptions
-        sb.AppendLine("            services.Configure<global::NOF.Infrastructure.Abstraction.EndpointNameOptions>(endpointNameOptions => {");
-        foreach (var (typeExpr, name) in endpointNames)
+        // Populate EndpointNameRegistry via GetOrAddSingleton
+        if (endpointNames.Count > 0)
         {
-            sb.AppendLine($"                endpointNameOptions.TrySet(typeof({typeExpr}), \"{EscapeString(name)}\");");
+            sb.AppendLine("            var endpointNameRegistry = services.GetOrAddSingleton<global::NOF.Infrastructure.Abstraction.EndpointNameRegistry>();");
+            foreach (var (typeExpr, name) in endpointNames)
+            {
+                sb.AppendLine($"            endpointNameRegistry.TrySet(typeof({typeExpr}), \"{EscapeString(name)}\");");
+            }
+            sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services, endpointNameRegistry);");
         }
-        sb.AppendLine("            });");
+        else
+        {
+            sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services);");
+        }
 
-        sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services);");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}");
@@ -263,7 +270,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
                 commandInfos.Add($"new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.ICommandHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<{handlerTypeName}>(global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of(typeof({messageType})));");
                 endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
                 hasNonEventHandler = true;
             }
@@ -272,14 +279,16 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
                 eventInfos.Add($"new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IEventHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<{handlerTypeName}>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IEventHandler>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(typeof({messageType})), (sp, key) => sp.GetRequiredKeyedService<{handlerTypeName}>(key));");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
                 notificationInfos.Add($"new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.INotificationHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<{handlerTypeName}>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.INotificationHandler>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(typeof({messageType})), (sp, key) => sp.GetRequiredKeyedService<{handlerTypeName}>(key));");
                 hasNonEventHandler = true;
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
@@ -288,7 +297,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
                 var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
                 requestWithResponseInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
-                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IRequestHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<{handlerTypeName}>(global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of(typeof({messageType})));");
                 endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
                 hasNonEventHandler = true;
             }
@@ -297,7 +306,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 var messageSymbol = (INamedTypeSymbol)iface.TypeArguments[0];
                 var messageType = messageSymbol.ToDisplayString(typeFormat);
                 requestWithoutResponseInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-                keyedRegistrations.Add($"services.AddKeyedScoped<global::NOF.Application.IRequestHandler, {handlerTypeName}>(global::NOF.Infrastructure.Abstraction.RequestHandlerKey.Of(typeof({messageType})));");
+                keyedRegistrations.Add($"services.AddKeyedScoped<{handlerTypeName}>(global::NOF.Infrastructure.Abstraction.RequestHandlerKey.Of(typeof({messageType})));");
                 endpointNames.Add((messageType, ResolveEndpointNameForLeafType(messageSymbol)));
                 hasNonEventHandler = true;
             }

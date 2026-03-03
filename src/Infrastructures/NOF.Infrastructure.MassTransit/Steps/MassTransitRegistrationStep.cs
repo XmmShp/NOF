@@ -1,6 +1,5 @@
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 
@@ -19,35 +18,8 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         var requestWithResponseInfos = builder.Services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
 
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
-        var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameOptions>();
-        var nameProvider = new ManualEndpointNameProvider(Options.Create(endpointNameOptions));
-
-        // Collect all non-event handler types for scoped registration
-        var handlerTypes = new HashSet<Type>();
-        foreach (var info in commandInfos)
-        {
-            handlerTypes.Add(info.HandlerType);
-        }
-
-        foreach (var info in notificationInfos)
-        {
-            handlerTypes.Add(info.HandlerType);
-        }
-
-        foreach (var info in requestWithoutResponseInfos)
-        {
-            handlerTypes.Add(info.HandlerType);
-        }
-
-        foreach (var info in requestWithResponseInfos)
-        {
-            handlerTypes.Add(info.HandlerType);
-        }
-
-        foreach (var handler in handlerTypes)
-        {
-            builder.Services.AddScoped(handler);
-        }
+        var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameRegistry>();
+        var nameProvider = new ManualEndpointNameProvider(endpointNameOptions);
 
         var mediatorConsumers = new List<Type>();
         var busConsumers = new List<Type>();

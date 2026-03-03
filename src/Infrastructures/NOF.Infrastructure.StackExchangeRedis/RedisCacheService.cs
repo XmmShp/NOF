@@ -360,7 +360,6 @@ public class RedisCacheService : ICacheService
         return Optional.None;
     }
 
-    /// <inheritdoc />
     public async ValueTask ExecuteRawAsync(IDictionary<string, object?> parameters, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(parameters);

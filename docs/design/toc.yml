@@ -1,3 +1,5 @@
+- name: Handler Registration
+  href: handler-registration.md
 - name: Mapper
   href: mapper.md
 - name: Step Pipeline

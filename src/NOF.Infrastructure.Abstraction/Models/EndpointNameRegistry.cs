@@ -9,22 +9,21 @@ namespace NOF.Infrastructure.Abstraction;
 /// overridden via <see cref="HandlerSelector"/> fluent API.
 /// </para>
 /// <para>
-/// Use <c>services.Configure&lt;EndpointNameOptions&gt;(o =&gt; o.Set&lt;MyHandler&gt;("my-endpoint"))</c>
-/// to register or override endpoint names at configuration time.
+/// Registered as a singleton in DI via <c>GetOrAddSingleton</c>.
 /// </para>
 /// </summary>
-public sealed class EndpointNameOptions : ConcurrentDictionary<Type, string>
+public sealed class EndpointNameRegistry : ConcurrentDictionary<Type, string>
 {
     /// <summary>
     /// Sets the endpoint name for the specified type, overwriting any existing entry.
     /// </summary>
-    public EndpointNameOptions Set<T>(string endpointName)
+    public EndpointNameRegistry Set<T>(string endpointName)
         => Set(typeof(T), endpointName);
 
     /// <summary>
     /// Sets the endpoint name for the specified type, overwriting any existing entry.
     /// </summary>
-    public EndpointNameOptions Set(Type type, string endpointName)
+    public EndpointNameRegistry Set(Type type, string endpointName)
     {
         ArgumentNullException.ThrowIfNull(type);
         ArgumentNullException.ThrowIfNull(endpointName);

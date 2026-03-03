@@ -6,7 +6,8 @@
     <Nullable>enable</Nullable>
 
     <!-- AOT Compatibility -->
-    <IsAotCompatible>true</IsAotCompatible>    
+    <IsAotCompatible>true</IsAotCompatible>
+    <VerifyReferenceAotCompatibility>true</VerifyReferenceAotCompatibility>
 
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Abstraction</PackageId>

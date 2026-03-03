@@ -1,21 +1,20 @@
-using Microsoft.Extensions.Options;
 using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.Core;
 
 /// <summary>
-/// Provides endpoint names from a pre-built <see cref="EndpointNameOptions"/> dictionary.
+/// Provides endpoint names from a pre-built <see cref="EndpointNameRegistry"/> dictionary.
 /// Names are typically computed at compile time by the source generator and registered during
 /// <c>AddAllHandlers</c>. For types not pre-registered, falls back to a safe type-name derivation.
 /// </summary>
 public class ManualEndpointNameProvider : IEndpointNameProvider
 {
-    private readonly EndpointNameOptions _options;
+    private readonly EndpointNameRegistry _options;
 
-    public ManualEndpointNameProvider(IOptions<EndpointNameOptions> options)
+    public ManualEndpointNameProvider(EndpointNameRegistry options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        _options = options.Value;
+        _options = options;
     }
 
     public virtual string GetEndpointName(Type type)

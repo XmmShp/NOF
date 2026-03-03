@@ -23,8 +23,8 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.AddScoped<IRequestSender, RequestSender>();
         builder.Services.AddScoped<IEventPublisher, InMemoryEventPublisher>();
 
-        builder.Services.AddOptions<EndpointNameOptions>();
-        builder.Services.AddSingleton<IEndpointNameProvider, ManualEndpointNameProvider>();
+        var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameRegistry>();
+        builder.Services.AddSingleton<IEndpointNameProvider>(new ManualEndpointNameProvider(endpointNameOptions));
 
         builder.Services.AddOptions<OutboxOptions>()
             .BindConfiguration("NOF:Outbox")

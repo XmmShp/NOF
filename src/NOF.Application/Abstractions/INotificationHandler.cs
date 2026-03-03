@@ -7,7 +7,10 @@ namespace NOF.Application;
 /// Non-generic marker interface for notification handlers. Not intended for direct use.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface INotificationHandler : IMessageHandler;
+public interface INotificationHandler : IMessageHandler
+{
+    Task HandleAsync(INotification notification, CancellationToken cancellationToken);
+}
 
 /// <summary>
 /// Handles notifications of the specified type.
@@ -16,6 +19,9 @@ public interface INotificationHandler : IMessageHandler;
 public interface INotificationHandler<in TNotification> : INotificationHandler
     where TNotification : class, INotification
 {
+    Task INotificationHandler.HandleAsync(INotification notification, CancellationToken cancellationToken)
+        => HandleAsync((TNotification)notification, cancellationToken);
+
     /// <summary>Handles the notification.</summary>
     /// <param name="notification">The notification to handle.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
