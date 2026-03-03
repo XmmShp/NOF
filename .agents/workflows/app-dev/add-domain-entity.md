@@ -45,7 +45,6 @@ Value objects are immutable types wrapping a primitive. Implement `IValueObject<
    var id = OrderId.Of(12345L);      // From primitive
    long raw = (long)id;              // Back to primitive (explicit cast)
    long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
-   Type t = OrderId.GetUnderlyingType();// typeof(long)
    var email = EmailAddress.Of("a@b.com");  // Validated
    ```
 

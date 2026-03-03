@@ -201,7 +201,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine();
 
         // IValueObject<T>.GetUnderlyingValue()
-        // IValueObject.GetUnderlyingValue() and GetUnderlyingType() are provided by the interface defaults
+        // IValueObject.GetUnderlyingValue() is provided by the interface default
         sb.AppendLine($"        public {info.PrimitiveFullName} GetUnderlyingValue() => _value;");
         sb.AppendLine();
 

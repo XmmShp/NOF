@@ -52,7 +52,7 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 
 | Attribute | What It Generates |
 |-----------|-------------------|
-| `: IValueObject<T>` | `Of()`, `GetUnderlyingValue()`, `GetUnderlyingType()`, `static virtual Validate`, equality, JSON converter, explicit casts |
+| `: IValueObject<T>` | `Of()`, `GetUnderlyingValue()`, `static virtual Validate`, equality, JSON converter, explicit casts |
 | `[NewableValueObject]` | Static `New()` method (SnowflakeId) |
 | `[AutoInject(Lifetime)]` | DI registration (Singleton/Scoped/Transient) |
 | `[ExposeToHttpEndpoint(verb, route)]` | HTTP endpoint mapping |

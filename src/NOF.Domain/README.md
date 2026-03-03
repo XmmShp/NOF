@@ -60,7 +60,6 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 
 The interface provides:
 - **`static virtual void Validate(T value)`** — override to add custom validation (default is no-op)
-- **`static virtual Type GetUnderlyingType()`** — returns `typeof(T)` by default
 - **`object IValueObject.GetUnderlyingValue()`** — default implementation forwarding to `T GetUnderlyingValue()`
 
 ```csharp
@@ -81,10 +80,9 @@ var id = OrderId.New();              // Snowflake ID
 var name = CustomerName.Of("Alice"); // Validated
 long raw = (long)id;                 // Explicit cast to primitive
 long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
-Type t = OrderId.GetUnderlyingType();// typeof(long)
 ```
 
-The `IValueObject` / `IValueObject<T>` interfaces enable the mapper's built-in `ValueObject → primitive` conversion without reflection.
+The `IValueObject` / `IValueObject<T>` interfaces enable the source generator's `ValueObject ↔ primitive` conversion at compile time. See [design/value-object.md](/docs/design/value-object.md) for the full design rationale.
 
 ## Installation
 

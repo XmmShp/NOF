@@ -141,3 +141,95 @@ public interface IMapper
 ```
 
 That's it. No `MapResult`. No `IUnwrappable`. No recursion engine. A dictionary of functions, a lookup algorithm, and a nullable fallback. The rest is up to you — explicitly.
+
+## The Source Generator: Meeting in the Middle
+
+After shipping the simplified mapper, we heard a recurring piece of feedback: "I love that mappings are explicit, but writing `new OrderDto(order.Id, order.Name, order.Status.ToString())` for twenty properties is tedious."
+
+They were right. The philosophy was sound — explicit over implicit — but the ergonomics needed help. The question was how to reduce boilerplate without reintroducing hidden magic.
+
+The answer was a source generator. Instead of the mapper engine discovering rules at runtime, we let the compiler generate the mapping functions at build time. The mapping code is visible, inspectable, and deterministic. If you want to know what a mapping does, you can read the generated file. There is no runtime reflection, no scanning, no convention engine.
+
+### How it works
+
+You declare your mapping pairs on a `partial static class` using `[Mappable<TSource, TDest>]`:
+
+```csharp
+[Mappable<Order, OrderDto>]
+[Mappable<Order, OrderSummary>(TwoWay = true)]
+public static partial class Mappings;
+```
+
+The generator produces a `ConfigureAutoMappings()` extension method on `MapperOptions`:
+
+```csharp
+// Generated
+partial class Mappings
+{
+    public static MapperOptions ConfigureAutoMappings(this MapperOptions options)
+    {
+        options.Add<Order, OrderDto>(src =>
+            new OrderDto(src.Id, src.Name)
+            {
+                Id = src.Id,
+                Name = src.Name,
+            });
+        // ... reverse mapping for TwoWay, etc.
+        return options;
+    }
+}
+```
+
+You call it at startup: `services.Configure<MapperOptions>(o => o.ConfigureAutoMappings())`.
+
+Attributes can be scattered across multiple partial declarations of the same class — the generator merges them. This lets you co-locate mapping declarations near the types they relate to, without losing the single registration point.
+
+### The matching rules
+
+The generator follows a small, predictable set of rules:
+
+1. **Property matching** — only public, same-name (case-insensitive) properties. If the source has `Id` and the destination has `Id`, they match. If the names don't match, they're ignored.
+
+2. **Constructor selection** — the generator examines all public constructors and picks the one whose parameter names match the most source properties (case-insensitive, matching the C# convention where `record OrderDto(int id)` has a parameter `id` that corresponds to property `Id`). Even if a property is passed to the constructor, it still appears in the member initializer if it's writable — this is intentional and matches how records work.
+
+3. **Implicit conversions (including user-defined)** — if C#'s `ClassifyConversion` reports an implicit conversion between the source and destination types, the generator emits a direct assignment. This naturally handles `T → Optional<T>`, `T → Result<T>`, and other user-defined implicit operators without special-casing. The generator follows C#'s own implicit conversion rules.
+
+4. **User-defined explicit conversions** — if no implicit conversion exists but the source or destination type declares an explicit conversion operator, the generator emits a cast. This handles `IValueObject<T>` → `T` unwrapping via the generated `explicit operator`.
+
+5. **Optional / Result unwrap** — strict nullable semantics on the unwrap side:
+
+   | Source | Destination | Allowed? | Reason |
+   |--------|-------------|----------|--------|
+   | `Wrapper<T>` | `T` | ❌ NOF022 | Unwrapping discards "absent" semantics; destination must be nullable |
+   | `Wrapper<T>` | `T?` | ✅ | Safe unwrap |
+   | `Wrapper<T?>` | `T` | ❌ NOF022 | Double-nullable source cannot narrow |
+   | `Wrapper<T?>` | `T?` | ❌ NOF022 | Inner nullable makes absence ambiguous |
+
+   - `Optional<T>` unwraps via `.Value`, `Result<T>` unwraps via `.Value!`.
+   - Wrapping (`T → Wrapper<T>`) is handled by rule 3 (implicit conversion) — no special logic needed.
+
+6. **IValueObject\<T\>** (`T : notnull`):
+   - Unwrap: `IValueObject<T>` → `T` via explicit cast (rule 4). Only the exact underlying type is allowed.
+   - Wrap: `T` → `VoType.Of(value)`. Same exact-type restriction.
+   - Different VO types (e.g. `OrderName` → `CustomerId`) always fall back to `IMapper`.
+
+7. **Nullable\<T\> (value types)** — `Nullable<VO>` → `T?` and `T?` → `Nullable<VO>` are expanded via `.HasValue` / `.Value` with recursive inner conversion. This handles common patterns like `ConfigNodeId?` → `long?`.
+
+8. **IEnumerable\<T\> → collection** — if both source and destination implement `IEnumerable<T>` (including `List<T>`, `IReadOnlyList<T>`, arrays, custom collections), the generator emits a collection expression `[..src.Select(item => convert(item))]`. The compiler infers the correct target collection type from context. Element conversion is recursive — all the above rules apply per-element.
+
+9. **Common primitive conversions** — `int` ↔ `string` (via `ToString()` / `Parse`), `int` ↔ `enum` (via cast), `enum` ↔ `string` (via `ToString()` / `Enum.Parse<T>`), numeric casts between numeric types.
+
+10. **Everything else uses IMapper** — if none of the above rules apply, the generated code calls `mapper.Map<TSource, TDest>(value)`. If that pair is not among the auto-generated registrations, the generator emits a **NOF023** warning at compile time. This means you can compose auto-generated mappings with manually registered ones seamlessly, but you get early feedback when a mapping might be missing.
+
+### Why this isn't magic
+
+The key difference between this source generator and a library like AutoMapper is transparency. AutoMapper resolves mappings at runtime through a configuration object that you can't easily inspect at a glance. Our generator produces C# code that you can read, step through in a debugger, and reason about statically. The generated code is exactly what you would have written by hand — it just saves you the keystrokes.
+
+If the generator can't figure out a conversion, it doesn't silently skip the property or throw at runtime. It emits a call to `mapper.Map<,>()`, which will fail loudly at runtime if you haven't registered that mapping. The failure mode is the same as hand-written code: explicit and immediate. And you'll see a compile-time warning (NOF023) alerting you to the gap.
+
+### Diagnostics
+
+- **NOF020** — duplicate mapping. If the same `(Source, Destination)` pair appears twice — including reverse mappings from `TwoWay = true` — you get a compile error. Not a runtime exception, not a silent last-wins override. A compile error.
+- **NOF021** — the `[Mappable]` class must be `partial static`. If it isn't, you get a compile error telling you to fix it.
+- **NOF022** — nullable semantic mismatch. The generator detected a wrapper unwrap that violates nullable annotation rules (e.g. `Optional<T>` → `T` without `T?`). The property falls back to `mapper.Map` with this warning.
+- **NOF023** — unregistered mapper fallback. The generated code calls `mapper.Map<S, D>()` for a type pair that is not among the auto-generated registrations. This is a hint that you may need to register a manual mapping or add a `[Mappable]` declaration.

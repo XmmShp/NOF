@@ -30,7 +30,7 @@ public interface IValueObject
 /// <para>Override <see cref="Validate"/> to add custom validation logic.</para>
 /// </summary>
 /// <typeparam name="T">The underlying primitive type (e.g. <c>string</c>, <c>int</c>, <c>Guid</c>).</typeparam>
-public interface IValueObject<T> : IValueObject
+public interface IValueObject<T> : IValueObject where T : notnull
 {
     /// <summary>
     /// Returns the underlying primitive value.
@@ -40,11 +40,6 @@ public interface IValueObject<T> : IValueObject
     /// <inheritdoc />
     [EditorBrowsable(EditorBrowsableState.Never)]
     object IValueObject.GetUnderlyingValue() => GetUnderlyingValue()!;
-
-    /// <summary>
-    /// Returns the <see cref="System.Type"/> of the underlying primitive.
-    /// </summary>
-    static Type GetUnderlyingType() => typeof(T);
 
     /// <summary>
     /// Validates the primitive value before constructing the value object.

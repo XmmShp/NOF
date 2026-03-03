@@ -132,6 +132,33 @@ var dto = entity.Map.AsRuntime.To<EntityDto>();           // Use runtime type fo
 
 **Nullable fallback**: A mapping `A → T` is automatically used for `A → T?` when no direct `A → T?` registration exists.
 
+### Source-Generated Mappings ([Mappable])
+
+For common scenarios (property-to-property, domain ↔ DTO), use `[Mappable]` on a `partial static class` to let the source generator write the mapping delegates for you:
+
+```csharp
+[Mappable<Order, OrderDto>]
+[Mappable<Order, OrderSummary>(TwoWay = true)]      // generates both directions
+[Mappable(typeof(Config), typeof(ConfigDto))]        // non-generic overload
+public static partial class Mappings;
+
+// Register at startup:
+builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
+```
+
+**Attributes can be scattered across multiple files** using partial declarations of the same class — the generator merges them into a single `ConfigureAutoMappings()` extension method.
+
+**Matching rules:**
+- Only public, same-name properties are mapped (case-insensitive).
+- The constructor with the most matched parameters is selected. Matched writable properties also appear in the member initializer.
+- `Optional<T>`, `Result<T>`, `IValueObject<T>` are unwrapped/wrapped automatically.
+- Common conversions (string↔int, int↔enum, enum↔string, numeric casts) are built-in.
+- All other conversions use the `IMapper` parameter.
+
+**Diagnostics:**
+- `NOF020` — duplicate mapping (including TwoWay reverse).
+- `NOF021` — `[Mappable]` class must be `partial static`.
+
 ## Installation
 
 ```shell

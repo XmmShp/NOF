@@ -21,15 +21,6 @@ public class ConfigNodeViewRepository : IConfigNodeViewRepository
         _dbContext = dbContext;
         _cache = cache;
         _mapper = mapper;
-
-        _mapper.TryAdd<ConfigFile, ConfigFileDto>(f => new ConfigFileDto((string)f.Name, (string)f.Content));
-        _mapper.TryAdd<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(
-            (long)node.Id,
-            node.ParentId.HasValue ? (long)node.ParentId.Value : null,
-            (string)node.Name,
-            node.ActiveFileName.HasValue ? (string)node.ActiveFileName.Value : null,
-            node.ConfigFiles.Select(f => _mapper.Map<ConfigFile, ConfigFileDto>(f)).ToList()
-        ));
     }
 
     public async Task<ConfigNodeDto?> GetByIdAsync(ConfigNodeId id, CancellationToken cancellationToken = default)

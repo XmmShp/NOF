@@ -128,6 +128,31 @@ var obj = entity.Map.To(typeof(EntityDto));                 // Non-generic
 
 **Nullable fallback**: A mapping `A → T` is automatically used for `A → T?` when no direct `A → T?` registration exists.
 
+**Source-generated mappings** — `[Mappable<TSource, TDest>]` on a `partial static class`:
+
+```csharp
+[Mappable<Order, OrderDto>]
+[Mappable<Order, OrderSummary>(TwoWay = true)]
+[Mappable(typeof(Config), typeof(ConfigDto))]
+public static partial class Mappings;
+
+// Generated extension method:
+// options.ConfigureAutoMappings();
+```
+
+Rules: matches properties by name (case-insensitive), picks constructor with most matched params. Conversion priority:
+1. Same type → direct assignment
+2. Implicit conversion (including user-defined implicit operators) → direct assignment. Handles `T → Optional<T>`, `T → Result<T>` via their implicit operators.
+3. User-defined explicit conversion → cast. Handles `IValueObject<T> → T` via generated `explicit operator`.
+4. `Optional<T>` / `Result<T>` unwrap with strict nullable semantics: `Wrapper<T>` → `T?` ✅, `Wrapper<T>` → `T` ❌ (NOF022), `Wrapper<T?>` → anything ❌ (NOF022).
+5. `IValueObject<T>` (`T : notnull`) — unwrap via explicit cast (rule 3), wrap via `VoType.Of()`. Exact underlying type only.
+6. `Nullable<T>` (value types) — `Nullable<VO> → T?` and `T? → Nullable<VO>` expanded via `.HasValue`/`.Value` with recursive inner conversion.
+7. `IEnumerable<T>` → collection — `[..src.Select(item => convert(item))]` collection expression with recursive element conversion.
+8. Primitive conversions (string↔int, int↔enum, etc.)
+9. Fallback → `mapper.Map` (NOF023 warning if pair not auto-generated)
+
+`TwoWay = true` generates both directions. Diagnostics: NOF020 (duplicate), NOF021 (non-partial-static), NOF022 (nullable mismatch), NOF023 (unregistered fallback).
+
 ### Dispatch APIs
 
 | Interface | Method | Description |
