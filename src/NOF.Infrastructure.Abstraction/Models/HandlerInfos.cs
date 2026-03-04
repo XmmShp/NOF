@@ -1,4 +1,5 @@
 using NOF.Contract;
+using System.Reflection;
 
 namespace NOF.Infrastructure.Abstraction;
 
@@ -8,8 +9,8 @@ namespace NOF.Infrastructure.Abstraction;
 /// </summary>
 public sealed class CommandHandlerInfos : HashSet<CommandHandlerInfo>
 {
-    private readonly Dictionary<Type, string> _endpointNames = new();
-    private readonly HashSet<Type> _noAttr = new();
+    private readonly Dictionary<Type, string> _endpointNames = [];
+    private readonly HashSet<Type> _noAttr = [];
 
     /// <summary>
     /// Gets the endpoint name for a handler type.
@@ -32,10 +33,22 @@ public sealed class CommandHandlerInfos : HashSet<CommandHandlerInfo>
 
     private bool TryResolve(Type handlerType, out string name)
     {
-        if (_endpointNames.TryGetValue(handlerType, out name!)) return true;
-        if (_noAttr.Contains(handlerType)) return false;
-        var attr = (EndpointNameAttribute?)Attribute.GetCustomAttribute(handlerType, typeof(EndpointNameAttribute));
-        if (attr is not null) { _endpointNames[handlerType] = name = attr.Name; return true; }
+        if (_endpointNames.TryGetValue(handlerType, out name!))
+        {
+            return true;
+        }
+
+        if (_noAttr.Contains(handlerType))
+        {
+            return false;
+        }
+
+        var attr = handlerType.GetCustomAttribute<EndpointNameAttribute>();
+        if (attr is not null)
+        {
+            _endpointNames[handlerType] = name = attr.Name;
+            return true;
+        }
         _noAttr.Add(handlerType);
         return false;
     }
@@ -73,10 +86,22 @@ public sealed class RequestWithoutResponseHandlerInfos : HashSet<RequestWithoutR
 
     private bool TryResolve(Type handlerType, out string name)
     {
-        if (_endpointNames.TryGetValue(handlerType, out name!)) return true;
-        if (_noAttr.Contains(handlerType)) return false;
-        var attr = (EndpointNameAttribute?)Attribute.GetCustomAttribute(handlerType, typeof(EndpointNameAttribute));
-        if (attr is not null) { _endpointNames[handlerType] = name = attr.Name; return true; }
+        if (_endpointNames.TryGetValue(handlerType, out name!))
+        {
+            return true;
+        }
+
+        if (_noAttr.Contains(handlerType))
+        {
+            return false;
+        }
+
+        var attr = handlerType.GetCustomAttribute<EndpointNameAttribute>();
+        if (attr is not null)
+        {
+            _endpointNames[handlerType] = name = attr.Name;
+            return true;
+        }
         _noAttr.Add(handlerType);
         return false;
     }
@@ -102,10 +127,22 @@ public sealed class RequestWithResponseHandlerInfos : HashSet<RequestWithRespons
 
     private bool TryResolve(Type handlerType, out string name)
     {
-        if (_endpointNames.TryGetValue(handlerType, out name!)) return true;
-        if (_noAttr.Contains(handlerType)) return false;
-        var attr = (EndpointNameAttribute?)Attribute.GetCustomAttribute(handlerType, typeof(EndpointNameAttribute));
-        if (attr is not null) { _endpointNames[handlerType] = name = attr.Name; return true; }
+        if (_endpointNames.TryGetValue(handlerType, out name!))
+        {
+            return true;
+        }
+
+        if (_noAttr.Contains(handlerType))
+        {
+            return false;
+        }
+
+        var attr = handlerType.GetCustomAttribute<EndpointNameAttribute>();
+        if (attr is not null)
+        {
+            _endpointNames[handlerType] = name = attr.Name;
+            return true;
+        }
         _noAttr.Add(handlerType);
         return false;
     }

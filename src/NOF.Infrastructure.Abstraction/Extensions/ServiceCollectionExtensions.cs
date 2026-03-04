@@ -182,7 +182,11 @@ public static partial class NOFInfrastructureCoreExtensions
         public IServiceCollection AddHandlerInfo(params CommandHandlerInfo[] infos)
         {
             var set = services.GetOrAddSingleton<CommandHandlerInfos>();
-            foreach (var info in infos) set.Add(info);
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
             return services;
         }
 
@@ -193,7 +197,11 @@ public static partial class NOFInfrastructureCoreExtensions
         public IServiceCollection AddHandlerInfo(params EventHandlerInfo[] infos)
         {
             var set = services.GetOrAddSingleton<EventHandlerInfos>();
-            foreach (var info in infos) set.Add(info);
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
             return services;
         }
 
@@ -204,7 +212,11 @@ public static partial class NOFInfrastructureCoreExtensions
         public IServiceCollection AddHandlerInfo(params NotificationHandlerInfo[] infos)
         {
             var set = services.GetOrAddSingleton<NotificationHandlerInfos>();
-            foreach (var info in infos) set.Add(info);
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
             return services;
         }
 
@@ -215,7 +227,11 @@ public static partial class NOFInfrastructureCoreExtensions
         public IServiceCollection AddHandlerInfo(params RequestWithoutResponseHandlerInfo[] infos)
         {
             var set = services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>();
-            foreach (var info in infos) set.Add(info);
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
             return services;
         }
 
@@ -226,7 +242,11 @@ public static partial class NOFInfrastructureCoreExtensions
         public IServiceCollection AddHandlerInfo(params RequestWithResponseHandlerInfo[] infos)
         {
             var set = services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
-            foreach (var info in infos) set.Add(info);
+            foreach (var info in infos)
+            {
+                set.Add(info);
+            }
+
             return services;
         }
     }

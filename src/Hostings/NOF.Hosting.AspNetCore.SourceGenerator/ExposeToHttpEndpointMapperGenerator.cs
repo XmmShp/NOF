@@ -134,15 +134,15 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 case INamedTypeSymbol { DeclaredAccessibility: Accessibility.Public, IsAbstract: false } type
                     when ExposeToHttpEndpointHelpers.HasPublicApiAttribute(type)
                          && ExposeToHttpEndpointHelpers.IsRequestType(type):
-                {
-                    var typeNs = ExposeToHttpEndpointHelpers.GetFullNamespace(type.ContainingNamespace);
-                    if (scanNamespaces.Any(scan => typeNs.StartsWith(scan, StringComparison.Ordinal))
-                        && seen.Add(type))
                     {
-                        results.Add(GetEndpointInfo(type));
+                        var typeNs = ExposeToHttpEndpointHelpers.GetFullNamespace(type.ContainingNamespace);
+                        if (scanNamespaces.Any(scan => typeNs.StartsWith(scan, StringComparison.Ordinal))
+                            && seen.Add(type))
+                        {
+                            results.Add(GetEndpointInfo(type));
+                        }
+                        break;
                     }
-                    break;
-                }
                 case INamespaceSymbol nestedNs:
                     CollectPublicApiTypes(nestedNs, scanNamespaces, results, seen);
                     break;
