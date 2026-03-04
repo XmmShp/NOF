@@ -7,25 +7,6 @@ public static partial class NOFContractExtensions
 {
     extension(string str)
     {
-        /// <summary>Extracts the system name from a client type name by removing the "Client" suffix.</summary>
-        /// <param name="clientName">The client type name.</param>
-        /// <returns>The system name.</returns>
-        public static string GetSystemNameFromClient(string clientName)
-        {
-            const string client = "client";
-            if (clientName.EndsWith(client, StringComparison.OrdinalIgnoreCase))
-            {
-                clientName = clientName[..^client.Length];
-            }
-            return clientName;
-        }
-
-        /// <summary>Extracts the system name from a client type by removing the "Client" suffix.</summary>
-        /// <typeparam name="TClient">The client type.</typeparam>
-        /// <returns>The system name.</returns>
-        public static string GetSystemNameFromClient<TClient>() where TClient : class
-            => string.GetSystemNameFromClient(typeof(TClient).Name);
-
         /// <summary>
         /// Matches a string against a glob pattern containing '*' wildcards.
         /// Supports patterns like "a.*All.c", "*.log", "prefix*suffix", etc.

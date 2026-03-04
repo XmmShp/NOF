@@ -16,10 +16,6 @@
     <Description>Contract layer for the NOF Framework — requests, commands, notifications, Result type, and HTTP endpoint attributes with source generation.</Description>
   </PropertyGroup>	
 
-  <ItemGroup>
-	<PackageReference Include="Microsoft.Extensions.Http" />
-  </ItemGroup>
-
 	<ItemGroup>
 		<None Include="..\NOF.Contract.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Contract.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
