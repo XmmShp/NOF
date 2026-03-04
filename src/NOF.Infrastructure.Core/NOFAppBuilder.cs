@@ -55,17 +55,12 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// </summary>
     protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs;
 
-    /// <inheritdoc/>
-    public IStartupEventChannel StartupEventChannel { get; protected set; }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="NOFAppBuilder{THostApplication}"/> class.
-    /// Sets up a default implementation of <see cref="IStartupEventChannel"/> for internal configuration events
-    /// and registers all default service registration steps.
+    /// Registers all default service registration steps.
     /// </summary>
     protected NOFAppBuilder()
     {
-        StartupEventChannel = new StartupEventChannel();
         ServiceConfigs =
         [
             new CoreServicesRegistrationStep(),

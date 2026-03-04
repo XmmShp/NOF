@@ -4,10 +4,9 @@ using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.MassTransit;
 
-public record MassTransitConfiguring(IBusRegistrationConfigurator Configurator);
-
 internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<MassTransitRegistrationStep>
 {
+    internal Action<IBusRegistrationConfigurator>? ConfigureBus { get; set; }
     /// <inheritdoc/>
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
@@ -68,7 +67,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         {
             config.SetEndpointNameFormatter(new EndpointNameFormatter(commandInfos, requestWithoutResponseInfos, requestWithResponseInfos));
             config.AddConsumers(busConsumers.ToArray());
-            builder.StartupEventChannel.Publish(new MassTransitConfiguring(config));
+            ConfigureBus?.Invoke(config);
         });
 
         return ValueTask.CompletedTask;

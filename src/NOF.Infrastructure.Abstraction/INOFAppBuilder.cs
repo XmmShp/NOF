@@ -9,12 +9,6 @@ namespace NOF.Infrastructure.Abstraction;
 /// </summary>
 public interface IApplicationInitializationContext : IHostApplicationBuilder
 {
-    /// <summary>
-    /// Gets the configuration-time event dispatcher used to enable plugin-style customization
-    /// during application setup. This dispatcher allows modules to react to configuration lifecycle
-    /// events without tight coupling. 
-    /// </summary>
-    IStartupEventChannel StartupEventChannel { get; }
 
 }
 

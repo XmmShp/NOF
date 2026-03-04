@@ -8,12 +8,6 @@ using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
 
-/// <summary>
-/// Event published when OpenAPI is being configured
-/// Allows users to customize OpenAPI configuration
-/// </summary>
-public sealed record OpenApiConfigurating(OpenApiOptions Options);
-
 public static partial class NOFHostingAspNetCoreExtensions
 {
     extension(INOFAppBuilder builder)
@@ -66,8 +60,6 @@ public static partial class NOFHostingAspNetCoreExtensions
         {
             builder.Services.AddOpenApi(opt =>
             {
-                builder.StartupEventChannel.Publish(new OpenApiConfigurating(opt));
-
                 opt.AddSchemaTransformer<OptionalSchemaTransformer>();
             });
             builder.AddInitializationStep(new ScalarInitializationStep());

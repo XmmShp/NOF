@@ -11,9 +11,8 @@ public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
     {
         public INOFAppBuilder UseRabbitMQ(string connectStringName = "rabbitmq")
         {
-            selector.Builder.StartupEventChannel.Subscribe<MassTransitConfiguring>(e =>
+            selector.ConfigureBus(config =>
             {
-                var config = e.Configurator;
                 config.UsingRabbitMq((context, cfg) =>
                 {
                     cfg.Publish<IRequestBase>(p => p.Exclude = true);

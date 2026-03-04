@@ -19,9 +19,10 @@ public static partial class NOFInfrastructureMassTransitExtensions
             builder.Services.ReplaceOrAddScoped<ICommandRider, MassTransitCommandRider>();
             builder.Services.ReplaceOrAddScoped<INotificationRider, MassTransitNotificationRider>();
             builder.Services.ReplaceOrAddScoped<IRequestRider, MassTransitRequestRider>();
-            builder.AddRegistrationStep(new MassTransitRegistrationStep());
+            var step = new MassTransitRegistrationStep();
+            builder.AddRegistrationStep(step);
 
-            return new MassTransitSelector(builder);
+            return new MassTransitSelector(builder, step);
         }
     }
 }
