@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
@@ -8,7 +9,7 @@ namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Registers core framework services including invocation context, command sender,
-/// notification publisher, and endpoint name provider.
+/// notification publisher, handler resolvers, and handler endpoint name map.
 /// </summary>
 public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep<CoreServicesRegistrationStep>
 {
@@ -16,29 +17,37 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
     [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        builder.Services.AddScoped<IInvocationContextInternal, InvocationContext>();
-        builder.Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());
+        builder.Services.TryAddScoped<IInvocationContextInternal, InvocationContext>();
+        builder.Services.TryAddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());
 
-        builder.Services.AddScoped<ICommandSender, CommandSender>();
-        builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
-        builder.Services.AddScoped<IRequestSender, RequestSender>();
-        builder.Services.AddScoped<IEventPublisher, InMemoryEventPublisher>();
+        builder.Services.TryAddScoped<ICommandSender, CommandSender>();
+        builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
+        builder.Services.TryAddScoped<IRequestSender, RequestSender>();
+        builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
 
-        var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameRegistry>();
-        builder.Services.AddSingleton<IEndpointNameProvider>(new ManualEndpointNameProvider(endpointNameOptions));
+        builder.Services.TryAddScoped<ICommandRider, InMemoryCommandRider>();
+        builder.Services.TryAddScoped<INotificationRider, InMemoryNotificationRider>();
+        builder.Services.TryAddScoped<IRequestRider, InMemoryRequestRider>();
+
+        // Handler resolvers: index handlers by message type + endpoint name for efficient lookup
+        builder.Services.TryAddSingleton(new CommandHandlerInfos());
+        builder.Services.TryAddSingleton(new RequestWithoutResponseHandlerInfos());
+        builder.Services.TryAddSingleton(new RequestWithResponseHandlerInfos());
+        builder.Services.TryAddSingleton<ICommandHandlerResolver, CommandHandlerResolver>();
+        builder.Services.TryAddSingleton<IRequestHandlerResolver, RequestHandlerResolver>();
 
         builder.Services.AddOptions<OutboxOptions>()
             .BindConfiguration("NOF:Outbox")
             .ValidateOnStart();
 
         // Handler inbound pipeline: executor
-        builder.Services.AddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();
+        builder.Services.TryAddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();
 
         // Outbound pipeline: executor
-        builder.Services.AddScoped<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
+        builder.Services.TryAddScoped<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
 
         // State machine registry
-        builder.Services.AddSingleton<IStateMachineRegistry, StateMachineRegistry>();
+        builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
 
         return ValueTask.CompletedTask;
     }

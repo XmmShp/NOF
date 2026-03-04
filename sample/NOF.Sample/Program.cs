@@ -44,8 +44,7 @@ builder.Services.AddAntDesign()
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Here, we self-call for test
-builder.Services.AddHttpClient<INOFSampleService, HttpNOFSampleService>(client => client.BaseAddress = new Uri("http://localhost:55892/"));
+builder.Services.AddScoped<INOFSampleService, RequestSenderNOFSampleService>();
 
 builder.Services.AddHostedService(async (sp, ct) =>
 {

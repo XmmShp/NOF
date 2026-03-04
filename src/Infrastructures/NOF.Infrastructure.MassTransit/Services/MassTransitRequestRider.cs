@@ -12,24 +12,21 @@ namespace NOF.Infrastructure.MassTransit;
 /// MassTransit request transport implementation.
 /// Dispatches locally via mediator when the request type has a local handler
 /// and the destination endpoint is null/whitespace or matches the local endpoint.
-/// Otherwise dispatches remotely via the bus.
+/// Otherwise dispatches remotely via the bus — requires explicit <c>destinationEndpointName</c>.
 /// </summary>
 public class MassTransitRequestRider : IRequestRider
 {
     private readonly IScopedMediator _mediator;
     private readonly IScopedClientFactory _clientFactory;
-    private readonly IEndpointNameProvider _nameProvider;
     private readonly LocalHandlerRegistry _localHandlers;
 
     public MassTransitRequestRider(
         IScopedMediator mediator,
         IScopedClientFactory clientFactory,
-        IEndpointNameProvider nameProvider,
         LocalHandlerRegistry localHandlers)
     {
         _mediator = mediator;
         _clientFactory = clientFactory;
-        _nameProvider = nameProvider;
         _localHandlers = localHandlers;
     }
 
@@ -63,7 +60,13 @@ public class MassTransitRequestRider : IRequestRider
     private async Task<TResult> SendRemoteAsync<TResult>(IRequestBase request, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken)
         where TResult : class, IResult
     {
-        destinationEndpointName ??= _nameProvider.GetEndpointName(request.GetType());
+        if (string.IsNullOrWhiteSpace(destinationEndpointName))
+        {
+            throw new InvalidOperationException(
+                $"Remote dispatch of request '{request.GetType().Name}' requires an explicit destinationEndpointName. " +
+                "No local handler is registered for this request type.");
+        }
+
         var requestType = request.GetType();
         var executor = RemoteExecutorCache<TResult>.Cache.GetOrAdd(requestType, CreateRemoteExecutor<TResult>);
         return await executor(_clientFactory, request, headers, destinationEndpointName.ToQueueUri(), cancellationToken).ConfigureAwait(false);

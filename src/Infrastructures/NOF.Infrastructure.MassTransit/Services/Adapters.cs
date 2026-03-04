@@ -15,16 +15,19 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IInboundPipelineExecutor _executor;
+    private readonly IRequestHandlerResolver _resolver;
 
-    public MassTransitRequestHandlerAdapter(IServiceProvider serviceProvider, IInboundPipelineExecutor executor)
+    public MassTransitRequestHandlerAdapter(IServiceProvider serviceProvider, IInboundPipelineExecutor executor, IRequestHandlerResolver resolver)
     {
         _serviceProvider = serviceProvider;
         _executor = executor;
+        _resolver = resolver;
     }
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var handler = _serviceProvider.GetRequiredKeyedService<THandler>(RequestHandlerKey.Of(typeof(TRequest)));
+        var key = _resolver.ResolveRequestByHandler(typeof(THandler))!;
+        var handler = _serviceProvider.GetRequiredKeyedService<THandler>(key);
         var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, handler);
 
         await _executor.ExecuteAsync(handlerContext, async ct =>
@@ -42,16 +45,19 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> :
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IInboundPipelineExecutor _executor;
+    private readonly IRequestHandlerResolver _resolver;
 
-    public MassTransitRequestHandlerAdapter(IServiceProvider serviceProvider, IInboundPipelineExecutor executor)
+    public MassTransitRequestHandlerAdapter(IServiceProvider serviceProvider, IInboundPipelineExecutor executor, IRequestHandlerResolver resolver)
     {
         _serviceProvider = serviceProvider;
         _executor = executor;
+        _resolver = resolver;
     }
 
     public async Task Consume(ConsumeContext<TRequest> context)
     {
-        var handler = _serviceProvider.GetRequiredKeyedService<THandler>(RequestWithResponseHandlerKey.Of(typeof(TRequest)));
+        var key = _resolver.ResolveRequestWithResponseByHandler(typeof(THandler))!;
+        var handler = _serviceProvider.GetRequiredKeyedService<THandler>(key);
         var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, handler);
 
         await _executor.ExecuteAsync(handlerContext, async ct =>
@@ -69,16 +75,19 @@ internal class MassTransitCommandHandlerAdapter<THandler, TCommand> : IConsumer<
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IInboundPipelineExecutor _executor;
+    private readonly ICommandHandlerResolver _resolver;
 
-    public MassTransitCommandHandlerAdapter(IServiceProvider serviceProvider, IInboundPipelineExecutor executor)
+    public MassTransitCommandHandlerAdapter(IServiceProvider serviceProvider, IInboundPipelineExecutor executor, ICommandHandlerResolver resolver)
     {
         _serviceProvider = serviceProvider;
         _executor = executor;
+        _resolver = resolver;
     }
 
     public async Task Consume(ConsumeContext<TCommand> context)
     {
-        var handler = _serviceProvider.GetRequiredKeyedService<THandler>(CommandHandlerKey.Of(typeof(TCommand)));
+        var key = _resolver.ResolveByHandler(typeof(THandler))!;
+        var handler = _serviceProvider.GetRequiredKeyedService<THandler>(key);
         var handlerContext = MassTransitAdapterHelper.BuildHandlerContext(context, handler);
 
         await _executor.ExecuteAsync(handlerContext,

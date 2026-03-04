@@ -4,7 +4,7 @@ namespace NOF.Infrastructure.Abstraction;
 
 /// <summary>
 /// Returned by the source-generated <c>AddAllHandlers</c> method.
-/// Provides a fluent API to override endpoint names for handler and message types.
+/// Provides fluent API to override endpoint names for handler types.
 /// </summary>
 public sealed class HandlerSelector
 {
@@ -12,33 +12,29 @@ public sealed class HandlerSelector
     /// Gets the underlying service collection.
     /// </summary>
     public IServiceCollection Services { get; }
-    private readonly Lazy<EndpointNameRegistry> _endpointNameRegistry;
 
     public HandlerSelector(IServiceCollection services)
     {
         Services = services;
-        _endpointNameRegistry = new Lazy<EndpointNameRegistry>(
-            () => Services.GetOrAddSingleton<EndpointNameRegistry>());
-    }
-
-    public HandlerSelector(IServiceCollection services, EndpointNameRegistry endpointNameRegistry)
-    {
-        Services = services;
-        _endpointNameRegistry = new Lazy<EndpointNameRegistry>(endpointNameRegistry);
     }
 
     /// <summary>
-    /// Overrides the endpoint name for the specified type.
+    /// Overrides the endpoint name for a specific handler type.
+    /// Updates the handler info, keyed service registration, and endpoint name map.
     /// </summary>
-    public HandlerSelector SetEndpointName<T>(string endpointName)
-        => SetEndpointName(typeof(T), endpointName);
+    public HandlerSelector SetEndpointName<THandler>(string endpointName)
+        => SetEndpointName(typeof(THandler), endpointName);
 
     /// <summary>
-    /// Overrides the endpoint name for the specified type.
+    /// Overrides the endpoint name for a specific handler type.
+    /// Updates the handler info, keyed service registration, and endpoint name map.
     /// </summary>
-    public HandlerSelector SetEndpointName(Type type, string endpointName)
+    public HandlerSelector SetEndpointName(Type handlerType, string endpointName)
     {
-        _endpointNameRegistry.Value.Set(type, endpointName);
+        Services.GetOrAddSingleton<CommandHandlerInfos>().SetEndpointName(handlerType, endpointName);
+        Services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>().SetEndpointName(handlerType, endpointName);
+        Services.GetOrAddSingleton<RequestWithResponseHandlerInfos>().SetEndpointName(handlerType, endpointName);
+
         return this;
     }
 }

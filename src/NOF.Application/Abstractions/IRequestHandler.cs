@@ -7,15 +7,21 @@ namespace NOF.Application;
 /// Non-generic marker interface for request handlers. Not intended for direct use.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRequestHandler : IMessageHandler;
+public interface IRequestHandler : IMessageHandler
+{
+    Task<IResult> HandleAsync(IRequestBase request, CancellationToken cancellationToken);
+}
 
 /// <summary>
 /// Handles requests of the specified type without a typed response.
 /// </summary>
 /// <typeparam name="TRequest">The request type.</typeparam>
-public interface IRequestHandler<TRequest> : IRequestHandler
+public interface IRequestHandler<in TRequest> : IRequestHandler
     where TRequest : IRequest
 {
+    async Task<IResult> IRequestHandler.HandleAsync(IRequestBase request, CancellationToken cancellationToken)
+        => await HandleAsync((TRequest)request, cancellationToken);
+
     /// <summary>Handles the request.</summary>
     /// <param name="request">The request to handle.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -28,9 +34,12 @@ public interface IRequestHandler<TRequest> : IRequestHandler
 /// </summary>
 /// <typeparam name="TRequest">The request type.</typeparam>
 /// <typeparam name="TResponse">The response type.</typeparam>
-public interface IRequestHandler<TRequest, TResponse> : IRequestHandler
+public interface IRequestHandler<in TRequest, TResponse> : IRequestHandler
     where TRequest : class, IRequest<TResponse>
 {
+    async Task<IResult> IRequestHandler.HandleAsync(IRequestBase request, CancellationToken cancellationToken)
+        => await HandleAsync((TRequest)request, cancellationToken);
+
     /// <summary>Handles the request and returns a typed response.</summary>
     /// <param name="request">The request to handle.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

@@ -15,12 +15,18 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
     ];
 
     private readonly ConcurrentDictionary<Type, string> _nameCache = new();
-    private readonly IEndpointNameProvider _nameProvider;
+    private readonly CommandHandlerInfos _commandInfos;
+    private readonly RequestWithoutResponseHandlerInfos _requestInfos;
+    private readonly RequestWithResponseHandlerInfos _requestWithResponseInfos;
 
-    public EndpointNameFormatter(IEndpointNameProvider nameProvider)
+    public EndpointNameFormatter(
+        CommandHandlerInfos commandInfos,
+        RequestWithoutResponseHandlerInfos requestInfos,
+        RequestWithResponseHandlerInfos requestWithResponseInfos)
     {
-        ArgumentNullException.ThrowIfNull(nameProvider);
-        _nameProvider = nameProvider;
+        _commandInfos = commandInfos;
+        _requestInfos = requestInfos;
+        _requestWithResponseInfos = requestWithResponseInfos;
     }
 
     protected override string GetConsumerName(Type consumerType)
@@ -32,18 +38,12 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
 
         if (!consumerType.IsGenericType || !SupportedConsumerGenericTypes.Contains(consumerType.GetGenericTypeDefinition()))
         {
-            var fallback = _nameProvider.GetEndpointName(consumerType);
-            return _nameCache.GetOrAdd(consumerType, fallback);
+            return _nameCache.GetOrAdd(consumerType, base.GetConsumerName(consumerType));
         }
 
         var handlerType = consumerType.GenericTypeArguments[0];
-        var endpointName = _nameProvider.GetEndpointName(handlerType);
+        var endpointName = _commandInfos.GetEndpointName(handlerType);
 
         return _nameCache.GetOrAdd(consumerType, endpointName);
-    }
-
-    protected override string GetMessageName(Type type)
-    {
-        return _nameProvider.GetEndpointName(type);
     }
 }

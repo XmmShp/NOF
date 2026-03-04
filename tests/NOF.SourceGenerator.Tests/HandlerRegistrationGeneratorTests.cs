@@ -39,14 +39,11 @@ public class HandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         // Should use typed CommandHandlerInfo
-        generatedCode.Should().Contain("global::NOF.Infrastructure.Abstraction.CommandHandlerInfo");
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand))");
 
-        // Point-to-point: registers concrete type only (no interface)
-        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyCommandHandler>(global::NOF.Infrastructure.Abstraction.CommandHandlerKey.Of(");
-        generatedCode.Should().NotContain("AddKeyedScoped<global::NOF.Application.ICommandHandler>");
+        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
+        generatedCode.Should().NotContain("AddKeyedScoped");
 
-        // Should populate EndpointNameRegistry
-        generatedCode.Should().Contain("EndpointNameRegistry");
     }
 
     [Fact]
@@ -76,9 +73,12 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Point-to-point: registers concrete type only
-        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyRequestHandler>(global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerKey.Of(");
-        generatedCode.Should().NotContain("AddKeyedScoped<global::NOF.Application.IRequestHandler>");
+        // Should use typed RequestWithResponseHandlerInfo
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof(global::App.MyRequestHandler), typeof(global::App.MyRequest), typeof(string))");
+
+        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
+        generatedCode.Should().NotContain("AddKeyedScoped");
+
     }
 
     [Fact]
@@ -107,13 +107,12 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Multicast: registers both concrete and interface factory
-        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyEventHandler>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(");
-        generatedCode.Should().Contain("AddKeyedScoped<global::NOF.Application.IEventHandler>(global::NOF.Infrastructure.Abstraction.EventHandlerKey.Of(");
-        generatedCode.Should().Contain("GetRequiredKeyedService<global::App.MyEventHandler>(key)");
+        // Should use typed EventHandlerInfo
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent))");
 
-        // Event handlers should NOT register endpoint names
-        generatedCode.Should().NotContain("EndpointNameRegistry");
+        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
+        generatedCode.Should().NotContain("AddKeyedScoped");
+
     }
 
     [Fact]
@@ -142,9 +141,10 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Multicast: registers both concrete and interface factory
-        generatedCode.Should().Contain("AddKeyedScoped<global::App.MyNotificationHandler>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(");
-        generatedCode.Should().Contain("AddKeyedScoped<global::NOF.Application.INotificationHandler>(global::NOF.Infrastructure.Abstraction.NotificationHandlerKey.Of(");
-        generatedCode.Should().Contain("GetRequiredKeyedService<global::App.MyNotificationHandler>(key)");
+        // Should use typed NotificationHandlerInfo
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification))");
+
+        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
+        generatedCode.Should().NotContain("AddKeyedScoped");
     }
 }

@@ -82,6 +82,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new TracingInboundMiddlewareStep(),
             new AutoInstrumentationInboundMiddlewareStep(),
             new MessageInboxInboundMiddlewareStep(),
+            new HandlerKeyedServiceRegistrationStep(),
 
             // Default outbound middleware steps
             new MessageIdOutboundMiddlewareStep(),

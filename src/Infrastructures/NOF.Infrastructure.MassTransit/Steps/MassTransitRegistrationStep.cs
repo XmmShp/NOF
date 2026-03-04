@@ -1,7 +1,6 @@
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
 
 namespace NOF.Infrastructure.MassTransit;
 
@@ -18,8 +17,6 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         var requestWithResponseInfos = builder.Services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
 
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
-        var endpointNameOptions = builder.Services.GetOrAddSingleton<EndpointNameRegistry>();
-        var nameProvider = new ManualEndpointNameProvider(endpointNameOptions);
 
         var mediatorConsumers = new List<Type>();
         var busConsumers = new List<Type>();
@@ -29,7 +26,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         {
             var adapter = typeof(MassTransitCommandHandlerAdapter<,>)
                 .MakeGenericType(info.HandlerType, info.CommandType);
-            localHandlers.Register(info.CommandType, nameProvider.GetEndpointName(info.HandlerType));
+            localHandlers.Register(info.CommandType, commandInfos.GetEndpointName(info.HandlerType));
             mediatorConsumers.Add(adapter);
             busConsumers.Add(adapter);
         }
@@ -47,7 +44,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         {
             var adapter = typeof(MassTransitRequestHandlerAdapter<,>)
                 .MakeGenericType(info.HandlerType, info.RequestType);
-            localHandlers.Register(info.RequestType, nameProvider.GetEndpointName(info.HandlerType));
+            localHandlers.Register(info.RequestType, requestWithoutResponseInfos.GetEndpointName(info.HandlerType));
             mediatorConsumers.Add(adapter);
             busConsumers.Add(adapter);
         }
@@ -57,7 +54,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         {
             var adapter = typeof(MassTransitRequestHandlerAdapter<,,>)
                 .MakeGenericType(info.HandlerType, info.RequestType, info.ResponseType);
-            localHandlers.Register(info.RequestType, nameProvider.GetEndpointName(info.HandlerType));
+            localHandlers.Register(info.RequestType, requestWithResponseInfos.GetEndpointName(info.HandlerType));
             mediatorConsumers.Add(adapter);
             busConsumers.Add(adapter);
         }
@@ -69,7 +66,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
 
         builder.Services.AddMassTransit(config =>
         {
-            config.SetEndpointNameFormatter(new EndpointNameFormatter(nameProvider));
+            config.SetEndpointNameFormatter(new EndpointNameFormatter(commandInfos, requestWithoutResponseInfos, requestWithResponseInfos));
             config.AddConsumers(busConsumers.ToArray());
             builder.StartupEventChannel.Publish(new MassTransitConfiguring(config));
         });

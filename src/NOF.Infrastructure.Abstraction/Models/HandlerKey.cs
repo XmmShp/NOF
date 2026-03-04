@@ -2,9 +2,9 @@ namespace NOF.Infrastructure.Abstraction;
 
 /// <summary>
 /// Strongly-typed marker used as keyed-service key for command handler registrations.
-/// The key is <c>CommandHandlerKey.Of(typeof(TCommand))</c>.
+/// The key is <c>CommandHandlerKey.Of(typeof(TCommand), endpointName)</c>.
 /// </summary>
-public sealed record CommandHandlerKey(CommandHandlerKey.UniqueKey Key, Type CommandType)
+public sealed record CommandHandlerKey(CommandHandlerKey.UniqueKey Key, Type CommandType, string EndpointName)
 {
     public class UniqueKey
     {
@@ -12,8 +12,8 @@ public sealed record CommandHandlerKey(CommandHandlerKey.UniqueKey Key, Type Com
         public static readonly UniqueKey Instance = new();
     }
 
-    /// <summary>Creates the composite service key for the given command type.</summary>
-    public static CommandHandlerKey Of(Type commandType) => new(UniqueKey.Instance, commandType);
+    /// <summary>Creates the composite service key for the given command type and endpoint name.</summary>
+    public static CommandHandlerKey Of(Type commandType, string endpointName) => new(UniqueKey.Instance, commandType, endpointName);
 }
 
 /// <summary>
@@ -50,9 +50,9 @@ public sealed record NotificationHandlerKey(NotificationHandlerKey.UniqueKey Key
 
 /// <summary>
 /// Strongly-typed marker used as keyed-service key for request (without response) handler registrations.
-/// The key is <c>RequestHandlerKey.Of(typeof(TRequest))</c>.
+/// The key is <c>RequestHandlerKey.Of(typeof(TRequest), endpointName)</c>.
 /// </summary>
-public sealed record RequestHandlerKey(RequestHandlerKey.UniqueKey Key, Type RequestType)
+public sealed record RequestHandlerKey(RequestHandlerKey.UniqueKey Key, Type RequestType, string EndpointName)
 {
     public class UniqueKey
     {
@@ -60,15 +60,15 @@ public sealed record RequestHandlerKey(RequestHandlerKey.UniqueKey Key, Type Req
         public static readonly UniqueKey Instance = new();
     }
 
-    /// <summary>Creates the composite service key for the given request type.</summary>
-    public static RequestHandlerKey Of(Type requestType) => new(UniqueKey.Instance, requestType);
+    /// <summary>Creates the composite service key for the given request type and endpoint name.</summary>
+    public static RequestHandlerKey Of(Type requestType, string endpointName) => new(UniqueKey.Instance, requestType, endpointName);
 }
 
 /// <summary>
 /// Strongly-typed marker used as keyed-service key for request-with-response handler registrations.
-/// The key is <c>RequestWithResponseHandlerKey.Of(typeof(TRequest))</c>.
+/// The key is <c>RequestWithResponseHandlerKey.Of(typeof(TRequest), endpointName)</c>.
 /// </summary>
-public sealed record RequestWithResponseHandlerKey(RequestWithResponseHandlerKey.UniqueKey Key, Type RequestType)
+public sealed record RequestWithResponseHandlerKey(RequestWithResponseHandlerKey.UniqueKey Key, Type RequestType, string EndpointName)
 {
     public class UniqueKey
     {
@@ -76,6 +76,6 @@ public sealed record RequestWithResponseHandlerKey(RequestWithResponseHandlerKey
         public static readonly UniqueKey Instance = new();
     }
 
-    /// <summary>Creates the composite service key for the given request type.</summary>
-    public static RequestWithResponseHandlerKey Of(Type requestType) => new(UniqueKey.Instance, requestType);
+    /// <summary>Creates the composite service key for the given request type and endpoint name.</summary>
+    public static RequestWithResponseHandlerKey Of(Type requestType, string endpointName) => new(UniqueKey.Instance, requestType, endpointName);
 }

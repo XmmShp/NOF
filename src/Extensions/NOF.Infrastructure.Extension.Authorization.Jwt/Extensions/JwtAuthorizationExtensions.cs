@@ -126,7 +126,7 @@ public static partial class NOFJwtAuthorizationExtensions
                 });
 
 #pragma warning disable CS8620
-            // Register handlers
+            // Register handlers — AddHandlerInfo handles keyed services + endpoint name map at runtime
             builder.Services.AddHandlerInfo(
                 new RequestWithResponseHandlerInfo(typeof(GenerateJwtToken), typeof(GenerateJwtTokenRequest), typeof(GenerateJwtTokenResponse)),
                 new RequestWithResponseHandlerInfo(typeof(ValidateJwtRefreshToken), typeof(ValidateJwtRefreshTokenRequest), typeof(ValidateJwtRefreshTokenResponse)));
@@ -150,4 +150,5 @@ public static partial class NOFJwtAuthorizationExtensions
             });
         }
     }
+
 }

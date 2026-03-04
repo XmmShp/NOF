@@ -1,11 +1,24 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace NOF.Infrastructure.Abstraction;
 
-public record CommandHandlerInfo(Type HandlerType, Type CommandType);
+public record CommandHandlerInfo(
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type HandlerType,
+    Type CommandType);
 
-public record EventHandlerInfo(Type HandlerType, Type EventType);
+public record EventHandlerInfo(
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type HandlerType,
+    Type EventType);
 
-public record NotificationHandlerInfo(Type HandlerType, Type NotificationType);
+public record NotificationHandlerInfo(
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type HandlerType,
+    Type NotificationType);
 
-public record RequestWithoutResponseHandlerInfo(Type HandlerType, Type RequestType);
+public record RequestWithoutResponseHandlerInfo(
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type HandlerType,
+    Type RequestType);
 
-public record RequestWithResponseHandlerInfo(Type HandlerType, Type RequestType, Type ResponseType);
+public record RequestWithResponseHandlerInfo(
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type HandlerType,
+    Type RequestType,
+    Type ResponseType);
