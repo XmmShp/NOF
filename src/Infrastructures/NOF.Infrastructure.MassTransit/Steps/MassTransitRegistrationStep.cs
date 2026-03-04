@@ -10,28 +10,24 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
     /// <inheritdoc/>
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var commandInfos = builder.Services.GetOrAddSingleton<CommandHandlerInfos>();
-        var notificationInfos = builder.Services.GetOrAddSingleton<NotificationHandlerInfos>();
-        var requestWithoutResponseInfos = builder.Services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>();
-        var requestWithResponseInfos = builder.Services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
-
+        var infos = builder.Services.GetOrAddSingleton<HandlerInfos>();
         var localHandlers = builder.Services.GetOrAddSingleton<LocalHandlerRegistry>();
 
         var mediatorConsumers = new List<Type>();
         var busConsumers = new List<Type>();
 
         // Command: mediator + bus
-        foreach (var info in commandInfos)
+        foreach (var info in infos.Commands)
         {
             var adapter = typeof(MassTransitCommandHandlerAdapter<,>)
                 .MakeGenericType(info.HandlerType, info.CommandType);
-            localHandlers.Register(info.CommandType, commandInfos.GetEndpointName(info.HandlerType));
+            localHandlers.Register(info.CommandType, infos.GetEndpointName(info.HandlerType));
             mediatorConsumers.Add(adapter);
             busConsumers.Add(adapter);
         }
 
         // Notification: bus only
-        foreach (var info in notificationInfos)
+        foreach (var info in infos.Notifications)
         {
             var adapter = typeof(MassTransitNotificationHandlerAdapter<,>)
                 .MakeGenericType(info.HandlerType, info.NotificationType);
@@ -39,21 +35,21 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
         }
 
         // RequestWithoutResponse: mediator + bus
-        foreach (var info in requestWithoutResponseInfos)
+        foreach (var info in infos.RequestsWithoutResponse)
         {
             var adapter = typeof(MassTransitRequestHandlerAdapter<,>)
                 .MakeGenericType(info.HandlerType, info.RequestType);
-            localHandlers.Register(info.RequestType, requestWithoutResponseInfos.GetEndpointName(info.HandlerType));
+            localHandlers.Register(info.RequestType, infos.GetEndpointName(info.HandlerType));
             mediatorConsumers.Add(adapter);
             busConsumers.Add(adapter);
         }
 
         // RequestWithResponse: mediator + bus
-        foreach (var info in requestWithResponseInfos)
+        foreach (var info in infos.RequestsWithResponse)
         {
             var adapter = typeof(MassTransitRequestHandlerAdapter<,,>)
                 .MakeGenericType(info.HandlerType, info.RequestType, info.ResponseType);
-            localHandlers.Register(info.RequestType, requestWithResponseInfos.GetEndpointName(info.HandlerType));
+            localHandlers.Register(info.RequestType, infos.GetEndpointName(info.HandlerType));
             mediatorConsumers.Add(adapter);
             busConsumers.Add(adapter);
         }
@@ -65,7 +61,7 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
 
         builder.Services.AddMassTransit(config =>
         {
-            config.SetEndpointNameFormatter(new EndpointNameFormatter(commandInfos, requestWithoutResponseInfos, requestWithResponseInfos));
+            config.SetEndpointNameFormatter(new EndpointNameFormatter(infos));
             config.AddConsumers(busConsumers.ToArray());
             ConfigureBus?.Invoke(config);
         });

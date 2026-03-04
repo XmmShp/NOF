@@ -26,11 +26,13 @@ internal static class SendContextExtensions
             }
 
             var activity = Activity.Current;
-            if (activity is not null)
+            if (activity is null)
             {
-                context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity.TraceId.ToString());
-                context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity.SpanId.ToString());
+                return;
             }
+
+            context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity.TraceId.ToString());
+            context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity.SpanId.ToString());
         }
     }
 }

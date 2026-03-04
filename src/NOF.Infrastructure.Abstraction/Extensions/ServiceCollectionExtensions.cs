@@ -176,72 +176,13 @@ public static partial class NOFInfrastructureCoreExtensions
         }
 
         /// <summary>
-        /// Adds one or more <see cref="CommandHandlerInfo"/> entries to the <see cref="CommandHandlerInfos"/> singleton.
+        /// Adds one or more <see cref="HandlerInfo"/> entries to the <see cref="HandlerInfos"/> singleton.
+        /// Each entry is dispatched to the appropriate typed set via pattern matching.
         /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
         /// </summary>
-        public IServiceCollection AddHandlerInfo(params CommandHandlerInfo[] infos)
+        public IServiceCollection AddHandlerInfo(params HandlerInfo[] infos)
         {
-            var set = services.GetOrAddSingleton<CommandHandlerInfos>();
-            foreach (var info in infos)
-            {
-                set.Add(info);
-            }
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds one or more <see cref="EventHandlerInfo"/> entries to the <see cref="EventHandlerInfos"/> singleton.
-        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
-        /// </summary>
-        public IServiceCollection AddHandlerInfo(params EventHandlerInfo[] infos)
-        {
-            var set = services.GetOrAddSingleton<EventHandlerInfos>();
-            foreach (var info in infos)
-            {
-                set.Add(info);
-            }
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds one or more <see cref="NotificationHandlerInfo"/> entries to the <see cref="NotificationHandlerInfos"/> singleton.
-        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
-        /// </summary>
-        public IServiceCollection AddHandlerInfo(params NotificationHandlerInfo[] infos)
-        {
-            var set = services.GetOrAddSingleton<NotificationHandlerInfos>();
-            foreach (var info in infos)
-            {
-                set.Add(info);
-            }
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds one or more <see cref="RequestWithoutResponseHandlerInfo"/> entries to the <see cref="RequestWithoutResponseHandlerInfos"/> singleton.
-        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
-        /// </summary>
-        public IServiceCollection AddHandlerInfo(params RequestWithoutResponseHandlerInfo[] infos)
-        {
-            var set = services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>();
-            foreach (var info in infos)
-            {
-                set.Add(info);
-            }
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds one or more <see cref="RequestWithResponseHandlerInfo"/> entries to the <see cref="RequestWithResponseHandlerInfos"/> singleton.
-        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
-        /// </summary>
-        public IServiceCollection AddHandlerInfo(params RequestWithResponseHandlerInfo[] infos)
-        {
-            var set = services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
+            var set = services.GetOrAddSingleton<HandlerInfos>();
             foreach (var info in infos)
             {
                 set.Add(info);

@@ -15,18 +15,11 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
     ];
 
     private readonly ConcurrentDictionary<Type, string> _nameCache = new();
-    private readonly CommandHandlerInfos _commandInfos;
-    private readonly RequestWithoutResponseHandlerInfos _requestInfos;
-    private readonly RequestWithResponseHandlerInfos _requestWithResponseInfos;
+    private readonly HandlerInfos _infos;
 
-    public EndpointNameFormatter(
-        CommandHandlerInfos commandInfos,
-        RequestWithoutResponseHandlerInfos requestInfos,
-        RequestWithResponseHandlerInfos requestWithResponseInfos)
+    public EndpointNameFormatter(HandlerInfos infos)
     {
-        _commandInfos = commandInfos;
-        _requestInfos = requestInfos;
-        _requestWithResponseInfos = requestWithResponseInfos;
+        _infos = infos;
     }
 
     protected override string GetConsumerName(Type consumerType)
@@ -42,7 +35,7 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
         }
 
         var handlerType = consumerType.GenericTypeArguments[0];
-        var endpointName = _commandInfos.GetEndpointName(handlerType);
+        var endpointName = _infos.GetEndpointName(handlerType);
 
         return _nameCache.GetOrAdd(consumerType, endpointName);
     }

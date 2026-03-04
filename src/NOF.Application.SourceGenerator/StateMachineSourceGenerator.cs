@@ -173,6 +173,11 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
 
+        var sanitizedName = assemblyName.Replace(".", "");
+
+        // Collect handler class names and notification types for the static property
+        var handlerPairs = new List<(string HandlerClassName, string NotificationFullName)>();
+
         // Generate concrete handler classes per (definition, notification) pair
         foreach (var def in definitions)
         {
@@ -197,8 +202,28 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                 sb.AppendLine("            : base(repository, uow, serviceProvider, stateMachineRegistry) { }");
                 sb.AppendLine("    }");
                 sb.AppendLine();
+
+                handlerPairs.Add((handlerClassName, notificationFullName));
             }
         }
+
+        // Generate static property with all SM handler entries
+        sb.AppendLine($"    /// <summary>");
+        sb.AppendLine($"    /// Contains all generated state machine notification handler entries.");
+        sb.AppendLine($"    /// Register via <c>HandlerSelector.AddStateMachineHandlers()</c>.");
+        sb.AppendLine($"    /// </summary>");
+        sb.AppendLine($"    public static partial class {sanitizedName}StateMachineHandlers");
+        sb.AppendLine("    {");
+        sb.AppendLine($"        public static global::NOF.Application.StateMachineHandlerEntry[] Handlers {{ get; }} =");
+        sb.AppendLine("        [");
+        for (var i = 0; i < handlerPairs.Count; i++)
+        {
+            var (handlerClassName, notificationFullName) = handlerPairs[i];
+            var comma = i < handlerPairs.Count - 1 ? "," : "";
+            sb.AppendLine($"            new(typeof({handlerClassName}), typeof({notificationFullName})){comma}");
+        }
+        sb.AppendLine("        ];");
+        sb.AppendLine("    }");
 
         sb.AppendLine("}");
 

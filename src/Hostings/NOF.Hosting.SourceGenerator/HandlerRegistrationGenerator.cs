@@ -31,7 +31,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                         return null;
                     }
                     var symbol = ctx.SemanticModel.GetDeclaredSymbol(cds);
-                    if (symbol is { IsAbstract: false, IsGenericType: false } && IsHandlerType(symbol))
+                    if (symbol is { IsAbstract: false, IsGenericType: false } && !IsStateMachineHandler(symbol) && IsHandlerType(symbol))
                     {
                         return symbol;
                     }
@@ -101,11 +101,26 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 case INamespaceSymbol childNs:
                     CollectHandlerTypes(childNs, builder);
                     break;
-                case INamedTypeSymbol { IsAbstract: false, IsGenericType: false } type when IsHandlerType(type):
+                case INamedTypeSymbol { IsAbstract: false, IsGenericType: false } type when !IsStateMachineHandler(type) && IsHandlerType(type):
                     builder.Add(type);
                     break;
             }
         }
+    }
+
+    private static bool IsStateMachineHandler(INamedTypeSymbol symbol)
+    {
+        var current = symbol.BaseType;
+        while (current is not null)
+        {
+            if (current.IsGenericType &&
+                current.OriginalDefinition.ToDisplayString() == "NOF.Application.StateMachineNotificationHandler<TStateMachineDefinition, TState, TNotification>")
+            {
+                return true;
+            }
+            current = current.BaseType;
+        }
+        return false;
     }
 
     private static bool IsHandlerType(INamedTypeSymbol symbol)
@@ -164,32 +179,26 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine(
             "        public static global::NOF.Infrastructure.Abstraction.HandlerSelector AddAllHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
+        sb.AppendLine("            var infos = services.GetOrAddSingleton<global::NOF.Infrastructure.Abstraction.HandlerInfos>();");
 
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
 
-        // Collect typed handler info entries
-        var commandInfos = new List<string>();
-        var eventInfos = new List<string>();
-        var notificationInfos = new List<string>();
-        var requestWithoutResponseInfos = new List<string>();
-        var requestWithResponseInfos = new List<string>();
+        // Collect all handler info entries
+        var allInfos = new List<string>();
 
         foreach (var handlerClass in handlerClasses)
         {
-            CollectHandlerRegistrations(commandInfos, eventInfos, notificationInfos,
-                requestWithoutResponseInfos, requestWithResponseInfos,
-                handlerClass, typeFormat);
+            CollectHandlerRegistrations(allInfos, handlerClass, typeFormat);
         }
 
-        // AddHandlerInfo handles keyed service registration, endpoint name map, etc. at runtime
-        EmitAddInfoCalls(sb, "AddHandlerInfo", commandInfos);
-        EmitAddInfoCalls(sb, "AddHandlerInfo", eventInfos);
-        EmitAddInfoCalls(sb, "AddHandlerInfo", notificationInfos);
-        EmitAddInfoCalls(sb, "AddHandlerInfo", requestWithoutResponseInfos);
-        EmitAddInfoCalls(sb, "AddHandlerInfo", requestWithResponseInfos);
+        // Register handler infos directly on the HandlerInfos instance
+        foreach (var info in allInfos)
+        {
+            sb.AppendLine($"            infos.Add({info});");
+        }
 
-        sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services);");
+        sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services, infos);");
 
         sb.AppendLine("        }");
         sb.AppendLine("    }");
@@ -198,27 +207,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
-    private static void EmitAddInfoCalls(StringBuilder sb, string methodName, List<string> infos)
-    {
-        if (infos.Count == 0)
-        {
-            return;
-        }
-
-        sb.AppendLine($"            services.{methodName}(");
-        for (var i = 0; i < infos.Count; i++)
-        {
-            var comma = i < infos.Count - 1 ? "," : ");";
-            sb.AppendLine($"                {infos[i]}{comma}");
-        }
-    }
-
     private static void CollectHandlerRegistrations(
-        List<string> commandInfos,
-        List<string> eventInfos,
-        List<string> notificationInfos,
-        List<string> requestWithoutResponseInfos,
-        List<string> requestWithResponseInfos,
+        List<string> allInfos,
         INamedTypeSymbol handlerClass,
         SymbolDisplayFormat typeFormat)
     {
@@ -236,28 +226,28 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             if (display == "NOF.Application.ICommandHandler<TCommand>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                commandInfos.Add($"new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.IEventHandler<TEvent>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                eventInfos.Add($"new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                notificationInfos.Add($"new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
                 var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
-                requestWithResponseInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                requestWithoutResponseInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
         }
     }

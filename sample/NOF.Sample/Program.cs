@@ -11,6 +11,7 @@ using NOF.Infrastructure.MassTransit;
 using NOF.Infrastructure.MassTransit.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
+using NOF.Sample.Application;
 using NOF.Sample.WebUI;
 using System.Text.Json;
 
@@ -23,7 +24,9 @@ JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(
         );
 
 builder.Services.AddNOFSampleAutoInjectServices();
-builder.Services.AddAllHandlers();
+builder.Services.AddAllHandlers()
+    .AddStateMachineHandlers(NOFSampleApplicationStateMachineHandlers.Handlers);
+
 builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 
 builder.AddRedisCache();

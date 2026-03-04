@@ -67,9 +67,9 @@ public sealed class CommandHandlerResolver : ICommandHandlerResolver
     // handlerType → key
     private readonly Dictionary<Type, CommandHandlerKey> _byHandler = new();
 
-    public CommandHandlerResolver(CommandHandlerInfos infos)
+    public CommandHandlerResolver(HandlerInfos infos)
     {
-        foreach (var info in infos)
+        foreach (var info in infos.Commands)
         {
             var ep = infos.GetEndpointName(info.HandlerType);
             var key = CommandHandlerKey.Of(info.CommandType, ep);
@@ -120,13 +120,11 @@ public sealed class RequestHandlerResolver : IRequestHandlerResolver
     private readonly Dictionary<Type, ResolvedHandler> _rwrByMessageDefault = new();
     private readonly Dictionary<Type, RequestWithResponseHandlerKey> _rwrByHandler = new();
 
-    public RequestHandlerResolver(
-        RequestWithoutResponseHandlerInfos requestInfos,
-        RequestWithResponseHandlerInfos requestWithResponseInfos)
+    public RequestHandlerResolver(HandlerInfos infos)
     {
-        foreach (var info in requestInfos)
+        foreach (var info in infos.RequestsWithoutResponse)
         {
-            var ep = requestInfos.GetEndpointName(info.HandlerType);
+            var ep = infos.GetEndpointName(info.HandlerType);
             var key = RequestHandlerKey.Of(info.RequestType, ep);
             var resolved = new ResolvedHandler(info.HandlerType, key);
 
@@ -137,7 +135,7 @@ public sealed class RequestHandlerResolver : IRequestHandlerResolver
             }
             epMap.TryAdd(ep, resolved);
 
-            if (!requestInfos.HasExplicitEndpointName(info.HandlerType))
+            if (!infos.HasExplicitEndpointName(info.HandlerType))
             {
                 _reqByMessageDefault.TryAdd(info.RequestType, resolved);
             }
@@ -145,9 +143,9 @@ public sealed class RequestHandlerResolver : IRequestHandlerResolver
             _reqByHandler.TryAdd(info.HandlerType, key);
         }
 
-        foreach (var info in requestWithResponseInfos)
+        foreach (var info in infos.RequestsWithResponse)
         {
-            var ep = requestWithResponseInfos.GetEndpointName(info.HandlerType);
+            var ep = infos.GetEndpointName(info.HandlerType);
             var key = RequestWithResponseHandlerKey.Of(info.RequestType, ep);
             var resolved = new ResolvedHandler(info.HandlerType, key);
 
@@ -158,7 +156,7 @@ public sealed class RequestHandlerResolver : IRequestHandlerResolver
             }
             epMap.TryAdd(ep, resolved);
 
-            if (!requestWithResponseInfos.HasExplicitEndpointName(info.HandlerType))
+            if (!infos.HasExplicitEndpointName(info.HandlerType))
             {
                 _rwrByMessageDefault.TryAdd(info.RequestType, resolved);
             }

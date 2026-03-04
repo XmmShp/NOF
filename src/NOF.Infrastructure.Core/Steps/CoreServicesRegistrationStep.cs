@@ -30,9 +30,6 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.TryAddScoped<IRequestRider, InMemoryRequestRider>();
 
         // Handler resolvers: index handlers by message type + endpoint name for efficient lookup
-        builder.Services.TryAddSingleton(new CommandHandlerInfos());
-        builder.Services.TryAddSingleton(new RequestWithoutResponseHandlerInfos());
-        builder.Services.TryAddSingleton(new RequestWithResponseHandlerInfos());
         builder.Services.TryAddSingleton<ICommandHandlerResolver, CommandHandlerResolver>();
         builder.Services.TryAddSingleton<IRequestHandlerResolver, RequestHandlerResolver>();
 

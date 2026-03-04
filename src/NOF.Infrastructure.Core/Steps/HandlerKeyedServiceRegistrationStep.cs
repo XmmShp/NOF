@@ -12,40 +12,37 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var commandInfos = builder.Services.GetOrAddSingleton<CommandHandlerInfos>();
-        foreach (var info in commandInfos)
+        var infos = builder.Services.GetOrAddSingleton<HandlerInfos>();
+
+        foreach (var info in infos.Commands)
         {
-            var ep = commandInfos.GetEndpointName(info.HandlerType);
+            var ep = infos.GetEndpointName(info.HandlerType);
             builder.Services.AddKeyedScoped(info.HandlerType, CommandHandlerKey.Of(info.CommandType, ep));
         }
 
-        var eventInfos = builder.Services.GetOrAddSingleton<EventHandlerInfos>();
-        foreach (var info in eventInfos)
+        foreach (var info in infos.Events)
         {
             var key = EventHandlerKey.Of(info.EventType);
             builder.Services.AddKeyedScoped(info.HandlerType, key);
             builder.Services.AddKeyedScoped<Application.IEventHandler>(key, (sp, k) => (Application.IEventHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
         }
 
-        var notificationInfos = builder.Services.GetOrAddSingleton<NotificationHandlerInfos>();
-        foreach (var info in notificationInfos)
+        foreach (var info in infos.Notifications)
         {
             var key = NotificationHandlerKey.Of(info.NotificationType);
             builder.Services.AddKeyedScoped(info.HandlerType, key);
             builder.Services.AddKeyedScoped<Application.INotificationHandler>(key, (sp, k) => (Application.INotificationHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
         }
 
-        var reqInfos = builder.Services.GetOrAddSingleton<RequestWithoutResponseHandlerInfos>();
-        foreach (var info in reqInfos)
+        foreach (var info in infos.RequestsWithoutResponse)
         {
-            var ep = reqInfos.GetEndpointName(info.HandlerType);
+            var ep = infos.GetEndpointName(info.HandlerType);
             builder.Services.AddKeyedScoped(info.HandlerType, RequestHandlerKey.Of(info.RequestType, ep));
         }
 
-        var rwrInfos = builder.Services.GetOrAddSingleton<RequestWithResponseHandlerInfos>();
-        foreach (var info in rwrInfos)
+        foreach (var info in infos.RequestsWithResponse)
         {
-            var ep = rwrInfos.GetEndpointName(info.HandlerType);
+            var ep = infos.GetEndpointName(info.HandlerType);
             builder.Services.AddKeyedScoped(info.HandlerType, RequestWithResponseHandlerKey.Of(info.RequestType, ep));
         }
 
