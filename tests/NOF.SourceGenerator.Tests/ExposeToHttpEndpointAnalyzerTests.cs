@@ -12,10 +12,23 @@ namespace NOF.SourceGenerator.Tests;
 
 public class ExposeToHttpEndpointAnalyzerTests
 {
+    private static readonly Type[] Refs =
+    [
+        typeof(PublicApiAttribute),
+        typeof(HttpEndpointAttribute),
+        typeof(GenerateServiceAttribute),
+        typeof(HttpVerb),
+        typeof(IRequest),
+        typeof(IRequest<>),
+        typeof(IRequestSender),
+        typeof(Result),
+        typeof(Result<>)
+    ];
+
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
-        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true,
-            typeof(ExposeToHttpEndpointAttribute).ToMetadataReference());
+        var extraReferences = Refs.Select(t => t.ToMetadataReference()).ToArray();
+        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
 
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new ExposeToHttpEndpointAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
@@ -23,14 +36,17 @@ public class ExposeToHttpEndpointAnalyzerTests
         return diagnostics;
     }
 
+    // --- HttpEndpoint + PublicApi validation ---
+
     [Fact]
-    public async Task StructRequest_ReportsError()
+    public async Task StructRequest_WithPublicApi_ReportsError()
     {
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public struct CreateItemRequest : IRequest
                 {
                     public string Name { get; set; }
@@ -40,19 +56,37 @@ public class ExposeToHttpEndpointAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF200");
+        diagnostics.Should().Contain(d => d.Id == "NOF200");
         diagnostics.First(d => d.Id == "NOF200").GetMessage().Should().Contain("CreateItemRequest");
+    }
+
+    [Fact]
+    public async Task HttpEndpointWithoutPublicApi_ReportsError()
+    {
+        const string source = """
+            using NOF.Contract;
+            namespace App
+            {
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public record CreateItemRequest(string Name) : IRequest;
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        diagnostics.Should().ContainSingle(d => d.Id == "NOF204");
+        diagnostics.First(d => d.Id == "NOF204").GetMessage().Should().Contain("CreateItemRequest");
     }
 
     [Fact]
     public async Task MissingRouteParamProperty_ReportsError()
     {
-        // Class with primary ctor param 'id' — NOT a property, route param {id} has no match
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
                 public class UpdateItemRequest(long id) : IRequest
                 {
                     public string Name { get; set; } = default!;
@@ -70,12 +104,12 @@ public class ExposeToHttpEndpointAnalyzerTests
     [Fact]
     public async Task ClassWithPrimaryCtor_NoParameterlessCtor_ReportsError()
     {
-        // Class with primary ctor — no parameterless ctor
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
                 public class UpdateItemRequest(long id) : IRequest
                 {
                     public string Name { get; set; } = default!;
@@ -96,7 +130,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
                 public class UpdateItemRequest : IRequest
                 {
                     public long Id { get; set; }
@@ -115,12 +150,12 @@ public class ExposeToHttpEndpointAnalyzerTests
     [Fact]
     public async Task RecordWithPrimaryCtor_NoDiagnostic()
     {
-        // Record primary ctor params become properties — no errors expected
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
                 public record UpdateItemRequest(long Id) : IRequest
                 {
                     public string? Value { get; set; }
@@ -142,7 +177,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
                 public record AddFileRequest(long NodeId, string FileName, string Content) : IRequest;
             }
             """;
@@ -161,7 +197,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
                 public class AddFileRequest : IRequest
                 {
                     public long NodeId { get; set; }
@@ -172,7 +209,6 @@ public class ExposeToHttpEndpointAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        // fileName has no matching property
         diagnostics.Should().ContainSingle(d => d.Id == "NOF201");
         diagnostics.First(d => d.Id == "NOF201").GetMessage().Should().Contain("fileName");
     }
@@ -180,12 +216,12 @@ public class ExposeToHttpEndpointAnalyzerTests
     [Fact]
     public async Task NoRouteParams_ClassWithoutParameterlessCtor_StillReportsCtorError()
     {
-        // Even without route params, a class with only a parameterized ctor is invalid
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public class CreateItemRequest : IRequest
                 {
                     public CreateItemRequest(string name) { Name = name; }
@@ -206,7 +242,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public class CreateItemRequest : IRequest
                 {
                     public CreateItemRequest() { }
@@ -224,12 +261,12 @@ public class ExposeToHttpEndpointAnalyzerTests
     [Fact]
     public async Task RouteParamMatchIsCaseInsensitive_NoDiagnostic()
     {
-        // Route has {id} but property is Id — should match case-insensitively
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
                 public record DeleteItemRequest(long Id) : IRequest;
             }
             """;
@@ -239,14 +276,16 @@ public class ExposeToHttpEndpointAnalyzerTests
         diagnostics.Should().NotContain(d => d.Id == "NOF201");
     }
 
+    // --- PublicApi OperationName validation ---
+
     [Fact]
-    public async Task InvalidOperationName_ReportsError()
+    public async Task InvalidOperationName_OnPublicApi_ReportsError()
     {
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items", OperationName = "create-item")]
+                [PublicApi(OperationName = "create-item")]
                 public record CreateItemRequest(string Name) : IRequest;
             }
             """;
@@ -264,7 +303,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items", OperationName = "CreateItem")]
+                [PublicApi(OperationName = "CreateItem")]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public record CreateItemRequest(string Name) : IRequest;
             }
             """;
@@ -277,12 +317,12 @@ public class ExposeToHttpEndpointAnalyzerTests
     [Fact]
     public async Task NoOperationName_NoDiagnostic()
     {
-        // When OperationName is not specified, no validation needed
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items")]
+                [PublicApi]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public record CreateItemRequest(string Name) : IRequest;
             }
             """;
@@ -299,7 +339,7 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [ExposeToHttpEndpoint(HttpVerb.Post, "/api/items", OperationName = "Create Item")]
+                [PublicApi(OperationName = "Create Item")]
                 public record CreateItemRequest(string Name) : IRequest;
             }
             """;

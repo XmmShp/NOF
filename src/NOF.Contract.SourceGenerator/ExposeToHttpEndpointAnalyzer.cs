@@ -9,9 +9,7 @@ using System.Linq;
 namespace NOF.Contract.SourceGenerator;
 
 /// <summary>
-/// Diagnostic analyzer for ExposeToHttpEndpoint usage validation.
-/// Validates that request types are reference types (class/record), have matching public properties
-/// for all route parameters, and that classes have a parameterless constructor.
+/// Diagnostic analyzer for HttpEndpoint / PublicApi / GenerateService attribute validation.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
@@ -23,7 +21,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         "NOF200",
         "Request must be a reference type",
         "Request type '{0}' must be a class or record, not a struct",
-        "ExposeToHttpEndpoint",
+        "PublicApi",
         DiagnosticSeverity.Error,
         true);
 
@@ -34,7 +32,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         "NOF201",
         "Missing public property for route parameter",
         "Request type '{0}' does not contain a public property matching route parameter '{1}' (case-insensitive). Add a public property named '{1}'.",
-        "ExposeToHttpEndpoint",
+        "HttpEndpoint",
         DiagnosticSeverity.Error,
         true);
 
@@ -46,7 +44,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         "NOF202",
         "Class request must have a parameterless constructor",
         "Request class '{0}' must have a public parameterless constructor. Records may use primary constructors, but classes must have a parameterless constructor.",
-        "ExposeToHttpEndpoint",
+        "HttpEndpoint",
         DiagnosticSeverity.Error,
         true);
 
@@ -57,7 +55,40 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         "NOF203",
         "OperationName must be a valid C# identifier",
         "OperationName '{0}' on request type '{1}' is not a valid C# identifier. It must start with a letter or underscore and contain only letters, digits, or underscores.",
-        "ExposeToHttpEndpoint",
+        "PublicApi",
+        DiagnosticSeverity.Error,
+        true);
+
+    /// <summary>
+    /// [HttpEndpoint] requires [PublicApi] to also be present on the type.
+    /// </summary>
+    public static readonly DiagnosticDescriptor HttpEndpointRequiresPublicApi = new(
+        "NOF204",
+        "[HttpEndpoint] requires [PublicApi]",
+        "Request type '{0}' has [HttpEndpoint] but is missing [PublicApi]. Add [PublicApi] to the type.",
+        "HttpEndpoint",
+        DiagnosticSeverity.Error,
+        true);
+
+    /// <summary>
+    /// ExtraTypes in [GenerateService] must implement IRequest or IRequest&lt;T&gt;.
+    /// </summary>
+    public static readonly DiagnosticDescriptor ExtraTypeMustBeRequest = new(
+        "NOF205",
+        "ExtraType must implement IRequest",
+        "Type '{0}' specified in ExtraTypes does not implement IRequest or IRequest<T>",
+        "GenerateService",
+        DiagnosticSeverity.Error,
+        true);
+
+    /// <summary>
+    /// ExtraTypes in [GenerateService] must have [PublicApi].
+    /// </summary>
+    public static readonly DiagnosticDescriptor ExtraTypeMustHavePublicApi = new(
+        "NOF206",
+        "ExtraType must have [PublicApi]",
+        "Type '{0}' specified in ExtraTypes does not have [PublicApi] attribute",
+        "GenerateService",
         DiagnosticSeverity.Error,
         true);
 
@@ -66,7 +97,10 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         RequestMustBeReferenceType,
         MissingRouteParamProperty,
         ClassMustHaveParameterlessCtor,
-        InvalidOperationName
+        InvalidOperationName,
+        HttpEndpointRequiresPublicApi,
+        ExtraTypeMustBeRequest,
+        ExtraTypeMustHavePublicApi
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -81,30 +115,49 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
     {
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
-        // Only analyze types with ExposeToHttpEndpointAttribute
-        var endpointAttributes = typeSymbol.GetAttributes()
-            .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Contract.ExposeToHttpEndpointAttribute")
+        // Analyze [HttpEndpoint] on request types
+        AnalyzeHttpEndpointAttributes(context, typeSymbol);
+
+        // Analyze [PublicApi] on request types
+        AnalyzePublicApiAttribute(context, typeSymbol);
+
+        // Analyze [GenerateService] on interfaces
+        AnalyzeGenerateServiceAttribute(context, typeSymbol);
+    }
+
+    private static void AnalyzeHttpEndpointAttributes(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
+    {
+        var httpEndpointAttributes = typeSymbol.GetAttributes()
+            .Where(attr => attr.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpEndpointAttributeFqn)
             .ToList();
 
-        if (endpointAttributes.Count == 0)
-        {
-            return;
-        }
-
-        // Only analyze types that implement IRequest or IRequest<T>
-        if (!ExposeToHttpEndpointHelpers.IsRequestType(typeSymbol))
+        if (httpEndpointAttributes.Count == 0)
         {
             return;
         }
 
         var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
 
-        // Rule 1: Must be a reference type (class or record), not struct
+        // Rule: [HttpEndpoint] requires [PublicApi]
+        if (!ExposeToHttpEndpointHelpers.HasPublicApiAttribute(typeSymbol))
+        {
+            context.ReportDiagnostic(
+                Diagnostic.Create(HttpEndpointRequiresPublicApi, typeLocation, typeSymbol.Name));
+            return;
+        }
+
+        // Only validate further if it implements IRequest
+        if (!ExposeToHttpEndpointHelpers.IsRequestType(typeSymbol))
+        {
+            return;
+        }
+
+        // Rule: Must be a reference type
         if (typeSymbol.IsValueType)
         {
             context.ReportDiagnostic(
                 Diagnostic.Create(RequestMustBeReferenceType, typeLocation, typeSymbol.Name));
-            return; // No point checking further
+            return;
         }
 
         // Determine if this is a record
@@ -113,14 +166,13 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             .OfType<TypeDeclarationSyntax>()
             .Any(t => t is RecordDeclarationSyntax);
 
-        // Rule 2: If it's a class (not record), must have a public parameterless constructor
+        // Rule: class (not record) must have parameterless ctor
         if (!isRecord)
         {
             var hasParameterlessCtor = typeSymbol.Constructors
                 .Any(c => c.DeclaredAccessibility == Accessibility.Public
                           && c is { IsStatic: false, Parameters.Length: 0 });
 
-            // If there are no explicitly declared instance constructors, the compiler generates a default one
             var hasExplicitCtors = typeSymbol.Constructors
                 .Any(c => !c.IsStatic && !c.IsImplicitlyDeclared);
 
@@ -131,25 +183,16 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        // Rule 3: For each attribute, check that all route parameters have matching public properties
+        // Rule: route parameters must have matching properties
         var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(typeSymbol);
         var propertyNames = new HashSet<string>(
             allProperties.Select(p => p.Name),
             System.StringComparer.OrdinalIgnoreCase);
 
-        foreach (var attr in endpointAttributes)
+        foreach (var attr in httpEndpointAttributes)
         {
             var attrLocation = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? typeLocation;
 
-            // Rule 4: OperationName must be a valid C# identifier
-            if (attr.NamedArguments
-                    .FirstOrDefault(arg => arg.Key == "OperationName").Value.Value is string operationName && !SyntaxFacts.IsValidIdentifier(operationName))
-            {
-                context.ReportDiagnostic(
-                    Diagnostic.Create(InvalidOperationName, attrLocation, operationName, typeSymbol.Name));
-            }
-
-            // Rule 3: Check route parameters have matching public properties
             var route = attr.ConstructorArguments.Length > 1
                 ? attr.ConstructorArguments[1].Value as string
                 : null;
@@ -169,4 +212,78 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         }
     }
 
+    private static void AnalyzePublicApiAttribute(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
+    {
+        var publicApiAttr = typeSymbol.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.PublicApiAttributeFqn);
+
+        if (publicApiAttr is null)
+        {
+            return;
+        }
+
+        var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
+
+        // Validate OperationName if specified
+        var operationName = publicApiAttr.NamedArguments
+            .FirstOrDefault(arg => arg.Key == "OperationName").Value.Value as string;
+
+        if (operationName is not null && !SyntaxFacts.IsValidIdentifier(operationName))
+        {
+            var attrLocation = publicApiAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? typeLocation;
+            context.ReportDiagnostic(
+                Diagnostic.Create(InvalidOperationName, attrLocation, operationName, typeSymbol.Name));
+        }
+
+        // Validate: must be a reference type if it's a request
+        if (ExposeToHttpEndpointHelpers.IsRequestType(typeSymbol) && typeSymbol.IsValueType)
+        {
+            context.ReportDiagnostic(
+                Diagnostic.Create(RequestMustBeReferenceType, typeLocation, typeSymbol.Name));
+        }
+    }
+
+    private static void AnalyzeGenerateServiceAttribute(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
+    {
+        var gsAttr = typeSymbol.GetAttributes()
+            .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn);
+
+        if (gsAttr is null)
+        {
+            return;
+        }
+
+        var attrLocation = gsAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+                           ?? typeSymbol.Locations.FirstOrDefault()
+                           ?? Location.None;
+
+        // Validate ExtraTypes
+        var extraTypesArg = gsAttr.NamedArguments
+            .FirstOrDefault(a => a.Key == "ExtraTypes").Value;
+
+        if (extraTypesArg.Kind != TypedConstantKind.Array || extraTypesArg.Values.IsDefaultOrEmpty)
+        {
+            return;
+        }
+
+        foreach (var et in extraTypesArg.Values)
+        {
+            if (et.Value is not INamedTypeSymbol extraType)
+            {
+                continue;
+            }
+
+            if (!ExposeToHttpEndpointHelpers.IsRequestType(extraType))
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(ExtraTypeMustBeRequest, attrLocation, extraType.Name));
+            }
+
+            if (!ExposeToHttpEndpointHelpers.HasPublicApiAttribute(extraType))
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(ExtraTypeMustHavePublicApi, attrLocation, extraType.Name));
+            }
+        }
+    }
 }

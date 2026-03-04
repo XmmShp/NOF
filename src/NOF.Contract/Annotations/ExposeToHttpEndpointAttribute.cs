@@ -1,10 +1,11 @@
 namespace NOF.Contract;
 
 /// <summary>
-/// Marks a request type to be exposed as an HTTP endpoint
+/// Marks a request type to be exposed as an HTTP endpoint.
+/// Requires <see cref="PublicApiAttribute"/> to also be present on the type.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
-public sealed class ExposeToHttpEndpointAttribute : Attribute
+public sealed class HttpEndpointAttribute : Attribute
 {
     /// <summary>
     /// HTTP method
@@ -17,16 +18,11 @@ public sealed class ExposeToHttpEndpointAttribute : Attribute
     public string? Route { get; }
 
     /// <summary>
-    /// Operation name for generating client method names. If null, uses the request type name (without "Request" suffix)
-    /// </summary>
-    public string? OperationName { get; init; }
-
-    /// <summary>
-    /// Creates a new ExposeToHttpEndpointAttribute instance
+    /// Creates a new HttpEndpointAttribute instance
     /// </summary>
     /// <param name="method">HTTP method</param>
     /// <param name="route">Route template</param>
-    public ExposeToHttpEndpointAttribute(HttpVerb method, string? route = null)
+    public HttpEndpointAttribute(HttpVerb method, string? route = null)
     {
         Method = method;
         Route = route;
@@ -49,4 +45,3 @@ public enum HttpVerb
     /// <summary>HTTP PATCH method.</summary>
     Patch,
 }
-

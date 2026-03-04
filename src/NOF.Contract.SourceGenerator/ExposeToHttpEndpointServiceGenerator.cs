@@ -15,71 +15,123 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var provider = context.SyntaxProvider
+        // Find partial interfaces with [GenerateService]
+        var interfaceProvider = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => node is TypeDeclarationSyntax { AttributeLists.Count: > 0 },
-                transform: static (ctx, _) => GetEligibleType(ctx))
+                predicate: static (node, _) => node is InterfaceDeclarationSyntax { AttributeLists.Count: > 0 },
+                transform: static (ctx, _) =>
+                {
+                    if (ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is INamedTypeSymbol symbol
+                        && ExposeToHttpEndpointHelpers.HasGenerateServiceAttribute(symbol))
+                    {
+                        return symbol;
+                    }
+                    return null;
+                })
             .Where(static m => m is not null);
 
-        var compilationAndClasses = context.CompilationProvider.Combine(provider.Collect());
-        context.RegisterSourceOutput(compilationAndClasses, GenerateClients);
+        var compilationAndInterfaces = context.CompilationProvider.Combine(interfaceProvider.Collect());
+        context.RegisterSourceOutput(compilationAndInterfaces, Generate);
     }
 
-    private static INamedTypeSymbol? GetEligibleType(GeneratorSyntaxContext ctx)
+    private static void Generate(SourceProductionContext context, (Compilation Compilation, ImmutableArray<INamedTypeSymbol?> Interfaces) source)
     {
-        var node = (TypeDeclarationSyntax)ctx.Node;
-        var model = ctx.SemanticModel;
-
-        if (model.GetDeclaredSymbol(node) is not { } symbol
-            || !ExposeToHttpEndpointHelpers.HasExposeToHttpEndpointAttribute(symbol)
-            || !ExposeToHttpEndpointHelpers.IsRequestType(symbol))
-        {
-            return null;
-        }
-
-        return symbol;
-    }
-
-    private static void GenerateClients(SourceProductionContext context, (Compilation Compilation, ImmutableArray<INamedTypeSymbol?> Classes) source)
-    {
-        if (source.Classes.IsDefaultOrEmpty)
+        if (source.Interfaces.IsDefaultOrEmpty)
         {
             return;
         }
 
-        var endpoints = new List<EndpointInfo>();
-
-        foreach (var classSymbol in source.Classes.Distinct(SymbolEqualityComparer.Default).OfType<INamedTypeSymbol>())
+        foreach (var iface in source.Interfaces.Distinct(SymbolEqualityComparer.Default).OfType<INamedTypeSymbol>())
         {
             context.CancellationToken.ThrowIfCancellationRequested();
+            GenerateForInterface(context, source.Compilation, iface);
+        }
+    }
 
-            var attributes = classSymbol.GetAttributes()
-                .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Contract.ExposeToHttpEndpointAttribute");
+    private static void GenerateForInterface(SourceProductionContext context, Compilation compilation, INamedTypeSymbol iface)
+    {
+        var attr = iface.GetAttributes()
+            .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn);
 
-            foreach (var attr in attributes)
+        // Parse attribute parameters
+        var namespacesArg = attr.NamedArguments
+            .FirstOrDefault(a => a.Key == "Namespaces").Value;
+        var generateHttp = attr.NamedArguments
+            .FirstOrDefault(a => a.Key == "GenerateHttpClient").Value.Value is not false; // default true
+        var generateRequestSender = attr.NamedArguments
+            .FirstOrDefault(a => a.Key == "GenerateRequestSenderClient").Value.Value is not false; // default true
+        var extraTypesArg = attr.NamedArguments
+            .FirstOrDefault(a => a.Key == "ExtraTypes").Value;
+
+        // Determine scan namespaces
+        var scanNamespaces = new HashSet<string>(StringComparer.Ordinal);
+        if (namespacesArg.Kind == TypedConstantKind.Array && !namespacesArg.Values.IsDefaultOrEmpty)
+        {
+            foreach (var ns in namespacesArg.Values)
             {
-                var info = ExposeToHttpEndpointHelpers.ExtractEndpointInfo(classSymbol, attr, source.Compilation);
-                endpoints.Add(info);
+                if (ns.Value is string s)
+                {
+                    scanNamespaces.Add(s);
+                }
+            }
+        }
+        else
+        {
+            // Default: same namespace as the interface
+            var ifaceNs = ExposeToHttpEndpointHelpers.GetFullNamespace(iface.ContainingNamespace);
+            if (!string.IsNullOrEmpty(ifaceNs))
+            {
+                scanNamespaces.Add(ifaceNs);
             }
         }
 
-        if (endpoints.Count == 0)
+        // Collect extra types from attribute
+        var extraTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        if (extraTypesArg.Kind == TypedConstantKind.Array && !extraTypesArg.Values.IsDefaultOrEmpty)
+        {
+            foreach (var et in extraTypesArg.Values)
+            {
+                if (et.Value is INamedTypeSymbol extraType)
+                {
+                    extraTypes.Add(extraType);
+                }
+            }
+        }
+
+        // Scan for PublicApi request types in the specified namespaces
+        var publicApiInfos = new List<PublicApiInfo>();
+        var seenTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+
+        CollectPublicApiTypes(compilation.Assembly.GlobalNamespace, scanNamespaces, publicApiInfos, seenTypes);
+
+        // Also scan referenced assemblies
+        foreach (var refAsm in compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            CollectPublicApiTypes(refAsm.GlobalNamespace, scanNamespaces, publicApiInfos, seenTypes);
+        }
+
+        // Add extra types
+        foreach (var extra in extraTypes)
+        {
+            if (seenTypes.Add(extra) && ExposeToHttpEndpointHelpers.HasPublicApiAttribute(extra)
+                                     && ExposeToHttpEndpointHelpers.IsRequestType(extra))
+            {
+                publicApiInfos.Add(ExposeToHttpEndpointHelpers.ExtractPublicApiInfo(extra));
+            }
+        }
+
+        if (publicApiInfos.Count == 0)
         {
             return;
         }
 
-        var assemblyName = source.Compilation.AssemblyName ?? "Unknown";
-        GenerateClientForAssembly(context, assemblyName, endpoints.ToArray());
-    }
+        // Check which methods already exist on the partial interface (user-defined)
+        var existingMethods = GetExistingMethodSignatures(iface);
 
-    private static void GenerateClientForAssembly(SourceProductionContext context, string assemblyName, EndpointInfo[] endpoints)
-    {
-        if (endpoints.Length == 0)
-        {
-            return;
-        }
-
-        var (serviceName, interfaceName, clientName) = ExposeToHttpEndpointHelpers.GetServiceNames(assemblyName);
+        var interfaceName = iface.Name;
+        var ifaceNamespace = ExposeToHttpEndpointHelpers.GetFullNamespace(iface.ContainingNamespace);
+        var httpClientName = ExposeToHttpEndpointHelpers.GetHttpClientName(interfaceName);
+        var requestSenderClientName = ExposeToHttpEndpointHelpers.GetRequestSenderClientName(interfaceName);
 
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
@@ -87,48 +139,80 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("using NOF.Contract;");
         sb.AppendLine();
-        sb.AppendLine($"namespace {assemblyName}");
+        sb.AppendLine($"namespace {ifaceNamespace}");
         sb.AppendLine("{");
-        sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// {assemblyName} service client interface");
-        sb.AppendLine("    /// </summary>");
+
+        // Generate interface methods
         sb.AppendLine($"    public partial interface {interfaceName}");
         sb.AppendLine("    {");
 
-        foreach (var endpoint in endpoints)
+        var methodsToGenerate = new List<PublicApiInfo>();
+        foreach (var api in publicApiInfos)
         {
-            var requestType = endpoint.RequestType.ToDisplayString();
-            var responseType = endpoint.ResponseType?.ToDisplayString();
+            var methodName = api.OperationName + "Async";
+            var requestType = api.RequestType.ToDisplayString();
+
+            // Check for signature conflict: same method name and first param type
+            var sig = $"{methodName}({requestType})";
+            if (existingMethods.Contains(sig))
+            {
+                continue;
+            }
+
+            methodsToGenerate.Add(api);
+
+            var responseType = api.ResponseType?.ToDisplayString();
             var returnType = string.IsNullOrEmpty(responseType) ? "global::NOF.Contract.Result" : $"global::NOF.Contract.Result<{responseType}>";
-            var methodName = endpoint.OperationName;
 
             sb.AppendLine("        /// <summary>");
-            sb.AppendLine(!string.IsNullOrEmpty(endpoint.DisplayName)
-                ? $"        /// {EscapeXmlComment(endpoint.DisplayName)}"
-                : $"        /// Calls {endpoint.Route} endpoint");
-            if (!string.IsNullOrEmpty(endpoint.Summary))
+            if (!string.IsNullOrEmpty(api.DisplayName))
             {
-                sb.AppendLine($"        /// <para>{EscapeXmlComment(endpoint.Summary)}</para>");
+                sb.AppendLine($"        /// {EscapeXmlComment(api.DisplayName)}");
             }
-
-            if (!string.IsNullOrEmpty(endpoint.Description))
+            else
             {
-                sb.AppendLine($"        /// <para>{EscapeXmlComment(endpoint.Description)}</para>");
+                sb.AppendLine($"        /// Calls {api.OperationName} operation");
             }
-
+            if (!string.IsNullOrEmpty(api.Summary))
+            {
+                sb.AppendLine($"        /// <para>{EscapeXmlComment(api.Summary)}</para>");
+            }
+            if (!string.IsNullOrEmpty(api.Description))
+            {
+                sb.AppendLine($"        /// <para>{EscapeXmlComment(api.Description)}</para>");
+            }
             sb.AppendLine("        /// </summary>");
             sb.AppendLine("        /// <param name=\"request\">Request parameters</param>");
-            sb.AppendLine("        /// <param name=\"completionOption\">When the operation should complete</param>");
             sb.AppendLine("        /// <param name=\"cancellationToken\">Cancellation token</param>");
-            sb.AppendLine($"        global::System.Threading.Tasks.Task<{returnType}> {methodName}Async({requestType} request, global::System.Net.Http.HttpCompletionOption completionOption = default, global::System.Threading.CancellationToken cancellationToken = default);");
+            sb.AppendLine($"        global::System.Threading.Tasks.Task<{returnType}> {methodName}({requestType} request, global::System.Threading.CancellationToken cancellationToken = default);");
             sb.AppendLine();
         }
 
         sb.AppendLine("    }");
         sb.AppendLine();
 
+        // Generate HTTP client implementation
+        if (generateHttp)
+        {
+            EmitHttpClient(sb, interfaceName, httpClientName, methodsToGenerate, compilation);
+        }
+
+        // Generate RequestSender client implementation
+        if (generateRequestSender)
+        {
+            EmitRequestSenderClient(sb, interfaceName, requestSenderClientName, methodsToGenerate);
+        }
+
+        sb.AppendLine("}");
+
+        context.AddSource($"{ifaceNamespace}.{interfaceName}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+    }
+
+    private static void EmitHttpClient(StringBuilder sb, string interfaceName, string clientName,
+        List<PublicApiInfo> methods, Compilation compilation)
+    {
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine($"    /// {assemblyName} service client implementation");
+        sb.AppendLine($"    /// HTTP client implementation of {interfaceName}");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine($"    public partial class {clientName} : {interfaceName}");
         sb.AppendLine("    {");
@@ -146,18 +230,73 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
 
-        foreach (var endpoint in endpoints)
+        foreach (var api in methods)
         {
-            EmitMethodBody(sb, endpoint);
+            EndpointInfo endpointInfo;
+            if (ExposeToHttpEndpointHelpers.HasHttpEndpointAttribute(api.RequestType))
+            {
+                var httpAttr = api.RequestType.GetAttributes()
+                    .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpEndpointAttributeFqn);
+                endpointInfo = ExposeToHttpEndpointHelpers.ExtractEndpointInfo(api.RequestType, httpAttr);
+            }
+            else
+            {
+                // No [HttpEndpoint] — default to POST with operation name as route
+                endpointInfo = ExposeToHttpEndpointHelpers.ExtractDefaultEndpointInfo(api.RequestType);
+            }
+            EmitHttpMethodBody(sb, endpointInfo);
         }
 
         sb.AppendLine("    }");
-        sb.AppendLine("}");
-
-        context.AddSource($"{assemblyName}.{serviceName}Client.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+        sb.AppendLine();
     }
 
-    private static void EmitMethodBody(StringBuilder sb, EndpointInfo endpoint)
+    private static void EmitRequestSenderClient(StringBuilder sb, string interfaceName, string clientName,
+        List<PublicApiInfo> methods)
+    {
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine($"    /// In-process RequestSender implementation of {interfaceName}");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine($"    public partial class {clientName} : {interfaceName}");
+        sb.AppendLine("    {");
+        sb.AppendLine("        private readonly global::NOF.Contract.IRequestSender _requestSender;");
+        sb.AppendLine();
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine($"        /// Initializes a new instance of {clientName}");
+        sb.AppendLine("        /// </summary>");
+        sb.AppendLine("        /// <param name=\"requestSender\">Request sender</param>");
+        sb.AppendLine($"        public {clientName}(global::NOF.Contract.IRequestSender requestSender)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(requestSender);");
+        sb.AppendLine("            _requestSender = requestSender;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+
+        foreach (var api in methods)
+        {
+            EmitRequestSenderMethodBody(sb, api);
+        }
+
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void EmitRequestSenderMethodBody(StringBuilder sb, PublicApiInfo api)
+    {
+        var requestType = api.RequestType.ToDisplayString();
+        var responseType = api.ResponseType?.ToDisplayString();
+        var returnType = string.IsNullOrEmpty(responseType) ? "global::NOF.Contract.Result" : $"global::NOF.Contract.Result<{responseType}>";
+        var methodName = api.OperationName;
+
+        sb.AppendLine("        /// <inheritdoc />");
+        sb.AppendLine($"        public virtual async global::System.Threading.Tasks.Task<{returnType}> {methodName}Async({requestType} request, global::System.Threading.CancellationToken cancellationToken)");
+        sb.AppendLine("        {");
+        sb.AppendLine($"            return await _requestSender.SendAsync(request, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+    }
+
+    private static void EmitHttpMethodBody(StringBuilder sb, EndpointInfo endpoint)
     {
         var requestType = endpoint.RequestType.ToDisplayString();
         var responseType = endpoint.ResponseType?.ToDisplayString();
@@ -190,13 +329,11 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         var hasRouteParams = routeParamProperties.Count > 0;
 
         sb.AppendLine("        /// <inheritdoc />");
-        sb.AppendLine($"        public async global::System.Threading.Tasks.Task<{returnType}> {methodName}Async({requestType} request, global::System.Net.Http.HttpCompletionOption completionOption, global::System.Threading.CancellationToken cancellationToken)");
+        sb.AppendLine($"        public virtual async global::System.Threading.Tasks.Task<{returnType}> {methodName}Async({requestType} request, global::System.Threading.CancellationToken cancellationToken)");
         sb.AppendLine("        {");
 
-        // Step 1: Build the endpoint URL
         if (hasRouteParams)
         {
-            // Build route string with parameters replaced
             var routeExpression = BuildRouteInterpolation(sb, endpoint.Route, routeParamProperties);
             sb.AppendLine($"            var endpoint = {routeExpression};");
         }
@@ -205,13 +342,10 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
             sb.AppendLine($"            var endpoint = \"{endpoint.Route}\";");
         }
 
-        // Step 2: Build the request message
         if (isBodyMethod)
         {
-            // POST/PUT/PATCH: body method
             if (hasRouteParams && nonRouteProperties.Count > 0)
             {
-                // Build a dictionary with only non-route properties for the body
                 sb.AppendLine($"            var body = new global::System.Collections.Generic.Dictionary<string, object?>({nonRouteProperties.Count});");
                 foreach (var prop in nonRouteProperties)
                 {
@@ -222,19 +356,16 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
             }
             else if (hasRouteParams && nonRouteProperties.Count == 0)
             {
-                // All properties are route params, no body needed
                 sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
             }
             else
             {
-                // No route params, serialize the whole request as body
                 sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
                 sb.AppendLine($"            httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request, typeof({requestType}), options: _jsonOptions);");
             }
         }
         else
         {
-            // GET/DELETE: query string method
             if (nonRouteProperties.Count > 0)
             {
                 sb.AppendLine("            var queryParts = new global::System.Collections.Generic.List<string>();");
@@ -250,8 +381,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
             sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
         }
 
-        // Step 3: Send and parse response
-        sb.AppendLine("            using var response = await _httpClient.SendAsync(httpRequest, completionOption, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("            using var response = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);");
         sb.AppendLine("            if (!response.IsSuccessStatusCode)");
         sb.AppendLine("            {");
         sb.AppendLine("                return global::NOF.Contract.Result.Fail((int)response.StatusCode, $\"{(int)response.StatusCode}: {response.ReasonPhrase}\");");
@@ -279,6 +409,50 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
+    private static void CollectPublicApiTypes(INamespaceSymbol ns, HashSet<string> scanNamespaces,
+        List<PublicApiInfo> results, HashSet<INamedTypeSymbol> seen)
+    {
+        var currentNs = ExposeToHttpEndpointHelpers.GetFullNamespace(ns);
+
+        if (!string.IsNullOrEmpty(currentNs) && scanNamespaces.Any(scan => currentNs.StartsWith(scan)))
+        {
+            foreach (var type in ns.GetTypeMembers())
+            {
+                if (type is { DeclaredAccessibility: Accessibility.Public, IsAbstract: false }
+                    && ExposeToHttpEndpointHelpers.HasPublicApiAttribute(type)
+                    && ExposeToHttpEndpointHelpers.IsRequestType(type)
+                    && seen.Add(type))
+                {
+                    results.Add(ExposeToHttpEndpointHelpers.ExtractPublicApiInfo(type));
+                }
+            }
+        }
+
+        foreach (var child in ns.GetNamespaceMembers())
+        {
+            CollectPublicApiTypes(child, scanNamespaces, results, seen);
+        }
+    }
+
+    /// <summary>
+    /// Gets signatures of methods already defined on the interface (by user in partial declarations).
+    /// Signature format: "MethodNameAsync(Full.Type.Name)"
+    /// </summary>
+    private static HashSet<string> GetExistingMethodSignatures(INamedTypeSymbol iface)
+    {
+        var sigs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var member in iface.GetMembers())
+        {
+            if (member is IMethodSymbol method && !method.IsImplicitlyDeclared)
+            {
+                var firstParam = method.Parameters.FirstOrDefault();
+                var paramType = firstParam?.Type.ToDisplayString() ?? "";
+                sigs.Add($"{method.Name}({paramType})");
+            }
+        }
+        return sigs;
+    }
+
     private static void EmitQueryParamAppend(StringBuilder sb, IPropertySymbol prop)
     {
         var propName = prop.Name;
@@ -298,7 +472,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         }
     }
 
-    private static string FormatValueExpression(string accessor, ITypeSymbol type, bool isNullable)
+    internal static string FormatValueExpression(string accessor, ITypeSymbol type, bool isNullable)
     {
         var underlying = type;
         var isNullableValueType = false;
@@ -322,10 +496,6 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         };
     }
 
-    /// <summary>
-    /// Emits local variable declarations for route parameters and returns the interpolated route string.
-    /// Uses local variables to avoid global:: inside string interpolation expressions.
-    /// </summary>
     private static string BuildRouteInterpolation(StringBuilder sb, string route, List<(string ParamName, IPropertySymbol Property)> routeParamProperties)
     {
         var result = route;

@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
@@ -14,93 +13,157 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var sourceClasses = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: static (node, _) => node is TypeDeclarationSyntax { AttributeLists.Count: > 0 },
-                transform: static (ctx, _) =>
-                {
-                    if (ctx.Node is not TypeDeclarationSyntax tds)
-                    {
-                        return null;
-                    }
-
-                    if (ctx.SemanticModel.GetDeclaredSymbol(tds) is INamedTypeSymbol { IsAbstract: false, DeclaredAccessibility: Accessibility.Public } symbol
-                        && ExposeToHttpEndpointHelpers.HasExposeToHttpEndpointAttribute(symbol)
-                        && ExposeToHttpEndpointHelpers.IsRequestType(symbol))
-                    {
-                        return symbol;
-                    }
-                    return null;
-                })
-            .Where(static s => s is not null);
-
-        var referencedTypes = context.CompilationProvider
-            .Select(static (compilation, _) =>
-            {
-                var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
-                foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
-                {
-                    CollectEndpointTypes(assembly.GlobalNamespace, builder);
-                }
-                return builder.ToImmutable();
-            });
-
-        var allTypes = referencedTypes.Combine(sourceClasses.Collect())
-            .Select(static (pair, _) =>
-            {
-                var (fromRefs, fromSource) = pair;
-                var set = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-                foreach (var t in fromRefs)
-                {
-                    set.Add(t);
-                }
-
-                foreach (var t in Enumerable.OfType<INamedTypeSymbol>(fromSource))
-                {
-                    set.Add(t);
-                }
-
-                return set.ToImmutableArray();
-            });
-
-        var endpointInfos = context.CompilationProvider.Combine(allTypes)
-            .Select(static (pair, _) =>
-            {
-                var (compilation, types) = pair;
-                var list = ImmutableArray.CreateBuilder<EndpointInfo>();
-                foreach (var type in types)
-                {
-                    var attrs = type.GetAttributes()
-                        .Where(attr => attr.AttributeClass?.ToDisplayString() == "NOF.Contract.ExposeToHttpEndpointAttribute");
-
-                    foreach (var attr in attrs)
-                    {
-                        var info = ExposeToHttpEndpointHelpers.ExtractEndpointInfo(type, attr, compilation);
-                        list.Add(info);
-                    }
-                }
-                return (AssemblyName: compilation.AssemblyName ?? "Unknown", Endpoints: list.ToImmutable());
-            });
-
-        context.RegisterSourceOutput(endpointInfos, static (ctx, data) => GenerateMapAllHttpEndpointsExtension(ctx, data.AssemblyName, data.Endpoints));
+        // Use CompilationProvider to scan both source and referenced assemblies for [GenerateService]
+        context.RegisterSourceOutput(context.CompilationProvider, static (ctx, compilation) => Generate(ctx, compilation));
     }
 
-    private static void CollectEndpointTypes(INamespaceSymbol ns, ImmutableArray<INamedTypeSymbol>.Builder builder)
+    private static void Generate(SourceProductionContext context, Compilation compilation)
+    {
+        // Collect [GenerateService] interfaces from source and referenced assemblies
+        var generateServiceInterfaces = new List<INamedTypeSymbol>();
+
+        CollectGenerateServiceInterfaces(compilation.Assembly.GlobalNamespace, generateServiceInterfaces);
+        foreach (var refAsm in compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            CollectGenerateServiceInterfaces(refAsm.GlobalNamespace, generateServiceInterfaces);
+        }
+
+        if (generateServiceInterfaces.Count == 0)
+        {
+            return;
+        }
+
+        // Collect all scan namespaces and extra types from all [GenerateService] interfaces
+        var scanNamespaces = new HashSet<string>(StringComparer.Ordinal);
+        var extraTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+
+        foreach (var iface in generateServiceInterfaces)
+        {
+            var attr = iface.GetAttributes()
+                .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn);
+
+            var namespacesArg = attr.NamedArguments
+                .FirstOrDefault(a => a.Key == "Namespaces").Value;
+
+            if (namespacesArg.Kind == TypedConstantKind.Array && !namespacesArg.Values.IsDefaultOrEmpty)
+            {
+                foreach (var ns in namespacesArg.Values)
+                {
+                    if (ns.Value is string s)
+                    {
+                        scanNamespaces.Add(s);
+                    }
+                }
+            }
+            else
+            {
+                var ifaceNs = ExposeToHttpEndpointHelpers.GetFullNamespace(iface.ContainingNamespace);
+                if (!string.IsNullOrEmpty(ifaceNs))
+                {
+                    scanNamespaces.Add(ifaceNs);
+                }
+            }
+
+            var extraTypesArg = attr.NamedArguments
+                .FirstOrDefault(a => a.Key == "ExtraTypes").Value;
+            if (extraTypesArg.Kind == TypedConstantKind.Array && !extraTypesArg.Values.IsDefaultOrEmpty)
+            {
+                foreach (var et in extraTypesArg.Values)
+                {
+                    if (et.Value is INamedTypeSymbol extraType)
+                    {
+                        extraTypes.Add(extraType);
+                    }
+                }
+            }
+        }
+
+        // Scan for [PublicApi] request types in the specified namespaces
+        var seenTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var endpointInfos = new List<EndpointInfo>();
+
+        CollectPublicApiTypes(compilation.Assembly.GlobalNamespace, scanNamespaces, endpointInfos, seenTypes);
+        foreach (var refAsm in compilation.SourceModule.ReferencedAssemblySymbols)
+        {
+            CollectPublicApiTypes(refAsm.GlobalNamespace, scanNamespaces, endpointInfos, seenTypes);
+        }
+
+        // Add extra types
+        foreach (var extra in extraTypes)
+        {
+            if (seenTypes.Add(extra)
+                && ExposeToHttpEndpointHelpers.HasPublicApiAttribute(extra)
+                && ExposeToHttpEndpointHelpers.IsRequestType(extra))
+            {
+                endpointInfos.Add(GetEndpointInfo(extra));
+            }
+        }
+
+        if (endpointInfos.Count == 0)
+        {
+            return;
+        }
+
+        GenerateMapAllHttpEndpointsExtension(context, compilation.AssemblyName ?? "Unknown", endpointInfos.ToImmutableArray());
+    }
+
+    private static void CollectGenerateServiceInterfaces(INamespaceSymbol ns, List<INamedTypeSymbol> results)
+    {
+        foreach (var member in ns.GetMembers())
+        {
+            switch (member)
+            {
+                case INamedTypeSymbol { TypeKind: TypeKind.Interface } type
+                    when ExposeToHttpEndpointHelpers.HasGenerateServiceAttribute(type):
+                    results.Add(type);
+                    break;
+                case INamespaceSymbol nestedNs:
+                    CollectGenerateServiceInterfaces(nestedNs, results);
+                    break;
+            }
+        }
+    }
+
+    private static void CollectPublicApiTypes(INamespaceSymbol ns, HashSet<string> scanNamespaces,
+        List<EndpointInfo> results, HashSet<INamedTypeSymbol> seen)
     {
         foreach (var member in ns.GetMembers())
         {
             switch (member)
             {
                 case INamedTypeSymbol { DeclaredAccessibility: Accessibility.Public, IsAbstract: false } type
-                    when ExposeToHttpEndpointHelpers.HasExposeToHttpEndpointAttribute(type)
+                    when ExposeToHttpEndpointHelpers.HasPublicApiAttribute(type)
                          && ExposeToHttpEndpointHelpers.IsRequestType(type):
-                    builder.Add(type);
+                {
+                    var typeNs = ExposeToHttpEndpointHelpers.GetFullNamespace(type.ContainingNamespace);
+                    if (scanNamespaces.Any(scan => typeNs.StartsWith(scan, StringComparison.Ordinal))
+                        && seen.Add(type))
+                    {
+                        results.Add(GetEndpointInfo(type));
+                    }
                     break;
+                }
                 case INamespaceSymbol nestedNs:
-                    CollectEndpointTypes(nestedNs, builder);
+                    CollectPublicApiTypes(nestedNs, scanNamespaces, results, seen);
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Gets EndpointInfo for a [PublicApi] request type.
+    /// Uses [HttpEndpoint] if present, otherwise defaults to POST.
+    /// </summary>
+    private static EndpointInfo GetEndpointInfo(INamedTypeSymbol type)
+    {
+        if (ExposeToHttpEndpointHelpers.HasHttpEndpointAttribute(type))
+        {
+            var httpAttr = type.GetAttributes()
+                .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpEndpointAttributeFqn);
+            return ExposeToHttpEndpointHelpers.ExtractEndpointInfo(type, httpAttr);
+        }
+
+        return ExposeToHttpEndpointHelpers.ExtractDefaultEndpointInfo(type);
     }
 
     private static void GenerateMapAllHttpEndpointsExtension(SourceProductionContext context, string assemblyName, ImmutableArray<EndpointInfo> endpoints)
@@ -129,7 +192,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine($"    public static partial class {sanitizedAssemblyName}Extensions");
         sb.AppendLine("    {");
         sb.AppendLine("        /// <summary>");
-        sb.AppendLine("        /// Registers all HTTP endpoints marked with [ExposeToHttpEndpoint].");
+        sb.AppendLine("        /// Registers all HTTP endpoints marked with [HttpEndpoint].");
         sb.AppendLine("        /// Generated by source generator.");
         sb.AppendLine("        /// </summary>");
         sb.AppendLine("        public static global::Microsoft.AspNetCore.Builder.WebApplication MapAllHttpEndpoints(this global::Microsoft.AspNetCore.Builder.WebApplication app)");
@@ -173,7 +236,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             var fromAttr = isGet ? "[global::Microsoft.AspNetCore.Http.AsParametersAttribute]" : "[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]";
             sb.Append($"            app.{mapMethod}(\"{ep.Route}\",");
             sb.AppendLine();
-            sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Application.IRequestSender sender) =>");
+            sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Contract.IRequestSender sender) =>");
             sb.AppendLine("                {");
             sb.AppendLine("                    var response = await sender.SendAsync(request);");
             sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
@@ -197,7 +260,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             {
                 lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] {bodyDtoName} __body__");
             }
-            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Application.IRequestSender sender");
+            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Contract.IRequestSender sender");
 
             var lambdaParamStr = string.Join(", ", lambdaParams);
 

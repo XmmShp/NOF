@@ -2,6 +2,8 @@
   href: handler-registration.md
 - name: Mapper
   href: mapper.md
+- name: Public API
+  href: public-api.md
 - name: Step Pipeline
   href: step.md
 - name: Value Object

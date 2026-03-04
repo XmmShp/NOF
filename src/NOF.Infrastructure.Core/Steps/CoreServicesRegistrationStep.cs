@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 

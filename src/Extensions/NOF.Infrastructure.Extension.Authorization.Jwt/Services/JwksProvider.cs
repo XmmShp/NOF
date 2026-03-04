@@ -154,7 +154,7 @@ public class RequestSenderJwksProvider : IJwksProvider
         try
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var requestSender = scope.ServiceProvider.GetRequiredService<NOF.Application.IRequestSender>();
+            var requestSender = scope.ServiceProvider.GetRequiredService<NOF.Contract.IRequestSender>();
 
             var result = await requestSender.SendAsync(new GetJwksRequest(), cancellationToken);
             if (!result.IsSuccess || result.Value.Jwks.Keys is not { Length: > 0 } jwkKeys)

@@ -1,6 +1,4 @@
-using NOF.Contract;
-
-namespace NOF.Application;
+namespace NOF.Contract;
 
 /// <summary>
 /// Sends request messages and returns their results.
