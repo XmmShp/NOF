@@ -28,8 +28,11 @@ dotnet ef database update --project MyApp --context AppDbContext
 
 Key points:
 - `NOFDbContext` auto-configures outbox/inbox/state machine tables
+- `NOFDbContext` sets `ChangeTracker.AutoDetectChangesEnabled = false` — all updates must be explicit via `IUnitOfWork.Update(entity)`
 - `AutoMigrate()` applies pending migrations on startup (dev only)
 - `IUnitOfWork` is registered as `EFCoreUnitOfWork` by `AddEFCore<T>()`
+- `IUnitOfWork.Update(entity)` marks the aggregate root and its entire object graph (including owned/child entities) as modified
+- `IRepository<T>` provides `FindAsync`, `FindAllAsync` (`IAsyncEnumerable<T>`), `Add`, `Remove`
 - **Value objects are automatically handled** — `ValueObjectValueConverterSelector` detects all `[ValueObject<T>]` types and provides EF Core `ValueConverter` instances at runtime. No manual converter registration needed.
 
 ---

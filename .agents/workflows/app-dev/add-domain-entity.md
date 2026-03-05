@@ -94,12 +94,12 @@ Value objects are immutable types wrapping a primitive. Implement `IValueObject<
 
 ## Adding a Child Entity
 
-For entities owned by an aggregate root, use `Entity` base class:
+For entities owned by an aggregate root, implement `IEntity` marker interface:
 
 ```csharp
 using NOF.Domain;
 
-public class OrderItem : Entity
+public class OrderItem : IEntity
 {
     public string ProductName { get; init; }
     public int Quantity { get; private set; }
@@ -158,6 +158,9 @@ public static partial class OrderFailures;
 ## Notes
 
 - Aggregate roots raise domain events via `AddEvent()` — events are dispatched when `IUnitOfWork.SaveChangesAsync()` is called.
+- `AggregateRoot.Events` is `ICollection<IEvent>` — users can add, remove, or clear events freely.
+- Child entities use `IEntity` marker interface (no base class). `Entity` base class has been removed.
+- After modifying an aggregate root, you **must** call `_uow.Update(entity)` before `SaveChangesAsync()` — EF Core auto-detect changes is disabled.
 - `[NewableValueObject]` requires the SnowflakeId generator to be configured (it is by default in `NOFAppBuilder`).
 - Value objects use explicit casts, not implicit — `(long)orderId` to get the primitive, or `id.GetUnderlyingValue()`.
 - Override `static void Validate(T value)` on the struct to add custom validation (it's a `static virtual` on the interface — default is no-op).

@@ -68,6 +68,8 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 | Run background work | `ICommand` + `ICommandSender` |
 | Broadcast an event | `INotification` + `INotificationPublisher` |
 | React to entity changes (in-transaction) | `IEvent` + `IEventHandler` |
+| Explicitly persist aggregate changes | `_uow.Update(entity)` + `_uow.SaveChangesAsync()` |
+| Get all aggregate roots | `IRepository.FindAllAsync()` (returns `IAsyncEnumerable<T>`) |
 | Reliably publish after DB commit | `IDeferredNotificationPublisher` |
 | Cache data | `CacheKey<T>` + `ICacheService` |
 | Map domain entities to DTOs | `services.Configure<MapperOptions>(...)` + `IMapper` |
@@ -84,6 +86,8 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 - XML doc comments on public APIs
 - `Optional<T>` for PATCH fields; explicit casts for value objects: `(long)orderId`
 - Parameterless constructors `private`/`internal` for EF Core
+- Always call `_uow.Update(entity)` after modifying an aggregate root — auto-detect changes is disabled
+- Child entities implement `IEntity` marker interface (no `Entity` base class)
 
 ## References
 

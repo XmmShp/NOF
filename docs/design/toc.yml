@@ -4,6 +4,8 @@
   href: mapper.md
 - name: Public API
   href: public-api.md
+- name: Repository & Unit of Work
+  href: repository-uow.md
 - name: Step Pipeline
   href: step.md
 - name: Value Object

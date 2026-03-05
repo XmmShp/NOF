@@ -26,6 +26,7 @@ public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
 
         var fileName = ConfigFileName.Of(request.FileName);
         node.RemoveConfigFile(fileName);
+        _uow.Update(node);
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

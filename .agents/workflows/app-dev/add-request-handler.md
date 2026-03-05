@@ -100,6 +100,35 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
         return Result.Success();
     }
 }
+
+// Mutation (update existing entity) — explicit Update required:
+public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
+{
+    private readonly IOrderRepository _orderRepository;
+    private readonly IUnitOfWork _uow;
+
+    public UpdateOrderHandler(IOrderRepository orderRepository, IUnitOfWork uow)
+    {
+        _orderRepository = orderRepository;
+        _uow = uow;
+    }
+
+    public async Task<Result> HandleAsync(
+        UpdateOrderRequest request, CancellationToken cancellationToken)
+    {
+        var order = await _orderRepository.FindAsync(
+            OrderId.Of(request.Id), cancellationToken);
+        if (order is null)
+        {
+            return Result.Fail(404, "Order not found");
+        }
+
+        order.UpdateName(request.CustomerName);
+        _uow.Update(order);  // Explicit — marks aggregate + child entities for persistence
+        await _uow.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
 ```
 
 ## Fire-and-Forget Command

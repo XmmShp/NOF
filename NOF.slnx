@@ -9,6 +9,7 @@
     <Project Path="sample/NOF.Sample/NOF.Sample.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
   </Folder>
   <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="nuget.config" />

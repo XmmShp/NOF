@@ -26,6 +26,7 @@ public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
 
         var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);
         node.SetActiveFileName(fileName);
+        _uow.Update(node);
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

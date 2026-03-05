@@ -34,6 +34,11 @@ public class Order : AggregateRoot
         AddEvent(new OrderUpdatedEvent(Id));
     }
 }
+
+// In handler — explicit Update required:
+// order.UpdateName(newName);
+// _uow.Update(order);
+// await _uow.SaveChangesAsync(ct);
 ```
 
 ## 3. Implement Domain Event Handlers

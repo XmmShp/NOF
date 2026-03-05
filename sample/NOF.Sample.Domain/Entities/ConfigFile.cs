@@ -2,7 +2,7 @@ using NOF.Domain;
 
 namespace NOF.Sample;
 
-public class ConfigFile : Entity
+public class ConfigFile : IEntity
 {
     public ConfigFileName Name { get; init; }
     public ConfigContent Content { get; private set; }

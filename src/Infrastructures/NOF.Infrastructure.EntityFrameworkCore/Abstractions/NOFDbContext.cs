@@ -9,6 +9,7 @@ public abstract class NOFDbContext : DbContext
     protected NOFDbContext(DbContextOptions options) : base(options)
     {
         _options = options;
+        ChangeTracker.AutoDetectChangesEnabled = false;
     }
 
     internal DbSet<EFCoreStateMachineContext> StateMachineContexts { get; set; }

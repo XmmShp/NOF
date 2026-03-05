@@ -80,8 +80,10 @@ tests/                         — Unit and integration tests
 - `[ValueObject]` — generate value object boilerplate
 
 ### Domain
-- `IRepository<T, TKey>` — repository abstraction with typed keys
-- `IUnitOfWork` — transactional unit of work
+- `IEntity` — marker interface for child entities (no base class)
+- `AggregateRoot` — base class for aggregate roots; `Events` is `ICollection<IEvent>`
+- `IRepository<T, TKey>` — repository abstraction (Find, FindAll, Add, Remove)
+- `IUnitOfWork` — explicit `Update(entity)` + transactional `SaveChangesAsync()`
 - `IDeferredNotificationPublisher` / `IDeferredCommandSender` — outbox-based deferred dispatch
 
 ## Coding Conventions
@@ -169,10 +171,21 @@ public interface IOrderRepository : IRepository<Order, OrderId> { }
 
 // Host project — EF Core implementation
 [AutoInject(Lifetime.Scoped)]
-public class OrderRepository : EFCoreRepository<Order, OrderId>, IOrderRepository
+public class OrderRepository : EFCoreRepository<Order>, IOrderRepository
 {
-    public OrderRepository(DbContext dbContext) : base(dbContext) { }
+    public OrderRepository(NOFDbContext dbContext) : base(dbContext) { }
 }
+// IRepository<T> provides: FindAsync, FindAllAsync (IAsyncEnumerable<T>), Add, Remove
+```
+
+### Explicit Update Pattern
+
+```csharp
+var order = await _orderRepo.FindAsync(orderId, ct);
+order.UpdateName(newName);
+_uow.Update(order);  // Marks aggregate root + child entities for persistence
+await _uow.SaveChangesAsync(ct);
+// Note: AutoDetectChangesEnabled is false — Update() is required for mutations
 ```
 
 ### Typed Cache Keys
@@ -222,6 +235,7 @@ public class OrderStateMachine : IStateMachineDefinition<OrderState>
 ```csharp
 _publisher.Publish(new OrderCreatedNotification(id));  // Deferred
 await _uow.SaveChangesAsync(ct);  // Commits entity + outbox atomically
+// For mutations, call _uow.Update(entity) before SaveChangesAsync()
 ```
 
 ### Endpoint Metadata

@@ -27,6 +27,11 @@ internal class EFCoreUnitOfWork : IUnitOfWork
         _collector = collector;
     }
 
+    public void Update<TAggregateRoot>(TAggregateRoot entity) where TAggregateRoot : class, IAggregateRoot
+    {
+        _dbContext.Update(entity).DetectChanges();
+    }
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
         await using var tx = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
@@ -34,7 +39,7 @@ internal class EFCoreUnitOfWork : IUnitOfWork
         {
             var domainEvents = _dbContext.ChangeTracker.Entries<IAggregateRoot>()
                 .Select(e => e.Entity)
-                .SelectMany(e => { var events = e.Events.ToList(); e.ClearEvents(); return events; }).ToList();
+                .SelectMany(e => { var events = e.Events.ToList(); e.Events.Clear(); return events; }).ToList();
 
             foreach (var domainEvent in domainEvents)
             {

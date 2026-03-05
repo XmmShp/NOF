@@ -28,6 +28,7 @@ public class AddOrUpdateConfigFile : IRequestHandler<AddOrUpdateConfigFileReques
         var content = ConfigContent.Of(request.Content);
 
         node.AddOrUpdateConfigFile(fileName, content);
+        _uow.Update(node);
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

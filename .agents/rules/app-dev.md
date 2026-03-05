@@ -33,8 +33,9 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 | `INotificationHandler<T>` | Handles a notification | Application |
 | `IEventHandler<T>` | Handles a domain event | Application |
 | `AggregateRoot` | DDD aggregate root base class | Domain |
-| `IRepository<T, TKey>` | Repository abstraction | Domain |
-| `IUnitOfWork` | Transactional unit of work | Application |
+| `IEntity` | Marker interface for child entities | Domain |
+| `IRepository<T, TKey>` | Repository abstraction (Find, FindAll, Add, Remove) | Domain |
+| `IUnitOfWork` | Explicit update + transactional save | Application |
 | `IDeferredNotificationPublisher` | Outbox-based deferred notifications | Application |
 | `IDeferredCommandSender` | Outbox-based deferred commands | Application |
 | `CacheKey<T>` | Typed cache key | Application |
@@ -61,6 +62,7 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 - Constants and static fields: `PascalCase`
 - All public APIs should have XML doc comments
 - Use `Optional<T>` for PATCH request fields (distinguishes "not sent" from "sent as null")
+- Always call `_uow.Update(entity)` after modifying an aggregate root — changes are NOT auto-detected
 
 ## Common Patterns
 

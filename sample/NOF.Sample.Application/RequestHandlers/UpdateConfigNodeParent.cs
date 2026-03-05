@@ -45,6 +45,7 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
         }
 
         node.UpdateParent(newParentId);
+        _uow.Update(node);
         await _uow.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

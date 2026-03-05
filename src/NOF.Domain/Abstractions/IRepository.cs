@@ -20,9 +20,16 @@ public interface IRepository<TAggregateRoot> : IRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The aggregate root, or <c>null</c> if not found.</returns>
     ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns all aggregate roots from the repository as an async stream.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>An async enumerable of all aggregate roots.</returns>
+    IAsyncEnumerable<TAggregateRoot> FindAllAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Adds an aggregate root to the repository.</summary>
     /// <param name="entity">The aggregate root to add.</param>
     void Add(TAggregateRoot entity);
+
     /// <summary>Removes an aggregate root from the repository.</summary>
     /// <param name="entity">The aggregate root to remove.</param>
     void Remove(TAggregateRoot entity);

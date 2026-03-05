@@ -21,8 +21,7 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
     private readonly long _maxSequence;
     private readonly int _machineIdShift;
     private readonly int _timestampShift;
-    private readonly long _maxMachineId;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     private long _lastTimestamp = -1L;
     private long _sequence = 0L;
@@ -37,29 +36,24 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
         var machineIdBits = options.MachineIdBits;
         var sequenceBits = options.SequenceBits;
 
-        if (machineIdBits < 1 || machineIdBits > 20)
+        if (machineIdBits is < 1 or > 20)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "MachineIdBits must be between 1 and 20.");
         }
 
-        if (sequenceBits < 1 || sequenceBits > 20)
+        if (sequenceBits is < 1 or > 20)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "SequenceBits must be between 1 and 20.");
         }
 
-        if (machineIdBits + sequenceBits >= 63)
-        {
-            throw new ArgumentOutOfRangeException(nameof(options), "MachineIdBits + SequenceBits must be less than 63.");
-        }
-
-        _maxMachineId = (1L << machineIdBits) - 1;
+        var maxMachineId = (1L << machineIdBits) - 1;
         _maxSequence = (1L << sequenceBits) - 1;
         _machineIdShift = sequenceBits;
         _timestampShift = machineIdBits + sequenceBits;
 
-        if (options.MachineId < 0 || options.MachineId > _maxMachineId)
+        if (options.MachineId < 0 || options.MachineId > maxMachineId)
         {
-            throw new ArgumentOutOfRangeException(nameof(options), $"MachineId must be in range [0, {_maxMachineId}].");
+            throw new ArgumentOutOfRangeException(nameof(options), $"MachineId must be in range [0, {maxMachineId}].");
         }
 
         _machineId = options.MachineId;

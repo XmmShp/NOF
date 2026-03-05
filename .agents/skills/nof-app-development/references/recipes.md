@@ -92,6 +92,19 @@ public class Order : AggregateRoot
 
 public record OrderCreatedEvent(OrderId Id, string CustomerName) : IEvent;
 public record OrderUpdatedEvent(OrderId Id) : IEvent;
+
+// Child entity (owned by aggregate root) — uses IEntity marker interface
+public class OrderItem : IEntity
+{
+    public string ProductName { get; init; }
+    public int Quantity { get; private set; }
+    internal OrderItem() { }
+    public OrderItem(string productName, int quantity)
+    {
+        ProductName = productName;
+        Quantity = quantity;
+    }
+}
 ```
 
 ## Repository
@@ -105,13 +118,16 @@ public interface IOrderRepository : IRepository<Order, OrderId>
 
 // Host project — EF Core implementation
 [AutoInject(Lifetime.Scoped)]
-public class OrderRepository : EFCoreRepository<Order, OrderId>, IOrderRepository
+public class OrderRepository : EFCoreRepository<Order>, IOrderRepository
 {
-    public OrderRepository(DbContext dbContext) : base(dbContext) { }
+    public OrderRepository(NOFDbContext dbContext) : base(dbContext) { }
 
     public async Task<Order?> FindByCustomerAsync(string name, CancellationToken ct)
-        => await DbSet.FirstOrDefaultAsync(o => o.CustomerName == name, ct);
+        => await DbContext.Set<Order>().FirstOrDefaultAsync(o => o.CustomerName == name, ct);
 }
+
+// IRepository<T> provides: FindAsync, FindAllAsync, Add, Remove
+// FindAllAsync returns IAsyncEnumerable<T> for streaming large result sets
 ```
 
 ## Request Handler (HTTP Endpoint)
@@ -166,6 +182,27 @@ request.Notes.IfSome(notes => order.UpdateNotes(notes));
 public static partial class OrderFailures;
 
 // Usage: return Result.Fail(OrderFailures.OrderNotFound);
+```
+
+## Mutation Handler (Explicit Update)
+
+```csharp
+public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
+{
+    private readonly IOrderRepository _repo;
+    private readonly IUnitOfWork _uow;
+
+    public async Task<Result> HandleAsync(UpdateOrderRequest request, CancellationToken ct)
+    {
+        var order = await _repo.FindAsync(OrderId.Of(request.Id), ct);
+        if (order is null) return Result.Fail(404, "Order not found");
+
+        order.UpdateName(request.CustomerName);
+        _uow.Update(order);  // Explicit — marks aggregate + child entities
+        await _uow.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}
 ```
 
 ## Transactional Outbox
