@@ -9,8 +9,7 @@ public class ConfigNode : AggregateRoot
     public ConfigNodeName Name { get; private set; }
     public ConfigFileName? ActiveFileName { get; private set; }
 
-    private readonly List<ConfigFile> _configFiles = [];
-    public IReadOnlyList<ConfigFile> ConfigFiles => _configFiles.AsReadOnly();
+    public IEnumerable<ConfigFile> ConfigFiles { get; } = new List<ConfigFile>();
 
     private ConfigNode() { }
 
@@ -35,14 +34,14 @@ public class ConfigNode : AggregateRoot
 
     public void AddOrUpdateConfigFile(ConfigFileName name, ConfigContent content)
     {
-        var existing = _configFiles.FirstOrDefault(f => f.Name == name);
+        var existing = ConfigFiles.FirstOrDefault(f => f.Name == name);
         if (existing is not null)
         {
             existing.UpdateContent(content);
         }
         else
         {
-            _configFiles.Add(new ConfigFile(name, content));
+            ConfigFiles.Mut.Add(new ConfigFile(name, content));
         }
 
         AddEvent(new ConfigNodeUpdatedEvent(Id, Name, ParentId));
@@ -50,10 +49,10 @@ public class ConfigNode : AggregateRoot
 
     public void RemoveConfigFile(ConfigFileName name)
     {
-        var existing = _configFiles.FirstOrDefault(f => f.Name == name);
+        var existing = ConfigFiles.FirstOrDefault(f => f.Name == name);
         if (existing is not null)
         {
-            _configFiles.Remove(existing);
+            ConfigFiles.Mut.Remove(existing);
             if (ActiveFileName == name)
             {
                 ActiveFileName = null;

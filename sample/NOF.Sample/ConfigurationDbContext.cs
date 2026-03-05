@@ -25,7 +25,7 @@ public class ConfigurationDbContext : NOFDbContext
             entity.Property(e => e.ActiveFileName).HasMaxLength(100);
             entity.HasIndex(e => e.Name).IsUnique();
 
-            entity.OwnsMany<ConfigFile>("_configFiles", file =>
+            entity.OwnsMany(e => e.ConfigFiles, file =>
             {
                 file.ToTable("ConfigFile");
                 file.WithOwner().HasForeignKey("NodeId");
@@ -35,8 +35,6 @@ public class ConfigurationDbContext : NOFDbContext
                 file.Property(f => f.Name).HasMaxLength(100);
                 // Content can be large
             });
-
-            entity.Ignore(e => e.ConfigFiles);
         });
 
         // 配置读模型：ConfigNodeChildren
