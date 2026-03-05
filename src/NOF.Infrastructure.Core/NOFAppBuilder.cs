@@ -132,7 +132,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// <summary>
     /// Adds an application configuration delegate that will be executed after the host is built but before it starts.
     /// </summary>
-    public INOFAppBuilder AddInitializationStep(Func<IApplicationInitializationContext, IHost, Task> func)
+    public INOFAppBuilder AddInitializationStep(Func<IHostApplicationBuilder, IHost, Task> func)
         => AddInitializationStep(new ApplicationInitializationStep(func));
 
     /// <inheritdoc cref="IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep)"/>

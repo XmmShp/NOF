@@ -3,22 +3,12 @@ using Microsoft.Extensions.Hosting;
 namespace NOF.Infrastructure.Abstraction;
 
 /// <summary>
-/// Read-only context available during application initialization steps.
-/// Provides access to services, configuration, and metadata but does not allow
-/// adding or removing any steps.
-/// </summary>
-public interface IApplicationInitializationContext : IHostApplicationBuilder
-{
-
-}
-
-/// <summary>
 /// Context available during service registration steps.
-/// Extends <see cref="IApplicationInitializationContext"/> with the ability to schedule
+/// Extends <see cref="IHostApplicationBuilder"/> with the ability to schedule
 /// initialization steps (which run later), but does NOT allow adding more registration steps
 /// (the registration graph is already being executed).
 /// </summary>
-public interface IServiceRegistrationContext : IApplicationInitializationContext
+public interface IServiceRegistrationContext : IHostApplicationBuilder
 {
     /// <summary>
     /// Registers an application configuration delegate that runs after the web application is built.
@@ -51,7 +41,7 @@ public interface IServiceRegistrationContext : IApplicationInitializationContext
 /// During step execution, narrower context interfaces are used to prevent invalid operations:
 /// <list type="bullet">
 ///   <item><see cref="IServiceRegistrationContext"/> — used by <see cref="IServiceRegistrationStep"/>; cannot add registration steps.</item>
-///   <item><see cref="IApplicationInitializationContext"/> — used by <see cref="IApplicationInitializationStep"/>; cannot add any steps.</item>
+///   <item><see cref="IHostApplicationBuilder"/> — used by <see cref="IApplicationInitializationStep"/>; cannot add any steps.</item>
 /// </list>
 /// </para>
 /// </summary>

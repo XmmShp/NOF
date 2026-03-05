@@ -11,7 +11,7 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 internal sealed class MapperInitializationStep : IApplicationInitializationStep<MapperInitializationStep>
 {
-    public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
+    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
     {
         var mapper = app.Services.GetRequiredService<IMapper>();
         Mapper.SetCurrent(mapper);

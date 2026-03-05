@@ -15,14 +15,14 @@ public interface IApplicationInitializationStep : IStep
     /// and the fully built host application instance.
     /// This method is typically invoked just before the host starts, enabling final runtime customizations.
     /// <para>
-    /// The <paramref name="context"/> is an <see cref="IApplicationInitializationContext"/> which provides
+    /// The <paramref name="context"/> is an <see cref="IHostApplicationBuilder"/> which provides
     /// read-only access to services, configuration, and metadata but does NOT allow adding any steps.
     /// </para>
     /// </summary>
     /// <param name="context">The initialization context used for contextual information and services.</param>
     /// <param name="app">The constructed host application instance.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    Task ExecuteAsync(IApplicationInitializationContext context, IHost app);
+    Task ExecuteAsync(IHostApplicationBuilder context, IHost app);
 }
 
 /// <summary>

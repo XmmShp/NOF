@@ -11,7 +11,7 @@ namespace NOF.Infrastructure.Core;
 /// </summary>
 internal sealed class IdGeneratorInitializationStep : IApplicationInitializationStep<IdGeneratorInitializationStep>
 {
-    public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
+    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
     {
         var generator = app.Services.GetRequiredService<IIdGenerator>();
         IdGenerator.SetCurrent(generator);

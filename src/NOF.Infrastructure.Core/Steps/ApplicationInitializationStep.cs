@@ -4,14 +4,14 @@ namespace NOF.Infrastructure.Abstraction;
 
 public class ApplicationInitializationStep : IApplicationInitializationStep<ApplicationInitializationStep>
 {
-    private readonly Func<IApplicationInitializationContext, IHost, Task> _configurator;
+    private readonly Func<IHostApplicationBuilder, IHost, Task> _configurator;
 
-    public ApplicationInitializationStep(Func<IApplicationInitializationContext, IHost, Task> configurator)
+    public ApplicationInitializationStep(Func<IHostApplicationBuilder, IHost, Task> configurator)
     {
         _configurator = configurator;
     }
 
-    public Task ExecuteAsync(IApplicationInitializationContext context, IHost app)
+    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
     {
         return _configurator(context, app);
     }
