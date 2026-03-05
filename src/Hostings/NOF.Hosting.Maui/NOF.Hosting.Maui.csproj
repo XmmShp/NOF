@@ -1,11 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+    <!-- MAUI workload is only available on Windows/macOS; produce an empty stub on Linux so the solution still builds -->
+    <_HasMauiWorkload>false</_HasMauiWorkload>
+    <_HasMauiWorkload Condition="$([MSBuild]::IsOSPlatform('windows')) OR $([MSBuild]::IsOSPlatform('osx'))">true</_HasMauiWorkload>
+
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="'$(_HasMauiWorkload)' != 'true'">net10.0</TargetFrameworks>
+
+    <UseMaui Condition="'$(_HasMauiWorkload)' == 'true'">true</UseMaui>
+    <SingleProject Condition="'$(_HasMauiWorkload)' == 'true'">true</SingleProject>
+
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UseMaui>true</UseMaui>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
@@ -15,12 +23,18 @@
     <IsAotCompatible>true</IsAotCompatible>
     <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
 
-    <IsPackable>true</IsPackable>
+    <IsPackable Condition="'$(_HasMauiWorkload)' == 'true'">true</IsPackable>
+    <IsPackable Condition="'$(_HasMauiWorkload)' != 'true'">false</IsPackable>
     <PackageId>NOF.Hosting.Maui</PackageId>
     <Description>.NET MAUI hosting for the NOF Framework — integrates the NOF step pipeline with the MAUI application lifecycle.</Description>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- On Linux (no MAUI workload), exclude all source files to produce an empty assembly -->
+  <ItemGroup Condition="'$(_HasMauiWorkload)' != 'true'">
+    <Compile Remove="**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(_HasMauiWorkload)' == 'true'">
     <PackageReference Include="Microsoft.Maui.Controls" VersionOverride="$(MauiVersion)" />
   </ItemGroup>
 

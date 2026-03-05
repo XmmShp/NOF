@@ -35,9 +35,12 @@ jobs:
             - '.github/workflows/ci.yml'
 
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: changes
     if: needs.changes.outputs.src == 'true'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
     - name: Checkout code
@@ -49,6 +52,7 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Install MAUI workload
+      if: runner.os == 'Windows'
       run: dotnet workload install maui
 
     - name: Restore dependencies

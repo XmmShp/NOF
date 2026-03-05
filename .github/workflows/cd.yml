@@ -55,9 +55,41 @@ jobs:
             - 'docfx.json'
 
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: changes
     if: needs.changes.outputs.src == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install MAUI workload
+      if: runner.os == 'Windows'
+      run: dotnet workload install maui
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Verify code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+
+    - name: Build solution
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+
+    - name: Run tests
+      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
+
+  pack-and-publish:
+    runs-on: windows-latest
+    needs: build-and-test
 
     steps:
     - name: Checkout code
@@ -76,17 +108,12 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Verify code formatting
-      run: dotnet format --verify-no-changes --verbosity diagnostic
-
     - name: Build solution
       run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
 
-    - name: Run tests
-      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
-
     - name: Determine version
       id: version
+      shell: bash
       run: |
         if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/v* ]]; then
           # Tag push - use tag version
@@ -112,6 +139,7 @@ jobs:
         echo "Is Release: $IS_RELEASE"
 
     - name: Pack NuGet packages
+      shell: bash
       run: |
         VERSION=${{ steps.version.outputs.VERSION }}
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
@@ -130,6 +158,7 @@ jobs:
         dotnet pack src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/NOF.Infrastructure.Extension.Authorization.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
 
     - name: Publish to NuGet.org
+      shell: bash
       run: |
         dotnet nuget push "./artifacts/*.nupkg" \
           --api-key ${{ secrets.NUGET_API_KEY }} \
@@ -160,9 +189,6 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Install MAUI workload
-      run: dotnet workload install maui
 
     # Build first so DocFX can read pre-built DLLs instead of .csproj files.
     # Workaround for C# 14 support: https://github.com/dotnet/docfx/issues/10808
