@@ -69,7 +69,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
             .Select(static (data, _) =>
             {
                 var (compilation, definitions) = data;
-                var assemblyName = compilation.AssemblyName ?? "Unknown";
+                var assemblyName = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
                 return (AssemblyName: assemblyName, Definitions: definitions);
             });
 

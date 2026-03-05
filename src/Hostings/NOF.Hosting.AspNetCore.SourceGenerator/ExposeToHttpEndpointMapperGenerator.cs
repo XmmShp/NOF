@@ -104,7 +104,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             return;
         }
 
-        GenerateMapAllHttpEndpointsExtension(context, compilation.AssemblyName ?? "Unknown", endpointInfos.ToImmutableArray());
+        GenerateMapAllHttpEndpointsExtension(context, AssemblyPrefixHelper.GetAssemblyPrefix(compilation), endpointInfos.ToImmutableArray());
     }
 
     private static void CollectGenerateServiceInterfaces(INamespaceSymbol ns, List<INamedTypeSymbol> results)

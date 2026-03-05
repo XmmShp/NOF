@@ -43,18 +43,22 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         var referencedTypes = context.CompilationProvider
             .Select(static (compilation, _) =>
             {
-                var currentAssemblyName = compilation.AssemblyName ?? string.Empty;
+                var allPrefixes = AssemblyPrefixHelper.GetAllPrefixes(compilation);
                 var builder = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
                 foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
                 {
                     var assemblyName = assembly.Name;
 
-                    // Only scan assemblies whose name starts with the current assembly name prefix
-                    if (!string.IsNullOrEmpty(currentAssemblyName) &&
-                        assemblyName.StartsWith(currentAssemblyName) &&
-                        (assemblyName.Length == currentAssemblyName.Length || assemblyName[currentAssemblyName.Length] == '.'))
+                    // Only scan assemblies whose name starts with one of the configured prefixes
+                    foreach (var prefix in allPrefixes)
                     {
-                        CollectHandlerTypes(assembly.GlobalNamespace, builder);
+                        if (!string.IsNullOrEmpty(prefix) &&
+                            assemblyName.StartsWith(prefix) &&
+                            (assemblyName.Length == prefix.Length || assemblyName[prefix.Length] == '.'))
+                        {
+                            CollectHandlerTypes(assembly.GlobalNamespace, builder);
+                            break;
+                        }
                     }
                 }
                 return builder.ToImmutable();
@@ -75,7 +79,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 {
                     set.Add(t);
                 }
-                var assemblyName = compilation.AssemblyName ?? "Unknown";
+                var assemblyName = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
                 return (AssemblyName: assemblyName, Types: set.ToImmutableArray());
             });
 
