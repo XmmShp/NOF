@@ -59,6 +59,7 @@ jobs:
       run: dotnet restore
 
     - name: Verify code formatting
+      if: runner.os == 'Linux'
       run: dotnet format --verify-no-changes --verbosity diagnostic
 
     - name: Build solution

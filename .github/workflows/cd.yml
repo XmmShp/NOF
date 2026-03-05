@@ -79,6 +79,7 @@ jobs:
       run: dotnet restore
 
     - name: Verify code formatting
+      if: runner.os == 'Linux'
       run: dotnet format --verify-no-changes --verbosity diagnostic
 
     - name: Build solution
@@ -113,35 +114,40 @@ jobs:
 
     - name: Determine version
       id: version
-      shell: bash
+      shell: pwsh
       run: |
-        if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+        if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -match "^refs/tags/v.*") {
           # Tag push - use tag version
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"
-          IS_RELEASE="true"
-        elif [ -n "${{ github.event.inputs.version }}" ]; then
+          $VERSION = "${{ github.ref_name }}" -replace "^v", ""
+          $IS_RELEASE = "true"
+        } elseif ("${{ github.event.inputs.version }}" -ne "") {
           # Manual trigger with version input
-          VERSION="${{ github.event.inputs.version }}"
-          IS_RELEASE="true"
-        else
+          $VERSION = "${{ github.event.inputs.version }}"
+          $IS_RELEASE = "true"
+        } else {
           # Main branch push - use version from Directory.Build.props with nightly suffix
-          BASE_VERSION=$(grep -oP '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
-          if [ -z "$BASE_VERSION" ]; then BASE_VERSION="7.0.0"; fi
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          MINUTES_SINCE=$(( ($(date -u +%s) - $(date -u -d '2024-01-01' +%s)) / 60 ))
-          VERSION="${BASE_VERSION}-nightly.${MINUTES_SINCE}.${SHORT_SHA}"
-          IS_RELEASE="false"
-        fi
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "IS_RELEASE=$IS_RELEASE" >> $GITHUB_OUTPUT
+          $CONTENT = Get-Content "Directory.Build.props" -Raw
+          if ($CONTENT -match '<VersionPrefix>([^<]+)</VersionPrefix>') {
+            $BASE_VERSION = $matches[1]
+          } else {
+            $BASE_VERSION = "7.0.0"
+          }
+          $SHORT_SHA = git rev-parse --short HEAD
+          $BASE_TIME = [DateTimeOffset]::Parse("2024-01-01T00:00:00Z").ToUnixTimeSeconds()
+          $CURRENT_TIME = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+          $MINUTES_SINCE = [math]::Floor(($CURRENT_TIME - $BASE_TIME) / 60)
+          $VERSION = "${BASE_VERSION}-nightly.${MINUTES_SINCE}.${SHORT_SHA}"
+          $IS_RELEASE = "false"
+        }
+        echo "VERSION=$VERSION" >> $env:GITHUB_OUTPUT
+        echo "IS_RELEASE=$IS_RELEASE" >> $env:GITHUB_OUTPUT
         echo "Version: $VERSION"
         echo "Is Release: $IS_RELEASE"
 
     - name: Pack NuGet packages
-      shell: bash
+      shell: pwsh
       run: |
-        VERSION=${{ steps.version.outputs.VERSION }}
+        $VERSION = "${{ steps.version.outputs.VERSION }}"
         dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
@@ -158,12 +164,13 @@ jobs:
         dotnet pack src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/NOF.Infrastructure.Extension.Authorization.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
 
     - name: Publish to NuGet.org
-      shell: bash
+      shell: pwsh
       run: |
-        dotnet nuget push "./artifacts/*.nupkg" \
-          --api-key ${{ secrets.NUGET_API_KEY }} \
-          --source https://api.nuget.org/v3/index.json \
-          --skip-duplicate
+        $packages = Get-ChildItem ./artifacts/*.nupkg
+        foreach ($package in $packages) {
+          Write-Host "Publishing: $($package.Name)"
+          dotnet nuget push $package.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        }
 
     - name: Create release draft
       if: steps.version.outputs.IS_RELEASE == 'true'
