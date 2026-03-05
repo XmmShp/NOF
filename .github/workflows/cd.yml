@@ -70,6 +70,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
+    - name: Install MAUI workload
+      run: dotnet workload install maui
+
     - name: Restore dependencies
       run: dotnet restore
 
@@ -115,6 +118,7 @@ jobs:
         dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        dotnet pack src/Hostings/NOF.Hosting.Maui/NOF.Hosting.Maui.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Infrastructure.Abstraction/NOF.Infrastructure.Abstraction.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
@@ -156,6 +160,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install MAUI workload
+      run: dotnet workload install maui
 
     # Build first so DocFX can read pre-built DLLs instead of .csproj files.
     # Workaround for C# 14 support: https://github.com/dotnet/docfx/issues/10808

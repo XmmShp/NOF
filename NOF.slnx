@@ -27,6 +27,7 @@
   <Folder Name="/src/Hostings/">
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
+    <Project Path="src/Hostings/NOF.Hosting.Maui/NOF.Hosting.Maui.csproj" Id="b7c3d4e5-f6a7-4890-abcd-1234567890ef" />
     <Project Path="src/Hostings/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
   </Folder>
   <Folder Name="/src/Extensions/">
