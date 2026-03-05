@@ -1,6 +1,6 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Data.Sqlite;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;
 
@@ -36,7 +36,7 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
 
         // Apply tenant isolation database naming strategy
         var connBuilder = new SqliteConnectionStringBuilder(connectionString);
-        
+
         // For SQLite, we typically modify the database file path
         if (string.IsNullOrWhiteSpace(connBuilder.DataSource))
         {
@@ -48,15 +48,15 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
             var directory = Path.GetDirectoryName(connBuilder.DataSource);
             var filename = Path.GetFileNameWithoutExtension(connBuilder.DataSource);
             var extension = Path.GetExtension(connBuilder.DataSource);
-            
+
             var tenantFilename = string.IsNullOrEmpty(filename)
                 ? tenantId
                 : $"{filename}-{tenantId}";
-            
+
             var tenantPath = string.IsNullOrEmpty(directory)
                 ? $"{tenantFilename}{extension}"
                 : Path.Combine(directory, $"{tenantFilename}{extension}");
-                
+
             connBuilder.DataSource = tenantPath;
         }
 

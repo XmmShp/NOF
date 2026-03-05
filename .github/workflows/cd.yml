@@ -3,10 +3,17 @@ name: CD
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: false
+        type: string
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -75,17 +82,31 @@ jobs:
     - name: Run tests
       run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
 
-    - name: Determine nightly version
+    - name: Determine version
       id: version
       run: |
-        LATEST_TAG=$(git tag --sort=-v:refname | grep '^v' | head -n 1)
-        BASE_VERSION="${LATEST_TAG#v}"
-        if [ -z "$BASE_VERSION" ]; then BASE_VERSION="0.0.0"; fi
-        SHORT_SHA=$(git rev-parse --short HEAD)
-        MINUTES_SINCE=$(( ($(date -u +%s) - $(date -u -d '2024-01-01' +%s)) / 60 ))
-        VERSION="${BASE_VERSION}-nightly.${MINUTES_SINCE}.${SHORT_SHA}"
+        if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Tag push - use tag version
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          IS_RELEASE="true"
+        elif [ -n "${{ github.event.inputs.version }}" ]; then
+          # Manual trigger with version input
+          VERSION="${{ github.event.inputs.version }}"
+          IS_RELEASE="true"
+        else
+          # Main branch push - use version from Directory.Build.props with nightly suffix
+          BASE_VERSION=$(grep -oP '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
+          if [ -z "$BASE_VERSION" ]; then BASE_VERSION="7.0.0"; fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          MINUTES_SINCE=$(( ($(date -u +%s) - $(date -u -d '2024-01-01' +%s)) / 60 ))
+          VERSION="${BASE_VERSION}-nightly.${MINUTES_SINCE}.${SHORT_SHA}"
+          IS_RELEASE="false"
+        fi
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "Nightly version: $VERSION"
+        echo "IS_RELEASE=$IS_RELEASE" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+        echo "Is Release: $IS_RELEASE"
 
     - name: Pack NuGet packages
       run: |
@@ -104,12 +125,23 @@ jobs:
         dotnet pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
         dotnet pack src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/NOF.Infrastructure.Extension.Authorization.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
 
-    - name: Publish nightly to NuGet.org
+    - name: Publish to NuGet.org
       run: |
         dotnet nuget push "./artifacts/*.nupkg" \
           --api-key ${{ secrets.NUGET_API_KEY }} \
           --source https://api.nuget.org/v3/index.json \
           --skip-duplicate
+
+    - name: Create release draft
+      if: steps.version.outputs.IS_RELEASE == 'true'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        release_name: Release ${{ steps.version.outputs.VERSION }}
+        draft: true
+        prerelease: false
 
   deploy-docs:
     runs-on: ubuntu-latest
