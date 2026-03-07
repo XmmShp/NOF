@@ -31,7 +31,7 @@ namespace NOF.Contract;
 /// </code>
 /// </example>
 /// </summary>
-public abstract record PatchRequest
+public abstract record PatchRequest : IRequest
 {
     /// <summary>
     /// The backing store for all JSON properties received in the payload.

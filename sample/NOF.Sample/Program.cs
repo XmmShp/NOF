@@ -13,15 +13,8 @@ using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Application;
 using NOF.Sample.WebUI;
-using System.Text.Json;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
-
-JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(
-    options =>
-        options.UseDefaultJsonTypeInfoResolver()
-            .ConfigureValueObjectJsonSerializerOptions()
-        );
 
 builder.Services.AddNOFSampleAutoInjectServices();
 builder.Services.AddAllHandlers()

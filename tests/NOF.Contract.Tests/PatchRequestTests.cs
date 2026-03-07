@@ -1,5 +1,7 @@
 using FluentAssertions;
+using NOF.Contract;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Xunit;
 
 namespace NOF.Contract.Tests;
@@ -249,8 +251,9 @@ public class PatchRequestTests
         var strictOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = false,
-            PropertyNamingPolicy = null
-        }.UseDefaultJsonTypeInfoResolver();
+            PropertyNamingPolicy = null,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
 
         var patch = new TestPatchRequest
         {

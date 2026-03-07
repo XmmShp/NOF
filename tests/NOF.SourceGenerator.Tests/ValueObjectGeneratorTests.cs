@@ -28,7 +28,7 @@ public class ValueObjectGeneratorTests
     private static string GetVoCode(GeneratorDriverRunResult result)
         => result.GeneratedTrees
             .Select(t => t.GetText().ToString())
-            .Single(c => !c.Contains("ConfigureValueObjectJsonSerializerOptions"));
+            .Single();
 
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
@@ -122,7 +122,7 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        result.GeneratedTrees.Should().HaveCount(2);
+        result.GeneratedTrees.Should().ContainSingle();
         var code = GetVoCode(result);
 
         code.Should().Contain("public static Name Of(string value)");

@@ -143,7 +143,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine("{");
 
         // Generate interface methods
-        sb.AppendLine($"    public partial interface {interfaceName}");
+        sb.AppendLine($"    partial interface {interfaceName}");
         sb.AppendLine("    {");
 
         var methodsToGenerate = new List<PublicApiInfo>();

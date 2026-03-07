@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -24,6 +25,13 @@ public static partial class NOFContractExtensions
         };
         options.Converters.Add(new OptionalConverterFactory());
         options.Converters.Add(new PatchRequestConverterFactory());
+
+        if (JsonSerializer.IsReflectionEnabledByDefault && RuntimeFeature.IsDynamicCodeSupported)
+        {
+#pragma warning disable IL2026, IL3050
+            options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
+#pragma warning restore IL2026, IL3050
+        }
 
         foreach (var configure in _nofConfigurators)
         {
@@ -78,7 +86,6 @@ public static partial class NOFContractExtensions
         /// JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
         /// {
         ///     options.TypeInfoResolverChain.Add(MyAppJsonContext.Default);
-        ///     options.ConfigureValueObjectJsonSerializerOptions();
         /// });
         /// </code>
         /// </example>
@@ -94,28 +101,6 @@ public static partial class NOFContractExtensions
                     $"{nameof(ConfigureNOFJsonSerializerOptions)} must be called before {nameof(NOF)} is first accessed.");
             }
             _nofConfigurators.Add(configure);
-        }
-    }
-
-    extension(JsonSerializerOptions options)
-    {
-        /// <summary>
-        /// Appends a <see cref="DefaultJsonTypeInfoResolver"/> to the
-        /// <see cref="JsonSerializerOptions.TypeInfoResolverChain"/>.
-        /// </summary>
-        /// <remarks>
-        /// This is a convenience method for non-AOT scenarios that need reflection-based
-        /// metadata resolution for arbitrary types. Existing resolvers in the chain
-        /// (e.g. source-generated contexts) take priority.
-        /// AOT applications should register their own <c>JsonSerializerContext</c> instead.
-        /// </remarks>
-        /// <returns>The same <see cref="JsonSerializerOptions"/> instance for fluent chaining.</returns>
-        [RequiresDynamicCode("DefaultJsonTypeInfoResolver requires runtime code generation. Use a source-generated JsonSerializerContext for AOT applications.")]
-        [RequiresUnreferencedCode("DefaultJsonTypeInfoResolver requires unreferenced code. Use a source-generated JsonSerializerContext for trimmed applications.")]
-        public JsonSerializerOptions UseDefaultJsonTypeInfoResolver()
-        {
-            options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
-            return options;
         }
     }
 }
