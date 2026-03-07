@@ -76,7 +76,8 @@ Requests cross service boundaries and return a response.
 
 ```csharp
 // Shared contract
-[ExposeToHttpEndpoint(HttpVerb.Get, "api/inventory/{productId}")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Get, "api/inventory/{productId}")]
 public record CheckInventoryRequest(long ProductId) : IRequest<CheckInventoryResponse>;
 public record CheckInventoryResponse(int AvailableQuantity);
 

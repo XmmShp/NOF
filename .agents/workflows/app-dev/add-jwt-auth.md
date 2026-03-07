@@ -106,12 +106,14 @@ By default, all endpoints require authentication. Use `[AllowAnonymous]` to opt 
 
 ```csharp
 // Protected (default)
-[ExposeToHttpEndpoint(HttpVerb.Get, "api/orders")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Get, "api/orders")]
 public record GetOrdersRequest : IRequest<GetOrdersResponse>;
 
 // Public
 [AllowAnonymous]
-[ExposeToHttpEndpoint(HttpVerb.Post, "api/auth/login")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Post, "api/auth/login")]
 public record LoginRequest(string Username, string Password) : IRequest<LoginResponse>;
 ```
 

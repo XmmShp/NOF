@@ -14,12 +14,12 @@ You are working in the **NOF (Neat Opinionated Framework)** repository, a modula
 ```
 src/
   NOF.Domain/                  — Domain entities, aggregate roots, events, [AutoInject]
-  NOF.Contract/                — IRequest, ICommand, INotification, Result<T>, [ExposeToHttpEndpoint]
+  NOF.Contract/                — IRequest, ICommand, INotification, Result<T>, [PublicApi], [HttpEndpoint]
   NOF.Application/             — Handlers, state machines, caching, unit of work
   NOF.Infrastructure.Abstraction/ — INOFAppBuilder, IStep, shared abstractions
   NOF.Infrastructure.Core/     — App builder, step pipeline, OpenTelemetry, service wiring
-  NOF.Domain.SourceGenerator/  — Source generator for [AutoInject], [ValueObject], SnowflakeId
-  NOF.Contract.SourceGenerator/ — Source generator for [ExposeToHttpEndpoint], [Failure]
+  NOF.Domain.SourceGenerator/  — Source generator for [AutoInject], IValueObject<T>, [NewableValueObject]
+  NOF.Contract.SourceGenerator/ — Source generator for [PublicApi], [HttpEndpoint], [GenerateService], [Failure]
   NOF.Application.SourceGenerator/ — Source generator for handler registration
   Hostings/
     NOF.Hosting.AspNetCore/    — ASP.NET Core host, endpoint mapping, middleware, JSON config
@@ -73,16 +73,20 @@ tests/                         — Unit and integration tests
 - Steps are executed in topological order based on declared dependencies
 - Concrete steps should use the CRTP `<TSelf>` variant (e.g. `MyStep : IServiceRegistrationStep<MyStep>`)
 
-### Source Generator Attributes
+### Source Generator Attributes & Interfaces
+- `IValueObject<T>` (interface) — generate value object boilerplate (constructors, equality, JSON converter, `Of()` factory, explicit cast)
+- `[NewableValueObject]` — generate static `New()` method (SnowflakeId, requires `IValueObject<long>`)
 - `[AutoInject(Lifetime)]` — auto-register class in DI container
-- `[ExposeToHttpEndpoint(HttpVerb, route)]` — expose request as HTTP endpoint
-- `[Failure]` — generate failure/error definitions
-- `[ValueObject]` — generate value object boilerplate
+- `[Failure(name, message, errorCode)]` — generate static failure instances
+- `[PublicApi]` — mark request as public API operation (required by `[HttpEndpoint]` and `[GenerateService]`)
+- `[HttpEndpoint(HttpVerb, route)]` — expose request as HTTP endpoint (requires `[PublicApi]`)
+- `[GenerateService]` — generate service interface + HTTP client + `IRequestSender` client (on `partial interface`)
+- `[Mappable<TSource, TDest>]` — auto-generate mapper registrations (on `partial static class`)
 
 ### Domain
 - `IEntity` — marker interface for child entities (no base class)
 - `AggregateRoot` — base class for aggregate roots; `Events` is `ICollection<IEvent>`
-- `IRepository<T, TKey>` — repository abstraction (Find, FindAll, Add, Remove)
+- `IRepository<T, TKey>` — repository abstraction (FindAsync, FindAllAsync, Add, Remove)
 - `IUnitOfWork` — explicit `Update(entity)` + transactional `SaveChangesAsync()`
 - `IDeferredNotificationPublisher` / `IDeferredCommandSender` — outbox-based deferred dispatch
 
@@ -135,14 +139,12 @@ await app.RunAsync();
 ### Value Objects (source-generated)
 
 ```csharp
-[ValueObject<long>]
 [NewableValueObject]  // Adds static New() for SnowflakeId
-public readonly partial struct OrderId;
+public readonly partial struct OrderId : IValueObject<long>;
 
-[ValueObject<string>]
-public readonly partial struct EmailAddress
+public readonly partial struct EmailAddress : IValueObject<string>
 {
-    private static void Validate(string input) { /* throw DomainException on invalid */ }
+    public static void Validate(string input) { /* throw on invalid */ }
 }
 ```
 
@@ -198,7 +200,8 @@ public record OrderCacheKey(long Id) : CacheKey<OrderDto>($"Order:{Id}");
 ### PatchRequest with Optional Fields
 
 ```csharp
-[ExposeToHttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
 public record UpdateOrderRequest : PatchRequest, IRequest
 {
     public long Id { get; init; }
@@ -242,7 +245,8 @@ await _uow.SaveChangesAsync(ct);  // Commits entity + outbox atomically
 
 | Attribute | Purpose |
 |-----------|---------|
-| `[ExposeToHttpEndpoint(HttpVerb, route)]` | Map to HTTP endpoint |
+| `[PublicApi]` | Mark as public API operation |
+| `[HttpEndpoint(HttpVerb, route)]` | Map to HTTP endpoint (requires `[PublicApi]`) |
 | `[AllowAnonymous]` | Skip authentication |
 | `[Summary("...")]` | OpenAPI summary |
 | `[EndpointDescription("...")]` | OpenAPI description |

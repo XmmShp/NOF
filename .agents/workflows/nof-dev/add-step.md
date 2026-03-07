@@ -12,7 +12,7 @@ Runs during DI container setup, before the host is built.
 
 1. Create a class implementing `IServiceRegistrationStep`:
    ```csharp
-   public class MyFeatureRegistrationStep : IServiceRegistrationStep, IAfter<CoreServicesRegistrationStep>
+   public class MyFeatureRegistrationStep : IServiceRegistrationStep<MyFeatureRegistrationStep>, IAfter<CoreServicesRegistrationStep>
    {
        public ValueTask ExecuteAsync(IServiceRegistrationContext context)
        {
@@ -39,7 +39,7 @@ Runs after the host is built but before it starts.
 
 1. Create a class implementing `IApplicationInitializationStep`:
    ```csharp
-   public class MyFeatureInitializationStep : IApplicationInitializationStep
+   public class MyFeatureInitializationStep : IApplicationInitializationStep<MyFeatureInitializationStep>
    {
        public async Task ExecuteAsync(IApplicationInitializationContext context, IHost host)
        {

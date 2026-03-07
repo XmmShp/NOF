@@ -34,7 +34,7 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 | `IEventHandler<T>` | Handles a domain event | Application |
 | `AggregateRoot` | DDD aggregate root base class | Domain |
 | `IEntity` | Marker interface for child entities | Domain |
-| `IRepository<T, TKey>` | Repository abstraction (Find, FindAll, Add, Remove) | Domain |
+| `IRepository<T, TKey>` | Repository abstraction (FindAsync, FindAllAsync, Add, Remove) | Domain |
 | `IUnitOfWork` | Explicit update + transactional save | Application |
 | `IDeferredNotificationPublisher` | Outbox-based deferred notifications | Application |
 | `IDeferredCommandSender` | Outbox-based deferred commands | Application |
@@ -42,15 +42,18 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 | `IMapper` | Zero-reflection object mapper | Application |
 | `Result<T>` / `Result` | Operation result with failure support | Contract |
 
-## Source Generator Attributes
+## Source Generator Attributes & Interfaces
 
-| Attribute | What It Generates | Layer |
+| Attribute / Interface | What It Generates | Layer |
 |-----------|-------------------|-------|
-| `[ValueObject<T>]` | Constructors, equality, JSON converter, casts | Domain |
-| `[NewableValueObject]` | Static `New()` method (SnowflakeId) | Domain |
+| `IValueObject<T>` (interface) | Constructors, equality, JSON converter, explicit cast to `T`, `Of()` factory | Domain |
+| `[NewableValueObject]` | Static `New()` method (SnowflakeId, requires `IValueObject<long>`) | Domain |
 | `[AutoInject(Lifetime)]` | DI registration | Any |
-| `[ExposeToHttpEndpoint(verb, route)]` | HTTP endpoint mapping | Contract |
-| `[Failure(name, message, statusCode)]` | Static `Failure` instances | Contract/Domain |
+| `[Failure(name, message, errorCode)]` | Static `Failure` instances | Domain |
+| `[PublicApi]` | Marks request as public API operation (required by `[HttpEndpoint]` and `[GenerateService]`) | Contract |
+| `[HttpEndpoint(HttpVerb, route)]` | HTTP endpoint mapping (requires `[PublicApi]`) | Contract |
+| `[GenerateService]` | Service interface + HTTP client + `IRequestSender` client (on `partial interface`) | Contract |
+| `[Mappable<TSource, TDest>]` | Auto-generated mapper registrations (on `partial static class`) | Application |
 
 ## Coding Conventions
 

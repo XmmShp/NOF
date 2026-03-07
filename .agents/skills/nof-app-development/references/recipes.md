@@ -44,15 +44,13 @@ await app.RunAsync();
 
 ```csharp
 // Simple ID (SnowflakeId)
-[ValueObject<long>]
 [NewableValueObject]
-public readonly partial struct OrderId;
+public readonly partial struct OrderId : IValueObject<long>;
 
 // Validated value object
-[ValueObject<string>]
-public readonly partial struct EmailAddress
+public readonly partial struct EmailAddress : IValueObject<string>
 {
-    private static void Validate(string input)
+    public static void Validate(string input)
     {
         if (!input.Contains('@'))
             throw new DomainException(-1, "Invalid email format.");
@@ -134,7 +132,8 @@ public class OrderRepository : EFCoreRepository<Order>, IOrderRepository
 
 ```csharp
 // Contract
-[ExposeToHttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
 [Summary("Get order by ID")]
 [Category("Orders")]
 public record GetOrderRequest(long Id) : IRequest<GetOrderResponse>;
@@ -161,7 +160,8 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
 ## PATCH with Optional Fields
 
 ```csharp
-[ExposeToHttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
 public record UpdateOrderRequest : PatchRequest, IRequest
 {
     public long Id { get; init; }

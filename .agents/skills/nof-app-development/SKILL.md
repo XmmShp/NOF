@@ -55,8 +55,11 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 | `: IValueObject<T>` | `Of()`, `GetUnderlyingValue()`, `static virtual Validate`, equality, JSON converter, explicit casts |
 | `[NewableValueObject]` | Static `New()` method (SnowflakeId) |
 | `[AutoInject(Lifetime)]` | DI registration (Singleton/Scoped/Transient) |
-| `[ExposeToHttpEndpoint(verb, route)]` | HTTP endpoint mapping |
-| `[Failure(name, message, statusCode)]` | Static `Failure` instances |
+| `[PublicApi]` | Marks request as public API operation (required by `[HttpEndpoint]` and `[GenerateService]`) |
+| `[HttpEndpoint(HttpVerb, route)]` | HTTP endpoint mapping (requires `[PublicApi]`) |
+| `[GenerateService]` | Service interface + HTTP client + `IRequestSender` client (on `partial interface`) |
+| `[Mappable<TSource, TDest>]` | Auto-generated mapper registrations (on `partial static class`) |
+| `[Failure(name, message, errorCode)]` | Static `Failure` instances |
 | `[Summary]` / `[EndpointDescription]` / `[Category]` | OpenAPI metadata |
 | `[AllowAnonymous]` | Skip authentication |
 
@@ -64,7 +67,7 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 
 | I want to… | Use |
 |------------|-----|
-| Expose an API endpoint | `IRequest` + `[ExposeToHttpEndpoint]` |
+| Expose an API endpoint | `IRequest` + `[PublicApi]` + `[HttpEndpoint]` |
 | Run background work | `ICommand` + `ICommandSender` |
 | Broadcast an event | `INotification` + `INotificationPublisher` |
 | React to entity changes (in-transaction) | `IEvent` + `IEventHandler` |

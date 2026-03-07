@@ -107,7 +107,7 @@ public class OrderRepository : EFCoreRepository<Order, OrderId>, IOrderRepositor
 ## Notes
 
 - `NOFDbContext` automatically configures outbox messages, inbox messages, and state machine context tables.
-- **Value objects (`[ValueObject<T>]`) are automatically handled by EF Core** — `ValueObjectValueConverterSelector` detects them and provides `ValueConverter` instances at runtime. No manual converter registration needed.
+- **Value objects (`IValueObject<T>`) are automatically handled by EF Core** — `ValueObjectValueConverterSelector` detects them and provides `ValueConverter` instances at runtime. No manual converter registration needed.
 - `AutoMigrate()` applies pending migrations on application startup — convenient for development, consider disabling in production.
 - Domain events raised by aggregate roots are automatically dispatched when `IUnitOfWork.SaveChangesAsync()` is called.
 - EF Core migrations are excluded from formatting rules (configured in `.editorconfig`).

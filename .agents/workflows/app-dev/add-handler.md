@@ -14,7 +14,8 @@ NOF uses a CQRS messaging pattern with `IRequest`, `ICommand`, and `INotificatio
 
 ```csharp
 // Contract
-[ExposeToHttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
 [Summary("Get order by ID")]
 [Category("Orders")]
 public record GetOrderRequest(long Id) : IRequest<GetOrderResponse>;
@@ -52,7 +53,8 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
 
 ```csharp
 // Contract
-[ExposeToHttpEndpoint(HttpVerb.Post, "api/orders")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Post, "api/orders")]
 public record CreateOrderRequest(string CustomerName) : IRequest;
 
 // Handler — returns Result (not Result<T>)
@@ -122,7 +124,8 @@ public class UpdateViewOnOrderCreated : IEventHandler<OrderCreatedEvent>
 
 ```csharp
 // Contract
-[ExposeToHttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
+[PublicApi]
+[HttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
 public record UpdateOrderRequest : PatchRequest, IRequest
 {
     public long Id { get; init; }
@@ -174,7 +177,8 @@ public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
 
 | Attribute | Purpose |
 |-----------|---------|
-| `[ExposeToHttpEndpoint(HttpVerb, route)]` | Map to HTTP endpoint |
+| `[PublicApi]` | Mark as public API operation |
+| `[HttpEndpoint(HttpVerb, route)]` | Map to HTTP endpoint (requires `[PublicApi]`) |
 | `[AllowAnonymous]` | Skip authentication |
 | `[Summary("...")]` | OpenAPI summary |
 | `[EndpointDescription("...")]` | OpenAPI description |
@@ -184,6 +188,6 @@ public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
 
 - Handlers are auto-discovered via source generators — no manual DI registration needed.
 - Use `[AutoInject]` on service classes for automatic DI registration.
-- Request handlers return `Result<T>` — `Result.Fail(statusCode, message)` maps to HTTP status codes.
+- Request handlers return `Result<T>` — `Result.Fail(errorCode, message)` maps to HTTP status codes.
 - `PatchRequest` uses `Optional<T>` to distinguish "not sent" from "sent as null".
 - Domain event handlers (`IEventHandler<T>`) run within the `SaveChangesAsync()` transaction — keep them fast.
