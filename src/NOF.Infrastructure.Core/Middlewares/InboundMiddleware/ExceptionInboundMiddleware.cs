@@ -44,7 +44,7 @@ public sealed class ExceptionInboundMiddleware : IInboundMiddleware
                 context.MessageType, context.HandlerType, ex.Message);
 
             // Convert exception to unified error response
-            var errorResult = Result.Fail(500, "Internal server error");
+            var errorResult = Result.Fail("500", "Internal server error");
 
             // Set the error response to context
             context.Response = errorResult;

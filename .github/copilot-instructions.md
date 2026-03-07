@@ -213,8 +213,8 @@ public record UpdateOrderRequest : PatchRequest, IRequest
 ### Failure Definitions (source-generated)
 
 ```csharp
-[Failure("OrderNotFound", "Order not found.", 404)]
-[Failure("OrderAlreadyConfirmed", "Already confirmed.", 409)]
+[Failure("OrderNotFound", "Order not found.", "404")]
+[Failure("OrderAlreadyConfirmed", "Already confirmed.", "409")]
 public static partial class OrderFailures;
 // Usage: return Result.Fail(OrderFailures.OrderNotFound);
 ```

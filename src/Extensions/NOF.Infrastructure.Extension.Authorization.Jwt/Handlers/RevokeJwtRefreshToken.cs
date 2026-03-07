@@ -26,7 +26,7 @@ public class RevokeJwtRefreshToken : IRequestHandler<RevokeJwtRefreshTokenReques
         }
         catch (Exception ex)
         {
-            return Result.Fail(500, $"An unexpected error occurred: {ex.Message}");
+            return Result.Fail("500", $"An unexpected error occurred: {ex.Message}");
         }
     }
 }

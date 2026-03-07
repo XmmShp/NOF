@@ -20,7 +20,7 @@ public class GetConfigNodeById : IRequestHandler<GetConfigNodeByIdRequest, GetCo
 
         if (node is null)
         {
-            return Result.Fail(404, "配置节点不存在");
+            return Result.Fail("404", "配置节点不存在");
         }
 
         var dto = node with { ConfigFiles = node.ConfigFiles.Select(f => new ConfigFileDto(f.Name, f.Content)).ToList() };

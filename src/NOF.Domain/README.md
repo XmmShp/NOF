@@ -40,8 +40,8 @@ public interface IRepository<TAggregateRoot> where TAggregateRoot : class, IAggr
 Declaratively define domain failure codes. The source generator produces static `FailResult` instances at compile time.
 
 ```csharp
-[Failure("NotFound", "Order not found", 404001)]
-[Failure("AlreadyPaid", "Order has already been paid", 409001)]
+[Failure("NotFound", "Order not found", "404001")]
+[Failure("AlreadyPaid", "Order has already been paid", "409001")]
 public partial class OrderFailures;
 
 // Generated usage:

@@ -78,7 +78,7 @@ public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, Generat
         }
         catch (Exception ex)
         {
-            return Task.FromResult<Result<GenerateJwtTokenResponse>>(Result.Fail(500, ex.Message));
+            return Task.FromResult<Result<GenerateJwtTokenResponse>>(Result.Fail("500", ex.Message));
         }
     }
 

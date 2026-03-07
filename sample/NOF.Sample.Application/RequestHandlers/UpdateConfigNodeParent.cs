@@ -21,7 +21,7 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
 
         if (node is null)
         {
-            return Result.Fail(404, "节点不存在");
+            return Result.Fail("404", "节点不存在");
         }
 
         var newParentId = request.NewParentId.HasValue
@@ -34,13 +34,13 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
             var parentNode = await _configNodeRepository.FindAsync(newParentId.Value, cancellationToken);
             if (parentNode is null)
             {
-                return Result.Fail(404, "目标父节点不存在");
+                return Result.Fail("404", "目标父节点不存在");
             }
 
             // 防止循环引用：检查新父节点是否是当前节点的子孙节点
             if (await IsDescendant(nodeId, newParentId.Value, cancellationToken))
             {
-                return Result.Fail(400, "不能将节点移动到其子节点下");
+                return Result.Fail("400", "不能将节点移动到其子节点下");
             }
         }
 

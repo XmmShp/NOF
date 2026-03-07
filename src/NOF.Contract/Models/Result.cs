@@ -12,15 +12,15 @@ public interface IResult;
 /// <summary>
 /// Represents the result of an operation that does not return a value.
 /// Contains information about whether the operation succeeded and, if not, the error details.
-/// Instances must be created via <see cref="Success()"/>, <see cref="Success{T}(T)"/>, or <see cref="Fail(int, string)"/>.
+/// Instances must be created via <see cref="Success()"/>, <see cref="Success{T}(T)"/>, or <see cref="Fail(string, string)"/>.
 /// </summary>
 public record Result : IResult
 {
     [JsonConstructor]
-    private Result(bool isSuccess, int errorCode, string? message)
+    private Result(bool isSuccess, string? errorCode, string? message)
     {
         IsSuccess = isSuccess;
-        ErrorCode = errorCode;
+        ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
     }
 
@@ -31,9 +31,9 @@ public record Result : IResult
 
     /// <summary>
     /// Gets the error code associated with a failed operation.
-    /// Should be zero if <see cref="IsSuccess"/> is <see langword="true"/>.
+    /// Should be empty if <see cref="IsSuccess"/> is <see langword="true"/>.
     /// </summary>
-    public int ErrorCode { get; }
+    public string ErrorCode { get; }
 
     /// <summary>
     /// Gets the human-readable error message describing the failure.
@@ -56,10 +56,10 @@ public record Result : IResult
     /// <summary>
     /// Creates a new <see cref="FailResult"/> instance representing a failed operation.
     /// </summary>
-    /// <param name="errorCode">The numeric error code.</param>
+    /// <param name="errorCode">The error code.</param>
     /// <param name="message">The descriptive error message.</param>
     /// <returns>A <see cref="FailResult"/> representing the failure.</returns>
-    public static FailResult Fail(int errorCode, string message)
+    public static FailResult Fail(string errorCode, string message)
     {
         return new FailResult(errorCode, message);
     }
@@ -70,7 +70,7 @@ public record Result : IResult
     /// <returns>A success result with <see cref="IsSuccess"/> set to <see langword="true"/>.</returns>
     public static Result Success()
     {
-        return new Result(true, 0, string.Empty);
+        return new Result(true, string.Empty, string.Empty);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public record Result : IResult
     /// <exception cref="ArgumentNullException">
     /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
     /// </exception>
-    public TResult Match<TResult>(Func<TResult> onSuccess, Func<int, string, TResult> onFailure)
+    public TResult Match<TResult>(Func<TResult> onSuccess, Func<string, string, TResult> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
         ArgumentNullException.ThrowIfNull(onFailure);
@@ -141,7 +141,7 @@ public record Result : IResult
     /// <exception cref="ArgumentNullException">
     /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
     /// </exception>
-    public void Match(Action onSuccess, Action<int, string> onFailure)
+    public void Match(Action onSuccess, Action<string, string> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
         ArgumentNullException.ThrowIfNull(onFailure);
@@ -160,20 +160,20 @@ public record Result : IResult
 /// <summary>
 /// Represents a failed operation result used primarily for construction and implicit conversion.
 /// Not intended for direct use in application logic—prefer <see cref="Result"/> or <see cref="Result{T}"/>.
-/// Instances must be created via <see cref="Result.Fail(int, string)"/>.
+/// Instances must be created via <see cref="Result.Fail(string, string)"/>.
 /// </summary>
 public record FailResult : IResult
 {
-    internal FailResult(int errorCode, string message)
+    internal FailResult(string errorCode, string message)
     {
         ErrorCode = errorCode;
         Message = message;
     }
 
     /// <summary>
-    /// Gets the numeric error code.
+    /// Gets the error code.
     /// </summary>
-    public int ErrorCode { get; }
+    public string ErrorCode { get; }
 
     /// <summary>
     /// Gets the descriptive error message.
@@ -184,7 +184,7 @@ public record FailResult : IResult
 /// <summary>
 /// Represents the result of an operation that returns a value of type <typeparamref name="T"/>.
 /// Encapsulates either a success with a value or a failure with error details.
-/// Instances must be created via <see cref="Result.Success{T}(T)"/> or <see cref="Result.Fail(int, string)"/>.
+/// Instances must be created via <see cref="Result.Success{T}(T)"/> or <see cref="Result.Fail(string, string)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the value returned on success.</typeparam>
 public record Result<T> : IResult
@@ -192,16 +192,16 @@ public record Result<T> : IResult
     internal Result(T value)
     {
         IsSuccess = true;
-        ErrorCode = 0;
+        ErrorCode = string.Empty;
         Message = string.Empty;
         Value = value;
     }
 
     [JsonConstructor]
-    private Result(bool isSuccess, int errorCode, string? message, T? value)
+    private Result(bool isSuccess, string? errorCode, string? message, T? value)
     {
         IsSuccess = isSuccess;
-        ErrorCode = errorCode;
+        ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
         Value = value;
     }
@@ -215,9 +215,9 @@ public record Result<T> : IResult
 
     /// <summary>
     /// Gets the error code associated with a failed operation.
-    /// Should be zero if <see cref="IsSuccess"/> is <see langword="true"/>.
+    /// Should be empty if <see cref="IsSuccess"/> is <see langword="true"/>.
     /// </summary>
-    public int ErrorCode { get; }
+    public string ErrorCode { get; }
 
     /// <summary>
     /// Gets the human-readable error message describing the failure.
@@ -261,7 +261,7 @@ public record Result<T> : IResult
     /// <exception cref="ArgumentNullException">
     /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
     /// </exception>
-    public TResult Match<TResult>(Func<T, TResult> onSuccess, Func<int, string, TResult> onFailure)
+    public TResult Match<TResult>(Func<T, TResult> onSuccess, Func<string, string, TResult> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
         ArgumentNullException.ThrowIfNull(onFailure);
@@ -281,7 +281,7 @@ public record Result<T> : IResult
     /// <exception cref="ArgumentNullException">
     /// Thrown if either <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <see langword="null"/>.
     /// </exception>
-    public void Match(Action<T> onSuccess, Action<int, string> onFailure)
+    public void Match(Action<T> onSuccess, Action<string, string> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
         ArgumentNullException.ThrowIfNull(onFailure);

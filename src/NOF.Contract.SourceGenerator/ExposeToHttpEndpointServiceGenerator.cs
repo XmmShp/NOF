@@ -382,9 +382,16 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine("            using var response = await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);");
+        EmitResponseHandling(sb, responseType);
+        sb.AppendLine("        }");
+        sb.AppendLine();
+    }
+
+    private static void EmitResponseHandling(StringBuilder sb, string? responseType)
+    {
         sb.AppendLine("            if (!response.IsSuccessStatusCode)");
         sb.AppendLine("            {");
-        sb.AppendLine("                return global::NOF.Contract.Result.Fail((int)response.StatusCode, $\"{(int)response.StatusCode}: {response.ReasonPhrase}\");");
+        sb.AppendLine("                return global::NOF.Contract.Result.Fail(((int)response.StatusCode).ToString(), $\"{(int)response.StatusCode}: {response.ReasonPhrase}\");");
         sb.AppendLine("            }");
         sb.AppendLine("            try");
         sb.AppendLine("            {");
@@ -392,20 +399,19 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         if (string.IsNullOrEmpty(responseType))
         {
             sb.AppendLine("                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result>(response.Content, _jsonOptions, cancellationToken);");
-            sb.AppendLine("                return apiResponse ?? global::NOF.Contract.Result.Fail(500, \"Unexpected null response from server.\");");
+            sb.AppendLine("                return apiResponse ?? global::NOF.Contract.Result.Fail(\"500\", \"Unexpected null response from server.\");");
         }
         else
         {
             sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result<{responseType}>>(response.Content, _jsonOptions, cancellationToken);");
-            sb.AppendLine("                return apiResponse ?? global::NOF.Contract.Result.Fail(500, \"Unexpected null response from server.\");");
+            sb.AppendLine("                return apiResponse ?? global::NOF.Contract.Result.Fail(\"500\", \"Unexpected null response from server.\");");
         }
 
         sb.AppendLine("            }");
         sb.AppendLine("            catch (global::System.Text.Json.JsonException ex)");
         sb.AppendLine("            {");
-        sb.AppendLine("                return global::NOF.Contract.Result.Fail(400, $\"Response deserialization failed: {ex.Message}\");");
+        sb.AppendLine("                return global::NOF.Contract.Result.Fail(\"400\", $\"Response deserialization failed: {ex.Message}\");");
         sb.AppendLine("            }");
-        sb.AppendLine("        }");
         sb.AppendLine();
     }
 

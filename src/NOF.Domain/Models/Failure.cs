@@ -7,7 +7,7 @@ namespace NOF.Domain;
 /// </summary>
 /// <param name="Message">The failure message.</param>
 /// <param name="ErrorCode">The application-specific error code.</param>
-public record Failure(string Message, int ErrorCode)
+public record Failure(string Message, string ErrorCode)
 {
     /// <summary>Throws a <see cref="DomainException"/> from this failure.</summary>
     [DoesNotReturn]

@@ -22,14 +22,6 @@ public class FailureAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
-    public static readonly DiagnosticDescriptor InvalidFailureCode = new(
-        "NOF101",
-        "Invalid Failure Code",
-        "Failure code must be a non-negative integer",
-        "FailureGenerator",
-        DiagnosticSeverity.Error,
-        true);
-
     public static readonly DiagnosticDescriptor DuplicateFailureNameInClass = new(
         "NOF102",
         "Duplicate Failure Name in Class",
@@ -43,7 +35,7 @@ public class FailureAnalyzer : DiagnosticAnalyzer
         "Duplicate Failure Code in Class",
         "Class '{0}' contains duplicate Failure code '{1}'. Consider using a unique code.",
         "FailureGenerator",
-        DiagnosticSeverity.Error,
+        DiagnosticSeverity.Info,
         true);
 
     public static readonly DiagnosticDescriptor NonPartialClassWithFailureAttribute = new(
@@ -57,7 +49,6 @@ public class FailureAnalyzer : DiagnosticAnalyzer
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         EmptyFailureName,
-        InvalidFailureCode,
         DuplicateFailureNameInClass,
         DuplicateFailureCodeInClass,
         NonPartialClassWithFailureAttribute
@@ -103,7 +94,7 @@ public class FailureAnalyzer : DiagnosticAnalyzer
 
         // Validate each FailureAttribute
         var failureNames = new System.Collections.Generic.HashSet<string>();
-        var failureCodes = new System.Collections.Generic.HashSet<int>();
+        var failureCodes = new System.Collections.Generic.HashSet<string>();
 
         foreach (var attribute in failureAttributes)
         {
@@ -155,35 +146,19 @@ public class FailureAnalyzer : DiagnosticAnalyzer
             }
 
             // Validate failure code
-            if (codeArg.Value is int code)
+            var code = codeArg.Value?.ToString() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(code))
             {
-                if (code < 0)
+                // Check for duplicate codes
+                if (!failureCodes.Add(code))
                 {
                     context.ReportDiagnostic(
                         Diagnostic.Create(
-                            InvalidFailureCode,
-                            attributeSyntax.ArgumentList?.Arguments[2].GetLocation() ?? attributeSyntax.GetLocation()));
+                            DuplicateFailureCodeInClass,
+                            attributeSyntax.ArgumentList?.Arguments[2].GetLocation() ?? attributeSyntax.GetLocation(),
+                            namedTypeSymbol.Name,
+                            code));
                 }
-                else
-                {
-                    // Check for duplicate codes
-                    if (!failureCodes.Add(code))
-                    {
-                        context.ReportDiagnostic(
-                            Diagnostic.Create(
-                                DuplicateFailureCodeInClass,
-                                attributeSyntax.ArgumentList?.Arguments[2].GetLocation() ?? attributeSyntax.GetLocation(),
-                                namedTypeSymbol.Name,
-                                code));
-                    }
-                }
-            }
-            else
-            {
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        InvalidFailureCode,
-                        attributeSyntax.ArgumentList?.Arguments[2].GetLocation() ?? attributeSyntax.GetLocation()));
             }
         }
     }

@@ -15,8 +15,8 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
-                [Failure("NotFound", "资源未找到", 1002)]
+                [Failure("InvalidInput", "输入无效", "1001")]
+                [Failure("NotFound", "资源未找到", "1002")]
                 public partial class MyFailure
                 {
                 }
@@ -41,10 +41,10 @@ public class FailureGeneratorTests
         fields.Should().HaveCount(2);
 
         var invalidInputField = fields.First(f => f.Declaration.Variables.First().Identifier.Text == "InvalidInput");
-        invalidInputField.ToString().Should().Contain("public static readonly global::NOF.Domain.Failure InvalidInput = new(\"输入无效\", 1001);");
+        invalidInputField.ToString().Should().Contain("public static readonly global::NOF.Domain.Failure InvalidInput = new(\"输入无效\", \"1001\");");
 
         var notFoundField = fields.First(f => f.Declaration.Variables.First().Identifier.Text == "NotFound");
-        notFoundField.ToString().Should().Contain("public static readonly global::NOF.Domain.Failure NotFound = new(\"资源未找到\", 1002);");
+        notFoundField.ToString().Should().Contain("public static readonly global::NOF.Domain.Failure NotFound = new(\"资源未找到\", \"1002\");");
     }
 
     [Fact]
@@ -55,12 +55,12 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
+                [Failure("InvalidInput", "输入无效", "1001")]
                 public partial class MyFailure
                 {
                 }
 
-                [Failure("NotFound", "资源未找到", 1002)]
+                [Failure("NotFound", "资源未找到", "1002")]
                 public partial class MyFailure
                 {
                 }
@@ -93,8 +93,8 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
-                [Failure("InvalidInput", "输入参数无效", 1002)]
+                [Failure("InvalidInput", "输入无效", "1001")]
+                [Failure("InvalidInput", "输入参数无效", "1002")]
                 public partial class MyFailure
                 {
                 }
@@ -111,15 +111,15 @@ public class FailureGeneratorTests
     }
 
     [Fact]
-    public void GenerateFailureClass_ForDuplicateErrorCode_ReportsError()
+    public void GenerateFailureClass_ForDuplicateErrorCode_ReportsInfoAndStillGenerates()
     {
         // Arrange
         const string source = """
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
-                [Failure("InvalidParameter", "输入参数无效", 1001)]
+                [Failure("InvalidInput", "输入无效", "1001")]
+                [Failure("InvalidParameter", "输入参数无效", "1001")]
                 public partial class MyFailure
                 {
                 }
@@ -130,8 +130,9 @@ public class FailureGeneratorTests
         var result = new FailureGenerator().GetResult(source, typeof(FailureAttribute));
 
         // Assert
-        result.GeneratedTrees.Should().BeEmpty();
+        result.GeneratedTrees.Should().ContainSingle();
         result.Diagnostics.Should().ContainSingle(d => d.Id == "NOF002");
+        result.Diagnostics.Single(d => d.Id == "NOF002").Severity.Should().Be(Microsoft.CodeAnalysis.DiagnosticSeverity.Info);
         result.Diagnostics.First().GetMessage().Should().Contain("MyFailure").And.Contain("1001");
     }
 
@@ -143,7 +144,7 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
+                [Failure("InvalidInput", "输入无效", "1001")]
                 public partial record MyFailure
                 {
                 }
@@ -170,7 +171,7 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
+                [Failure("InvalidInput", "输入无效", "1001")]
                 public abstract partial class MyFailure
                 {
                 }
@@ -197,14 +198,14 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test1
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
+                [Failure("InvalidInput", "输入无效", "1001")]
                 public partial class MyFailure
                 {
                 }
             }
             namespace Test2
             {
-                [Failure("NotFound", "资源未找到", 1002)]
+                [Failure("NotFound", "资源未找到", "1002")]
                 public partial class MyFailure
                 {
                 }
@@ -230,7 +231,7 @@ public class FailureGeneratorTests
             using NOF.Domain;
             namespace Test
             {
-                [Failure("InvalidInput", "输入无效", 1001)]
+                [Failure("InvalidInput", "输入无效", "1001")]
                 public class MyFailure
                 {
                 }

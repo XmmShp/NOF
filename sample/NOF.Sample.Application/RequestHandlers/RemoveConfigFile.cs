@@ -21,7 +21,7 @@ public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
 
         if (node is null)
         {
-            return Result.Fail(404, "Node not found.");
+            return Result.Fail("404", "Node not found.");
         }
 
         var fileName = ConfigFileName.Of(request.FileName);

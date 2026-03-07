@@ -47,7 +47,7 @@ public class GetJwks : IRequestHandler<GetJwksRequest, GetJwksResponse>
         }
         catch (Exception ex)
         {
-            return Result.Fail(500, $"Failed to retrieve JWKS: {ex.Message}");
+            return Result.Fail("500", $"Failed to retrieve JWKS: {ex.Message}");
         }
     }
 }

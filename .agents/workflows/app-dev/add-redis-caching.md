@@ -85,7 +85,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
         var order = await _orderRepository.FindAsync(OrderId.Of(request.Id), ct);
         if (order is null)
         {
-            return Result.Fail(404, "Order not found");
+            return Result.Fail("404", "Order not found");
         }
 
         var dto = MapToDto(order);

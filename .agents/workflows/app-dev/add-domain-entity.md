@@ -28,12 +28,12 @@ Value objects are immutable types wrapping a primitive. Implement `IValueObject<
        {
            if (string.IsNullOrWhiteSpace(value))
            {
-               throw new DomainException(-1, "Email cannot be empty.");
+               throw new ValidationException("Email cannot be empty.");
            }
 
            if (!value.Contains('@'))
            {
-               throw new DomainException(-1, "Invalid email format.");
+               throw new ValidationException("Invalid email format.");
            }
        }
    }
@@ -147,8 +147,8 @@ Use `[Failure]` to generate static `Failure` instances:
 ```csharp
 using NOF.Domain;
 
-[Failure("OrderNotFound", "Order not found.", 404)]
-[Failure("OrderAlreadyConfirmed", "Order is already confirmed.", 409)]
+[Failure("OrderNotFound", "Order not found.", "404")]
+[Failure("OrderAlreadyConfirmed", "Order is already confirmed.", "409")]
 public static partial class OrderFailures;
 
 // Usage in handler:

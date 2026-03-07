@@ -6,7 +6,7 @@ namespace NOF.Domain;
 public class DomainException : Exception
 {
     /// <summary>Gets the application-specific error code.</summary>
-    public int ErrorCode { get; }
+    public string ErrorCode { get; }
 
     /// <summary>Initializes a new instance from a <see cref="Failure"/>.</summary>
     /// <param name="failure">The failure descriptor.</param>
@@ -24,7 +24,7 @@ public class DomainException : Exception
     /// <summary>Initializes a new instance with an error code and message.</summary>
     /// <param name="errorCode">The error code.</param>
     /// <param name="message">The error message.</param>
-    public DomainException(int errorCode, string message)
+    public DomainException(string errorCode, string message)
         : base(message)
     {
         ErrorCode = errorCode;
@@ -34,7 +34,7 @@ public class DomainException : Exception
     /// <param name="errorCode">The error code.</param>
     /// <param name="message">The error message.</param>
     /// <param name="innerException">The inner exception.</param>
-    public DomainException(int errorCode, string message, Exception innerException)
+    public DomainException(string errorCode, string message, Exception innerException)
         : base(message, innerException)
     {
         ErrorCode = errorCode;

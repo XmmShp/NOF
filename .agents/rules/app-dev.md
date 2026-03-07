@@ -94,7 +94,7 @@ return new GetOrderResponse(id, name);  // implicit conversion to Result<T>
 
 // Failure
 return Result.Fail(OrderFailures.OrderNotFound);
-return Result.Fail(404, "Order not found");
+return Result.Fail("404", "Order not found");
 ```
 
 ### Object Mapping (IMapper)

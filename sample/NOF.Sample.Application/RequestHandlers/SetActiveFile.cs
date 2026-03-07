@@ -21,7 +21,7 @@ public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
 
         if (node is null)
         {
-            return Result.Fail(404, "Node not found.");
+            return Result.Fail("404", "Node not found.");
         }
 
         var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);

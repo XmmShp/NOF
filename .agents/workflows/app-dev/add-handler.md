@@ -41,7 +41,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
         GetOrderRequest request, CancellationToken cancellationToken)
     {
         var order = await _repo.FindAsync(OrderId.Of(request.Id), cancellationToken);
-        if (order is null) return Result.Fail(404, "Not found");
+        if (order is null) return Result.Fail("404", "Not found");
         
         return _mapper.Map<Order, GetOrderResponse>(order);
         // Or: return order.Map.To<GetOrderResponse>();
@@ -150,7 +150,7 @@ public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
         UpdateOrderRequest request, CancellationToken cancellationToken)
     {
         var order = await _repo.FindAsync(OrderId.Of(request.Id), cancellationToken);
-        if (order is null) return Result.Fail(404, "Not found");
+        if (order is null) return Result.Fail("404", "Not found");
 
         request.CustomerName.IfSome(name => order.UpdateName(name));
         request.Notes.IfSome(notes => order.UpdateNotes(notes));

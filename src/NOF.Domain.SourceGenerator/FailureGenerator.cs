@@ -28,7 +28,7 @@ public class FailureGenerator : IIncrementalGenerator
         "Duplicate Failure Code",
         "Class '{0}' contains duplicate Failure codes: {1}",
         "FailureGenerator",
-        DiagnosticSeverity.Error,
+        DiagnosticSeverity.Info,
         true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -105,7 +105,7 @@ public class FailureGenerator : IIncrementalGenerator
         var errors = (errorAttributes.Where(attr => attr.ConstructorArguments.Length == 3)
             .Select(attr => new { attr, name = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty })
             .Select(t => new { t, message = t.attr.ConstructorArguments[1].Value?.ToString() ?? string.Empty })
-            .Select(t => new { t, errorCode = (int)(t.t.attr.ConstructorArguments[2].Value ?? 0) })
+            .Select(t => new { t, errorCode = t.t.attr.ConstructorArguments[2].Value?.ToString() ?? string.Empty })
             .Where(t => !string.IsNullOrEmpty(t.t.t.name))
             .Select(t => new FailureInfo { Name = t.t.t.name, Message = t.t.message, FailureCode = t.errorCode })).ToList();
 
@@ -178,10 +178,8 @@ public class FailureGenerator : IIncrementalGenerator
                 context.ReportDiagnostic(Diagnostic.Create(
                     DuplicateFailureCodeDescriptor,
                     errorClass.Location, errorClass.TypeName, string.Join(", ", duplicateErrorCodes)));
-                continue;
             }
 
-            // Only generate code if there are no duplicates
             var source = GenerateFailureClass(errorClass);
             // Use namespace and type name to generate file name
             var safeFileName = $"{errorClass.Namespace.Replace('.', '_')}_{errorClass.TypeName}.g.cs";
@@ -214,7 +212,7 @@ public class FailureGenerator : IIncrementalGenerator
             sb.AppendLine("        /// <summary>");
             sb.AppendLine($"        /// {error.Message}");
             sb.AppendLine("        /// </summary>");
-            sb.AppendLine($"        public static readonly global::NOF.Domain.Failure {error.Name} = new(\"{error.Message}\", {error.FailureCode});");
+            sb.AppendLine($"        public static readonly global::NOF.Domain.Failure {error.Name} = new(\"{error.Message}\", \"{error.FailureCode}\");");
             sb.AppendLine();
         }
 
@@ -244,6 +242,6 @@ public class FailureGenerator : IIncrementalGenerator
     {
         public string Name { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
-        public int FailureCode { get; set; }
+        public string FailureCode { get; set; } = string.Empty;
     }
 }

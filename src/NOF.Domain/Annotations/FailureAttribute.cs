@@ -19,7 +19,7 @@ public class FailureAttribute : Attribute
     /// <summary>
     /// The failure error code.
     /// </summary>
-    public int ErrorCode { get; }
+    public string ErrorCode { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FailureAttribute"/> class.
@@ -27,7 +27,7 @@ public class FailureAttribute : Attribute
     /// <param name="name">The failure name.</param>
     /// <param name="message">The failure message.</param>
     /// <param name="errorCode">The failure error code.</param>
-    public FailureAttribute(string name, string message, int errorCode)
+    public FailureAttribute(string name, string message, string errorCode)
     {
         Name = name;
         Message = message;

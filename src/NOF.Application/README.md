@@ -18,7 +18,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
     {
         var order = await _repository.FindAsync([request.Id], cancellationToken);
         if (order is null)
-            return Result.Fail(404, "Order not found");
+            return Result.Fail("404", "Order not found");
 
         return Result.Success(new OrderDto(order.Id, order.Status));
     }

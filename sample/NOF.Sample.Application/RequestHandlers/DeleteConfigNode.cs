@@ -26,12 +26,12 @@ public class DeleteConfigNode : IRequestHandler<DeleteConfigNodeRequest>
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
         if (node is null)
         {
-            return Result.Fail(404, "Node not found.");
+            return Result.Fail("404", "Node not found.");
         }
 
         if (await _configNodeViewRepository.HasChildrenAsync(id, cancellationToken))
         {
-            return Result.Fail(400, "Cannot delete node with children.");
+            return Result.Fail("400", "Cannot delete node with children.");
         }
 
         node.MarkAsDeleted();

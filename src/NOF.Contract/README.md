@@ -31,7 +31,7 @@ public record OrderCreatedNotification(Guid OrderId) : INotification;
 return Result.Success(orderDto);
 
 // Failure
-return Result.Fail(404, "Order not found");
+return Result.Fail("404", "Order not found");
 ```
 
 ### `[ExposeToHttpEndpoint]`

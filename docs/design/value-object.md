@@ -10,7 +10,7 @@ public readonly partial struct OrderName : IValueObject<string>
     public static void Validate(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException(-1, "Order name cannot be empty.");
+            throw new ValidationException("Order name cannot be empty.");
     }
 }
 ```

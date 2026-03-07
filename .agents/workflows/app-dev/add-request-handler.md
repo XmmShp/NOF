@@ -62,7 +62,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse
 
         if (order is null)
         {
-            return Result.Fail(404, "Order not found");
+            return Result.Fail("404", "Order not found");
         }
 
         return _mapper.Map<Order, GetOrderResponse>(order);
@@ -122,7 +122,7 @@ public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
             OrderId.Of(request.Id), cancellationToken);
         if (order is null)
         {
-            return Result.Fail(404, "Order not found");
+            return Result.Fail("404", "Order not found");
         }
 
         order.UpdateName(request.CustomerName);

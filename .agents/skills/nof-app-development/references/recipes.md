@@ -53,7 +53,7 @@ public readonly partial struct EmailAddress : IValueObject<string>
     public static void Validate(string input)
     {
         if (!input.Contains('@'))
-            throw new DomainException(-1, "Invalid email format.");
+            throw new ValidationException("Invalid email format.");
     }
 }
 
@@ -177,8 +177,8 @@ request.Notes.IfSome(notes => order.UpdateNotes(notes));
 ## Failure Definitions
 
 ```csharp
-[Failure("OrderNotFound", "Order not found.", 404)]
-[Failure("OrderAlreadyConfirmed", "Already confirmed.", 409)]
+[Failure("OrderNotFound", "Order not found.", "404")]
+[Failure("OrderAlreadyConfirmed", "Already confirmed.", "409")]
 public static partial class OrderFailures;
 
 // Usage: return Result.Fail(OrderFailures.OrderNotFound);
@@ -195,7 +195,7 @@ public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
     public async Task<Result> HandleAsync(UpdateOrderRequest request, CancellationToken ct)
     {
         var order = await _repo.FindAsync(OrderId.Of(request.Id), ct);
-        if (order is null) return Result.Fail(404, "Order not found");
+        if (order is null) return Result.Fail("404", "Order not found");
 
         order.UpdateName(request.CustomerName);
         _uow.Update(order);  // Explicit — marks aggregate + child entities

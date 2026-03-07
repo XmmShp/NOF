@@ -54,20 +54,20 @@ public class ValidateJwtRefreshToken : IRequestHandler<ValidateJwtRefreshTokenRe
 
                 if (jwtToken is null)
                 {
-                    return Result.Fail(400, "Invalid refresh token format");
+                    return Result.Fail("400", "Invalid refresh token format");
                 }
             }
             catch (SecurityTokenExpiredException)
             {
-                return Result.Fail(400, "Refresh token expired");
+                return Result.Fail("400", "Refresh token expired");
             }
             catch (SecurityTokenValidationException ex)
             {
-                return Result.Fail(400, $"Invalid refresh token: {ex.Message}");
+                return Result.Fail("400", $"Invalid refresh token: {ex.Message}");
             }
             catch (Exception ex)
             {
-                return Result.Fail(500, $"Error validating refresh token: {ex.Message}");
+                return Result.Fail("500", $"Error validating refresh token: {ex.Message}");
             }
 
             // Extract essential claims from the validated token
@@ -77,21 +77,21 @@ public class ValidateJwtRefreshToken : IRequestHandler<ValidateJwtRefreshTokenRe
 
             if (string.IsNullOrEmpty(tokenId) || string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(tenantId))
             {
-                return Result.Fail(400, "Invalid refresh token claims");
+                return Result.Fail("400", "Invalid refresh token claims");
             }
 
             // Check if the refresh token has been revoked
             var isRevoked = await _repository.IsRevokedAsync(tokenId, cancellationToken);
             if (isRevoked)
             {
-                return Result.Fail(400, "Refresh token has been revoked");
+                return Result.Fail("400", "Refresh token has been revoked");
             }
 
             return Result.Success(new ValidateJwtRefreshTokenResponse(tokenId, userId, tenantId));
         }
         catch (Exception ex)
         {
-            return Result.Fail(500, $"An unexpected error occurred: {ex.Message}");
+            return Result.Fail("500", $"An unexpected error occurred: {ex.Message}");
         }
     }
 }

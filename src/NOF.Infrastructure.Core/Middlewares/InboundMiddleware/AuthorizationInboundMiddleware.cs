@@ -57,7 +57,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
             _logger.LogWarning("Unauthorized access attempt to {HandlerType}/{MessageType} by unauthenticated user",
                 context.HandlerType, context.MessageType);
 
-            context.Response = Result.Fail(401, "Please login first");
+            context.Response = Result.Fail("401", "Please login first");
             return;
         }
 
@@ -68,7 +68,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
             _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
                 context.HandlerType, context.MessageType, permissionAttr.Permission);
 
-            context.Response = Result.Fail(403, "Insufficient permissions");
+            context.Response = Result.Fail("403", "Insufficient permissions");
             return;
         }
 

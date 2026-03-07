@@ -20,7 +20,7 @@ public class GetConfigNodeChildren : IRequestHandler<GetConfigNodeChildrenReques
 
         if (children is null)
         {
-            return Result.Fail(404, "未找到子节点信息");
+            return Result.Fail("404", "未找到子节点信息");
         }
 
         return new GetConfigNodeChildrenResponse((long)children.NodeId, children.ChildrenIds);

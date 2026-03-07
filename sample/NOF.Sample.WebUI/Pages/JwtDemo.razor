@@ -295,7 +295,7 @@
         }
         catch (Exception ex)
         {
-            _validationResult = Result.Fail(500, ex.Message);
+            _validationResult = Result.Fail("500", ex.Message);
             MessageService.Error($"Error validating token: {ex.Message}");
         }
         finally
@@ -335,7 +335,7 @@
         }
         catch (Exception ex)
         {
-            _revokeResult = Result.Fail(500, ex.Message);
+            _revokeResult = Result.Fail("500", ex.Message);
             MessageService.Error($"Error revoking token: {ex.Message}");
         }
         finally

@@ -21,7 +21,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         if (appNode is null)
         {
-            return Result.Fail(404, "配置节点不存在");
+            return Result.Fail("404", "配置节点不存在");
         }
 
         // 2. Expand Path to Root

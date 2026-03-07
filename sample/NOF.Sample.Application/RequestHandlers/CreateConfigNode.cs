@@ -21,7 +21,7 @@ public class CreateConfigNode : IRequestHandler<CreateConfigNodeRequest>
 
         if (await _configNodeRepository.ExistsByNameAsync(name, cancellationToken))
         {
-            return Result.Fail(400, "Node with same name already exists.");
+            return Result.Fail("400", "Node with same name already exists.");
         }
 
         var node = ConfigNode.Create(name, parentId);
