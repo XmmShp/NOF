@@ -23,7 +23,9 @@
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer — entities, aggregate roots, repositories, domain events |
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer — requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer — handler abstractions, state machines, caching, unit of work |
+| [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis) | Application Redis extension — advanced Redis cache abstractions built on top of `ICacheService` |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting — middleware, OpenAPI, endpoint mapping, JSON configuration |
+| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting — client-side routing, authorization components, and host builder integration |
 | [`NOF.Infrastructure.Core`](https://www.nuget.org/packages/NOF.Infrastructure.Core) | Core infrastructure — `INOFAppBuilder`, step pipeline, OpenTelemetry, service wiring |
 | [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization & authority — OIDC resource server, token issuance, key rotation, JWKS |
 | [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure — `NOFDbContext`, repositories, outbox, multi-tenancy |
@@ -47,7 +49,7 @@ builder.AddEFCore<AppDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 
-builder.Services.AddRedisCache();
+builder.AddRedisCache();
 
 var app = await builder.BuildAsync();
 
@@ -78,8 +80,10 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
 NOF.Domain              ← Domain entities, aggregate roots, events, shared attributes ([AutoInject])
 NOF.Contract            ← Requests, commands, notifications, DTOs
 NOF.Application         ← Handlers, state machines, application services
+NOF.Application.Extension.* ← Optional application-layer extensions
 NOF.Infrastructure.Core ← App builder, pipeline, OpenTelemetry
 NOF.Hosting.AspNetCore  ← ASP.NET Core host, endpoints, middleware
+NOF.Hosting.BlazorWebAssembly ← Blazor WebAssembly host, auth guard, client integration
 NOF.Infrastructure.*    ← Database, messaging, caching providers
 NOF.Extensions.*        ← Optional feature extensions
 ```

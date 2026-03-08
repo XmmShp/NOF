@@ -12,14 +12,14 @@ public class IdentityInboundMiddlewareStep : IInboundMiddlewareStep<IdentityInbo
 /// </summary>
 public sealed class IdentityInboundMiddleware : IInboundMiddleware
 {
-    private readonly IInvocationContextInternal _invocationContext;
+    private readonly IMutableUserContext _userContext;
     private readonly IIdentityResolver? _identityResolver;
 
     public IdentityInboundMiddleware(
-        IInvocationContextInternal invocationContext,
+        IMutableUserContext userContext,
         IIdentityResolver? identityResolver = null)
     {
-        _invocationContext = invocationContext;
+        _userContext = userContext;
         _identityResolver = identityResolver;
     }
 
@@ -30,13 +30,13 @@ public sealed class IdentityInboundMiddleware : IInboundMiddleware
             var principal = await _identityResolver.ResolveAsync(context, cancellationToken);
             if (principal is not null)
             {
-                _invocationContext.SetUser(principal);
+                _userContext.SetUser(principal);
                 await next(cancellationToken);
                 return;
             }
         }
 
-        _invocationContext.UnsetUser();
+        _userContext.UnsetUser();
         await next(cancellationToken);
     }
 }

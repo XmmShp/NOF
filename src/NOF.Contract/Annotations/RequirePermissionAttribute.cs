@@ -3,7 +3,7 @@ namespace NOF.Contract;
 /// <summary>
 /// Permission requirement attribute for marking handlers or messages that need specific permissions
 /// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 public class RequirePermissionAttribute : Attribute
 {
     /// <summary>

@@ -1,5 +1,3 @@
-using System.Security.Claims;
-
 namespace NOF.Application;
 
 /// <summary>
@@ -9,10 +7,9 @@ namespace NOF.Application;
 public interface IInvocationContext
 {
     /// <summary>
-    /// The claims principal representing the current user.
-    /// May be unauthenticated (e.g., system-triggered events).
+    /// Gets the current user context associated with this invocation.
     /// </summary>
-    ClaimsPrincipal User { get; }
+    IUserContext UserContext { get; }
 
     /// <summary>
     /// The tenant ID under which this invocation is executing.
@@ -38,20 +35,16 @@ public interface IInvocationContext
 }
 
 /// <summary>
-/// Internal interface for mutable invocation context operations.
+/// Represents mutable operations for the invocation context.
 /// </summary>
-public interface IInvocationContextInternal : IInvocationContext
+public interface IMutableInvocationContext : IInvocationContext
 {
-    /// <summary>
-    /// Sets the current user context.
-    /// </summary>
-    /// <param name="user">The claims principal representing the authenticated user.</param>
-    void SetUser(ClaimsPrincipal user);
+    IUserContext IInvocationContext.UserContext => UserContext;
 
     /// <summary>
-    /// Clears the current user context, marking the user as unauthenticated.
+    /// Gets the mutable user context associated with this invocation.
     /// </summary>
-    void UnsetUser();
+    new IMutableUserContext UserContext { get; }
 
     /// <summary>
     /// Sets the current tenant identifier.

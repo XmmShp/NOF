@@ -17,8 +17,10 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
     [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        builder.Services.TryAddScoped<IInvocationContextInternal, InvocationContext>();
-        builder.Services.TryAddScoped<IInvocationContext>(sp => sp.GetRequiredService<IInvocationContextInternal>());
+        builder.Services.TryAddScoped<IMutableUserContext, UserContext>();
+        builder.Services.TryAddScoped<IUserContext>(sp => sp.GetRequiredService<IMutableUserContext>());
+        builder.Services.TryAddScoped<IMutableInvocationContext, InvocationContext>();
+        builder.Services.TryAddScoped<IInvocationContext>(sp => sp.GetRequiredService<IMutableInvocationContext>());
 
         builder.Services.TryAddScoped<ICommandSender, CommandSender>();
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();

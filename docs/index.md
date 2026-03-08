@@ -12,6 +12,7 @@
 - **Multi-Tenancy** — Tenant-aware `DbContext` with automatic model filtering and migration isolation.
 - **Modular Pipeline** — Dependency-aware `IStep` system for ordered service registration and application initialization.
 - **OpenTelemetry** — Built-in tracing, metrics, and logging integration.
+- **Redis Cache Extensions** — Optional Redis-specific cache abstractions via `NOF.Application.Extension.Redis` on top of `ICacheService` / `IDistributedCache`.
 
 ## Getting Started
 

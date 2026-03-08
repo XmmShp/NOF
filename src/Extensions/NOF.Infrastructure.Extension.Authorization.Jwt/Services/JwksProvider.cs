@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using NOF.Contract;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 
@@ -154,7 +155,7 @@ public class RequestSenderJwksProvider : IJwksProvider
         try
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var requestSender = scope.ServiceProvider.GetRequiredService<NOF.Contract.IRequestSender>();
+            var requestSender = scope.ServiceProvider.GetRequiredService<IRequestSender>();
 
             var result = await requestSender.SendAsync(new GetJwksRequest(), cancellationToken);
             if (!result.IsSuccess || result.Value.Jwks.Keys is not { Length: > 0 } jwkKeys)

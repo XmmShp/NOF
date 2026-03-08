@@ -1,11 +1,13 @@
+using AntDesign;
 using NOF.Contract;
+using Result = NOF.Contract.Result;
 
 namespace NOF.Sample.WebUI;
 
-public static partial class NOFSampleWebUIExtensions
+public static class NOFSampleWebUIExtensions
 {
     /// <param name="messageService">The message service to use.</param>
-    extension(AntDesign.IMessageService messageService)
+    extension(IMessageService messageService)
     {
         /// <summary>
         /// Displays a success or error message based on the outcome of a <see cref="Result"/>.

@@ -6,6 +6,8 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 Contains the application service abstractions: request handlers, command handlers, notification handlers, state machines, caching, and unit of work patterns. This is where your business logic orchestration lives.
 
+For Redis-specific cache data structure abstractions, see the separate `NOF.Application.Extension.Redis` package.
+
 ## Key Abstractions
 
 ### Request Handlers
@@ -164,6 +166,8 @@ builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 ```shell
 dotnet add package NOF.Application
 ```
+
+`ICacheService` implements `IDistributedCache`, so standard distributed cache consumers can resolve either abstraction from NOF cache registrations.
 
 ## License
 

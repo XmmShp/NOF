@@ -1,0 +1,32 @@
+@using System.Reflection
+@using NOF.Contract
+@if (_allowAnonymous || _requiredPermission is null)
+{
+    <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
+}
+else
+{
+    <AuthGuard Permission="@_requiredPermission.Permission"
+               AuthorizingContent="@AuthorizingContent"
+               UnauthorizedContent="@UnauthorizedContent">
+        <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
+    </AuthGuard>
+}
+
+@code {
+    [Parameter, EditorRequired] public RouteData RouteData { get; set; } = default!;
+    [Parameter] public Type? DefaultLayout { get; set; }
+    [Parameter] public RenderFragment? AuthorizingContent { get; set; }
+    [Parameter] public RenderFragment? UnauthorizedContent { get; set; }
+
+    private bool _allowAnonymous;
+    private RequirePermissionAttribute? _requiredPermission;
+
+    protected override void OnParametersSet()
+    {
+        _allowAnonymous = RouteData.PageType.GetCustomAttribute<AllowAnonymousAttribute>(inherit: true) is not null;
+        _requiredPermission = RouteData.PageType.GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: true)
+            .OfType<RequirePermissionAttribute>()
+            .FirstOrDefault();
+    }
+}

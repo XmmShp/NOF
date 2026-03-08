@@ -4,6 +4,8 @@
 
 This directory contains structured instructions that help AI agents work effectively with the NOF codebase. Human developers should also read these files to understand the conventions and workflows.
 
+Recent framework conventions such as step-driven cache defaults, `IDistributedCache` compatibility, the `NOF.Application.Extension.Redis` package, and hosting packages like `NOF.Hosting.BlazorWebAssembly` should be reflected here when framework behavior changes.
+
 ## Directory Structure
 
 ```

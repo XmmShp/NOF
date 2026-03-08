@@ -14,20 +14,20 @@ public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundM
 /// </summary>
 public sealed class TenantInboundMiddleware : IInboundMiddleware
 {
-    private readonly IInvocationContextInternal _invocationContext;
+    private readonly IMutableInvocationContext _invocationContext;
 
-    public TenantInboundMiddleware(IInvocationContextInternal invocationContext)
+    public TenantInboundMiddleware(IMutableInvocationContext invocationContext)
     {
         _invocationContext = invocationContext;
     }
 
-    public ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
         string? tenantId = null;
 
-        if (_invocationContext.User.IsAuthenticated)
+        if (_invocationContext.UserContext.User.IsAuthenticated)
         {
-            tenantId = _invocationContext.User
+            tenantId = _invocationContext.UserContext.User
                 .FindFirst(ClaimTypes.TenantId)?.Value;
         }
 
@@ -49,6 +49,6 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware
             }
         }
 
-        return next(cancellationToken);
+        await next(cancellationToken);
     }
 }

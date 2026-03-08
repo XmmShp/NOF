@@ -16,14 +16,14 @@ public class AuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<Authori
 /// </summary>
 public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
 {
-    private readonly IInvocationContext _invocationContext;
+    private readonly IUserContext _userContext;
     private readonly ILogger<AuthorizationInboundMiddleware> _logger;
 
     public AuthorizationInboundMiddleware(
-        IInvocationContext invocationContext,
+        IUserContext userContext,
         ILogger<AuthorizationInboundMiddleware> logger)
     {
-        _invocationContext = invocationContext;
+        _userContext = userContext;
         _logger = logger;
     }
 
@@ -52,7 +52,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
         }
 
         // Check if user is authenticated
-        if (!_invocationContext.User.IsAuthenticated)
+        if (!_userContext.IsAuthenticated)
         {
             _logger.LogWarning("Unauthorized access attempt to {HandlerType}/{MessageType} by unauthenticated user",
                 context.HandlerType, context.MessageType);
@@ -63,7 +63,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
 
         // Check if user has required permission
         if (!string.IsNullOrEmpty(permissionAttr.Permission) &&
-            !_invocationContext.User.HasPermission(permissionAttr.Permission))
+            !_userContext.HasPermission(permissionAttr.Permission))
         {
             _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
                 context.HandlerType, context.MessageType, permissionAttr.Permission);

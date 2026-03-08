@@ -1,0 +1,72 @@
+@using NOF.Application
+@implements IDisposable
+@inject IUserContext UserContext
+
+@if (!_initialized)
+{
+    @AuthorizingContent
+}
+else if (_isAuthorized)
+{
+    @ChildContent
+}
+else
+{
+    @UnauthorizedContent
+}
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Permission { get; set; }
+    [Parameter] public RenderFragment? AuthorizingContent { get; set; }
+    [Parameter] public RenderFragment? UnauthorizedContent { get; set; }
+
+    private bool _initialized;
+    private bool _isAuthorized;
+
+    protected override void OnInitialized()
+    {
+        UserContext.StateChanged += HandleAuthorizationStateChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshStateAsync();
+    }
+
+    private async Task RefreshStateAsync()
+    {
+        _initialized = false;
+        _isAuthorized = await IsAuthorizedAsync();
+        _initialized = true;
+    }
+
+    private Task<bool> IsAuthorizedAsync()
+    {
+        if (!UserContext.IsAuthenticated)
+        {
+            return Task.FromResult(false);
+        }
+
+        if (string.IsNullOrWhiteSpace(Permission))
+        {
+            return Task.FromResult(true);
+        }
+
+        return Task.FromResult(UserContext.HasPermission(Permission));
+    }
+
+    private void HandleAuthorizationStateChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshStateAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        UserContext.StateChanged -= HandleAuthorizationStateChanged;
+    }
+}

@@ -115,11 +115,11 @@ public static partial class NOFJwtAuthorizationExtensions
             builder.Services.AddSingleton<IRevokedRefreshTokenRepository, CacheRevokedRefreshTokenRepository>();
 
             // Bridge JwtAuthorityOptions.Issuer into JwtAuthorizationOptions
-            builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<JwtAuthorizationOptions>>(
+            builder.Services.AddSingleton<IConfigureOptions<JwtAuthorizationOptions>>(
                 sp =>
                 {
-                    var authorityOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtAuthorityOptions>>().Value;
-                    return new Microsoft.Extensions.Options.ConfigureOptions<JwtAuthorizationOptions>(opts =>
+                    var authorityOptions = sp.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value;
+                    return new ConfigureOptions<JwtAuthorizationOptions>(opts =>
                     {
                         opts.Issuer ??= authorityOptions.Issuer;
                     });

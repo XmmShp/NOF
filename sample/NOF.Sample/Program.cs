@@ -1,7 +1,5 @@
 using ConfigurationCenter;
 using NOF.Application;
-using NOF.Contract;
-using NOF.Domain;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure.Core;
 using NOF.Infrastructure.EntityFrameworkCore;

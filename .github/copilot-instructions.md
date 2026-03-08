@@ -16,6 +16,8 @@ src/
   NOF.Domain/                  — Domain entities, aggregate roots, events, [AutoInject]
   NOF.Contract/                — IRequest, ICommand, INotification, Result<T>, [PublicApi], [HttpEndpoint]
   NOF.Application/             — Handlers, state machines, caching, unit of work
+  Extensions/
+    NOF.Application.Extension.Redis/ — Redis-specific application cache abstractions
   NOF.Infrastructure.Abstraction/ — INOFAppBuilder, IStep, shared abstractions
   NOF.Infrastructure.Core/     — App builder, step pipeline, OpenTelemetry, service wiring
   NOF.Domain.SourceGenerator/  — Source generator for [AutoInject], IValueObject<T>, [NewableValueObject]
@@ -23,6 +25,7 @@ src/
   NOF.Application.SourceGenerator/ — Source generator for handler registration
   Hostings/
     NOF.Hosting.AspNetCore/    — ASP.NET Core host, endpoint mapping, middleware, JSON config
+    NOF.Hosting.BlazorWebAssembly/ — Blazor WebAssembly host, auth guard, client authorization integration
     NOF.Hosting.AspNetCore.SourceGenerator/ — Endpoint mapper source generator
     NOF.Hosting.SourceGenerator/ — Hosting-level source generator
   Extensions/
@@ -196,6 +199,12 @@ await _uow.SaveChangesAsync(ct);
 public record OrderCacheKey(long Id) : CacheKey<OrderDto>($"Order:{Id}");
 // Usage: await _cache.GetAsync(new OrderCacheKey(id), ct);
 ```
+
+### Cache Registration
+
+- `ICacheService` implementations also satisfy `IDistributedCache`
+- cache defaults (`ICacheSerializer`, lock retry strategy, default `ICacheService`, default `IDistributedCache`, factory) are installed once through registration steps
+- Redis-specific abstractions such as `IRedisCacheService` live in `NOF.Application.Extension.Redis`
 
 ### PatchRequest with Optional Fields
 

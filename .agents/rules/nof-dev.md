@@ -12,6 +12,7 @@ You are working in the **NOF (Neat Opinionated Framework)** repository — a mod
 ## Repository Layout
 
 - `src/` — Framework source packages (Domain, Contract, Application, Infrastructure, Hosting, Extensions)
+- `src/Hostings/NOF.Hosting.BlazorWebAssembly/` — Blazor WebAssembly hosting package and client auth UI primitives
 - `src/*SourceGenerator/` — Roslyn source generators (compile-time code generation)
 - `sample/` — Sample application demonstrating NOF usage
 - `tests/` — xUnit tests (Contract, Integration, SourceGenerator)
@@ -33,8 +34,15 @@ You are working in the **NOF (Neat Opinionated Framework)** repository — a mod
 
 - **CQRS**: `IRequest`/`ICommand`/`INotification` with typed handlers
 - **Step Pipeline**: `IServiceRegistrationStep` / `IApplicationInitializationStep` with `IAfter<T>`/`IBefore<T>` ordering, CRTP `IStep<TSelf>` for AOT-safe type metadata
+- **Cache Registration**: global cache defaults should be installed once via registration steps; named cache registrations should layer on top and expose both `ICacheService` and `IDistributedCache`
 - **Source Gen Attributes**: `[AutoInject]`, `[PublicApi]`, `[HttpEndpoint]`, `[GenerateService]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`; `IValueObject<T>` (interface trigger)
 - **Transactional Outbox**: `IDeferredNotificationPublisher` via EF Core
+
+## Package Placement Notes
+
+- Generic cache abstractions stay in `NOF.Application`
+- Redis-specific cache abstractions live in `src/Extensions/NOF.Application.Extension.Redis/`
+- Redis infrastructure implementation stays in `src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/`
 
 ## Coding Rules
 
@@ -86,7 +94,7 @@ Ask yourself (or your AI agent) these questions:
 
 4. **CI/CD Pipelines** — Do the GitHub Actions workflows need updating?
    - `.github/workflows/ci.yml` — If you added a new test project or changed build steps
-   - `.github/workflows/cd.yml` — If you added a new NuGet package (add `dotnet pack` command)
+   - `.github/workflows/cd.yml` — If you added a new NuGet package (add `dotnet pack` command), including hosting packages like Blazor WebAssembly
    - `.github/workflows/release.yml` — Same as cd.yml for release builds
 
 5. **Agent Instructions** — Did you update the AI agent files?

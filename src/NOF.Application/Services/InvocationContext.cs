@@ -1,19 +1,18 @@
-using System.Security.Claims;
-
 namespace NOF.Application;
 
 /// <summary>
 /// Default implementation of <see cref="IInvocationContext"/>.
 /// </summary>
-public class InvocationContext : IInvocationContextInternal
+public class InvocationContext : IMutableInvocationContext
 {
-    /// <summary>
-    /// A shared, unauthenticated <see cref="ClaimsPrincipal"/> instance.
-    /// </summary>
-    public static ClaimsPrincipal Anonymous { get; } = new();
+    public InvocationContext(IMutableUserContext userContext)
+    {
+        ArgumentNullException.ThrowIfNull(userContext);
+        UserContext = userContext;
+    }
 
     /// <inheritdoc />
-    public ClaimsPrincipal User { get; private set; } = Anonymous;
+    public IMutableUserContext UserContext { get; }
 
     /// <inheritdoc />
     public string? TenantId { get; private set; }
@@ -26,18 +25,6 @@ public class InvocationContext : IInvocationContextInternal
 
     /// <inheritdoc />
     public string? SpanId { get; private set; }
-
-    /// <inheritdoc />
-    public void SetUser(ClaimsPrincipal user)
-    {
-        User = user;
-    }
-
-    /// <inheritdoc />
-    public void UnsetUser()
-    {
-        User = Anonymous;
-    }
 
     /// <inheritdoc />
     public void SetTenantId(string? tenantId)
