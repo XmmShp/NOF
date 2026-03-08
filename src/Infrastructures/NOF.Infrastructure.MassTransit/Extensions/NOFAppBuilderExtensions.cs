@@ -1,6 +1,5 @@
 using MassTransit.Logging;
 using MassTransit.Monitoring;
-using Microsoft.Extensions.DependencyInjection;
 using NOF.Infrastructure.Abstraction;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;

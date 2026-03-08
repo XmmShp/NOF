@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Application.Extension.Redis;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
 using StackExchange.Redis;
@@ -7,7 +9,7 @@ using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure.StackExchangeRedis;
 
-public class RedisCacheService : ICacheService
+public class RedisCacheService : IRedisCacheService
 {
     private readonly IDatabase _database;
     private readonly ICacheSerializer _serializer;
@@ -19,7 +21,7 @@ public class RedisCacheService : ICacheService
         IConnectionMultiplexer connectionMultiplexer,
         ICacheSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
-        CacheServiceOptions options)
+        IOptions<CacheServiceOptions> options)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
         ArgumentNullException.ThrowIfNull(serializer);
@@ -29,7 +31,7 @@ public class RedisCacheService : ICacheService
         _database = connectionMultiplexer.GetDatabase();
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
-        _options = options;
+        _options = options.Value;
     }
 
     private string ApplyKeyPrefix(string key)
@@ -213,6 +215,29 @@ public class RedisCacheService : ICacheService
         return result;
     }
 
+    public async ValueTask<IReadOnlyDictionary<string, T>> HashGetAllAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var entries = await _database.HashGetAllAsync(prefixedKey);
+        var result = new Dictionary<string, T>(entries.Length);
+        foreach (var entry in entries)
+        {
+            var value = _serializer.Deserialize<T>(entry.Value);
+            if (value is not null)
+            {
+                result[entry.Name!] = value;
+            }
+        }
+
+        return result;
+    }
+
+    public async ValueTask<bool> HashExistsAsync(string key, string field, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        return await _database.HashExistsAsync(prefixedKey, field);
+    }
+
     /// <inheritdoc />
     public async ValueTask SetManyAsync<T>(IDictionary<string, T> items, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
     {
@@ -360,43 +385,175 @@ public class RedisCacheService : ICacheService
         return Optional.None;
     }
 
-    public async ValueTask ExecuteRawAsync(IDictionary<string, object?> parameters, CancellationToken cancellationToken = default)
+    public async ValueTask<bool> HashSetAsync<T>(string key, string field, T value, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(parameters);
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.HashSetAsync(prefixedKey, field, data.ToArray(), When.Always, CommandFlags.None);
+    }
 
-        // Expected parameters:
-        // - "Command": string - Redis command name (e.g., "SET", "GET", "HSET")
-        // - "Args": object[] - Command arguments
-        // - "Script": string (optional) - Lua script to execute
-        // - "Keys": string[] (optional) - Keys for Lua script
-        // - "Values": object[] (optional) - Values for Lua script
-
-        if (parameters.TryGetValue("Script", out var scriptObj) && scriptObj is string script)
+    public async ValueTask<long> HashSetManyAsync<T>(string key, IReadOnlyDictionary<string, T> values, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var entries = values.Select(static kvp => kvp).Select(kvp => new HashEntry(kvp.Key, _serializer.Serialize(kvp.Value).ToArray())).ToArray();
+        if (entries.Length == 0)
         {
-            // Execute Lua script
-            var keys = parameters.TryGetValue("Keys", out var keysObj) && keysObj is string[] keysArray
-                ? keysArray.Select(k => (RedisKey)ApplyKeyPrefix(k)).ToArray()
-                : [];
-
-            var values = parameters.TryGetValue("Values", out var valuesObj) && valuesObj is object[] valuesArray
-                ? valuesArray.Select(v => (RedisValue)(v.ToString() ?? string.Empty)).ToArray()
-                : [];
-
-            await _database.ScriptEvaluateAsync(script, keys, values);
+            return 0;
         }
-        else if (parameters.TryGetValue("Command", out var commandObj) && commandObj is string command)
+
+        await _database.HashSetAsync(prefixedKey, entries);
+        return entries.Length;
+    }
+
+    public async ValueTask<Optional<T>> HashGetAsync<T>(string key, string field, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = await _database.HashGetAsync(prefixedKey, field);
+        if (!data.HasValue)
         {
-            // Execute raw Redis command
-            var args = parameters.TryGetValue("Args", out var argsObj) && argsObj is object[] argsArray
-                ? argsArray.Select(object (a) => a.ToString() ?? string.Empty).ToArray()
-                : [];
+            return Optional.None;
+        }
 
-            await _database.ExecuteAsync(command, args);
-        }
-        else
+        var value = _serializer.Deserialize<T>(data!);
+        return value is not null ? Optional.Of(value) : Optional.None;
+    }
+
+    public async ValueTask<IReadOnlyDictionary<string, Optional<T>>> HashGetManyAsync<T>(string key, IEnumerable<string> fields, CancellationToken cancellationToken = default)
+    {
+        var fieldList = fields.ToList();
+        var prefixedKey = ApplyKeyPrefix(key);
+        var values = await _database.HashGetAsync(prefixedKey, fieldList.Select(static field => (RedisValue)field).ToArray());
+        var result = new Dictionary<string, Optional<T>>(fieldList.Count);
+
+        for (var i = 0; i < fieldList.Count; i++)
         {
-            throw new ArgumentException("Parameters must contain either 'Script' or 'Command' key.", nameof(parameters));
+            if (!values[i].HasValue)
+            {
+                result[fieldList[i]] = Optional.None;
+                continue;
+            }
+
+            var value = _serializer.Deserialize<T>(values[i]!);
+            result[fieldList[i]] = value is not null ? Optional.Of(value) : Optional.None;
         }
+
+        return result;
+    }
+
+    public async ValueTask<bool> HashDeleteAsync(string key, string field, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        return await _database.HashDeleteAsync(prefixedKey, field);
+    }
+
+    public async ValueTask<bool> SetAddAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.SetAddAsync(prefixedKey, data.ToArray());
+    }
+
+    public async ValueTask<bool> SetContainsAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.SetContainsAsync(prefixedKey, data.ToArray());
+    }
+
+    public async ValueTask<bool> SetRemoveAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.SetRemoveAsync(prefixedKey, data.ToArray());
+    }
+
+    public async ValueTask<IReadOnlyList<T>> SetMembersAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var values = await _database.SetMembersAsync(prefixedKey);
+        return DeserializeMany<T>(values);
+    }
+
+    public async ValueTask<long> SetLengthAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        return await _database.SetLengthAsync(prefixedKey);
+    }
+
+    public async ValueTask<long> ListRightPushAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.ListRightPushAsync(prefixedKey, data.ToArray());
+    }
+
+    public async ValueTask<Optional<T>> ListLeftPopAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = await _database.ListLeftPopAsync(prefixedKey);
+        if (!data.HasValue)
+        {
+            return Optional.None;
+        }
+
+        var value = _serializer.Deserialize<T>(data!);
+        return value is not null ? Optional.Of(value) : Optional.None;
+    }
+
+    public async ValueTask<IReadOnlyList<T>> ListRangeAsync<T>(string key, long start = 0, long stop = -1, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var values = await _database.ListRangeAsync(prefixedKey, start, stop);
+        return DeserializeMany<T>(values);
+    }
+
+    public async ValueTask<long> ListLengthAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        return await _database.ListLengthAsync(prefixedKey);
+    }
+
+    public async ValueTask<bool> SortedSetAddAsync<T>(string key, T value, double score, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.SortedSetAddAsync(prefixedKey, data.ToArray(), score);
+    }
+
+    public async ValueTask<long> SortedSetRemoveAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.SortedSetRemoveAsync(prefixedKey, data.ToArray()) ? 1 : 0;
+    }
+
+    public async ValueTask<IReadOnlyList<T>> SortedSetRangeByRankAsync<T>(string key, long start = 0, long stop = -1, bool descending = false, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var values = await _database.SortedSetRangeByRankAsync(prefixedKey, start, stop, descending ? Order.Descending : Order.Ascending);
+        return DeserializeMany<T>(values);
+    }
+
+    public async ValueTask<IReadOnlyList<T>> SortedSetRangeByScoreAsync<T>(string key, double start = double.NegativeInfinity, double stop = double.PositiveInfinity, bool descending = false, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var values = await _database.SortedSetRangeByScoreAsync(prefixedKey, start, stop, order: descending ? Order.Descending : Order.Ascending);
+        return DeserializeMany<T>(values);
+    }
+
+    public async ValueTask<Optional<double>> SortedSetScoreAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        var score = await _database.SortedSetScoreAsync(prefixedKey, data.ToArray());
+        return score.HasValue ? Optional.Of(score.Value) : Optional.None;
+    }
+
+    public async ValueTask<double> SortedSetIncrementScoreAsync<T>(string key, T value, double delta, CancellationToken cancellationToken = default)
+    {
+        var prefixedKey = ApplyKeyPrefix(key);
+        var data = _serializer.Serialize(value);
+        return await _database.SortedSetIncrementAsync(prefixedKey, data.ToArray(), delta);
     }
 
     internal async ValueTask<bool> ReleaseLockAsync(string key, string lockId)
@@ -426,6 +583,26 @@ public class RedisCacheService : ICacheService
         }
 
         return options.SlidingExpiration;
+    }
+
+    private IReadOnlyList<T> DeserializeMany<T>(RedisValue[] values)
+    {
+        var result = new List<T>(values.Length);
+        foreach (var value in values)
+        {
+            if (!value.HasValue)
+            {
+                continue;
+            }
+
+            var deserialized = _serializer.Deserialize<T>(value!);
+            if (deserialized is not null)
+            {
+                result.Add(deserialized);
+            }
+        }
+
+        return result;
     }
 
     private record LockKey(string Key) : CacheKey<byte[]>($"__nof_redis_distributed_lock__:{Key}");

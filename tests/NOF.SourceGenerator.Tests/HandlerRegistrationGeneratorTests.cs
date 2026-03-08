@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 using NOF.Hosting.SourceGenerator;
 using NOF.Infrastructure.Abstraction;
 using NOF.SourceGenerator.Tests.Extensions;
@@ -65,8 +66,8 @@ public class HandlerRegistrationGeneratorTests
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
             typeof(IRequestHandler<,>),
-            typeof(NOF.Contract.IRequest<>),
-            typeof(NOF.Contract.Result),
+            typeof(IRequest<>),
+            typeof(Result),
             typeof(RequestWithResponseHandlerInfo)
         );
 
@@ -100,7 +101,7 @@ public class HandlerRegistrationGeneratorTests
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
             typeof(IEventHandler<>),
-            typeof(NOF.Domain.IEvent),
+            typeof(IEvent),
             typeof(EventHandlerInfo)
         );
 

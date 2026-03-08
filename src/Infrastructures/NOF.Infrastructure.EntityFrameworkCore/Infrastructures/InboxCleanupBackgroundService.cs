@@ -55,7 +55,7 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContextInternal>();
+        var invocationContext = scope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
 
         // Get all tenants
         var tenants = await tenantRepository.GetAllAsync();

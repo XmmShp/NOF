@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NOF.Domain;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;

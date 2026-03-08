@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
@@ -9,7 +10,7 @@ namespace NOF.Infrastructure.Core;
 /// <summary>
 /// In-memory implementation of <see cref="ICacheService"/> for development and testing purposes.
 /// </summary>
-public sealed class MemoryCacheService : ICacheService, IDisposable
+public sealed class InMemoryCacheService : ICacheService, IDisposable
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
     private readonly ICacheSerializer _serializer;
@@ -18,7 +19,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
     private readonly CacheServiceOptions _options;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
 
-    public MemoryCacheService(ICacheSerializer serializer, ICacheLockRetryStrategy lockRetryStrategy, CacheServiceOptions options)
+    public InMemoryCacheService(ICacheSerializer serializer, ICacheLockRetryStrategy lockRetryStrategy, IOptions<CacheServiceOptions> options)
     {
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
@@ -26,7 +27,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
 
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
-        _options = options;
+        _options = options.Value;
         _expirationTimer = new Timer(RemoveExpiredEntries, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
     }
 
@@ -454,12 +455,6 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
     }
 
     /// <inheritdoc />
-    public ValueTask ExecuteRawAsync(IDictionary<string, object?> parameters, CancellationToken cancellationToken = default)
-    {
-        throw new NotSupportedException("ExecuteRawAsync is not supported for in-memory cache. This method is only available for cache implementations that support raw command execution (e.g., Redis).");
-    }
-
-    /// <inheritdoc />
     public void Dispose()
     {
         _expirationTimer.Dispose();
@@ -555,14 +550,14 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
 
     private sealed class MemoryDistributedLock : IDistributedLock
     {
-        private readonly MemoryCacheService _cache;
+        private readonly InMemoryCacheService _cache;
         private readonly string _lockId;
         private readonly TimeSpan _expiration;
         private readonly Task? _renewalTask;
         private readonly CancellationTokenSource? _renewalCts;
         private int _isReleased;
 
-        public MemoryDistributedLock(MemoryCacheService cache, string key, string lockId, TimeSpan expiration, TimeSpan minimumRenewalDuration, double renewalIntervalFactor)
+        public MemoryDistributedLock(InMemoryCacheService cache, string key, string lockId, TimeSpan expiration, TimeSpan minimumRenewalDuration, double renewalIntervalFactor)
         {
             _cache = cache;
             Key = key;

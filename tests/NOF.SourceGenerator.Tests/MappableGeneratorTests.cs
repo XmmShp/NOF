@@ -21,7 +21,7 @@ public class MappableGeneratorTests
         typeof(MappableAttribute),               // NOF.Application (includes MappableAttribute<,>)
         typeof(IMapper),                          // NOF.Application
         typeof(MapperOptions),                    // NOF.Application
-        typeof(NOF.Contract.Optional<>),             // NOF.Contract
+        typeof(Contract.Optional<>),             // NOF.Contract
         typeof(Result),                           // NOF.Contract
         typeof(IValueObject<>),                   // NOF.Domain
     ];

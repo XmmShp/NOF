@@ -76,7 +76,7 @@ public static partial class NOFInfrastructureCoreConstants
     /// <summary>
     /// Standard HTTP / transport-level header keys.
     /// </summary>
-    public static partial class Transport
+    public static class Transport
     {
         /// <summary>
         /// Standard HTTP / transport-level header keys used in <see cref="InboundContext.Headers"/>.

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Contract;
@@ -8,7 +7,7 @@ using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
 
-public static partial class NOFHostingAspNetCoreExtensions
+public static class NOFHostingAspNetCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {

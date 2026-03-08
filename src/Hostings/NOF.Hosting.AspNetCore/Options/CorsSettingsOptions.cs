@@ -9,4 +9,4 @@ public class CorsSettingsOptions
     public string[] AllowedHeaders { get; set; } = ["*"];
 
     public bool AllowCredentials { get; set; } = true;
-};
+}

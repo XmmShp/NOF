@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -210,13 +211,13 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine($"        public override bool Equals(object? obj) => obj is {info.TypeName} other && Equals(other);");
         if (info.PrimitiveIsValueType)
         {
-            sb.AppendLine($"        public override int GetHashCode() => _value.GetHashCode();");
-            sb.AppendLine($"        public override string? ToString() => _value.ToString();");
+            sb.AppendLine("        public override int GetHashCode() => _value.GetHashCode();");
+            sb.AppendLine("        public override string? ToString() => _value.ToString();");
         }
         else
         {
-            sb.AppendLine($"        public override int GetHashCode() => _value?.GetHashCode() ?? 0;");
-            sb.AppendLine($"        public override string? ToString() => _value?.ToString();");
+            sb.AppendLine("        public override int GetHashCode() => _value?.GetHashCode() ?? 0;");
+            sb.AppendLine("        public override string? ToString() => _value?.ToString();");
         }
         sb.AppendLine();
 
@@ -229,12 +230,12 @@ public class ValueObjectGenerator : IIncrementalGenerator
         if (info.HasNewMethod)
         {
             sb.AppendLine($"        public static {info.TypeName} New()");
-            sb.AppendLine($"            => Of(global::NOF.Domain.IdGenerator.Current.NextId());");
+            sb.AppendLine("            => Of(global::NOF.Domain.IdGenerator.Current.NextId());");
             sb.AppendLine();
         }
 
         // Nested JsonConverter
-        sb.AppendLine($"        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
+        sb.AppendLine("        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
         sb.AppendLine($"        public sealed class __JsonConverter : global::System.Text.Json.Serialization.JsonConverter<{info.TypeName}>");
         sb.AppendLine("        {");
         sb.AppendLine($"            public override {info.TypeName} Read(ref global::System.Text.Json.Utf8JsonReader reader, global::System.Type typeToConvert, global::System.Text.Json.JsonSerializerOptions options)");
@@ -245,7 +246,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine($"            public override void Write(global::System.Text.Json.Utf8JsonWriter writer, {info.TypeName} value, global::System.Text.Json.JsonSerializerOptions options)");
         sb.AppendLine("            {");
-        sb.AppendLine($"                global::System.Text.Json.JsonSerializer.Serialize(writer, value._value, options);");
+        sb.AppendLine("                global::System.Text.Json.JsonSerializer.Serialize(writer, value._value, options);");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
 
@@ -258,7 +259,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
     private class ValueObjectResult
     {
         public ValueObjectInfo? Info { get; set; }
-        public System.Collections.Generic.List<Diagnostic> Diagnostics { get; } = new System.Collections.Generic.List<Diagnostic>();
+        public List<Diagnostic> Diagnostics { get; } = new();
     }
 
     private class ValueObjectInfo

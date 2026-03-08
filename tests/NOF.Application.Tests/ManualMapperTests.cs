@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
-using NOF.Application;
+using System.Collections;
 using Xunit;
 
 namespace NOF.Application.Tests;
@@ -201,7 +201,7 @@ public class ManualMapperTests
     public void OpenGenericSource_FallbackWorks()
     {
         var mapper = CreateMapper(o =>
-            o.Add(typeof(List<>), typeof(int), (src, _) => ((System.Collections.IList)src).Count));
+            o.Add(typeof(List<>), typeof(int), (src, _) => ((IList)src).Count));
 
         var result = mapper.Map<List<string>, int>(["a", "b", "c"]);
 
@@ -226,7 +226,7 @@ public class ManualMapperTests
         var mapper = CreateMapper(o =>
             o.Add(typeof(List<>), typeof(HashSet<>), (src, _) =>
             {
-                var list = (System.Collections.IList)src;
+                var list = (IList)src;
                 var set = new HashSet<object>();
                 foreach (var item in list)
                 {

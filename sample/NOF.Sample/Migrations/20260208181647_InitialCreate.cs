@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#nullable disable
+
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-
-#nullable disable
 
 namespace NOF.Sample.Migrations
 {

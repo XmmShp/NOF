@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NOF.Domain;
 using NOF.Domain.SourceGenerator;
 using Xunit;
@@ -31,13 +33,13 @@ public class FailureGeneratorTests
 
         var tree = result.GeneratedTrees.Single();
         var root = tree.GetRoot();
-        var ns = root.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.NamespaceDeclarationSyntax>().Single();
+        var ns = root.DescendantNodes().OfType<NamespaceDeclarationSyntax>().Single();
         ns.Name.ToString().Should().Be("Test");
 
-        var classDecl = ns.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax>().Single();
+        var classDecl = ns.DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
         classDecl.Identifier.Text.Should().Be("MyFailure");
 
-        var fields = classDecl.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.FieldDeclarationSyntax>().ToList();
+        var fields = classDecl.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
         fields.Should().HaveCount(2);
 
         var invalidInputField = fields.First(f => f.Declaration.Variables.First().Identifier.Text == "InvalidInput");
@@ -75,9 +77,9 @@ public class FailureGeneratorTests
 
         var tree = result.GeneratedTrees.Single();
         var root = tree.GetRoot();
-        var classDecl = root.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax>().Single();
+        var classDecl = root.DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
 
-        var fields = classDecl.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.FieldDeclarationSyntax>().ToList();
+        var fields = classDecl.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
         fields.Should().HaveCount(2);
 
         var fieldNames = fields.Select(f => f.Declaration.Variables.First().Identifier.Text).ToList();
@@ -132,7 +134,7 @@ public class FailureGeneratorTests
         // Assert
         result.GeneratedTrees.Should().ContainSingle();
         result.Diagnostics.Should().ContainSingle(d => d.Id == "NOF002");
-        result.Diagnostics.Single(d => d.Id == "NOF002").Severity.Should().Be(Microsoft.CodeAnalysis.DiagnosticSeverity.Info);
+        result.Diagnostics.Single(d => d.Id == "NOF002").Severity.Should().Be(DiagnosticSeverity.Info);
         result.Diagnostics.First().GetMessage().Should().Contain("MyFailure").And.Contain("1001");
     }
 
@@ -159,7 +161,7 @@ public class FailureGeneratorTests
 
         var tree = result.GeneratedTrees.Single();
         var root = tree.GetRoot();
-        var recordDecl = root.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.RecordDeclarationSyntax>().Single();
+        var recordDecl = root.DescendantNodes().OfType<RecordDeclarationSyntax>().Single();
         recordDecl.Identifier.Text.Should().Be("MyFailure");
     }
 
@@ -186,7 +188,7 @@ public class FailureGeneratorTests
 
         var tree = result.GeneratedTrees.Single();
         var root = tree.GetRoot();
-        var classDecl = root.DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax>().Single();
+        var classDecl = root.DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
         classDecl.Modifiers.Should().Contain(m => m.Text == "abstract");
     }
 

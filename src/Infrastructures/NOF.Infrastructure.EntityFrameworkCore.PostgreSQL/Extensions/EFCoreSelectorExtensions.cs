@@ -2,7 +2,7 @@ using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 
-public static partial class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions
+public static class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions
 {
     extension(EFCoreSelector selector)
     {

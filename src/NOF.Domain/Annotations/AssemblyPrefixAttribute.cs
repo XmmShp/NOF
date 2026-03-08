@@ -13,7 +13,7 @@ namespace NOF.Annotation;
 /// [assembly: NOF.Annotation.AssemblyPrefix("MyApp", "MyApp.Shared")]
 /// </code>
 /// </example>
-[AttributeUsage(AttributeTargets.Assembly, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Assembly)]
 public class AssemblyPrefixAttribute : Attribute
 {
     /// <summary>

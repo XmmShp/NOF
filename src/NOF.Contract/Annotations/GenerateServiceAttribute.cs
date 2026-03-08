@@ -5,7 +5,7 @@ namespace NOF.Contract;
 /// for request types marked with <see cref="PublicApiAttribute"/>.
 /// Place on a <c>partial interface</c>.
 /// </summary>
-[AttributeUsage(AttributeTargets.Interface, Inherited = false)]
+[AttributeUsage(AttributeTargets.Interface)]
 public sealed class GenerateServiceAttribute : Attribute
 {
     /// <summary>

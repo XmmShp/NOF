@@ -79,7 +79,7 @@ public sealed class InMemoryRequestRider : IRequestRider
     {
         return new InboundContext
         {
-            Message = (IMessage)request,
+            Message = request,
             Handler = handler,
             Headers = headers is not null
                 ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)

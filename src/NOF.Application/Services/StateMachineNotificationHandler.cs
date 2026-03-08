@@ -43,7 +43,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     {
         var builder = new StateMachineBuilder<TState>();
         new TStateMachineDefinition().Build(builder);
-        var blueprint = ((IStateMachineBuilderInternal)builder).Build();
+        var blueprint = builder.Build();
         blueprint.DefinitionType = typeof(TStateMachineDefinition);
         return blueprint;
     }

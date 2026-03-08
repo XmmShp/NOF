@@ -1,5 +1,4 @@
 using FluentAssertions;
-using NOF.Contract;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Xunit;
@@ -196,7 +195,7 @@ public class PatchRequestTests
     [Fact]
     public void Serialize_OnlyIncludesSetProperties()
     {
-        var patch = new TestPatchRequest() { Name = Optional.Of("Alice") };
+        var patch = new TestPatchRequest { Name = Optional.Of("Alice") };
 
         var json = JsonSerializer.Serialize(patch, JsonSerializerOptions.NOF);
         var doc = JsonDocument.Parse(json);
@@ -209,7 +208,7 @@ public class PatchRequestTests
     [Fact]
     public void Serialize_Deserialize_RoundTrip()
     {
-        var original = new TestPatchRequest()
+        var original = new TestPatchRequest
         {
             Name = Optional.Of("Alice"),
             Age = Optional.Of<int?>(25)
@@ -257,7 +256,7 @@ public class PatchRequestTests
 
         var patch = new TestPatchRequest
         {
-            ExtensionData = new Dictionary<string, System.Text.Json.JsonElement>
+            ExtensionData = new Dictionary<string, JsonElement>
             {
                 ["Name"] = JsonSerializer.SerializeToElement("Alice")
             }

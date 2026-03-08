@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -26,7 +24,7 @@ public static partial class NOFContractExtensions
         options.Converters.Add(new OptionalConverterFactory());
         options.Converters.Add(new PatchRequestConverterFactory());
 
-        if (JsonSerializer.IsReflectionEnabledByDefault && RuntimeFeature.IsDynamicCodeSupported)
+        if (JsonSerializer.IsReflectionEnabledByDefault)
         {
 #pragma warning disable IL2026, IL3050
             options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());

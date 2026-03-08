@@ -1,5 +1,4 @@
 using MassTransit;
-using Microsoft.Extensions.DependencyInjection;
 using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.MassTransit;

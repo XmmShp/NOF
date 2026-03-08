@@ -27,6 +27,8 @@ jobs:
           src:
             - 'src/**'
             - 'tests/**'
+            - '.agents/**'
+            - '.github/copilot-instructions.md'
             - 'Directory.Build.props'
             - 'Directory.Packages.props'
             - 'nuget.config'

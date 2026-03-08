@@ -1,7 +1,6 @@
 using NOF.Application;
 using NOF.Infrastructure.Abstraction;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.Core;
 
@@ -15,9 +14,9 @@ public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboun
 /// </summary>
 public sealed class TracingInboundMiddleware : IInboundMiddleware
 {
-    private readonly IInvocationContextInternal _invocationContext;
+    private readonly IMutableInvocationContext _invocationContext;
 
-    public TracingInboundMiddleware(IInvocationContextInternal invocationContext)
+    public TracingInboundMiddleware(IMutableInvocationContext invocationContext)
     {
         _invocationContext = invocationContext;
     }

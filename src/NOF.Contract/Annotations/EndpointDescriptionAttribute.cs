@@ -4,7 +4,7 @@ namespace NOF.Contract;
 /// Specifies a description for the endpoint, used to enhance OpenAPI documentation.
 /// Unlike System.ComponentModel.DescriptionAttribute, this attribute does not affect the request type's own schema.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class)]
 public class EndpointDescriptionAttribute : Attribute
 {
     /// <summary>

@@ -1,5 +1,5 @@
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Infrastructure.Abstraction;
@@ -65,25 +65,20 @@ public static partial class NOFInfrastructureCoreExtensions
                 services.Configure(name, configure);
             }
 
-            // Default keyed serializer — overridable via builder.WithSerializer(...)
-            services.TryAddKeyedSingleton<ICacheSerializer>(name, (_, _) => new JsonCacheSerializer());
-
-            // Default keyed lock retry strategy — overridable via builder.WithLockRetryStrategy(...)
-            services.TryAddKeyedSingleton<ICacheLockRetryStrategy>(name, (_, _) => new ExponentialBackoffCacheLockRetryStrategy());
+            services.AddKeyedScoped<IOptions<CacheServiceOptions>>(name, (sp, key) =>
+                Options.Create(sp.GetRequiredService<IOptionsMonitor<CacheServiceOptions>>().Get((string)key!)));
 
             // Keyed cache service — factory explicitly resolves keyed deps and named options
             services.AddKeyedScoped<ICacheService>(name, (sp, key) =>
             {
-                var serializer = sp.GetRequiredKeyedService<ICacheSerializer>(key);
-                var lockRetryStrategy = sp.GetRequiredKeyedService<ICacheLockRetryStrategy>(key);
-                var opts = sp.GetRequiredService<IOptionsMonitor<CacheServiceOptions>>().Get((string)key!);
+                var serializer = sp.GetKeyedService<ICacheSerializer>(key) ?? sp.GetRequiredService<ICacheSerializer>();
+                var lockRetryStrategy = sp.GetKeyedService<ICacheLockRetryStrategy>(key) ?? sp.GetRequiredService<ICacheLockRetryStrategy>();
+                var opts = sp.GetRequiredKeyedService<IOptions<CacheServiceOptions>>(key!);
                 return ActivatorUtilities.CreateInstance<TImplementation>(sp, serializer, lockRetryStrategy, opts);
             });
 
-            services.TryAddScoped<ICacheService>(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
-
-            // Factory singleton (safe to call multiple times)
-            services.TryAddSingleton<ICacheServiceFactory, DefaultCacheServiceFactory>();
+            services.AddKeyedScoped<IDistributedCache>(name, (sp, key) =>
+                sp.GetRequiredKeyedService<ICacheService>(key!));
 
             return new CacheServiceBuilder(name, services);
         }

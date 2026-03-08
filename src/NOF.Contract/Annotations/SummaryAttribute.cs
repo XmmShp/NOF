@@ -3,7 +3,7 @@ namespace NOF.Contract;
 /// <summary>
 /// Specifies a summary for the endpoint, used to enhance OpenAPI documentation.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class)]
 public class SummaryAttribute : Attribute
 {
     /// <summary>

@@ -7,7 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace NOF.Infrastructure.Abstraction;
 
 // ReSharper disable once InconsistentNaming
-public static partial class NOFInfrastructureCoreExtensions
+public static class NOFInfrastructureCoreExtensions
 {
     /// <param name="services">The <see cref="IServiceCollection"/> to add the service to.</param>
     extension(IServiceCollection services)

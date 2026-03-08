@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using NOF.Domain;
 using NOF.Domain.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
+using System.Text.Json.Serialization;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -19,7 +20,7 @@ public class ValueObjectGeneratorTests
         typeof(IValueObject<>),
         typeof(NewableValueObjectAttribute),
         typeof(IdGenerator),
-        typeof(System.Text.Json.Serialization.JsonConverterAttribute),
+        typeof(JsonConverterAttribute),
     ];
 
     private static GeneratorDriverRunResult RunGenerator(string source)

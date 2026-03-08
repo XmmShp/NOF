@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System;
@@ -291,7 +290,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine("        /// <inheritdoc />");
         sb.AppendLine($"        public virtual async global::System.Threading.Tasks.Task<{returnType}> {methodName}Async({requestType} request, global::System.Threading.CancellationToken cancellationToken)");
         sb.AppendLine("        {");
-        sb.AppendLine($"            return await _requestSender.SendAsync(request, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("            return await _requestSender.SendAsync(request, cancellationToken).ConfigureAwait(false);");
         sb.AppendLine("        }");
         sb.AppendLine();
     }

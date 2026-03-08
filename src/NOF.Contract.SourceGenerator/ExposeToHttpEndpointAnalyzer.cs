@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -187,7 +188,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(typeSymbol);
         var propertyNames = new HashSet<string>(
             allProperties.Select(p => p.Name),
-            System.StringComparer.OrdinalIgnoreCase);
+            StringComparer.OrdinalIgnoreCase);
 
         foreach (var attr in httpEndpointAttributes)
         {

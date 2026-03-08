@@ -5,7 +5,7 @@ using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.MassTransit.RabbitMQ;
 
-public static partial class NOFInfrastructureMassTransitRabbitMQExtensions
+public static class NOFInfrastructureMassTransitRabbitMQExtensions
 {
     extension(MassTransitSelector selector)
     {

@@ -8,7 +8,7 @@ using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
+public static class NOFInfrastructureEntityFrameworkCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {
@@ -28,7 +28,7 @@ public static partial class NOFInfrastructureEntityFrameworkCoreExtensions
             builder.Services.AddScoped((Func<IServiceProvider, TDbContext>)(sp =>
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory<TDbContext>>();
-                var invocationContext = sp.GetRequiredService<Application.IInvocationContext>();
+                var invocationContext = sp.GetRequiredService<IInvocationContext>();
                 return factory.CreateDbContext((string?)invocationContext.TenantId);
             }));
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());

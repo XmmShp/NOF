@@ -191,14 +191,14 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                 var notificationFullName = notificationType.ToDisplayString(typeFormat);
                 var handlerClassName = $"__{defName}_{notificationName}_Handler";
 
-                sb.AppendLine($"    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]");
+                sb.AppendLine("    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]");
                 sb.AppendLine($"    public sealed class {handlerClassName} : global::NOF.Application.StateMachineNotificationHandler<{defFullName}, {stateFullName}, {notificationFullName}>");
                 sb.AppendLine("    {");
                 sb.AppendLine($"        public {handlerClassName}(");
-                sb.AppendLine($"            global::NOF.Application.IStateMachineContextRepository repository,");
-                sb.AppendLine($"            global::NOF.Application.IUnitOfWork uow,");
-                sb.AppendLine($"            global::System.IServiceProvider serviceProvider,");
-                sb.AppendLine($"            global::NOF.Application.IStateMachineRegistry stateMachineRegistry)");
+                sb.AppendLine("            global::NOF.Application.IStateMachineContextRepository repository,");
+                sb.AppendLine("            global::NOF.Application.IUnitOfWork uow,");
+                sb.AppendLine("            global::System.IServiceProvider serviceProvider,");
+                sb.AppendLine("            global::NOF.Application.IStateMachineRegistry stateMachineRegistry)");
                 sb.AppendLine("            : base(repository, uow, serviceProvider, stateMachineRegistry) { }");
                 sb.AppendLine("    }");
                 sb.AppendLine();
@@ -208,13 +208,13 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
         }
 
         // Generate static property with all SM handler entries
-        sb.AppendLine($"    /// <summary>");
-        sb.AppendLine($"    /// Contains all generated state machine notification handler entries.");
-        sb.AppendLine($"    /// Register via <c>HandlerSelector.AddStateMachineHandlers()</c>.");
-        sb.AppendLine($"    /// </summary>");
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Contains all generated state machine notification handler entries.");
+        sb.AppendLine("    /// Register via <c>HandlerSelector.AddStateMachineHandlers()</c>.");
+        sb.AppendLine("    /// </summary>");
         sb.AppendLine($"    public static partial class {sanitizedName}StateMachineHandlers");
         sb.AppendLine("    {");
-        sb.AppendLine($"        public static global::NOF.Application.StateMachineHandlerEntry[] Handlers {{ get; }} =");
+        sb.AppendLine("        public static global::NOF.Application.StateMachineHandlerEntry[] Handlers { get; } =");
         sb.AppendLine("        [");
         for (var i = 0; i < handlerPairs.Count; i++)
         {

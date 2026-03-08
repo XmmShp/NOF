@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NOF.Domain;
+using System.Reflection;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -162,7 +163,7 @@ public class SnowflakeIdGeneratorTests
     {
         // Reset to null via reflection to isolate test
         var field = typeof(IdGenerator).GetField("_current",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+            BindingFlags.NonPublic | BindingFlags.Static)!;
         var previous = field.GetValue(null);
         field.SetValue(null, null);
 

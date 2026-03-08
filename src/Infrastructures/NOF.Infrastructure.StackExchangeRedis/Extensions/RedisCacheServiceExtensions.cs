@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
+using NOF.Application.Extension.Redis;
 using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 using StackExchange.Redis;
@@ -34,7 +35,12 @@ public static partial class NOFInfrastructureExtensions
                 return ConnectionMultiplexer.Connect(connectionString);
             });
 
-            builder.Services.AddCacheService<RedisCacheService>(name ?? ICacheServiceFactory.DefaultName, configureOptions);
+            var cacheName = name ?? ICacheServiceFactory.DefaultName;
+            builder.Services.AddCacheService<RedisCacheService>(cacheName, configureOptions);
+            builder.Services.AddKeyedScoped<IRedisCacheService>(cacheName, (sp, key) =>
+                (IRedisCacheService)sp.GetRequiredKeyedService<ICacheService>(key!));
+            builder.Services.TryAddScoped<IRedisCacheService>(sp =>
+                sp.GetRequiredKeyedService<IRedisCacheService>(ICacheServiceFactory.DefaultName));
 
             return builder;
         }

@@ -56,7 +56,7 @@ public class OptionalTests
     [Fact]
     public void ImplicitConversion_FromNullString_SetsHasValue_WithNullValue()
     {
-        Optional<string> opt = (string)null!;
+        Optional<string> opt = null!;
         opt.HasValue.Should().BeTrue();
         opt.Value.Should().BeNull();
     }
@@ -149,7 +149,7 @@ public class OptionalJsonTests
         const string json = """{"name":"Bob","age":25}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        dto.Name.HasValue.Should().BeTrue(because: $"converter should set HasValue=true for present property");
+        dto.Name.HasValue.Should().BeTrue(because: "converter should set HasValue=true for present property");
         dto.Name.Value.Should().Be("Bob");
         dto.Age.HasValue.Should().BeTrue();
         dto.Age.Value.Should().Be(25);

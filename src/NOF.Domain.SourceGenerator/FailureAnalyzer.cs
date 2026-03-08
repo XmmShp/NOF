@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -93,8 +94,8 @@ public class FailureAnalyzer : DiagnosticAnalyzer
         }
 
         // Validate each FailureAttribute
-        var failureNames = new System.Collections.Generic.HashSet<string>();
-        var failureCodes = new System.Collections.Generic.HashSet<string>();
+        var failureNames = new HashSet<string>();
+        var failureCodes = new HashSet<string>();
 
         foreach (var attribute in failureAttributes)
         {

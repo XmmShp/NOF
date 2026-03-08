@@ -55,7 +55,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContextInternal>();
+        var invocationContext = scope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
         var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
         var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 

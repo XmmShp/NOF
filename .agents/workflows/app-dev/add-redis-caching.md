@@ -4,11 +4,12 @@ description: How to add Redis caching with typed CacheKey in a NOF application
 
 # Add Redis Caching
 
-NOF provides a typed caching abstraction via `ICacheService` and `CacheKey<T>`, backed by StackExchange.Redis.
+NOF provides a typed caching abstraction via `ICacheService` and `CacheKey<T>`, backed by StackExchange.Redis. For Redis-specific data structures, use `IRedisCacheService` from `NOF.Application.Extension.Redis`.
 
 ## 1. Add NuGet Package
 
 ```bash
+dotnet add package NOF.Application.Extension.Redis
 dotnet add package NOF.Infrastructure.StackExchangeRedis
 ```
 
@@ -182,7 +183,9 @@ All methods above accept both `string` keys and strongly-typed `CacheKey<T>` key
 ## Notes
 
 - `ICacheService` extends `IDistributedCache` — it's compatible with standard .NET caching APIs.
+- Redis registrations also expose `IDistributedCache` in DI, so standard distributed cache consumers can use the same underlying cache instance.
 - Without Redis, NOF uses an in-memory cache by default (`CacheServiceRegistrationStep`). `AddRedisCache()` replaces it.
 - `CacheKey<T>` is strongly typed — the generic parameter `T` ensures type safety at compile time.
 - `Optional<T>` distinguishes between "not in cache" (`!HasValue`) and "cached null" (`HasValue` with `Value == null`).
 - Use `ICacheServiceFactory` if you need named cache instances.
+- For hashes, sets, lists, and sorted sets, inject `IRedisCacheService` from `NOF.Application.Extension.Redis`.

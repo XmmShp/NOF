@@ -276,10 +276,10 @@ public class MappableGenerator : IIncrementalGenerator
         sb.AppendLine("{");
         sb.AppendLine($"    partial class {typeName}");
         sb.AppendLine("    {");
-        sb.AppendLine($"        /// <summary>");
-        sb.AppendLine($"        /// Registers all auto-generated mappings declared via [Mappable] attributes on this class.");
-        sb.AppendLine($"        /// </summary>");
-        sb.AppendLine($"        public static global::NOF.Application.MapperOptions ConfigureAutoMappings(this global::NOF.Application.MapperOptions options)");
+        sb.AppendLine("        /// <summary>");
+        sb.AppendLine("        /// Registers all auto-generated mappings declared via [Mappable] attributes on this class.");
+        sb.AppendLine("        /// </summary>");
+        sb.AppendLine("        public static global::NOF.Application.MapperOptions ConfigureAutoMappings(this global::NOF.Application.MapperOptions options)");
         sb.AppendLine("        {");
 
         foreach (var pair in pairs)

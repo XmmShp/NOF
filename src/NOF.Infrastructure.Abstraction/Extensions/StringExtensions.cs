@@ -1,6 +1,6 @@
 namespace NOF.Infrastructure.Core;
 
-public static partial class NOFInfrastructureCoreExtensions
+public static class NOFInfrastructureCoreExtensions
 {
     extension(string str)
     {
