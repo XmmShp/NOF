@@ -10,26 +10,15 @@ internal class EFCoreUnitOfWork : IUnitOfWork
     private readonly DbContext _dbContext;
     private readonly ITransactionManager _transactionManager;
     private readonly IEventPublisher _publisher;
-    private readonly IOutboxMessageRepository _messageRepository;
-    private readonly IOutboxMessageCollector _collector;
 
     public EFCoreUnitOfWork(
         DbContext dbContext,
         ITransactionManager transactionManager,
-        IEventPublisher publisher,
-        IOutboxMessageRepository messageRepository,
-        IOutboxMessageCollector collector)
+        IEventPublisher publisher)
     {
         _dbContext = dbContext;
         _transactionManager = transactionManager;
         _publisher = publisher;
-        _messageRepository = messageRepository;
-        _collector = collector;
-    }
-
-    public void Update<TAggregateRoot>(TAggregateRoot entity) where TAggregateRoot : class, IAggregateRoot
-    {
-        _dbContext.Update(entity).DetectChanges();
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
@@ -44,16 +33,6 @@ internal class EFCoreUnitOfWork : IUnitOfWork
             foreach (var domainEvent in domainEvents)
             {
                 await _publisher.PublishAsync(domainEvent, cancellationToken);
-            }
-
-            var messages = _collector.GetMessages();
-
-            var hasMessage = messages.Count > 0;
-
-            if (hasMessage)
-            {
-                _messageRepository.Add(messages, cancellationToken);
-                _collector.Clear();
             }
             var result = await _dbContext.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);

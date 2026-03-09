@@ -15,7 +15,7 @@ public static class NOFInfrastructureMassTransitRabbitMQExtensions
             {
                 config.UsingRabbitMq((context, cfg) =>
                 {
-                    cfg.Publish<IRequestBase>(p => p.Exclude = true);
+                    cfg.Publish<IRequestMarker>(p => p.Exclude = true);
                     cfg.Publish<IRequest>(p => p.Exclude = true);
                     cfg.Publish<ICommand>(p => p.Exclude = true);
                     cfg.Publish<INotification>(p => p.Exclude = true);

@@ -17,7 +17,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
     private const string InterfaceMetadataName = "NOF.Domain.IValueObject<T>";
     private const string NewableAttributeMetadataName = "NOF.Domain.NewableValueObjectAttribute";
 
-    private static readonly DiagnosticDescriptor MustBePartialDescriptor = new(
+    private static readonly DiagnosticDescriptor _mustBePartialDescriptor = new(
         id: "NOF010",
         title: "ValueObject struct must be partial",
         messageFormat: "'{0}' implements IValueObject<T> but is not declared as partial",
@@ -25,7 +25,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor NewableMustBeLongDescriptor = new(
+    private static readonly DiagnosticDescriptor _newableMustBeLongDescriptor = new(
         id: "NOF012",
         title: "[NewableValueObject] requires IValueObject<long>",
         messageFormat: "'{0}' is annotated with [NewableValueObject] but its primitive type is '{1}'. Only IValueObject<long> is supported.",
@@ -99,7 +99,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         // Must be partial
         if (syntax.Modifiers.All(m => m.Text != "partial"))
         {
-            result.Diagnostics.Add(Diagnostic.Create(MustBePartialDescriptor, syntax.Identifier.GetLocation(), symbol.Name));
+            result.Diagnostics.Add(Diagnostic.Create(_mustBePartialDescriptor, syntax.Identifier.GetLocation(), symbol.Name));
             return result; // no code gen
         }
 
@@ -120,7 +120,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         if (hasNewableAttribute && primitiveType.SpecialType != SpecialType.System_Int64)
         {
             result.Diagnostics.Add(Diagnostic.Create(
-                NewableMustBeLongDescriptor,
+                _newableMustBeLongDescriptor,
                 syntax.Identifier.GetLocation(),
                 symbol.Name, primitiveName));
             return result; // no code gen

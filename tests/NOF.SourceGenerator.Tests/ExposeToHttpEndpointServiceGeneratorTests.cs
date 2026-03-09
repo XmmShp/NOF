@@ -8,7 +8,7 @@ namespace NOF.SourceGenerator.Tests;
 
 public class ExposeToHttpEndpointServiceGeneratorTests
 {
-    private static readonly Type[] ExtraRefs =
+    private static readonly Type[] _extraRefs =
     [
         typeof(PublicApiAttribute),
         typeof(HttpEndpointAttribute),
@@ -41,7 +41,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var root = runResult.GeneratedTrees[0].GetRoot();
@@ -90,7 +90,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
@@ -114,7 +114,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // Both HTTP and RequestSender methods should be virtual
@@ -138,7 +138,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var root = runResult.GeneratedTrees[0].GetRoot();
 
         // Both implementation classes should be partial
@@ -163,7 +163,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().BeEmpty();
     }
 
@@ -191,7 +191,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
@@ -225,7 +225,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
@@ -256,7 +256,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
@@ -287,7 +287,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
@@ -317,7 +317,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("JsonContent.Create(request,");
@@ -341,7 +341,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         // RequestSender client should use _requestSender.SendAsync
@@ -364,7 +364,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var root = runResult.GeneratedTrees[0].GetRoot();
@@ -401,7 +401,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var root = runResult.GeneratedTrees[0].GetRoot();
@@ -434,7 +434,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("request.SubmitTimeFrom.Value.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)");
@@ -465,7 +465,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("request.Since.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)");
@@ -493,7 +493,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, ExtraRefs);
+        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("global::System.Threading.Tasks.Task<");

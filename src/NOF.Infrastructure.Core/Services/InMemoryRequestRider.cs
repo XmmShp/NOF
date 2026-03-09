@@ -75,7 +75,7 @@ public sealed class InMemoryRequestRider : IRequestRider
         return Result.From<TResponse>(context.Response!);
     }
 
-    private static InboundContext BuildInboundContext(IRequestBase request, IMessageHandler handler, IDictionary<string, string?>? headers)
+    private static InboundContext BuildInboundContext(IRequestMarker request, IMessageHandler handler, IDictionary<string, string?>? headers)
     {
         return new InboundContext
         {

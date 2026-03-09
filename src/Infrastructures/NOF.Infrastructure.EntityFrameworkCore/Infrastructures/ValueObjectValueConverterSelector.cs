@@ -20,7 +20,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 {
     private static readonly ConcurrentDictionary<Type, ValueConverterInfo?> _cache = new();
-    private static readonly Type InterfaceOpenType = typeof(IValueObject<>);
+    private static readonly Type _interfaceOpenType = typeof(IValueObject<>);
 
     public ValueObjectValueConverterSelector(ValueConverterSelectorDependencies dependencies)
         : base(dependencies) { }
@@ -32,12 +32,9 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
         var underlyingType = Nullable.GetUnderlyingType(modelClrType) ?? modelClrType;
 
         var info = _cache.GetOrAdd(underlyingType, BuildConverterInfo);
-        if (info is null)
-        {
-            return baseConverters;
-        }
-
-        if (providerClrType is not null && providerClrType != info.Value.ProviderClrType)
+        if (info is null
+            || (providerClrType is not null
+                && providerClrType != info.Value.ProviderClrType))
         {
             return baseConverters;
         }
@@ -79,17 +76,10 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
     }
 
     private static Type? GetPrimitiveType(Type voType)
-    {
-        foreach (var iface in voType.GetInterfaces())
-        {
-            if (iface.IsGenericType &&
-                iface.GetGenericTypeDefinition() == InterfaceOpenType)
-            {
-                return iface.GenericTypeArguments[0];
-            }
-        }
-        return null;
-    }
+        => voType.GetInterfaces()
+            .Where(iface => iface.IsGenericType && iface.GetGenericTypeDefinition() == _interfaceOpenType)
+            .Select(iface => iface.GenericTypeArguments[0])
+            .FirstOrDefault();
 }
 
 /// <summary>

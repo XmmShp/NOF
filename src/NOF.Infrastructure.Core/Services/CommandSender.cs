@@ -1,7 +1,6 @@
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
-using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
 
@@ -35,40 +34,5 @@ public sealed class CommandSender : ICommandSender
         {
             await _rider.SendAsync(command, context.Headers, context.DestinationEndpointName, ct);
         }, cancellationToken);
-    }
-}
-
-/// <summary>
-/// Deferred command sender implementation.
-/// </summary>
-public sealed class DeferredCommandSender : IDeferredCommandSender
-{
-    private readonly IOutboxMessageCollector _collector;
-    private readonly IInvocationContext _invocationContext;
-
-    public DeferredCommandSender(IOutboxMessageCollector collector, IInvocationContext invocationContext)
-    {
-        _collector = collector;
-        _invocationContext = invocationContext;
-    }
-
-    public void Send(ICommand command, string? destinationEndpointName = null)
-    {
-        var currentActivity = Activity.Current;
-        var tenantId = _invocationContext.TenantId;
-
-        var headers = new Dictionary<string, string?>
-        {
-            [NOFInfrastructureCoreConstants.Transport.Headers.TenantId] = tenantId
-        };
-
-        _collector.AddMessage(new OutboxMessage
-        {
-            Message = command,
-            DestinationEndpointName = destinationEndpointName,
-            Headers = headers,
-            TraceId = currentActivity?.TraceId,
-            SpanId = currentActivity?.SpanId
-        });
     }
 }

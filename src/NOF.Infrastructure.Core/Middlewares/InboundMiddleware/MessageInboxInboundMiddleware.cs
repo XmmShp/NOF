@@ -39,7 +39,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
 
             context.Headers[NOFInfrastructureCoreConstants.Transport.Headers.MessageId] = messageId.ToString();
 
-            var messageExists = await _inboxMessageRepository.ExistByMessageIdAsync(messageId, cancellationToken);
+            var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
             if (messageExists)
             {
                 _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, context.MessageType);
@@ -48,7 +48,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
                 return;
             }
 
-            var inboxMessage = new InboxMessage(messageId);
+            var inboxMessage = new NOFInboxMessage(messageId);
 
             _inboxMessageRepository.Add(inboxMessage);
 

@@ -6,6 +6,8 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure.Core;
 
@@ -14,15 +16,18 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
+    private readonly IMessageSerializer _messageSerializer;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<OutboxOptions> options,
-        ILogger<OutboxMessageBackgroundService> logger)
+        ILogger<OutboxMessageBackgroundService> logger,
+        IMessageSerializer messageSerializer)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value;
         _logger = logger;
+        _messageSerializer = messageSerializer;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,7 +74,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             _logger.LogDebug("Processing outbox messages for Host database");
 
             var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-            var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
+            var pendingMessages = await repository.AtomicClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken)
+                .ToListAsync(cancellationToken);
 
             if (pendingMessages.Count > 0)
             {
@@ -83,9 +89,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
 
         // Process all tenant databases
-        var tenants = await tenantRepository.GetAllAsync();
-
-        foreach (var tenant in tenants)
+        await foreach (var tenant in tenantRepository.FindAllAsync(cancellationToken))
         {
             if (!tenant.IsActive)
             {
@@ -103,7 +107,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
 
                 // Use claim-based retrieval to avoid duplicate processing across instances
-                var pendingMessages = await repository.ClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken);
+                var pendingMessages = await repository.AtomicClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken)
+                    .ToListAsync(cancellationToken);
 
                 if (pendingMessages.Count == 0)
                 {
@@ -125,7 +130,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     }
 
     private async Task ProcessSingleMessageAsync(
-        OutboxMessage message,
+        NOFOutboxMessage message,
         IOutboxMessageRepository repository,
         ICommandRider commandRider,
         INotificationRider notificationRider,
@@ -133,7 +138,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         if (message.RetryCount >= _options.MaxRetryCount)
         {
-            await repository.RecordDeliveryFailureAsync(message.Id, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
+            await repository.AtomicRecordDeliveryFailureAsync(message.Id, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
             _logger.LogWarning("Message {MessageId} exceeded max retry count ({MaxRetry}), marked as failed",
                 message.Id, _options.MaxRetryCount);
             return;
@@ -142,8 +147,13 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
         var messageId = Guid.NewGuid();
+        var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
+        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
+        var headers = string.IsNullOrWhiteSpace(message.Headers)
+            ? new Dictionary<string, string?>()
+            : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
-        var headers = new Dictionary<string, string?>(message.Headers);
+        headers = new Dictionary<string, string?>(headers);
         headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.MessageId, messageId.ToString());
         headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
         headers.TryAdd(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
@@ -151,7 +161,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         if (activity is { IsAllDataRequested: true })
         {
             activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageId, messageId);
-            activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageType, message.Message.GetType().Name);
+            activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.MessageType, payload.GetType().Name);
             activity.SetTag(NOFInfrastructureCoreConstants.Messaging.Tags.Destination, message.DestinationEndpointName ?? "default");
             activity.SetTag("OutboxMessageId", message.Id);
             if (headers.TryGetValue(NOFInfrastructureCoreConstants.Transport.Headers.TenantId, out var tenantId))
@@ -162,14 +172,14 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         try
         {
-            if (message.Message is ICommand command)
+            if (payload is ICommand command)
             {
                 await commandRider.SendAsync(command, headers, message.DestinationEndpointName,
                     cancellationToken);
                 _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
                     message.Id, command.GetType().Name, message.RetryCount);
             }
-            else if (message.Message is INotification notification)
+            else if (payload is INotification notification)
             {
                 await notificationRider.PublishAsync(notification, headers, cancellationToken);
                 _logger.LogDebug("Published notification {MessageId} of type {Type} (retry {Retry})",
@@ -177,9 +187,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
             else
             {
-                await repository.RecordDeliveryFailureAsync(message.Id, "Unsupported message type", cancellationToken);
+                await repository.AtomicRecordDeliveryFailureAsync(message.Id, "Unsupported message type", cancellationToken);
                 _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
-                    message.Id, message.Message.GetType().FullName ?? "null");
+                    message.Id, payload.GetType().FullName ?? "null");
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -194,7 +204,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             _logger.LogWarning(ex, "Failed to deliver message {MessageId} (retry {Retry})", message.Id,
                 message.RetryCount);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            await repository.RecordDeliveryFailureAsync(message.Id, ex.Message, cancellationToken);
+            await repository.AtomicRecordDeliveryFailureAsync(message.Id, ex.Message, cancellationToken);
             throw; // ensure not added to success list
         }
 
@@ -202,21 +212,27 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         activity?.SetStatus(ActivityStatusCode.Ok);
     }
 
-    private static Activity? RestoreTracingContext(OutboxMessage message)
+    private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        if (message.TraceId is null)
+        if (string.IsNullOrWhiteSpace(message.TraceId))
         {
             return null;
         }
 
+        var traceId = ActivityTraceId.CreateFromString(message.TraceId);
+        var spanId = string.IsNullOrWhiteSpace(message.SpanId)
+            ? ActivitySpanId.CreateRandom()
+            : ActivitySpanId.CreateFromString(message.SpanId);
+
         var activityContext = new ActivityContext(
-            traceId: message.TraceId ?? ActivityTraceId.CreateRandom(),
-            spanId: message.SpanId ?? ActivitySpanId.CreateRandom(),
+            traceId: traceId,
+            spanId: spanId,
             traceFlags: ActivityTraceFlags.Recorded,
             isRemote: true);
 
+        var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
         var activity = NOFInfrastructureCoreConstants.Messaging.Source.StartActivity(
-            $"{NOFInfrastructureCoreConstants.Messaging.ActivityNames.MessageSending}: {message.Message.GetType().FullName}",
+            $"{NOFInfrastructureCoreConstants.Messaging.ActivityNames.MessageSending}: {payload.GetType().FullName}",
             kind: ActivityKind.Producer,
             parentContext: activityContext);
 
@@ -224,7 +240,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     }
 
     private async Task ProcessMessagesBatch(
-        IReadOnlyCollection<OutboxMessage> pendingMessages,
+        IReadOnlyCollection<NOFOutboxMessage> pendingMessages,
         IOutboxMessageRepository repository,
         ICommandRider commandRider,
         INotificationRider notificationRider,
@@ -260,7 +276,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await repository.MarkAsSentAsync(succeededIds, cancellationToken);
+                await repository.AtomicMarkAsSentAsync(succeededIds, cancellationToken);
                 if (tenantId != null)
                 {
                     _logger.LogInformation(

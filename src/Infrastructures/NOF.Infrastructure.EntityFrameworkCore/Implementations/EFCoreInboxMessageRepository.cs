@@ -7,31 +7,18 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 /// <summary>
 /// EF Core inbox message repository implementation.
 /// </summary>
-internal sealed class EFCoreInboxMessageRepository : IInboxMessageRepository
+internal sealed class EFCoreInboxMessageRepository : EFCoreRepository<NOFInboxMessage>, IInboxMessageRepository
 {
-    private readonly NOFDbContext _dbContext;
     private readonly ILogger<EFCoreInboxMessageRepository> _logger;
 
-    public EFCoreInboxMessageRepository(NOFDbContext dbContext, ILogger<EFCoreInboxMessageRepository> logger)
+    public EFCoreInboxMessageRepository(NOFDbContext dbContext, ILogger<EFCoreInboxMessageRepository> logger) : base(dbContext)
     {
-        _dbContext = dbContext;
         _logger = logger;
     }
 
-    public void Add(InboxMessage message)
+    public async Task<bool> ExistsAsync(Guid messageId, CancellationToken cancellationToken = default)
     {
-        var entity = new EFCoreInboxMessage
-        {
-            Id = message.Id,
-            CreatedAt = message.CreatedAt
-        };
-
-        _dbContext.InboxMessages.Add(entity);
-    }
-
-    public async Task<bool> ExistByMessageIdAsync(Guid messageId, CancellationToken cancellationToken = default)
-    {
-        var exists = await _dbContext.InboxMessages
+        var exists = await DbContext.Set<NOFInboxMessage>()
             .AsNoTracking()
             .AnyAsync(m => m.Id == messageId, cancellationToken);
 

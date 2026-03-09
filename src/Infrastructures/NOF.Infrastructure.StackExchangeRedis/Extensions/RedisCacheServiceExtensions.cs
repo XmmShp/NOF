@@ -9,7 +9,7 @@ using StackExchange.Redis;
 
 namespace NOF.Infrastructure.StackExchangeRedis;
 
-public static partial class NOFInfrastructureExtensions
+public static class NOFInfrastructureExtensions
 {
     /// <param name="builder">The <see cref="INOFAppBuilder"/>.</param>
     extension(INOFAppBuilder builder)

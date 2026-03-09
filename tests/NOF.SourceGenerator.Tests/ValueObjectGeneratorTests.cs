@@ -15,7 +15,7 @@ public class ValueObjectGeneratorTests
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static readonly Type[] ExtraRefs =
+    private static readonly Type[] _extraRefs =
     [
         typeof(IValueObject<>),
         typeof(NewableValueObjectAttribute),
@@ -24,7 +24,7 @@ public class ValueObjectGeneratorTests
     ];
 
     private static GeneratorDriverRunResult RunGenerator(string source)
-        => new ValueObjectGenerator().GetResultPostGen(source, ExtraRefs);
+        => new ValueObjectGenerator().GetResultPostGen(source, _extraRefs);
 
     private static string GetVoCode(GeneratorDriverRunResult result)
         => result.GeneratedTrees
@@ -34,7 +34,7 @@ public class ValueObjectGeneratorTests
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
     {
-        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, ExtraRefs);
+        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, _extraRefs);
 
         var driver = CSharpGeneratorDriver.Create(new ValueObjectGenerator());
         driver = (CSharpGeneratorDriver)driver.RunGenerators(compilation);

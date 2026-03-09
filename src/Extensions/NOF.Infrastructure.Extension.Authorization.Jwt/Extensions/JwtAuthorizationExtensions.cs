@@ -49,10 +49,9 @@ public static partial class NOFJwtAuthorizationExtensions
             // HTTP-based JWKS provider (TryAdd — authority's local provider wins if registered)
             builder.Services.TryAddSingleton<IJwksProvider, HttpJwksProvider>();
 
-            // JWT identity resolver
-            builder.Services.AddSingleton<IIdentityResolver, JwtIdentityResolver>();
+            // Inbound/outbound JWT middleware steps
+            builder.AddRegistrationStep(new JwtAuthorizationInboundMiddlewareStep());
 
-            // Outbound middleware step
             builder.AddRegistrationStep(new JwtAuthorizationOutboundMiddlewareStep());
 
 #pragma warning disable CS8620

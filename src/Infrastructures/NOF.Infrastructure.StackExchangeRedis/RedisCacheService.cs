@@ -389,7 +389,7 @@ public class RedisCacheService : IRedisCacheService
     {
         var prefixedKey = ApplyKeyPrefix(key);
         var data = _serializer.Serialize(value);
-        return await _database.HashSetAsync(prefixedKey, field, data.ToArray(), When.Always, CommandFlags.None);
+        return await _database.HashSetAsync(prefixedKey, field, data.ToArray());
     }
 
     public async ValueTask<long> HashSetManyAsync<T>(string key, IReadOnlyDictionary<string, T> values, CancellationToken cancellationToken = default)

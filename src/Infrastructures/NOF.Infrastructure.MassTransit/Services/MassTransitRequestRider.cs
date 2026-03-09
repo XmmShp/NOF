@@ -54,10 +54,10 @@ public class MassTransitRequestRider : IRequestRider
 
     private static class RemoteExecutorCache<TResult> where TResult : class, IResult
     {
-        public static readonly ConcurrentDictionary<Type, Func<IScopedClientFactory, IRequestBase, IDictionary<string, string?>?, Uri, CancellationToken, Task<TResult>>> Cache = [];
+        public static readonly ConcurrentDictionary<Type, Func<IScopedClientFactory, IRequestMarker, IDictionary<string, string?>?, Uri, CancellationToken, Task<TResult>>> Cache = [];
     }
 
-    private async Task<TResult> SendRemoteAsync<TResult>(IRequestBase request, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken)
+    private async Task<TResult> SendRemoteAsync<TResult>(IRequestMarker request, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken)
         where TResult : class, IResult
     {
         if (string.IsNullOrWhiteSpace(destinationEndpointName))
@@ -72,11 +72,11 @@ public class MassTransitRequestRider : IRequestRider
         return await executor(_clientFactory, request, headers, destinationEndpointName.ToQueueUri(), cancellationToken).ConfigureAwait(false);
     }
 
-    private static Func<IScopedClientFactory, IRequestBase, IDictionary<string, string?>?, Uri, CancellationToken, Task<TResult>> CreateRemoteExecutor<TResult>(Type requestType)
+    private static Func<IScopedClientFactory, IRequestMarker, IDictionary<string, string?>?, Uri, CancellationToken, Task<TResult>> CreateRemoteExecutor<TResult>(Type requestType)
         where TResult : class, IResult
     {
         var client = Expression.Parameter(typeof(IScopedClientFactory));
-        var request = Expression.Parameter(typeof(IRequestBase));
+        var request = Expression.Parameter(typeof(IRequestMarker));
         var hdrs = Expression.Parameter(typeof(IDictionary<string, string?>));
         var uri = Expression.Parameter(typeof(Uri));
         var token = Expression.Parameter(typeof(CancellationToken));
@@ -86,7 +86,7 @@ public class MassTransitRequestRider : IRequestRider
             .MakeGenericMethod(requestType, typeof(TResult));
 
         var call = Expression.Call(method, client, Expression.Convert(request, requestType), hdrs, uri, token);
-        return Expression.Lambda<Func<IScopedClientFactory, IRequestBase, IDictionary<string, string?>?, Uri, CancellationToken, Task<TResult>>>(call, client, request, hdrs, uri, token).Compile();
+        return Expression.Lambda<Func<IScopedClientFactory, IRequestMarker, IDictionary<string, string?>?, Uri, CancellationToken, Task<TResult>>>(call, client, request, hdrs, uri, token).Compile();
     }
 
     private static async Task<TResult> SendRemoteTypedAsync<TCommand, TResult>(IScopedClientFactory client, TCommand command, IDictionary<string, string?>? headers, Uri destinationAddress, CancellationToken cancellationToken)

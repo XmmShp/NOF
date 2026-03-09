@@ -7,11 +7,11 @@ namespace NOF.SourceGenerator.Tests.Extensions;
 
 public static class CSharpCompilationExtensions
 {
-    private static readonly Assembly[] AppDomainAssemblies;
+    private static readonly Assembly[] _appDomainAssemblies;
 
     static CSharpCompilationExtensions()
     {
-        AppDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+        _appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies()
             .Where(assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location)).ToArray();
     }
 
@@ -27,7 +27,7 @@ public static class CSharpCompilationExtensions
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(source);
 
-            var references = AppDomainAssemblies.Select(
+            var references = _appDomainAssemblies.Select(
                     assembly => MetadataReference.CreateFromFile(assembly.Location))
                 .Cast<MetadataReference>()
                 .ToList();

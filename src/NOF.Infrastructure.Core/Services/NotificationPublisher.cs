@@ -1,7 +1,6 @@
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
-using System.Diagnostics;
 
 namespace NOF.Infrastructure.Core;
 
@@ -34,41 +33,5 @@ public sealed class NotificationPublisher : INotificationPublisher
         {
             await _rider.PublishAsync(notification, context.Headers, ct);
         }, cancellationToken);
-    }
-}
-
-/// <summary>
-/// Deferred notification publisher implementation.
-/// </summary>
-public sealed class DeferredNotificationPublisher : IDeferredNotificationPublisher
-{
-    private readonly IOutboxMessageCollector _collector;
-    private readonly IInvocationContext _invocationContext;
-
-    public DeferredNotificationPublisher(IOutboxMessageCollector collector, IInvocationContext invocationContext)
-    {
-        _collector = collector;
-        _invocationContext = invocationContext;
-    }
-
-    public void Publish(INotification notification)
-    {
-        var currentActivity = Activity.Current;
-        var tenantId = _invocationContext.TenantId;
-
-        var headers = new Dictionary<string, string?>
-        {
-            [NOFInfrastructureCoreConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString(),
-            [NOFInfrastructureCoreConstants.Transport.Headers.TenantId] = tenantId
-        };
-
-        _collector.AddMessage(new OutboxMessage
-        {
-            Message = notification,
-            DestinationEndpointName = null,
-            Headers = headers,
-            TraceId = currentActivity?.TraceId,
-            SpanId = currentActivity?.SpanId
-        });
     }
 }

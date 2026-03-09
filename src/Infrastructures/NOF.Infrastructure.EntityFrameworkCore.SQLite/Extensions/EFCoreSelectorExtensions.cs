@@ -2,7 +2,7 @@ using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;
 
-public static class NOFInfrastructureEntityFrameworkCoreSQLiteExtensions
+public static class NOFInfrastructureEntityFrameworkCoreSqLiteExtensions
 {
     extension(EFCoreSelector selector)
     {

@@ -57,13 +57,10 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
         var invocationContext = scope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
 
-        // Get all tenants
-        var tenants = await tenantRepository.GetAllAsync();
-
         // Save the original tenant context
         var originalTenantId = invocationContext.TenantId;
 
-        foreach (var tenant in tenants)
+        await foreach (var tenant in tenantRepository.FindAllAsync(cancellationToken))
         {
             if (!tenant.IsActive)
             {
@@ -81,7 +78,7 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
                 var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
 
                 var olderThan = DateTime.UtcNow - _retentionPeriod;
-                var deletedCount = await dbContext.Set<EFCoreInboxMessage>()
+                var deletedCount = await dbContext.NOFInboxMessages
                     .Where(m => m.CreatedAt < olderThan)
                     .ExecuteDeleteAsync(cancellationToken);
 

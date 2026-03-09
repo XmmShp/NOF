@@ -222,10 +222,10 @@ dotnet_naming_symbols.constants.applicable_kinds = field
 dotnet_naming_symbols.constants.required_modifiers = const
 dotnet_naming_symbols.constants.applicable_accessibilities = *
 
-# Private static/readonly fields should be PascalCase (checked before instance field rule)
-dotnet_naming_rule.private_static_fields_should_be_pascal_case.severity = suggestion
-dotnet_naming_rule.private_static_fields_should_be_pascal_case.symbols = private_static_fields
-dotnet_naming_rule.private_static_fields_should_be_pascal_case.style = pascal_case
+# Private static fields should be _camelCase (checked before instance field rule)
+dotnet_naming_rule.private_static_fields_should_be_camel_case.severity = suggestion
+dotnet_naming_rule.private_static_fields_should_be_camel_case.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields_should_be_camel_case.style = underscore_camel_case
 
 dotnet_naming_symbols.private_static_fields.applicable_kinds = field
 dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private, private_protected

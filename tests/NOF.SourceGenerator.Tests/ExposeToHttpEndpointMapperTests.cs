@@ -10,7 +10,7 @@ namespace NOF.SourceGenerator.Tests;
 
 public class ExposeToHttpEndpointMapperTests
 {
-    private static readonly Type[] Refs =
+    private static readonly Type[] _refs =
     [
         typeof(PublicApiAttribute),
         typeof(HttpEndpointAttribute),
@@ -33,7 +33,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var libComp = CSharpCompilation.CreateCompilation("Lib", libSource, isDll: true, Refs);
+        var libComp = CSharpCompilation.CreateCompilation("Lib", libSource, isDll: true, _refs);
         var libRef = libComp.CreateMetadataReference();
 
         const string mainSource = """
@@ -102,7 +102,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().BeEmpty();
@@ -139,7 +139,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
@@ -171,7 +171,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
@@ -203,7 +203,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
@@ -237,7 +237,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
@@ -267,7 +267,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
@@ -300,7 +300,7 @@ public class ExposeToHttpEndpointMapperTests
             }
             """;
 
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, Refs);
+        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();

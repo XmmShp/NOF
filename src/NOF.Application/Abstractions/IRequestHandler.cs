@@ -9,7 +9,7 @@ namespace NOF.Application;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IRequestHandler : IMessageHandler
 {
-    Task<IResult> HandleAsync(IRequestBase request, CancellationToken cancellationToken);
+    Task<IResult> HandleAsync(IRequestMarker request, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -19,7 +19,7 @@ public interface IRequestHandler : IMessageHandler
 public interface IRequestHandler<in TRequest> : IRequestHandler
     where TRequest : IRequest
 {
-    async Task<IResult> IRequestHandler.HandleAsync(IRequestBase request, CancellationToken cancellationToken)
+    async Task<IResult> IRequestHandler.HandleAsync(IRequestMarker request, CancellationToken cancellationToken)
         => await HandleAsync((TRequest)request, cancellationToken);
 
     /// <summary>Handles the request.</summary>
@@ -37,7 +37,7 @@ public interface IRequestHandler<in TRequest> : IRequestHandler
 public interface IRequestHandler<in TRequest, TResponse> : IRequestHandler
     where TRequest : class, IRequest<TResponse>
 {
-    async Task<IResult> IRequestHandler.HandleAsync(IRequestBase request, CancellationToken cancellationToken)
+    async Task<IResult> IRequestHandler.HandleAsync(IRequestMarker request, CancellationToken cancellationToken)
         => await HandleAsync((TRequest)request, cancellationToken);
 
     /// <summary>Handles the request and returns a typed response.</summary>

@@ -15,7 +15,7 @@ namespace NOF.Domain.SourceGenerator;
 public class FailureGenerator : IIncrementalGenerator
 {
     // Diagnostic descriptors for error reporting
-    private static readonly DiagnosticDescriptor DuplicateFailureNameDescriptor = new(
+    private static readonly DiagnosticDescriptor _duplicateFailureNameDescriptor = new(
         "NOF001",
         "Duplicate Failure Name",
         "Class '{0}' contains duplicate Failure names: {1}",
@@ -23,7 +23,7 @@ public class FailureGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         true);
 
-    private static readonly DiagnosticDescriptor DuplicateFailureCodeDescriptor = new(
+    private static readonly DiagnosticDescriptor _duplicateFailureCodeDescriptor = new(
         "NOF002",
         "Duplicate Failure Code",
         "Class '{0}' contains duplicate Failure codes: {1}",
@@ -166,7 +166,7 @@ public class FailureGenerator : IIncrementalGenerator
             if (duplicateNames.Count > 0)
             {
                 context.ReportDiagnostic(Diagnostic.Create(
-                    DuplicateFailureNameDescriptor,
+                    _duplicateFailureNameDescriptor,
                     errorClass.Location, errorClass.TypeName, string.Join(", ", duplicateNames)));
                 continue;
             }
@@ -176,7 +176,7 @@ public class FailureGenerator : IIncrementalGenerator
             if (duplicateErrorCodes.Count > 0)
             {
                 context.ReportDiagnostic(Diagnostic.Create(
-                    DuplicateFailureCodeDescriptor,
+                    _duplicateFailureCodeDescriptor,
                     errorClass.Location, errorClass.TypeName, string.Join(", ", duplicateErrorCodes)));
             }
 

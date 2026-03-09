@@ -6,7 +6,7 @@ using System.Security.Claims;
 namespace NOF.Infrastructure.Core;
 
 /// <summary>Tenant resolution step — resolves tenant from claims or headers.</summary>
-public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundMiddlewareStep, TenantInboundMiddleware>, IAfter<IdentityInboundMiddlewareStep>;
+public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundMiddlewareStep, TenantInboundMiddleware>, IAfter<ExceptionInboundMiddlewareStep>;
 
 /// <summary>
 /// Inbound middleware that resolves the tenant identifier.

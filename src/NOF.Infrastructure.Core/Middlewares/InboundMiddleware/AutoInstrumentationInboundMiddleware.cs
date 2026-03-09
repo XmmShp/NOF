@@ -13,14 +13,14 @@ public class AutoInstrumentationInboundMiddlewareStep : IInboundMiddlewareStep<A
 /// </summary>
 public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
 {
-    private static readonly Counter<long> ExecutionCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
+    private static readonly Counter<long> _executionCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ExecutionCounter,
         description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ExecutionCounter);
-    private static readonly Histogram<double> ExecutionDuration = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateHistogram<double>(
+    private static readonly Histogram<double> _executionDuration = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateHistogram<double>(
         NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ExecutionDuration,
         unit: NOFInfrastructureCoreConstants.InboundPipeline.MetricUnits.Milliseconds,
         description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ExecutionDuration);
-    private static readonly Counter<long> ErrorCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
+    private static readonly Counter<long> _errorCounter = NOFInfrastructureCoreConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureCoreConstants.InboundPipeline.Metrics.ErrorCounter,
         description: NOFInfrastructureCoreConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
 
@@ -52,8 +52,8 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
 
-            ExecutionCounter.Add(1, tags);
-            ExecutionDuration.Record(durationMs, tags);
+            _executionCounter.Add(1, tags);
+            _executionDuration.Record(durationMs, tags);
 
             _logger.LogDebug(
                 "Handler {HandlerType} completed successfully in {Duration}ms",
@@ -64,8 +64,8 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
 
-            ErrorCounter.Add(1, tags);
-            ExecutionDuration.Record(durationMs, tags);
+            _errorCounter.Add(1, tags);
+            _executionDuration.Record(durationMs, tags);
 
             _logger.LogError(ex,
                 "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}",

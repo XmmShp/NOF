@@ -30,6 +30,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.TryAddScoped<ICommandRider, InMemoryCommandRider>();
         builder.Services.TryAddScoped<INotificationRider, InMemoryNotificationRider>();
         builder.Services.TryAddScoped<IRequestRider, InMemoryRequestRider>();
+        builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
 
         // Handler resolvers: index handlers by message type + endpoint name for efficient lookup
         builder.Services.TryAddSingleton<ICommandHandlerResolver, CommandHandlerResolver>();

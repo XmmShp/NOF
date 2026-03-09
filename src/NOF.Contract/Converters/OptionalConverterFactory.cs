@@ -65,7 +65,7 @@ internal class OptionalConverter<T> : JsonConverter<Optional<T>>
 /// </remarks>
 public static class OptionalTypeInfoResolverModifier
 {
-    private static readonly Type OptionalOpenType = typeof(Optional<>);
+    private static readonly Type _optionalOpenType = typeof(Optional<>);
 
     /// <summary>
     /// A modifier action to be added to <see cref="DefaultJsonTypeInfoResolver.Modifiers"/>.
@@ -88,7 +88,7 @@ public static class OptionalTypeInfoResolverModifier
                 continue;
             }
 
-            if (prop.PropertyType.GetGenericTypeDefinition() != OptionalOpenType)
+            if (prop.PropertyType.GetGenericTypeDefinition() != _optionalOpenType)
             {
                 continue;
             }

@@ -40,4 +40,5 @@ namespace NOF.Contract;
 [JsonSerializable(typeof(TimeOnly?))]
 [JsonSerializable(typeof(TimeSpan?))]
 [JsonSerializable(typeof(Dictionary<string, JsonElement>))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
 internal partial class NOFJsonSerializerContext : JsonSerializerContext;

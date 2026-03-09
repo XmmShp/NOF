@@ -3,70 +3,43 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
-using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
+internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbContext, NOFOutboxMessage>, IOutboxMessageRepository
 {
-    private readonly NOFDbContext _dbContext;
     private readonly OutboxOptions _options;
     private readonly ILogger<EFCoreOutboxMessageRepository> _logger;
+    private readonly IMessageSerializer _messageSerializer;
 
     public EFCoreOutboxMessageRepository(
         NOFDbContext dbContext,
         IOptions<OutboxOptions> options,
-        ILogger<EFCoreOutboxMessageRepository> logger)
+        ILogger<EFCoreOutboxMessageRepository> logger,
+        IMessageSerializer messageSerializer) : base(dbContext)
     {
-        _dbContext = dbContext;
         _options = options.Value;
         _logger = logger;
+        _messageSerializer = messageSerializer;
     }
 
-    public void Add(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken = default)
+    public override void Add(NOFOutboxMessage aggregateRoot)
     {
-        var outboxMessages = new List<EFCoreOutboxMessage>();
-
-        foreach (var msg in messages)
-        {
-            var messageType = msg.Message is ICommand
-                ? OutboxMessageType.Command
-                : OutboxMessageType.Notification;
-
-            outboxMessages.Add(new EFCoreOutboxMessage
-            {
-                Id = msg.Id,
-                MessageType = messageType,
-                PayloadType = msg.Message.GetType().AssemblyQualifiedName!,
-                Payload = Serialize(msg.Message),
-                Headers = Serialize(msg.Headers),
-                DestinationEndpointName = msg.DestinationEndpointName,
-                CreatedAt = msg.CreatedAt,
-                Status = OutboxMessageStatus.Pending,
-                RetryCount = msg.RetryCount,
-                ClaimedBy = null,
-                ClaimExpiresAt = null,
-                TraceId = msg.TraceId?.ToString(),
-                SpanId = msg.SpanId?.ToString()
-            });
-        }
-
-        if (outboxMessages.Count > 0)
-        {
-            _dbContext.OutboxMessages.AddRange(outboxMessages);
-            _logger.LogDebug("Added {Count} messages to outbox", outboxMessages.Count);
-        }
+        aggregateRoot.Status = OutboxMessageStatus.Pending;
+        aggregateRoot.ClaimedBy = null;
+        aggregateRoot.ClaimExpiresAt = null;
+        base.Add(aggregateRoot);
     }
 
     /// <summary>
     /// Claims pending messages for delivery, preventing duplicate processing across instances.
     /// </summary>
-    public async Task<IReadOnlyList<OutboxMessage>> ClaimPendingMessagesAsync(
+    public async IAsyncEnumerable<NOFOutboxMessage> AtomicClaimPendingMessagesAsync(
         int batchSize,
         TimeSpan? claimTimeout = null,
-        CancellationToken cancellationToken = default)
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var timeout = claimTimeout ?? _options.ClaimTimeout;
         var lockId = Guid.NewGuid().ToString();
@@ -76,7 +49,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
         // Step 1: Claim pending messages (including those with expired locks)
         try
         {
-            rowsUpdated = await _dbContext.OutboxMessages
+            rowsUpdated = await DbContext.NOFOutboxMessages
                 .Where(m => m.Status == OutboxMessageStatus.Pending &&
                             m.RetryCount < _options.MaxRetryCount &&
                             (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
@@ -90,61 +63,70 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
         }
         catch (DbUpdateException)
         {
-            return new List<OutboxMessage>();
+            yield break;
         }
 
         if (rowsUpdated == 0)
         {
-            return new List<OutboxMessage>();
+            yield break;
         }
 
         // Step 2: Retrieve successfully claimed messages
-        var claimedMessages = await _dbContext.OutboxMessages
+        var claimedMessages = await DbContext.NOFOutboxMessages
             .Where(m => m.ClaimedBy == lockId)
             .ToListAsync(cancellationToken);
 
-        var result = new List<OutboxMessage>(claimedMessages.Count);
+        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
 
-        foreach (var m in claimedMessages)
+        foreach (var message in claimedMessages)
         {
+            NOFOutboxMessage claimedMessage;
             try
             {
-                var message = Deserialize<IMessage>(m.PayloadType, m.Payload);
+                var deserializedMessage = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
+                var headers = string.IsNullOrWhiteSpace(message.Headers)
+                    ? new Dictionary<string, string?>()
+                    : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
-                result.Add(new OutboxMessage
+                claimedMessage = new NOFOutboxMessage
                 {
-                    Id = m.Id,
-                    Message = message,
-                    Headers = Deserialize<Dictionary<string, string?>>(typeof(Dictionary<string, string?>).AssemblyQualifiedName!, m.Headers),
-                    DestinationEndpointName = m.DestinationEndpointName,
-                    CreatedAt = m.CreatedAt,
-                    RetryCount = m.RetryCount,
-                    TraceId = string.IsNullOrEmpty(m.TraceId) ? null : ActivityTraceId.CreateFromString(m.TraceId),
-                    SpanId = string.IsNullOrEmpty(m.SpanId) ? null : ActivitySpanId.CreateFromString(m.SpanId)
-                });
+                    Id = message.Id,
+                    MessageType = deserializedMessage is ICommand ? OutboxMessageType.Command : OutboxMessageType.Notification,
+                    PayloadType = message.PayloadType,
+                    Payload = message.Payload,
+                    Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
+                    DestinationEndpointName = message.DestinationEndpointName,
+                    CreatedAt = message.CreatedAt,
+                    RetryCount = message.RetryCount,
+                    TraceId = message.TraceId,
+                    SpanId = message.SpanId,
+                    Status = message.Status,
+                    ClaimedBy = message.ClaimedBy,
+                    ClaimExpiresAt = message.ClaimExpiresAt,
+                    SentAt = message.SentAt,
+                    FailedAt = message.FailedAt,
+                    ErrorMessage = message.ErrorMessage
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Deserialization failed for claimed message {MessageId}, type: {TypeName}",
-                    m.Id, m.PayloadType);
+                    message.Id, message.PayloadType);
 
-                // Release the lock on the failed message and mark as permanently failed
-                await ReleaseClaimAndMarkAsFailedAsync(m.Id, $"Deserialization error: {ex.Message}", cancellationToken);
+                await ReleaseClaimAndMarkAsFailedAsync(message.Id, $"Deserialization error: {ex.Message}", cancellationToken);
+                continue;
             }
+
+            yield return claimedMessage;
         }
-
-        _logger.LogDebug("Successfully claimed {ClaimedCount} messages with lock {LockId}",
-            result.Count, lockId);
-
-        return result;
     }
 
-    public async Task MarkAsSentAsync(
+    public async ValueTask AtomicMarkAsSentAsync(
         IEnumerable<long> messageIds,
         CancellationToken cancellationToken = default)
     {
         // Avoid duplicate marking (e.g., already processed by another instance)
-        await _dbContext.OutboxMessages
+        await DbContext.NOFOutboxMessages
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
@@ -157,9 +139,9 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
     /// <summary>
     /// Records a delivery failure and determines whether to retry or permanently fail based on retry count.
     /// </summary>
-    public async Task RecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
+    public async ValueTask AtomicRecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
-        var rowsUpdated = await _dbContext.OutboxMessages
+        var rowsUpdated = await DbContext.NOFOutboxMessages
             .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.ErrorMessage, errorMessage)
@@ -173,7 +155,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
         }
 
         // Step 2: Load the latest state to determine the final status
-        var message = await _dbContext.OutboxMessages
+        var message = await DbContext.NOFOutboxMessages
             .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
 
         if (message == null)
@@ -202,26 +184,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
                 messageId, message.RetryCount, errorMessage);
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private static readonly JsonSerializerOptions SerializeOptions = new()
-    {
-        WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    private static string Serialize(object obj)
-    {
-        return JsonSerializer.Serialize(obj, obj.GetType(), SerializeOptions);
-    }
-
-    private static T Deserialize<T>(string typeName, string payload)
-    {
-        var type = Type.GetType(typeName)
-            ?? throw new InvalidOperationException($"Cannot resolve type: {typeName}");
-
-        return (T)JsonSerializer.Deserialize(payload, type, SerializeOptions)!;
+        await DbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -232,7 +195,7 @@ internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
         string errorMessage,
         CancellationToken cancellationToken = default)
     {
-        await _dbContext.OutboxMessages
+        await DbContext.NOFOutboxMessages
             .Where(m => m.Id == messageId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, OutboxMessageStatus.Failed)

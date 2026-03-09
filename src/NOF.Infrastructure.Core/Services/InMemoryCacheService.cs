@@ -4,6 +4,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace NOF.Infrastructure.Core;
 
@@ -412,7 +413,7 @@ public sealed class InMemoryCacheService : ICacheService, IDisposable
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (_cache.TryAdd(prefixedKey, new CacheEntry(System.Text.Encoding.UTF8.GetBytes(lockId), new DistributedCacheEntryOptions
+            if (_cache.TryAdd(prefixedKey, new CacheEntry(Encoding.UTF8.GetBytes(lockId), new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expiration
             })))
@@ -439,7 +440,7 @@ public sealed class InMemoryCacheService : ICacheService, IDisposable
 
         while (DateTimeOffset.UtcNow < deadline && !cancellationToken.IsCancellationRequested)
         {
-            if (_cache.TryAdd(prefixedKey, new CacheEntry(System.Text.Encoding.UTF8.GetBytes(lockId), new DistributedCacheEntryOptions
+            if (_cache.TryAdd(prefixedKey, new CacheEntry(Encoding.UTF8.GetBytes(lockId), new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expiration
             })))
@@ -595,7 +596,7 @@ public sealed class InMemoryCacheService : ICacheService, IDisposable
                         // Renew lock only if we still own it using CAS pattern
                         while (_cache._cache.TryGetValue(Key, out var oldEntry))
                         {
-                            var storedLockId = System.Text.Encoding.UTF8.GetString(oldEntry.Data.Span);
+                            var storedLockId = Encoding.UTF8.GetString(oldEntry.Data.Span);
                             if (storedLockId != _lockId)
                             {
                                 break; // Lock stolen or expired
@@ -647,7 +648,7 @@ public sealed class InMemoryCacheService : ICacheService, IDisposable
 
             if (_cache._cache.TryGetValue(Key, out var entry))
             {
-                var storedLockId = System.Text.Encoding.UTF8.GetString(entry.Data.Span);
+                var storedLockId = Encoding.UTF8.GetString(entry.Data.Span);
                 if (storedLockId == _lockId)
                 {
                     _cache._cache.TryRemove(Key, out _);

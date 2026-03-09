@@ -12,7 +12,7 @@ namespace NOF.SourceGenerator.Tests;
 
 public class ExposeToHttpEndpointAnalyzerTests
 {
-    private static readonly Type[] Refs =
+    private static readonly Type[] _refs =
     [
         typeof(PublicApiAttribute),
         typeof(HttpEndpointAttribute),
@@ -27,7 +27,7 @@ public class ExposeToHttpEndpointAnalyzerTests
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
-        var extraReferences = Refs.Select(t => t.ToMetadataReference()).ToArray();
+        var extraReferences = _refs.Select(t => t.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
 
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new ExposeToHttpEndpointAnalyzer());

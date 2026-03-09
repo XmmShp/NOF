@@ -6,7 +6,7 @@ namespace NOF.Infrastructure.MassTransit;
 
 public class EndpointNameFormatter : DefaultEndpointNameFormatter
 {
-    private static readonly HashSet<Type> SupportedConsumerGenericTypes =
+    private static readonly HashSet<Type> _supportedConsumerGenericTypes =
     [
         typeof(MassTransitRequestHandlerAdapter<,>),
         typeof(MassTransitRequestHandlerAdapter<,,>),
@@ -29,7 +29,7 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
             return cached;
         }
 
-        if (!consumerType.IsGenericType || !SupportedConsumerGenericTypes.Contains(consumerType.GetGenericTypeDefinition()))
+        if (!consumerType.IsGenericType || !_supportedConsumerGenericTypes.Contains(consumerType.GetGenericTypeDefinition()))
         {
             return _nameCache.GetOrAdd(consumerType, base.GetConsumerName(consumerType));
         }

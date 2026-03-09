@@ -72,7 +72,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             new MapperRegistrationStep(),
 
             new ExceptionInboundMiddlewareStep(),
-            new IdentityInboundMiddlewareStep(),
             new TenantInboundMiddlewareStep(),
             new AuthorizationInboundMiddlewareStep(),
             new TracingInboundMiddlewareStep(),
@@ -108,12 +107,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         return this;
     }
 
-    /// <summary>
-    /// Adds a service configuration delegate that will be executed during the service registration phase.
-    /// </summary>
-    public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)
-        => AddRegistrationStep(new ServiceRegistrationStep(func));
-
     /// <inheritdoc />
     public virtual INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
     {
@@ -129,20 +122,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ApplicationConfigs.RemoveWhere(predicate);
         return this;
     }
-
-    /// <summary>
-    /// Adds an application configuration delegate that will be executed after the host is built but before it starts.
-    /// </summary>
-    public INOFAppBuilder AddInitializationStep(Func<IHostApplicationBuilder, IHost, Task> func)
-        => AddInitializationStep(new ApplicationInitializationStep(func));
-
-    /// <inheritdoc cref="IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep)"/>
-    IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
-        => AddInitializationStep(initializationStep);
-
-    /// <inheritdoc cref="IServiceRegistrationContext.RemoveInitializationStep(Predicate{IApplicationInitializationStep})"/>
-    IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-        => RemoveInitializationStep(predicate);
 
     /// <summary>
     /// Asynchronously constructs and initializes the final host application instance.

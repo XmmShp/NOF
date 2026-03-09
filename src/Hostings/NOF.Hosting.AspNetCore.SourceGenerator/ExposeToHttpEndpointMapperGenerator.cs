@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using NOF.SourceGenerator.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;

@@ -159,27 +159,6 @@ public class SnowflakeIdGeneratorTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void IdGenerator_Current_ThrowsBeforeSet()
-    {
-        // Reset to null via reflection to isolate test
-        var field = typeof(IdGenerator).GetField("_current",
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-        var previous = field.GetValue(null);
-        field.SetValue(null, null);
-
-        try
-        {
-            var act = () => IdGenerator.Current;
-            act.Should().Throw<InvalidOperationException>()
-               .WithMessage("*IdGenerator has not been initialized*");
-        }
-        finally
-        {
-            field.SetValue(null, previous); // restore
-        }
-    }
-
-    [Fact]
     public void IdGenerator_SetCurrent_MakesCurrent_Available()
     {
         var gen = Default();

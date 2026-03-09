@@ -16,7 +16,7 @@ public class MappableGeneratorTests
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static readonly Type[] ExtraRefs =
+    private static readonly Type[] _extraRefs =
     [
         typeof(MappableAttribute),               // NOF.Application (includes MappableAttribute<,>)
         typeof(IMapper),                          // NOF.Application
@@ -27,12 +27,12 @@ public class MappableGeneratorTests
     ];
 
     private static GeneratorDriverRunResult RunGenerator(string source)
-        => new MappableGenerator().GetResult(source, ExtraRefs);
+        => new MappableGenerator().GetResult(source, _extraRefs);
 
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
     {
-        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, ExtraRefs);
+        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, _extraRefs);
 
         var driver = CSharpGeneratorDriver.Create(new MappableGenerator());
         driver = (CSharpGeneratorDriver)driver.RunGenerators(compilation);

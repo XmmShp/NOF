@@ -14,7 +14,7 @@ namespace NOF.Application.SourceGenerator;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class HandlerMessageAnalyzer : DiagnosticAnalyzer
 {
-    private static readonly string[] HandlerInterfaceNames =
+    private static readonly string[] _handlerInterfaceNames =
     {
         "NOF.Application.ICommandHandler<TCommand>",
         "NOF.Application.IEventHandler<TEvent>",
@@ -23,7 +23,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
         "NOF.Application.IRequestHandler<TRequest, TResponse>"
     };
 
-    private static readonly string[] MessageInterfaceNames =
+    private static readonly string[] _messageInterfaceNames =
     {
         "NOF.Contract.ICommand",
         "NOF.Contract.IEvent",
@@ -82,7 +82,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
             }
 
             var display = iface.OriginalDefinition.ToDisplayString();
-            foreach (var name in HandlerInterfaceNames)
+            foreach (var name in _handlerInterfaceNames)
             {
                 if (display == name)
                 {
@@ -113,7 +113,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
                 ? iface.OriginalDefinition.ToDisplayString()
                 : iface.ToDisplayString();
 
-            foreach (var name in MessageInterfaceNames)
+            foreach (var name in _messageInterfaceNames)
             {
                 if (display == name)
                 {
