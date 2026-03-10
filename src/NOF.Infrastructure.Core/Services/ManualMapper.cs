@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
+using NOF.Application;
 
-namespace NOF.Application;
+namespace NOF.Infrastructure.Core;
 
 /// <summary>
 /// Implements <see cref="IMapper"/> using explicitly registered mapping functions.

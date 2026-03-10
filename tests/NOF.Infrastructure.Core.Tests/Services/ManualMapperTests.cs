@@ -1,9 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
+using NOF.Application;
 using System.Collections;
 using Xunit;
 
-namespace NOF.Application.Tests;
+namespace NOF.Infrastructure.Core.Tests.Services;
 
 public class ManualMapperTests
 {
@@ -13,8 +14,6 @@ public class ManualMapperTests
         configure?.Invoke(options);
         return new ManualMapper(Options.Create(options));
     }
-
-    #region Basic generic mapping
 
     [Fact]
     public void Map_Generic_ReturnsExpectedResult()
@@ -59,10 +58,6 @@ public class ManualMapperTests
         act.Should().Throw<InvalidOperationException>();
     }
 
-    #endregion
-
-    #region Basic non-generic mapping
-
     [Fact]
     public void Map_NonGeneric_ReturnsExpectedResult()
     {
@@ -106,10 +101,6 @@ public class ManualMapperTests
         act.Should().Throw<InvalidOperationException>();
     }
 
-    #endregion
-
-    #region Named mappings
-
     [Fact]
     public void Map_NamedMapping_ReturnsCorrectResult()
     {
@@ -135,10 +126,6 @@ public class ManualMapperTests
 
         act.Should().Throw<InvalidOperationException>();
     }
-
-    #endregion
-
-    #region TryAdd
 
     [Fact]
     public void TryAdd_Generic_FirstCallSucceeds()
@@ -175,10 +162,6 @@ public class ManualMapperTests
         mapper.Map<int, string>(1).Should().Be("first:1");
     }
 
-    #endregion
-
-    #region Add replaces existing (single delegate per key)
-
     [Fact]
     public void Add_Generic_ReplacesExistingDelegate()
     {
@@ -188,14 +171,8 @@ public class ManualMapperTests
             o.Add<int, string>(x => $"second:{x}");
         });
 
-        // Second Add replaces the first — single delegate per key
         mapper.Map<int, string>(1).Should().Be("second:1");
     }
-
-    #endregion
-
-
-    #region Open generic fallback
 
     [Fact]
     public void OpenGenericSource_FallbackWorks()
@@ -250,18 +227,12 @@ public class ManualMapperTests
             o.Add(typeof(List<string>), typeof(int), (src, _) => 42);
         });
 
-        // Closed type registration should win
         var result = mapper.Map<List<string>, int>(["a"]);
         result.Should().Be(42);
 
-        // Other closed type falls back to open generic
         var result2 = mapper.Map<List<int>, int>([1, 2]);
         result2.Should().Be(999);
     }
-
-    #endregion
-
-    #region Nullable<T> fallback
 
     [Fact]
     public void NullableFallback_MappingToNullableT_UsesRegisteredTMapping()
@@ -269,7 +240,6 @@ public class ManualMapperTests
         var mapper = CreateMapper(o =>
             o.Add<string, int>(s => s.Length));
 
-        // Registered: string → int. Query: string → int?
         var found = mapper.TryMap<string, int?>("hello", out var result);
 
         found.Should().BeTrue();
@@ -282,7 +252,6 @@ public class ManualMapperTests
         var mapper = CreateMapper(o =>
             o.Add<string, int?>(s => s.Length));
 
-        // Registered: string → int?. Query: string → int. Should NOT find it.
         var act = () => mapper.Map<string, int>("hello");
 
         act.Should().Throw<InvalidOperationException>();
@@ -297,11 +266,9 @@ public class ManualMapperTests
             o.Add<string, int?>(s => s.Length * 10);
         });
 
-        // Direct int? registration should take priority over fallback from int
         var result = mapper.Map<string, int?>("hi");
         result.Should().Be(20);
 
-        // int mapping still works directly
         var result2 = mapper.Map<string, int>("hi");
         result2.Should().Be(2);
     }
@@ -316,10 +283,6 @@ public class ManualMapperTests
         act.Should().Throw<InvalidOperationException>();
     }
 
-    #endregion
-
-    #region useRuntimeType
-
     [Fact]
     public void Map_UseRuntimeType_ResolvesUsingActualType()
     {
@@ -328,11 +291,9 @@ public class ManualMapperTests
 
         BaseSource source = new DerivedSource { Name = "base", Extra = "ext" };
 
-        // Without useRuntimeType: looks up BaseSource → TargetDto (not found)
         var act = () => mapper.Map<BaseSource, TargetDto>(source);
         act.Should().Throw<InvalidOperationException>();
 
-        // With useRuntimeType: looks up DerivedSource → TargetDto
         var result = mapper.Map<BaseSource, TargetDto>(source, useRuntimeType: true);
         result.Label.Should().Be("derived:ext");
     }
@@ -353,10 +314,6 @@ public class ManualMapperTests
         with.Label.Should().Be("derived:ext");
     }
 
-    #endregion
-
-    #region MapperOptions.Merge
-
     [Fact]
     public void Merge_ExistingKeysNotOverwritten()
     {
@@ -371,10 +328,7 @@ public class ManualMapperTests
 
         var mapper = new ManualMapper(Options.Create(primary));
 
-        // int→string: primary keeps its delegate, secondary is not added
         mapper.Map<int, string>(1).Should().Be("primary:1");
-
-        // int→double: only exists in secondary, should work
         mapper.Map<int, double>(10).Should().Be(15.0);
     }
 
@@ -390,10 +344,6 @@ public class ManualMapperTests
         var mapper = new ManualMapper(Options.Create(primary));
         mapper.Map<string, int>("test").Should().Be(4);
     }
-
-    #endregion
-
-    #region Registration via IMapper (runtime)
 
     [Fact]
     public void IMapper_Add_RegistersAtRuntime()
@@ -427,10 +377,6 @@ public class ManualMapperTests
         mapper.Map<int, string>(1).Should().Be("runtime:1");
     }
 
-    #endregion
-
-    #region Nested mapping via IMapper parameter
-
     [Fact]
     public void Add_WithMapper_DelegateCanUseMapperForNestedMapping()
     {
@@ -455,10 +401,6 @@ public class ManualMapperTests
 
         mapper.Map<Wrapper<int>, string>(new Wrapper<int>(7)).Should().Be("w:7");
     }
-
-    #endregion
-
-    #region Edge cases
 
     [Fact]
     public void Map_NonGeneric_NullSourceType_ThrowsArgumentNullException()
@@ -490,16 +432,11 @@ public class ManualMapperTests
     [Fact]
     public void NoBuiltInMappings_IntToString_Throws()
     {
-        // Explicit-only: no built-in int→string mapping
         var mapper = CreateMapper();
 
         var act = () => mapper.Map<int, string>(42);
         act.Should().Throw<InvalidOperationException>();
     }
-
-    #endregion
-
-    #region Test helpers
 
     private record Wrapper<T>(T Inner);
 
@@ -514,6 +451,4 @@ public class ManualMapperTests
     }
 
     private record TargetDto(string Label);
-
-    #endregion
 }

@@ -9,7 +9,7 @@ using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
 using Xunit;
 
-namespace NOF.Infrastructure.Tests.Persistence;
+namespace NOF.Infrastructure.Core.Tests.Persistence;
 
 public class InMemoryPersistenceTests
 {
@@ -50,6 +50,41 @@ public class InMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task Transaction_DisposeWithoutCompletion_ShouldRollbackChanges()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
+
+        await using (await transactionManager.BeginTransactionAsync())
+        {
+            repository.Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
+        }
+
+        (await repository.FindAsync("tenant-dispose")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Transaction_CompleteOutOfOrder_ShouldThrow()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
+
+        await using var outer = await transactionManager.BeginTransactionAsync();
+        await using var inner = await transactionManager.BeginTransactionAsync();
+
+        Func<Task> act = () => outer.CommitAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*LIFO order*");
+
+        await inner.RollbackAsync();
+        await outer.RollbackAsync();
+    }
+
+    [Fact]
     public async Task UnitOfWork_SaveChanges_ShouldPublishEvents_ClearEvents_AndReturnChangeCount()
     {
         using var services = CreateServiceProvider();
@@ -67,6 +102,22 @@ public class InMemoryPersistenceTests
         changeCount.Should().Be(1);
         publisher.Events.Should().ContainSingle().Which.Should().BeOfType<TestEvent>();
         order.Events.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnitOfWork_SaveChanges_TwiceWithoutNewChanges_ShouldReturnZero()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        repository.Add(TestOrder.Create(1, "order-1"));
+
+        await unitOfWork.SaveChangesAsync();
+        var second = await unitOfWork.SaveChangesAsync();
+
+        second.Should().Be(0);
     }
 
     [Fact]
@@ -118,6 +169,44 @@ public class InMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task OutboxRepository_ShouldNotClaimExpiredOrExhaustedMessagesBeyondRules()
+    {
+        using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) });
+        using var scope = services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+
+        repository.Add(new NOFOutboxMessage
+        {
+            Id = 1,
+            PayloadType = typeof(string).AssemblyQualifiedName!,
+            Payload = "a",
+            Headers = "{}",
+            MessageType = OutboxMessageType.Command
+        });
+
+        repository.Add(new NOFOutboxMessage
+        {
+            Id = 2,
+            PayloadType = typeof(string).AssemblyQualifiedName!,
+            Payload = "b",
+            Headers = "{}",
+            MessageType = OutboxMessageType.Command
+        });
+
+        var exhausted = await repository.FindAsync(1L);
+        exhausted.Should().NotBeNull();
+        exhausted!.RetryCount = 2;
+
+        var claimedUntilFuture = await repository.FindAsync(2L);
+        claimedUntilFuture.Should().NotBeNull();
+        claimedUntilFuture!.ClaimExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5);
+
+        var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
+
+        claimed.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task OutboxRepository_ShouldMarkMessageAsFailed_WhenRetryCountReachesLimit()
     {
         using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 1, ClaimTimeout = TimeSpan.FromMinutes(1) });
@@ -159,6 +248,19 @@ public class InMemoryPersistenceTests
 
         invocationContext.SetTenantId(null);
         (await repository.FindAsync("corr", "def"))!.State.Should().Be(1);
+    }
+
+    [Fact]
+    public void Store_GetPartition_WithSameNameButDifferentTypes_ShouldThrow()
+    {
+        var store = new InMemoryPersistenceStore();
+
+        store.GetPartition<TestOrder, long>("orders", static order => order.Id, static order => TestOrder.Create(order.Id, order.Number));
+
+        var act = () => store.GetPartition<TestTenantProjection, string>("orders", static projection => projection.Id, static projection => new TestTenantProjection { Id = projection.Id });
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*already registered with a different entity or key type*");
     }
 
     [Fact]
@@ -265,5 +367,10 @@ public class InMemoryPersistenceTests
             : base(store, session, "test:orders", static order => order.Id, static order => TestOrder.Create(order.Id, order.Number))
         {
         }
+    }
+
+    private sealed class TestTenantProjection
+    {
+        public string Id { get; init; } = string.Empty;
     }
 }
