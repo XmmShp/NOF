@@ -26,11 +26,20 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.TryAddScoped<IRequestSender, RequestSender>();
         builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
+        builder.Services.TryAddSingleton<InMemoryPersistenceStore>();
+        builder.Services.TryAddScoped<InMemoryPersistenceSession>();
+        builder.Services.TryAddScoped<IUnitOfWork, InMemoryUnitOfWork>();
+        builder.Services.TryAddScoped<ITransactionManager, InMemoryTransactionManager>();
+        builder.Services.TryAddScoped<IInboxMessageRepository, InMemoryInboxMessageRepository>();
+        builder.Services.TryAddScoped<IOutboxMessageRepository, InMemoryOutboxMessageRepository>();
+        builder.Services.TryAddScoped<ITenantRepository, InMemoryTenantRepository>();
+        builder.Services.TryAddScoped<IStateMachineContextRepository, InMemoryStateMachineContextRepository>();
 
         builder.Services.TryAddScoped<ICommandRider, InMemoryCommandRider>();
         builder.Services.TryAddScoped<INotificationRider, InMemoryNotificationRider>();
         builder.Services.TryAddScoped<IRequestRider, InMemoryRequestRider>();
         builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
+        builder.Services.AddHostedService<MemoryPersistenceWarningHostedService>();
 
         // Handler resolvers: index handlers by message type + endpoint name for efficient lookup
         builder.Services.TryAddSingleton<ICommandHandlerResolver, CommandHandlerResolver>();
