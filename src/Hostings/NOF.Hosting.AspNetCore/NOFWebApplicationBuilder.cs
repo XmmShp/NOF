@@ -14,19 +14,19 @@ namespace NOF.Hosting.AspNetCore;
 
 public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 {
-    public WebApplicationBuilder InnerBuilder { get; }
+    public WebApplicationBuilder WebApplicationBuilder { get; }
 
     protected NOFWebApplicationBuilder(string[] args)
     {
-        InnerBuilder = WebApplication.CreateBuilder(args);
+        WebApplicationBuilder = WebApplication.CreateBuilder(args);
     }
 
-    public static NOFWebApplicationBuilder Create(string[] args, bool useDefaultConfigs = true)
+    public static NOFWebApplicationBuilder Create(string[] args, bool useDefaults = true)
     {
         var builder = new NOFWebApplicationBuilder(args);
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
         builder.AddRegistrationStep(new HttpHeaderOutboundMiddlewareStep());
-        if (useDefaultConfigs)
+        if (useDefaults)
         {
             builder.UseDefaultSettings();
         }
@@ -36,30 +36,30 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     /// <inheritdoc />
     protected override Task<WebApplication> BuildApplicationAsync()
     {
-        return Task.FromResult(InnerBuilder.Build());
+        return Task.FromResult(WebApplicationBuilder.Build());
     }
 
     /// <inheritdoc />
     public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
     {
-        ((IHostApplicationBuilder)InnerBuilder).ConfigureContainer(factory, configure);
+        ((IHostApplicationBuilder)WebApplicationBuilder).ConfigureContainer(factory, configure);
     }
 
     /// <inheritdoc />
     public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
 
     /// <inheritdoc />
-    public override IConfigurationManager Configuration => InnerBuilder.Configuration;
+    public override IConfigurationManager Configuration => WebApplicationBuilder.Configuration;
 
     /// <inheritdoc />
-    public override IHostEnvironment Environment => InnerBuilder.Environment;
+    public override IHostEnvironment Environment => WebApplicationBuilder.Environment;
 
     /// <inheritdoc />
-    public override ILoggingBuilder Logging => InnerBuilder.Logging;
+    public override ILoggingBuilder Logging => WebApplicationBuilder.Logging;
 
     /// <inheritdoc />
-    public override IMetricsBuilder Metrics => InnerBuilder.Metrics;
+    public override IMetricsBuilder Metrics => WebApplicationBuilder.Metrics;
 
     /// <inheritdoc />
-    public override IServiceCollection Services => InnerBuilder.Services;
+    public override IServiceCollection Services => WebApplicationBuilder.Services;
 }

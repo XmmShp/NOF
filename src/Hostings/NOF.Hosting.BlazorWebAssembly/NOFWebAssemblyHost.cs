@@ -6,16 +6,16 @@ namespace NOF.Hosting.BlazorWebAssembly;
 
 public sealed class NOFWebAssemblyHost : IHost, IAsyncDisposable
 {
-    private readonly WebAssemblyHost _innerWebAssemblyHost;
+    public WebAssemblyHost WebAssemblyHost { get; }
 
     internal NOFWebAssemblyHost(WebAssemblyHost webAssemblyHost)
     {
-        _innerWebAssemblyHost = webAssemblyHost;
+        WebAssemblyHost = webAssemblyHost;
     }
 
-    public IServiceProvider Services => _innerWebAssemblyHost.Services;
+    public IServiceProvider Services => WebAssemblyHost.Services;
 
-    public IConfiguration Configuration => _innerWebAssemblyHost.Configuration;
+    public IConfiguration Configuration => WebAssemblyHost.Configuration;
 
     public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -25,7 +25,7 @@ public sealed class NOFWebAssemblyHost : IHost, IAsyncDisposable
     {
     }
 
-    public ValueTask DisposeAsync() => _innerWebAssemblyHost.DisposeAsync();
+    public ValueTask DisposeAsync() => WebAssemblyHost.DisposeAsync();
 
-    public Task RunAsync() => _innerWebAssemblyHost.RunAsync();
+    public Task RunAsync() => WebAssemblyHost.RunAsync();
 }

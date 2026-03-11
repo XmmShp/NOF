@@ -12,7 +12,7 @@ using NOF.Sample;
 using NOF.Sample.Application;
 using NOF.Sample.WebUI;
 
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.Services.AddNOFSampleAutoInjectServices();
 builder.Services.AddAllHandlers()
@@ -22,10 +22,10 @@ builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 
 builder.AddRedisCache();
 
-builder.AddJwtAuthority()
+builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample")
     .AddJwksRequestHandler();
 
-builder.AddJwtAuthorization();
+builder.AddJwtAuthorization(o => o.Issuer = "NOF.Sample");
 
 builder.AddMassTransit()
     .UseRabbitMQ();

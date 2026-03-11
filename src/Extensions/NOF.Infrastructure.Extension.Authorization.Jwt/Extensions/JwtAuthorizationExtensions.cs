@@ -22,8 +22,6 @@ public static partial class NOFJwtAuthorizationExtensions
         /// </summary>
         /// <param name="configureOptions">Action to configure JWT authorization options.</param>
         /// <returns>A <see cref="JwtAuthorizationSelector"/> for further configuration.</returns>
-        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
-        [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
         public JwtAuthorizationSelector AddJwtAuthorization(Action<JwtAuthorizationOptions>? configureOptions = null)
         {
             if (configureOptions is not null)
@@ -32,9 +30,7 @@ public static partial class NOFJwtAuthorizationExtensions
             }
             else
             {
-                builder.Services.AddOptions<JwtAuthorizationOptions>()
-                    .BindConfiguration("NOF:Jwt:Authorization")
-                    .ValidateOnStart();
+                builder.Services.AddOptions<JwtAuthorizationOptions>();
             }
 
             // Register JwksJsonContext into the shared NOF JSON resolver chain
@@ -82,8 +78,6 @@ public static partial class NOFJwtAuthorizationExtensions
         /// </summary>
         /// <param name="configureOptions">Action to configure authority options.</param>
         /// <returns>The NOF application builder for chaining.</returns>
-        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
-        [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
         public JwtAuthoritySelector AddJwtAuthority(Action<JwtAuthorityOptions>? configureOptions = null)
         {
             if (configureOptions is not null)
@@ -93,9 +87,7 @@ public static partial class NOFJwtAuthorizationExtensions
             else
             {
                 builder.Services.AddSingleton<IValidateOptions<JwtAuthorityOptions>, JwtAuthorityOptionsValidator>();
-                builder.Services.AddOptions<JwtAuthorityOptions>()
-                    .BindConfiguration("NOF:Jwt:Authority")
-                    .ValidateOnStart();
+                builder.Services.AddOptions<JwtAuthorityOptions>();
             }
 
             // Signing key service (in-memory key ring)

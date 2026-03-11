@@ -21,16 +21,12 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep<A
     private const string AlivenessEndpointPath = "/alive";
     private const string Tag = "live";
 
-    [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
-    [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
 
-        builder.Services.AddOptions<HttpHeaderOutboundMiddlewareOptions>()
-            .BindConfiguration("NOF:HttpHeaderMiddleware")
-            .ValidateOnStart();
+        builder.Services.AddOptions<HttpHeaderOutboundMiddlewareOptions>();
 
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
         builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>

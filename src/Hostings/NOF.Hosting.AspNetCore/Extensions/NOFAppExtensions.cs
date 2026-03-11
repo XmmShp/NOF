@@ -43,13 +43,9 @@ public static class NOFHostingAspNetCoreExtensions
             return builder;
         }
 
-        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
-        [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "BindConfiguration is intercepted by EnableConfigurationBindingGenerator")]
         public INOFAppBuilder UseCors()
         {
-            builder.Services.AddOptions<CorsSettingsOptions>()
-                .BindConfiguration("NOF:CorsSettings")
-                .ValidateOnStart();
+            builder.Services.AddOptions<CorsSettingsOptions>();
             builder.Services.AddCors();
             builder.AddInitializationStep(new CorsInitializationStep());
             return builder;

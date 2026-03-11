@@ -15,13 +15,13 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
 {
     private readonly IConfigurationManager _configuration = new ConfigurationManager();
 
-    private readonly WebAssemblyHostBuilder _innerBuilder;
+    public WebAssemblyHostBuilder WebAssemblyHostBuilder { get; }
 
     protected NOFWebAssemblyHostBuilder(string[]? args)
     {
-        _innerBuilder = WebAssemblyHostBuilder.CreateDefault(args);
-        Environment = new NOFWebAssemblyHostEnvironment(_innerBuilder.HostEnvironment);
-        _configuration.AddConfiguration(_innerBuilder.Configuration);
+        WebAssemblyHostBuilder = WebAssemblyHostBuilder.CreateDefault(args);
+        Environment = new NOFWebAssemblyHostEnvironment(WebAssemblyHostBuilder.HostEnvironment);
+        _configuration.AddConfiguration(WebAssemblyHostBuilder.Configuration);
     }
 
     public static NOFWebAssemblyHostBuilder Create(string[]? args)
@@ -36,10 +36,10 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
     }
 
     protected override Task<NOFWebAssemblyHost> BuildApplicationAsync()
-        => Task.FromResult(new NOFWebAssemblyHost(_innerBuilder.Build()));
+        => Task.FromResult(new NOFWebAssemblyHost(WebAssemblyHostBuilder.Build()));
 
     public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
-        => _innerBuilder.ConfigureContainer(factory, configure);
+        => WebAssemblyHostBuilder.ConfigureContainer(factory, configure);
 
     public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
 
@@ -47,11 +47,11 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
 
     public override IHostEnvironment Environment { get; }
 
-    public override ILoggingBuilder Logging => _innerBuilder.Logging;
+    public override ILoggingBuilder Logging => WebAssemblyHostBuilder.Logging;
 
     public override IMetricsBuilder Metrics => field ??= InitializeMetrics();
 
-    public override IServiceCollection Services => _innerBuilder.Services;
+    public override IServiceCollection Services => WebAssemblyHostBuilder.Services;
 
     private IMetricsBuilder InitializeMetrics()
     {
