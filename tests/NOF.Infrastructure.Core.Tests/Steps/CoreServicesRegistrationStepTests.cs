@@ -6,6 +6,7 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using NOF.Application;
 using NOF.Contract;
@@ -62,7 +63,7 @@ public class CoreServicesRegistrationStepTests
     }
 
     [Fact]
-    public async Task CoreServicesStep_ExecuteAsync_ShouldNotRegisterFallbackPersistenceServices()
+    public async Task CoreServicesStep_ExecuteAsync_ShouldRegisterHostedServicesAndOutboxOptionsOnly()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
@@ -71,11 +72,19 @@ public class CoreServicesRegistrationStepTests
         await step.ExecuteAsync(context);
 
         using var provider = builder.Services.BuildServiceProvider();
-        using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetService<IUnitOfWork>().Should().BeNull();
-        scope.ServiceProvider.GetService<ITransactionManager>().Should().BeNull();
-        provider.GetServices<IHostedService>().Should().NotContain(service => service is MemoryPersistenceWarningHostedService);
+        builder.Services.Should().Contain(service =>
+            service.ServiceType == typeof(IHostedService) &&
+            service.ImplementationType == typeof(MemoryPersistenceWarningHostedService));
+
+        builder.Services.Should().Contain(service =>
+            service.ServiceType == typeof(IHostedService) &&
+            service.ImplementationType == typeof(OutboxMessageBackgroundService));
+
+        provider.GetRequiredService<IOptions<OutboxOptions>>().Should().NotBeNull();
+
+        builder.Services.Should().NotContain(service => service.ServiceType == typeof(IUnitOfWork));
+        builder.Services.Should().NotContain(service => service.ServiceType == typeof(ITransactionManager));
     }
 
     [Fact]
