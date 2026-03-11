@@ -57,7 +57,7 @@ public static class NOFInfrastructureCoreExtensions
         {
             ArgumentNullException.ThrowIfNull(descriptor);
 
-            var existingDescriptor = services.FirstOrDefault(d => d.Lifetime == descriptor.Lifetime && d.ServiceType == descriptor.ServiceType);
+            var existingDescriptor = services.FirstOrDefault(d => d.ServiceType == descriptor.ServiceType);
             if (existingDescriptor is not null)
             {
                 services.Remove(existingDescriptor);

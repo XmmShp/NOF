@@ -23,6 +23,7 @@
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Infrastructure.Abstraction/NOF.Infrastructure.Abstraction.csproj" />
     <Project Path="src/NOF.Infrastructure.Core/NOF.Infrastructure.Core.csproj" Id="3ae958a0-86ed-4f43-8802-83be54c1f8cf" />
+    <Project Path="src/NOF.Test/NOF.Test.csproj" />
   </Folder>
   <Folder Name="/src/Hostings/">
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
@@ -46,5 +47,6 @@
     <Project Path="tests/NOF.Contract.Tests/NOF.Contract.Tests.csproj" Id="a4d4d1a7-24e1-4c7e-a368-8db0063b737a" />
     <Project Path="tests/NOF.Infrastructure.Core.Tests/NOF.Infrastructure.Core.Tests.csproj" />
     <Project Path="tests/NOF.SourceGenerator.Tests/NOF.SourceGenerator.Tests.csproj" Id="35f09326-8798-4668-bd60-9b9a0882f1e9" />
+    <Project Path="tests/NOF.Test.Tests/NOF.Test.Tests.csproj" />
   </Folder>
 </Solution>
