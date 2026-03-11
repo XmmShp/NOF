@@ -52,7 +52,7 @@ public static partial class NOFInfrastructureCoreExtensions
         /// <param name="configure">Optional action to configure <see cref="CacheServiceOptions"/> for this name.</param>
         /// <returns>An <see cref="ICacheServiceBuilder"/> for further configuration.</returns>
         public ICacheServiceBuilder AddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
-            string name,
+            string name = ICacheServiceFactory.DefaultName,
             Action<CacheServiceOptions>? configure = null)
             where TImplementation : class, ICacheService
         {
@@ -79,6 +79,25 @@ public static partial class NOFInfrastructureCoreExtensions
 
             services.AddKeyedScoped<IDistributedCache>(name, (sp, key) =>
                 sp.GetRequiredKeyedService<ICacheService>(key!));
+
+            return new CacheServiceBuilder(name, services);
+        }
+
+        public ICacheServiceBuilder TryAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
+            string name = ICacheServiceFactory.DefaultName,
+            Action<CacheServiceOptions>? configure = null)
+            where TImplementation : class, ICacheService
+        {
+            ArgumentNullException.ThrowIfNull(name);
+
+            var hasRegistration = services.Any(service =>
+                service.ServiceType == typeof(ICacheService) &&
+                Equals(service.ServiceKey, name));
+
+            if (!hasRegistration)
+            {
+                return services.AddCacheService<TImplementation>(name, configure);
+            }
 
             return new CacheServiceBuilder(name, services);
         }

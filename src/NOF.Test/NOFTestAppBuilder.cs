@@ -4,9 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
@@ -41,18 +39,11 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
     private void ConfigureDefaultTestServices()
     {
         Services.AddOptions();
-        Services.TryAddSingleton(Options.Create(new MapperOptions()));
-        Services.TryAddSingleton(Options.Create(new SnowflakeIdGeneratorOptions()));
-
-        Services.TryAddSingleton<IMapper>(sp => new ManualMapper(sp.GetRequiredService<IOptions<MapperOptions>>()));
-        Services.TryAddSingleton<IIdGenerator>(sp =>
-            new SnowflakeIdGenerator(sp.GetRequiredService<IOptions<SnowflakeIdGeneratorOptions>>().Value));
-
         Services.TryAddSingleton<InboundPipelineTypes>();
         Services.TryAddSingleton<OutboundPipelineTypes>();
 
         new CoreServicesRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
-        new OutboxRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
+        new FallbackServiceRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
     }
 
     protected override Task<IHost> BuildApplicationAsync()

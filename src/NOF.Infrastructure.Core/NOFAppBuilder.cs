@@ -65,12 +65,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ServiceConfigs =
         [
             new CoreServicesRegistrationStep(),
-            new CacheServiceDefaultsRegistrationStep(),
-            new CacheServiceRegistrationStep(),
-            new OutboxRegistrationStep(),
+            new FallbackServiceRegistrationStep(),
             new OpenTelemetryRegistrationStep(),
-            new SnowflakeIdGeneratorRegistrationStep(),
-            new MapperRegistrationStep(),
 
             new ExceptionInboundMiddlewareStep(),
             new TenantInboundMiddlewareStep(),

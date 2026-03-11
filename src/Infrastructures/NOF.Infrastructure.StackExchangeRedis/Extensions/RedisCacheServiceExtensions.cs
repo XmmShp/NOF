@@ -23,8 +23,6 @@ public static class NOFInfrastructureExtensions
         /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
         public INOFAppBuilder AddRedisCache(string? name = null, string connectionName = "redis", Action<CacheServiceOptions>? configureOptions = null)
         {
-            builder.RemoveRegistrationStep<CacheServiceRegistrationStep>();
-
             // Register IConnectionMultiplexer if not already registered
             builder.Services.TryAddSingleton<IConnectionMultiplexer>(sp =>
             {

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.Core;
@@ -17,6 +18,7 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
 
         foreach (var info in infos.Commands)
         {
+            TypeRegistry.Register(info.CommandType);
             var ep = infos.GetEndpointName(info.HandlerType);
             builder.Services.AddKeyedScoped(info.HandlerType, CommandHandlerKey.Of(info.CommandType, ep));
         }
@@ -30,6 +32,7 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
 
         foreach (var info in infos.Notifications)
         {
+            TypeRegistry.Register(info.NotificationType);
             var key = NotificationHandlerKey.Of(info.NotificationType);
             builder.Services.AddKeyedScoped(info.HandlerType, key);
             builder.Services.AddKeyedScoped<INotificationHandler>(key, (sp, k) => (INotificationHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
@@ -37,12 +40,14 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
 
         foreach (var info in infos.RequestsWithoutResponse)
         {
+            TypeRegistry.Register(info.RequestType);
             var ep = infos.GetEndpointName(info.HandlerType);
             builder.Services.AddKeyedScoped(info.HandlerType, RequestHandlerKey.Of(info.RequestType, ep));
         }
 
         foreach (var info in infos.RequestsWithResponse)
         {
+            TypeRegistry.Register(info.RequestType);
             var ep = infos.GetEndpointName(info.HandlerType);
             builder.Services.AddKeyedScoped(info.HandlerType, RequestWithResponseHandlerKey.Of(info.RequestType, ep));
         }

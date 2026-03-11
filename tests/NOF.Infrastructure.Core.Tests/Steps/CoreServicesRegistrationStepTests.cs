@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
@@ -17,14 +19,16 @@ namespace NOF.Infrastructure.Core.Tests.Steps;
 public class CoreServicesRegistrationStepTests
 {
     [Fact]
-    public async Task ExecuteAsync_ShouldRegisterDefaultInMemoryPersistenceServices()
+    public async Task FallbackStep_ExecuteAsync_ShouldRegisterDefaultInMemoryPersistenceServices()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
-        var step = new CoreServicesRegistrationStep();
+        var coreStep = new CoreServicesRegistrationStep();
+        var step = new FallbackServiceRegistrationStep();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 
+        await coreStep.ExecuteAsync(context);
         await step.ExecuteAsync(context);
 
         using var provider = builder.Services.BuildServiceProvider();
@@ -41,7 +45,24 @@ public class CoreServicesRegistrationStepTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ShouldRegisterMemoryPersistenceWarningHostedService()
+    public async Task FallbackStep_ExecuteAsync_ShouldRegisterMemoryPersistenceWarningHostedService()
+    {
+        var builder = new TestServiceRegistrationContext();
+        var context = new TestServiceRegistrationContext(builder);
+        var coreStep = new CoreServicesRegistrationStep();
+        var step = new FallbackServiceRegistrationStep();
+
+        await coreStep.ExecuteAsync(context);
+        await step.ExecuteAsync(context);
+
+        using var provider = builder.Services.BuildServiceProvider();
+        var hostedServices = provider.GetServices<IHostedService>().ToList();
+
+        hostedServices.Should().Contain(service => service is MemoryPersistenceWarningHostedService);
+    }
+
+    [Fact]
+    public async Task CoreServicesStep_ExecuteAsync_ShouldNotRegisterFallbackPersistenceServices()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
@@ -50,9 +71,29 @@ public class CoreServicesRegistrationStepTests
         await step.ExecuteAsync(context);
 
         using var provider = builder.Services.BuildServiceProvider();
-        var hostedServices = provider.GetServices<IHostedService>().ToList();
+        using var scope = provider.CreateScope();
 
-        hostedServices.Should().Contain(service => service is MemoryPersistenceWarningHostedService);
+        scope.ServiceProvider.GetService<IUnitOfWork>().Should().BeNull();
+        scope.ServiceProvider.GetService<ITransactionManager>().Should().BeNull();
+        provider.GetServices<IHostedService>().Should().NotContain(service => service is MemoryPersistenceWarningHostedService);
+    }
+
+    [Fact]
+    public void TryAddCacheService_ShouldNotOverrideExistingNamedRegistration()
+    {
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.AddSingleton<ICacheSerializer, JsonCacheSerializer>();
+        services.AddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
+
+        services.AddCacheService<TestCacheService>();
+        services.TryAddCacheService<InMemoryCacheService>();
+
+        var descriptors = services
+            .Where(service => service.ServiceType == typeof(ICacheService) && Equals(service.ServiceKey, ICacheServiceFactory.DefaultName))
+            .ToList();
+
+        descriptors.Should().HaveCount(1);
     }
 
     private sealed class TestServiceRegistrationContext : IServiceRegistrationContext
@@ -145,5 +186,95 @@ public class CoreServicesRegistrationStepTests
         private long _current = 1000;
 
         public long NextId() => Interlocked.Increment(ref _current);
+    }
+
+    private sealed class TestCacheService : ICacheService
+    {
+        public byte[]? Get(string key) => null;
+
+        public Task<byte[]?> GetAsync(string key, CancellationToken token = default)
+            => Task.FromResult<byte[]?>(null);
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
+        {
+        }
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
+            => Task.CompletedTask;
+
+        public void Refresh(string key)
+        {
+        }
+
+        public Task RefreshAsync(string key, CancellationToken token = default)
+            => Task.CompletedTask;
+
+        public void Remove(string key)
+        {
+        }
+
+        public Task RemoveAsync(string key, CancellationToken token = default)
+            => Task.CompletedTask;
+
+        public ValueTask<Optional<T>> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<Optional<T>>(Optional.None);
+
+        public ValueTask<T> GetOrSetAsync<T>(string key, Func<CancellationToken, ValueTask<T>> factory, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
+            => factory(cancellationToken);
+
+        public ValueTask SetAsync<T>(string key, T value, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(false);
+
+        public ValueTask<IReadOnlyDictionary<string, Optional<T>>> GetManyAsync<T>(IEnumerable<string> keys, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyDictionary<string, Optional<T>>>(new Dictionary<string, Optional<T>>());
+
+        public ValueTask SetManyAsync<T>(IDictionary<string, T> items, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask<long> RemoveManyAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(0L);
+
+        public ValueTask<long> IncrementAsync(string key, long value = 1, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(value);
+
+        public ValueTask<long> DecrementAsync(string key, long value = 1, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(-value);
+
+        public ValueTask<bool> SetIfNotExistsAsync<T>(string key, T value, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(true);
+
+        public ValueTask<Optional<T>> GetAndSetAsync<T>(string key, T newValue, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<Optional<T>>(Optional.None);
+
+        public ValueTask<Optional<T>> GetAndRemoveAsync<T>(string key, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<Optional<T>>(Optional.None);
+
+        public ValueTask<Optional<TimeSpan>> GetTimeToLiveAsync(string key, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<Optional<TimeSpan>>(Optional.None);
+
+        public ValueTask<bool> SetTimeToLiveAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(true);
+
+        public ValueTask<IDistributedLock> AcquireLockAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IDistributedLock>(new TestDistributedLock(key));
+
+        public ValueTask<Optional<IDistributedLock>> TryAcquireLockAsync(string key, TimeSpan expiration, TimeSpan timeout, CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(Optional.Of<IDistributedLock>(new TestDistributedLock(key)));
+    }
+
+    private sealed class TestDistributedLock(string key) : IDistributedLock
+    {
+        public string Key { get; } = key;
+
+        public bool IsAcquired => true;
+
+        public ValueTask<bool> ReleaseAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(true);
+
+        public ValueTask DisposeAsync()
+            => ValueTask.CompletedTask;
     }
 }

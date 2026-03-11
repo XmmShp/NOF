@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace NOF.Domain;
 
 /// <summary>
@@ -28,12 +30,15 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
     /// <summary>
     /// Initializes a new instance from <see cref="SnowflakeIdGeneratorOptions"/>.
     /// </summary>
-    public SnowflakeIdGenerator(SnowflakeIdGeneratorOptions options)
+    public SnowflakeIdGenerator(IOptions<SnowflakeIdGeneratorOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        var machineIdBits = options.MachineIdBits;
-        var sequenceBits = options.SequenceBits;
+        var optionsValue = options.Value;
+        ArgumentNullException.ThrowIfNull(optionsValue);
+
+        var machineIdBits = optionsValue.MachineIdBits;
+        var sequenceBits = optionsValue.SequenceBits;
 
         if (machineIdBits is < 1 or > 20)
         {
@@ -50,13 +55,13 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
         _machineIdShift = sequenceBits;
         _timestampShift = machineIdBits + sequenceBits;
 
-        if (options.MachineId < 0 || options.MachineId > maxMachineId)
+        if (optionsValue.MachineId < 0 || optionsValue.MachineId > maxMachineId)
         {
             throw new ArgumentOutOfRangeException(nameof(options), $"MachineId must be in range [0, {maxMachineId}].");
         }
 
-        _machineId = options.MachineId;
-        _epochMs = options.Epoch.ToUnixTimeMilliseconds();
+        _machineId = optionsValue.MachineId;
+        _epochMs = optionsValue.Epoch.ToUnixTimeMilliseconds();
     }
 
     /// <summary>Generates the next unique snowflake ID.</summary>

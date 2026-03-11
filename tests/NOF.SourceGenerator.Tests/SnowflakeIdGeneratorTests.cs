@@ -1,14 +1,13 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using NOF.Domain;
-using System.Reflection;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
 public class SnowflakeIdGeneratorTests
 {
-    private static SnowflakeIdGenerator Default() =>
-        new(new SnowflakeIdGeneratorOptions());
+    private static SnowflakeIdGenerator Default() => new(Options.Create(new SnowflakeIdGeneratorOptions()));
 
     // -----------------------------------------------------------------------
     // Basic generation
@@ -45,7 +44,7 @@ public class SnowflakeIdGeneratorTests
     public void NextId_EmbedsMachineId_InCorrectBitPosition()
     {
         const int machineId = 7;
-        var gen = new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions { MachineId = machineId });
+        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = machineId }));
         var id = gen.NextId();
 
         // Default layout: 12 sequence bits, 10 machine bits
@@ -68,12 +67,12 @@ public class SnowflakeIdGeneratorTests
         const int sequenceBits = 8;
         const int machineId = 5;
 
-        var gen = new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions
+        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions
         {
             MachineIdBits = machineIdBits,
             SequenceBits = sequenceBits,
             MachineId = machineId,
-        });
+        }));
 
         var id = gen.NextId();
         var maxMachineId = (1L << machineIdBits) - 1;
@@ -84,11 +83,11 @@ public class SnowflakeIdGeneratorTests
     [Fact]
     public void CustomBitLayout_StillProducesUniqueIds()
     {
-        var gen = new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions
+        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions
         {
             MachineIdBits = 8,
             SequenceBits = 8,
-        });
+        }));
 
         var ids = Enumerable.Range(0, 500).Select(_ => gen.NextId()).ToList();
         ids.Distinct().Should().HaveCount(500);
@@ -103,7 +102,7 @@ public class SnowflakeIdGeneratorTests
     {
         // A later epoch means smaller timestamp component (less time has elapsed)
         var laterEpoch = DateTimeOffset.UtcNow.AddSeconds(-10);
-        var gen = new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions { Epoch = laterEpoch });
+        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { Epoch = laterEpoch }));
         gen.NextId().Should().BePositive();
     }
 
@@ -114,32 +113,28 @@ public class SnowflakeIdGeneratorTests
     [Fact]
     public void MachineId_OutOfRange_Throws()
     {
-        var act = () => new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions { MachineId = 9999 });
+        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = 9999 }));
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void NegativeMachineId_Throws()
     {
-        var act = () => new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions { MachineId = -1 });
+        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = -1 }));
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void InvalidMachineIdBits_Throws()
     {
-        var act = () => new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions { MachineIdBits = 0 });
+        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineIdBits = 0 }));
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void BitLayoutOverflow_Throws()
     {
-        var act = () => new SnowflakeIdGenerator(new SnowflakeIdGeneratorOptions
-        {
-            MachineIdBits = 32,
-            SequenceBits = 32,
-        });
+        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineIdBits = 32, SequenceBits = 32 }));
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
