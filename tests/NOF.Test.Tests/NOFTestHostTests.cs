@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using Xunit;
@@ -89,6 +90,42 @@ public class NOFTestHostTests
         await act.Should().NotThrowAsync();
     }
 
+    [Fact]
+    public async Task GetRequiredService_ShouldInitializeSingletonOnlyOnce()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.Services.AddSingleton<SingletonInitializable>();
+
+        await using var host = await builder.BuildTestHostAsync();
+
+        var first = host.GetRequiredService<SingletonInitializable>();
+        var second = host.GetRequiredService<SingletonInitializable>();
+
+        first.Should().BeSameAs(second);
+        first.InitializeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetRequiredService_ShouldInitializeScopedServiceOncePerScope()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.Services.AddScoped<ScopedInitializable>();
+
+        await using var host = await builder.BuildTestHostAsync();
+
+        using var firstScope = host.CreateScope();
+        var firstA = firstScope.GetRequiredService<ScopedInitializable>();
+        var firstB = firstScope.GetRequiredService<ScopedInitializable>();
+
+        using var secondScope = host.CreateScope();
+        var second = secondScope.GetRequiredService<ScopedInitializable>();
+
+        firstA.Should().BeSameAs(firstB);
+        firstA.InitializeCount.Should().Be(1);
+        second.InitializeCount.Should().Be(1);
+        second.ScopeInstanceId.Should().NotBe(firstA.ScopeInstanceId);
+    }
+
     private sealed record PingRequest(string Value) : IRequest;
 
     private sealed record EchoRequest(string Value) : IRequest<string>;
@@ -129,6 +166,38 @@ public class NOFTestHostTests
         public Task PublishAsync(INotification notification, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class SingletonInitializable : IInitializable
+    {
+        private bool _isInitialized;
+
+        public bool IsInitialized => _isInitialized;
+
+        public int InitializeCount { get; private set; }
+
+        public void Initialize()
+        {
+            InitializeCount++;
+            _isInitialized = true;
+        }
+    }
+
+    private sealed class ScopedInitializable : IInitializable
+    {
+        private bool _isInitialized;
+
+        public bool IsInitialized => _isInitialized;
+
+        public Guid ScopeInstanceId { get; } = Guid.NewGuid();
+
+        public int InitializeCount { get; private set; }
+
+        public void Initialize()
+        {
+            InitializeCount++;
+            _isInitialized = true;
         }
     }
 }
