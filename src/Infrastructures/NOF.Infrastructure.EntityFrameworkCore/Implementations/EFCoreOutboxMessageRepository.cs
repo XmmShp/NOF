@@ -43,7 +43,8 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     {
         var timeout = claimTimeout ?? _options.ClaimTimeout;
         var lockId = Guid.NewGuid().ToString();
-        var expiresAt = DateTimeOffset.UtcNow.Add(timeout);
+        var now = DateTimeOffset.UtcNow;
+        var expiresAt = now.Add(timeout);
 
         int rowsUpdated;
         // Step 1: Claim pending messages (including those with expired locks)
@@ -52,7 +53,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
             rowsUpdated = await DbContext.NOFOutboxMessages
                 .Where(m => m.Status == OutboxMessageStatus.Pending &&
                             m.RetryCount < _options.MaxRetryCount &&
-                            (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+                            (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= now))
                 .OrderBy(m => m.CreatedAt)
                 .Take(batchSize)
                 .ExecuteUpdateAsync(setters => setters
@@ -126,11 +127,12 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
         CancellationToken cancellationToken = default)
     {
         // Avoid duplicate marking (e.g., already processed by another instance)
+        var sentAt = DateTimeOffset.UtcNow;
         await DbContext.NOFOutboxMessages
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
-                .SetProperty(m => m.SentAt, DateTimeOffset.UtcNow)
+                .SetProperty(m => m.SentAt, sentAt)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
                 .SetProperty(m => m.ClaimExpiresAt, (DateTimeOffset?)null),
                 cancellationToken);
@@ -141,11 +143,12 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     /// </summary>
     public async ValueTask AtomicRecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
+        var failedAt = DateTimeOffset.UtcNow;
         var rowsUpdated = await DbContext.NOFOutboxMessages
             .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.ErrorMessage, errorMessage)
-                .SetProperty(m => m.FailedAt, DateTimeOffset.UtcNow),
+                .SetProperty(m => m.FailedAt, failedAt),
                 cancellationToken);
 
         if (rowsUpdated == 0)
@@ -195,12 +198,13 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
         string errorMessage,
         CancellationToken cancellationToken = default)
     {
+        var releaseFailedAt = DateTimeOffset.UtcNow;
         await DbContext.NOFOutboxMessages
             .Where(m => m.Id == messageId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, OutboxMessageStatus.Failed)
                 .SetProperty(m => m.ErrorMessage, errorMessage)
-                .SetProperty(m => m.FailedAt, DateTimeOffset.UtcNow)
+                .SetProperty(m => m.FailedAt, releaseFailedAt)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
                 .SetProperty(m => m.ClaimExpiresAt, (DateTimeOffset?)null),
                 cancellationToken);
