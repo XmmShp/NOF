@@ -23,7 +23,7 @@ public class NOFOutboxMessage : AggregateRoot
     /// <summary>
     /// The creation time.
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// The retry count (defaults to 0 when added).
@@ -34,8 +34,8 @@ public class NOFOutboxMessage : AggregateRoot
     public string PayloadType { get; set; } = null!;
     public string Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
-    public DateTimeOffset? SentAt { get; set; }
-    public DateTimeOffset? FailedAt { get; set; }
+    public DateTime? SentAt { get; set; }
+    public DateTime? FailedAt { get; set; }
     public string? ErrorMessage { get; set; }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class NOFOutboxMessage : AggregateRoot
     /// <summary>
     /// The claim lock expiration time.
     /// </summary>
-    public DateTimeOffset? ClaimExpiresAt { get; set; }
+    public DateTime? ClaimExpiresAt { get; set; }
 
     public OutboxMessageStatus Status { get; set; }
     public string? TraceId { get; set; }

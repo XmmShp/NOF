@@ -77,7 +77,7 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
                 // Use the current scope's DbContext, which automatically uses the set tenant context
                 var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
 
-                var olderThan = DateTimeOffset.UtcNow - _retentionPeriod;
+                var olderThan = DateTime.UtcNow - _retentionPeriod;
                 var deletedCount = await dbContext.Set<NOFOutboxMessage>()
                     .Where(m => m.Status == OutboxMessageStatus.Sent)
                     .Where(m => m.SentAt != null && m.SentAt < olderThan)

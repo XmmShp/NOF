@@ -241,7 +241,7 @@ internal sealed class InMemoryOutboxMessageRepository : InMemoryRepository<NOFOu
 
         var timeout = claimTimeout ?? _options.Value.ClaimTimeout;
         var claimedBy = Guid.NewGuid().ToString("N");
-        var expiresAt = DateTimeOffset.UtcNow.Add(timeout);
+        var expiresAt = DateTime.UtcNow.Add(timeout);
         List<NOFOutboxMessage> claimed;
 
         lock (Store.SyncRoot)
@@ -249,7 +249,7 @@ internal sealed class InMemoryOutboxMessageRepository : InMemoryRepository<NOFOu
             claimed = Items.Values
                 .Where(m => m.Status == OutboxMessageStatus.Pending &&
                             m.RetryCount < _options.Value.MaxRetryCount &&
-                            (m.ClaimExpiresAt is null || m.ClaimExpiresAt <= DateTimeOffset.UtcNow))
+                            (m.ClaimExpiresAt is null || m.ClaimExpiresAt <= DateTime.UtcNow))
                 .OrderBy(m => m.CreatedAt)
                 .Take(batchSize)
                 .Select(message =>
@@ -284,7 +284,7 @@ internal sealed class InMemoryOutboxMessageRepository : InMemoryRepository<NOFOu
                 }
 
                 message.Status = OutboxMessageStatus.Sent;
-                message.SentAt = DateTimeOffset.UtcNow;
+                message.SentAt = DateTime.UtcNow;
                 message.ClaimedBy = null;
                 message.ClaimExpiresAt = null;
             }
@@ -306,7 +306,7 @@ internal sealed class InMemoryOutboxMessageRepository : InMemoryRepository<NOFOu
             }
 
             message.ErrorMessage = errorMessage;
-            message.FailedAt = DateTimeOffset.UtcNow;
+            message.FailedAt = DateTime.UtcNow;
 
             if (message.RetryCount >= _options.Value.MaxRetryCount)
             {

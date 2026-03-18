@@ -43,7 +43,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     {
         var timeout = claimTimeout ?? _options.ClaimTimeout;
         var lockId = Guid.NewGuid().ToString();
-        var now = DateTimeOffset.UtcNow;
+        var now = DateTime.UtcNow;
         var expiresAt = now.Add(timeout);
 
         int rowsUpdated;
@@ -127,14 +127,14 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
         CancellationToken cancellationToken = default)
     {
         // Avoid duplicate marking (e.g., already processed by another instance)
-        var sentAt = DateTimeOffset.UtcNow;
+        var sentAt = DateTime.UtcNow;
         await DbContext.NOFOutboxMessages
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
                 .SetProperty(m => m.SentAt, sentAt)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
-                .SetProperty(m => m.ClaimExpiresAt, (DateTimeOffset?)null),
+                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
                 cancellationToken);
     }
 
@@ -143,7 +143,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     /// </summary>
     public async ValueTask AtomicRecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
-        var failedAt = DateTimeOffset.UtcNow;
+        var failedAt = DateTime.UtcNow;
         var rowsUpdated = await DbContext.NOFOutboxMessages
             .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
@@ -198,7 +198,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
         string errorMessage,
         CancellationToken cancellationToken = default)
     {
-        var releaseFailedAt = DateTimeOffset.UtcNow;
+        var releaseFailedAt = DateTime.UtcNow;
         await DbContext.NOFOutboxMessages
             .Where(m => m.Id == messageId)
             .ExecuteUpdateAsync(setters => setters
@@ -206,7 +206,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
                 .SetProperty(m => m.ErrorMessage, errorMessage)
                 .SetProperty(m => m.FailedAt, releaseFailedAt)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
-                .SetProperty(m => m.ClaimExpiresAt, (DateTimeOffset?)null),
+                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
                 cancellationToken);
     }
 }

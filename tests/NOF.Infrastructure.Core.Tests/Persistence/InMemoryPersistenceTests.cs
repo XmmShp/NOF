@@ -151,7 +151,7 @@ public class InMemoryPersistenceTests
             Payload = "payload",
             Headers = "{}",
             MessageType = OutboxMessageType.Command,
-            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-1)
+            CreatedAt = DateTime.UtcNow.AddMinutes(-1)
         });
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
@@ -199,7 +199,7 @@ public class InMemoryPersistenceTests
 
         var claimedUntilFuture = await repository.FindAsync(2L);
         claimedUntilFuture.Should().NotBeNull();
-        claimedUntilFuture!.ClaimExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5);
+        claimedUntilFuture!.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
 
