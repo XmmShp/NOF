@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NOF.Infrastructure.Abstraction\NOF.Infrastructure.Abstraction.csproj" />
+    <ProjectReference Include="..\Infrastructures\NOF.Infrastructure.Memory\NOF.Infrastructure.Memory.csproj" />
   </ItemGroup>
 
 </Project>

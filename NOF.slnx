@@ -40,6 +40,7 @@
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.SQLite/NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj" Id="f1e2a3b4-c5d6-e7f8-9a0b-1c2d3e4f5a6b" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" Id="9ae2e6a5-eb9c-4e64-9bd3-a3aafd1dbe65" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.Memory/NOF.Infrastructure.Memory.csproj" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/NOF.Infrastructure.MassTransit.RabbitMQ.csproj" Id="4992df6e-965b-4903-8f95-ef06b96f8d78" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.MassTransit/NOF.Infrastructure.MassTransit.csproj" Id="d9b3c17c-9cd5-4350-a4b4-ea1e3de691a2" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />

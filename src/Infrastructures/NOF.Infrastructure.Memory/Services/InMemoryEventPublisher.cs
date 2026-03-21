@@ -3,7 +3,7 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
 /// <summary>
 /// In-memory event publisher that dispatches domain events to their typed handlers

@@ -3,7 +3,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure.Abstraction;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
 /// <summary>
 /// In-memory request rider that dispatches requests directly to their typed handlers

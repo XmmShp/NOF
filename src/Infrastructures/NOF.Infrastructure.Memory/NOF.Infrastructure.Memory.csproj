@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <PackageId>NOF.Infrastructure.Memory</PackageId>
+    <Description>In-memory infrastructure implementation for the NOF Framework — cache, riders, persistence store, repositories, and transaction components.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Infrastructure.Abstraction\NOF.Infrastructure.Abstraction.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 using NOF.Application;
 using System.Data;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
-internal sealed class InMemoryTransactionManager : ITransactionManager
+public sealed class InMemoryTransactionManager : ITransactionManager
 {
     private readonly InMemoryPersistenceStore _store;
     private readonly ILogger<InMemoryTransactionManager> _logger;

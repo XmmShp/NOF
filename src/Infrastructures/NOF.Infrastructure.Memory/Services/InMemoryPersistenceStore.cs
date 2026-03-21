@@ -2,7 +2,7 @@ using NOF.Application;
 using NOF.Infrastructure.Abstraction;
 using System.Collections.Concurrent;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
 public sealed class InMemoryPersistenceStore
 {

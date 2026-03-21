@@ -7,6 +7,7 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
 using NOF.Infrastructure.Core;
+using NOF.Infrastructure.Memory;
 using Xunit;
 
 namespace NOF.Infrastructure.Core.Tests.Persistence;

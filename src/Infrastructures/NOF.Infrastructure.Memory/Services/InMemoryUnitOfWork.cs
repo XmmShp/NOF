@@ -2,9 +2,9 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
-internal sealed class InMemoryUnitOfWork : IUnitOfWork
+public sealed class InMemoryUnitOfWork : IUnitOfWork
 {
     private readonly InMemoryPersistenceSession _session;
     private readonly IEventPublisher _eventPublisher;

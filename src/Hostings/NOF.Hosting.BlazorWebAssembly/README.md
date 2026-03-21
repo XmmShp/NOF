@@ -24,7 +24,7 @@ var nofBuilder = NOFWebAssemblyHostBuilder.Create(builder);
 nofBuilder.WithAutoApplicationParts();
 
 await nofBuilder.BuildWebAssemblyHostAsync();
-```
+``` 
 
 ## Dependencies
 

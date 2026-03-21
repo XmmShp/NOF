@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Infrastructure.Abstraction;
+using NOF.Infrastructure.Memory;
 
 namespace NOF.Infrastructure.Core;
 

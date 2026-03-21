@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging;
 using NOF.Application;
 using NOF.Infrastructure.Abstraction;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
-internal sealed class MemoryPersistenceWarningHostedService : IHostedService
+public sealed class MemoryPersistenceWarningHostedService : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MemoryPersistenceWarningHostedService> _logger;
@@ -34,7 +34,7 @@ internal sealed class MemoryPersistenceWarningHostedService : IHostedService
             tenantRepository is InMemoryTenantRepository &&
             stateMachineRepository is InMemoryStateMachineContextRepository)
         {
-            _logger.LogWarning("NOF is using the built-in in-memory persistence implementation. Data is process-local, non-durable, and does not provide real transactional guarantees. Do not use it as production persistence.");
+            _logger.LogWarning("NOF is using NOF.Infrastructure.Memory for persistence fallback. Data is process-local, non-durable, and does not provide real transactional guarantees. Do not use it as production persistence.");
         }
 
         return Task.CompletedTask;

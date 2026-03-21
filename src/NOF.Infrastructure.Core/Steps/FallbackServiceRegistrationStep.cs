@@ -5,6 +5,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
+using NOF.Infrastructure.Memory;
 
 namespace NOF.Infrastructure.Core;
 

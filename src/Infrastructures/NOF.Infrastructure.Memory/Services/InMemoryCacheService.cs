@@ -6,7 +6,7 @@ using NOF.Infrastructure.Abstraction;
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
 /// <summary>
 /// In-memory implementation of <see cref="ICacheService"/> for development and testing purposes.

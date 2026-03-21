@@ -1,7 +1,7 @@
 using NOF.Domain;
 using System.Collections.Concurrent;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
 public sealed class InMemoryPersistenceSession
 {

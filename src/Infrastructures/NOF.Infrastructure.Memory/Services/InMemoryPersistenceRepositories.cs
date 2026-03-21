@@ -5,7 +5,7 @@ using NOF.Domain;
 using NOF.Infrastructure.Abstraction;
 using System.Collections.Concurrent;
 
-namespace NOF.Infrastructure.Core;
+namespace NOF.Infrastructure.Memory;
 
 public abstract class InMemoryRepository<TAggregateRoot, TKey> : IRepository<TAggregateRoot, TKey>
     where TAggregateRoot : class, IAggregateRoot
@@ -95,7 +95,7 @@ public abstract class InMemoryRepository<TAggregateRoot, TKey> : IRepository<TAg
     }
 }
 
-internal sealed class InMemoryInboxMessageRepository : InMemoryRepository<NOFInboxMessage, Guid>, IInboxMessageRepository
+public sealed class InMemoryInboxMessageRepository : InMemoryRepository<NOFInboxMessage, Guid>, IInboxMessageRepository
 {
     public InMemoryInboxMessageRepository(InMemoryPersistenceStore store, InMemoryPersistenceSession session)
         : base(store, session, "nof:inbox", static message => message.Id, static message => new NOFInboxMessage(message.Id)
@@ -115,7 +115,7 @@ internal sealed class InMemoryInboxMessageRepository : InMemoryRepository<NOFInb
         => items.OrderBy(message => message.CreatedAt);
 }
 
-internal sealed class InMemoryTenantRepository : InMemoryRepository<NOFTenant, string>, ITenantRepository
+public sealed class InMemoryTenantRepository : InMemoryRepository<NOFTenant, string>, ITenantRepository
 {
     private readonly ILogger<InMemoryTenantRepository> _logger;
 
@@ -144,7 +144,7 @@ internal sealed class InMemoryTenantRepository : InMemoryRepository<NOFTenant, s
         => items.OrderBy(tenant => tenant.Id, StringComparer.OrdinalIgnoreCase);
 }
 
-internal sealed class InMemoryStateMachineContextRepository : InMemoryRepository<NOFStateMachineContext, string>, IStateMachineContextRepository
+public sealed class InMemoryStateMachineContextRepository : InMemoryRepository<NOFStateMachineContext, string>, IStateMachineContextRepository
 {
     public InMemoryStateMachineContextRepository(InMemoryPersistenceStore store, InMemoryPersistenceSession session, IInvocationContext invocationContext)
         : base(
@@ -179,7 +179,7 @@ internal sealed class InMemoryStateMachineContextRepository : InMemoryRepository
         => $"{correlationId}\u001f{definitionTypeName}";
 }
 
-internal sealed class InMemoryOutboxMessageRepository : InMemoryRepository<NOFOutboxMessage, long>, IOutboxMessageRepository
+public sealed class InMemoryOutboxMessageRepository : InMemoryRepository<NOFOutboxMessage, long>, IOutboxMessageRepository
 {
     private readonly IOptions<OutboxOptions> _options;
     private readonly ILogger<InMemoryOutboxMessageRepository> _logger;
