@@ -5,7 +5,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting.SourceGenerator;
-using NOF.Infrastructure.Abstraction;
+using NOF.Infrastructure;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -40,7 +40,7 @@ public class HandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         // Should use typed CommandHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand))");
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand))");
 
         // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
         generatedCode.Should().NotContain("AddKeyedScoped");
@@ -75,7 +75,7 @@ public class HandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         // Should use typed RequestWithResponseHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof(global::App.MyRequestHandler), typeof(global::App.MyRequest), typeof(string))");
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.RequestWithResponseHandlerInfo(typeof(global::App.MyRequestHandler), typeof(global::App.MyRequest), typeof(string))");
 
         // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
         generatedCode.Should().NotContain("AddKeyedScoped");
@@ -109,7 +109,7 @@ public class HandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         // Should use typed EventHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent))");
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent))");
 
         // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
         generatedCode.Should().NotContain("AddKeyedScoped");
@@ -143,7 +143,7 @@ public class HandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         // Should use typed NotificationHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification))");
+        generatedCode.Should().Contain("new global::NOF.Infrastructure.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification))");
 
         // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
         generatedCode.Should().NotContain("AddKeyedScoped");

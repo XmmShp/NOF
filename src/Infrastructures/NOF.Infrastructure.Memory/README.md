@@ -14,6 +14,17 @@ Provides `NOF.Infrastructure.Memory` in-memory implementations used as developme
 
 These implementations are process-local and non-durable, and should not be used as production persistence.
 
+## Usage
+
+`NOF.Infrastructure` no longer includes memory implementations by default.
+To use in-memory infrastructure, add this package and register it explicitly:
+
+```csharp
+var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+
+builder.AddMemoryInfrastructure();
+```
+
 ## Dependencies
 
 - [`NOF.Infrastructure.Abstraction`](https://www.nuget.org/packages/NOF.Infrastructure.Abstraction)

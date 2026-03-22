@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
-using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <PackageId>NOF.Infrastructure</PackageId>
+    <Description>Unified infrastructure package for the NOF Framework — abstractions, core pipeline, OpenTelemetry integration, and service wiring.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
+    <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
+  </ItemGroup>
+
+</Project>

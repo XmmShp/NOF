@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NOF.Infrastructure.Abstraction\NOF.Infrastructure.Abstraction.csproj" />
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

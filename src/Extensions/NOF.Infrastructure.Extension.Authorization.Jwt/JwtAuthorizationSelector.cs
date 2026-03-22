@@ -1,5 +1,3 @@
-using NOF.Infrastructure.Abstraction;
-
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>

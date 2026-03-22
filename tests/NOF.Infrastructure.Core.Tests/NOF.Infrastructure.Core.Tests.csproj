@@ -18,10 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.Memory\NOF.Infrastructure.Memory.csproj" />
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Infrastructure.Abstraction\NOF.Infrastructure.Abstraction.csproj" />
   </ItemGroup>
 
 </Project>

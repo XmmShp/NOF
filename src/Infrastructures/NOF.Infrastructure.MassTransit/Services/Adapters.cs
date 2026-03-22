@@ -2,8 +2,6 @@ using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure.MassTransit;
@@ -132,8 +130,8 @@ internal static class MassTransitAdapterHelper
         var activity = Activity.Current;
         if (activity is not null)
         {
-            headers[NOFInfrastructureCoreConstants.Transport.Headers.TraceId] = activity.TraceId.ToString();
-            headers[NOFInfrastructureCoreConstants.Transport.Headers.SpanId] = activity.SpanId.ToString();
+            headers[NOFInfrastructureConstants.Transport.Headers.TraceId] = activity.TraceId.ToString();
+            headers[NOFInfrastructureConstants.Transport.Headers.SpanId] = activity.SpanId.ToString();
         }
 
         return new InboundContext

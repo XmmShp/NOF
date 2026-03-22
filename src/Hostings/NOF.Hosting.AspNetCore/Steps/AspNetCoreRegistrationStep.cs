@@ -4,10 +4,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using NOF.Infrastructure.Abstraction;
+using NOF.Infrastructure;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting.AspNetCore;
 

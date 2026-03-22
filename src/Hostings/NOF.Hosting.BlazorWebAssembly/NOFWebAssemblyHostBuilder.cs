@@ -6,7 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Contract;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure;
 using System.Text.Json;
 
 namespace NOF.Hosting.BlazorWebAssembly;

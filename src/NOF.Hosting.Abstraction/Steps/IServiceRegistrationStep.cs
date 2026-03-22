@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure.Abstraction;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Defines a service-level configuration unit that participates in the DI container registration phase.

@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
 using NOF.Application.Extension.Redis;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
 using StackExchange.Redis;
 
 namespace NOF.Infrastructure.StackExchangeRedis;

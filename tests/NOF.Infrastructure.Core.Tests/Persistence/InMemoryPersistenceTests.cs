@@ -5,8 +5,6 @@ using Microsoft.Extensions.Options;
 using Moq;
 using NOF.Application;
 using NOF.Domain;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
@@ -254,7 +252,7 @@ public class InMemoryPersistenceTests
     [Fact]
     public void Store_GetPartition_WithSameNameButDifferentTypes_ShouldThrow()
     {
-        var store = new InMemoryPersistenceStore();
+        var store = new MemoryPersistenceStore();
 
         store.GetPartition<TestOrder, long>("orders", static order => order.Id, static order => TestOrder.Create(order.Id, order.Number));
 
@@ -302,18 +300,18 @@ public class InMemoryPersistenceTests
     private static ServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, ILogger<MemoryPersistenceWarningHostedService>? warningLogger = null)
     {
         var services = new ServiceCollection();
-        services.AddSingleton<InMemoryPersistenceStore>();
-        services.AddScoped<InMemoryPersistenceSession>();
+        services.AddSingleton<MemoryPersistenceStore>();
+        services.AddScoped<MemoryPersistenceSession>();
         services.AddScoped<IMutableUserContext, UserContext>();
         services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IMutableUserContext>());
         services.AddScoped<IMutableInvocationContext, InvocationContext>();
         services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IMutableInvocationContext>());
-        services.AddScoped<IUnitOfWork, InMemoryUnitOfWork>();
-        services.AddScoped<ITransactionManager, InMemoryTransactionManager>();
-        services.AddScoped<IInboxMessageRepository, InMemoryInboxMessageRepository>();
-        services.AddScoped<IOutboxMessageRepository, InMemoryOutboxMessageRepository>();
-        services.AddScoped<ITenantRepository, InMemoryTenantRepository>();
-        services.AddScoped<IStateMachineContextRepository, InMemoryStateMachineContextRepository>();
+        services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();
+        services.AddScoped<ITransactionManager, MemoryTransactionManager>();
+        services.AddScoped<IInboxMessageRepository, MemoryInboxMessageRepository>();
+        services.AddScoped<IOutboxMessageRepository, MemoryOutboxMessageRepository>();
+        services.AddScoped<ITenantRepository, MemoryTenantRepository>();
+        services.AddScoped<IStateMachineContextRepository, MemoryStateMachineContextRepository>();
         services.AddScoped<TestOrderRepository>();
         services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         services.AddSingleton<TestEventPublisher>();
@@ -362,9 +360,9 @@ public class InMemoryPersistenceTests
             => AddEvent(@event);
     }
 
-    private sealed class TestOrderRepository : InMemoryRepository<TestOrder, long>
+    private sealed class TestOrderRepository : MemoryRepository<TestOrder, long>
     {
-        public TestOrderRepository(InMemoryPersistenceStore store, InMemoryPersistenceSession session)
+        public TestOrderRepository(MemoryPersistenceStore store, MemoryPersistenceSession session)
             : base(store, session, "test:orders", static order => order.Id, static order => TestOrder.Create(order.Id, order.Number))
         {
         }

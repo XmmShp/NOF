@@ -1,7 +1,6 @@
 using MassTransit;
 using MassTransit.Mediator;
 using NOF.Contract;
-using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.MassTransit;
 
@@ -9,7 +8,7 @@ namespace NOF.Infrastructure.MassTransit;
 /// MassTransit command transport implementation.
 /// Dispatches locally via mediator when the command type has a local handler
 /// and the destination endpoint is null/whitespace or matches the local endpoint.
-/// Otherwise dispatches remotely via the bus — requires explicit <c>destinationEndpointName</c>.
+/// Otherwise dispatches remotely via the bus 鈥?requires explicit <c>destinationEndpointName</c>.
 /// </summary>
 public class MassTransitCommandRider : ICommandRider
 {

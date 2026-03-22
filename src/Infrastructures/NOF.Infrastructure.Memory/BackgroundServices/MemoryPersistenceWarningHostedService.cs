@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
-using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.Memory;
 
@@ -27,12 +26,12 @@ public sealed class MemoryPersistenceWarningHostedService : IHostedService
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
         var stateMachineRepository = scope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
 
-        if (unitOfWork is InMemoryUnitOfWork &&
-            transactionManager is InMemoryTransactionManager &&
-            inbox is InMemoryInboxMessageRepository &&
-            outbox is InMemoryOutboxMessageRepository &&
-            tenantRepository is InMemoryTenantRepository &&
-            stateMachineRepository is InMemoryStateMachineContextRepository)
+        if (unitOfWork is MemoryUnitOfWork &&
+            transactionManager is MemoryTransactionManager &&
+            inbox is MemoryInboxMessageRepository &&
+            outbox is MemoryOutboxMessageRepository &&
+            tenantRepository is MemoryTenantRepository &&
+            stateMachineRepository is MemoryStateMachineContextRepository)
         {
             _logger.LogWarning("NOF is using NOF.Infrastructure.Memory for persistence fallback. Data is process-local, non-durable, and does not provide real transactional guarantees. Do not use it as production persistence.");
         }

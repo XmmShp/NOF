@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;

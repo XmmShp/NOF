@@ -1,5 +1,4 @@
 using MassTransit;
-using NOF.Infrastructure.Core;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure.MassTransit;
@@ -31,8 +30,8 @@ internal static class SendContextExtensions
                 return;
             }
 
-            context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.TraceId, activity.TraceId.ToString());
-            context.Headers.Set(NOFInfrastructureCoreConstants.Transport.Headers.SpanId, activity.SpanId.ToString());
+            context.Headers.Set(NOFInfrastructureConstants.Transport.Headers.TraceId, activity.TraceId.ToString());
+            context.Headers.Set(NOFInfrastructureConstants.Transport.Headers.SpanId, activity.SpanId.ToString());
         }
     }
 }

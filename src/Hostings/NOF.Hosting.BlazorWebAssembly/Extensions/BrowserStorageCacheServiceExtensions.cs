@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure;
 
 namespace NOF.Hosting.BlazorWebAssembly;
 

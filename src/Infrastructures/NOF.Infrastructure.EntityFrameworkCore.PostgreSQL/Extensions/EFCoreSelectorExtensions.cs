@@ -1,5 +1,3 @@
-using NOF.Infrastructure.Abstraction;
-
 namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 
 public static class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions

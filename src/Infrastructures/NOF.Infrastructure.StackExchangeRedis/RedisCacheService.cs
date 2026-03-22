@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Application.Extension.Redis;
 using NOF.Contract;
-using NOF.Infrastructure.Abstraction;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
 

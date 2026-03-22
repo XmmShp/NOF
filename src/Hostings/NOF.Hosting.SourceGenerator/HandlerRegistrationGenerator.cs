@@ -160,7 +160,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("#pragma warning disable CS8620");
         sb.AppendLine();
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine("using NOF.Infrastructure.Abstraction;");
+        sb.AppendLine("using NOF.Infrastructure;");
         sb.AppendLine();
 
         sb.AppendLine($"namespace {assemblyName}");
@@ -182,9 +182,9 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine(
             "        /// <returns>A <see cref=\"HandlerSelector\"/> for further endpoint name customization.</returns>");
         sb.AppendLine(
-            "        public static global::NOF.Infrastructure.Abstraction.HandlerSelector AddAllHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
+            "        public static global::NOF.Infrastructure.HandlerSelector AddAllHandlers(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var infos = services.GetOrAddSingleton<global::NOF.Infrastructure.Abstraction.HandlerInfos>();");
+        sb.AppendLine("            var infos = services.GetOrAddSingleton<global::NOF.Infrastructure.HandlerInfos>();");
 
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
@@ -203,7 +203,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             sb.AppendLine($"            infos.Add({info});");
         }
 
-        sb.AppendLine("            return new global::NOF.Infrastructure.Abstraction.HandlerSelector(services, infos);");
+        sb.AppendLine("            return new global::NOF.Infrastructure.HandlerSelector(services, infos);");
 
         sb.AppendLine("        }");
         sb.AppendLine("    }");
@@ -231,28 +231,28 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             if (display == "NOF.Application.ICommandHandler<TCommand>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.IEventHandler<TEvent>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
                 var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
             }
             else if (display == "NOF.Application.IRequestHandler<TRequest>")
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.Abstraction.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+                allInfos.Add($"new global::NOF.Infrastructure.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
         }
     }

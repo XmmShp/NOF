@@ -6,8 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
 using NOF.Domain;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure;
 
 namespace NOF.Test;
 

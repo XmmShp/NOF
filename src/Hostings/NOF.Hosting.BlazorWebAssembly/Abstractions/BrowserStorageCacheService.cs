@@ -2,7 +2,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure.Abstraction;
+using NOF.Infrastructure;
 using System.Collections.Concurrent;
 
 namespace NOF.Hosting.BlazorWebAssembly;

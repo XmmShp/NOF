@@ -15,6 +15,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
+	  <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>

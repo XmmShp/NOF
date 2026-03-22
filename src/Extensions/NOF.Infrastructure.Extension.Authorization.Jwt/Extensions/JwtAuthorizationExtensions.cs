@@ -2,8 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
-using NOF.Infrastructure.Abstraction;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
@@ -42,7 +40,7 @@ public static partial class NOFJwtAuthorizationExtensions
             // JWKS HTTP client
             builder.Services.AddHttpClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
 
-            // HTTP-based JWKS provider (TryAdd — authority's local provider wins if registered)
+            // HTTP-based JWKS provider (TryAdd 鈥?authority's local provider wins if registered)
             builder.Services.TryAddSingleton<IJwksProvider, HttpJwksProvider>();
 
             // Inbound/outbound JWT middleware steps
@@ -99,10 +97,10 @@ public static partial class NOFJwtAuthorizationExtensions
             // Key rotation background service
             builder.Services.AddHostedService<JwtKeyRotationBackgroundService>();
 
-            // Local JWKS provider — overrides HttpJwksProvider (authority always uses local)
+            // Local JWKS provider 鈥?overrides HttpJwksProvider (authority always uses local)
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, LocalJwksProvider>();
 
-            // Revoked refresh token repository (TryAdd — user can override with custom impl)
+            // Revoked refresh token repository (TryAdd 鈥?user can override with custom impl)
             builder.Services.AddSingleton<IRevokedRefreshTokenRepository, CacheRevokedRefreshTokenRepository>();
 
             // Bridge JwtAuthorityOptions.Issuer into JwtAuthorizationOptions
@@ -117,7 +115,7 @@ public static partial class NOFJwtAuthorizationExtensions
                 });
 
 #pragma warning disable CS8620
-            // Register handlers — AddHandlerInfo handles keyed services + endpoint name map at runtime
+            // Register handlers 鈥?AddHandlerInfo handles keyed services + endpoint name map at runtime
             builder.Services.AddHandlerInfo(
                 new RequestWithResponseHandlerInfo(typeof(GenerateJwtToken), typeof(GenerateJwtTokenRequest), typeof(GenerateJwtTokenResponse)),
                 new RequestWithResponseHandlerInfo(typeof(ValidateJwtRefreshToken), typeof(ValidateJwtRefreshTokenRequest), typeof(ValidateJwtRefreshTokenResponse)));

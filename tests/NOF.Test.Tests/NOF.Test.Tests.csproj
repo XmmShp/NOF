@@ -20,7 +20,7 @@
     <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

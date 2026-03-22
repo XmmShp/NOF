@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure;
 
 namespace NOF.Hosting.Maui;
 

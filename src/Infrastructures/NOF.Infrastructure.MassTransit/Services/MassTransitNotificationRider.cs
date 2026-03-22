@@ -1,6 +1,5 @@
 using MassTransit;
 using NOF.Contract;
-using NOF.Infrastructure.Abstraction;
 
 namespace NOF.Infrastructure.MassTransit;
 

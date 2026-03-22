@@ -11,8 +11,6 @@ using Microsoft.Extensions.Primitives;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
-using NOF.Infrastructure.Abstraction;
-using NOF.Infrastructure.Core;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
@@ -21,7 +19,7 @@ namespace NOF.Infrastructure.Core.Tests.Steps;
 public class CoreServicesRegistrationStepTests
 {
     [Fact]
-    public async Task FallbackStep_ExecuteAsync_ShouldRegisterDefaultInMemoryPersistenceServices()
+    public async Task FallbackStep_ExecuteAsync_ShouldNotRegisterInMemoryPersistenceServicesByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
@@ -36,18 +34,18 @@ public class CoreServicesRegistrationStepTests
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
 
-        scope.ServiceProvider.GetRequiredService<InMemoryPersistenceStore>().Should().NotBeNull();
-        scope.ServiceProvider.GetRequiredService<InMemoryPersistenceSession>().Should().NotBeNull();
-        scope.ServiceProvider.GetRequiredService<IUnitOfWork>().Should().BeOfType<InMemoryUnitOfWork>();
-        scope.ServiceProvider.GetRequiredService<ITransactionManager>().Should().BeOfType<InMemoryTransactionManager>();
-        scope.ServiceProvider.GetRequiredService<IInboxMessageRepository>().Should().BeOfType<InMemoryInboxMessageRepository>();
-        scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>().Should().BeOfType<InMemoryOutboxMessageRepository>();
-        scope.ServiceProvider.GetRequiredService<ITenantRepository>().Should().BeOfType<InMemoryTenantRepository>();
-        scope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>().Should().BeOfType<InMemoryStateMachineContextRepository>();
+        scope.ServiceProvider.GetService<MemoryPersistenceStore>().Should().BeNull();
+        scope.ServiceProvider.GetService<MemoryPersistenceSession>().Should().BeNull();
+        scope.ServiceProvider.GetService<IUnitOfWork>().Should().BeNull();
+        scope.ServiceProvider.GetService<ITransactionManager>().Should().BeNull();
+        scope.ServiceProvider.GetService<IInboxMessageRepository>().Should().BeNull();
+        scope.ServiceProvider.GetService<IOutboxMessageRepository>().Should().BeNull();
+        scope.ServiceProvider.GetService<ITenantRepository>().Should().BeNull();
+        scope.ServiceProvider.GetService<IStateMachineContextRepository>().Should().BeNull();
     }
 
     [Fact]
-    public async Task FallbackStep_ExecuteAsync_ShouldRegisterMemoryPersistenceWarningHostedService()
+    public async Task FallbackStep_ExecuteAsync_ShouldNotRegisterMemoryPersistenceWarningHostedServiceByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
@@ -60,7 +58,7 @@ public class CoreServicesRegistrationStepTests
         using var provider = builder.Services.BuildServiceProvider();
         var hostedServices = provider.GetServices<IHostedService>().ToList();
 
-        hostedServices.Should().Contain(service => service is MemoryPersistenceWarningHostedService);
+        hostedServices.Should().NotContain(service => service is MemoryPersistenceWarningHostedService);
     }
 
     [Fact]
@@ -73,10 +71,6 @@ public class CoreServicesRegistrationStepTests
         await step.ExecuteAsync(context);
 
         using var provider = builder.Services.BuildServiceProvider();
-
-        builder.Services.Should().Contain(service =>
-            service.ServiceType == typeof(IHostedService) &&
-            service.ImplementationType == typeof(MemoryPersistenceWarningHostedService));
 
         builder.Services.Should().Contain(service =>
             service.ServiceType == typeof(IHostedService) &&
@@ -97,7 +91,7 @@ public class CoreServicesRegistrationStepTests
         services.AddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
 
         services.AddCacheService<TestCacheService>();
-        services.TryAddCacheService<InMemoryCacheService>();
+        services.TryAddCacheService<MemoryCacheService>();
 
         var descriptors = services
             .Where(service => service.ServiceType == typeof(ICacheService) && Equals(service.ServiceKey, ICacheServiceFactory.DefaultName))

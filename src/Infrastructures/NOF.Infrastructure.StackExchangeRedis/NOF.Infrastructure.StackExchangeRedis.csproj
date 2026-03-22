@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Extensions\NOF.Application.Extension.Redis\NOF.Application.Extension.Redis.csproj" />
-    <ProjectReference Include="..\..\NOF.Infrastructure.Core\NOF.Infrastructure.Core.csproj" />
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

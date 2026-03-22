@@ -1,5 +1,4 @@
 using MassTransit;
-using NOF.Infrastructure.Abstraction;
 using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure.MassTransit;

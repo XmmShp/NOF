@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Infrastructure.Core;
+using NOF.Infrastructure;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("NOF.Integration.Tests")]

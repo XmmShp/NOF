@@ -1,5 +1,3 @@
-using NOF.Infrastructure.Abstraction;
-
 namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;
 
 public static class NOFInfrastructureEntityFrameworkCoreSqLiteExtensions
