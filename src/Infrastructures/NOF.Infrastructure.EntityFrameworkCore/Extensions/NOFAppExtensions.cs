@@ -24,12 +24,12 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             #endregion
 
             #region DbContext Services
-            builder.Services.AddScoped((Func<IServiceProvider, TDbContext>)(sp =>
+            builder.Services.AddScoped(sp =>
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory<TDbContext>>();
                 var invocationContext = sp.GetRequiredService<IInvocationContext>();
-                return factory.CreateDbContext((string?)invocationContext.TenantId);
-            }));
+                return factory.CreateDbContext(invocationContext.TenantId);
+            });
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
             #endregion

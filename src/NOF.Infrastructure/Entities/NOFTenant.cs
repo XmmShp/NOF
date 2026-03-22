@@ -5,7 +5,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Tenant aggregate root.
 /// </summary>
-public class NOFTenant : AggregateRoot
+public class NOFTenant : AggregateRoot, ICloneable
 {
     /// <summary>
     /// The tenant identifier.
@@ -36,4 +36,15 @@ public class NOFTenant : AggregateRoot
     /// The last update time.
     /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public object Clone()
+        => new NOFTenant
+        {
+            Id = Id,
+            Name = Name,
+            Description = Description,
+            IsActive = IsActive,
+            CreatedAt = CreatedAt,
+            UpdatedAt = UpdatedAt
+        };
 }

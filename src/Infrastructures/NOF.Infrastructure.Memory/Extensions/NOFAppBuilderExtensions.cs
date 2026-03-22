@@ -13,13 +13,15 @@ public static class NOFInfrastructureMemoryExtensions
 
             builder.Services.AddScoped<IEventPublisher, EventPublisher>();
             builder.Services.AddSingleton<MemoryPersistenceStore>();
-            builder.Services.AddScoped<MemoryPersistenceSession>();
+            builder.Services.AddScoped<IMemoryPersistenceContextFactory, MemoryPersistenceContextFactory>();
+            builder.Services.AddScoped(sp => sp.GetRequiredService<IMemoryPersistenceContextFactory>().CreateContext());
             builder.Services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();
             builder.Services.AddScoped<ITransactionManager, MemoryTransactionManager>();
             builder.Services.AddScoped<IInboxMessageRepository, MemoryInboxMessageRepository>();
-            builder.Services.AddScoped<IOutboxMessageRepository, MemoryOutboxMessageRepository>();
             builder.Services.AddScoped<ITenantRepository, MemoryTenantRepository>();
+            builder.Services.AddScoped<IOutboxMessageRepository, MemoryOutboxMessageRepository>();
             builder.Services.AddScoped<IStateMachineContextRepository, MemoryStateMachineContextRepository>();
+
             builder.Services.AddScoped<ICommandRider, MemoryCommandRider>();
             builder.Services.AddScoped<INotificationRider, MemoryNotificationRider>();
             builder.Services.AddScoped<IRequestRider, MemoryRequestRider>();

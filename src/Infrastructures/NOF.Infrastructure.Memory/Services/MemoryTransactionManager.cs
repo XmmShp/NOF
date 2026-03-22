@@ -18,7 +18,7 @@ public sealed class MemoryTransactionManager : ITransactionManager
 
     public Task<ITransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, CancellationToken cancellationToken = default)
     {
-        var snapshot = _store.CaptureSnapshot();
+        var snapshot = (MemoryPersistenceStore)_store.Clone();
         var transaction = new MemoryTransaction(this, snapshot, _transactions.Count == 0, isolationLevel);
         _transactions.Push(transaction);
         _logger.LogWarning("Using in-memory transaction manager. Transactions are process-local snapshots only and are not durable or truly atomic. IsolationLevel: {IsolationLevel}", isolationLevel);
@@ -38,7 +38,7 @@ public sealed class MemoryTransactionManager : ITransactionManager
 
         if (!commit)
         {
-            _store.RestoreSnapshot(transaction.Snapshot);
+            _store.RestoreFrom(transaction.Snapshot);
         }
 
         return Task.CompletedTask;
@@ -50,7 +50,7 @@ public sealed class MemoryTransactionManager : ITransactionManager
         private bool _completed;
         private bool _disposed;
 
-        public MemoryTransaction(MemoryTransactionManager manager, InMemoryPersistenceStoreSnapshot snapshot, bool isRootTransaction, IsolationLevel isolationLevel)
+        public MemoryTransaction(MemoryTransactionManager manager, MemoryPersistenceStore snapshot, bool isRootTransaction, IsolationLevel isolationLevel)
         {
             _manager = manager;
             Snapshot = snapshot;
@@ -58,7 +58,7 @@ public sealed class MemoryTransactionManager : ITransactionManager
             IsolationLevel = isolationLevel;
         }
 
-        public InMemoryPersistenceStoreSnapshot Snapshot { get; }
+        public MemoryPersistenceStore Snapshot { get; }
 
         public bool IsRootTransaction { get; }
 

@@ -1,92 +1,119 @@
 using NOF.Domain;
-using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure.Memory;
 
-public abstract class MemoryRepository<TAggregateRoot, TKey> : IRepository<TAggregateRoot, TKey>
-    where TAggregateRoot : class, IAggregateRoot
-    where TKey : notnull
+public abstract class MemoryRepository<TAggregateRoot> : IRepository<TAggregateRoot>
+    where TAggregateRoot : class, IAggregateRoot, ICloneable
 {
-    private readonly Func<string> _partitionNameFactory;
-    private readonly Func<TAggregateRoot, TKey> _keySelector;
-    private readonly Func<TAggregateRoot, TAggregateRoot> _cloner;
-    private readonly IEqualityComparer<TKey>? _keyComparer;
+    private readonly Func<TAggregateRoot, object?[], bool> _selector;
 
     protected MemoryRepository(
-        MemoryPersistenceStore store,
-        MemoryPersistenceSession session,
-        string partitionName,
-        Func<TAggregateRoot, TKey> keySelector,
-        Func<TAggregateRoot, TAggregateRoot> cloner,
-        IEqualityComparer<TKey>? keyComparer = null)
-        : this(store, session, () => partitionName, keySelector, cloner, keyComparer)
+        MemoryPersistenceContext context,
+        Func<TAggregateRoot, object?[], bool> selector)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(selector);
+
+        Context = context;
+        _selector = selector;
     }
 
-    protected MemoryRepository(
-        MemoryPersistenceStore store,
-        MemoryPersistenceSession session,
-        Func<string> partitionNameFactory,
-        Func<TAggregateRoot, TKey> keySelector,
-        Func<TAggregateRoot, TAggregateRoot> cloner,
-        IEqualityComparer<TKey>? keyComparer = null)
-    {
-        Store = store;
-        Session = session;
-        _partitionNameFactory = partitionNameFactory;
-        _keySelector = keySelector;
-        _cloner = cloner;
-        _keyComparer = keyComparer;
-    }
-
-    protected MemoryPersistenceStore Store { get; }
-
-    protected MemoryPersistenceSession Session { get; }
-
-    protected ConcurrentDictionary<TKey, TAggregateRoot> Items
-        => Store.GetPartition(_partitionNameFactory(), _keySelector, _cloner, _keyComparer).Items;
-
-    protected virtual IEnumerable<TAggregateRoot> OrderItems(IEnumerable<TAggregateRoot> items)
-        => items;
+    protected MemoryPersistenceContext Context { get; }
 
     public virtual ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (keyValues is not [TKey key])
+        foreach (var candidate in Context.Set<TAggregateRoot>())
         {
-            return ValueTask.FromResult<TAggregateRoot?>(null);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_selector(candidate, keyValues))
+            {
+                return ValueTask.FromResult<TAggregateRoot?>(candidate);
+            }
         }
 
-        var entity = Items.TryGetValue(key, out var found) ? Track(found) : null;
-        return ValueTask.FromResult(entity);
+        return ValueTask.FromResult<TAggregateRoot?>(null);
     }
 
     public virtual async IAsyncEnumerable<TAggregateRoot> FindAllAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        foreach (var entity in OrderItems(Items.Values))
+        var snapshot = Context.Set<TAggregateRoot>();
+
+        foreach (var entity in snapshot)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return Track(entity);
+            yield return entity;
             await Task.CompletedTask;
         }
     }
 
     public virtual void Add(TAggregateRoot entity)
-    {
-        Items[_keySelector(entity)] = entity;
-        Session.RegisterChange(entity);
-    }
+        => Context.Set<TAggregateRoot>().Add(entity);
 
     public virtual void Remove(TAggregateRoot entity)
     {
-        Items.TryRemove(_keySelector(entity), out _);
-        Session.RegisterChange(entity);
+        var table = Context.Set<TAggregateRoot>();
+        for (var i = table.Count - 1; i >= 0; i--)
+        {
+            var candidate = table[i];
+            if (ReferenceEquals(candidate, entity) || EqualityComparer<TAggregateRoot>.Default.Equals(candidate, entity))
+            {
+                table.RemoveAt(i);
+            }
+        }
     }
+}
 
-    protected TAggregateRoot Track(TAggregateRoot aggregateRoot)
+public abstract class MemoryRepository<TAggregateRoot, TKey> : MemoryRepository<TAggregateRoot>, IRepository<TAggregateRoot, TKey>
+    where TAggregateRoot : class, IAggregateRoot, ICloneable
+    where TKey : notnull
+{
+    protected MemoryRepository(
+        MemoryPersistenceContext context,
+        Func<TAggregateRoot, TKey> keySelector)
+        : base(
+            context,
+            (entity, keyValues) =>
+                keyValues is [TKey key] && EqualityComparer<TKey>.Default.Equals(keySelector(entity), key))
     {
-        Session.Track(aggregateRoot);
-        return aggregateRoot;
+        ArgumentNullException.ThrowIfNull(keySelector);
+    }
+}
+
+public abstract class MemoryRepository<TAggregateRoot, TKey1, TKey2> : MemoryRepository<TAggregateRoot>, IRepository<TAggregateRoot, TKey1, TKey2>
+    where TAggregateRoot : class, IAggregateRoot, ICloneable
+    where TKey1 : notnull
+    where TKey2 : notnull
+{
+    protected MemoryRepository(
+        MemoryPersistenceContext context,
+        Func<TAggregateRoot, (TKey1, TKey2)> keySelector)
+        : base(
+            context,
+            (entity, keyValues) =>
+                keyValues is [TKey1 key1, TKey2 key2] &&
+                EqualityComparer<(TKey1, TKey2)>.Default.Equals(keySelector(entity), (key1, key2)))
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+    }
+}
+
+public abstract class MemoryRepository<TAggregateRoot, TKey1, TKey2, TKey3> : MemoryRepository<TAggregateRoot>, IRepository<TAggregateRoot, TKey1, TKey2, TKey3>
+    where TAggregateRoot : class, IAggregateRoot, ICloneable
+    where TKey1 : notnull
+    where TKey2 : notnull
+    where TKey3 : notnull
+{
+    protected MemoryRepository(
+        MemoryPersistenceContext context,
+        Func<TAggregateRoot, (TKey1, TKey2, TKey3)> keySelector)
+        : base(
+            context,
+            (entity, keyValues) =>
+                keyValues is [TKey1 key1, TKey2 key2, TKey3 key3] &&
+                EqualityComparer<(TKey1, TKey2, TKey3)>.Default.Equals(keySelector(entity), (key1, key2, key3)))
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
     }
 }

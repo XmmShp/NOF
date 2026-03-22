@@ -7,7 +7,7 @@ namespace NOF.Application;
 /// State machine context entity containing the context, state, and tracing information.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class NOFStateMachineContext : AggregateRoot
+public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
 {
     /// <summary>
     /// The correlation ID that identifies the state machine instance.
@@ -41,4 +41,12 @@ public sealed class NOFStateMachineContext : AggregateRoot
             State = state
         };
     }
+
+    public object Clone()
+        => new NOFStateMachineContext
+        {
+            CorrelationId = CorrelationId,
+            DefinitionTypeName = DefinitionTypeName,
+            State = State
+        };
 }

@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 /// Outbox message entity used for adding messages in transactional context and reading by background services.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public class NOFOutboxMessage : AggregateRoot
+public class NOFOutboxMessage : AggregateRoot, ICloneable
 {
     /// <summary>
     /// The message ID.
@@ -50,6 +50,27 @@ public class NOFOutboxMessage : AggregateRoot
     public OutboxMessageStatus Status { get; set; }
     public string? TraceId { get; set; }
     public string? SpanId { get; set; }
+
+    public object Clone()
+        => new NOFOutboxMessage
+        {
+            Id = Id,
+            DestinationEndpointName = DestinationEndpointName,
+            CreatedAt = CreatedAt,
+            RetryCount = RetryCount,
+            MessageType = MessageType,
+            PayloadType = PayloadType,
+            Payload = Payload,
+            Headers = Headers,
+            SentAt = SentAt,
+            FailedAt = FailedAt,
+            ErrorMessage = ErrorMessage,
+            ClaimedBy = ClaimedBy,
+            ClaimExpiresAt = ClaimExpiresAt,
+            Status = Status,
+            TraceId = TraceId,
+            SpanId = SpanId
+        };
 }
 
 public enum OutboxMessageType
