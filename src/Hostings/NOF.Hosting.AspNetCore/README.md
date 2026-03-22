@@ -8,11 +8,11 @@ Provides the ASP.NET Core host integration for NOF applications, including autom
 
 ## Features
 
-- **Automatic Endpoint Mapping** â€” source generators turn `[ExposeToHttpEndpoint]` requests into minimal API endpoints
-- **OpenAPI & Scalar** â€” built-in OpenAPI document generation with Scalar UI
-- **JSON Configuration** â€” pre-configured `System.Text.Json` options with sensible defaults
-- **Invocation Context Middleware** â€” propagates tenant ID and other context through the request pipeline
-- **`[AutoInject]` Support** â€” bundled source generators for automatic DI registration
+- **Automatic Endpoint Mapping** â€?source generators turn `[ExposeToHttpEndpoint]` requests into minimal API endpoints
+- **OpenAPI & Scalar** â€?built-in OpenAPI document generation with Scalar UI
+- **JSON Configuration** â€?pre-configured `System.Text.Json` options with sensible defaults
+- **Invocation Context Middleware** â€?propagates tenant ID and other context through the request pipeline
+- **`[AutoInject]` Support** â€?bundled source generators for automatic DI registration
 
 ## Usage
 
@@ -47,3 +47,4 @@ dotnet add package NOF.Hosting.AspNetCore
 ## License
 
 Apache-2.0
+

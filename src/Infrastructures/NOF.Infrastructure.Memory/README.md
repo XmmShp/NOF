@@ -27,7 +27,7 @@ builder.AddMemoryInfrastructure();
 
 ## Dependencies
 
-- [`NOF.Infrastructure.Abstraction`](https://www.nuget.org/packages/NOF.Infrastructure.Abstraction)
+- [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)
 
 ## Installation
 
@@ -38,3 +38,4 @@ dotnet add package NOF.Infrastructure.Memory
 ## License
 
 Apache-2.0
+

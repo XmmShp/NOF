@@ -20,7 +20,7 @@ For Redis-specific data structure abstractions such as hashes, sets, lists, and 
 
 ## Dependencies
 
-- [`NOF.Infrastructure.Core`](https://www.nuget.org/packages/NOF.Infrastructure.Core)
+- [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)
 - [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis)
 - [`StackExchange.Redis`](https://www.nuget.org/packages/StackExchange.Redis)
 
@@ -33,3 +33,4 @@ dotnet add package NOF.Infrastructure.StackExchangeRedis
 ## License
 
 Apache-2.0
+

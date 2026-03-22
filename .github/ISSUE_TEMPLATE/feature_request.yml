@@ -13,7 +13,7 @@ body:
     attributes:
       label: Related Package(s)
       description: Which NOF package(s) would this feature apply to? Leave blank if it's a new package or cross-cutting.
-      placeholder: "e.g. NOF.Application, NOF.Infrastructure.Core"
+      placeholder: "e.g. NOF.Application, NOF.Infrastructure"
     validations:
       required: false
 
@@ -48,3 +48,4 @@ body:
       description: Any other context, diagrams, or references.
     validations:
       required: false
+

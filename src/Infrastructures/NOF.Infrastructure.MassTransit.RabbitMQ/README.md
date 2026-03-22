@@ -31,3 +31,4 @@ dotnet add package NOF.Infrastructure.MassTransit.RabbitMQ
 ## License
 
 Apache-2.0
+

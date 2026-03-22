@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Caching.Distributed;
 
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
-internal sealed record BrowserStorageCacheEntry(byte[] Data, DateTimeOffset? AbsoluteExpiration, TimeSpan? SlidingExpiration, DateTimeOffset LastAccessed)
+public sealed record BrowserStorageCacheEntry(byte[] Data, DateTimeOffset? AbsoluteExpiration, TimeSpan? SlidingExpiration, DateTimeOffset LastAccessed)
 {
     public static BrowserStorageCacheEntry FromBytes(byte[] data, DistributedCacheEntryOptions options)
     {
@@ -59,3 +59,4 @@ internal sealed record BrowserStorageCacheEntry(byte[] Data, DateTimeOffset? Abs
         return null;
     }
 }
+

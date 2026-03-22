@@ -59,8 +59,8 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 - Optional `New()` factory via `[NewableValueObject]` (for snowflake IDs on `IValueObject<long>`)
 
 The interface provides:
-- **`static virtual void Validate(T value)`** â€” override to add custom validation (default is no-op)
-- **`object IValueObject.GetUnderlyingValue()`** â€” default implementation forwarding to `T GetUnderlyingValue()`
+- **`static virtual void Validate(T value)`** â€?override to add custom validation (default is no-op)
+- **`object IValueObject.GetUnderlyingValue()`** â€?default implementation forwarding to `T GetUnderlyingValue()`
 
 ```csharp
 [NewableValueObject]
@@ -82,7 +82,7 @@ long raw = (long)id;                 // Explicit cast to primitive
 long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
 ```
 
-The `IValueObject` / `IValueObject<T>` interfaces enable the source generator's `ValueObject â†” primitive` conversion at compile time. See [design/value-object.md](/docs/design/value-object.md) for the full design rationale.
+The `IValueObject` / `IValueObject<T>` interfaces enable the source generator's `ValueObject â†?primitive` conversion at compile time. See [design/value-object.md](/docs/design/value-object.md) for the full design rationale.
 
 ## Installation
 
@@ -93,3 +93,4 @@ dotnet add package NOF.Domain
 ## License
 
 Apache-2.0
+

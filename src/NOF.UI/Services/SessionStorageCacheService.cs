@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using NOF.Infrastructure;
 
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public sealed class SessionStorageCacheService(
     ISessionStorage sessionStorage,
@@ -10,3 +10,4 @@ public sealed class SessionStorageCacheService(
     IOptions<CacheServiceOptions> options) : BrowserStorageCacheService(sessionStorage, serializer, lockRetryStrategy, options)
 {
 }
+

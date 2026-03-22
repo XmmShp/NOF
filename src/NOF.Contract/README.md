@@ -48,10 +48,10 @@ public record CreateOrderRequest(string ProductName, int Quantity) : IRequest<Gu
 
 ### Other Annotations
 
-- **`[RequirePermission]`** â€” declares required permissions for an endpoint
-- **`[AllowAnonymous]`** â€” marks an endpoint as publicly accessible
-- **`[EndpointName]`** / **`[EndpointDescription]`** â€” OpenAPI metadata
-- **`[Summary]`** â€” adds summary documentation to generated endpoints
+- **`[RequirePermission]`** â€?declares required permissions for an endpoint
+- **`[AllowAnonymous]`** â€?marks an endpoint as publicly accessible
+- **`[EndpointName]`** / **`[EndpointDescription]`** â€?OpenAPI metadata
+- **`[Summary]`** â€?adds summary documentation to generated endpoints
 
 ## Installation
 
@@ -62,3 +62,4 @@ dotnet add package NOF.Contract
 ## License
 
 Apache-2.0
+

@@ -319,3 +319,5 @@ appsettings.Development.json
 
 # Sourcegraph Cody
 .cody/
+
+.dotnet/

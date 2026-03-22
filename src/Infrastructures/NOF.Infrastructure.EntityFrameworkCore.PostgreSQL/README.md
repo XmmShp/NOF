@@ -32,3 +32,4 @@ dotnet add package NOF.Infrastructure.EntityFrameworkCore.PostgreSQL
 ## License
 
 Apache-2.0
+

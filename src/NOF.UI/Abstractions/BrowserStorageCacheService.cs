@@ -5,7 +5,7 @@ using NOF.Contract;
 using NOF.Infrastructure;
 using System.Collections.Concurrent;
 
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public abstract class BrowserStorageCacheService : ICacheService
 {
@@ -353,3 +353,4 @@ public abstract class BrowserStorageCacheService : ICacheService
             _ => "unknown"
         };
 }
+

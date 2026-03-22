@@ -24,7 +24,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 
     public void ApplyServices(IServiceCollection services)
     {
-        // Host mode �?no filtering needed
+        // Host mode -no filtering needed
         if (string.IsNullOrWhiteSpace(TenantId))
         {
             return;

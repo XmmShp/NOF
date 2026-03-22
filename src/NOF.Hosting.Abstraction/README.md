@@ -11,6 +11,7 @@ Provides the core host-builder abstraction contracts used by NOF hosting impleme
 - `IStep` / `IAfter<>` / `IBefore<>`
 - `IServiceRegistrationStep`
 - `IApplicationInitializationStep`
+- `ConfiguratorGraph<T>` (dependency-aware topological ordering for steps)
 
 This package enables host scenarios that do not require the full application/infrastructure stack.
 
@@ -23,3 +24,4 @@ dotnet add package NOF.Hosting.Abstraction
 ## License
 
 Apache-2.0
+

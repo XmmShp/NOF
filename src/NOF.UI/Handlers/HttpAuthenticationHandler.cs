@@ -1,4 +1,4 @@
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public class HttpAuthenticationHandler : DelegatingHandler
 {
@@ -16,3 +16,4 @@ public class HttpAuthenticationHandler : DelegatingHandler
         return await base.SendAsync(request, cancellationToken);
     }
 }
+

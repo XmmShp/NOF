@@ -13,7 +13,7 @@ body:
     attributes:
       label: Affected Package(s)
       description: Which NOF NuGet package(s) are affected?
-      placeholder: "e.g. NOF.Infrastructure.Core, NOF.Hosting.AspNetCore"
+      placeholder: "e.g. NOF.Infrastructure, NOF.Hosting.AspNetCore"
     validations:
       required: true
 
@@ -78,3 +78,4 @@ body:
       description: Any other context, screenshots, or log output.
     validations:
       required: false
+

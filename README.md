@@ -3,41 +3,42 @@
 [![CI](https://github.com/XmmShp/NOF/actions/workflows/ci.yml/badge.svg)](https://github.com/XmmShp/NOF/actions/workflows/ci.yml)
 [![CD](https://github.com/XmmShp/NOF/actions/workflows/cd.yml/badge.svg)](https://github.com/XmmShp/NOF/actions/workflows/cd.yml)
 
-**NOF** (short for **N**eat **O**pinionated **F**ramework) is a modular, convention-driven application framework for .NET that embraces clean architecture principles. It provides a structured approach to building scalable applications with built-in support for CQRS, domain-driven design, transactional outbox, state machines, multi-tenancy, and more.
+**NOF** (short for **N**eat **O**pinionated **F**ramework) is a modular, convention-driven application framework for .NET that embraces clean architecture principles. It provides a structured approach to building scalable applications with built-in support for CQRS, domain-driven design, transactional outbox, state machines, multi-tenancy, and observability.
 
 ## Features
 
-- **Clean Architecture** — layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
-- **CQRS & Messaging** — first-class `IRequest`, `ICommand`, `INotification` abstractions with handler pipelines
-- **Source Generators** — compile-time code generation for HTTP endpoint mapping, DI registration, failure definitions, and more
-- **Transactional Outbox** — reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
-- **State Machines** — declarative, event-driven state machine builder with persistent context
-- **Multi-Tenancy** — tenant-aware `DbContext` with automatic model filtering and migration isolation
-- **Modular Pipeline** — dependency-aware `IStep` system for ordered service registration and application initialization
-- **OpenTelemetry** — built-in tracing, metrics, and logging integration
+- **Clean Architecture** - layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
+- **CQRS & Messaging** - first-class `IRequest`, `ICommand`, `INotification` abstractions with handler pipelines
+- **Source Generators** - compile-time code generation for HTTP endpoint mapping, DI registration, and failure definitions
+- **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
+- **State Machines** - declarative, event-driven state machine builder with persistent context
+- **Multi-Tenancy** - tenant-aware persistence and infrastructure integration
+- **Modular Pipeline** - dependency-aware `IStep` system for ordered service registration and application initialization
+- **OpenTelemetry** - built-in tracing, metrics, and logging integration
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer — entities, aggregate roots, repositories, domain events |
-| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer — requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
-| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer — handler abstractions, state machines, caching, unit of work |
-| [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis) | Application Redis extension — advanced Redis cache abstractions built on top of `ICacheService` |
-| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting — middleware, OpenAPI, endpoint mapping, JSON configuration |
-| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting — client-side routing, authorization components, and host builder integration |
-| [`NOF.Infrastructure.Core`](https://www.nuget.org/packages/NOF.Infrastructure.Core) | Core infrastructure — `INOFAppBuilder`, step pipeline, OpenTelemetry, service wiring |
-| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization & authority — OIDC resource server, token issuance, key rotation, JWKS |
-| [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure — `NOFDbContext`, repositories, outbox, multi-tenancy |
+| [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer - entities, aggregate roots, repositories, domain events |
+| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer - requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
+| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer - handler abstractions, state machines, caching, unit of work |
+| [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction) | Hosting abstractions - builder contracts, step contracts, dependency ordering |
+| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - app builder implementation, pipeline, OpenTelemetry, service wiring |
+| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, client cache services |
+| [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis) | Application Redis extension - advanced Redis cache abstractions built on top of `ICacheService` |
+| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI, endpoint mapping, JSON configuration |
+| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - WebAssembly host builder integration |
+| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization and authority - token issuance, key rotation, JWKS |
+| [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure - `NOFDbContext`, repositories, outbox, multi-tenancy |
 | [`NOF.Infrastructure.EntityFrameworkCore.PostgreSQL`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL) | PostgreSQL provider for NOF EF Core infrastructure |
-| [`NOF.Infrastructure.MassTransit`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit) | MassTransit integration — message bus adapter for commands, events, notifications |
+| [`NOF.Infrastructure.MassTransit`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit) | MassTransit integration - message bus adapter for commands, events, notifications |
 | [`NOF.Infrastructure.MassTransit.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit.RabbitMQ) | RabbitMQ transport for NOF MassTransit infrastructure |
 | [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis caching infrastructure via StackExchange.Redis |
 
 ## Quick Start
 
 ```csharp
-// Program.cs
 var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
 
 builder.AddJwtAuthority();
@@ -58,34 +59,19 @@ app.MapAllHttpEndpoints();
 await app.RunAsync();
 ```
 
-```csharp
-// Define a request
-[ExposeToHttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
-public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
-
-// Implement the handler
-public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
-{
-    public async Task<Result<OrderDto>> HandleAsync(
-        GetOrderRequest request, CancellationToken cancellationToken)
-    {
-        // ...
-    }
-}
-```
-
 ## Architecture
 
-```
-NOF.Domain              ← Domain entities, aggregate roots, events, shared attributes ([AutoInject])
-NOF.Contract            ← Requests, commands, notifications, DTOs
-NOF.Application         ← Handlers, state machines, application services
-NOF.Application.Extension.* ← Optional application-layer extensions
-NOF.Infrastructure.Core ← App builder, pipeline, OpenTelemetry
-NOF.Hosting.AspNetCore  ← ASP.NET Core host, endpoints, middleware
-NOF.Hosting.BlazorWebAssembly ← Blazor WebAssembly host, auth guard, client integration
-NOF.Infrastructure.*    ← Database, messaging, caching providers
-NOF.Extensions.*        ← Optional feature extensions
+```text
+NOF.Domain                     <- Domain entities, aggregate roots, events
+NOF.Contract                   <- Requests, commands, notifications, DTOs
+NOF.Application                <- Handlers, state machines, application services
+NOF.Hosting.Abstraction        <- Host builder and step contracts
+NOF.Infrastructure             <- Builder implementation and shared runtime pipeline
+NOF.UI                         <- Shared UI components and browser client primitives
+NOF.Hosting.AspNetCore         <- ASP.NET Core host integration
+NOF.Hosting.BlazorWebAssembly  <- Blazor WebAssembly host integration
+NOF.Infrastructure.*           <- Persistence, messaging, and caching providers
+NOF.Extensions.*               <- Optional feature extensions
 ```
 
 ## Documentation

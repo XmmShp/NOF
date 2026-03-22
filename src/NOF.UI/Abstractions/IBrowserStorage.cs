@@ -1,4 +1,4 @@
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public interface IBrowserStorage
 {
@@ -12,3 +12,4 @@ public interface IBrowserStorage
 public interface ILocalStorage : IBrowserStorage;
 
 public interface ISessionStorage : IBrowserStorage;
+

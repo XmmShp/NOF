@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using NOF.Infrastructure;
 
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public sealed class LocalStorageCacheService(
     ILocalStorage localStorage,
@@ -10,3 +10,4 @@ public sealed class LocalStorageCacheService(
     IOptions<CacheServiceOptions> options) : BrowserStorageCacheService(localStorage, serializer, lockRetryStrategy, options)
 {
 }
+

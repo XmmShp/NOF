@@ -8,12 +8,12 @@ Provides the message bus integration layer using MassTransit. Adapts NOF's `ICom
 
 ## Features
 
-- **Handler Adapters** â€” automatically wraps NOF handlers as MassTransit consumers
-- **Command Sending** â€” `ICommandSender` implementation via MassTransit send endpoints
-- **Event Publishing** â€” `IEventPublisher` for domain event distribution
-- **Notification Riding** â€” pub/sub notification delivery
-- **Endpoint Name Formatting** â€” convention-based endpoint naming with caching
-- **Deferred Sending** â€” `IDeferredCommandSender` for transactional outbox integration
+- **Handler Adapters** â€?automatically wraps NOF handlers as MassTransit consumers
+- **Command Sending** â€?`ICommandSender` implementation via MassTransit send endpoints
+- **Event Publishing** â€?`IEventPublisher` for domain event distribution
+- **Notification Riding** â€?pub/sub notification delivery
+- **Endpoint Name Formatting** â€?convention-based endpoint naming with caching
+- **Deferred Sending** â€?`IDeferredCommandSender` for transactional outbox integration
 
 ## Usage
 
@@ -34,3 +34,4 @@ dotnet add package NOF.Infrastructure.MassTransit
 ## License
 
 Apache-2.0
+

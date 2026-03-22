@@ -6,8 +6,8 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 
 `NOF.Infrastructure` provides a single integration entry for infrastructure capabilities by composing:
 
-- `NOF.Infrastructure.Abstraction`
-- `NOF.Infrastructure.Core`
+- `NOF.Hosting.Abstraction`
+- `NOF.Application`
 
 This lets consumers reference one package/project while still getting the full default infrastructure setup.
 
@@ -24,3 +24,4 @@ dotnet add package NOF.Infrastructure
 ## License
 
 Apache-2.0
+

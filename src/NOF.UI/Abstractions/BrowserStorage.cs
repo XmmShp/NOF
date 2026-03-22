@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public abstract class BrowserStorage(IJSRuntime jsRuntime) : IBrowserStorage
 {
@@ -15,3 +15,4 @@ public abstract class BrowserStorage(IJSRuntime jsRuntime) : IBrowserStorage
 
     protected abstract string StorageName { get; }
 }
+

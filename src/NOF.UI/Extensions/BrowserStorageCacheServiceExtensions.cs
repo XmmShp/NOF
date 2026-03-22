@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Infrastructure;
 
-namespace NOF.Hosting.BlazorWebAssembly;
+namespace NOF.UI;
 
 public static class NOFHostingBlazorWebAssemblyExtensions
 {
@@ -18,3 +18,4 @@ public static class NOFHostingBlazorWebAssemblyExtensions
         }
     }
 }
+
