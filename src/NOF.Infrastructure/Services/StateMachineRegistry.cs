@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure;
 
-internal sealed class StateMachineRegistry : IStateMachineRegistry
+public sealed class StateMachineRegistry : IStateMachineRegistry
 {
     private readonly ConcurrentDictionary<Type, Lazy<StateMachineBlueprint>> _blueprintsByDefinition = [];
 

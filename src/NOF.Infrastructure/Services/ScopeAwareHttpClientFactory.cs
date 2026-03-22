@@ -13,7 +13,7 @@ namespace NOF.Infrastructure;
 /// simply delegates to the inner factory for those clients.
 /// </para>
 /// </summary>
-internal class ScopeAwareHttpClientFactory : IHttpClientFactory
+public class ScopeAwareHttpClientFactory : IHttpClientFactory
 {
     private readonly IServiceProvider _scopeServiceProvider;
     private readonly IHttpMessageHandlerFactory _handlerFactory;

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace NOF.Infrastructure;
 
-internal sealed class DelegateBackgroundService : BackgroundService
+public sealed class DelegateBackgroundService : BackgroundService
 {
     private readonly Func<IServiceProvider, CancellationToken, Task> _startAction;
     private readonly IServiceProvider _serviceProvider;

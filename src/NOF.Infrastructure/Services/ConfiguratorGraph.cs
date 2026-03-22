@@ -6,7 +6,7 @@ namespace NOF.Infrastructure;
 /// This ensures configurators are executed in a valid order where dependencies run before their dependents.
 /// </summary>
 /// <typeparam name="T">The type of configurator, which must implement <see cref="IStep"/>.</typeparam>
-internal class ConfiguratorGraph<T> where T : IStep
+public class ConfiguratorGraph<T> where T : IStep
 {
     private readonly HashSet<T> _nodes;
     private IReadOnlyList<T>? _orderedConfigs;

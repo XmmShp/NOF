@@ -12,12 +12,16 @@ public sealed class FallbackServiceRegistrationStep : IBaseSettingsServiceRegist
     {
         builder.Services.TryAddSingleton<ICacheSerializer, JsonCacheSerializer>();
         builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
-        builder.Services.TryAddSingleton<ICacheServiceFactory, DefaultCacheServiceFactory>();
+        builder.Services.TryAddSingleton<ICacheServiceFactory, CacheServiceFactory>();
 
         builder.Services.TryAddSingleton<IMapper, ManualMapper>();
 
-        builder.Services.AddOptions<SnowflakeIdGeneratorOptions>();
-        builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+        if (builder.Services.FirstOrDefault(sd => sd.ServiceType == typeof(IIdGenerator)) is null)
+        {
+            builder.Services.AddOptions<SnowflakeIdGeneratorOptions>();
+            builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+        }
+
         builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
 
         builder.Services.TryAddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();
