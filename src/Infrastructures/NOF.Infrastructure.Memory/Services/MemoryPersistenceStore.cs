@@ -9,7 +9,18 @@ public sealed class MemoryPersistenceStore : ICloneable
     internal void RestoreFrom(MemoryPersistenceStore snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        TablesByTenant = CloneTableDictionary(snapshot.TablesByTenant);
+
+        var staleTenants = TablesByTenant.Keys.Except(snapshot.TablesByTenant.Keys, StringComparer.OrdinalIgnoreCase).ToArray();
+        foreach (var staleTenant in staleTenants)
+        {
+            TablesByTenant.TryRemove(staleTenant, out _);
+        }
+
+        foreach (var tenant in snapshot.TablesByTenant)
+        {
+            var targetContext = TablesByTenant.GetOrAdd(tenant.Key, static _ => new MemoryPersistenceContext());
+            targetContext.RestoreFrom(tenant.Value);
+        }
     }
 
     public static string NormalizeTenantId(string? tenantId)

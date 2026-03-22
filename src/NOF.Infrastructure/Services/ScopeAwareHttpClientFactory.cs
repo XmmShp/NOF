@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 /// designated <see cref="DelegatingHandler"/>s from the <b>current DI scope</b>
 /// (e.g. Blazor circuit scope) and wraps them around the cached handler pipeline.
 /// <para>
-/// Handlers that are NOT marked as scope-aware are unaffected 鈥?the factory
+/// Handlers that are NOT marked as scope-aware are unaffected the factory
 /// simply delegates to the inner factory for those clients.
 /// </para>
 /// </summary>
@@ -25,7 +25,7 @@ internal class ScopeAwareHttpClientFactory : IHttpClientFactory
     /// designated <see cref="DelegatingHandler"/>s from the <b>current DI scope</b>
     /// (e.g. Blazor circuit scope) and wraps them around the cached handler pipeline.
     /// <para>
-    /// Handlers that are NOT marked as scope-aware are unaffected 鈥?the factory
+    /// Handlers that are NOT marked as scope-aware are unaffected the factory
     /// simply delegates to the inner factory for those clients.
     /// </para>
     /// </summary>

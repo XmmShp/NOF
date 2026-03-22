@@ -4,7 +4,7 @@ using NOF.Domain;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Outermost middleware step 鈥?catches all exceptions.</summary>
+/// <summary>Outermost middleware step catches all exceptions.</summary>
 public class ExceptionInboundMiddlewareStep : IInboundMiddlewareStep<ExceptionInboundMiddlewareStep, ExceptionInboundMiddleware>;
 
 /// <summary>

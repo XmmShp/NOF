@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Activity tracing step 鈥?resolves trace/span IDs from headers and creates distributed tracing Activity per handler execution.</summary>
+/// <summary>Activity tracing step resolves trace/span IDs from headers and creates distributed tracing Activity per handler execution.</summary>
 public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboundMiddlewareStep, TracingInboundMiddleware>,
     IAfter<TenantInboundMiddlewareStep>;
 

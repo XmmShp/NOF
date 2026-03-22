@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 /// <para>
 /// Each concrete step must expose its own <see cref="Type"/> so that the framework can inspect
 /// implemented interfaces for dependency ordering (via <see cref="IAfter{T}"/> / <see cref="IBefore{T}"/>)
-/// without relying on <see cref="object.GetType"/> â€?which is not annotated for trimming.
+/// without relying on <see cref="object.GetType"/> which is not annotated for trimming.
 /// The recommended way is to implement <see cref="IStep{TSelf}"/> (CRTP) which provides
 /// a default implementation that returns <c>typeof(TSelf)</c> with the correct
 /// <see cref="DynamicallyAccessedMemberTypes.Interfaces"/> annotation, making the step

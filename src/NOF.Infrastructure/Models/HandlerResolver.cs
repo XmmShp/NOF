@@ -60,11 +60,11 @@ public interface IRequestHandlerResolver
 /// <inheritdoc cref="ICommandHandlerResolver"/>
 public sealed class CommandHandlerResolver : ICommandHandlerResolver
 {
-    // messageType â†?(endpointName â†?resolved)
+    // messageType éˆ«?(endpointName éˆ«?resolved)
     private readonly Dictionary<Type, Dictionary<string, ResolvedHandler>> _byMessage = new();
-    // messageType â†?first registered resolved (for null-endpoint fast path)
+    // messageType éˆ«?first registered resolved (for null-endpoint fast path)
     private readonly Dictionary<Type, ResolvedHandler> _byMessageDefault = new();
-    // handlerType â†?key
+    // handlerType éˆ«?key
     private readonly Dictionary<Type, CommandHandlerKey> _byHandler = new();
 
     public CommandHandlerResolver(HandlerInfos infos)
@@ -111,7 +111,7 @@ public sealed class CommandHandlerResolver : ICommandHandlerResolver
 /// <inheritdoc cref="IRequestHandlerResolver"/>
 public sealed class RequestHandlerResolver : IRequestHandlerResolver
 {
-    // requestType â†?(endpointName â†?resolved)
+    // requestType éˆ«?(endpointName éˆ«?resolved)
     private readonly Dictionary<Type, Dictionary<string, ResolvedHandler>> _reqByMessage = new();
     private readonly Dictionary<Type, ResolvedHandler> _reqByMessageDefault = new();
     private readonly Dictionary<Type, RequestHandlerKey> _reqByHandler = new();

@@ -29,6 +29,7 @@ public abstract class MemoryRepository<TAggregateRoot> : IRepository<TAggregateR
             cancellationToken.ThrowIfCancellationRequested();
             if (_selector(candidate, keyValues))
             {
+                Context.TrackEntity(candidate);
                 return ValueTask.FromResult<TAggregateRoot?>(candidate);
             }
         }
@@ -43,24 +44,35 @@ public abstract class MemoryRepository<TAggregateRoot> : IRepository<TAggregateR
         foreach (var entity in snapshot)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            Context.TrackEntity(entity);
             yield return entity;
             await Task.CompletedTask;
         }
     }
 
     public virtual void Add(TAggregateRoot entity)
-        => Context.Set<TAggregateRoot>().Add(entity);
+    {
+        Context.Set<TAggregateRoot>().Add(entity);
+        Context.TrackEntity(entity);
+    }
 
     public virtual void Remove(TAggregateRoot entity)
     {
         var table = Context.Set<TAggregateRoot>();
+        var removed = false;
         for (var i = table.Count - 1; i >= 0; i--)
         {
             var candidate = table[i];
             if (ReferenceEquals(candidate, entity) || EqualityComparer<TAggregateRoot>.Default.Equals(candidate, entity))
             {
                 table.RemoveAt(i);
+                removed = true;
             }
+        }
+
+        if (removed)
+        {
+            Context.TrackEntity(entity);
         }
     }
 }

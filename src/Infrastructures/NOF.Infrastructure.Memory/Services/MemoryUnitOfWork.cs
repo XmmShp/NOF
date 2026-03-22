@@ -1,5 +1,4 @@
 using NOF.Application;
-using NOF.Domain;
 
 namespace NOF.Infrastructure.Memory;
 
@@ -19,10 +18,9 @@ public sealed class MemoryUnitOfWork : IUnitOfWork
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var context = _store.CreateContext(_invocationContext.TenantId);
+        var changedEntities = context.ConsumeTrackedEntities();
 
-        var domainEvents = context.Tables.Values
-            .SelectMany(table => table.Items)
-            .OfType<IAggregateRoot>()
+        var domainEvents = changedEntities
             .SelectMany(aggregateRoot =>
             {
                 var events = aggregateRoot.Events.ToArray();
@@ -36,6 +34,6 @@ public sealed class MemoryUnitOfWork : IUnitOfWork
             await _eventPublisher.PublishAsync(domainEvent, cancellationToken);
         }
 
-        return 0;
+        return changedEntities.Count;
     }
 }

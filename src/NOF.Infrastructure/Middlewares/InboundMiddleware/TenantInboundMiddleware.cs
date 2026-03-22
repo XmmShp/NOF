@@ -4,7 +4,7 @@ using System.Security.Claims;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Tenant resolution step 鈥?resolves tenant from claims or headers.</summary>
+/// <summary>Tenant resolution step resolves tenant from claims or headers.</summary>
 public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundMiddlewareStep, TenantInboundMiddleware>, IAfter<ExceptionInboundMiddlewareStep>;
 
 /// <summary>

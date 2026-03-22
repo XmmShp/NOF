@@ -35,7 +35,6 @@ public class CoreServicesRegistrationStepTests
         using var scope = provider.CreateScope();
 
         scope.ServiceProvider.GetService<MemoryPersistenceStore>().Should().BeNull();
-        scope.ServiceProvider.GetService<MemoryPersistenceSession>().Should().BeNull();
         scope.ServiceProvider.GetService<IUnitOfWork>().Should().BeNull();
         scope.ServiceProvider.GetService<ITransactionManager>().Should().BeNull();
         scope.ServiceProvider.GetService<IInboxMessageRepository>().Should().BeNull();

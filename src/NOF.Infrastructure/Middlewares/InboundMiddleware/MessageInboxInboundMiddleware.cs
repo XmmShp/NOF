@@ -3,7 +3,7 @@ using NOF.Application;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Inbox message processing step 鈥?deduplication via inbox pattern.</summary>
+/// <summary>Inbox message processing step deduplication via inbox pattern.</summary>
 public class MessageInboxInboundMiddlewareStep : IInboundMiddlewareStep<MessageInboxInboundMiddlewareStep, MessageInboxInboundMiddleware>, IAfter<AutoInstrumentationInboundMiddlewareStep>;
 
 /// <summary>

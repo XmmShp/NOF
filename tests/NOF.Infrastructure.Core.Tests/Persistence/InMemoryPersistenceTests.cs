@@ -95,6 +95,7 @@ public class InMemoryPersistenceTests
         var order = TestOrder.Create(1, "order-1");
         order.Raise(new TestEvent("created"));
         repository.Add(order);
+        await ((IRepository<TestOrder, long>)repository).FindAsync(1L);
 
         var changeCount = await unitOfWork.SaveChangesAsync();
 
@@ -233,33 +234,30 @@ public class InMemoryPersistenceTests
     public async Task StateMachineRepository_ShouldIsolateDataByTenant()
     {
         using var services = CreateServiceProvider();
-        using var scope = services.CreateScope();
-        var invocationContext = scope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
-        var repository = scope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+        using (var hostScope = services.CreateScope())
+        {
+            var hostInvocationContext = hostScope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
+            hostInvocationContext.SetTenantId(null);
+            var hostRepository = hostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+            hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
+        }
 
-        invocationContext.SetTenantId(null);
-        repository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
+        using (var tenantScope = services.CreateScope())
+        {
+            var tenantInvocationContext = tenantScope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
+            tenantInvocationContext.SetTenantId("tenant-a");
+            var tenantRepository = tenantScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+            tenantRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
+            (await tenantRepository.FindAsync("corr", "def"))!.State.Should().Be(2);
+        }
 
-        invocationContext.SetTenantId("tenant-a");
-        repository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
-
-        (await repository.FindAsync("corr", "def"))!.State.Should().Be(2);
-
-        invocationContext.SetTenantId(null);
-        (await repository.FindAsync("corr", "def"))!.State.Should().Be(1);
-    }
-
-    [Fact]
-    public void Store_GetPartition_WithSameNameButDifferentTypes_ShouldThrow()
-    {
-        var store = new MemoryPersistenceStore();
-
-        store.GetPartition<TestOrder, long>("orders", static order => order.Id, static order => TestOrder.Create(order.Id, order.Number));
-
-        var act = () => store.GetPartition<TestTenantProjection, string>("orders", static projection => projection.Id, static projection => new TestTenantProjection { Id = projection.Id });
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*already registered with a different entity or key type*");
+        using (var verifyHostScope = services.CreateScope())
+        {
+            var verifyHostInvocationContext = verifyHostScope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
+            verifyHostInvocationContext.SetTenantId(null);
+            var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+            (await verifyHostRepository.FindAsync("corr", "def"))!.State.Should().Be(1);
+        }
     }
 
     [Fact]
@@ -291,7 +289,7 @@ public class InMemoryPersistenceTests
         logger.Verify(x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("built-in in-memory persistence implementation")),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("NOF is using NOF.Infrastructure.Memory for persistence fallback")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -301,11 +299,11 @@ public class InMemoryPersistenceTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<MemoryPersistenceStore>();
-        services.AddScoped<MemoryPersistenceSession>();
         services.AddScoped<IMutableUserContext, UserContext>();
         services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IMutableUserContext>());
         services.AddScoped<IMutableInvocationContext, InvocationContext>();
         services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IMutableInvocationContext>());
+        services.AddScoped(sp => sp.GetRequiredService<MemoryPersistenceStore>().CreateContext(sp.GetRequiredService<IInvocationContext>().TenantId));
         services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();
         services.AddScoped<ITransactionManager, MemoryTransactionManager>();
         services.AddScoped<IInboxMessageRepository, MemoryInboxMessageRepository>();
@@ -347,7 +345,7 @@ public class InMemoryPersistenceTests
 
     private sealed record TestEvent(string Name) : IEvent;
 
-    private sealed class TestOrder : AggregateRoot
+    private sealed class TestOrder : AggregateRoot, ICloneable
     {
         public long Id { get; init; }
 
@@ -358,18 +356,16 @@ public class InMemoryPersistenceTests
 
         public void Raise(IEvent @event)
             => AddEvent(@event);
+
+        public object Clone()
+            => Create(Id, Number);
     }
 
     private sealed class TestOrderRepository : MemoryRepository<TestOrder, long>
     {
-        public TestOrderRepository(MemoryPersistenceStore store, MemoryPersistenceSession session)
-            : base(store, session, "test:orders", static order => order.Id, static order => TestOrder.Create(order.Id, order.Number))
+        public TestOrderRepository(MemoryPersistenceContext context)
+            : base(context, static order => order.Id)
         {
         }
-    }
-
-    private sealed class TestTenantProjection
-    {
-        public string Id { get; init; } = string.Empty;
     }
 }

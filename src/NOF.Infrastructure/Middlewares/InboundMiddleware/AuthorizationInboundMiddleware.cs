@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Permission authorization step 鈥?checks [RequirePermission] / [AllowAnonymous].</summary>
+/// <summary>Permission authorization step checks [RequirePermission] / [AllowAnonymous].</summary>
 public class AuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<AuthorizationInboundMiddlewareStep, AuthorizationInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
 
 /// <summary>

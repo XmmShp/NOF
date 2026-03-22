@@ -11,7 +11,7 @@ namespace NOF.Infrastructure.MassTransit;
 /// MassTransit request transport implementation.
 /// Dispatches locally via mediator when the request type has a local handler
 /// and the destination endpoint is null/whitespace or matches the local endpoint.
-/// Otherwise dispatches remotely via the bus 鈥?requires explicit <c>destinationEndpointName</c>.
+/// Otherwise dispatches remotely via the bus requires explicit <c>destinationEndpointName</c>.
 /// </summary>
 public class MassTransitRequestRider : IRequestRider
 {

@@ -1,5 +1,4 @@
 using FluentAssertions;
-using NOF.Application;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
@@ -20,49 +19,56 @@ public class MemoryPersistenceStoreTests
     }
 
     [Fact]
-    public void CloneEntity_WithUnsupportedType_ShouldThrow()
+    public void Clone_ShouldCreateDeepCopyOfTenantData()
     {
         var store = new MemoryPersistenceStore();
+        var context = store.CreateContext("tenant-a");
+        context.Set<TestProjection>().Add(new TestProjection { Id = 1, Name = "before" });
 
-        var act = () => store.CloneEntity(new UnsupportedEntity());
+        var clone = (MemoryPersistenceStore)store.Clone();
+        var clonedContext = clone.CreateContext("tenant-a");
+        clonedContext.Set<TestProjection>()[0].Name = "after";
 
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage("*Cloning is not supported*");
+        context.Set<TestProjection>()[0].Name.Should().Be("before");
     }
 
     [Fact]
-    public void CaptureSnapshot_AndRestoreSnapshot_ShouldRestoreCustomPartitionState()
+    public void RestoreFrom_ShouldRestoreSnapshotState()
     {
         var store = new MemoryPersistenceStore();
-        var partition = store.GetPartition<TestProjection, long>("custom", static item => item.Id, static item => new TestProjection { Id = item.Id, Name = item.Name });
-        partition.Items[1] = new TestProjection { Id = 1, Name = "before" };
+        var context = store.CreateContext("tenant-a");
+        context.Set<TestProjection>().Add(new TestProjection { Id = 1, Name = "before" });
 
-        var snapshot = store.CaptureSnapshot();
+        var snapshot = (MemoryPersistenceStore)store.Clone();
 
-        partition.Items[1] = new TestProjection { Id = 1, Name = "after" };
-        store.RestoreSnapshot(snapshot);
+        context.Set<TestProjection>()[0].Name = "after";
+        store.RestoreFrom(snapshot);
 
-        var restored = store.GetPartition<TestProjection, long>("custom", static item => item.Id, static item => new TestProjection { Id = item.Id, Name = item.Name });
-        restored.Items[1].Name.Should().Be("before");
+        var restored = store.CreateContext("tenant-a").Set<TestProjection>();
+        restored[0].Name.Should().Be("before");
     }
 
     [Fact]
-    public void CloneEntity_ShouldCloneBuiltInEntities()
+    public void CreateContext_ShouldKeepDataIsolatedByTenant()
     {
         var store = new MemoryPersistenceStore();
+        var host = store.CreateContext(null);
+        var tenant = store.CreateContext("tenant-a");
 
-        store.CloneEntity(new NOFInboxMessage(Guid.NewGuid())).Should().NotBeNull();
-        store.CloneEntity(new NOFTenant { Id = "tenant-1", Name = "Tenant" }).Should().NotBeNull();
-        store.CloneEntity(new NOFOutboxMessage { Id = 1, Payload = "{}", Headers = "{}", PayloadType = typeof(string).AssemblyQualifiedName!, MessageType = OutboxMessageType.Command }).Should().NotBeNull();
-        store.CloneEntity(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 }).Should().NotBeNull();
+        host.Set<TestProjection>().Add(new TestProjection { Id = 1, Name = "host" });
+        tenant.Set<TestProjection>().Add(new TestProjection { Id = 2, Name = "tenant" });
+
+        host.Set<TestProjection>().Should().ContainSingle(item => item.Name == "host");
+        tenant.Set<TestProjection>().Should().ContainSingle(item => item.Name == "tenant");
     }
 
-    private sealed class TestProjection
+    private sealed class TestProjection : ICloneable
     {
-        public long Id { get; init; }
+        public long Id { get; set; }
 
-        public string Name { get; init; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+
+        public object Clone()
+            => new TestProjection { Id = Id, Name = Name };
     }
-
-    private sealed class UnsupportedEntity;
 }

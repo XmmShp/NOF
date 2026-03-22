@@ -67,7 +67,7 @@ public static partial class NOFInfrastructureExtensions
             services.AddKeyedScoped<IOptions<CacheServiceOptions>>(name, (sp, key) =>
                 Options.Create(sp.GetRequiredService<IOptionsMonitor<CacheServiceOptions>>().Get((string)key!)));
 
-            // Keyed cache service 鈥?factory explicitly resolves keyed deps and named options
+            // Keyed cache service factory explicitly resolves keyed deps and named options
             services.AddKeyedScoped<ICacheService>(name, (sp, key) =>
             {
                 var serializer = sp.GetKeyedService<ICacheSerializer>(key) ?? sp.GetRequiredService<ICacheSerializer>();

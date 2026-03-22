@@ -10,8 +10,8 @@ namespace NOF.Infrastructure;
 /// This is the full builder interface available before <c>BuildAsync</c> is called.
 /// During step execution, narrower context interfaces are used to prevent invalid operations:
 /// <list type="bullet">
-///   <item><see cref="IServiceRegistrationContext"/> â€?used by <see cref="IServiceRegistrationStep"/>; cannot add registration steps.</item>
-///   <item><see cref="IHostApplicationBuilder"/> â€?used by <see cref="IApplicationInitializationStep"/>; cannot add any steps.</item>
+///   <item><see cref="IServiceRegistrationContext"/> used by <see cref="IServiceRegistrationStep"/>; cannot add registration steps.</item>
+///   <item><see cref="IHostApplicationBuilder"/> used by <see cref="IApplicationInitializationStep"/>; cannot add any steps.</item>
 /// </list>
 /// </para>
 /// </summary>

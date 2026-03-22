@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Outermost outbound middleware step 鈥?creates the tracing activity span that wraps
+/// Outermost outbound middleware step creates the tracing activity span that wraps
 /// the entire outbound pipeline (header population + dispatch).
 /// Runs first so it can wrap everything.
 /// </summary>

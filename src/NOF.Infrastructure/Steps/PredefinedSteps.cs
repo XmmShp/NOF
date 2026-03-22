@@ -36,7 +36,7 @@ public interface IDependentServiceRegistrationStep<[DynamicallyAccessedMembers(D
 /// <summary>
 /// Declares a handler middleware type to be included in the handler pipeline.
 /// Extends <see cref="IServiceRegistrationStep"/> so each middleware step participates
-/// in the normal service registration phase 鈥?its <see cref="IServiceRegistrationStep.ExecuteAsync"/>
+/// in the normal service registration phase its <see cref="IServiceRegistrationStep.ExecuteAsync"/>
 /// registers the middleware type as scoped in DI and appends it to the ordered pipeline type list.
 /// <para>
 /// Middleware ordering is resolved via <see cref="IAfter{T}"/> / <see cref="IBefore{T}"/>

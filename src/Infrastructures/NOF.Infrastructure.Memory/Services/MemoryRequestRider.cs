@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.Memory;
 /// resolved from DI using keyed services.
 /// Uses <see cref="IRequestHandlerResolver"/> to find the correct handler by message type
 /// and optional endpoint name. Creates a new DI scope per dispatch to match MassTransit behavior.
-/// Fully AOT-compatible 鈥?no reflection or <c>MakeGenericType</c> calls.
+/// Fully AOT-compatible no reflection or <c>MakeGenericType</c> calls.
 /// </summary>
 public sealed class MemoryRequestRider : IRequestRider
 {

@@ -4,7 +4,7 @@ using System.Diagnostics.Metrics;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Auto instrumentation step 鈥?records execution metrics and logging.</summary>
+/// <summary>Auto instrumentation step records execution metrics and logging.</summary>
 public class AutoInstrumentationInboundMiddlewareStep : IInboundMiddlewareStep<AutoInstrumentationInboundMiddlewareStep, AutoInstrumentationInboundMiddleware>, IAfter<TracingInboundMiddlewareStep>;
 
 /// <summary>
