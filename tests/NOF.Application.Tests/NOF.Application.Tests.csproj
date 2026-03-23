@@ -22,8 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Contract.SourceGenerator\NOF.Contract.SourceGenerator.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
