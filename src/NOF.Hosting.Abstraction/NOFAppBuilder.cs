@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Abstraction;
 
 namespace NOF.Infrastructure;
 
@@ -97,7 +96,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             await task.ExecuteAsync(this).ConfigureAwait(false);
         }
 
-        ConfigureContainer(new InitializingServiceProviderFactory());
+        ConfigureContainer(new NOFServiceProviderFactory());
 
         var app = await BuildApplicationAsync();
 

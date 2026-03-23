@@ -1,8 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace NOF.Infrastructure;
 
-public sealed class InitializingServiceProviderFactory : IServiceProviderFactory<IServiceCollection>
+public sealed class NOFServiceProviderFactory : IServiceProviderFactory<IServiceCollection>
 {
     private readonly DefaultServiceProviderFactory _innerFactory = new();
 
@@ -10,5 +11,5 @@ public sealed class InitializingServiceProviderFactory : IServiceProviderFactory
         => _innerFactory.CreateBuilder(services);
 
     public IServiceProvider CreateServiceProvider(IServiceCollection containerBuilder)
-        => new InitializingServiceProvider(_innerFactory.CreateServiceProvider(containerBuilder));
+        => new NOFServiceProvider(_innerFactory.CreateServiceProvider(containerBuilder));
 }

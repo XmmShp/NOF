@@ -3,9 +3,19 @@ using NOF.Abstraction;
 
 namespace NOF.Infrastructure;
 
-public sealed class InitializingServiceProvider(IServiceProvider innerProvider) : IServiceScopeFactory, IKeyedServiceProvider
+public sealed class NOFServiceProvider : IServiceScopeFactory, IKeyedServiceProvider
 {
+    private readonly IServiceProvider _innerProvider;
     private IServiceScopeFactory? _scopeFactory;
+
+    public NOFServiceProvider(IServiceProvider innerProvider)
+    {
+        ArgumentNullException.ThrowIfNull(innerProvider);
+        _innerProvider = innerProvider;
+
+        // Force daemon service resolution every time a NOF service provider is created.
+        _ = _innerProvider.GetServices<IDaemonService>().ToArray();
+    }
 
     public object? GetService(Type serviceType)
     {
@@ -16,15 +26,15 @@ public sealed class InitializingServiceProvider(IServiceProvider innerProvider) 
 
         if (serviceType == typeof(IServiceScopeFactory))
         {
-            return _scopeFactory ??= new InitializingServiceScopeFactory(innerProvider.GetRequiredService<IServiceScopeFactory>());
+            return _scopeFactory ??= new NOFServiceScopeFactory(_innerProvider.GetRequiredService<IServiceScopeFactory>());
         }
 
-        return InitializeIfNeeded(innerProvider.GetService(serviceType));
+        return InitializeIfNeeded(_innerProvider.GetService(serviceType));
     }
 
     public object? GetKeyedService(Type serviceType, object? serviceKey)
     {
-        return innerProvider is IKeyedServiceProvider keyedServiceProvider
+        return _innerProvider is IKeyedServiceProvider keyedServiceProvider
             ? InitializeIfNeeded(keyedServiceProvider.GetKeyedService(serviceType, serviceKey))
             : null;
     }
@@ -37,12 +47,12 @@ public sealed class InitializingServiceProvider(IServiceProvider innerProvider) 
 
     public IServiceScope CreateScope()
     {
-        return (_scopeFactory ??= new InitializingServiceScopeFactory(innerProvider.GetRequiredService<IServiceScopeFactory>())).CreateScope();
+        return (_scopeFactory ??= new NOFServiceScopeFactory(_innerProvider.GetRequiredService<IServiceScopeFactory>())).CreateScope();
     }
 
     private static object? InitializeIfNeeded(object? instance)
     {
-        if (instance is IInitializable initializable && !initializable.IsInitialized)
+        if (instance is IInitializable { IsInitialized: false } initializable)
         {
             initializable.Initialize();
         }

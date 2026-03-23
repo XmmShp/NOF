@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF.Infrastructure;
 
-public sealed class InitializingServiceScope(IServiceScope innerScope) : IServiceScope, IAsyncDisposable
+public sealed class NOFServiceScope(IServiceScope innerScope) : IServiceScope, IAsyncDisposable
 {
     public IServiceProvider ServiceProvider
-        => field ??= new InitializingServiceProvider(innerScope.ServiceProvider);
+        => field ??= new NOFServiceProvider(innerScope.ServiceProvider);
 
     public void Dispose()
         => innerScope.Dispose();
