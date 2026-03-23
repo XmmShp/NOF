@@ -7,6 +7,32 @@ public static partial class NOFInfrastructureExtensions
     extension(INOFAppBuilder builder)
     {
         /// <summary>
+        /// Applies the built-in NOF infrastructure defaults (service registration steps and initialization steps).
+        /// Existing defaults of the same type are removed before re-adding to keep the pipeline stable.
+        /// </summary>
+        public INOFAppBuilder AddInfrastructureDefaults()
+        {
+            builder.TryAddRegistrationStep<InitializingServiceProviderFactoryRegistrationStep>()
+                .TryAddRegistrationStep<CoreServicesRegistrationStep>()
+                .TryAddRegistrationStep<FallbackServiceRegistrationStep>()
+                .TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
+                .TryAddRegistrationStep<ExceptionInboundMiddlewareStep>()
+                .TryAddRegistrationStep<TenantInboundMiddlewareStep>()
+                .TryAddRegistrationStep<AuthorizationInboundMiddlewareStep>()
+                .TryAddRegistrationStep<TracingInboundMiddlewareStep>()
+                .TryAddRegistrationStep<AutoInstrumentationInboundMiddlewareStep>()
+                .TryAddRegistrationStep<MessageInboxInboundMiddlewareStep>()
+                .TryAddRegistrationStep<HandlerKeyedServiceRegistrationStep>()
+                .TryAddRegistrationStep<MessageIdOutboundMiddlewareStep>()
+                .TryAddRegistrationStep<TracingOutboundMiddlewareStep>()
+                .TryAddRegistrationStep<TenantOutboundMiddlewareStep>()
+                .TryAddInitializationStep<IdGeneratorInitializationStep>()
+                .TryAddInitializationStep<MapperInitializationStep>();
+
+            return builder;
+        }
+
+        /// <summary>
         /// Adds a service configuration delegate that will be executed during the service registration phase.
         /// </summary>
         public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)

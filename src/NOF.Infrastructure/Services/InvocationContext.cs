@@ -1,3 +1,5 @@
+using NOF.Contract;
+
 namespace NOF.Application;
 
 /// <summary>
@@ -39,4 +41,3 @@ public class InvocationContext : IMutableInvocationContext
         SpanId = spanId;
     }
 }
-

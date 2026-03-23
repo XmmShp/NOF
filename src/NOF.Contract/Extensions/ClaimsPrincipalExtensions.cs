@@ -1,9 +1,8 @@
-using NOF.Contract;
 using System.Security.Claims;
 
-namespace NOF.Application;
+namespace NOF.Contract;
 
-public static partial class NOFApplicationExtensions
+public static partial class NOFContractExtensions
 {
     extension(ClaimsPrincipal user)
     {
@@ -13,12 +12,12 @@ public static partial class NOFApplicationExtensions
         public bool IsAuthenticated => user.Identity?.IsAuthenticated == true;
 
         /// <summary>
-        /// Gets the unique identifier of the current user from the NameIdentifier claim, or <c>null</c> if not authenticated.
+        /// Gets the unique identifier of the current user from the NameIdentifier claim.
         /// </summary>
         public string? Id => user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         /// <summary>
-        /// Gets the username of the current user from the Name claim, or <c>null</c> if not authenticated.
+        /// Gets the username of the current user from the Name claim.
         /// </summary>
         public string? Name => user.Identity?.Name;
 
@@ -31,12 +30,9 @@ public static partial class NOFApplicationExtensions
             .AsReadOnly();
 
         /// <summary>
-        /// Determines whether the current user has the specified permission (role).
-        /// Supports exact match and wildcard patterns (e.g., "order.*").
+        /// Determines whether the current user has the specified permission.
+        /// Supports exact match and wildcard patterns (for example: "order.*").
         /// </summary>
-        /// <param name="permission">The permission name to check.</param>
-        /// <param name="comparison">The string comparison type.</param>
-        /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
         public bool HasPermission(string permission, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
         {
             if (string.IsNullOrEmpty(permission))
@@ -46,16 +42,13 @@ public static partial class NOFApplicationExtensions
 
             var permissions = user.Permissions;
             var comparer = StringComparer.FromComparison(comparison);
-
-            // Exact match
             if (permissions.Contains(permission, comparer))
             {
                 return true;
             }
 
-            // Wildcard match (e.g., "order.*", "admin.*.delete")
             return permissions
-                .Where(p => p.Contains('*'))
+                .Where(pattern => pattern.Contains('*'))
                 .Any(pattern => permission.MatchWildcard(pattern, comparison));
         }
     }

@@ -1,3 +1,5 @@
+using NOF.Contract;
+
 namespace NOF.Application;
 
 /// <summary>

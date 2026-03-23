@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure;
 

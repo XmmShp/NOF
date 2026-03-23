@@ -5,10 +5,8 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Contract;
 using NOF.Infrastructure;
 using NOF.UI;
-using System.Text.Json;
 
 namespace NOF.Hosting.BlazorWebAssembly;
 
@@ -28,11 +26,8 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
     public static NOFWebAssemblyHostBuilder Create(string[]? args)
     {
         var builder = new NOFWebAssemblyHostBuilder(args);
+        builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new BrowserStorageRegistrationStep());
-        JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
-        {
-            options.TypeInfoResolverChain.Add(NOFUIJsonContext.Default);
-        });
         return builder;
     }
 

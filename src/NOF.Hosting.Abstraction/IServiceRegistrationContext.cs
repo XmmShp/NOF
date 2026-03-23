@@ -30,4 +30,34 @@ public interface IServiceRegistrationContext : IHostApplicationBuilder
     /// </summary>
     IServiceRegistrationContext RemoveInitializationStep<T>() where T : IApplicationInitializationStep
         => RemoveInitializationStep(t => t is T);
+
+    /// <summary>
+    /// Adds the initialization step only if a step of the same runtime type has not been registered.
+    /// </summary>
+    IServiceRegistrationContext TryAddInitializationStep(IApplicationInitializationStep initializationStep)
+    {
+        ArgumentNullException.ThrowIfNull(initializationStep);
+        var exists = false;
+        RemoveInitializationStep(existing =>
+        {
+            if (existing.GetType() == initializationStep.GetType())
+            {
+                exists = true;
+            }
+            return false;
+        });
+
+        if (exists)
+        {
+            return this;
+        }
+
+        return AddInitializationStep(initializationStep);
+    }
+
+    /// <summary>
+    /// Adds the initialization step type only if it has not been registered.
+    /// </summary>
+    IServiceRegistrationContext TryAddInitializationStep<T>() where T : IApplicationInitializationStep, new()
+        => TryAddInitializationStep(new T());
 }

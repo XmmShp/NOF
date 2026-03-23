@@ -38,6 +38,36 @@ public interface INOFAppBuilder : IServiceRegistrationContext
     INOFAppBuilder RemoveRegistrationStep<T>() where T : IServiceRegistrationStep
         => RemoveRegistrationStep(t => t is T);
 
+    /// <summary>
+    /// Adds the registration step only if a step of the same runtime type has not been registered.
+    /// </summary>
+    INOFAppBuilder TryAddRegistrationStep(IServiceRegistrationStep registrationStep)
+    {
+        ArgumentNullException.ThrowIfNull(registrationStep);
+        var exists = false;
+        RemoveRegistrationStep(existing =>
+        {
+            if (existing.GetType() == registrationStep.GetType())
+            {
+                exists = true;
+            }
+            return false;
+        });
+
+        if (exists)
+        {
+            return this;
+        }
+
+        return AddRegistrationStep(registrationStep);
+    }
+
+    /// <summary>
+    /// Adds the registration step type only if it has not been registered.
+    /// </summary>
+    INOFAppBuilder TryAddRegistrationStep<T>() where T : IServiceRegistrationStep, new()
+        => TryAddRegistrationStep(new T());
+
     IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
         => AddInitializationStep(initializationStep);
 
@@ -55,4 +85,16 @@ public interface INOFAppBuilder : IServiceRegistrationContext
     /// </summary>
     new INOFAppBuilder RemoveInitializationStep<T>() where T : IApplicationInitializationStep
         => RemoveInitializationStep(t => t is T);
+
+    /// <summary>
+    /// Adds the initialization step only if a step of the same runtime type has not been registered.
+    /// </summary>
+    new INOFAppBuilder TryAddInitializationStep(IApplicationInitializationStep initializationStep)
+        => (INOFAppBuilder)((IServiceRegistrationContext)this).TryAddInitializationStep(initializationStep);
+
+    /// <summary>
+    /// Adds the initialization step type only if it has not been registered.
+    /// </summary>
+    new INOFAppBuilder TryAddInitializationStep<T>() where T : IApplicationInitializationStep, new()
+        => (INOFAppBuilder)((IServiceRegistrationContext)this).TryAddInitializationStep<T>();
 }

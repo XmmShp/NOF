@@ -3,11 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Runtime.CompilerServices;
-
-[assembly: InternalsVisibleTo("NOF.Integration.Tests")]
-[assembly: InternalsVisibleTo("NOF.Infrastructure.Core.Tests")]
-[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2, PublicKey=0024000004800000940000000602000000240000525341310004000001000100c547cac37abd99c8db225ef2f6c8a3602f3b3606cc9891605d02baa56104f4cfc0734aa39b93bf7852f7d9266654753cc297e7d2edfe0bac1cdcf9f717241550e0a7b191195b7667bb4f64bcb8e2121380fd1d9d46ad2d92d2d15605093924cceaf74c4861eff62abf69b9291ed0a340e113be11e6a7d3113e92484cf7045cc7")]
 
 namespace NOF.Infrastructure;
 
@@ -20,7 +15,7 @@ namespace NOF.Infrastructure;
 /// This builder orchestrates two distinct phases:
 /// <list type="bullet">
 ///   <item><description><b>Service Configuration Phase</b>: Executes all registered <see cref="IServiceRegistrationStep"/>
-///   instances to populate the dependency injection container and configure infrastructure services.</description></item>
+///   instances to populate the dependency injection container and configure host capabilities.</description></item>
 ///   <item><description><b>Application Configuration Phase</b>: After the host application is built,
 ///   executes all registered <see cref="IApplicationInitializationStep"/> instances to perform
 ///   final setup such as middleware registration, event subscriptions, or background task initialization.</description></item>
@@ -45,7 +40,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// These configurations are typically added via <see cref="AddRegistrationStep"/> or delegate overloads,
     /// and are executed in dependency-aware order before the host application is constructed.
     /// </summary>
-    protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs;
+    protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs = [];
 
     /// <summary>
     /// A collection of application configuration units that will be executed after the host application
@@ -53,39 +48,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// event subscriptions, or background task initialization.
     /// Configurations are executed in dependency-resolved order via <see cref="AddInitializationStep"/>.
     /// </summary>
-    protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="NOFAppBuilder{THostApplication}"/> class.
-    /// Registers all default service registration steps.
-    /// </summary>
-    protected NOFAppBuilder()
-    {
-        ServiceConfigs =
-        [
-            new CoreServicesRegistrationStep(),
-            new FallbackServiceRegistrationStep(),
-            new OpenTelemetryRegistrationStep(),
-
-            new ExceptionInboundMiddlewareStep(),
-            new TenantInboundMiddlewareStep(),
-            new AuthorizationInboundMiddlewareStep(),
-            new TracingInboundMiddlewareStep(),
-            new AutoInstrumentationInboundMiddlewareStep(),
-            new MessageInboxInboundMiddlewareStep(),
-            new HandlerKeyedServiceRegistrationStep(),
-
-            // Default outbound middleware steps
-            new MessageIdOutboundMiddlewareStep(),
-            new TracingOutboundMiddlewareStep(),
-            new TenantOutboundMiddlewareStep(),
-        ];
-        ApplicationConfigs =
-        [
-            new IdGeneratorInitializationStep(),
-            new MapperInitializationStep(),
-        ];
-    }
+    protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs = [];
 
     /// <inheritdoc />
     public virtual INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
@@ -132,8 +95,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         {
             await task.ExecuteAsync(this).ConfigureAwait(false);
         }
-
-        ConfigureContainer(new InitializingServiceProviderFactory());
 
         var app = await BuildApplicationAsync();
 

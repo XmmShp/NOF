@@ -1,4 +1,4 @@
-using NOF.Application;
+using NOF.Contract;
 using System.Security.Claims;
 
 namespace NOF.Infrastructure;

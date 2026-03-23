@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
-    <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
   </ItemGroup>
 
 </Project>

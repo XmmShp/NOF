@@ -17,7 +17,9 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
 
     public static NOFMauiAppBuilder Create(bool useDefaults = true)
     {
-        return new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults));
+        var builder = new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults));
+        builder.AddInfrastructureDefaults();
+        return builder;
     }
 
     /// <inheritdoc />

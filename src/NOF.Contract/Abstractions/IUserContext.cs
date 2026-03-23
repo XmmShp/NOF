@@ -1,12 +1,17 @@
 using System.Security.Claims;
 
-namespace NOF.Application;
+namespace NOF.Contract;
 
 /// <summary>
 /// Represents the current user information for the active logical execution context.
 /// </summary>
 public interface IUserContext
 {
+    /// <summary>
+    /// Permission claim type used by NOF.
+    /// </summary>
+    public const string PermissionClaimType = "nof.permission";
+
     /// <summary>
     /// The claims principal representing the current user.
     /// May be unauthenticated.
@@ -51,21 +56,4 @@ public interface IUserContext
     /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
     bool HasPermission(string permission, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
         => User.HasPermission(permission, comparison);
-}
-
-/// <summary>
-/// Represents mutable operations for the current user context.
-/// </summary>
-public interface IMutableUserContext : IUserContext
-{
-    /// <summary>
-    /// Sets the current user context.
-    /// </summary>
-    /// <param name="user">The claims principal representing the authenticated user.</param>
-    void SetUser(ClaimsPrincipal user);
-
-    /// <summary>
-    /// Clears the current user context, marking the user as unauthenticated.
-    /// </summary>
-    void UnsetUser();
 }

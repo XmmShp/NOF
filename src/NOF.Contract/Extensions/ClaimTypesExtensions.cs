@@ -1,15 +1,15 @@
 using System.Security.Claims;
 
-namespace NOF.Application;
+namespace NOF.Contract;
 
-public static partial class NOFApplicationExtensions
+public static partial class NOFContractExtensions
 {
     extension(ClaimTypes)
     {
         /// <summary>
         /// Custom claim type for permissions, separate from standard Role claims.
         /// </summary>
-        public static string Permission => "nof.permission";
+        public static string Permission => IUserContext.PermissionClaimType;
 
         /// <summary>
         /// Well-known claim type for tenant identifier.
