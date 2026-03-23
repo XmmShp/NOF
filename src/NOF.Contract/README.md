@@ -34,24 +34,24 @@ return Result.Success(orderDto);
 return Result.Fail("404", "Order not found");
 ```
 
-### `[ExposeToHttpEndpoint]`
+### `[HttpEndpoint]`
 
 Marks a request type for automatic HTTP endpoint generation via source generator.
 
 ```csharp
-[ExposeToHttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
+[HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
 public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
 
-[ExposeToHttpEndpoint(HttpVerb.Post, "/api/orders")]
+[HttpEndpoint(HttpVerb.Post, "/api/orders")]
 public record CreateOrderRequest(string ProductName, int Quantity) : IRequest<Guid>;
 ```
 
 ### Other Annotations
 
-- **`[RequirePermission]`** â€?declares required permissions for an endpoint
-- **`[AllowAnonymous]`** â€?marks an endpoint as publicly accessible
-- **`[EndpointName]`** / **`[EndpointDescription]`** â€?OpenAPI metadata
-- **`[Summary]`** â€?adds summary documentation to generated endpoints
+- **`[RequirePermission]`** - declares required permissions for an endpoint
+- **`[AllowAnonymous]`** - marks an endpoint as publicly accessible
+- **`[EndpointName]`** / **`[EndpointDescription]`** - OpenAPI metadata
+- **`[Summary]`** - adds summary documentation to generated endpoints
 
 ## Installation
 

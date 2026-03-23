@@ -13,7 +13,7 @@ Use this package when your application logic needs Redis-native operations beyon
 Register Redis cache infrastructure first, then inject Redis abstractions in your application services.
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddRedisCache();
 ```

@@ -184,9 +184,9 @@ chore(ci): upgrade to .NET 10 SDK
 
 ```
 NOF.Domain              ← Domain entities, aggregate roots, events, [AutoInject]
-NOF.Contract            ← IRequest, ICommand, INotification, Result<T>, [ExposeToHttpEndpoint]
+NOF.Contract            ← IRequest, ICommand, INotification, Result<T>, [HttpEndpoint]
 NOF.Application         ← Handlers, state machines, caching, unit of work
-NOF.Infrastructure.Core ← INOFAppBuilder, IStep pipeline, OpenTelemetry
+NOF.Infrastructure ← INOFAppBuilder, IStep pipeline, OpenTelemetry
 NOF.Hosting.AspNetCore  ← ASP.NET Core host, endpoint mapping, middleware
 NOF.Infrastructure.*    ← EF Core, MassTransit, Redis providers
 NOF.Extensions.*        ← JWT authorization, optional features
@@ -202,11 +202,11 @@ NOF.Extensions.*        ← JWT authorization, optional features
 ### Adding a New Infrastructure Package
 
 1. Create the project under `src/Infrastructures/`.
-2. Reference `NOF.Infrastructure.Abstraction` or `NOF.Infrastructure.Core`.
+2. Reference `NOF.Hosting.Abstraction` or `NOF.Infrastructure`.
 3. Implement registration via `IServiceRegistrationStep`.
 4. Add the project to `NOF.slnx`.
 5. Add NuGet versions to the root `Directory.Packages.props`.
-6. Add pack command to `cd.yml` and `release.yml`.
+6. Add pack command to `cd.yml`.
 
 ## License
 

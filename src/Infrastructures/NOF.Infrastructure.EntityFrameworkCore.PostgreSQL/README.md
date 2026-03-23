@@ -9,7 +9,7 @@ Extends `NOF.Infrastructure.EntityFrameworkCore` with PostgreSQL-specific databa
 ## Usage
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddEFCore<AppDbContext>()
     .AutoMigrate()

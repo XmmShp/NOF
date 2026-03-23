@@ -9,7 +9,7 @@ Extends `NOF.Infrastructure.MassTransit` with RabbitMQ as the message transport.
 ## Usage
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddMassTransit()
     .UseRabbitMQ();

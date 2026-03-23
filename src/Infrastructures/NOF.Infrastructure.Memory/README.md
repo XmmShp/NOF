@@ -20,7 +20,7 @@ These implementations are process-local and non-durable, and should not be used 
 To use in-memory infrastructure, add this package and register it explicitly:
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddMemoryInfrastructure();
 ```

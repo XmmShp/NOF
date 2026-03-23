@@ -72,7 +72,7 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 ### Bootstrap (Program.cs)
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 builder.Services.AddMyAppAutoInjectServices();  // Source-generated
 builder.Services.AddAllHandlers();               // Source-generated
 builder.AddRedisCache();

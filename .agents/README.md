@@ -31,7 +31,7 @@ Recent framework conventions such as step-driven cache defaults, `IDistributedCa
       add-state-machine.md
       scaffold-nof-app.md
   skills/
-    nof-app-development.md — Comprehensive skill for AI agents building NOF applications
+    nof-app-development/SKILL.md — Comprehensive skill for AI agents building NOF applications
 ```
 
 ## Who Should Use What
@@ -39,7 +39,7 @@ Recent framework conventions such as step-driven cache defaults, `IDistributedCa
 | You are… | Read rules | Use workflows | Use skills |
 |----------|-----------|---------------|------------|
 | **Contributing to NOF** (framework code, tests, CI/CD) | `rules/nof-dev.md` | `workflows/nof-dev/*` | — |
-| **Building an app with NOF** (your own project) | `rules/app-dev.md` | `workflows/app-dev/*` | `skills/nof-app-development.md` |
+| **Building an app with NOF** (your own project) | `rules/app-dev.md` | `workflows/app-dev/*` | `skills/nof-app-development/SKILL.md` |
 
 ## For AI Agent Clients
 

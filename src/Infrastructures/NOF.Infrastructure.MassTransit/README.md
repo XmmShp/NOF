@@ -8,17 +8,17 @@ Provides the message bus integration layer using MassTransit. Adapts NOF's `ICom
 
 ## Features
 
-- **Handler Adapters** â€?automatically wraps NOF handlers as MassTransit consumers
-- **Command Sending** â€?`ICommandSender` implementation via MassTransit send endpoints
-- **Event Publishing** â€?`IEventPublisher` for domain event distribution
-- **Notification Riding** â€?pub/sub notification delivery
-- **Endpoint Name Formatting** â€?convention-based endpoint naming with caching
-- **Deferred Sending** â€?`IDeferredCommandSender` for transactional outbox integration
+- **Handler Adapters** - automatically wraps NOF handlers as MassTransit consumers
+- **Command Sending** - `ICommandSender` implementation via MassTransit send endpoints
+- **Event Publishing** - `IEventPublisher` for domain event distribution
+- **Notification Riding** - pub/sub notification delivery
+- **Endpoint Name Formatting** - convention-based endpoint naming with caching
+- **Deferred Sending** - `IDeferredCommandSender` for transactional outbox integration
 
 ## Usage
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddMassTransit();
 ```

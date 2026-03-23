@@ -22,7 +22,7 @@
 ```csharp
 using NOF.Hosting.AspNetCore;
 
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 // Source-generated registrations
 builder.Services.AddMyAppAutoInjectServices();  // From [AutoInject]

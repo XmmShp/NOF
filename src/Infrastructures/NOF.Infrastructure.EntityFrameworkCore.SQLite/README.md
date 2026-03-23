@@ -9,7 +9,7 @@ Extends `NOF.Infrastructure.EntityFrameworkCore` with SQLite-specific database p
 ## Usage
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddEFCore<AppDbContext>()
     .AutoMigrate()

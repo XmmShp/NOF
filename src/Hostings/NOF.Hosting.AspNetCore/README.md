@@ -4,22 +4,22 @@ ASP.NET Core hosting package for the [NOF Framework](https://github.com/XmmShp/N
 
 ## Overview
 
-Provides the ASP.NET Core host integration for NOF applications, including automatic HTTP endpoint generation from `[ExposeToHttpEndpoint]` attributes, OpenAPI/Scalar documentation, JSON serialization configuration, middleware pipeline, and the `INOFAppBuilder` implementation for web applications.
+Provides the ASP.NET Core host integration for NOF applications, including automatic HTTP endpoint generation from `[HttpEndpoint]` attributes, OpenAPI/Scalar documentation, JSON serialization configuration, middleware pipeline, and the `INOFAppBuilder` implementation for web applications.
 
 ## Features
 
-- **Automatic Endpoint Mapping** â€?source generators turn `[ExposeToHttpEndpoint]` requests into minimal API endpoints
-- **OpenAPI & Scalar** â€?built-in OpenAPI document generation with Scalar UI
-- **JSON Configuration** â€?pre-configured `System.Text.Json` options with sensible defaults
-- **Invocation Context Middleware** â€?propagates tenant ID and other context through the request pipeline
-- **`[AutoInject]` Support** â€?bundled source generators for automatic DI registration
+- **Automatic Endpoint Mapping** - source generators turn `[HttpEndpoint]` requests into minimal API endpoints
+- **OpenAPI & Scalar** - built-in OpenAPI document generation with Scalar UI
+- **JSON Configuration** - pre-configured `System.Text.Json` options with sensible defaults
+- **Invocation Context Middleware** - propagates tenant ID and other context through the request pipeline
+- **`[AutoInject]` Support** - bundled source generators for automatic DI registration
 
 ## Usage
 
 ```csharp
-// useDefaultConfigs: true automatically calls UseDefaultSettings()
+// useDefaults: true automatically calls UseDefaultSettings()
 // which configures JSON options, CORS, and Scalar (in dev mode)
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
+var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.WithAutoApplicationParts();
 
@@ -30,10 +30,10 @@ app.MapAllHttpEndpoints();
 await app.RunAsync();
 ```
 
-Requests annotated with `[ExposeToHttpEndpoint]` are automatically mapped to minimal API endpoints:
+Requests annotated with `[HttpEndpoint]` are automatically mapped to minimal API endpoints:
 
 ```csharp
-[ExposeToHttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
+[HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
 [RequirePermission("orders:read")]
 public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
 ```
