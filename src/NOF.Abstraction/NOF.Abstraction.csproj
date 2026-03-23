@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <IsPackable>true</IsPackable>
+    <PackageId>NOF.Abstraction</PackageId>
+    <Description>Cross-cutting abstractions and annotations for the NOF Framework - shared initialization contracts, DI helper provider factory, and source-generation attributes.</Description>
+  </PropertyGroup>
+
+</Project>

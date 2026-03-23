@@ -8,12 +8,11 @@ public static partial class NOFInfrastructureExtensions
     {
         /// <summary>
         /// Applies the built-in NOF infrastructure defaults (service registration steps and initialization steps).
-        /// Existing defaults of the same type are removed before re-adding to keep the pipeline stable.
+        /// Each default step is added only when a step of the same type is not already present.
         /// </summary>
         public INOFAppBuilder AddInfrastructureDefaults()
         {
-            builder.TryAddRegistrationStep<InitializingServiceProviderFactoryRegistrationStep>()
-                .TryAddRegistrationStep<CoreServicesRegistrationStep>()
+            builder.TryAddRegistrationStep<CoreServicesRegistrationStep>()
                 .TryAddRegistrationStep<FallbackServiceRegistrationStep>()
                 .TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<ExceptionInboundMiddlewareStep>()
