@@ -1,3 +1,5 @@
+using NOF.Hosting;
+
 namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 
 public static class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions

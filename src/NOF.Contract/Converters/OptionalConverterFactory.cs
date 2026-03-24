@@ -52,7 +52,7 @@ internal class OptionalConverter<T> : JsonConverter<Optional<T>>
 }
 
 /// <summary>
-/// A <see cref="System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver"/> modifier that
+/// A <see cref="IJsonTypeInfoResolver"/> modifier that
 /// suppresses serialization of <see cref="Optional{T}"/> properties when
 /// <see cref="Optional{T}.HasValue"/> is <c>false</c>, so the property is omitted from the JSON
 /// output entirely rather than written as <c>null</c>.

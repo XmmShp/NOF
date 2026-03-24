@@ -117,8 +117,8 @@ public class HttpJwksProvider : IJwksProvider
 }
 
 /// <summary>
-/// Fetches JWKS via <see cref="NOF.Application.IRequestSender"/> and caches the keys.
-/// Because <see cref="NOF.Application.IRequestSender"/> is scoped, this provider
+/// Fetches JWKS via <see cref="Application.IRequestSender"/> and caches the keys.
+/// Because <see cref="Application.IRequestSender"/> is scoped, this provider
 /// creates a scope on each refresh to resolve it.
 /// </summary>
 public class RequestSenderJwksProvider : IJwksProvider

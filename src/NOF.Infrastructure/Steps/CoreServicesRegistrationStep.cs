@@ -13,7 +13,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        builder.Services.AddScoped<ICacheService>(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
+        builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
         builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
         builder.Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IMutableInvocationContext>());
         builder.Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IMutableUserContext>());

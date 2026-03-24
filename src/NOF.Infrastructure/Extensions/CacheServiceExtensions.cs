@@ -64,7 +64,7 @@ public static partial class NOFInfrastructureExtensions
                 services.Configure(name, configure);
             }
 
-            services.AddKeyedScoped<IOptions<CacheServiceOptions>>(name, (sp, key) =>
+            services.AddKeyedScoped(name, (sp, key) =>
                 Options.Create(sp.GetRequiredService<IOptionsMonitor<CacheServiceOptions>>().Get((string)key!)));
 
             // Keyed cache service factory explicitly resolves keyed deps and named options
@@ -80,6 +80,29 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredKeyedService<ICacheService>(key!));
 
             return new CacheServiceBuilder(name, services);
+        }
+
+        public ICacheServiceBuilder ReplaceOrAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
+            string name = ICacheServiceFactory.DefaultName,
+            Action<CacheServiceOptions>? configure = null)
+            where TImplementation : class, ICacheService
+        {
+            ArgumentNullException.ThrowIfNull(name);
+
+            var descriptorsToRemove = services
+                .Where(service =>
+                    Equals(service.ServiceKey, name) &&
+                    (service.ServiceType == typeof(ICacheService) ||
+                     service.ServiceType == typeof(IDistributedCache) ||
+                     service.ServiceType == typeof(IOptions<CacheServiceOptions>)))
+                .ToArray();
+
+            foreach (var descriptor in descriptorsToRemove)
+            {
+                services.Remove(descriptor);
+            }
+
+            return services.AddCacheService<TImplementation>(name, configure);
         }
 
         public ICacheServiceBuilder TryAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(

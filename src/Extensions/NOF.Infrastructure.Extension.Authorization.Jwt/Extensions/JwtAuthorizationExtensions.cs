@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Text.Json;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
@@ -40,8 +40,7 @@ public static partial class NOFJwtAuthorizationExtensions
             // JWKS HTTP client
             builder.Services.AddHttpClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
 
-            // HTTP-based JWKS provider (TryAdd authority's local provider wins if registered)
-            builder.Services.TryAddSingleton<IJwksProvider, HttpJwksProvider>();
+            builder.Services.ReplaceOrAddSingleton<IJwksProvider, HttpJwksProvider>();
 
             // Inbound/outbound JWT middleware steps
             builder.AddRegistrationStep(new JwtAuthorizationInboundMiddlewareStep());
@@ -84,15 +83,15 @@ public static partial class NOFJwtAuthorizationExtensions
             }
             else
             {
-                builder.Services.AddSingleton<IValidateOptions<JwtAuthorityOptions>, JwtAuthorityOptionsValidator>();
+                builder.Services.ReplaceOrAddSingleton<IValidateOptions<JwtAuthorityOptions>, JwtAuthorityOptionsValidator>();
                 builder.Services.AddOptions<JwtAuthorityOptions>();
             }
 
             // Signing key service (in-memory key ring)
-            builder.Services.AddSingleton<ISigningKeyService, SigningKeyService>();
+            builder.Services.ReplaceOrAddSingleton<ISigningKeyService, SigningKeyService>();
 
             // JWKS service
-            builder.Services.AddSingleton<IJwksService, JwksService>();
+            builder.Services.ReplaceOrAddSingleton<IJwksService, JwksService>();
 
             // Key rotation background service
             builder.Services.AddHostedService<JwtKeyRotationBackgroundService>();
@@ -100,11 +99,10 @@ public static partial class NOFJwtAuthorizationExtensions
             // Local JWKS provider overrides HttpJwksProvider (authority always uses local)
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, LocalJwksProvider>();
 
-            // Revoked refresh token repository (TryAdd user can override with custom impl)
-            builder.Services.AddSingleton<IRevokedRefreshTokenRepository, CacheRevokedRefreshTokenRepository>();
+            builder.Services.ReplaceOrAddSingleton<IRevokedRefreshTokenRepository, CacheRevokedRefreshTokenRepository>();
 
             // Bridge JwtAuthorityOptions.Issuer into JwtAuthorizationOptions
-            builder.Services.AddSingleton<IConfigureOptions<JwtAuthorizationOptions>>(
+            builder.Services.ReplaceOrAddSingleton<IConfigureOptions<JwtAuthorizationOptions>>(
                 sp =>
                 {
                     var authorityOptions = sp.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value;

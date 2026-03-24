@@ -1,3 +1,5 @@
+using NOF.Hosting;
+
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>
@@ -14,7 +16,7 @@ public readonly struct JwtAuthorizationSelector
 
     /// <summary>
     /// Replaces the default <see cref="HttpJwksProvider"/> with <see cref="RequestSenderJwksProvider"/>
-    /// which fetches JWKS via <see cref="NOF.Application.IRequestSender"/>.
+    /// which fetches JWKS via <see cref="Application.IRequestSender"/>.
     /// </summary>
     /// <returns>This selector for further chaining.</returns>
     public JwtAuthorizationSelector UseRequestJwksProvider()

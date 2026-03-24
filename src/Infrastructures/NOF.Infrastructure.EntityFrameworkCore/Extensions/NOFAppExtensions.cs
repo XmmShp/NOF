@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
@@ -15,36 +15,36 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             where TDbContext : NOFDbContext
         {
             #region Common Services
-            builder.Services.AddScoped<IInboxMessageRepository, EFCoreInboxMessageRepository>();
-            builder.Services.AddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
-            builder.Services.AddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
-            builder.Services.AddScoped<ITenantRepository, EFCoreTenantRepository>();
-            builder.Services.AddScoped<IUnitOfWork, EFCoreUnitOfWork>();
-            builder.Services.AddScoped<ITransactionManager, EFCoreTransactionManager>();
+            builder.Services.ReplaceOrAddScoped<IInboxMessageRepository, EFCoreInboxMessageRepository>();
+            builder.Services.ReplaceOrAddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
+            builder.Services.ReplaceOrAddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
+            builder.Services.ReplaceOrAddScoped<ITenantRepository, EFCoreTenantRepository>();
+            builder.Services.ReplaceOrAddScoped<IUnitOfWork, EFCoreUnitOfWork>();
+            builder.Services.ReplaceOrAddScoped<ITransactionManager, EFCoreTransactionManager>();
             #endregion
 
             #region DbContext Services
-            builder.Services.AddScoped(sp =>
+            builder.Services.ReplaceOrAddScoped(sp =>
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory<TDbContext>>();
                 var invocationContext = sp.GetRequiredService<IInvocationContext>();
                 return factory.CreateDbContext(invocationContext.TenantId);
             });
-            builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
-            builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
+            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
+            builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
             #endregion
 
             #region Infrastructure Services
             builder.Services.AddOptionsInConfiguration<DbContextFactoryOptions>("NOF:DbContextFactory");
 
-            builder.Services.AddScoped<INOFDbContextFactory<TDbContext>>(sp => new NOFDbContextFactory<TDbContext>(
+            builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>>(sp => new NOFDbContextFactory<TDbContext>(
                 sp,
                 sp.GetRequiredService<IInvocationContext>(),
                 sp.GetRequiredService<IDbContextConfigurator>(),
                 sp.GetRequiredService<IOptions<DbContextFactoryOptions>>(),
                 sp.GetRequiredService<ILogger<NOFDbContextFactory<TDbContext>>>()));
 
-            builder.Services.AddScoped<IDbContextFactory<TDbContext>>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
+            builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
 
             builder.Services.AddHostedService<InboxCleanupBackgroundService>();
             builder.Services.AddHostedService<OutboxCleanupBackgroundService>();

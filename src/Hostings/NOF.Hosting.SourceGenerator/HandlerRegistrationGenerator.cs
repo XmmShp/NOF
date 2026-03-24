@@ -160,7 +160,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("#pragma warning disable CS8620");
         sb.AppendLine();
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine("using NOF.Infrastructure;");
+        sb.AppendLine("using NOF.Hosting;");
         sb.AppendLine();
 
         sb.AppendLine($"namespace {assemblyName}");

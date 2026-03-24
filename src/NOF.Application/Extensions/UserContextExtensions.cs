@@ -11,7 +11,7 @@ public static partial class NOFApplicationExtensions
         public IServiceCollection AddUserContext(Func<IServiceProvider, IUserContext> implementationFactory)
         {
             ArgumentNullException.ThrowIfNull(implementationFactory);
-            services.TryAddScoped<IUserContext>(implementationFactory);
+            services.TryAddScoped(implementationFactory);
             return services;
         }
     }

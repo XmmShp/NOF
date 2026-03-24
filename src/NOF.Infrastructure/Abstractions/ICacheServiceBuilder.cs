@@ -20,7 +20,7 @@ public interface ICacheServiceBuilder
     ICacheServiceBuilder WithSerializer(ICacheSerializer serializer)
     {
         ArgumentNullException.ThrowIfNull(serializer);
-        Services.AddKeyedScoped<ICacheSerializer>(Name, (_, _) => serializer);
+        Services.AddKeyedScoped(Name, (_, _) => serializer);
         return this;
     }
 
@@ -28,7 +28,7 @@ public interface ICacheServiceBuilder
     ICacheServiceBuilder WithSerializer(Func<IServiceProvider, ICacheSerializer> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        Services.AddKeyedScoped<ICacheSerializer>(Name, (sp, _) => factory(sp));
+        Services.AddKeyedScoped(Name, (sp, _) => factory(sp));
         return this;
     }
 
@@ -43,7 +43,7 @@ public interface ICacheServiceBuilder
     ICacheServiceBuilder WithLockRetryStrategy(ICacheLockRetryStrategy strategy)
     {
         ArgumentNullException.ThrowIfNull(strategy);
-        Services.AddKeyedScoped<ICacheLockRetryStrategy>(Name, (_, _) => strategy);
+        Services.AddKeyedScoped(Name, (_, _) => strategy);
         return this;
     }
 
@@ -51,7 +51,7 @@ public interface ICacheServiceBuilder
     ICacheServiceBuilder WithLockRetryStrategy(Func<IServiceProvider, ICacheLockRetryStrategy> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        Services.AddKeyedScoped<ICacheLockRetryStrategy>(Name, (sp, _) => factory(sp));
+        Services.AddKeyedScoped(Name, (sp, _) => factory(sp));
         return this;
     }
 

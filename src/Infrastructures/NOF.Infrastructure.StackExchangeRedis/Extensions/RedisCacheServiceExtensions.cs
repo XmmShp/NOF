@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
 using NOF.Application.Extension.Redis;
+using NOF.Hosting;
 using StackExchange.Redis;
 
 namespace NOF.Infrastructure.StackExchangeRedis;
@@ -21,8 +21,7 @@ public static class NOFInfrastructureExtensions
         /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
         public INOFAppBuilder AddRedisCache(string? name = null, string connectionName = "redis", Action<CacheServiceOptions>? configureOptions = null)
         {
-            // Register IConnectionMultiplexer if not already registered
-            builder.Services.TryAddSingleton<IConnectionMultiplexer>(sp =>
+            builder.Services.ReplaceOrAddSingleton<IConnectionMultiplexer>(sp =>
             {
                 var configuration = sp.GetRequiredService<IConfiguration>();
                 var connectionString = configuration.GetConnectionString(connectionName)
@@ -32,10 +31,10 @@ public static class NOFInfrastructureExtensions
             });
 
             var cacheName = name ?? ICacheServiceFactory.DefaultName;
-            builder.Services.AddCacheService<RedisCacheService>(cacheName, configureOptions);
-            builder.Services.AddKeyedScoped<IRedisCacheService>(cacheName, (sp, key) =>
+            builder.Services.ReplaceOrAddCacheService<RedisCacheService>(cacheName, configureOptions);
+            builder.Services.AddKeyedScoped(cacheName, (sp, key) =>
                 (IRedisCacheService)sp.GetRequiredKeyedService<ICacheService>(key!));
-            builder.Services.TryAddScoped<IRedisCacheService>(sp =>
+            builder.Services.ReplaceOrAddScoped(sp =>
                 sp.GetRequiredKeyedService<IRedisCacheService>(ICacheServiceFactory.DefaultName));
 
             return builder;

@@ -1,6 +1,6 @@
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
-public static partial class NOFInfrastructureExtensions
+public static partial class NOFHostingExtensions
 {
     extension(string str)
     {
@@ -28,6 +28,7 @@ public static partial class NOFInfrastructureExtensions
             {
                 clientName = clientName[..^client.Length];
             }
+
             return clientName;
         }
 

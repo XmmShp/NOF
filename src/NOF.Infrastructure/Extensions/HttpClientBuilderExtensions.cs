@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
@@ -23,8 +23,8 @@ public static partial class NOFInfrastructureExtensions
         public IHttpClientBuilder AddScopeAwareHttpMessageHandler<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>()
             where THandler : DelegatingHandler
         {
-            builder.Services.TryAddTransient<THandler>();
-            builder.Services.Replace(ServiceDescriptor.Transient<IHttpClientFactory, ScopeAwareHttpClientFactory>());
+            builder.Services.ReplaceOrAddTransient<THandler, THandler>();
+            builder.Services.ReplaceOrAddTransient<IHttpClientFactory, ScopeAwareHttpClientFactory>();
 
             builder.Services.Configure<ScopeAwareHttpClientFactoryOptions>(
                 builder.Name, options =>

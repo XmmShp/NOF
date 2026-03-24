@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
@@ -26,7 +27,7 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
         {
             var key = EventHandlerKey.Of(info.EventType);
             builder.Services.AddKeyedScoped(info.HandlerType, key);
-            builder.Services.AddKeyedScoped<IEventHandler>(key, (sp, k) => (IEventHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
+            builder.Services.AddKeyedScoped(key, (sp, k) => (IEventHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
         }
 
         foreach (var info in infos.Notifications)
@@ -34,7 +35,7 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
             TypeRegistry.Register(info.NotificationType);
             var key = NotificationHandlerKey.Of(info.NotificationType);
             builder.Services.AddKeyedScoped(info.HandlerType, key);
-            builder.Services.AddKeyedScoped<INotificationHandler>(key, (sp, k) => (INotificationHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
+            builder.Services.AddKeyedScoped(key, (sp, k) => (INotificationHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
         }
 
         foreach (var info in infos.RequestsWithoutResponse)

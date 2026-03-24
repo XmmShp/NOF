@@ -15,7 +15,7 @@ public sealed class GenerateServiceAttribute : Attribute
     public string[]? Namespaces { get; init; }
 
     /// <summary>
-    /// Whether to generate an HTTP client implementation (uses <see cref="System.Net.Http.HttpClient"/>).
+    /// Whether to generate an HTTP client implementation (uses <see cref="HttpClient"/>).
     /// Defaults to <c>true</c>.
     /// </summary>
     public bool GenerateHttpClient { get; init; } = true;

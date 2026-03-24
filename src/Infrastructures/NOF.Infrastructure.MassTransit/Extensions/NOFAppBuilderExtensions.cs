@@ -1,5 +1,6 @@
 using MassTransit.Logging;
 using MassTransit.Monitoring;
+using NOF.Hosting;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
