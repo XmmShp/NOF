@@ -19,16 +19,14 @@ namespace NOF.Infrastructure.Core.Tests.Steps;
 public class CoreServicesRegistrationStepTests
 {
     [Fact]
-    public async Task FallbackStep_ExecuteAsync_ShouldNotRegisterInMemoryPersistenceServicesByDefault()
+    public async Task CoreServicesStep_ExecuteAsync_ShouldNotRegisterInMemoryPersistenceServicesByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
-        var coreStep = new CoreServicesRegistrationStep();
-        var step = new FallbackServiceRegistrationStep();
+        var step = new CoreServicesRegistrationStep();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 
-        await coreStep.ExecuteAsync(context);
         await step.ExecuteAsync(context);
 
         using var provider = builder.Services.BuildServiceProvider();
@@ -44,14 +42,12 @@ public class CoreServicesRegistrationStepTests
     }
 
     [Fact]
-    public async Task FallbackStep_ExecuteAsync_ShouldNotRegisterMemoryPersistenceWarningHostedServiceByDefault()
+    public async Task CoreServicesStep_ExecuteAsync_ShouldNotRegisterMemoryPersistenceWarningHostedServiceByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
-        var coreStep = new CoreServicesRegistrationStep();
-        var step = new FallbackServiceRegistrationStep();
+        var step = new CoreServicesRegistrationStep();
 
-        await coreStep.ExecuteAsync(context);
         await step.ExecuteAsync(context);
 
         using var provider = builder.Services.BuildServiceProvider();
@@ -61,7 +57,7 @@ public class CoreServicesRegistrationStepTests
     }
 
     [Fact]
-    public async Task CoreServicesStep_ExecuteAsync_ShouldRegisterHostedServicesAndOutboxOptionsOnly()
+    public async Task CoreServicesStep_ExecuteAsync_ShouldRegisterCoreServicesAndOutboxOptions()
     {
         var builder = new TestServiceRegistrationContext();
         var context = new TestServiceRegistrationContext(builder);
@@ -76,6 +72,7 @@ public class CoreServicesRegistrationStepTests
             service.ImplementationType == typeof(OutboxMessageBackgroundService));
 
         provider.GetRequiredService<IOptions<OutboxOptions>>().Should().NotBeNull();
+        provider.GetRequiredService<IEventPublisher>().Should().BeOfType<EventPublisher>();
 
         builder.Services.Should().NotContain(service => service.ServiceType == typeof(IUnitOfWork));
         builder.Services.Should().NotContain(service => service.ServiceType == typeof(ITransactionManager));

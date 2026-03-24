@@ -42,7 +42,6 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
         Services.TryAddSingleton<OutboundPipelineTypes>();
 
         new CoreServicesRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
-        new FallbackServiceRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
     }
 
     protected override Task<IHost> BuildApplicationAsync()

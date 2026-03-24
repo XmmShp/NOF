@@ -13,7 +13,6 @@ public static partial class NOFInfrastructureExtensions
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             builder.TryAddRegistrationStep<CoreServicesRegistrationStep>()
-                .TryAddRegistrationStep<FallbackServiceRegistrationStep>()
                 .TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<ExceptionInboundMiddlewareStep>()
                 .TryAddRegistrationStep<TenantInboundMiddlewareStep>()
