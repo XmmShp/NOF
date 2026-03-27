@@ -5,7 +5,9 @@
     <Project Path="sample/NOF.Sample.Application/NOF.Sample.Application.csproj" Id="df9909e4-d1da-4865-95d8-27d133d9d32c" />
     <Project Path="sample/NOF.Sample.Contract/NOF.Sample.Contract.csproj" Id="cfe0cc27-76f5-44de-804b-717a85e9a8b8" />
     <Project Path="sample/NOF.Sample.Domain/NOF.Sample.Domain.csproj" Id="8cb8747c-bc2a-4330-bb74-4ae457f07b98" />
-    <Project Path="sample/NOF.Sample.WebUI/NOF.Sample.WebUI.csproj" Id="4221e971-890d-4992-89fa-84f5904663cf" />
+    <Project Path="sample/NOF.Sample.Maui/NOF.Sample.Maui.csproj" Id="f6fc6c9e-c2f0-4650-991f-d1492bf16f9f" />
+    <Project Path="sample/NOF.Sample.UI/NOF.Sample.UI.csproj" Id="4221e971-890d-4992-89fa-84f5904663cf" />
+    <Project Path="sample/NOF.Sample.Wasm/NOF.Sample.Wasm.csproj" Id="7ec16e6e-53f6-4e3d-b6a0-98f20e028ad9" />
     <Project Path="sample/NOF.Sample/NOF.Sample.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
   </Folder>
   <Folder Name="/Solution Items/">

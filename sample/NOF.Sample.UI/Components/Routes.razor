@@ -1,5 +1,5 @@
-@using NOF.Sample.WebUI.Pages
-<Router AppAssembly="typeof(App).Assembly" NotFoundPage="typeof(NotFound)">
+@using NOF.Sample.UI.Pages
+<Router AppAssembly="typeof(MainLayout).Assembly" NotFoundPage="typeof(NotFound)">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

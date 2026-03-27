@@ -2,7 +2,7 @@ using AntDesign;
 using NOF.Contract;
 using Result = NOF.Contract.Result;
 
-namespace NOF.Sample.WebUI;
+namespace NOF.Sample.UI;
 
 public static class NOFSampleWebUIExtensions
 {

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AntDesign" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.BlazorWebAssembly\NOF.Hosting.BlazorWebAssembly.csproj" />
+    <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
+    <ProjectReference Include="..\NOF.Sample.UI\NOF.Sample.UI.csproj" />
+  </ItemGroup>
+
+</Project>

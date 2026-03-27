@@ -10,7 +10,6 @@ using NOF.Infrastructure.MassTransit.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Application;
-using NOF.Sample.WebUI;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
@@ -34,9 +33,11 @@ builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 
-builder.Services.AddAntDesign()
-    .AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddAntDesign();
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents()
+    .AddInteractiveWebAssemblyComponents();
 
 builder.Services.AddScoped<INOFSampleService, RequestSenderNOFSampleService>();
 
@@ -60,7 +61,11 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(
+        typeof(NOF.Sample.UI._Imports).Assembly,
+        typeof(NOF.Sample.Wasm._Imports).Assembly);
 
 app.MapAllHttpEndpoints();
 
