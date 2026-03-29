@@ -9,11 +9,13 @@ public static partial class NOFInfrastructureMassTransitExtensions
 {
     extension(IMediator mediator)
     {
-        public async Task<Result> SendRequest(IRequest request, IDictionary<string, string?>? headers = null, RequestTimeout timeout = default, CancellationToken cancellationToken = default)
+        public async Task<Result> SendRequest(object request, IDictionary<string, string?>? headers = null, RequestTimeout timeout = default, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(request);
             try
             {
-                using var handle = mediator.CreateRequest(request, cancellationToken, timeout);
+                dynamic requestHandle = mediator.CreateRequest((dynamic)request, cancellationToken, timeout);
+                using var handle = requestHandle;
                 SetHeaders(handle, headers);
                 var response = await handle.GetResponse<Result>().ConfigureAwait(false);
                 return response.Message;
@@ -30,11 +32,13 @@ public static partial class NOFInfrastructureMassTransitExtensions
             }
         }
 
-        public async Task<Result<TResponse>> SendRequest<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, RequestTimeout timeout = default, CancellationToken cancellationToken = default)
+        public async Task<Result<TResponse>> SendRequest<TResponse>(object request, IDictionary<string, string?>? headers = null, RequestTimeout timeout = default, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(request);
             try
             {
-                using var handle = mediator.CreateRequest(request, cancellationToken, timeout);
+                dynamic requestHandle = mediator.CreateRequest((dynamic)request, cancellationToken, timeout);
+                using var handle = requestHandle;
                 SetHeaders(handle, headers);
                 var response = await handle.GetResponse<Result<TResponse>>().ConfigureAwait(false);
                 return response.Message;

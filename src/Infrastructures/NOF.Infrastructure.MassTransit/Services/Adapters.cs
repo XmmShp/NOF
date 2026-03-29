@@ -8,7 +8,7 @@ namespace NOF.Infrastructure.MassTransit;
 
 internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<TRequest>
     where THandler : IRequestHandler<TRequest>
-    where TRequest : class, IRequest
+    where TRequest : class
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IInboundPipelineExecutor _executor;
@@ -38,7 +38,7 @@ internal class MassTransitRequestHandlerAdapter<THandler, TRequest> : IConsumer<
 
 internal class MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse> : IConsumer<TRequest>
     where THandler : IRequestHandler<TRequest, TResponse>
-    where TRequest : class, IRequest<TResponse>
+    where TRequest : class
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IInboundPipelineExecutor _executor;
@@ -136,7 +136,7 @@ internal static class MassTransitAdapterHelper
 
         return new InboundContext
         {
-            Message = (IMessage)context.Message,
+            Message = context.Message!,
             Handler = handler,
             Headers = headers
         };

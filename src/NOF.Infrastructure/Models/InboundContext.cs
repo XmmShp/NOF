@@ -14,7 +14,7 @@ public sealed class InboundContext
     /// <summary>
     /// Message instance
     /// </summary>
-    public required IMessage Message { get; init; }
+    public required object Message { get; init; }
 
     /// <summary>
     /// Handler instance

@@ -61,7 +61,7 @@ public class NOFTestHostTests
         builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
 
         await using var host = await builder.BuildTestHostAsync();
-        var result = await host.SendAsync(new EchoRequest("hello"));
+        var result = await host.SendAsync<string>(new EchoRequest("hello"));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("hello");
@@ -127,9 +127,9 @@ public class NOFTestHostTests
         second.ScopeInstanceId.Should().NotBe(firstA.ScopeInstanceId);
     }
 
-    private sealed record PingRequest(string Value) : IRequest;
+    private sealed record PingRequest(string Value);
 
-    private sealed record EchoRequest(string Value) : IRequest<string>;
+    private sealed record EchoRequest(string Value);
 
     private sealed record TestCommand(string Value) : ICommand;
 
@@ -137,12 +137,12 @@ public class NOFTestHostTests
 
     private sealed class FakeRequestDispatcher : IRequestDispatcher
     {
-        public Task<Result> DispatchAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+        public Task<Result> DispatchAsync(object request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result.Success());
         }
 
-        public Task<Result<TResponse>> DispatchAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
+        public Task<Result<TResponse>> DispatchAsync<TResponse>(object request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
         {
             object? value = request switch
             {
@@ -202,3 +202,4 @@ public class NOFTestHostTests
         }
     }
 }
+

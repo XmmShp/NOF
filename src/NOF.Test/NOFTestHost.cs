@@ -25,16 +25,16 @@ public sealed class NOFTestHost : IAsyncDisposable, IDisposable
         return new NOFTestScope(Services.CreateAsyncScope());
     }
 
-    public async Task<Result> SendAsync(IRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result> SendAsync(object request, CancellationToken cancellationToken = default)
     {
         using var scope = CreateScope();
         return await scope.SendAsync(request, cancellationToken);
     }
 
-    public async Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    public async Task<Result<TResponse>> SendAsync<TResponse>(object request, CancellationToken cancellationToken = default)
     {
         using var scope = CreateScope();
-        return await scope.SendAsync(request, cancellationToken);
+        return await scope.SendAsync<TResponse>(request, cancellationToken);
     }
 
     public async Task SendAsync(ICommand command, CancellationToken cancellationToken = default)

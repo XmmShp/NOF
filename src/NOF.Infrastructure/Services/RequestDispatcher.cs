@@ -24,11 +24,13 @@ public sealed class RequestDispatcher : IRequestDispatcher
     }
 
     public async Task<Result> DispatchAsync(
-        IRequest request,
+        object request,
         IDictionary<string, string?>? headers = null,
         string? destinationEndpointName = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var outboundContext = BuildOutboundContext(request, headers, destinationEndpointName);
 
         await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>
@@ -57,11 +59,13 @@ public sealed class RequestDispatcher : IRequestDispatcher
     }
 
     public async Task<Result<TResponse>> DispatchAsync<TResponse>(
-        IRequest<TResponse> request,
+        object request,
         IDictionary<string, string?>? headers = null,
         string? destinationEndpointName = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var outboundContext = BuildOutboundContext(request, headers, destinationEndpointName);
 
         await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>
@@ -89,7 +93,7 @@ public sealed class RequestDispatcher : IRequestDispatcher
         return Result.From<TResponse>(outboundContext.Response!);
     }
 
-    private static OutboundContext BuildOutboundContext(IRequestMarker request, IDictionary<string, string?>? headers, string? destinationEndpointName)
+    private static OutboundContext BuildOutboundContext(object request, IDictionary<string, string?>? headers, string? destinationEndpointName)
     {
         return new OutboundContext
         {
@@ -101,7 +105,7 @@ public sealed class RequestDispatcher : IRequestDispatcher
         };
     }
 
-    private static InboundContext BuildInboundContext(IRequestMarker request, IMessageHandler handler, IDictionary<string, string?> headers)
+    private static InboundContext BuildInboundContext(object request, IMessageHandler handler, IDictionary<string, string?> headers)
     {
         return new InboundContext
         {
@@ -111,4 +115,3 @@ public sealed class RequestDispatcher : IRequestDispatcher
         };
     }
 }
-

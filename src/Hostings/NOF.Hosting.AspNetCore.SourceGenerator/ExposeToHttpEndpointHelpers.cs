@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -8,21 +9,8 @@ namespace NOF.Hosting.AspNetCore.SourceGenerator;
 
 internal static class ExposeToHttpEndpointHelpers
 {
-    public const string PublicApiAttributeFqn = "NOF.Contract.PublicApiAttribute";
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
     public const string GenerateServiceAttributeFqn = "NOF.Contract.GenerateServiceAttribute";
-
-    public static bool HasHttpEndpointAttribute(INamedTypeSymbol symbol)
-    {
-        return symbol.GetAttributes()
-            .Any(attr => attr.AttributeClass?.ToDisplayString() == HttpEndpointAttributeFqn);
-    }
-
-    public static bool HasPublicApiAttribute(INamedTypeSymbol symbol)
-    {
-        return symbol.GetAttributes()
-            .Any(attr => attr.AttributeClass?.ToDisplayString() == PublicApiAttributeFqn);
-    }
 
     public static bool HasGenerateServiceAttribute(INamedTypeSymbol symbol)
     {
@@ -30,12 +18,53 @@ internal static class ExposeToHttpEndpointHelpers
             .Any(attr => attr.AttributeClass?.ToDisplayString() == GenerateServiceAttributeFqn);
     }
 
-    public static bool IsRequestType(INamedTypeSymbol typeSymbol)
+    public static bool IsCancellationToken(ITypeSymbol typeSymbol)
+        => typeSymbol.ToDisplayString() == "System.Threading.CancellationToken";
+
+    public static bool TryGetRequestParameter(IMethodSymbol method, out IParameterSymbol parameter)
     {
-        return typeSymbol.AllInterfaces.Any(i =>
-            i.ToDisplayString() == "NOF.Contract.IRequest"
-            || (i is { IsGenericType: true }
-                && i.OriginalDefinition.ToDisplayString() == "NOF.Contract.IRequest<TResponse>"));
+        var candidates = method.Parameters.Where(p => !IsCancellationToken(p.Type)).ToList();
+        if (candidates.Count == 1)
+        {
+            parameter = candidates[0];
+            return true;
+        }
+
+        parameter = null!;
+        return false;
+    }
+
+    public static bool TryGetResultResponseType(IMethodSymbol method, out ITypeSymbol? responseType)
+    {
+        responseType = null;
+        if (method.ReturnType is not INamedTypeSymbol { IsGenericType: true } returnType)
+        {
+            return false;
+        }
+
+        if (returnType.OriginalDefinition.ToDisplayString() != "System.Threading.Tasks.Task<TResult>")
+        {
+            return false;
+        }
+
+        if (returnType.TypeArguments[0] is not INamedTypeSymbol resultType)
+        {
+            return false;
+        }
+
+        if (resultType.ToDisplayString() == "NOF.Contract.Result")
+        {
+            return true;
+        }
+
+        if (resultType is { IsGenericType: true } &&
+            resultType.OriginalDefinition.ToDisplayString() == "NOF.Contract.Result<T>")
+        {
+            responseType = resultType.TypeArguments[0];
+            return true;
+        }
+
+        return false;
     }
 
     public static List<IPropertySymbol> GetAllPublicProperties(INamedTypeSymbol typeSymbol)
@@ -53,8 +82,10 @@ internal static class ExposeToHttpEndpointHelpers
                     properties.Add(prop);
                 }
             }
+
             current = current.BaseType;
         }
+
         return properties;
     }
 
@@ -66,149 +97,67 @@ internal static class ExposeToHttpEndpointHelpers
         {
             result.Add(match.Groups[1].Value);
         }
+
         return result;
     }
 
-    public static ITypeSymbol? GetResponseType(INamedTypeSymbol requestType)
+    public static EndpointInfo ExtractEndpointInfo(ServiceMethodInfo method)
     {
-        var requestInterface = requestType.AllInterfaces
-            .FirstOrDefault(i => i.OriginalDefinition.ToDisplayString() == "NOF.Contract.IRequest<TResponse>"
-                                 && i.IsGenericType);
+        var methodAttr = method.Method.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == HttpEndpointAttributeFqn);
 
-        return requestInterface is { TypeArguments.Length: 1 }
-            ? requestInterface.TypeArguments[0]
-            : null;
-    }
+        var httpMethod = methodAttr is null
+            ? HttpVerb.Post
+            : (HttpVerb)methodAttr.ConstructorArguments[0].Value!;
 
-    /// <summary>
-    /// Gets the operation name from a PublicApiAttribute on a request type.
-    /// Falls back to removing "Request" suffix from the class name.
-    /// </summary>
-    public static string GetOperationName(INamedTypeSymbol classSymbol)
-    {
-        var publicApiAttr = classSymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == PublicApiAttributeFqn);
+        var route = methodAttr is null
+            ? method.OperationName
+            : methodAttr.ConstructorArguments.Length > 1
+                ? methodAttr.ConstructorArguments[1].Value as string
+                : null;
 
-        var operationName = publicApiAttr?.NamedArguments
-            .FirstOrDefault(arg => arg.Key == "OperationName").Value.Value as string;
-
-        if (!string.IsNullOrEmpty(operationName))
-        {
-            return operationName!;
-        }
-
-        const string requestSuffix = "Request";
-        return classSymbol.Name.EndsWith(requestSuffix)
-            ? classSymbol.Name.Substring(0, classSymbol.Name.Length - requestSuffix.Length)
-            : classSymbol.Name;
-    }
-
-    /// <summary>
-    /// Creates a default EndpointInfo for a request that has [PublicApi] but no [HttpEndpoint].
-    /// Defaults to POST with the operation name as the route.
-    /// </summary>
-    public static EndpointInfo ExtractDefaultEndpointInfo(INamedTypeSymbol classSymbol)
-    {
-        var operationName = GetOperationName(classSymbol);
-        var responseType = GetResponseType(classSymbol);
-
-        var allAttrs = classSymbol.GetAttributes();
-
-        var displayName = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Contract.EndpointNameAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var description = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Contract.EndpointDescriptionAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var summary = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Contract.SummaryAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var tags = allAttrs
-            .Where(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.CategoryAttribute")
-            .Select(a => a.ConstructorArguments.FirstOrDefault().Value as string)
-            .Where(v => v != null)
-            .ToArray();
-
-        return new EndpointInfo
-        {
-            RequestType = classSymbol,
-            ResponseType = responseType,
-            Method = HttpVerb.Post,
-            Route = operationName,
-            OperationName = operationName,
-            DisplayName = displayName,
-            Description = description,
-            Summary = summary,
-            Tags = tags!
-        };
-    }
-
-    /// <summary>
-    /// Gets the full namespace string from an INamespaceSymbol.
-    /// </summary>
-    public static string GetFullNamespace(INamespaceSymbol ns)
-    {
-        var parts = new List<string>();
-        while (ns is not null && !string.IsNullOrEmpty(ns.Name))
-        {
-            parts.Insert(0, ns.Name);
-            ns = ns.ContainingNamespace;
-        }
-        return string.Join(".", parts);
-    }
-
-    public static EndpointInfo ExtractEndpointInfo(
-        INamedTypeSymbol classSymbol,
-        AttributeData httpAttr)
-    {
-        var method = (HttpVerb)httpAttr.ConstructorArguments[0].Value!;
-        var route = httpAttr.ConstructorArguments.Length > 1
-            ? httpAttr.ConstructorArguments[1].Value as string
-            : null;
         route = route?.TrimEnd('/');
+        route ??= method.OperationName;
 
-        var operationName = GetOperationName(classSymbol);
+        var displayName = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.EndpointNameAttribute");
 
-        route ??= operationName;
+        var description = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.EndpointDescriptionAttribute");
 
-        var responseType = GetResponseType(classSymbol);
+        var summary = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.SummaryAttribute");
 
-        var allAttrs = classSymbol.GetAttributes();
-
-        var displayName = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Contract.EndpointNameAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var description = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Contract.EndpointDescriptionAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var summary = allAttrs
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "NOF.Contract.SummaryAttribute")
-            ?.ConstructorArguments.FirstOrDefault().Value as string;
-
-        var tags = allAttrs
+        var tags = method.Method.GetAttributes()
             .Where(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.CategoryAttribute")
             .Select(a => a.ConstructorArguments.FirstOrDefault().Value as string)
             .Where(v => v != null)
+            .Cast<string>()
             .ToArray();
 
         return new EndpointInfo
         {
-            RequestType = classSymbol,
-            ResponseType = responseType,
-            Method = method,
+            RequestType = method.RequestType,
+            ResponseType = method.ResponseType,
+            Method = httpMethod,
             Route = route,
-            OperationName = operationName,
+            OperationName = method.OperationName,
             DisplayName = displayName,
             Description = description,
             Summary = summary,
-            Tags = tags!
+            Tags = tags
         };
     }
+
+    private static string? TryGetCtorString(ImmutableArray<AttributeData> attributes, string attributeFqn)
+        => attributes
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == attributeFqn)
+            ?.ConstructorArguments.FirstOrDefault().Value as string;
+}
+
+internal sealed class ServiceMethodInfo
+{
+    public IMethodSymbol Method { get; set; } = null!;
+    public INamedTypeSymbol RequestType { get; set; } = null!;
+    public ITypeSymbol? ResponseType { get; set; }
+    public string OperationName { get; set; } = string.Empty;
 }
 
 internal class EndpointInfo
@@ -232,3 +181,4 @@ internal enum HttpVerb
     Delete,
     Patch
 }
+

@@ -1,10 +1,9 @@
 namespace NOF.Contract;
 
 /// <summary>
-/// Marks a request type to be exposed as an HTTP endpoint.
-/// Requires <see cref="PublicApiAttribute"/> to also be present on the type.
+/// Marks a service method (or legacy request type) to be exposed as an HTTP endpoint.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class HttpEndpointAttribute : Attribute
 {
     /// <summary>

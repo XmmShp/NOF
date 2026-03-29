@@ -9,7 +9,7 @@ namespace NOF.Application;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public interface IRequestHandler : IMessageHandler
 {
-    Task<IResult> HandleAsync(IRequestMarker request, CancellationToken cancellationToken);
+    Task<IResult> HandleAsync(object request, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -17,9 +17,9 @@ public interface IRequestHandler : IMessageHandler
 /// </summary>
 /// <typeparam name="TRequest">The request type.</typeparam>
 public interface IRequestHandler<in TRequest> : IRequestHandler
-    where TRequest : IRequest
+    where TRequest : class
 {
-    async Task<IResult> IRequestHandler.HandleAsync(IRequestMarker request, CancellationToken cancellationToken)
+    async Task<IResult> IRequestHandler.HandleAsync(object request, CancellationToken cancellationToken)
         => await HandleAsync((TRequest)request, cancellationToken);
 
     /// <summary>Handles the request.</summary>
@@ -35,9 +35,9 @@ public interface IRequestHandler<in TRequest> : IRequestHandler
 /// <typeparam name="TRequest">The request type.</typeparam>
 /// <typeparam name="TResponse">The response type.</typeparam>
 public interface IRequestHandler<in TRequest, TResponse> : IRequestHandler
-    where TRequest : class, IRequest<TResponse>
+    where TRequest : class
 {
-    async Task<IResult> IRequestHandler.HandleAsync(IRequestMarker request, CancellationToken cancellationToken)
+    async Task<IResult> IRequestHandler.HandleAsync(object request, CancellationToken cancellationToken)
         => await HandleAsync((TRequest)request, cancellationToken);
 
     /// <summary>Handles the request and returns a typed response.</summary>

@@ -14,13 +14,11 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Use CompilationProvider to scan both source and referenced assemblies for [GenerateService]
         context.RegisterSourceOutput(context.CompilationProvider, static (ctx, compilation) => Generate(ctx, compilation));
     }
 
     private static void Generate(SourceProductionContext context, Compilation compilation)
     {
-        // Collect [GenerateService] interfaces from source and referenced assemblies
         var generateServiceInterfaces = new List<INamedTypeSymbol>();
 
         CollectGenerateServiceInterfaces(compilation.Assembly.GlobalNamespace, generateServiceInterfaces);
@@ -34,69 +32,18 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             return;
         }
 
-        // Collect all scan namespaces and extra types from all [GenerateService] interfaces
-        var scanNamespaces = new HashSet<string>(StringComparer.Ordinal);
-        var extraTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-
+        var endpointInfos = new List<EndpointInfo>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var iface in generateServiceInterfaces)
         {
-            var attr = iface.GetAttributes()
-                .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn);
-
-            var namespacesArg = attr.NamedArguments
-                .FirstOrDefault(a => a.Key == "Namespaces").Value;
-
-            if (namespacesArg.Kind == TypedConstantKind.Array && !namespacesArg.Values.IsDefaultOrEmpty)
+            foreach (var method in GetServiceMethods(iface))
             {
-                foreach (var ns in namespacesArg.Values)
+                var endpoint = GetEndpointInfo(method);
+                var key = $"{endpoint.Method}:{endpoint.Route}:{endpoint.RequestType.ToDisplayString()}:{endpoint.OperationName}";
+                if (seen.Add(key))
                 {
-                    if (ns.Value is string s)
-                    {
-                        scanNamespaces.Add(s);
-                    }
+                    endpointInfos.Add(endpoint);
                 }
-            }
-            else
-            {
-                var ifaceNs = ExposeToHttpEndpointHelpers.GetFullNamespace(iface.ContainingNamespace);
-                if (!string.IsNullOrEmpty(ifaceNs))
-                {
-                    scanNamespaces.Add(ifaceNs);
-                }
-            }
-
-            var extraTypesArg = attr.NamedArguments
-                .FirstOrDefault(a => a.Key == "ExtraTypes").Value;
-            if (extraTypesArg.Kind == TypedConstantKind.Array && !extraTypesArg.Values.IsDefaultOrEmpty)
-            {
-                foreach (var et in extraTypesArg.Values)
-                {
-                    if (et.Value is INamedTypeSymbol extraType)
-                    {
-                        extraTypes.Add(extraType);
-                    }
-                }
-            }
-        }
-
-        // Scan for [PublicApi] request types in the specified namespaces
-        var seenTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-        var endpointInfos = new List<EndpointInfo>();
-
-        CollectPublicApiTypes(compilation.Assembly.GlobalNamespace, scanNamespaces, endpointInfos, seenTypes);
-        foreach (var refAsm in compilation.SourceModule.ReferencedAssemblySymbols)
-        {
-            CollectPublicApiTypes(refAsm.GlobalNamespace, scanNamespaces, endpointInfos, seenTypes);
-        }
-
-        // Add extra types
-        foreach (var extra in extraTypes)
-        {
-            if (seenTypes.Add(extra)
-                && ExposeToHttpEndpointHelpers.HasPublicApiAttribute(extra)
-                && ExposeToHttpEndpointHelpers.IsRequestType(extra))
-            {
-                endpointInfos.Add(GetEndpointInfo(extra));
             }
         }
 
@@ -106,6 +53,48 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         }
 
         GenerateMapAllHttpEndpointsExtension(context, AssemblyPrefixHelper.GetAssemblyPrefix(compilation), endpointInfos.ToImmutableArray());
+    }
+
+    private static List<ServiceMethodInfo> GetServiceMethods(INamedTypeSymbol iface)
+    {
+        var methods = new List<ServiceMethodInfo>();
+
+        foreach (var member in iface.GetMembers())
+        {
+            if (member is not IMethodSymbol { MethodKind: MethodKind.Ordinary } method || method.IsImplicitlyDeclared)
+            {
+                continue;
+            }
+
+            if (!ExposeToHttpEndpointHelpers.TryGetRequestParameter(method, out var requestParam))
+            {
+                continue;
+            }
+
+            if (requestParam.Type is not INamedTypeSymbol requestType)
+            {
+                continue;
+            }
+
+            if (!ExposeToHttpEndpointHelpers.TryGetResultResponseType(method, out var responseType))
+            {
+                continue;
+            }
+
+            var operationName = method.Name.EndsWith("Async", StringComparison.Ordinal)
+                ? method.Name.Substring(0, method.Name.Length - 5)
+                : method.Name;
+
+            methods.Add(new ServiceMethodInfo
+            {
+                Method = method,
+                RequestType = requestType,
+                ResponseType = responseType,
+                OperationName = operationName
+            });
+        }
+
+        return methods;
     }
 
     private static void CollectGenerateServiceInterfaces(INamespaceSymbol ns, List<INamedTypeSymbol> results)
@@ -125,46 +114,9 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         }
     }
 
-    private static void CollectPublicApiTypes(INamespaceSymbol ns, HashSet<string> scanNamespaces,
-        List<EndpointInfo> results, HashSet<INamedTypeSymbol> seen)
+    private static EndpointInfo GetEndpointInfo(ServiceMethodInfo method)
     {
-        foreach (var member in ns.GetMembers())
-        {
-            switch (member)
-            {
-                case INamedTypeSymbol { DeclaredAccessibility: Accessibility.Public, IsAbstract: false } type
-                    when ExposeToHttpEndpointHelpers.HasPublicApiAttribute(type)
-                         && ExposeToHttpEndpointHelpers.IsRequestType(type):
-                    {
-                        var typeNs = ExposeToHttpEndpointHelpers.GetFullNamespace(type.ContainingNamespace);
-                        if (scanNamespaces.Any(scan => typeNs.StartsWith(scan, StringComparison.Ordinal))
-                            && seen.Add(type))
-                        {
-                            results.Add(GetEndpointInfo(type));
-                        }
-                        break;
-                    }
-                case INamespaceSymbol nestedNs:
-                    CollectPublicApiTypes(nestedNs, scanNamespaces, results, seen);
-                    break;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Gets EndpointInfo for a [PublicApi] request type.
-    /// Uses [HttpEndpoint] if present, otherwise defaults to POST.
-    /// </summary>
-    private static EndpointInfo GetEndpointInfo(INamedTypeSymbol type)
-    {
-        if (ExposeToHttpEndpointHelpers.HasHttpEndpointAttribute(type))
-        {
-            var httpAttr = type.GetAttributes()
-                .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpEndpointAttributeFqn);
-            return ExposeToHttpEndpointHelpers.ExtractEndpointInfo(type, httpAttr);
-        }
-
-        return ExposeToHttpEndpointHelpers.ExtractDefaultEndpointInfo(type);
+        return ExposeToHttpEndpointHelpers.ExtractEndpointInfo(method);
     }
 
     private static void GenerateMapAllHttpEndpointsExtension(SourceProductionContext context, string assemblyName, ImmutableArray<EndpointInfo> endpoints)
@@ -174,7 +126,6 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             return;
         }
 
-
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
         sb.AppendLine("#nullable enable");
@@ -183,7 +134,6 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
 
-        // Generate Body DTO classes for non-GET endpoints with route params that have body properties
         foreach (var ep in endpoints)
         {
             EmitBodyDtoIfNeeded(sb, ep);
@@ -192,10 +142,6 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         var sanitizedAssemblyName = assemblyName.Replace(".", "");
         sb.AppendLine($"    public static partial class {sanitizedAssemblyName}Extensions");
         sb.AppendLine("    {");
-        sb.AppendLine("        /// <summary>");
-        sb.AppendLine("        /// Registers all HTTP endpoints marked with [HttpEndpoint].");
-        sb.AppendLine("        /// Generated by source generator.");
-        sb.AppendLine("        /// </summary>");
         sb.AppendLine("        public static global::Microsoft.AspNetCore.Builder.WebApplication MapAllHttpEndpoints(this global::Microsoft.AspNetCore.Builder.WebApplication app)");
         sb.AppendLine("        {");
 
@@ -225,13 +171,14 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         };
 
         var requestType = ep.RequestType.ToDisplayString();
+        var dispatchInvocation = ep.ResponseType is null
+            ? "await dispatcher.DispatchAsync(request)"
+            : $"await dispatcher.DispatchAsync<{ep.ResponseType.ToDisplayString()}>(request)";
+
         var isGet = ep.Method == HttpVerb.Get;
         var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(ep.Route);
         var hasRouteParams = routeParams.Count > 0;
 
-        // Case 1: GET — always use [AsParameters], minimal API handles route + query binding
-        // Case 2: Non-GET, no route params — use [FromBody] directly
-        // Case 3: Non-GET, with route params — bind route params individually + optional [FromBody] body DTO + construct request
         if (isGet || !hasRouteParams)
         {
             var fromAttr = isGet ? "[global::Microsoft.AspNetCore.Http.AsParametersAttribute]" : "[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]";
@@ -239,30 +186,29 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher) =>");
             sb.AppendLine("                {");
-            sb.AppendLine("                    var response = await dispatcher.DispatchAsync(request);");
+            sb.AppendLine($"                    var response = {dispatchInvocation};");
             sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
             sb.Append("                })");
         }
         else
         {
-            // Non-GET with route params: use generated Body DTO for OpenAPI-friendly binding
             var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(ep.RequestType);
             var (routeParamProps, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
             var hasBody = bodyProps.Count > 0;
             var bodyDtoName = GetBodyDtoName(ep.RequestType);
 
-            // Build lambda parameter list
             var lambdaParams = new List<string>();
             foreach (var (_, prop) in routeParamProps)
             {
                 lambdaParams.Add($"{prop.Type.ToDisplayString()} {ToCamelCase(prop.Name)}");
             }
+
             if (hasBody)
             {
                 lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] {bodyDtoName} __body__");
             }
-            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher");
 
+            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher");
             var lambdaParamStr = string.Join(", ", lambdaParams);
 
             sb.Append($"            app.{mapMethod}(\"{ep.Route}\",");
@@ -270,17 +216,11 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             sb.AppendLine($"                async ({lambdaParamStr}) =>");
             sb.AppendLine("                {");
 
-            // Construct the request object
-            // Supports three patterns:
-            //   1. Record with primary ctor covering all props: new Request(a, b, c)
-            //   2. Hybrid: ctor + extra settable props: new Request(a) { B = b, C = c }
-            //   3. Parameterless ctor + object initializer: new Request { A = a, B = b }
             var bestCtor = FindBestConstructor(ep.RequestType, allProperties);
             var ctorParamNames = bestCtor != null
                 ? new HashSet<string>(bestCtor.Parameters.Select(p => p.Name), StringComparer.OrdinalIgnoreCase)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Build constructor arguments
             var ctorArgStr = "";
             if (bestCtor != null)
             {
@@ -300,10 +240,10 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                         ctorArgs.Add(bodyMatch != null ? $"__body__.{bodyMatch.Name}" : "default");
                     }
                 }
+
                 ctorArgStr = string.Join(", ", ctorArgs);
             }
 
-            // Collect remaining properties not covered by the constructor
             var initLines = new List<string>();
             foreach (var (_, prop) in routeParamProps)
             {
@@ -312,6 +252,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                     initLines.Add($"                        {prop.Name} = {ToCamelCase(prop.Name)}");
                 }
             }
+
             foreach (var prop in bodyProps)
             {
                 if (!ctorParamNames.Contains(prop.Name))
@@ -320,7 +261,6 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 }
             }
 
-            // Emit: new RequestType(ctorArgs) { ExtraProp = value, ... };
             if (initLines.Count > 0)
             {
                 sb.AppendLine($"                    var request = new {requestType}({ctorArgStr})");
@@ -330,6 +270,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                     sb.Append(initLines[i]);
                     sb.AppendLine(i < initLines.Count - 1 ? "," : "");
                 }
+
                 sb.AppendLine("                    };");
             }
             else
@@ -337,12 +278,15 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 sb.AppendLine($"                    var request = new {requestType}({ctorArgStr});");
             }
 
-            sb.AppendLine("                    var response = await dispatcher.DispatchAsync(request);");
+            var dispatchInvocationForConstructed = ep.ResponseType is null
+                ? "await dispatcher.DispatchAsync(request)"
+                : $"await dispatcher.DispatchAsync<{ep.ResponseType.ToDisplayString()}>(request)";
+
+            sb.AppendLine($"                    var response = {dispatchInvocationForConstructed};");
             sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
             sb.Append("                })");
         }
 
-        // Append OpenAPI metadata
         if (!string.IsNullOrEmpty(ep.DisplayName))
         {
             sb.Append($".WithName(\"{EscapeString(ep.DisplayName)}\")");
@@ -368,10 +312,6 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    /// <summary>
-    /// Emits a Body DTO class for a non-GET endpoint with route params that has body properties.
-    /// The DTO contains only the non-route properties, giving OpenAPI full schema visibility.
-    /// </summary>
     private static void EmitBodyDtoIfNeeded(StringBuilder sb, EndpointInfo ep)
     {
         if (ep.Method == HttpVerb.Get)
@@ -406,15 +346,12 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
             sb.AppendLine($"        public {propType} {prop.Name} {{ get; set; }}{defaultValue}");
         }
+
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    /// <summary>
-    /// Find a constructor whose parameters match all properties (by name, case-insensitive).
-    /// Prefers the constructor with the most parameters (primary ctor for records).
-    /// </summary>
-    private static IMethodSymbol FindBestConstructor(INamedTypeSymbol typeSymbol, List<IPropertySymbol> allProperties)
+    private static IMethodSymbol? FindBestConstructor(INamedTypeSymbol typeSymbol, List<IPropertySymbol> allProperties)
     {
         var propNames = new HashSet<string>(allProperties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
 

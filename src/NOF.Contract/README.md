@@ -12,10 +12,10 @@ Defines the messaging contracts and shared models that form the public API surfa
 
 ```csharp
 // Request with response
-public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
+public record GetOrderRequest(Guid Id);
 
 // Request without response
-public record ArchiveOrderRequest(Guid Id) : IRequest;
+public record ArchiveOrderRequest(Guid Id);
 
 // Fire-and-forget command
 public record SendEmailCommand(string To, string Subject, string Body) : ICommand;
@@ -40,10 +40,10 @@ Marks a request type for automatic HTTP endpoint generation via source generator
 
 ```csharp
 [HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
-public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
+public record GetOrderRequest(Guid Id);
 
 [HttpEndpoint(HttpVerb.Post, "/api/orders")]
-public record CreateOrderRequest(string ProductName, int Quantity) : IRequest<Guid>;
+public record CreateOrderRequest(string ProductName, int Quantity);
 ```
 
 ### Other Annotations
@@ -62,4 +62,5 @@ dotnet add package NOF.Contract
 ## License
 
 Apache-2.0
+
 

@@ -11,9 +11,9 @@ namespace NOF.Infrastructure;
 public sealed class OutboundContext
 {
     /// <summary>
-    /// The outbound message (command, notification, or request).
+    /// The outbound message (command, notification, or request payload).
     /// </summary>
-    public required IMessage Message { get; init; }
+    public required object Message { get; init; }
 
     /// <summary>
     /// Headers to be sent with the message.

@@ -8,15 +8,14 @@ namespace NOF.Infrastructure;
 public interface IRequestDispatcher
 {
     Task<Result> DispatchAsync(
-        IRequest request,
+        object request,
         IDictionary<string, string?>? headers = null,
         string? destinationEndpointName = null,
         CancellationToken cancellationToken = default);
 
     Task<Result<TResponse>> DispatchAsync<TResponse>(
-        IRequest<TResponse> request,
+        object request,
         IDictionary<string, string?>? headers = null,
         string? destinationEndpointName = null,
         CancellationToken cancellationToken = default);
 }
-

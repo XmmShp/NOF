@@ -1,16 +1,16 @@
 namespace NOF.Contract;
 
 /// <summary>
-/// Triggers source generation of a service interface and its implementations
-/// for request types marked with <see cref="PublicApiAttribute"/>.
+/// Triggers source generation of a service HTTP client implementation
+/// from user-declared service interface method signatures (RPC-style IDL).
 /// Place on a <c>partial interface</c>.
 /// </summary>
 [AttributeUsage(AttributeTargets.Interface)]
 public sealed class GenerateServiceAttribute : Attribute
 {
     /// <summary>
-    /// Namespaces to scan for <see cref="PublicApiAttribute"/>-annotated request types.
-    /// If empty, only the namespace of the annotated interface is scanned.
+    /// Reserved for backward compatibility.
+    /// No longer used when methods are declared explicitly on the interface.
     /// </summary>
     public string[]? Namespaces { get; init; }
 
@@ -21,9 +21,8 @@ public sealed class GenerateServiceAttribute : Attribute
     public bool GenerateHttpClient { get; init; } = true;
 
     /// <summary>
-    /// Additional request types to include in the generated interface.
-    /// Each type must implement <see cref="IRequest"/> or <see cref="IRequest{TResponse}"/>
-    /// and must be annotated with <see cref="PublicApiAttribute"/>.
+    /// Reserved for backward compatibility.
+    /// No longer used when methods are declared explicitly on the interface.
     /// </summary>
     public Type[]? ExtraTypes { get; init; }
 }

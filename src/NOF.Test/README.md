@@ -31,8 +31,8 @@ Wraps the built `IHost` and provides convenient helpers for application tests:
 
 - `CreateScope()`
 - `GetRequiredService<T>()`
-- `SendAsync(IRequest)`
-- `SendAsync<TResponse>(IRequest<TResponse>)`
+- `SendAsync(object request)`
+- `SendAsync<TResponse>(object request)`
 - `SendAsync(ICommand)`
 - `PublishAsync(INotification)`
 
@@ -100,4 +100,5 @@ dotnet add package NOF.Test
 ## License
 
 Apache-2.0
+
 

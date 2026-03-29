@@ -9,7 +9,7 @@ namespace NOF.Application.SourceGenerator;
 /// <summary>
 /// Analyzer that enforces:
 /// 1. A handler class can only implement one handler interface (ICommandHandler, IEventHandler, INotificationHandler, IRequestHandler).
-/// 2. A message class can only implement one message interface (ICommand, IEvent, INotification, IRequest/IRequest&lt;T&gt;).
+/// 2. A message class can only implement one message interface (ICommand, IEvent, INotification).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class HandlerMessageAnalyzer : DiagnosticAnalyzer
@@ -27,9 +27,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
     {
         "NOF.Contract.ICommand",
         "NOF.Contract.IEvent",
-        "NOF.Contract.INotification",
-        "NOF.Contract.IRequest",
-        "NOF.Contract.IRequest<TResponse>"
+        "NOF.Contract.INotification"
     };
 
     public static readonly DiagnosticDescriptor MultipleHandlerInterfacesRule = new(

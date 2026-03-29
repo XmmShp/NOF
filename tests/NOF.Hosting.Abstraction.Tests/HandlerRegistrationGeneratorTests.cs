@@ -55,7 +55,7 @@ public class HandlerRegistrationGeneratorTests
             using NOF.Contract;
             namespace App
             {
-                public record MyRequest : IRequest<string>;
+                public record MyRequest;
                 public class MyRequestHandler : IRequestHandler<MyRequest, string>
                 {
                     public System.Threading.Tasks.Task<Result<string>> HandleAsync(MyRequest request, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
@@ -65,9 +65,7 @@ public class HandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(IRequestHandler<,>),
-            typeof(IRequest<>),
-            typeof(Result),
+            typeof(IRequestHandler<,>),            typeof(Result),
             typeof(RequestWithResponseHandlerInfo)
         );
 
@@ -149,3 +147,5 @@ public class HandlerRegistrationGeneratorTests
         generatedCode.Should().NotContain("AddKeyedScoped");
     }
 }
+
+

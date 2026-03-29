@@ -11,13 +11,9 @@ namespace NOF.SourceGenerator.Tests;
 public class ExposeToHttpEndpointMapperTests
 {
     private static readonly Type[] _refs =
-    [
-        typeof(PublicApiAttribute),
-        typeof(HttpEndpointAttribute),
+    [        typeof(HttpEndpointAttribute),
         typeof(GenerateServiceAttribute),
         typeof(HttpVerb),
-        typeof(IRequest),
-        typeof(IRequest<>)
     ];
 
     [Fact]
@@ -27,9 +23,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace Lib
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Get, "/api/user")]
-                public record GetUserRequest(string Id) : IRequest<System.Guid>;
+                                [HttpEndpoint(HttpVerb.Get, "/api/user")]
+                public record GetUserRequest(string Id);
             }
             """;
 
@@ -40,9 +35,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/user")]
-                public record CreateUserRequest(string Name) : IRequest;
+                                [HttpEndpoint(HttpVerb.Post, "/api/user")]
+                public record CreateUserRequest(string Name);
 
                 [GenerateService(Namespaces = new[] { "App", "Lib" })]
                 public partial interface IMyService;
@@ -96,9 +90,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name) : IRequest;
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public record CreateItemRequest(string Name);
             }
             """;
 
@@ -131,8 +124,7 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                public record InternalRequest(string Data) : IRequest<string>;
+                                public record InternalRequest(string Data);
 
                 [GenerateService]
                 public partial interface IMyService;
@@ -156,15 +148,13 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace Other
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Get, "/api/other")]
-                public record OtherRequest : IRequest<string>;
+                                [HttpEndpoint(HttpVerb.Get, "/api/other")]
+                public record OtherRequest;
             }
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name) : IRequest;
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public record CreateItemRequest(string Name);
 
                 [GenerateService]
                 public partial interface IMyService;
@@ -190,9 +180,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
-                public record UpdateItemRequest(long Id) : IRequest
+                                [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
+                public record UpdateItemRequest(long Id)
                 {
                     public string? Value { get; set; }
                     public int? Priority { get; set; }
@@ -228,9 +217,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
-                public record AddFileRequest(long NodeId, string FileName, string Content) : IRequest;
+                                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
+                public record AddFileRequest(long NodeId, string FileName, string Content);
 
                 [GenerateService]
                 public partial interface IMyService;
@@ -258,9 +246,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
-                public record DeleteItemRequest(long Id) : IRequest;
+                                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
+                public record DeleteItemRequest(long Id);
 
                 [GenerateService]
                 public partial interface IMyService;
@@ -286,9 +273,8 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest : IRequest
+                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                public class UpdateItemRequest
                 {
                     public long Id { get; set; }
                     public string Name { get; set; } = default!;
@@ -316,3 +302,7 @@ public class ExposeToHttpEndpointMapperTests
         generatedCode.Should().Contain("Count = __body__.Count");
     }
 }
+
+
+
+

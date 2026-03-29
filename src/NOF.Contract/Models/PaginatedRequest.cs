@@ -5,7 +5,7 @@ namespace NOF.Contract;
 /// <summary>
 /// Base request for paginated queries.
 /// </summary>
-public record PaginatedRequest<T> : IRequest<T>
+public record PaginatedRequest<T>
     where T : class, IPaginatedResult
 {
     /// <summary>

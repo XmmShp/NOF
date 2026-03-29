@@ -3,7 +3,7 @@ namespace NOF.Contract;
 /// <summary>
 /// Specifies a custom endpoint name for a message type.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class)]
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
 public class EndpointNameAttribute : Attribute
 {
     /// <summary>Initializes a new instance with the specified endpoint name.</summary>
@@ -16,3 +16,4 @@ public class EndpointNameAttribute : Attribute
     /// <summary>Gets the endpoint name.</summary>
     public string Name { get; }
 }
+

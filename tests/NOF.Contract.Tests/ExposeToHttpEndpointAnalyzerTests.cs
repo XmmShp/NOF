@@ -13,14 +13,9 @@ namespace NOF.SourceGenerator.Tests;
 public class ExposeToHttpEndpointAnalyzerTests
 {
     private static readonly Type[] _refs =
-    [
-        typeof(PublicApiAttribute),
-        typeof(HttpEndpointAttribute),
+    [        typeof(HttpEndpointAttribute),
         typeof(GenerateServiceAttribute),
-        typeof(HttpVerb),
-        typeof(IRequest),
-        typeof(IRequest<>),
-        typeof(Result),
+        typeof(HttpVerb),        typeof(Result),
         typeof(Result<>)
     ];
 
@@ -44,9 +39,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public struct CreateItemRequest : IRequest
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public struct CreateItemRequest
                 {
                     public string Name { get; set; }
                 }
@@ -67,7 +61,7 @@ public class ExposeToHttpEndpointAnalyzerTests
             namespace App
             {
                 [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name) : IRequest;
+                public record CreateItemRequest(string Name);
             }
             """;
 
@@ -84,9 +78,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest(long id) : IRequest
+                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                public class UpdateItemRequest(long id)
                 {
                     public string Name { get; set; } = default!;
                 }
@@ -107,9 +100,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest(long id) : IRequest
+                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                public class UpdateItemRequest(long id)
                 {
                     public string Name { get; set; } = default!;
                 }
@@ -129,9 +121,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest : IRequest
+                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                public class UpdateItemRequest
                 {
                     public long Id { get; set; }
                     public string Name { get; set; } = default!;
@@ -153,9 +144,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public record UpdateItemRequest(long Id) : IRequest
+                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                public record UpdateItemRequest(long Id)
                 {
                     public string? Value { get; set; }
                 }
@@ -176,9 +166,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
-                public record AddFileRequest(long NodeId, string FileName, string Content) : IRequest;
+                                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
+                public record AddFileRequest(long NodeId, string FileName, string Content);
             }
             """;
 
@@ -196,9 +185,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
-                public class AddFileRequest : IRequest
+                                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
+                public class AddFileRequest
                 {
                     public long NodeId { get; set; }
                     public string Content { get; set; } = default!;
@@ -219,9 +207,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public class CreateItemRequest : IRequest
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public class CreateItemRequest
                 {
                     public CreateItemRequest(string name) { Name = name; }
                     public string Name { get; set; }
@@ -241,9 +228,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public class CreateItemRequest : IRequest
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public class CreateItemRequest
                 {
                     public CreateItemRequest() { }
                     public CreateItemRequest(string name) { Name = name; }
@@ -264,9 +250,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
-                public record DeleteItemRequest(long Id) : IRequest;
+                                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
+                public record DeleteItemRequest(long Id);
             }
             """;
 
@@ -284,8 +269,7 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi(OperationName = "create-item")]
-                public record CreateItemRequest(string Name) : IRequest;
+                                public record CreateItemRequest(string Name);
             }
             """;
 
@@ -302,9 +286,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi(OperationName = "CreateItem")]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name) : IRequest;
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public record CreateItemRequest(string Name);
             }
             """;
 
@@ -320,9 +303,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi]
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name) : IRequest;
+                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                public record CreateItemRequest(string Name);
             }
             """;
 
@@ -338,8 +320,7 @@ public class ExposeToHttpEndpointAnalyzerTests
             using NOF.Contract;
             namespace App
             {
-                [PublicApi(OperationName = "Create Item")]
-                public record CreateItemRequest(string Name) : IRequest;
+                                public record CreateItemRequest(string Name);
             }
             """;
 
@@ -348,3 +329,6 @@ public class ExposeToHttpEndpointAnalyzerTests
         diagnostics.Should().ContainSingle(d => d.Id == "NOF203");
     }
 }
+
+
+

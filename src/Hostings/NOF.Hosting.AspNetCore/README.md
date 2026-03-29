@@ -35,7 +35,7 @@ Requests annotated with `[HttpEndpoint]` are automatically mapped to minimal API
 ```csharp
 [HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
 [RequirePermission("orders:read")]
-public record GetOrderRequest(Guid Id) : IRequest<OrderDto>;
+public record GetOrderRequest(Guid Id);
 ```
 
 ## Installation
@@ -47,4 +47,5 @@ dotnet add package NOF.Hosting.AspNetCore
 ## License
 
 Apache-2.0
+
 

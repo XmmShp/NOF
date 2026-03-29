@@ -156,7 +156,7 @@ public class RequestDispatcherJwksProvider : IJwksProvider
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
             var dispatcher = scope.ServiceProvider.GetRequiredService<IRequestDispatcher>();
-            var result = await dispatcher.DispatchAsync(new GetJwksRequest(), cancellationToken: cancellationToken);
+            var result = await dispatcher.DispatchAsync<GetJwksResponse>(new GetJwksRequest(), cancellationToken: cancellationToken);
             if (!result.IsSuccess || result.Value.Jwks.Keys is not { Length: > 0 } jwkKeys)
             {
                 return;
