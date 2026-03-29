@@ -16,7 +16,6 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         typeof(HttpVerb),
         typeof(IRequest),
         typeof(IRequest<>),
-        typeof(IRequestSender),
         typeof(Result),
         typeof(Result<>)
     ];
@@ -54,10 +53,6 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         // HTTP client: Http + MyService
         root.DescendantNodes().OfType<ClassDeclarationSyntax>()
             .Should().Contain(c => c.Identifier.Text == "HttpMyService");
-
-        // RequestSender client: RequestSender + MyService
-        root.DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Should().Contain(c => c.Identifier.Text == "RequestSenderMyService");
 
         // Method name: CreateUser (from CreateUserRequest minus "Request")
         code.Should().Contain("CreateUserAsync");
@@ -117,7 +112,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
-        // Both HTTP and RequestSender methods should be virtual
+        // HTTP methods should be virtual
         code.Should().Contain("public virtual async");
     }
 
@@ -325,30 +320,6 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     }
 
     [Fact]
-    public void RequestSenderClient_UsesSendAsync()
-    {
-        const string source = """
-                              using NOF.Contract;
-
-                              namespace MyApp
-                              {
-                                  [PublicApi]
-                                  [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                                  public record CreateItemRequest(string Name) : IRequest;
-
-                                  [GenerateService]
-                                  public partial interface IMyService;
-                              }
-                              """;
-
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
-        var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
-
-        // RequestSender client should use _requestSender.SendAsync
-        code.Should().Contain("_requestSender.SendAsync(request, cancellationToken)");
-    }
-
-    [Fact]
     public void PublicApiWithoutHttpEndpoint_DefaultsToPost()
     {
         const string source = """
@@ -370,11 +341,9 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         var root = runResult.GeneratedTrees[0].GetRoot();
         var code = root.ToFullString();
 
-        // Both clients generated
+        // HTTP client generated
         root.DescendantNodes().OfType<ClassDeclarationSyntax>()
             .Should().Contain(c => c.Identifier.Text == "HttpMyService");
-        root.DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Should().Contain(c => c.Identifier.Text == "RequestSenderMyService");
 
         code.Should().Contain("InternalAsync");
 
@@ -385,7 +354,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
     }
 
     [Fact]
-    public void GenerateHttpClientFalse_OnlyRequestSender()
+    public void GenerateHttpClientFalse_GeneratesNoClientImplementation()
     {
         const string source = """
                               using NOF.Contract;
@@ -409,7 +378,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         root.DescendantNodes().OfType<ClassDeclarationSyntax>()
             .Should().NotContain(c => c.Identifier.Text == "HttpMyService");
         root.DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Should().Contain(c => c.Identifier.Text == "RequestSenderMyService");
+            .Should().BeEmpty();
     }
 
     [Fact]
@@ -501,7 +470,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
         code.Should().Contain("global::System.Net.Http.HttpClient");
         code.Should().Contain("global::System.Text.Json.JsonSerializerOptions");
         code.Should().Contain("global::NOF.Contract.Result");
-        code.Should().Contain("global::NOF.Contract.IRequestSender");
+        code.Should().NotContain("global::NOF.Contract.IRequestSender");
         // No HttpCompletionOption
         code.Should().NotContain("HttpCompletionOption");
     }

@@ -117,11 +117,11 @@ public class HttpJwksProvider : IJwksProvider
 }
 
 /// <summary>
-/// Fetches JWKS via <see cref="Application.IRequestSender"/> and caches the keys.
-/// Because <see cref="Application.IRequestSender"/> is scoped, this provider
+/// Fetches JWKS via in-process request dispatch and caches the keys.
+/// Because <see cref="IRequestDispatcher"/> is scoped, this provider
 /// creates a scope on each refresh to resolve it.
 /// </summary>
-public class RequestSenderJwksProvider : IJwksProvider
+public class RequestDispatcherJwksProvider : IJwksProvider
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly JwtAuthorizationOptions _options;
@@ -130,7 +130,7 @@ public class RequestSenderJwksProvider : IJwksProvider
     private volatile IReadOnlyList<SecurityKey>? _cachedKeys;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
 
-    public RequestSenderJwksProvider(IServiceProvider serviceProvider, IOptions<JwtAuthorizationOptions> options)
+    public RequestDispatcherJwksProvider(IServiceProvider serviceProvider, IOptions<JwtAuthorizationOptions> options)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value;
@@ -155,9 +155,8 @@ public class RequestSenderJwksProvider : IJwksProvider
         try
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var requestSender = scope.ServiceProvider.GetRequiredService<IRequestSender>();
-
-            var result = await requestSender.SendAsync(new GetJwksRequest(), cancellationToken);
+            var dispatcher = scope.ServiceProvider.GetRequiredService<IRequestDispatcher>();
+            var result = await dispatcher.DispatchAsync(new GetJwksRequest(), cancellationToken: cancellationToken);
             if (!result.IsSuccess || result.Value.Jwks.Keys is not { Length: > 0 } jwkKeys)
             {
                 return;

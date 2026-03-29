@@ -13,7 +13,7 @@ public readonly struct JwtAuthoritySelector
     }
 
     /// <summary>
-    /// Registers a <see cref="GetJwks"/> so that JWKS can be retrieved via <see cref="IRequestSender"/>.
+    /// Registers a <see cref="GetJwks"/> handler so that JWKS can be retrieved via in-process dispatch.
     /// </summary>
     /// <returns>This selector for further chaining.</returns>
     public JwtAuthoritySelector AddJwksRequestHandler()

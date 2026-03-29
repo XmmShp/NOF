@@ -3,7 +3,7 @@
 @using NOF.Contract
 @using NOF.Infrastructure.Extension.Authorization.Jwt
 @using Result = NOF.Contract.Result
-@inject IRequestSender RequestSender
+@inject INOFSampleService NOFService
 @inject IJSRuntime JsRuntime
 @inject IMessageService MessageService
 
@@ -246,7 +246,7 @@
                 TimeSpan.FromDays(7),
                 permissions
             );
-            var result = await RequestSender.SendAsync(request);
+            var result = await NOFService.GenerateJwtTokenAsync(request);
 
             if (result.IsSuccess)
             {
@@ -281,7 +281,7 @@
 
         try
         {
-            var result = await RequestSender.SendAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
+            var result = await NOFService.ValidateJwtRefreshTokenAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
             _validationResult = result;
 
             if (result.IsSuccess)
@@ -318,7 +318,7 @@
 
         try
         {
-            var result = await RequestSender.SendAsync(
+            var result = await NOFService.RevokeJwtRefreshTokenAsync(
                 new RevokeJwtRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
             );
             _revokeResult = result;
@@ -352,7 +352,7 @@
 
         try
         {
-            var result = await RequestSender.SendAsync(new GetJwksRequest());
+            var result = await NOFService.GetJwksAsync(new GetJwksRequest());
             if (result.IsSuccess)
             {
                 _jwksResponse = result.Value.Jwks;

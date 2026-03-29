@@ -13,7 +13,7 @@ public class JwtAuthorizationOptions
 
     /// <summary>
     /// Gets or sets the JWKS endpoint URL used to fetch signing keys for token validation.
-    /// Used by both <see cref="HttpJwksProvider"/> and <see cref="RequestSenderJwksProvider"/>.
+    /// Used by both <see cref="HttpJwksProvider"/> and <see cref="RequestDispatcherJwksProvider"/>.
     /// </summary>
     public string JwksEndpoint { get; set; } = string.Empty;
 

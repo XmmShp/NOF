@@ -99,18 +99,6 @@ internal static class ExposeToHttpEndpointHelpers
         return $"Http{baseName}";
     }
 
-    /// <summary>
-    /// Derives the RequestSender client class name from the interface name.
-    /// e.g. "ISampleService" → "RequestSenderSampleService"
-    /// </summary>
-    public static string GetRequestSenderClientName(string interfaceName)
-    {
-        var baseName = interfaceName.StartsWith("I") && interfaceName.Length > 1 && char.IsUpper(interfaceName[1])
-            ? interfaceName.Substring(1)
-            : interfaceName;
-        return $"RequestSender{baseName}";
-    }
-
     public static ITypeSymbol? GetResponseType(INamedTypeSymbol requestType)
     {
         var requestInterface = requestType.AllInterfaces

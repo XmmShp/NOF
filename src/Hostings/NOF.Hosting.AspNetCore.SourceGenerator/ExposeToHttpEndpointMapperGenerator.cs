@@ -237,9 +237,9 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             var fromAttr = isGet ? "[global::Microsoft.AspNetCore.Http.AsParametersAttribute]" : "[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]";
             sb.Append($"            app.{mapMethod}(\"{ep.Route}\",");
             sb.AppendLine();
-            sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Contract.IRequestSender sender) =>");
+            sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher) =>");
             sb.AppendLine("                {");
-            sb.AppendLine("                    var response = await sender.SendAsync(request);");
+            sb.AppendLine("                    var response = await dispatcher.DispatchAsync(request);");
             sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
             sb.Append("                })");
         }
@@ -261,7 +261,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             {
                 lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] {bodyDtoName} __body__");
             }
-            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Contract.IRequestSender sender");
+            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher");
 
             var lambdaParamStr = string.Join(", ", lambdaParams);
 
@@ -337,7 +337,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 sb.AppendLine($"                    var request = new {requestType}({ctorArgStr});");
             }
 
-            sb.AppendLine("                    var response = await sender.SendAsync(request);");
+            sb.AppendLine("                    var response = await dispatcher.DispatchAsync(request);");
             sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
             sb.Append("                })");
         }

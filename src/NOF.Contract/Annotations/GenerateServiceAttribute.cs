@@ -21,12 +21,6 @@ public sealed class GenerateServiceAttribute : Attribute
     public bool GenerateHttpClient { get; init; } = true;
 
     /// <summary>
-    /// Whether to generate an <see cref="IRequestSender"/>-based implementation for in-process calls.
-    /// Defaults to <c>true</c>.
-    /// </summary>
-    public bool GenerateRequestSenderClient { get; init; } = true;
-
-    /// <summary>
     /// Additional request types to include in the generated interface.
     /// Each type must implement <see cref="IRequest"/> or <see cref="IRequest{TResponse}"/>
     /// and must be annotated with <see cref="PublicApiAttribute"/>.

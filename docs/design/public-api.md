@@ -53,7 +53,6 @@ The attribute controls what gets generated:
 
 - **`Namespaces`** — which namespaces to scan for `[PublicApi]` request types. Defaults to the interface's own namespace. Supports prefix matching, so `"MyApp"` includes `"MyApp.Commands"` and `"MyApp.Queries"`.
 - **`GenerateHttpClient`** — whether to generate the `HttpClient`-based implementation. Default `true`.
-- **`GenerateRequestSenderClient`** — whether to generate the `IRequestSender`-based implementation. Default `true`.
 - **`ExtraTypes`** — additional request types to include, regardless of namespace.
 
 ```csharp
@@ -90,11 +89,7 @@ A `partial class` that implements the interface using `HttpClient`. Each method 
 - Route parameters are extracted from the request's properties and substituted into the URL.
 - All methods are `virtual`, allowing override in the partial class.
 
-### 3. RequestSender client (`RequestSenderMyService`)
-
-A `partial class` that implements the interface using `IRequestSender` for in-process dispatch. Each method delegates to `IRequestSender.SendAsync`. This client is used for server-side calls where no HTTP round-trip is needed.
-
-### 4. Endpoint mappings (`MapAllHttpEndpoints`)
+### 3. Endpoint mappings (`MapAllHttpEndpoints`)
 
 The hosting-side generator produces an extension method on `WebApplication` that registers all `[PublicApi]` request types as minimal API endpoints. Like the HTTP client, requests without `[HttpEndpoint]` default to POST.
 
@@ -118,11 +113,20 @@ Six diagnostic rules enforce correct usage:
 | NOF205 | Error | `ExtraTypes` entry must implement `IRequest` or `IRequest<T>` |
 | NOF206 | Error | `ExtraTypes` entry must have `[PublicApi]` |
 
-## Why IRequestSender Moved to Contract
+## In-Process Dispatch Design
 
-The `IRequestSender` interface was previously in `NOF.Application`. The generated `RequestSender` client needs to reference it, and the service interface lives in the Contract layer. Having the interface in Application created a circular dependency: Contract → Application for the interface, Application → Contract for the request types.
+`IRequestSender` and `IRequestRider` were removed. Request invocation now follows two clear paths:
 
-Moving `IRequestSender` to `NOF.Contract` resolves this cleanly. A backward-compatible `global using` alias in `NOF.Application` preserves existing code that references `NOF.Application.IRequestSender`.
+- **Cross-process RPC**: call generated strong-typed HTTP services (`Http*Service`).
+- **In-process dispatch**: use `IRequestDispatcher` (Infrastructure layer only).
+
+`IRequestDispatcher` keeps the full NOF pipeline model:
+
+- Runs the **outbound pipeline** first (header propagation, tracing, etc.).
+- Resolves the local request handler via `IRequestHandlerResolver`.
+- Executes the handler through the **inbound pipeline**.
+
+This preserves existing middleware behavior for local calls while removing the contract-level generic sender abstraction. Application/UI code now uses strong-typed services instead of generic request dispatch APIs.
 
 ## Design Decisions
 
@@ -140,4 +144,4 @@ Generated classes are `partial` so you can add custom methods, fields, or constr
 
 ### Why two generators?
 
-The service generator (`ExposeToHttpEndpointServiceGenerator`) runs in the Contract project and produces the interface and client classes. The mapper generator (`ExposeToHttpEndpointMapperGenerator`) runs in the Hosting project and produces ASP.NET Core endpoint registrations. They are separate because they target different layers and different NuGet packages, but they share the same scanning logic and the same `[GenerateService]` trigger.
+The service generator (`ExposeToHttpEndpointServiceGenerator`) runs in the Contract project and produces the interface and HTTP client classes. The mapper generator (`ExposeToHttpEndpointMapperGenerator`) runs in the Hosting project and produces ASP.NET Core endpoint registrations. They are separate because they target different layers and different NuGet packages, but they share the same scanning logic and the same `[GenerateService]` trigger.

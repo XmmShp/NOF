@@ -3,7 +3,6 @@
 @using NOF.Contract
 @inject IMessageService Message
 @inject INOFSampleService NOFService
-@inject IRequestSender Sender
 
 <PageTitle>配置中心</PageTitle>
 
@@ -269,7 +268,7 @@
             var node = Message.UnwrapWithMessage(result);
             if (node?.Node != null)
             {
-                var response = await Sender.SendAsync(new GetConfigurationRequest(node.Node.Name));
+                var response = await NOFService.GetConfigurationAsync(new GetConfigurationRequest(node.Node.Name));
 
                 if (response.IsSuccess)
                 {

@@ -25,7 +25,6 @@ public static class NOFInfrastructureMemoryExtensions
 
             builder.Services.ReplaceOrAddScoped<ICommandRider, MemoryCommandRider>();
             builder.Services.ReplaceOrAddScoped<INotificationRider, MemoryNotificationRider>();
-            builder.Services.ReplaceOrAddScoped<IRequestRider, MemoryRequestRider>();
 
             builder.Services.AddHostedService<MemoryPersistenceWarningHostedService>();
 

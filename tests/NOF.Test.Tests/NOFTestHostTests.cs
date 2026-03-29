@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Infrastructure;
 using Xunit;
 
 namespace NOF.Test.Tests;
@@ -42,10 +43,10 @@ public class NOFTestHostTests
     }
 
     [Fact]
-    public async Task SendAsync_ShouldResolveRequestSenderFromScope()
+    public async Task SendAsync_ShouldResolveRequestDispatcherFromScope()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.Services.AddScoped<IRequestSender, FakeRequestSender>();
+        builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
 
         await using var host = await builder.BuildTestHostAsync();
         var result = await host.SendAsync(new PingRequest("hello"));
@@ -57,7 +58,7 @@ public class NOFTestHostTests
     public async Task SendAsync_Generic_ShouldResolveTypedResponse()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.Services.AddScoped<IRequestSender, FakeRequestSender>();
+        builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
 
         await using var host = await builder.BuildTestHostAsync();
         var result = await host.SendAsync(new EchoRequest("hello"));
@@ -134,14 +135,14 @@ public class NOFTestHostTests
 
     private sealed record TestNotification(string Value) : INotification;
 
-    private sealed class FakeRequestSender : IRequestSender
+    private sealed class FakeRequestDispatcher : IRequestDispatcher
     {
-        public Task<Result> SendAsync(IRequest request, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken = default)
+        public Task<Result> DispatchAsync(IRequest request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result.Success());
         }
 
-        public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers, string? destinationEndpointName, CancellationToken cancellationToken = default)
+        public Task<Result<TResponse>> DispatchAsync<TResponse>(IRequest<TResponse> request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
         {
             object? value = request switch
             {

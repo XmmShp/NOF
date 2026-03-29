@@ -20,7 +20,6 @@ public class ExposeToHttpEndpointAnalyzerTests
         typeof(HttpVerb),
         typeof(IRequest),
         typeof(IRequest<>),
-        typeof(IRequestSender),
         typeof(Result),
         typeof(Result<>)
     ];

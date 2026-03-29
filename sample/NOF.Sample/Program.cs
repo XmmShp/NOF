@@ -39,7 +39,19 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-builder.Services.AddScoped<INOFSampleService, RequestSenderNOFSampleService>();
+builder.Services.AddScoped<INOFSampleService>(sp =>
+{
+    var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var request = accessor.HttpContext?.Request;
+    var baseUri = request is null
+        ? "http://localhost:55892/"
+        : $"{request.Scheme}://{request.Host}/";
+
+    return new HttpNOFSampleService(new HttpClient
+    {
+        BaseAddress = new Uri(baseUri)
+    });
+});
 
 builder.Services.AddHostedService(async (sp, ct) =>
 {
@@ -64,8 +76,8 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(
-        typeof(NOF.Sample.UI._Imports).Assembly,
-        typeof(NOF.Sample.Wasm._Imports).Assembly);
+        typeof(NOF.Sample.UI.Components.Routes).Assembly,
+        typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
 
 app.MapAllHttpEndpoints();
 

@@ -76,17 +76,17 @@ public class ExposeToHttpEndpointMapperTests
         getBlock.Should()
             .Contain("app.MapGet(\"/api/user\"")
             .And.Contain("[global::Microsoft.AspNetCore.Http.AsParametersAttribute] Lib.GetUserRequest request")
-            .And.Contain("sender.SendAsync(request)");
+            .And.Contain("dispatcher.DispatchAsync(request)");
 
         postBlock.Should()
             .Contain("app.MapPost(\"/api/user\"")
             .And.Contain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] App.CreateUserRequest request")
-            .And.Contain("sender.SendAsync(request)");
+            .And.Contain("dispatcher.DispatchAsync(request)");
 
         bodyText.Should().Contain("return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
 
-        // Uses NOF.Contract.IRequestSender, not NOF.Application.IRequestSender
-        bodyText.Should().Contain("global::NOF.Contract.IRequestSender");
+        // Uses NOF.Infrastructure.IRequestDispatcher, not NOF.Application.IRequestSender
+        bodyText.Should().Contain("global::NOF.Infrastructure.IRequestDispatcher");
     }
 
     [Fact]

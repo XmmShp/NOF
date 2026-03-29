@@ -20,7 +20,7 @@ Creates a lightweight host builder for tests while still going through the NOF r
 
 ```csharp
 var builder = NOFTestAppBuilder.Create();
-builder.Services.AddScoped<IRequestSender, FakeRequestSender>();
+builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
 
 await using var host = await builder.BuildTestHostAsync();
 ```
@@ -65,7 +65,7 @@ var result = await scope.SendAsync(new GetOrderRequest(orderId));
 ```csharp
 var builder = NOFTestAppBuilder.Create();
 
-builder.Services.AddScoped<IRequestSender, FakeRequestSender>();
+builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
 
 await using var host = await builder.BuildTestHostAsync();
 

@@ -15,13 +15,13 @@ public readonly struct JwtAuthorizationSelector
     }
 
     /// <summary>
-    /// Replaces the default <see cref="HttpJwksProvider"/> with <see cref="RequestSenderJwksProvider"/>
-    /// which fetches JWKS via <see cref="Application.IRequestSender"/>.
+    /// Replaces the default <see cref="HttpJwksProvider"/> with <see cref="RequestDispatcherJwksProvider"/>
+    /// which fetches JWKS via in-process dispatch.
     /// </summary>
     /// <returns>This selector for further chaining.</returns>
     public JwtAuthorizationSelector UseRequestJwksProvider()
     {
-        Builder.Services.ReplaceOrAddSingleton<IJwksProvider, RequestSenderJwksProvider>();
+        Builder.Services.ReplaceOrAddSingleton<IJwksProvider, RequestDispatcherJwksProvider>();
         return this;
     }
 }

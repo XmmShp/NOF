@@ -5,6 +5,8 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// <summary>
 /// Request for generating JWT token pair.
 /// </summary>
+[PublicApi]
+[HttpEndpoint(HttpVerb.Post, "/auth/jwt/token")]
 public record GenerateJwtTokenRequest(
     string UserId,
     string TenantId,

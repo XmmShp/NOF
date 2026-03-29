@@ -7,7 +7,7 @@ In-memory infrastructure package for the [NOF Framework](https://github.com/XmmS
 Provides `NOF.Infrastructure.Memory` in-memory implementations used as development/testing fallbacks:
 
 - `InMemoryCacheService`
-- In-memory riders (`InMemoryCommandRider`, `InMemoryNotificationRider`, `InMemoryRequestRider`)
+- In-memory riders (`InMemoryCommandRider`, `InMemoryNotificationRider`)
 - `InMemoryEventPublisher`
 - In-memory persistence store/session/repositories/unit-of-work/transaction manager
 - `MemoryPersistenceWarningHostedService`

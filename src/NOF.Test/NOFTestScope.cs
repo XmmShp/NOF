@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Infrastructure;
 using System.Security.Claims;
 
 namespace NOF.Test;
@@ -74,12 +75,12 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public Task<Result> SendAsync(IRequest request, CancellationToken cancellationToken = default)
     {
-        return GetRequiredService<IRequestSender>().SendAsync(request, cancellationToken);
+        return GetRequiredService<IRequestDispatcher>().DispatchAsync(request, cancellationToken: cancellationToken);
     }
 
     public Task<Result<TResponse>> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
-        return GetRequiredService<IRequestSender>().SendAsync(request, cancellationToken);
+        return GetRequiredService<IRequestDispatcher>().DispatchAsync(request, cancellationToken: cancellationToken);
     }
 
     public Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
