@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure;
 using System.Security.Claims;
 
 namespace NOF.Test;
@@ -71,16 +70,6 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         }
 
         return SetUser(new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType)));
-    }
-
-    public Task<Result> SendAsync(object request, CancellationToken cancellationToken = default)
-    {
-        return GetRequiredService<IRequestDispatcher>().DispatchAsync(request, cancellationToken: cancellationToken);
-    }
-
-    public Task<Result<TResponse>> SendAsync<TResponse>(object request, CancellationToken cancellationToken = default)
-    {
-        return GetRequiredService<IRequestDispatcher>().DispatchAsync<TResponse>(request, cancellationToken: cancellationToken);
     }
 
     public Task SendAsync(ICommand command, CancellationToken cancellationToken = default)

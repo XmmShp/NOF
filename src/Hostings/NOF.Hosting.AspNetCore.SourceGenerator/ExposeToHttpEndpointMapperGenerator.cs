@@ -39,7 +39,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             foreach (var method in GetServiceMethods(iface))
             {
                 var endpoint = GetEndpointInfo(method);
-                var key = $"{endpoint.Method}:{endpoint.Route}:{endpoint.RequestType.ToDisplayString()}:{endpoint.OperationName}";
+                var key = $"{endpoint.ServiceType.ToDisplayString()}:{endpoint.ServiceMethodName}:{endpoint.Method}:{endpoint.Route}:{endpoint.RequestType.ToDisplayString()}:{endpoint.OperationName}";
                 if (seen.Add(key))
                 {
                     endpointInfos.Add(endpoint);
@@ -76,7 +76,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (!ExposeToHttpEndpointHelpers.TryGetResultResponseType(method, out var responseType))
+            if (!ExposeToHttpEndpointHelpers.TryGetServiceReturnInfo(method, out var returnInfo))
             {
                 continue;
             }
@@ -89,7 +89,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             {
                 Method = method,
                 RequestType = requestType,
-                ResponseType = responseType,
+                ReturnInfo = returnInfo,
                 OperationName = operationName
             });
         }
@@ -171,9 +171,16 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         };
 
         var requestType = ep.RequestType.ToDisplayString();
-        var dispatchInvocation = ep.ResponseType is null
-            ? "await dispatcher.DispatchAsync(request)"
-            : $"await dispatcher.DispatchAsync<{ep.ResponseType.ToDisplayString()}>(request)";
+        var serviceType = ep.ServiceType.ToDisplayString();
+        var serviceCall = ep.ServiceHasCancellationToken
+            ? $"service.{ep.ServiceMethodName}(request, cancellationToken)"
+            : $"service.{ep.ServiceMethodName}(request)";
+        var serviceInvocation = ep.ReturnInfo.Kind switch
+        {
+            ServiceReturnKind.Task => $"await {serviceCall}",
+            ServiceReturnKind.TaskOfT => $"await {serviceCall}",
+            _ => throw new InvalidOperationException("Unsupported service return kind.")
+        };
 
         var isGet = ep.Method == HttpVerb.Get;
         var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(ep.Route);
@@ -184,10 +191,9 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             var fromAttr = isGet ? "[global::Microsoft.AspNetCore.Http.AsParametersAttribute]" : "[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]";
             sb.Append($"            app.{mapMethod}(\"{ep.Route}\",");
             sb.AppendLine();
-            sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher) =>");
+            sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service{(ep.ServiceHasCancellationToken ? ", global::System.Threading.CancellationToken cancellationToken" : string.Empty)}) =>");
             sb.AppendLine("                {");
-            sb.AppendLine($"                    var response = {dispatchInvocation};");
-            sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
+            EmitEndpointResponse(sb, ep.ReturnInfo.Kind, serviceInvocation);
             sb.Append("                })");
         }
         else
@@ -208,7 +214,11 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] {bodyDtoName} __body__");
             }
 
-            lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::NOF.Infrastructure.IRequestDispatcher dispatcher");
+            lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service");
+            if (ep.ServiceHasCancellationToken)
+            {
+                lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
+            }
             var lambdaParamStr = string.Join(", ", lambdaParams);
 
             sb.Append($"            app.{mapMethod}(\"{ep.Route}\",");
@@ -278,12 +288,17 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 sb.AppendLine($"                    var request = new {requestType}({ctorArgStr});");
             }
 
-            var dispatchInvocationForConstructed = ep.ResponseType is null
-                ? "await dispatcher.DispatchAsync(request)"
-                : $"await dispatcher.DispatchAsync<{ep.ResponseType.ToDisplayString()}>(request)";
+            var serviceCallForConstructed = ep.ServiceHasCancellationToken
+                ? $"service.{ep.ServiceMethodName}(request, cancellationToken)"
+                : $"service.{ep.ServiceMethodName}(request)";
+            var serviceInvocationForConstructed = ep.ReturnInfo.Kind switch
+            {
+                ServiceReturnKind.Task => $"await {serviceCallForConstructed}",
+                ServiceReturnKind.TaskOfT => $"await {serviceCallForConstructed}",
+                _ => throw new InvalidOperationException("Unsupported service return kind.")
+            };
 
-            sb.AppendLine($"                    var response = {dispatchInvocationForConstructed};");
-            sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
+            EmitEndpointResponse(sb, ep.ReturnInfo.Kind, serviceInvocationForConstructed);
             sb.Append("                })");
         }
 
@@ -349,6 +364,19 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
+
+    private static void EmitEndpointResponse(StringBuilder sb, ServiceReturnKind returnKind, string invocation)
+    {
+        if (returnKind == ServiceReturnKind.Task)
+        {
+            sb.AppendLine($"                    {invocation};");
+            sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok();");
+            return;
+        }
+
+        sb.AppendLine($"                    var response = {invocation};");
+        sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
     }
 
     private static IMethodSymbol? FindBestConstructor(INamedTypeSymbol typeSymbol, List<IPropertySymbol> allProperties)

@@ -39,7 +39,6 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.TryAddScoped<IMutableInvocationContext, InvocationContext>();
         builder.Services.TryAddScoped<ICommandSender, CommandSender>();
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
-        builder.Services.TryAddScoped<IRequestDispatcher, RequestDispatcher>();
         builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
         builder.Services.TryAddSingleton<ICommandHandlerResolver, CommandHandlerResolver>();
         builder.Services.TryAddSingleton<IRequestHandlerResolver, RequestHandlerResolver>();

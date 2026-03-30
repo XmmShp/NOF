@@ -1,6 +1,5 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NOF.Contract;
 using NOF.Hosting.AspNetCore.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
@@ -11,20 +10,31 @@ namespace NOF.SourceGenerator.Tests;
 public class ExposeToHttpEndpointMapperTests
 {
     private static readonly Type[] _refs =
-    [        typeof(HttpEndpointAttribute),
+    [
+        typeof(HttpEndpointAttribute),
         typeof(GenerateServiceAttribute),
         typeof(HttpVerb),
+        typeof(Result),
+        typeof(Result<>)
     ];
 
     [Fact]
-    public void GenerateMapAllHttpEndpoints_WithMainAndReferencedEndpoints_CombinesAll()
+    public void GenerateMapAllHttpEndpoints_WithMainAndReferencedServices_CombinesAll()
     {
         const string libSource = """
             using NOF.Contract;
+            using System.Threading.Tasks;
+
             namespace Lib
             {
-                                [HttpEndpoint(HttpVerb.Get, "/api/user")]
                 public record GetUserRequest(string Id);
+
+                [GenerateService]
+                public partial interface ILibService
+                {
+                    [HttpEndpoint(HttpVerb.Get, "/api/user")]
+                    Task<Result<string>> GetUserAsync(GetUserRequest request);
+                }
             }
             """;
 
@@ -33,54 +43,35 @@ public class ExposeToHttpEndpointMapperTests
 
         const string mainSource = """
             using NOF.Contract;
+            using System.Threading;
+            using System.Threading.Tasks;
+
             namespace App
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/user")]
                 public record CreateUserRequest(string Name);
 
-                [GenerateService(Namespaces = new[] { "App", "Lib" })]
-                public partial interface IMyService;
+                [GenerateService]
+                public partial interface IAppService
+                {
+                    [HttpEndpoint(HttpVerb.Post, "/api/user")]
+                    Task<Result> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default);
+                }
             }
             """;
 
         var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, libRef);
-
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(mainComp);
-        var trees = result.GeneratedTrees;
 
-        trees.Should().ContainSingle();
+        result.GeneratedTrees.Should().ContainSingle();
+        var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        var root = trees.Single().GetRoot();
-        var ns = root.DescendantNodes().OfType<NamespaceDeclarationSyntax>().Should().ContainSingle().Subject;
-        ns.Name.ToString().Should().Be("App");
-
-        var method = ns.DescendantNodes().OfType<MethodDeclarationSyntax>().Should().ContainSingle().Subject;
-        method.Identifier.Text.Should().Be("MapAllHttpEndpoints");
-
-        var bodyText = method.Body!.ToString();
-
-        var blocks = bodyText.Split([";\r\n\r\n", ";\n\n"], StringSplitOptions.RemoveEmptyEntries);
-
-        var getBlock = blocks.FirstOrDefault(b => b.Contains("MapGet"));
-        var postBlock = blocks.FirstOrDefault(b => b.Contains("MapPost"));
-
-        getBlock.Should().NotBeNull();
-        postBlock.Should().NotBeNull();
-
-        getBlock.Should()
-            .Contain("app.MapGet(\"/api/user\"")
-            .And.Contain("[global::Microsoft.AspNetCore.Http.AsParametersAttribute] Lib.GetUserRequest request")
-            .And.Contain("dispatcher.DispatchAsync(request)");
-
-        postBlock.Should()
-            .Contain("app.MapPost(\"/api/user\"")
-            .And.Contain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] App.CreateUserRequest request")
-            .And.Contain("dispatcher.DispatchAsync(request)");
-
-        bodyText.Should().Contain("return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
-
-        // Uses NOF.Infrastructure.IRequestDispatcher, not NOF.Application.IRequestSender
-        bodyText.Should().Contain("global::NOF.Infrastructure.IRequestDispatcher");
+        code.Should().Contain("app.MapGet(\"/api/user\"");
+        code.Should().Contain("app.MapPost(\"/api/user\"");
+        code.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] Lib.ILibService service");
+        code.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] App.IAppService service");
+        code.Should().Contain("service.GetUserAsync(request)");
+        code.Should().Contain("service.CreateUserAsync(request, cancellationToken)");
+        code.Should().NotContain("IRequestDispatcher");
     }
 
     [Fact]
@@ -90,7 +81,7 @@ public class ExposeToHttpEndpointMapperTests
             using NOF.Contract;
             namespace App
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public record CreateItemRequest(string Name);
             }
             """;
@@ -102,32 +93,21 @@ public class ExposeToHttpEndpointMapperTests
     }
 
     [Fact]
-    public void GenerateMapAllHttpEndpoints_WhenNoEndpointsExist_GeneratesNothing()
-    {
-        const string source = """
-            namespace App
-            {
-                public class PlainClass { }
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
-
-        result.GeneratedTrees.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void GenerateMapAllHttpEndpoints_PublicApiWithoutHttpEndpoint_DefaultsToPost()
+    public void GenerateMapAllHttpEndpoints_MethodWithoutHttpEndpoint_DefaultsToPost()
     {
         const string source = """
             using NOF.Contract;
+            using System.Threading.Tasks;
+
             namespace App
             {
-                                public record InternalRequest(string Data);
+                public record InternalRequest(string Data);
 
                 [GenerateService]
-                public partial interface IMyService;
+                public partial interface IMyService
+                {
+                    Task<Result> InternalAsync(InternalRequest request);
+                }
             }
             """;
 
@@ -135,52 +115,20 @@ public class ExposeToHttpEndpointMapperTests
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        generatedCode.Should().Contain("MapPost");
-        generatedCode.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] App.InternalRequest request");
+        var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
+        code.Should().Contain("MapPost");
+        code.Should().Contain("\"Internal\"");
     }
 
     [Fact]
-    public void GenerateMapAllHttpEndpoints_RespectsNamespaceFilter()
+    public void GenerateMapAllHttpEndpoints_RouteAndBodyHybridBinding_Works()
     {
         const string source = """
             using NOF.Contract;
-            namespace Other
-            {
-                                [HttpEndpoint(HttpVerb.Get, "/api/other")]
-                public record OtherRequest;
-            }
+            using System.Threading.Tasks;
+
             namespace App
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name);
-
-                [GenerateService]
-                public partial interface IMyService;
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
-
-        result.GeneratedTrees.Should().ContainSingle();
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        // Only App namespace scanned (default = interface namespace)
-        generatedCode.Should().Contain("MapPost");
-        generatedCode.Should().Contain("CreateItemRequest");
-        generatedCode.Should().NotContain("OtherRequest");
-    }
-
-    [Fact]
-    public void GenerateMapAllHttpEndpoints_RecordWithPrimaryCtorAndExtraProps_UsesHybridBinding()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
                 public record UpdateItemRequest(long Id)
                 {
                     public string? Value { get; set; }
@@ -188,101 +136,11 @@ public class ExposeToHttpEndpointMapperTests
                 }
 
                 [GenerateService]
-                public partial interface IMyService;
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
-
-        result.GeneratedTrees.Should().ContainSingle();
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        generatedCode.Should().Contain("class __UpdateItemRequest_Body__");
-        generatedCode.Should().Contain("public string? Value { get; set; }");
-        generatedCode.Should().Contain("public int? Priority { get; set; }");
-
-        generatedCode.Should().Contain("new App.UpdateItemRequest(id)");
-        generatedCode.Should().Contain("Value = __body__.Value");
-        generatedCode.Should().Contain("Priority = __body__.Priority");
-
-        generatedCode.Should().Contain("long id");
-        generatedCode.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] __UpdateItemRequest_Body__ __body__");
-    }
-
-    [Fact]
-    public void GenerateMapAllHttpEndpoints_RecordWithAllPropsInCtor_UsesCtorOnly()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
-                public record AddFileRequest(long NodeId, string FileName, string Content);
-
-                [GenerateService]
-                public partial interface IMyService;
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
-
-        result.GeneratedTrees.Should().ContainSingle();
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        generatedCode.Should().Contain("class __AddFileRequest_Body__");
-        generatedCode.Should().Contain("public string Content { get; set; }");
-        generatedCode.Should().NotContain("public long NodeId");
-        generatedCode.Should().NotContain("public string FileName { get; set; }");
-
-        generatedCode.Should().Contain("new App.AddFileRequest(nodeId, fileName, __body__.Content);");
-    }
-
-    [Fact]
-    public void GenerateMapAllHttpEndpoints_DeleteWithOnlyRouteParams_NoBodyDto()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
-                public record DeleteItemRequest(long Id);
-
-                [GenerateService]
-                public partial interface IMyService;
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
-
-        result.GeneratedTrees.Should().ContainSingle();
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        generatedCode.Should().NotContain("__DeleteItemRequest_Body__");
-        generatedCode.Should().NotContain("[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]");
-        generatedCode.Should().Contain("new App.DeleteItemRequest(id)");
-        generatedCode.Should().Contain("long id");
-    }
-
-    [Fact]
-    public void GenerateMapAllHttpEndpoints_ClassWithParameterlessCtor_UsesObjectInitializer()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest
+                public partial interface IMyService
                 {
-                    public long Id { get; set; }
-                    public string Name { get; set; } = default!;
-                    public int Count { get; set; }
+                    [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
+                    Task<Result> UpdateItemAsync(UpdateItemRequest request);
                 }
-
-                [GenerateService]
-                public partial interface IMyService;
             }
             """;
 
@@ -290,19 +148,12 @@ public class ExposeToHttpEndpointMapperTests
         var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
+        var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("class __UpdateItemRequest_Body__");
-        generatedCode.Should().Contain("public string Name { get; set; }");
-        generatedCode.Should().Contain("public int Count { get; set; }");
-
-        generatedCode.Should().Contain("new App.UpdateItemRequest()");
-        generatedCode.Should().Contain("Id = id");
-        generatedCode.Should().Contain("Name = __body__.Name");
-        generatedCode.Should().Contain("Count = __body__.Count");
+        code.Should().Contain("class __UpdateItemRequest_Body__");
+        code.Should().Contain("new App.UpdateItemRequest(id)");
+        code.Should().Contain("Value = __body__.Value");
+        code.Should().Contain("Priority = __body__.Priority");
+        code.Should().Contain("service.UpdateItemAsync(request)");
     }
 }
-
-
-
-

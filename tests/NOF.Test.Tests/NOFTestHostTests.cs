@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure;
 using Xunit;
 
 namespace NOF.Test.Tests;
@@ -40,31 +39,6 @@ public class NOFTestHostTests
         scope.UserContext.Id.Should().Be("user-1");
         scope.UserContext.Name.Should().Be("Alice");
         scope.UserContext.Permissions.Should().Contain(["orders.read", "orders.write"]);
-    }
-
-    [Fact]
-    public async Task SendAsync_ShouldResolveRequestDispatcherFromScope()
-    {
-        var builder = NOFTestAppBuilder.Create();
-        builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
-
-        await using var host = await builder.BuildTestHostAsync();
-        var result = await host.SendAsync(new PingRequest("hello"));
-
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task SendAsync_Generic_ShouldResolveTypedResponse()
-    {
-        var builder = NOFTestAppBuilder.Create();
-        builder.Services.AddScoped<IRequestDispatcher, FakeRequestDispatcher>();
-
-        await using var host = await builder.BuildTestHostAsync();
-        var result = await host.SendAsync<string>(new EchoRequest("hello"));
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("hello");
     }
 
     [Fact]
@@ -127,32 +101,9 @@ public class NOFTestHostTests
         second.ScopeInstanceId.Should().NotBe(firstA.ScopeInstanceId);
     }
 
-    private sealed record PingRequest(string Value);
-
-    private sealed record EchoRequest(string Value);
-
     private sealed record TestCommand(string Value) : ICommand;
 
     private sealed record TestNotification(string Value) : INotification;
-
-    private sealed class FakeRequestDispatcher : IRequestDispatcher
-    {
-        public Task<Result> DispatchAsync(object request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Result.Success());
-        }
-
-        public Task<Result<TResponse>> DispatchAsync<TResponse>(object request, IDictionary<string, string?>? headers = null, string? destinationEndpointName = null, CancellationToken cancellationToken = default)
-        {
-            object? value = request switch
-            {
-                EchoRequest echo when typeof(TResponse) == typeof(string) => echo.Value,
-                _ => default(TResponse)
-            };
-
-            return Task.FromResult(Result.Success((TResponse)value!));
-        }
-    }
 
     private sealed class FakeCommandSender : ICommandSender
     {

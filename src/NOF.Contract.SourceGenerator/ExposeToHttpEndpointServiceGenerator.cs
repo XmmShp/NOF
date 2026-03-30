@@ -55,11 +55,6 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         var generateHttp = attr.NamedArguments
             .FirstOrDefault(a => a.Key == "GenerateHttpClient").Value.Value is not false;
 
-        if (!generateHttp)
-        {
-            return;
-        }
-
         var methods = GetServiceMethods(iface);
         if (methods.Count == 0)
         {
@@ -79,7 +74,10 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {ifaceNamespace}");
         sb.AppendLine("{");
 
-        EmitHttpClient(sb, interfaceName, httpClientName, methods);
+        if (generateHttp)
+        {
+            EmitHttpClient(sb, interfaceName, httpClientName, methods);
+        }
 
         sb.AppendLine("}");
 
@@ -107,20 +105,18 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (!ExposeToHttpEndpointHelpers.TryGetResultResponseType(method, out var responseType))
+            if (!ExposeToHttpEndpointHelpers.TryGetServiceReturnInfo(method, out var returnInfo))
             {
                 continue;
             }
 
-            var operationName = method.Name.EndsWith("Async", StringComparison.Ordinal)
-                ? method.Name.Substring(0, method.Name.Length - 5)
-                : method.Name;
+            var operationName = ExposeToHttpEndpointHelpers.GetOperationName(method.Name);
 
             methods.Add(new ServiceMethodInfo
             {
                 Method = method,
                 RequestType = requestType,
-                ResponseType = responseType,
+                ReturnInfo = returnInfo,
                 OperationName = operationName
             });
         }
@@ -158,9 +154,10 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
     private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint)
     {
         var requestType = endpoint.RequestType.ToDisplayString();
-        var responseType = endpoint.ResponseType?.ToDisplayString();
         var returnType = method.Method.ReturnType.ToDisplayString();
         var methodName = method.Method.Name;
+        var returnKind = endpoint.ReturnInfo.Kind;
+        var returnValueType = endpoint.ReturnInfo.ValueType?.ToDisplayString();
         var httpMethod = GetHttpMethod(endpoint.Method);
         var isBodyMethod = IsBodyMethod(endpoint.Method);
         var fqnHttpMethod = $"global::System.Net.Http.{httpMethod}";
@@ -244,37 +241,29 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine($"            using var response = await _httpClient.SendAsync(httpRequest, {cancellationTokenArgument}).ConfigureAwait(false);");
-        EmitResponseHandling(sb, responseType, cancellationTokenArgument);
+
+        EmitResponseHandling(sb, returnKind, returnValueType, cancellationTokenArgument);
         sb.AppendLine("        }");
         sb.AppendLine();
     }
 
-    private static void EmitResponseHandling(StringBuilder sb, string? responseType, string cancellationTokenArgument)
+    private static void EmitResponseHandling(StringBuilder sb, ServiceReturnKind returnKind, string? returnValueType, string cancellationTokenArgument)
     {
-        sb.AppendLine("            if (!response.IsSuccessStatusCode)");
-        sb.AppendLine("            {");
-        sb.AppendLine("                return global::NOF.Contract.Result.Fail(((int)response.StatusCode).ToString(), $\"{(int)response.StatusCode}: {response.ReasonPhrase}\");");
-        sb.AppendLine("            }");
-        sb.AppendLine("            try");
-        sb.AppendLine("            {");
+        sb.AppendLine("            response.EnsureSuccessStatusCode();");
 
-        if (string.IsNullOrEmpty(responseType))
+        if (returnKind == ServiceReturnKind.Task)
         {
-            sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result>(response.Content, _jsonOptions, {cancellationTokenArgument});");
-            sb.AppendLine("                return apiResponse ?? global::NOF.Contract.Result.Fail(\"500\", \"Unexpected null response from server.\");");
+            sb.AppendLine("            return;");
+        }
+        else if (returnKind == ServiceReturnKind.TaskOfT)
+        {
+            sb.AppendLine($"            var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<{returnValueType}>(response.Content, _jsonOptions, {cancellationTokenArgument});");
+            sb.AppendLine("            return apiResponse!;");
         }
         else
         {
-            sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result<{responseType}>>(response.Content, _jsonOptions, {cancellationTokenArgument});");
-            sb.AppendLine("                return apiResponse ?? global::NOF.Contract.Result.Fail(\"500\", \"Unexpected null response from server.\");");
+            sb.AppendLine("            throw new global::System.InvalidOperationException(\"Unsupported service return kind.\");");
         }
-
-        sb.AppendLine("            }");
-        sb.AppendLine("            catch (global::System.Text.Json.JsonException ex)");
-        sb.AppendLine("            {");
-        sb.AppendLine("                return global::NOF.Contract.Result.Fail(\"400\", $\"Response deserialization failed: {ex.Message}\");");
-        sb.AppendLine("            }");
-        sb.AppendLine();
     }
 
     private static void EmitQueryParamAppend(StringBuilder sb, IPropertySymbol prop)

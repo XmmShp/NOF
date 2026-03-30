@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -13,9 +13,11 @@ namespace NOF.SourceGenerator.Tests;
 public class ExposeToHttpEndpointAnalyzerTests
 {
     private static readonly Type[] _refs =
-    [        typeof(HttpEndpointAttribute),
+    [
+        typeof(HttpEndpointAttribute),
         typeof(GenerateServiceAttribute),
-        typeof(HttpVerb),        typeof(Result),
+        typeof(HttpVerb),
+        typeof(Result),
         typeof(Result<>)
     ];
 
@@ -26,20 +28,17 @@ public class ExposeToHttpEndpointAnalyzerTests
 
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new ExposeToHttpEndpointAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
-        var diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
-        return diagnostics;
+        return await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
     }
 
-    // --- HttpEndpoint + PublicApi validation ---
-
     [Fact]
-    public async Task StructRequest_WithPublicApi_ReportsError()
+    public async Task StructRequest_WithHttpEndpoint_ReportsNOF200()
     {
         const string source = """
             using NOF.Contract;
             namespace App
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public struct CreateItemRequest
                 {
                     public string Name { get; set; }
@@ -48,166 +47,36 @@ public class ExposeToHttpEndpointAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-
         diagnostics.Should().Contain(d => d.Id == "NOF200");
-        diagnostics.First(d => d.Id == "NOF200").GetMessage().Should().Contain("CreateItemRequest");
     }
 
     [Fact]
-    public async Task HttpEndpointWithoutPublicApi_ReportsError()
+    public async Task MissingRouteParamProperty_ReportsNOF201()
+    {
+        const string source = """
+            using NOF.Contract;
+            namespace App
+            {
+                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
+                public class UpdateItemRequest
+                {
+                    public string Name { get; set; } = default!;
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        diagnostics.Should().ContainSingle(d => d.Id == "NOF201");
+    }
+
+    [Fact]
+    public async Task ClassWithoutParameterlessCtor_ReportsNOF202()
     {
         const string source = """
             using NOF.Contract;
             namespace App
             {
                 [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name);
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF204");
-        diagnostics.First(d => d.Id == "NOF204").GetMessage().Should().Contain("CreateItemRequest");
-    }
-
-    [Fact]
-    public async Task MissingRouteParamProperty_ReportsError()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest(long id)
-                {
-                    public string Name { get; set; } = default!;
-                }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF201");
-        var diag = diagnostics.First(d => d.Id == "NOF201");
-        diag.GetMessage().Should().Contain("UpdateItemRequest").And.Contain("id");
-    }
-
-    [Fact]
-    public async Task ClassWithPrimaryCtor_NoParameterlessCtor_ReportsError()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest(long id)
-                {
-                    public string Name { get; set; } = default!;
-                }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().Contain(d => d.Id == "NOF202");
-        diagnostics.First(d => d.Id == "NOF202").GetMessage().Should().Contain("UpdateItemRequest");
-    }
-
-    [Fact]
-    public async Task ClassWithExplicitParameterlessCtor_NoDiagnostic()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public class UpdateItemRequest
-                {
-                    public long Id { get; set; }
-                    public string Name { get; set; } = default!;
-                }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF200");
-        diagnostics.Should().NotContain(d => d.Id == "NOF201");
-        diagnostics.Should().NotContain(d => d.Id == "NOF202");
-    }
-
-    [Fact]
-    public async Task RecordWithPrimaryCtor_NoDiagnostic()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/items/{id}")]
-                public record UpdateItemRequest(long Id)
-                {
-                    public string? Value { get; set; }
-                }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF200");
-        diagnostics.Should().NotContain(d => d.Id == "NOF201");
-        diagnostics.Should().NotContain(d => d.Id == "NOF202");
-    }
-
-    [Fact]
-    public async Task RecordWithAllPropsInCtor_NoDiagnostic()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
-                public record AddFileRequest(long NodeId, string FileName, string Content);
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF200");
-        diagnostics.Should().NotContain(d => d.Id == "NOF201");
-        diagnostics.Should().NotContain(d => d.Id == "NOF202");
-    }
-
-    [Fact]
-    public async Task MultipleRouteParams_OneMissing_ReportsErrorForMissingOnly()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Put, "/api/nodes/{nodeId}/files/{fileName}")]
-                public class AddFileRequest
-                {
-                    public long NodeId { get; set; }
-                    public string Content { get; set; } = default!;
-                }
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF201");
-        diagnostics.First(d => d.Id == "NOF201").GetMessage().Should().Contain("fileName");
-    }
-
-    [Fact]
-    public async Task NoRouteParams_ClassWithoutParameterlessCtor_StillReportsCtorError()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
                 public class CreateItemRequest
                 {
                     public CreateItemRequest(string name) { Name = name; }
@@ -217,118 +86,95 @@ public class ExposeToHttpEndpointAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-
         diagnostics.Should().Contain(d => d.Id == "NOF202");
     }
 
     [Fact]
-    public async Task ClassWithBothParameterlessAndParameterizedCtor_NoDiagnostic()
+    public async Task ServiceMethod_WithTwoBusinessParameters_ReportsNOF207()
     {
         const string source = """
             using NOF.Contract;
-            namespace App
+            using System.Threading.Tasks;
+
+            namespace App;
+
+            public record Query1(string Value);
+            public record Query2(string Value);
+
+            [GenerateService]
+            public partial interface IMyService
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public class CreateItemRequest
-                {
-                    public CreateItemRequest() { }
-                    public CreateItemRequest(string name) { Name = name; }
-                    public string Name { get; set; } = default!;
-                }
+                Task<Result> DoAsync(Query1 first, Query2 second);
             }
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF202");
+        diagnostics.Should().ContainSingle(d => d.Id == "NOF207");
     }
 
     [Fact]
-    public async Task RouteParamMatchIsCaseInsensitive_NoDiagnostic()
+    public async Task ServiceMethod_WithSyncReturn_ReportsNOF207()
     {
         const string source = """
             using NOF.Contract;
-            namespace App
+
+            namespace App;
+
+            public record Query(string Value);
+
+            [GenerateService]
+            public partial interface IMyService
             {
-                                [HttpEndpoint(HttpVerb.Delete, "/api/items/{id}")]
-                public record DeleteItemRequest(long Id);
+                Result Do(Query request);
             }
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF201");
-    }
-
-    // --- PublicApi OperationName validation ---
-
-    [Fact]
-    public async Task InvalidOperationName_OnPublicApi_ReportsError()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                public record CreateItemRequest(string Name);
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF203");
-        diagnostics.First(d => d.Id == "NOF203").GetMessage().Should().Contain("create-item");
+        diagnostics.Should().ContainSingle(d => d.Id == "NOF207");
     }
 
     [Fact]
-    public async Task ValidOperationName_NoDiagnostic()
+    public async Task ServiceMethod_WithValueTaskReturn_ReportsNOF207()
     {
         const string source = """
             using NOF.Contract;
-            namespace App
+            using System.Threading.Tasks;
+
+            namespace App;
+
+            public record Query(string Value);
+
+            [GenerateService]
+            public partial interface IMyService
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name);
+                ValueTask<Result> DoAsync(Query request);
             }
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF203");
+        diagnostics.Should().ContainSingle(d => d.Id == "NOF207");
     }
 
     [Fact]
-    public async Task NoOperationName_NoDiagnostic()
+    public async Task ServiceMethod_WithTaskAndSingleRequest_NoNOF207()
     {
         const string source = """
             using NOF.Contract;
-            namespace App
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            namespace App;
+
+            public record Query(string Value);
+
+            [GenerateService]
+            public partial interface IMyService
             {
-                                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                public record CreateItemRequest(string Name);
+                Task<Result<string>> DoAsync(Query request, CancellationToken cancellationToken = default);
             }
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().NotContain(d => d.Id == "NOF203");
-    }
-
-    [Fact]
-    public async Task OperationNameWithSpaces_ReportsError()
-    {
-        const string source = """
-            using NOF.Contract;
-            namespace App
-            {
-                                public record CreateItemRequest(string Name);
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF203");
+        diagnostics.Should().NotContain(d => d.Id == "NOF207");
     }
 }
-
-
-

@@ -34,36 +34,22 @@ internal static class ExposeToHttpEndpointHelpers
         return false;
     }
 
-    public static bool TryGetResultResponseType(IMethodSymbol method, out ITypeSymbol? responseType)
+    public static bool TryGetServiceReturnInfo(IMethodSymbol method, out ServiceReturnInfo returnInfo)
     {
-        responseType = null;
-        if (method.ReturnType is not INamedTypeSymbol { IsGenericType: true } returnType)
+        if (method.ReturnType.ToDisplayString() == "System.Threading.Tasks.Task")
         {
-            return false;
-        }
-
-        if (returnType.OriginalDefinition.ToDisplayString() != "System.Threading.Tasks.Task<TResult>")
-        {
-            return false;
-        }
-
-        if (returnType.TypeArguments[0] is not INamedTypeSymbol resultType)
-        {
-            return false;
-        }
-
-        if (resultType.ToDisplayString() == "NOF.Contract.Result")
-        {
+            returnInfo = new ServiceReturnInfo(ServiceReturnKind.Task, null);
             return true;
         }
 
-        if (resultType is { IsGenericType: true } &&
-            resultType.OriginalDefinition.ToDisplayString() == "NOF.Contract.Result<T>")
+        if (method.ReturnType is INamedTypeSymbol { IsGenericType: true } generic &&
+            generic.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<TResult>")
         {
-            responseType = resultType.TypeArguments[0];
+            returnInfo = new ServiceReturnInfo(ServiceReturnKind.TaskOfT, generic.TypeArguments[0]);
             return true;
         }
 
+        returnInfo = default;
         return false;
     }
 
@@ -134,8 +120,11 @@ internal static class ExposeToHttpEndpointHelpers
 
         return new EndpointInfo
         {
+            ServiceType = method.Method.ContainingType,
+            ServiceMethodName = method.Method.Name,
+            ServiceHasCancellationToken = method.Method.Parameters.Any(p => IsCancellationToken(p.Type)),
             RequestType = method.RequestType,
-            ResponseType = method.ResponseType,
+            ReturnInfo = method.ReturnInfo,
             Method = httpMethod,
             Route = route,
             OperationName = method.OperationName,
@@ -156,14 +145,17 @@ internal sealed class ServiceMethodInfo
 {
     public IMethodSymbol Method { get; set; } = null!;
     public INamedTypeSymbol RequestType { get; set; } = null!;
-    public ITypeSymbol? ResponseType { get; set; }
+    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.Task, null);
     public string OperationName { get; set; } = string.Empty;
 }
 
 internal class EndpointInfo
 {
+    public INamedTypeSymbol ServiceType { get; set; } = null!;
+    public string ServiceMethodName { get; set; } = string.Empty;
+    public bool ServiceHasCancellationToken { get; set; }
     public INamedTypeSymbol RequestType { get; set; } = null!;
-    public ITypeSymbol? ResponseType { get; set; }
+    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.Task, null);
     public HttpVerb Method { get; set; }
     public string Route { get; set; } = string.Empty;
     public string OperationName { get; set; } = string.Empty;
@@ -180,5 +172,23 @@ internal enum HttpVerb
     Put,
     Delete,
     Patch
+}
+
+internal enum ServiceReturnKind
+{
+    Task,
+    TaskOfT
+}
+
+internal readonly struct ServiceReturnInfo
+{
+    public ServiceReturnInfo(ServiceReturnKind kind, ITypeSymbol? valueType)
+    {
+        Kind = kind;
+        ValueType = valueType;
+    }
+
+    public ServiceReturnKind Kind { get; }
+    public ITypeSymbol? ValueType { get; }
 }
 

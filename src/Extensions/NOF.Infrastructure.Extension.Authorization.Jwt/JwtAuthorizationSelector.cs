@@ -16,7 +16,7 @@ public readonly struct JwtAuthorizationSelector
 
     /// <summary>
     /// Replaces the default <see cref="HttpJwksProvider"/> with <see cref="RequestDispatcherJwksProvider"/>
-    /// which fetches JWKS via in-process dispatch.
+    /// which fetches JWKS via in-process request handler execution.
     /// </summary>
     /// <returns>This selector for further chaining.</returns>
     public JwtAuthorizationSelector UseRequestJwksProvider()

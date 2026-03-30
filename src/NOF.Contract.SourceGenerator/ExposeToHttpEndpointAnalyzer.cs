@@ -37,7 +37,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor InvalidServiceMethodSignature = new(
         "NOF207",
         "Invalid service method signature",
-        "Method '{0}' on service interface '{1}' must have exactly one request parameter (plus optional CancellationToken) and return Task<Result> or Task<Result<T>>",
+        "Method '{0}' on service interface '{1}' must have exactly one request parameter (plus optional CancellationToken) and return Task or Task<T>",
         "GenerateService",
         DiagnosticSeverity.Error,
         true);
@@ -102,11 +102,12 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var attrLocation = typeSymbol.GetAttributes()
-                               .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn)
-                               .ApplicationSyntaxReference?.GetSyntax().GetLocation()
-                           ?? typeSymbol.Locations.FirstOrDefault()
-                           ?? Location.None;
+        var generateAttr = typeSymbol.GetAttributes()
+            .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn);
+
+        var attrLocation = generateAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
+            ?? typeSymbol.Locations.FirstOrDefault()
+            ?? Location.None;
 
         foreach (var method in typeSymbol.GetMembers().OfType<IMethodSymbol>())
         {
@@ -116,7 +117,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             }
 
             var validRequestParameter = ExposeToHttpEndpointHelpers.TryGetRequestParameter(method, out var requestParameter);
-            var validReturnType = ExposeToHttpEndpointHelpers.TryGetResultResponseType(method, out _);
+            var validReturnType = ExposeToHttpEndpointHelpers.TryGetServiceReturnInfo(method, out _);
             if (!validRequestParameter || !validReturnType)
             {
                 context.ReportDiagnostic(
@@ -153,6 +154,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             var propertyNames = new HashSet<string>(allProperties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
             ValidateRouteParameters(context, requestType.Name, route!, propertyNames, methodLocation);
         }
+
     }
 
     private static void ValidateRequestPayloadShape(SymbolAnalysisContext context, INamedTypeSymbol requestType, Location location)
@@ -194,4 +196,5 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
                 Diagnostic.Create(MissingRouteParamProperty, location, requestTypeName, routeParam));
         }
     }
+
 }
