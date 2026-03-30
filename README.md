@@ -78,6 +78,14 @@ NOF.Extensions.*               <- Optional feature extensions
 
 Full API documentation is available at the [GitHub Pages site](https://xmmshp.github.io/NOF/).
 
+## Dependency Version Management
+
+This repository uses Central Package Management via `Directory.Packages.props`.
+
+- Root-level shared package versions are defined in `Directory.Packages.props`.
+- `sample/Directory.Packages.props` imports the root file and should only declare sample-specific package versions.
+- Avoid defining the same `<PackageVersion Include="...">` in both files, or NuGet restore will emit duplicate package version warnings (for example `NU1506`).
+
 ## License
 
 This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
