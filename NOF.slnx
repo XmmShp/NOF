@@ -17,6 +17,7 @@
     <File Path="nuget.config" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/NOF.Abstraction.SourceGenerator/NOF.Abstraction.SourceGenerator.csproj" />
     <Project Path="src/NOF.Abstraction/NOF.Abstraction.csproj" />
     <Project Path="src/NOF.Application/NOF.Application.csproj" />
     <Project Path="src/NOF.Application.SourceGenerator/NOF.Application.SourceGenerator.csproj" />
@@ -34,9 +35,9 @@
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
     <Project Path="src/Hostings/NOF.Hosting.BlazorWebAssembly/NOF.Hosting.BlazorWebAssembly.csproj" Id="2d5a6c2d-1d8b-4b67-8c7b-4f718c7d61a1" />
     <Project Path="src/Hostings/NOF.Hosting.Maui/NOF.Hosting.Maui.csproj" Id="b7c3d4e5-f6a7-4890-abcd-1234567890ef" />
-    <Project Path="src/Hostings/NOF.Hosting.SourceGenerator/NOF.Hosting.SourceGenerator.csproj" Id="9a656d99-fc6b-47db-ba9f-37179031df4a" />
   </Folder>
   <Folder Name="/src/Extensions/">
+    <Project Path="src/Extensions/NOF.Application.Extension.Redis/NOF.Application.Extension.Redis.csproj" />
     <Project Path="src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/NOF.Infrastructure.Extension.Authorization.Jwt.csproj" />
   </Folder>
   <Folder Name="/src/Infrastructures/">

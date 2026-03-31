@@ -1,7 +1,7 @@
 using NOF.Contract;
 using System.Reflection;
 
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 /// <summary>
 /// Centralized registry of all handler metadata collected during service registration.

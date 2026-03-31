@@ -1,11 +1,9 @@
-using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.DeleteConfigNode)])]
 public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 {
     private readonly IConfigNodeRepository _configNodeRepository;

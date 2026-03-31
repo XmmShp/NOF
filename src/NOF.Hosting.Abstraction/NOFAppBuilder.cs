@@ -50,6 +50,11 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     /// </summary>
     protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs = [];
 
+    protected NOFAppBuilder()
+    {
+        ServiceConfigs.Add(new AutoInjectServiceRegistrationStep());
+    }
+
     /// <inheritdoc />
     public virtual INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
     {

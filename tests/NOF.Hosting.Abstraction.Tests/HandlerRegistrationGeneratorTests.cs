@@ -2,10 +2,9 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Application.SourceGenerator;
 using NOF.Contract;
 using NOF.Domain;
-using NOF.Hosting.SourceGenerator;
-using NOF.Infrastructure;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -39,11 +38,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Should use typed CommandHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand))");
-
-        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
-        generatedCode.Should().NotContain("AddKeyedScoped");
+        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]");
+        generatedCode.Should().Contain("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));");
+        generatedCode.Should().NotContain("SourceModule.ReferencedAssemblySymbols");
 
     }
 
@@ -73,11 +70,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Should use typed EventHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent))");
-
-        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
-        generatedCode.Should().NotContain("AddKeyedScoped");
+        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]");
+        generatedCode.Should().Contain("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));");
+        generatedCode.Should().NotContain("SourceModule.ReferencedAssemblySymbols");
 
     }
 
@@ -107,12 +102,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Should use typed NotificationHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification))");
-
-        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
-        generatedCode.Should().NotContain("AddKeyedScoped");
+        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]");
+        generatedCode.Should().Contain("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));");
+        generatedCode.Should().NotContain("SourceModule.ReferencedAssemblySymbols");
     }
 }
-
 

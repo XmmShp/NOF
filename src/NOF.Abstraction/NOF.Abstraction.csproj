@@ -11,4 +11,11 @@
     <Description>Cross-cutting abstractions and annotations for the NOF Framework - shared initialization contracts, DI helper provider factory, and source-generation attributes.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="..\NOF.Abstraction.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Abstraction.SourceGenerator.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+
 </Project>

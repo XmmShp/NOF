@@ -3,7 +3,7 @@ using System.ComponentModel;
 
 namespace NOF.Sample;
 
-public partial interface INOFSampleService : IRpcService
+public interface INOFSampleService : IRpcService
 {
     [AllowAnonymous]
     [HttpEndpoint(HttpVerb.Post, "api/config-nodes")]

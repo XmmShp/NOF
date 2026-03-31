@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Abstraction.SourceGenerator\NOF.Abstraction.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

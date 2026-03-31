@@ -2,8 +2,8 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction.SourceGenerator;
 using NOF.Annotation;
-using NOF.Hosting.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -12,9 +12,8 @@ namespace NOF.SourceGenerator.Tests;
 public class AutoInjectGeneratorTests
 {
     [Fact]
-    public void GenerateServiceCollectionExtensions_ForClassesInBothMainAndPrefixMatchingReferenced_Assemblies_CombinesAll()
+    public void GenerateInitializer_UsesOnlyCurrentAssemblyTypes()
     {
-        // --- 类库 (prefix-matching: App.Lib matches App) ---
         const string libSource = """
             using Microsoft.Extensions.DependencyInjection;
             using NOF.Annotation;
@@ -30,7 +29,6 @@ public class AutoInjectGeneratorTests
         var libComp = CSharpCompilation.CreateCompilation("App.Lib", libSource, isDll: true, depRefs);
         var libRef = libComp.CreateMetadataReference();
 
-        // --- 主项目 ---
         const string mainSource = """
             using Microsoft.Extensions.DependencyInjection;
             using NOF.Annotation;
@@ -44,69 +42,49 @@ public class AutoInjectGeneratorTests
 
         var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, [libRef, .. depRefs]);
 
-        // --- 运行生成器 ---
         var result = new AutoInjectGenerator().GetResult(mainComp);
         var trees = result.GeneratedTrees;
         trees.Should().ContainSingle();
 
-        // 检查 App 的生成
         var appRoot = trees.Single().GetRoot();
         var appNs = appRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().Single();
         appNs.Name.ToString().Should().Be("App");
 
-        var appMethod = appNs.DescendantNodes().OfType<MethodDeclarationSyntax>().Single();
-        appMethod.Identifier.Text.Should().Be("AddAppAutoInjectServices");
-        appMethod.Body!.ToString().Should().Contain("IAppSvc").And.Contain("AppService").And.Contain("ServiceLifetime.Transient");
-        appMethod.Body!.ToString().Should().Contain("ILibSvc").And.Contain("LibService").And.Contain("ServiceLifetime.Singleton");
+        var generatedCode = appRoot.ToFullString();
+        generatedCode.Should().Contain("class __AppAutoInjectAssemblyInitializer");
+        generatedCode.Should().Contain("AppService");
+        generatedCode.Should().NotContain("LibService");
     }
 
     [Fact]
-    public void GenerateServiceCollectionExtensions_NonPrefixMatchingReferenced_Assemblies_AreExcluded()
+    public void GeneratedCode_ContainsAssemblyInitializerAttribute_AndRegistryRegistration()
     {
-        // --- 类库 (non-matching: "Lib" does NOT match "App" prefix) ---
-        const string libSource = """
-            using Microsoft.Extensions.DependencyInjection;
-            using NOF.Annotation;
-            namespace Lib
-            {
-                public interface ILibSvc { }
-                [AutoInject(Lifetime.Singleton)]
-                public class LibService : ILibSvc { }
-            }
-            """;
-
-        var depRefs = new[] { typeof(IServiceCollection).ToMetadataReference(), typeof(AutoInjectAttribute).ToMetadataReference() };
-        var libComp = CSharpCompilation.CreateCompilation("Lib", libSource, isDll: true, depRefs);
-        var libRef = libComp.CreateMetadataReference();
-
-        // --- 主项目 ---
-        const string mainSource = """
+        const string source = """
             using Microsoft.Extensions.DependencyInjection;
             using NOF.Annotation;
             namespace App
             {
                 public interface IAppSvc { }
-                [AutoInject(Lifetime.Transient)]
+                [AutoInject(Lifetime.Scoped)]
                 public class AppService : IAppSvc { }
             }
             """;
 
-        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, [libRef, .. depRefs]);
+        var depRefs = new[] { typeof(IServiceCollection).ToMetadataReference(), typeof(AutoInjectAttribute).ToMetadataReference() };
+        var compilation = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);
 
-        // --- 运行生成器 ---
-        var result = new AutoInjectGenerator().GetResult(mainComp);
+        var result = new AutoInjectGenerator().GetResult(compilation);
         var trees = result.GeneratedTrees;
         trees.Should().ContainSingle();
 
-        var appRoot = trees.Single().GetRoot();
-        var appMethod = appRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().Single();
-        // Should contain App types but NOT Lib types (non-matching prefix)
-        appMethod.Body!.ToString().Should().Contain("IAppSvc").And.Contain("AppService");
-        appMethod.Body!.ToString().Should().NotContain("ILibSvc").And.NotContain("LibService");
+        var generatedCode = trees.Single().GetRoot().ToFullString();
+        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]");
+        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register");
+        generatedCode.Should().Contain("typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, useFactory: false");
     }
 
     [Fact]
-    public void GeneratedCode_UsesFqnForServiceDescriptorAndServiceLifetime()
+    public void GeneratedCode_DoesNotGenerateLegacyAddAutoInjectServicesMethod()
     {
         const string source = """
             using Microsoft.Extensions.DependencyInjection;
@@ -125,19 +103,12 @@ public class AutoInjectGeneratorTests
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Should use global:: FQN for ServiceDescriptor
-        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor");
-        // Should use global:: FQN for ServiceLifetime
-        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped");
-        // Should use global:: FQN for IServiceCollection in method signature
-        generatedCode.Should().Contain("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
-        // Should NOT have bare using Microsoft.Extensions.DependencyInjection at the top
-        // (we allow it for GetRequiredService extension method)
-        generatedCode.Should().Contain("using Microsoft.Extensions.DependencyInjection;");
+        generatedCode.Should().NotContain("AddAppAutoInjectServices");
+        generatedCode.Should().NotContain("IServiceCollection");
     }
 
     [Fact]
-    public void GeneratedCode_SingletonWithMultipleInterfaces_UsesGetRequiredServiceExtension()
+    public void GeneratedCode_ExplicitRegisterTypes_ArePersistedInRegistryMetadata()
     {
         const string source = """
             using Microsoft.Extensions.DependencyInjection;
@@ -146,7 +117,7 @@ public class AutoInjectGeneratorTests
             {
                 public interface IFoo { }
                 public interface IBar { }
-                [AutoInject(Lifetime.Singleton)]
+                [AutoInject(Lifetime.Singleton, RegisterTypes = [typeof(IFoo), typeof(IBar)])]
                 public class FooBar : IFoo, IBar { }
             }
             """;
@@ -157,9 +128,9 @@ public class AutoInjectGeneratorTests
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        // Singleton with multiple interfaces: register self, then factory delegates
-        generatedCode.Should().Contain("sp.GetRequiredService<");
-        // Self registration
-        generatedCode.Should().Contain("typeof(App.FooBar), typeof(App.FooBar)");
+        generatedCode.Should().Contain("typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, useFactory: false");
+        generatedCode.Should().Contain("typeof(global::App.IFoo)");
+        generatedCode.Should().Contain("typeof(global::App.IBar)");
+        generatedCode.Should().Contain("useFactory: true");
     }
 }

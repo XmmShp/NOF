@@ -13,9 +13,7 @@ using NOF.Sample.Application;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
-builder.Services.AddNOFSampleAutoInjectServices();
-builder.Services.AddAllHandlers()
-    .AddStateMachineHandlers(NOFSampleApplicationStateMachineHandlers.Handlers);
+builder.AddApplicationPart(typeof(NOFSampleService).Assembly);
 
 builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 

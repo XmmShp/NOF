@@ -1,10 +1,8 @@
-using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.CreateConfigNode)])]
 public class CreateConfigNode : NOFSampleService.CreateConfigNode
 {
     private readonly IConfigNodeRepository _configNodeRepository;

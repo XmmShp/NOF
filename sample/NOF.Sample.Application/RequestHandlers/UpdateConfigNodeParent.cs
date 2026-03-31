@@ -1,10 +1,8 @@
-using NOF.Annotation;
-using NOF.Application;
+﻿using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.UpdateConfigNodeParent)])]
 public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 {
     private readonly IConfigNodeRepository _configNodeRepository;
@@ -30,13 +28,13 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
             ? ConfigNodeId.Of(request.NewParentId.Value)
             : (ConfigNodeId?)null;
 
-        // 妫€鏌ユ柊鐖惰妭鐐规槸鍚﹀瓨鍦紙濡傛灉涓嶆槸璁句负鏍硅妭鐐癸級
+        // Check whether the target parent exists (unless moving to root).
         if (newParentId.HasValue)
         {
             var parentNode = await _configNodeRepository.FindAsync(newParentId.Value, cancellationToken);
             if (parentNode is null)
             {
-                return Result.Fail("404", "鐩爣鐖惰妭鐐逛笉瀛樺湪");
+                return Result.Fail("404", "Target parent node not found.");
             }
 
             // Prevent cyclic parent relationship.
@@ -67,8 +65,3 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         return false;
     }
 }
-
-
-
-
-

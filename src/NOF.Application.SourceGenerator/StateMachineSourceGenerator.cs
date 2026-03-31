@@ -171,10 +171,13 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
 
+        var sanitizedName = assemblyName.Replace(".", "");
+        var initializerTypeName = $"__{sanitizedName}StateMachineHandlerAssemblyInitializer";
+        sb.AppendLine("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::" + assemblyName + "." + initializerTypeName + ">]");
+        sb.AppendLine();
+
         sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
-
-        var sanitizedName = assemblyName.Replace(".", "");
 
         // Collect handler class names and notification types for the static property
         var handlerPairs = new List<(string HandlerClassName, string NotificationFullName)>();
@@ -208,22 +211,22 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
             }
         }
 
-        // Generate static property with all SM handler entries
-        sb.AppendLine("    /// <summary>");
-        sb.AppendLine("    /// Contains all generated state machine notification handler entries.");
-        sb.AppendLine("    /// Register via <c>HandlerSelector.AddStateMachineHandlers()</c>.");
-        sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public static partial class {sanitizedName}StateMachineHandlers");
+        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        public static global::NOF.Application.StateMachineHandlerEntry[] Handlers { get; } =");
-        sb.AppendLine("        [");
-        for (var i = 0; i < handlerPairs.Count; i++)
+        sb.AppendLine("        private static int _initialized;");
+        sb.AppendLine();
+        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        {");
+        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        foreach (var (handlerClassName, notificationFullName) in handlerPairs)
         {
-            var (handlerClassName, notificationFullName) = handlerPairs[i];
-            var comma = i < handlerPairs.Count - 1 ? "," : "";
-            sb.AppendLine($"            new(typeof({handlerClassName}), typeof({notificationFullName})){comma}");
+            sb.AppendLine($"            global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.NotificationHandlerInfo(typeof({handlerClassName}), typeof({notificationFullName})));");
         }
-        sb.AppendLine("        ];");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
 
         sb.AppendLine("}");

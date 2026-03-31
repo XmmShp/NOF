@@ -1,4 +1,5 @@
 using MassTransit;
+using NOF.Application;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.MassTransit;

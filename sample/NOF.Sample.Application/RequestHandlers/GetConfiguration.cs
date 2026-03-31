@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Caching.Distributed;
-using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
@@ -8,7 +7,6 @@ using System.Text.Json.Nodes;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.GetConfiguration)])]
 public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheService cache)
     : NOFSampleService.GetConfiguration
 {

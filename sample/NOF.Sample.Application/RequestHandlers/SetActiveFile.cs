@@ -1,10 +1,8 @@
-using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.SetActiveFile)])]
 public class SetActiveFile : NOFSampleService.SetActiveFile
 {
     private readonly IConfigNodeRepository _configNodeRepository;

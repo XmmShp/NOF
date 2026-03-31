@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 /// <summary>
 /// Provides a deterministic, safe endpoint name from a <see cref="Type"/>.
@@ -17,7 +17,7 @@ public static class EndpointNameHelper
             return (type.FullName ?? type.Name).Replace('.', '_').Replace("+", "____");
         }
 
-        var defName = (type.GetGenericTypeDefinition().FullName ?? type.GetGenericTypeDefinition().Name);
+        var defName = type.GetGenericTypeDefinition().FullName ?? type.GetGenericTypeDefinition().Name;
         var backtickIndex = defName.LastIndexOf('`');
         if (backtickIndex >= 0)
         {

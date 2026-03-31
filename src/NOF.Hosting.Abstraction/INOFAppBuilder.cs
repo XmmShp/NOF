@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Hosting;
+using NOF.Annotation;
+using System.Reflection;
 
 namespace NOF.Infrastructure;
 
@@ -17,6 +19,21 @@ namespace NOF.Infrastructure;
 /// </summary>
 public interface INOFAppBuilder : IServiceRegistrationContext
 {
+    /// <summary>
+    /// Adds an application part assembly and executes its assembly initializers.
+    /// </summary>
+    INOFAppBuilder AddApplicationPart(Assembly assembly)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+
+        foreach (var attribute in assembly.GetCustomAttributes<AssemblyInitializeAttribute>())
+        {
+            attribute.InitializeMethod();
+        }
+
+        return this;
+    }
+
     /// <summary>
     /// Registers a service configuration delegate that runs during DI container setup.
     /// Use this to add services required by your application or modules.
@@ -97,4 +114,22 @@ public interface INOFAppBuilder : IServiceRegistrationContext
     /// </summary>
     new INOFAppBuilder TryAddInitializationStep<T>() where T : IApplicationInitializationStep, new()
         => (INOFAppBuilder)((IServiceRegistrationContext)this).TryAddInitializationStep<T>();
+}
+
+public static class NOFAppBuilderExtensions
+{
+    extension(INOFAppBuilder builder)
+    {
+        public INOFAppBuilder AddApplicationPart(Assembly assembly)
+        {
+            ArgumentNullException.ThrowIfNull(assembly);
+
+            foreach (var attribute in assembly.GetCustomAttributes<AssemblyInitializeAttribute>())
+            {
+                attribute.InitializeMethod();
+            }
+
+            return builder;
+        }
+    }
 }
