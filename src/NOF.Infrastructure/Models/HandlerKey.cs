@@ -47,35 +47,3 @@ public sealed record NotificationHandlerKey(NotificationHandlerKey.UniqueKey Key
     /// <summary>Creates the composite service key for the given notification type.</summary>
     public static NotificationHandlerKey Of(Type notificationType) => new(UniqueKey.Instance, notificationType);
 }
-
-/// <summary>
-/// Strongly-typed marker used as keyed-service key for request (without response) handler registrations.
-/// The key is <c>RequestHandlerKey.Of(typeof(TRequest), endpointName)</c>.
-/// </summary>
-public sealed record RequestHandlerKey(RequestHandlerKey.UniqueKey Key, Type RequestType, string EndpointName)
-{
-    public class UniqueKey
-    {
-        private UniqueKey() { }
-        public static readonly UniqueKey Instance = new();
-    }
-
-    /// <summary>Creates the composite service key for the given request type and endpoint name.</summary>
-    public static RequestHandlerKey Of(Type requestType, string endpointName) => new(UniqueKey.Instance, requestType, endpointName);
-}
-
-/// <summary>
-/// Strongly-typed marker used as keyed-service key for request-with-response handler registrations.
-/// The key is <c>RequestWithResponseHandlerKey.Of(typeof(TRequest), endpointName)</c>.
-/// </summary>
-public sealed record RequestWithResponseHandlerKey(RequestWithResponseHandlerKey.UniqueKey Key, Type RequestType, string EndpointName)
-{
-    public class UniqueKey
-    {
-        private UniqueKey() { }
-        public static readonly UniqueKey Instance = new();
-    }
-
-    /// <summary>Creates the composite service key for the given request type and endpoint name.</summary>
-    public static RequestWithResponseHandlerKey Of(Type requestType, string endpointName) => new(UniqueKey.Instance, requestType, endpointName);
-}

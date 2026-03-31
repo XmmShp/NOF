@@ -1,9 +1,11 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.SetActiveFile) })]
+public class SetActiveFile : NOFSampleService.SetActiveFile
 {
     private readonly IConfigNodeRepository _configNodeRepository;
     private readonly IUnitOfWork _uow;
@@ -14,7 +16,7 @@ public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
         _uow = uow;
     }
 
-    public async Task<Result> HandleAsync(SetActiveFileRequest request, CancellationToken cancellationToken)
+    public async Task<Result> SetActiveFileAsync(SetActiveFileRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
@@ -30,3 +32,8 @@ public class SetActiveFile : IRequestHandler<SetActiveFileRequest>
         return Result.Success();
     }
 }
+
+
+
+
+

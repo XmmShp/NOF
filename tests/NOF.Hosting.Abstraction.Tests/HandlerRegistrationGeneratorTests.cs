@@ -48,39 +48,6 @@ public class HandlerRegistrationGeneratorTests
     }
 
     [Fact]
-    public void GeneratedCode_RequestHandler_RegistersConcreteOnly()
-    {
-        const string source = """
-            using NOF.Application;
-            using NOF.Contract;
-            namespace App
-            {
-                public record MyRequest;
-                public class MyRequestHandler : IRequestHandler<MyRequest, string>
-                {
-                    public System.Threading.Tasks.Task<Result<string>> HandleAsync(MyRequest request, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
-                }
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
-            typeof(IServiceCollection),
-            typeof(IRequestHandler<,>),            typeof(Result),
-            typeof(RequestWithResponseHandlerInfo)
-        );
-
-        var result = new HandlerRegistrationGenerator().GetResult(comp);
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        // Should use typed RequestWithResponseHandlerInfo
-        generatedCode.Should().Contain("new global::NOF.Infrastructure.RequestWithResponseHandlerInfo(typeof(global::App.MyRequestHandler), typeof(global::App.MyRequest), typeof(string))");
-
-        // Keyed service registration is handled at runtime by AddHandlerInfo, not in generated code
-        generatedCode.Should().NotContain("AddKeyedScoped");
-
-    }
-
-    [Fact]
     public void GeneratedCode_EventHandler_RegistersBothConcreteAndInterfaceFactory()
     {
         const string source = """

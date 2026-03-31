@@ -12,7 +12,7 @@ namespace NOF.Hosting.SourceGenerator;
 
 /// <summary>
 /// Source generator: detects handler classes implementing ICommandHandler, IEventHandler,
-/// INotificationHandler, IRequestHandler from the current project and prefix-matching referenced
+/// INotificationHandler from the current project and prefix-matching referenced
 /// assemblies, and generates an <c>AddAllHandlers</c> extension method that registers them
 /// into <c>HandlerInfos</c> via DI.
 /// </summary>
@@ -139,9 +139,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             var display = iface.OriginalDefinition.ToDisplayString();
             if (display == "NOF.Application.ICommandHandler<TCommand>" ||
                 display == "NOF.Application.IEventHandler<TEvent>" ||
-                display == "NOF.Application.INotificationHandler<TNotification>" ||
-                display == "NOF.Application.IRequestHandler<TRequest>" ||
-                display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
+                display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 return true;
             }
@@ -242,17 +240,6 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
                 allInfos.Add($"new global::NOF.Infrastructure.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-            }
-            else if (display == "NOF.Application.IRequestHandler<TRequest, TResponse>")
-            {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                var responseType = iface.TypeArguments[1].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.RequestWithResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}), typeof({responseType}))");
-            }
-            else if (display == "NOF.Application.IRequestHandler<TRequest>")
-            {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                allInfos.Add($"new global::NOF.Infrastructure.RequestWithoutResponseHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
         }
     }

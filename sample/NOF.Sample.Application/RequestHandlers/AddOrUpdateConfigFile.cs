@@ -1,9 +1,11 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class AddOrUpdateConfigFile : IRequestHandler<AddOrUpdateConfigFileRequest>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.AddOrUpdateConfigFile) })]
+public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
 {
     private readonly IConfigNodeRepository _configNodeRepository;
     private readonly IUnitOfWork _uow;
@@ -14,7 +16,7 @@ public class AddOrUpdateConfigFile : IRequestHandler<AddOrUpdateConfigFileReques
         _uow = uow;
     }
 
-    public async Task<Result> HandleAsync(AddOrUpdateConfigFileRequest request, CancellationToken cancellationToken)
+    public async Task<Result> AddOrUpdateConfigFileAsync(AddOrUpdateConfigFileRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
@@ -32,3 +34,8 @@ public class AddOrUpdateConfigFile : IRequestHandler<AddOrUpdateConfigFileReques
         return Result.Success();
     }
 }
+
+
+
+
+

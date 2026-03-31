@@ -3,7 +3,7 @@
 @using NOF.Contract
 @using NOF.Infrastructure.Extension.Authorization.Jwt
 @using Result = NOF.Contract.Result
-@inject INOFSampleService NOFService
+@inject IJwtAuthorityService JwtService
 @inject IJSRuntime JsRuntime
 @inject IMessageService MessageService
 
@@ -94,7 +94,7 @@
 
     <!-- 令牌验证 -->
     <Col Span="12">
-        <Card Title="✅ Validate Token" Class="jwt-section">
+        <Card Title="�?Validate Token" Class="jwt-section">
             <Form Layout="@FormLayout.Vertical" TModel="object">
                 <FormItem Label="Refresh Token">
                     <TextArea @bind-Value="_refreshTokenToValidate" 
@@ -246,7 +246,7 @@
                 TimeSpan.FromDays(7),
                 permissions
             );
-            var result = await NOFService.GenerateJwtTokenAsync(request);
+            var result = await JwtService.GenerateJwtTokenAsync(request);
 
             if (result.IsSuccess)
             {
@@ -281,7 +281,7 @@
 
         try
         {
-            var result = await NOFService.ValidateJwtRefreshTokenAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
+            var result = await JwtService.ValidateJwtRefreshTokenAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
             _validationResult = result;
 
             if (result.IsSuccess)
@@ -318,7 +318,7 @@
 
         try
         {
-            var result = await NOFService.RevokeJwtRefreshTokenAsync(
+            var result = await JwtService.RevokeJwtRefreshTokenAsync(
                 new RevokeJwtRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
             );
             _revokeResult = result;
@@ -352,7 +352,7 @@
 
         try
         {
-            var result = await NOFService.GetJwksAsync(new GetJwksRequest());
+            var result = await JwtService.GetJwksAsync(new GetJwksRequest());
             if (result.IsSuccess)
             {
                 _jwksResponse = result.Value.Jwks;

@@ -1,4 +1,5 @@
-using Microsoft.Extensions.Caching.Distributed;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
@@ -7,10 +8,11 @@ using System.Text.Json.Nodes;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.GetConfiguration) })]
 public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheService cache)
-    : IRequestHandler<GetConfigurationRequest, GetConfigurationResponse>
+    : NOFSampleService.GetConfiguration
 {
-    public async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
+    public async Task<Result<GetConfigurationResponse>> GetConfigurationAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
     {
         var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);
@@ -21,7 +23,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         if (appNode is null)
         {
-            return Result.Fail("404", "配置节点不存在");
+            return Result.Fail("404", "Config node not found.");
         }
 
         // 2. Expand Path to Root
@@ -130,4 +132,9 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
         }
     }
 }
+
+
+
+
+
 

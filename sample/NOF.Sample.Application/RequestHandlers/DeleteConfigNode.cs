@@ -1,10 +1,12 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class DeleteConfigNode : IRequestHandler<DeleteConfigNodeRequest>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.DeleteConfigNode) })]
+public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 {
     private readonly IConfigNodeRepository _configNodeRepository;
     private readonly IConfigNodeViewRepository _configNodeViewRepository;
@@ -20,7 +22,7 @@ public class DeleteConfigNode : IRequestHandler<DeleteConfigNodeRequest>
         _uow = uow;
     }
 
-    public async Task<Result> HandleAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
+    public async Task<Result> DeleteConfigNodeAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.Id);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
@@ -40,3 +42,8 @@ public class DeleteConfigNode : IRequestHandler<DeleteConfigNodeRequest>
         return Result.Success();
     }
 }
+
+
+
+
+

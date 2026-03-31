@@ -21,8 +21,7 @@ builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 
 builder.AddRedisCache();
 
-builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample")
-    .AddJwksRequestHandler();
+builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
 
 builder.AddJwtAuthorization(o => o.Issuer = "NOF.Sample");
 
@@ -48,6 +47,20 @@ builder.Services.AddScoped<INOFSampleService>(sp =>
         : $"{request.Scheme}://{request.Host}/";
 
     return new HttpNOFSampleService(new HttpClient
+    {
+        BaseAddress = new Uri(baseUri)
+    });
+});
+
+builder.Services.AddScoped<IJwtAuthorityService>(sp =>
+{
+    var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var request = accessor.HttpContext?.Request;
+    var baseUri = request is null
+        ? "http://localhost:55892/"
+        : $"{request.Scheme}://{request.Host}/";
+
+    return new HttpSampleJwtAuthorityService(new HttpClient
     {
         BaseAddress = new Uri(baseUri)
     });

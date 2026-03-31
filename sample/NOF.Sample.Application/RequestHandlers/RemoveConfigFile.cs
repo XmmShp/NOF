@@ -1,9 +1,11 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.RemoveConfigFile) })]
+public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 {
     private readonly IConfigNodeRepository _configNodeRepository;
     private readonly IUnitOfWork _uow;
@@ -14,7 +16,7 @@ public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
         _uow = uow;
     }
 
-    public async Task<Result> HandleAsync(RemoveConfigFileRequest request, CancellationToken cancellationToken)
+    public async Task<Result> RemoveConfigFileAsync(RemoveConfigFileRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
@@ -30,3 +32,8 @@ public class RemoveConfigFile : IRequestHandler<RemoveConfigFileRequest>
         return Result.Success();
     }
 }
+
+
+
+
+

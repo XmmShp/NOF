@@ -33,26 +33,6 @@ internal class MassTransitRegistrationStep : IDependentServiceRegistrationStep<M
             busConsumers.Add(adapter);
         }
 
-        // RequestWithoutResponse: mediator + bus
-        foreach (var info in infos.RequestsWithoutResponse)
-        {
-            var adapter = typeof(MassTransitRequestHandlerAdapter<,>)
-                .MakeGenericType(info.HandlerType, info.RequestType);
-            localHandlers.Register(info.RequestType, infos.GetEndpointName(info.HandlerType));
-            mediatorConsumers.Add(adapter);
-            busConsumers.Add(adapter);
-        }
-
-        // RequestWithResponse: mediator + bus
-        foreach (var info in infos.RequestsWithResponse)
-        {
-            var adapter = typeof(MassTransitRequestHandlerAdapter<,,>)
-                .MakeGenericType(info.HandlerType, info.RequestType, info.ResponseType);
-            localHandlers.Register(info.RequestType, infos.GetEndpointName(info.HandlerType));
-            mediatorConsumers.Add(adapter);
-            busConsumers.Add(adapter);
-        }
-
         builder.Services.AddMediator(config =>
         {
             config.AddConsumers(mediatorConsumers.ToArray());

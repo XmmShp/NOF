@@ -1,127 +1,80 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Application;
+using NOF.Annotation;
 using NOF.Contract;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using ClaimTypes = System.Security.Claims.ClaimTypes;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-/// <summary>
-/// Handler for generating JWT token pair requests.
-/// </summary>
-public class GenerateJwtToken : IRequestHandler<GenerateJwtTokenRequest, GenerateJwtTokenResponse>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(JwtAuthorityService.GenerateJwtToken) })]
+public sealed class GenerateJwtToken : JwtAuthorityService.GenerateJwtToken
 {
-    private readonly JwtAuthorityOptions _authorityOptions;
-    private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ISigningKeyService _signingKeyService;
+    private readonly JwtAuthorityOptions _options;
 
-    public GenerateJwtToken(IOptions<JwtAuthorityOptions> authorityOptions, ISigningKeyService signingKeyService)
+    public GenerateJwtToken(ISigningKeyService signingKeyService, IOptions<JwtAuthorityOptions> options)
     {
-        _authorityOptions = authorityOptions.Value;
-        _tokenHandler = new JwtSecurityTokenHandler();
         _signingKeyService = signingKeyService;
+        _options = options.Value;
     }
 
-    public Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default)
+    public Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default)
     {
-        try
+        var now = DateTime.UtcNow;
+        var refreshTokenId = Guid.NewGuid().ToString("N");
+
+        var accessClaims = new List<Claim>
         {
-            var now = DateTime.UtcNow;
-            var accessTokenExpires = now.Add(request.AccessTokenExpiration);
-            var refreshTokenExpires = now.Add(request.RefreshTokenExpiration);
-
-            // Generate unique token IDs
-            var jti = Guid.NewGuid().ToString();
-            var refreshTokenId = Guid.NewGuid().ToString();
-
-            // Use the current signing key for both access and refresh tokens
-            var currentKey = _signingKeyService.CurrentSigningKey;
-
-            var accessClaims = new JwtClaims
-            {
-                Jti = jti,
-                Sub = request.UserId,
-                TenantId = request.TenantId,
-                Permissions = request.Permissions?.ToList() ?? [],
-                CustomClaims = request.CustomClaims ?? new Dictionary<string, string>(),
-                Iat = now,
-                Exp = accessTokenExpires,
-                Iss = _authorityOptions.Issuer,
-                Aud = request.Audience
-            };
-            var accessToken = CreateToken(accessClaims, currentKey);
-
-            // Create refresh token
-            var refreshClaims = new JwtClaims
-            {
-                Jti = refreshTokenId,
-                Sub = request.UserId,
-                TenantId = request.TenantId,
-                Iat = now,
-                Exp = refreshTokenExpires,
-                Iss = _authorityOptions.Issuer,
-                Aud = request.Audience
-            };
-            var refreshToken = CreateToken(refreshClaims, currentKey);
-
-            var tokenPair = new TokenPair
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                AccessTokenExpiresAt = accessTokenExpires,
-                RefreshTokenExpiresAt = refreshTokenExpires
-            };
-
-            return Task.FromResult(Result.Success(new GenerateJwtTokenResponse(tokenPair)));
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult<Result<GenerateJwtTokenResponse>>(Result.Fail("500", ex.Message));
-        }
-    }
-
-    private string CreateToken(JwtClaims claims, ManagedSigningKey managedKey)
-    {
-        var claimList = new List<Claim>
-        {
-            new(ClaimTypes.JwtId, claims.Jti),
-            new(ClaimTypes.Subject, claims.Sub)
+            new(ClaimTypes.Subject, request.UserId),
+            new(ClaimTypes.TenantId, request.TenantId)
         };
 
-        // Add tenant ID if provided
-        if (!string.IsNullOrEmpty(claims.TenantId))
+        if (request.Permissions is { Length: > 0 })
         {
-            claimList.Add(new Claim(ClaimTypes.TenantId, claims.TenantId));
+            accessClaims.AddRange(request.Permissions.Select(permission => new Claim(ClaimTypes.Permission, permission)));
         }
 
-        // Add permissions if provided
-        if (claims.Permissions is not null)
+        if (request.CustomClaims is not null)
         {
-            claimList.AddRange(claims.Permissions.Select(permission => new Claim(ClaimTypes.Permission, permission)));
+            accessClaims.AddRange(request.CustomClaims.Select(pair => new Claim(pair.Key, pair.Value)));
         }
 
-        // Add custom claims if provided
-        claimList.AddRange(claims.CustomClaims.Select(kv => new Claim(kv.Key, kv.Value)));
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var signingKey = _signingKeyService.CurrentSigningKey.Key;
+        var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
 
-        var signingCredentials = new SigningCredentials(managedKey.Key, NOFJwtAuthorizationConstants.Jwt.Algorithm)
+        var accessToken = tokenHandler.WriteToken(new JwtSecurityToken(
+            issuer: _options.Issuer,
+            audience: request.Audience,
+            claims: accessClaims,
+            notBefore: now,
+            expires: now.Add(request.AccessTokenExpiration),
+            signingCredentials: signingCredentials));
+
+        var refreshClaims = new[]
         {
-            Key = { KeyId = managedKey.Kid }
+            new Claim(ClaimTypes.JwtId, refreshTokenId),
+            new Claim(ClaimTypes.Subject, request.UserId),
+            new Claim(ClaimTypes.TenantId, request.TenantId)
         };
 
-        // iss, aud, exp, iat are set via SecurityTokenDescriptor properties to avoid duplication
-        var tokenDescriptor = new SecurityTokenDescriptor
+        var refreshToken = tokenHandler.WriteToken(new JwtSecurityToken(
+            issuer: _options.Issuer,
+            audience: request.Audience,
+            claims: refreshClaims,
+            notBefore: now,
+            expires: now.Add(request.RefreshTokenExpiration),
+            signingCredentials: signingCredentials));
+
+        var tokenPair = new TokenPair
         {
-            Subject = new ClaimsIdentity(claimList),
-            IssuedAt = claims.Iat,
-            Expires = claims.Exp,
-            Issuer = claims.Iss,
-            Audience = claims.Aud,
-            SigningCredentials = signingCredentials
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            AccessTokenExpiresAt = now.Add(request.AccessTokenExpiration),
+            RefreshTokenExpiresAt = now.Add(request.RefreshTokenExpiration)
         };
 
-        var token = _tokenHandler.CreateToken(tokenDescriptor);
-        return _tokenHandler.WriteToken(token);
+        return Task.FromResult(Result.Success(new GenerateJwtTokenResponse(tokenPair)));
     }
 }

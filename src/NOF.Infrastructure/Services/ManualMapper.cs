@@ -9,8 +9,8 @@ namespace NOF.Infrastructure;
 /// Thread-safe. Each <see cref="MapKey"/> holds exactly one delegate.
 /// </para>
 /// <para>
-/// Mapping lookup priority: exact type pair 鈫?open generic source 鈫?open generic dest
-/// 鈫?open generic both 鈫?<c>Nullable&lt;T&gt;</c> fallback (<c>A 鈫?T?</c> uses <c>A 鈫?T</c>).
+/// Mapping lookup priority: exact type pair - open generic source - open generic dest
+/// - open generic both - <c>Nullable&lt;T&gt;</c> fallback (<c>A - T?</c> uses <c>A - T</c>).
 /// </para>
 /// </summary>
 public sealed class ManualMapper : IMapper
@@ -141,7 +141,7 @@ public sealed class ManualMapper : IMapper
 
     #endregion
 
-    #region Lookup: exact 鈫?open generic 鈫?Nullable<T> fallback
+    #region Lookup: exact - open generic - Nullable<T> fallback
 
     private MapFunc? ResolveDelegate(Type sourceType, Type destType, string? name)
     {
@@ -184,7 +184,7 @@ public sealed class ManualMapper : IMapper
                 }
             }
 
-            // Nullable<T> fallback: A 鈫?T? can use A 鈫?T mapping (but not vice versa)
+            // Nullable<T> fallback: A - T? can use A - T mapping (but not vice versa)
             var underlyingDest = Nullable.GetUnderlyingType(destType);
             if (underlyingDest is not null)
             {

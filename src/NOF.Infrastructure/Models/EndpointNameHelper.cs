@@ -7,7 +7,7 @@ public static class EndpointNameHelper
 {
     /// <summary>
     /// Produces a stable, safe endpoint name from a type's full name.
-    /// Non-generic types: <c>Namespace_TypeName</c> (dots 鈫?underscores, nested <c>+</c> 鈫?<c>____</c>).
+    /// Non-generic types: <c>Namespace_TypeName</c> (dots - underscores, nested <c>+</c> - <c>____</c>).
     /// Generic types: <c>OpenName__Arg1___Arg2</c>.
     /// </summary>
     public static string BuildSafeTypeName(Type type)

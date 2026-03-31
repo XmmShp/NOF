@@ -1,9 +1,11 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequest>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.UpdateConfigNodeParent) })]
+public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 {
     private readonly IConfigNodeRepository _configNodeRepository;
     private readonly IUnitOfWork _uow;
@@ -14,33 +16,33 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
         _uow = uow;
     }
 
-    public async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
+    public async Task<Result> UpdateConfigNodeParentAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(nodeId, cancellationToken);
 
         if (node is null)
         {
-            return Result.Fail("404", "节点不存在");
+            return Result.Fail("404", "Node not found.");
         }
 
         var newParentId = request.NewParentId.HasValue
             ? ConfigNodeId.Of(request.NewParentId.Value)
             : (ConfigNodeId?)null;
 
-        // 检查新父节点是否存在（如果不是设为根节点）
+        // 妫€鏌ユ柊鐖惰妭鐐规槸鍚﹀瓨鍦紙濡傛灉涓嶆槸璁句负鏍硅妭鐐癸級
         if (newParentId.HasValue)
         {
             var parentNode = await _configNodeRepository.FindAsync(newParentId.Value, cancellationToken);
             if (parentNode is null)
             {
-                return Result.Fail("404", "目标父节点不存在");
+                return Result.Fail("404", "鐩爣鐖惰妭鐐逛笉瀛樺湪");
             }
 
-            // 防止循环引用：检查新父节点是否是当前节点的子孙节点
+            // Prevent cyclic parent relationship.
             if (await IsDescendant(nodeId, newParentId.Value, cancellationToken))
             {
-                return Result.Fail("400", "不能将节点移动到其子节点下");
+                return Result.Fail("400", "Cannot move a node under its descendant.");
             }
         }
 
@@ -65,3 +67,8 @@ public class UpdateConfigNodeParent : IRequestHandler<UpdateConfigNodeParentRequ
         return false;
     }
 }
+
+
+
+
+

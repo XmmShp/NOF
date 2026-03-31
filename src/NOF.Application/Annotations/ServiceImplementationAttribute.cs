@@ -5,6 +5,4 @@ namespace NOF.Application;
 /// one-method nested interfaces derived from an <see cref="NOF.Contract.IRpcService"/> interface.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public sealed class ServiceImplementationAttribute<TService> : Attribute
-{
-}
+public sealed class ServiceImplementationAttribute<TService> : Attribute;

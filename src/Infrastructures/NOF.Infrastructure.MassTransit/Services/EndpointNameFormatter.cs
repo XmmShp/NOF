@@ -7,8 +7,6 @@ public class EndpointNameFormatter : DefaultEndpointNameFormatter
 {
     private static readonly HashSet<Type> _supportedConsumerGenericTypes =
     [
-        typeof(MassTransitRequestHandlerAdapter<,>),
-        typeof(MassTransitRequestHandlerAdapter<,,>),
         typeof(MassTransitCommandHandlerAdapter<,>),
         typeof(MassTransitNotificationHandlerAdapter<,>)
     ];

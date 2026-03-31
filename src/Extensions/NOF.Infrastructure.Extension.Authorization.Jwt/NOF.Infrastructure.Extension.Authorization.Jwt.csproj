@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
   </ItemGroup>
 

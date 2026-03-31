@@ -1,5 +1,4 @@
 using NOF.Contract;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
 using System.ComponentModel;
 
 namespace NOF.Sample;
@@ -71,15 +70,4 @@ public partial interface INOFSampleService : IRpcService
 
     Task<Result<GetConfigurationResponse>> GetConfigurationAsync(GetConfigurationRequest request, CancellationToken cancellationToken = default);
 
-    [HttpEndpoint(HttpVerb.Post, "/auth/jwt/token")]
-    Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default);
-
-    [HttpEndpoint(HttpVerb.Post, "/auth/jwt/refresh/validate")]
-    Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken = default);
-
-    [HttpEndpoint(HttpVerb.Post, "/auth/jwt/refresh/revoke")]
-    Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken = default);
-
-    [HttpEndpoint(HttpVerb.Get, "/.well-known/jwks.json")]
-    Task<Result<GetJwksResponse>> GetJwksAsync(GetJwksRequest request, CancellationToken cancellationToken = default);
 }

@@ -38,20 +38,6 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
             builder.Services.AddKeyedScoped(key, (sp, k) => (INotificationHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
         }
 
-        foreach (var info in infos.RequestsWithoutResponse)
-        {
-            TypeRegistry.Register(info.RequestType);
-            var ep = infos.GetEndpointName(info.HandlerType);
-            builder.Services.AddKeyedScoped(info.HandlerType, RequestHandlerKey.Of(info.RequestType, ep));
-        }
-
-        foreach (var info in infos.RequestsWithResponse)
-        {
-            TypeRegistry.Register(info.RequestType);
-            var ep = infos.GetEndpointName(info.HandlerType);
-            builder.Services.AddKeyedScoped(info.HandlerType, RequestWithResponseHandlerKey.Of(info.RequestType, ep));
-        }
-
         return ValueTask.CompletedTask;
     }
 }

@@ -4,7 +4,7 @@ MassTransit messaging infrastructure package for the [NOF Framework](https://git
 
 ## Overview
 
-Provides the message bus integration layer using MassTransit. Adapts NOF's `ICommandHandler`, `INotificationHandler`, and `IRequestHandler` abstractions to MassTransit consumers, enabling distributed messaging with transactional outbox support.
+Provides the message bus integration layer using MassTransit. Adapts NOF's `ICommandHandler` and `INotificationHandler` abstractions to MassTransit consumers, enabling distributed messaging with transactional outbox support.
 
 ## Features
 

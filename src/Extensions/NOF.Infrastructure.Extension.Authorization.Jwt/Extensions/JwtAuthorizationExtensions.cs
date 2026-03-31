@@ -112,15 +112,6 @@ public static partial class NOFJwtAuthorizationExtensions
                     });
                 });
 
-#pragma warning disable CS8620
-            // Register handlers AddHandlerInfo handles keyed services + endpoint name map at runtime
-            builder.Services.AddHandlerInfo(
-                new RequestWithResponseHandlerInfo(typeof(GenerateJwtToken), typeof(GenerateJwtTokenRequest), typeof(GenerateJwtTokenResponse)),
-                new RequestWithResponseHandlerInfo(typeof(ValidateJwtRefreshToken), typeof(ValidateJwtRefreshTokenRequest), typeof(ValidateJwtRefreshTokenResponse)));
-            builder.Services.AddHandlerInfo(
-                new RequestWithoutResponseHandlerInfo(typeof(RevokeJwtRefreshToken), typeof(RevokeJwtRefreshTokenRequest)));
-#pragma warning restore CS8620
-
             return new JwtAuthoritySelector(builder);
         }
 

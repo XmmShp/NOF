@@ -1,21 +1,21 @@
-# NOF.Application
+ï»¿# NOF.Application
 
 Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Contains the application service abstractions: request handlers, command handlers, notification handlers, state machines, caching, and unit of work patterns. This is where your business logic orchestration lives.
+Contains the application service abstractions: RPC service implementation generation, command handlers, notification handlers, state machines, caching, and unit of work patterns. This is where your business logic orchestration lives.
 
 For Redis-specific cache data structure abstractions, see the separate `NOF.Application.Extension.Redis` package.
 
 ## Key Abstractions
 
-### Request Handlers
+### RPC Service Implementation
 
 ```csharp
-public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
+public class GetOrderHandler : OrderService.GetOrder
 {
-    public async Task<Result<OrderDto>> HandleAsync(
+    public async Task<Result<OrderDto>> GetOrderAsync(
         GetOrderRequest request, CancellationToken cancellationToken)
     {
         var order = await _repository.FindAsync([request.Id], cancellationToken);
@@ -32,7 +32,7 @@ public class GetOrderHandler : IRequestHandler<GetOrderRequest, OrderDto>
 ```csharp
 public class SendEmailHandler : CommandHandler<SendEmailCommand>
 {
-    public override async Task HandleAsync(
+    public override async Task GetOrderAsync(
         SendEmailCommand command, CancellationToken cancellationToken)
     {
         // Fire-and-forget command processing
@@ -45,7 +45,7 @@ public class SendEmailHandler : CommandHandler<SendEmailCommand>
 ```csharp
 public class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {
-    public override async Task HandleAsync(
+    public override async Task GetOrderAsync(
         OrderCreatedNotification notification, CancellationToken cancellationToken)
     {
         // React to domain events (pub/sub)
@@ -80,14 +80,14 @@ public class OrderStateMachine : IStateMachineDefinition<OrderState, OrderContex
 
 ### Transactional Message Sending
 
-Handler base classes provide built-in transactional outbox support â€?commands and notifications sent within a handler are automatically batched with the unit of work.
+Handler base classes provide built-in transactional outbox support - commands and notifications sent within a handler are automatically batched with the unit of work.
 
 ### Object Mapping (IMapper)
 
 Zero-reflection, explicit-only object mapper. Each `MapKey(Source, Destination, Name?)` holds exactly one delegate.
-No built-in mappings are provided â€?all mappings must be explicitly registered (explicit > implicit).
+No built-in mappings are provided - all mappings must be explicitly registered (explicit > implicit).
 
-**Registration** â€?`Add` (set/replace), `TryAdd` (skip if key exists):
+**Registration** - `Add` (set/replace), `TryAdd` (skip if key exists):
 
 ```csharp
 // Pre-build (Options pattern)
@@ -98,14 +98,14 @@ builder.Services.Configure<MapperOptions>(o =>
 // With IMapper for nested mapping
 o.Add<Order, OrderSummary>((o, mapper) => new OrderSummary(mapper.Map<Address, AddressDto>(o.Address)));
 
-// Runtime â€?TryAdd is safe in constructors (no-op if key already registered)
+// Runtime - TryAdd is safe in constructors (no-op if key already registered)
 _mapper.TryAdd<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(...));
 
-// Non-generic (MapFunc: (object, IMapper) â†?object)
+// Non-generic (MapFunc: (object, IMapper) - object)
 _mapper.Add(typeof(Order), typeof(OrderDto), (src, mapper) => MapOrder((Order)src));
 ```
 
-**Named mappings** â€?multiple names per type pair:
+**Named mappings** - multiple names per type pair:
 
 ```csharp
 _mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id), name: "summary");
@@ -113,7 +113,7 @@ _mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id, o.Details), name: "full");
 var dto = _mapper.Map<Order, OrderDto>(order, name: "full");
 ```
 
-**TryMap** â€?standard C# `Try` pattern with `out` parameter:
+**TryMap** - standard C# `Try` pattern with `out` parameter:
 
 ```csharp
 if (_mapper.TryMap<Order, OrderDto>(order, out var dto))
@@ -132,11 +132,11 @@ var dto = entity.Map.As<DerivedEntity>().To<EntityDto>(); // Change source type 
 var dto = entity.Map.AsRuntime.To<EntityDto>();           // Use runtime type for lookup
 ```
 
-**Nullable fallback**: A mapping `A â†?T` is automatically used for `A â†?T?` when no direct `A â†?T?` registration exists.
+**Nullable fallback**: A mapping `A - T` is automatically used for `A - T?` when no direct `A - T?` registration exists.
 
 ### Source-Generated Mappings ([Mappable])
 
-For common scenarios (property-to-property, domain â†?DTO), use `[Mappable]` on a `partial static class` to let the source generator write the mapping delegates for you:
+For common scenarios (property-to-property, domain - DTO), use `[Mappable]` on a `partial static class` to let the source generator write the mapping delegates for you:
 
 ```csharp
 [Mappable<Order, OrderDto>]
@@ -148,18 +148,18 @@ public static partial class Mappings;
 builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 ```
 
-**Attributes can be scattered across multiple files** using partial declarations of the same class â€?the generator merges them into a single `ConfigureAutoMappings()` extension method.
+**Attributes can be scattered across multiple files** using partial declarations of the same class - the generator merges them into a single `ConfigureAutoMappings()` extension method.
 
 **Matching rules:**
 - Only public, same-name properties are mapped (case-insensitive).
 - The constructor with the most matched parameters is selected. Matched writable properties also appear in the member initializer.
 - `Optional<T>`, `Result<T>`, `IValueObject<T>` are unwrapped/wrapped automatically.
-- Common conversions (stringâ†”int, intâ†”enum, enumâ†”string, numeric casts) are built-in.
+- Common conversions (stringéˆ«æ”Šnt, intéˆ«æ”…num, enuméˆ«æ”•tring, numeric casts) are built-in.
 - All other conversions use the `IMapper` parameter.
 
 **Diagnostics:**
-- `NOF020` â€?duplicate mapping (including TwoWay reverse).
-- `NOF021` â€?`[Mappable]` class must be `partial static`.
+- `NOF020` - duplicate mapping (including TwoWay reverse).
+- `NOF021` - `[Mappable]` class must be `partial static`.
 
 ## Installation
 
@@ -172,4 +172,5 @@ dotnet add package NOF.Application
 ## License
 
 Apache-2.0
+
 

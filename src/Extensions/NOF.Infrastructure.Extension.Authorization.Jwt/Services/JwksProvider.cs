@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
 using System.Net.Http.Json;
@@ -119,9 +118,7 @@ public class HttpJwksProvider : IJwksProvider
 }
 
 /// <summary>
-/// Fetches JWKS via in-process request handler execution and caches the keys.
-/// The provider creates a scope on each refresh and executes the handler through
-/// NOF inbound/outbound pipelines.
+/// Fetches JWKS from in-process <see cref="IJwksService"/> and caches the keys.
 /// </summary>
 public class RequestDispatcherJwksProvider : IJwksProvider
 {
@@ -157,40 +154,9 @@ public class RequestDispatcherJwksProvider : IJwksProvider
         try
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
-            var resolver = scope.ServiceProvider.GetRequiredService<IRequestHandlerResolver>();
-            var resolved = resolver.ResolveRequestWithResponse(typeof(GetJwksRequest))
-                ?? throw new InvalidOperationException("No local handler registered for GetJwksRequest.");
-
-            var handler = (IRequestHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
-            var inboundPipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-            var outboundPipeline = scope.ServiceProvider.GetRequiredService<IOutboundPipelineExecutor>();
-
-            var request = new GetJwksRequest();
-            var outboundContext = new OutboundContext
-            {
-                Message = request,
-                Headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-            };
-
-            await outboundPipeline.ExecuteAsync(outboundContext, async ct =>
-            {
-                var inboundContext = new InboundContext
-                {
-                    Message = request,
-                    Handler = handler,
-                    Headers = outboundContext.Headers
-                };
-
-                await inboundPipeline.ExecuteAsync(inboundContext, async innerCt =>
-                {
-                    inboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
-                }, ct).ConfigureAwait(false);
-
-                outboundContext.Response = inboundContext.Response;
-            }, cancellationToken).ConfigureAwait(false);
-
-            var result = Result.From<GetJwksResponse>(outboundContext.Response!);
-            if (!result.IsSuccess || result.Value.Jwks.Keys is not { Length: > 0 } jwkKeys)
+            var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
+            var jwks = jwksService.GetJwks();
+            if (jwks.Keys is not { Length: > 0 } jwkKeys)
             {
                 return;
             }

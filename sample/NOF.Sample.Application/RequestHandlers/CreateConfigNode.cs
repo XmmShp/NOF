@@ -1,9 +1,11 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class CreateConfigNode : IRequestHandler<CreateConfigNodeRequest>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.CreateConfigNode) })]
+public class CreateConfigNode : NOFSampleService.CreateConfigNode
 {
     private readonly IConfigNodeRepository _configNodeRepository;
     private readonly IUnitOfWork _uow;
@@ -14,7 +16,7 @@ public class CreateConfigNode : IRequestHandler<CreateConfigNodeRequest>
         _uow = uow;
     }
 
-    public async Task<Result> HandleAsync(CreateConfigNodeRequest request, CancellationToken cancellationToken)
+    public async Task<Result> CreateConfigNodeAsync(CreateConfigNodeRequest request, CancellationToken cancellationToken)
     {
         var name = ConfigNodeName.Of(request.Name);
         var parentId = request.ParentId.HasValue ? ConfigNodeId.Of(request.ParentId.Value) : (ConfigNodeId?)null;
@@ -30,3 +32,8 @@ public class CreateConfigNode : IRequestHandler<CreateConfigNodeRequest>
         return Result.Success();
     }
 }
+
+
+
+
+

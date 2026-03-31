@@ -1,25 +1,23 @@
-# Handler Registration: First-Class Citizens
+﻿# Handler Registration: First-Class Citizens
 
 ## Handlers in NOF
 
-In NOF, handlers are the primary unit of business logic. Every user-facing operation — processing a command, responding to a request, reacting to a domain event, broadcasting a notification — is implemented as a handler. They are first-class citizens: the framework discovers them at compile time, registers them into DI with precise keys, and provides infrastructure (pipelines, transports, middleware) that operates on them uniformly.
+In NOF, handlers are the primary unit of business logic. Every user-facing operation - processing a command, responding to a request, reacting to a domain event, broadcasting a notification - is implemented as a handler. They are first-class citizens: the framework discovers them at compile time, registers them into DI with precise keys, and provides infrastructure (pipelines, transports, middleware) that operates on them uniformly.
 
-There are five handler kinds, split into two families based on their dispatch semantics:
+There are three handler kinds, split into two families based on their dispatch semantics:
 
-**Point-to-point** (one message → one handler):
-- `ICommandHandler<TCommand>` — fire-and-forget commands
-- `IRequestHandler<TRequest>` — requests without a typed response
-- `IRequestHandler<TRequest, TResponse>` — requests with a typed response
+**Point-to-point** (one message - one handler):
+- `ICommandHandler<TCommand>` - fire-and-forget commands
 
-**Multicast** (one message → many handlers):
-- `IEventHandler<TEvent>` — domain events (in-process, within the aggregate boundary)
-- `INotificationHandler<TNotification>` — cross-boundary notifications
+**Multicast** (one message - many handlers):
+- `IEventHandler<TEvent>` - domain events (in-process, within the aggregate boundary)
+- `INotificationHandler<TNotification>` - cross-boundary notifications
 
 This distinction shapes every design decision in the registration system.
 
 ## Source-Generated Discovery
 
-Handlers are never registered manually. A Roslyn incremental source generator (`HandlerRegistrationGenerator`) scans the compilation — both source code in the current project and metadata from prefix-matching referenced assemblies — for concrete, non-abstract, non-generic classes implementing any of the five handler interfaces.
+Handlers are never registered manually. A Roslyn incremental source generator (`HandlerRegistrationGenerator`) scans the compilation - both source code in the current project and metadata from prefix-matching referenced assemblies - for concrete, non-abstract, non-generic classes implementing any of the three handler interfaces.
 
 For each discovered handler, the generator emits an `AddAllHandlers` extension method on `IServiceCollection` that:
 
@@ -31,17 +29,16 @@ The generated code uses fully-qualified names (`global::`) throughout to avoid n
 
 ## Keyed Service Registration
 
-All handlers are registered as **keyed scoped services** in the root DI container. The key is a strongly-typed composite: `XxxHandlerKey.Of(typeof(TMessage))`. Each handler kind has its own key type (`CommandHandlerKey`, `EventHandlerKey`, `NotificationHandlerKey`, `RequestHandlerKey`, `RequestWithResponseHandlerKey`), which prevents accidental cross-resolution between different handler families.
+All handlers are registered as **keyed scoped services** in the root DI container. The key is a strongly-typed composite: `XxxHandlerKey.Of(typeof(TMessage))`. Each handler kind has its own key type (`CommandHandlerKey`, `EventHandlerKey`, `NotificationHandlerKey`), which prevents accidental cross-resolution between different handler families.
 
 The registration strategy differs by dispatch semantics:
 
-### Point-to-Point Handlers (Command, Request)
+### Point-to-Point Handlers (Command)
 
-Point-to-point handlers have a one-to-one relationship between message type and handler. They are registered as the **concrete type** only:
+Command handlers have a one-to-one relationship between message type and handler. They are registered as the **concrete type** only:
 
 ```csharp
 services.AddKeyedScoped<MyCommandHandler>(CommandHandlerKey.Of(typeof(MyCommand)));
-services.AddKeyedScoped<MyRequestHandler>(RequestHandlerKey.Of(typeof(MyRequest)));
 ```
 
 Consumers resolve the concrete type directly:
@@ -54,7 +51,7 @@ This ensures that only code with knowledge of the concrete handler type can reso
 
 ### Multicast Handlers (Event, Notification)
 
-Multicast handlers have a one-to-many relationship: multiple handlers can subscribe to the same message type. They receive **dual registration** — both the concrete type and a factory-based interface delegation:
+Multicast handlers have a one-to-many relationship: multiple handlers can subscribe to the same message type. They receive **dual registration** - both the concrete type and a factory-based interface delegation:
 
 ```csharp
 // 1. Concrete registration (for MassTransit adapters and direct resolution)
@@ -96,10 +93,8 @@ Each handler kind has its own typed info record:
 | `CommandHandlerInfo` | `HandlerType`, `CommandType` |
 | `EventHandlerInfo` | `HandlerType`, `EventType` |
 | `NotificationHandlerInfo` | `HandlerType`, `NotificationType` |
-| `RequestWithoutResponseHandlerInfo` | `HandlerType`, `RequestType` |
-| `RequestWithResponseHandlerInfo` | `HandlerType`, `RequestType`, `ResponseType` |
 
-These are collected into typed singleton `HashSet` containers (`CommandHandlerInfos`, `EventHandlerInfos`, etc.) registered via `GetOrAddSingleton`. Infrastructure components — such as the MassTransit integration — read these collections at startup to wire up transport-level consumers.
+These are collected into typed singleton `HashSet` containers (`CommandHandlerInfos`, `EventHandlerInfos`, etc.) registered via `GetOrAddSingleton`. Infrastructure components - such as the MassTransit integration - read these collections at startup to wire up transport-level consumers.
 
 ## Endpoint Name Resolution
 
@@ -107,9 +102,9 @@ Point-to-point handlers need routable endpoint names for message transport (e.g.
 
 Endpoint names are resolved at compile time by the source generator:
 
-1. `[EndpointName("...")]` attribute on the handler or message type — explicit override
-2. For handlers implementing exactly one point-to-point interface — the message type's endpoint name
-3. Fallback — `BuildSafeTypeName`: a deterministic, namespace-safe string derived from the fully-qualified type name
+1. `[EndpointName("...")]` attribute on the handler or message type - explicit override
+2. For handlers implementing exactly one point-to-point interface - the message type's endpoint name
+3. Fallback - `BuildSafeTypeName`: a deterministic, namespace-safe string derived from the fully-qualified type name
 
 Event-only handlers do not receive endpoint names (they are dispatched in-process, not routed through queues).
 
@@ -122,14 +117,14 @@ services.AddAllHandlers()
 
 ## MassTransit Integration
 
-The MassTransit integration (`MassTransitRegistrationStep`) reads the four non-event handler info collections and creates typed adapter consumers:
+The MassTransit integration (`MassTransitRegistrationStep`) reads the non-event handler info collections and creates typed adapter consumers:
 
 - `MassTransitCommandHandlerAdapter<THandler, TCommand>`
 - `MassTransitRequestHandlerAdapter<THandler, TRequest>`
 - `MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse>`
 - `MassTransitNotificationHandlerAdapter<THandler, TNotification>`
 
-Each adapter injects `IServiceProvider` and resolves the handler via `GetRequiredKeyedService<THandler>(Key.Of(messageType))` at consume time — **not** through constructor injection. This means:
+Each adapter injects `IServiceProvider` and resolves the handler via `GetRequiredKeyedService<THandler>(Key.Of(messageType))` at consume time - **not** through constructor injection. This means:
 
 - Handlers are never registered as plain scoped services; they are only accessible through their keyed registrations
 - No other service can accidentally resolve a handler without the correct key
@@ -137,8 +132,11 @@ Each adapter injects `IServiceProvider` and resolves the handler via `GetRequire
 
 ## Design Principles
 
-1. **Compile-time discovery** — No reflection at runtime. The source generator does all the work.
-2. **Keyed isolation** — Handlers are only resolvable through their typed keys. No ambient service pollution.
-3. **Semantic split** — Point-to-point (concrete only) vs. multicast (concrete + interface factory) registrations match the dispatch semantics exactly.
-4. **DIM for type erasure** — `IEventHandler` and `INotificationHandler` use Default Interface Methods to bridge generic handlers to non-generic multicast dispatch.
-5. **Single source of truth** — `EndpointNameRegistry` and typed `HandlerInfos` singletons are populated once at startup and consumed by all infrastructure.
+1. **Compile-time discovery** - No reflection at runtime. The source generator does all the work.
+2. **Keyed isolation** - Handlers are only resolvable through their typed keys. No ambient service pollution.
+3. **Semantic split** - Point-to-point (concrete only) vs. multicast (concrete + interface factory) registrations match the dispatch semantics exactly.
+4. **DIM for type erasure** - `IEventHandler` and `INotificationHandler` use Default Interface Methods to bridge generic handlers to non-generic multicast dispatch.
+5. **Single source of truth** - `EndpointNameRegistry` and typed `HandlerInfos` singletons are populated once at startup and consumed by all infrastructure.
+
+
+

@@ -12,17 +12,5 @@ public readonly struct JwtAuthoritySelector
         Builder = builder;
     }
 
-    /// <summary>
-    /// Registers a <see cref="GetJwks"/> handler so that JWKS can be retrieved via in-process dispatch.
-    /// </summary>
-    /// <returns>This selector for further chaining.</returns>
-    public JwtAuthoritySelector AddJwksRequestHandler()
-    {
-#pragma warning disable CS8620
-        Builder.Services.AddHandlerInfo(
-            new RequestWithResponseHandlerInfo(typeof(GetJwks), typeof(GetJwksRequest), typeof(GetJwksResponse)));
-#pragma warning restore CS8620
-
-        return this;
-    }
+    public JwtAuthoritySelector AddJwksRequestHandler() => this;
 }

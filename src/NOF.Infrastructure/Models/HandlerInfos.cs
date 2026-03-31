@@ -13,8 +13,6 @@ public sealed class HandlerInfos
     public HashSet<CommandHandlerInfo> Commands { get; } = [];
     public HashSet<EventHandlerInfo> Events { get; } = [];
     public HashSet<NotificationHandlerInfo> Notifications { get; } = [];
-    public HashSet<RequestWithoutResponseHandlerInfo> RequestsWithoutResponse { get; } = [];
-    public HashSet<RequestWithResponseHandlerInfo> RequestsWithResponse { get; } = [];
 
     /// <summary>
     /// Adds a handler info to the appropriate typed set using pattern matching.
@@ -31,12 +29,6 @@ public sealed class HandlerInfos
                 break;
             case NotificationHandlerInfo notification:
                 Notifications.Add(notification);
-                break;
-            case RequestWithoutResponseHandlerInfo request:
-                RequestsWithoutResponse.Add(request);
-                break;
-            case RequestWithResponseHandlerInfo requestWithResponse:
-                RequestsWithResponse.Add(requestWithResponse);
                 break;
             default:
                 throw new ArgumentException($"Unknown handler info type: {info.GetType()}", nameof(info));

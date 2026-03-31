@@ -1,10 +1,12 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class GetRootConfigNodes : IRequestHandler<GetRootConfigNodesRequest, GetRootConfigNodesResponse>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.GetRootConfigNodes) })]
+public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
 {
     private readonly IConfigNodeViewRepository _viewRepository;
 
@@ -13,7 +15,7 @@ public class GetRootConfigNodes : IRequestHandler<GetRootConfigNodesRequest, Get
         _viewRepository = viewRepository;
     }
 
-    public async Task<Result<GetRootConfigNodesResponse>> HandleAsync(GetRootConfigNodesRequest request, CancellationToken cancellationToken)
+    public async Task<Result<GetRootConfigNodesResponse>> GetRootConfigNodesAsync(GetRootConfigNodesRequest request, CancellationToken cancellationToken)
     {
         var nodes = await _viewRepository.GetRootNodesAsync(cancellationToken);
 
@@ -28,3 +30,8 @@ public class GetRootConfigNodes : IRequestHandler<GetRootConfigNodesRequest, Get
         return new GetRootConfigNodesResponse(response);
     }
 }
+
+
+
+
+

@@ -1,10 +1,12 @@
+﻿using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class GetConfigNodeById : IRequestHandler<GetConfigNodeByIdRequest, GetConfigNodeByIdResponse>
+[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.GetConfigNodeById) })]
+public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
 {
     private readonly IConfigNodeViewRepository _viewRepository;
 
@@ -13,14 +15,14 @@ public class GetConfigNodeById : IRequestHandler<GetConfigNodeByIdRequest, GetCo
         _viewRepository = viewRepository;
     }
 
-    public async Task<Result<GetConfigNodeByIdResponse>> HandleAsync(GetConfigNodeByIdRequest request, CancellationToken cancellationToken)
+    public async Task<Result<GetConfigNodeByIdResponse>> GetConfigNodeByIdAsync(GetConfigNodeByIdRequest request, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.Id);
         var node = await _viewRepository.GetByIdAsync(nodeId, cancellationToken);
 
         if (node is null)
         {
-            return Result.Fail("404", "配置节点不存在");
+            return Result.Fail("404", "Config node not found.");
         }
 
         var dto = node with { ConfigFiles = node.ConfigFiles.Select(f => new ConfigFileDto(f.Name, f.Content)).ToList() };
@@ -28,3 +30,8 @@ public class GetConfigNodeById : IRequestHandler<GetConfigNodeByIdRequest, GetCo
         return new GetConfigNodeByIdResponse(dto);
     }
 }
+
+
+
+
+
