@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using NOF.Contract;
 using NOF.Contract.SourceGenerator;
 using Xunit;

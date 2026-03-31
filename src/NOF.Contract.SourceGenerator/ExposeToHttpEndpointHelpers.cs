@@ -194,7 +194,7 @@ internal class EndpointInfo
     public string? DisplayName { get; set; }
     public string? Description { get; set; }
     public string? Summary { get; set; }
-    public string[] Tags { get; set; } = Array.Empty<string>();
+    public string[] Tags { get; set; } = [];
 }
 
 internal enum ServiceReturnKind

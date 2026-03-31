@@ -3,7 +3,7 @@ using NOF.Contract;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(JwtAuthorityService.RevokeJwtRefreshToken) })]
+[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(JwtAuthorityService.RevokeJwtRefreshToken)])]
 public sealed class RevokeJwtRefreshToken : JwtAuthorityService.RevokeJwtRefreshToken
 {
     private readonly IRevokedRefreshTokenRepository _revokedRefreshTokenRepository;

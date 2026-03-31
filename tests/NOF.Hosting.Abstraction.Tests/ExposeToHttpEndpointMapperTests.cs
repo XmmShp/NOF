@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
 using NOF.Hosting.AspNetCore.SourceGenerator;

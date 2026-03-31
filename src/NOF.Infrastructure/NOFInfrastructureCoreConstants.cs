@@ -6,7 +6,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Central constants for the NOF Infrastructure Core layer.
 /// </summary>
-public static partial class NOFInfrastructureConstants
+public static class NOFInfrastructureConstants
 {
     /// <summary>
     /// Handler pipeline tracing and metrics constants.

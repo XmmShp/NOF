@@ -1,10 +1,10 @@
-﻿using NOF.Annotation;
+using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.UpdateConfigNodeParent) })]
+[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.UpdateConfigNodeParent)])]
 public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 {
     private readonly IConfigNodeRepository _configNodeRepository;

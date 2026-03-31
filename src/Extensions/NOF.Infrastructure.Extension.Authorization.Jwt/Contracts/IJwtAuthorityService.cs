@@ -2,7 +2,7 @@ using NOF.Contract;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-public partial interface IJwtAuthorityService : IRpcService
+public interface IJwtAuthorityService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Post, "/auth/jwt/token")]
     Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default);

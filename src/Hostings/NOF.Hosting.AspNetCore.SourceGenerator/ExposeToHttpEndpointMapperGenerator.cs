@@ -52,7 +52,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             return;
         }
 
-        GenerateMapAllHttpEndpointsExtension(context, AssemblyPrefixHelper.GetAssemblyPrefix(compilation), endpointInfos.ToImmutableArray());
+        GenerateMapAllHttpEndpointsExtension(context, AssemblyPrefixHelper.GetAssemblyPrefix(compilation), [.. endpointInfos]);
     }
 
     private static List<ServiceMethodInfo> GetServiceMethods(INamedTypeSymbol iface)

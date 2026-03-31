@@ -1,9 +1,9 @@
-﻿namespace NOF.Sample.Maui;
+namespace NOF.Sample.Maui;
 
 public partial class MainPage : ContentPage
 {
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+    public MainPage()
+    {
+        InitializeComponent();
+    }
 }

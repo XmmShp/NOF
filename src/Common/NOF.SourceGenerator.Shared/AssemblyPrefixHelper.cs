@@ -23,7 +23,7 @@ internal static class AssemblyPrefixHelper
         }
 
         var fallback = compilation.AssemblyName ?? "Unknown";
-        return ImmutableArray.Create(fallback);
+        return [fallback];
     }
 
     internal static bool MatchesPrefix(string assemblyName, ImmutableArray<string> allPrefixes)
@@ -66,7 +66,7 @@ internal static class AssemblyPrefixHelper
 
         if (arg.Value is string single && !string.IsNullOrEmpty(single))
         {
-            return ImmutableArray.Create(single);
+            return [single];
         }
 
         return ImmutableArray<string>.Empty;

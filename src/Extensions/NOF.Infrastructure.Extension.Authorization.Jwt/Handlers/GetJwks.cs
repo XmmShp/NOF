@@ -3,7 +3,7 @@ using NOF.Contract;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(JwtAuthorityService.GetJwks) })]
+[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(JwtAuthorityService.GetJwks)])]
 public sealed class GetJwks : JwtAuthorityService.GetJwks
 {
     private readonly IJwksService _jwksService;

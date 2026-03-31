@@ -259,7 +259,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
     private class ValueObjectResult
     {
         public ValueObjectInfo? Info { get; set; }
-        public List<Diagnostic> Diagnostics { get; } = new();
+        public List<Diagnostic> Diagnostics { get; } = [];
     }
 
     private class ValueObjectInfo

@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(JwtAuthorityService.ValidateJwtRefreshToken) })]
+[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(JwtAuthorityService.ValidateJwtRefreshToken)])]
 public sealed class ValidateJwtRefreshToken : JwtAuthorityService.ValidateJwtRefreshToken
 {
     private readonly ISigningKeyService _signingKeyService;

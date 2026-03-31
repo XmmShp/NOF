@@ -1,11 +1,8 @@
 using NOF.Annotation;
 using NOF.Application;
-using NOF.Sample;
 
 namespace NOF.Sample.Application;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(INOFSampleService) })]
+[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(INOFSampleService)])]
 [ServiceImplementation<INOFSampleService>]
-public partial class NOFSampleService
-{
-}
+public partial class NOFSampleService;

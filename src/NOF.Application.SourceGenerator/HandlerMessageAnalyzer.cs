@@ -15,18 +15,18 @@ namespace NOF.Application.SourceGenerator;
 public class HandlerMessageAnalyzer : DiagnosticAnalyzer
 {
     private static readonly string[] _handlerInterfaceNames =
-    {
+    [
         "NOF.Application.ICommandHandler<TCommand>",
         "NOF.Application.IEventHandler<TEvent>",
         "NOF.Application.INotificationHandler<TNotification>"
-    };
+    ];
 
     private static readonly string[] _messageInterfaceNames =
-    {
+    [
         "NOF.Contract.ICommand",
         "NOF.Contract.IEvent",
         "NOF.Contract.INotification"
-    };
+    ];
 
     public static readonly DiagnosticDescriptor MultipleHandlerInterfacesRule = new(
         id: "NOF001",
@@ -45,7 +45,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(MultipleHandlerInterfacesRule, MultipleMessageInterfacesRule);
+        [MultipleHandlerInterfacesRule, MultipleMessageInterfacesRule];
 
     public override void Initialize(AnalysisContext context)
     {

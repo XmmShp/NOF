@@ -1,11 +1,10 @@
-﻿using NOF.Annotation;
-using NOF.Application;
+using NOF.Annotation;
 using NOF.Contract;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-[AutoInject(Lifetime.Scoped, RegisterTypes = new[] { typeof(NOFSampleService.GetConfigNodeChildren) })]
+[AutoInject(Lifetime.Scoped, RegisterTypes = [typeof(NOFSampleService.GetConfigNodeChildren)])]
 public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
 {
     private readonly IConfigNodeViewRepository _viewRepository;
