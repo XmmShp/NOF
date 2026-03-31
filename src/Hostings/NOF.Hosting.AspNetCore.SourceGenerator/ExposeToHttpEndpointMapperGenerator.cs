@@ -19,22 +19,22 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
     private static void Generate(SourceProductionContext context, Compilation compilation)
     {
-        var generateServiceInterfaces = new List<INamedTypeSymbol>();
+        var rpcServiceInterfaces = new List<INamedTypeSymbol>();
 
-        CollectGenerateServiceInterfaces(compilation.Assembly.GlobalNamespace, generateServiceInterfaces);
+        CollectRpcServiceInterfaces(compilation.Assembly.GlobalNamespace, rpcServiceInterfaces);
         foreach (var refAsm in compilation.SourceModule.ReferencedAssemblySymbols)
         {
-            CollectGenerateServiceInterfaces(refAsm.GlobalNamespace, generateServiceInterfaces);
+            CollectRpcServiceInterfaces(refAsm.GlobalNamespace, rpcServiceInterfaces);
         }
 
-        if (generateServiceInterfaces.Count == 0)
+        if (rpcServiceInterfaces.Count == 0)
         {
             return;
         }
 
         var endpointInfos = new List<EndpointInfo>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var iface in generateServiceInterfaces)
+        foreach (var iface in rpcServiceInterfaces)
         {
             foreach (var method in GetServiceMethods(iface))
             {
@@ -97,18 +97,18 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         return methods;
     }
 
-    private static void CollectGenerateServiceInterfaces(INamespaceSymbol ns, List<INamedTypeSymbol> results)
+    private static void CollectRpcServiceInterfaces(INamespaceSymbol ns, List<INamedTypeSymbol> results)
     {
         foreach (var member in ns.GetMembers())
         {
             switch (member)
             {
                 case INamedTypeSymbol { TypeKind: TypeKind.Interface } type
-                    when ExposeToHttpEndpointHelpers.HasGenerateServiceAttribute(type):
+                    when ExposeToHttpEndpointHelpers.IsRpcServiceInterface(type):
                     results.Add(type);
                     break;
                 case INamespaceSymbol nestedNs:
-                    CollectGenerateServiceInterfaces(nestedNs, results);
+                    CollectRpcServiceInterfaces(nestedNs, results);
                     break;
             }
         }

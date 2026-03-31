@@ -38,7 +38,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         "NOF207",
         "Invalid service method signature",
         "Method '{0}' on service interface '{1}' must have exactly one request parameter (plus optional CancellationToken) and return Task or Task<T>",
-        "GenerateService",
+        "RpcService",
         DiagnosticSeverity.Error,
         true);
 
@@ -62,7 +62,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
         AnalyzeLegacyHttpEndpointAttributes(context, typeSymbol);
-        AnalyzeGenerateServiceAttribute(context, typeSymbol);
+        AnalyzeRpcServiceInterface(context, typeSymbol);
     }
 
     private static void AnalyzeLegacyHttpEndpointAttributes(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
@@ -95,19 +95,13 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static void AnalyzeGenerateServiceAttribute(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
+    private static void AnalyzeRpcServiceInterface(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
     {
-        if (!ExposeToHttpEndpointHelpers.HasGenerateServiceAttribute(typeSymbol))
+        if (!ExposeToHttpEndpointHelpers.IsRpcServiceInterface(typeSymbol))
         {
             return;
         }
-
-        var generateAttr = typeSymbol.GetAttributes()
-            .First(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.GenerateServiceAttributeFqn);
-
-        var attrLocation = generateAttr.ApplicationSyntaxReference?.GetSyntax().GetLocation()
-            ?? typeSymbol.Locations.FirstOrDefault()
-            ?? Location.None;
+        var attrLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
 
         foreach (var method in typeSymbol.GetMembers().OfType<IMethodSymbol>())
         {

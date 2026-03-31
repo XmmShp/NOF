@@ -1,91 +1,79 @@
 ﻿# Public API Overview
 
-## Current Model (2026-03)
+## Current Model
 
-`[GenerateService]` is now method-driven.
-The service interface itself is the RPC contract source of truth.
+NOF RPC contracts are now interface-first and marker-based.
 
 ```csharp
-[GenerateService]
-public partial interface IUserService
+public partial interface IUserService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Get, "/api/users/{id}")]
     Task<Result<UserDto>> GetUserAsync(GetUserRequest request, CancellationToken cancellationToken = default);
 }
 ```
 
-## GenerateService Rules
+## Service Interface Rules
 
-- `GenerateServiceAttribute` only keeps `GenerateHttpClient`.
-- Service methods must be async only:
-  - Return type must be `Task` or `Task<T>`.
-- Service methods must have exactly one business parameter.
-  - An optional `CancellationToken` parameter is allowed.
-  - No second business parameter is allowed.
+- RPC interface must implement `IRpcService`.
+- Methods must be async only: `Task` or `Task<T>`.
+- Methods must have exactly one business parameter.
+- Optional `CancellationToken` is allowed.
 
-## Generated Output
+## Http Client Generation
 
-For `IUserService`, NOF generates:
+`NOF.Contract.HttpServiceClientAttribute<TService>` is now the trigger for HTTP client code generation.
+It is placed on a partial class (not on the service interface).
 
-1. `HttpUserService` (if `GenerateHttpClient = true`).
-2. ASP.NET endpoint mapping (`MapAllHttpEndpoints`) that resolves and calls `IUserService` directly.
+```csharp
+[HttpServiceClient<IUserService>]
+public partial class HttpUserService;
+```
 
-No generated endpoint path uses `IRequestDispatcher` anymore.
+Generated class behavior:
 
-### HTTP Route Behavior
+- Class gets generated method bodies for `IUserService`.
+- Class auto-implements `IUserService` in generated partial when needed.
+- Route/verb come from method-level `[HttpEndpoint]`.
+- If no `[HttpEndpoint]`, defaults to `POST` + operation-name route.
 
-- If a method has `[HttpEndpoint]`, the configured verb/route is used.
-- If no `[HttpEndpoint]` exists, it defaults to:
-  - Verb: `POST`
-  - Route: method operation name (method name without `Async` suffix)
+## Service Implementation Split (Application)
 
-## Application-Layer Implementation Split
-
-Use generic attribute on a partial class:
+Use generic `ServiceImplementationAttribute<TService>` on a partial class:
 
 ```csharp
 [ServiceImplementation<IUserService>]
-public partial class UserService : IUserService
-{
-}
+public partial class UserService;
 ```
 
-Generator emits nested one-method interfaces on that class, for example:
+Generated result includes:
 
-```csharp
-partial class UserService
-{
-    public interface IGetUser
-    {
-        Task<Result<UserDto>> GetUserAsync(GetUserRequest request, CancellationToken cancellationToken = default);
-    }
-}
-```
+- Nested operation contracts, one per RPC method.
+- Nested interface names do not start with `I` (for example `GetUser`).
+- Service class gets generated forwarding methods and auto-implements `TService` when needed.
 
-This keeps one-service contract while enabling fine-grained implementation splitting/decoupling.
+Forwarding resolves operation contracts from DI at runtime.
+
+## Runtime Completeness Check
+
+Compile-time strict completeness enforcement was removed for split implementations.
+NOF now validates missing generated operation contracts during application startup.
 
 ## Diagnostics
 
-### Contract generator/analyzer
+### Contract analyzer
 
-- `NOF200`: request type on `[HttpEndpoint]` must be reference type.
+- `NOF200`: `[HttpEndpoint]` request type must be reference type.
 - `NOF201`: route parameter must match a public property.
-- `NOF202`: class request with explicit constructors must include public parameterless constructor.
-- `NOF207`: service method signature invalid (must be one business parameter + optional `CancellationToken`, and return `Task`/`Task<T>`).
+- `NOF202`: class request with explicit constructors must include a public parameterless constructor.
+- `NOF207`: invalid RPC method signature.
 
-### Application generator/analyzer
+### Application analyzer
 
 - `NOF300`: class with `[ServiceImplementation<TService>]` must be `partial`.
-- `NOF301`: `TService` must be an interface marked with `[GenerateService]`.
-- `NOF302`: class must implement `TService`.
+- `NOF301`: `TService` must be an interface implementing `IRpcService`.
 
-## Removed Request Dispatch API
+## Request Invocation Model
 
-Request-style generic sender/dispatcher APIs are removed from public usage flow:
-
-- Removed request send APIs from test host/scope.
-- Removed `SendRequest` helpers in transport integration.
-- Removed `IRequestDispatcher` infrastructure service and implementation.
-
-The request RPC path is now fully represented by generated service interface calls.
-Command and notification send/publish APIs are still preserved.
+- RPC requests use strong-typed `IRpcService` interfaces.
+- Command and notification APIs remain unchanged.
+- Generic request-dispatch style APIs are no longer part of the main public usage path.

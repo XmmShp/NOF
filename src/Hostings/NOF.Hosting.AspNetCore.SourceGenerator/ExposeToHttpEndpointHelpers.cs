@@ -10,13 +10,12 @@ namespace NOF.Hosting.AspNetCore.SourceGenerator;
 internal static class ExposeToHttpEndpointHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
-    public const string GenerateServiceAttributeFqn = "NOF.Contract.GenerateServiceAttribute";
+    public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
 
-    public static bool HasGenerateServiceAttribute(INamedTypeSymbol symbol)
-    {
-        return symbol.GetAttributes()
-            .Any(attr => attr.AttributeClass?.ToDisplayString() == GenerateServiceAttributeFqn);
-    }
+    public static bool IsRpcServiceInterface(INamedTypeSymbol symbol)
+        => symbol.TypeKind == TypeKind.Interface
+           && (symbol.ToDisplayString() == RpcServiceInterfaceFqn
+               || symbol.AllInterfaces.Any(i => i.ToDisplayString() == RpcServiceInterfaceFqn));
 
     public static bool IsCancellationToken(ITypeSymbol typeSymbol)
         => typeSymbol.ToDisplayString() == "System.Threading.CancellationToken";

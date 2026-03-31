@@ -15,7 +15,7 @@ public class ExposeToHttpEndpointAnalyzerTests
     private static readonly Type[] _refs =
     [
         typeof(HttpEndpointAttribute),
-        typeof(GenerateServiceAttribute),
+        typeof(IRpcService),
         typeof(HttpVerb),
         typeof(Result),
         typeof(Result<>)
@@ -101,8 +101,8 @@ public class ExposeToHttpEndpointAnalyzerTests
             public record Query1(string Value);
             public record Query2(string Value);
 
-            [GenerateService]
-            public partial interface IMyService
+            
+            public partial interface IMyService : IRpcService
             {
                 Task<Result> DoAsync(Query1 first, Query2 second);
             }
@@ -122,8 +122,8 @@ public class ExposeToHttpEndpointAnalyzerTests
 
             public record Query(string Value);
 
-            [GenerateService]
-            public partial interface IMyService
+            
+            public partial interface IMyService : IRpcService
             {
                 Result Do(Query request);
             }
@@ -144,8 +144,8 @@ public class ExposeToHttpEndpointAnalyzerTests
 
             public record Query(string Value);
 
-            [GenerateService]
-            public partial interface IMyService
+            
+            public partial interface IMyService : IRpcService
             {
                 ValueTask<Result> DoAsync(Query request);
             }
@@ -167,8 +167,8 @@ public class ExposeToHttpEndpointAnalyzerTests
 
             public record Query(string Value);
 
-            [GenerateService]
-            public partial interface IMyService
+            
+            public partial interface IMyService : IRpcService
             {
                 Task<Result<string>> DoAsync(Query request, CancellationToken cancellationToken = default);
             }
@@ -178,3 +178,4 @@ public class ExposeToHttpEndpointAnalyzerTests
         diagnostics.Should().NotContain(d => d.Id == "NOF207");
     }
 }
+

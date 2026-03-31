@@ -10,7 +10,8 @@ namespace NOF.Contract.SourceGenerator;
 internal static class ExposeToHttpEndpointHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
-    public const string GenerateServiceAttributeFqn = "NOF.Contract.GenerateServiceAttribute";
+    public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
+    public const string HttpServiceClientAttributeFqn = "NOF.Contract.HttpServiceClientAttribute<TService>";
 
     public static bool HasHttpEndpointAttribute(IMethodSymbol symbol)
     {
@@ -18,11 +19,10 @@ internal static class ExposeToHttpEndpointHelpers
             .Any(attr => attr.AttributeClass?.ToDisplayString() == HttpEndpointAttributeFqn);
     }
 
-    public static bool HasGenerateServiceAttribute(INamedTypeSymbol symbol)
-    {
-        return symbol.GetAttributes()
-            .Any(attr => attr.AttributeClass?.ToDisplayString() == GenerateServiceAttributeFqn);
-    }
+    public static bool IsRpcServiceInterface(INamedTypeSymbol symbol)
+        => symbol.TypeKind == TypeKind.Interface
+           && (symbol.ToDisplayString() == RpcServiceInterfaceFqn
+               || symbol.AllInterfaces.Any(i => i.ToDisplayString() == RpcServiceInterfaceFqn));
 
     public static List<IPropertySymbol> GetAllPublicProperties(INamedTypeSymbol typeSymbol)
     {

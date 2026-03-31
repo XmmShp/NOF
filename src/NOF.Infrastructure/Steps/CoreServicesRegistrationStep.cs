@@ -48,6 +48,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.AddScoped<IInvocationContext>(sp => sp.GetRequiredService<IMutableInvocationContext>());
         builder.Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IMutableUserContext>());
         builder.Services.AddHostedService<OutboxMessageBackgroundService>();
+        builder.Services.AddHostedService<RpcOperationStartupValidatorHostedService>();
         builder.Services.AddOptions<OutboxOptions>();
         return ValueTask.CompletedTask;
     }

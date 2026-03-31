@@ -2,23 +2,16 @@
 
 ## Decision
 
-NOF no longer exposes generic request-dispatch APIs in framework usage flow.
-Request invocation is fully replaced by strong-typed RPC-style service interfaces generated from `[GenerateService]`.
-
-## Removed Surface
-
-- Contract-level request sender APIs.
-- Framework-level request dispatcher abstractions/implementations.
-- Request `SendAsync`/`SendRequest` helper methods in test and transport helper layers.
+NOF no longer treats generic request-dispatch as the primary public path.
+RPC invocation is centered on strong-typed service interfaces marked with `IRpcService`.
 
 ## Current Invocation Model
 
-- Request-like operations: call generated service interface methods directly.
-- Commands: keep command sender APIs.
-- Notifications: keep publish APIs.
+- RPC-style requests: call `IRpcService` methods directly.
+- Command sending: unchanged.
+- Notification publishing: unchanged.
 
-## Why
+## Notes
 
-- Strong compile-time contract per service method.
-- Clear architecture boundary: service contract first, transport second.
-- Uniform async RPC semantics.
+- Transport-specific HTTP client generation is now triggered by `[HttpServiceClient<TService>]` on partial classes.
+- Service implementation splitting uses `[ServiceImplementation<TService>]` and runtime startup validation.

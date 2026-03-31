@@ -12,7 +12,7 @@ public class ExposeToHttpEndpointMapperTests
     private static readonly Type[] _refs =
     [
         typeof(HttpEndpointAttribute),
-        typeof(GenerateServiceAttribute),
+        typeof(IRpcService),
         typeof(HttpVerb),
         typeof(Result),
         typeof(Result<>)
@@ -29,8 +29,8 @@ public class ExposeToHttpEndpointMapperTests
             {
                 public record GetUserRequest(string Id);
 
-                [GenerateService]
-                public partial interface ILibService
+                
+                public partial interface ILibService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Get, "/api/user")]
                     Task<Result<string>> GetUserAsync(GetUserRequest request);
@@ -50,8 +50,8 @@ public class ExposeToHttpEndpointMapperTests
             {
                 public record CreateUserRequest(string Name);
 
-                [GenerateService]
-                public partial interface IAppService
+                
+                public partial interface IAppService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Post, "/api/user")]
                     Task<Result> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default);
@@ -103,8 +103,8 @@ public class ExposeToHttpEndpointMapperTests
             {
                 public record InternalRequest(string Data);
 
-                [GenerateService]
-                public partial interface IMyService
+                
+                public partial interface IMyService : IRpcService
                 {
                     Task<Result> InternalAsync(InternalRequest request);
                 }
@@ -135,8 +135,8 @@ public class ExposeToHttpEndpointMapperTests
                     public int? Priority { get; set; }
                 }
 
-                [GenerateService]
-                public partial interface IMyService
+                
+                public partial interface IMyService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
                     Task<Result> UpdateItemAsync(UpdateItemRequest request);
@@ -157,3 +157,4 @@ public class ExposeToHttpEndpointMapperTests
         code.Should().Contain("service.UpdateItemAsync(request)");
     }
 }
+
