@@ -1,4 +1,3 @@
-using NOF.Application;
 using NOF.Contract;
 using System.ComponentModel;
 
@@ -17,9 +16,9 @@ public sealed class InboundContext
     public required object Message { get; init; }
 
     /// <summary>
-    /// Handler instance
+    /// Handler type
     /// </summary>
-    public required IMessageHandler Handler { get; init; }
+    public required Type HandlerType { get; init; }
 
     /// <summary>
     /// Transport-level headers passed from the hosting adapter (HTTP, message bus, etc.).
@@ -32,20 +31,4 @@ public sealed class InboundContext
     /// Response result (only used for Request handlers)
     /// </summary>
     public IResult? Response { get; set; }
-
-    /// <summary>
-    /// Handler type name
-    /// </summary>
-    public string HandlerType
-    {
-        get
-        {
-            return Handler.GetType().FullName ?? Handler.GetType().Name;
-        }
-    }
-
-    /// <summary>
-    /// Message type name
-    /// </summary>
-    public string MessageType => Message.GetType().FullName ?? Message.GetType().Name;
 }

@@ -34,13 +34,13 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
     {
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType),
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageType)
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.FullName),
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().FullName)
         };
 
         _logger.LogDebug(
             "Executing handler {HandlerType} for message {MessageType}",
-            context.HandlerType, context.MessageType);
+            context.HandlerType.FullName, context.Message.GetType().FullName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -56,7 +56,7 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
 
             _logger.LogDebug(
                 "Handler {HandlerType} completed successfully in {Duration}ms",
-                context.HandlerType, durationMs);
+                context.HandlerType.FullName, durationMs);
         }
         catch (Exception ex)
         {
@@ -68,7 +68,7 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware
 
             _logger.LogError(ex,
                 "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}",
-                context.HandlerType, durationMs, ex.Message);
+                context.HandlerType.FullName, durationMs, ex.Message);
 
             throw;
         }

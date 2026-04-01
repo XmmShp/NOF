@@ -33,7 +33,7 @@ public sealed class MemoryNotificationRider : INotificationRider
             var context = new InboundContext
             {
                 Message = notification,
-                Handler = handler,
+                HandlerType = handler.GetType(),
                 Headers = headers is not null
                     ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)

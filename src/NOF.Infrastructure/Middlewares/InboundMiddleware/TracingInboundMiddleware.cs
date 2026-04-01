@@ -32,8 +32,8 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
 
         if (activity is { IsAllDataRequested: true })
         {
-            activity.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType);
-            activity.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageType);
+            activity.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.FullName);
+            activity.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().FullName);
         }
 
         try
@@ -62,7 +62,7 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
             isRemote: true);
 
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivity(
-            $"{context.HandlerType}.Handle: {context.MessageType}",
+            $"{context.HandlerType.FullName}.Handle: {context.Message.GetType().FullName}",
             kind: ActivityKind.Consumer,
             parentContext: activityContext);
     }

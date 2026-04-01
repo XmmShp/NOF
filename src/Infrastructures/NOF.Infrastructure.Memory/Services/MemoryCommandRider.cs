@@ -40,7 +40,7 @@ public sealed class MemoryCommandRider : ICommandRider
         var context = new InboundContext
         {
             Message = command,
-            Handler = handler,
+            HandlerType = resolved.HandlerType,
             Headers = headers is not null
                 ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)

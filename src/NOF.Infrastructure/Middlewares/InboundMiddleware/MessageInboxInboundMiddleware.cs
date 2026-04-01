@@ -41,7 +41,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
             var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
             if (messageExists)
             {
-                _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, context.MessageType);
+                _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, context.Message.GetType().FullName);
 
                 await transaction.RollbackAsync(cancellationToken);
                 return;
@@ -59,7 +59,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
 
             _logger.LogDebug(
                 "Inbox message {MessageId} for {MessageType} processed and committed successfully",
-                messageId, context.MessageType);
+                messageId, context.Message.GetType().FullName);
         }
         catch (Exception ex)
         {
@@ -71,12 +71,12 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
             {
                 _logger.LogError(rollbackEx,
                     "Failed to rollback transaction for inbox message processing of {MessageType}",
-                    context.MessageType);
+                    context.Message.GetType().FullName);
             }
 
             _logger.LogError(ex,
                 "Failed to process inbox message for {MessageType}. Transaction has been rolled back.",
-                context.MessageType);
+                context.Message.GetType().FullName);
 
             throw;
         }

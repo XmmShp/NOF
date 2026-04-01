@@ -182,7 +182,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 var context = new InboundContext
                 {
                     Message = command,
-                    Handler = handler,
+                    HandlerType = resolved.HandlerType,
                     Headers = headers ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 };
 
@@ -198,7 +198,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 var context = new InboundContext
                 {
                     Message = notification,
-                    Handler = handler,
+                    HandlerType = handler.GetType(),
                     Headers = headers ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 };
 

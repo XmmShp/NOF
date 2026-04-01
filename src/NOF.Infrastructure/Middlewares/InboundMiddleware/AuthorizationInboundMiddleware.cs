@@ -28,14 +28,14 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
         var messageType = context.Message.GetType();
-        var handlerType = context.Handler.GetType();
+        var handlerType = context.HandlerType;
 
         // Check if message or handler allows anonymous access
         var allowAnonymousAttr = GetAttribute<AllowAnonymousAttribute>(messageType, handlerType);
         if (allowAnonymousAttr is not null)
         {
             _logger.LogDebug("Handler {HandlerType} or message {MessageType} allows anonymous access",
-                context.HandlerType, context.MessageType);
+                context.HandlerType.FullName, messageType.FullName);
             await next(cancellationToken);
             return;
         }
@@ -53,7 +53,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
         if (!_userContext.IsAuthenticated)
         {
             _logger.LogWarning("Unauthorized access attempt to {HandlerType}/{MessageType} by unauthenticated user",
-                context.HandlerType, context.MessageType);
+                context.HandlerType.FullName, messageType.FullName);
 
             context.Response = Result.Fail("401", "Please login first");
             return;
@@ -64,14 +64,14 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
             !_userContext.HasPermission(permissionAttr.Permission))
         {
             _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
-                context.HandlerType, context.MessageType, permissionAttr.Permission);
+                context.HandlerType.FullName, messageType.FullName, permissionAttr.Permission);
 
             context.Response = Result.Fail("403", "Insufficient permissions");
             return;
         }
 
         _logger.LogDebug("Permission check passed for {HandlerType}/{MessageType} with permission {Permission}",
-            context.HandlerType, context.MessageType, permissionAttr.Permission);
+            context.HandlerType.FullName, messageType.FullName, permissionAttr.Permission);
 
         await next(cancellationToken);
     }
