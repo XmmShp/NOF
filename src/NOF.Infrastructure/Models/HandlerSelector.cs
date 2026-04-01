@@ -6,7 +6,7 @@ namespace NOF.Infrastructure;
 
 /// <summary>
 /// Returned by the source-generated <c>AddAllHandlers</c> method.
-/// Provides fluent API to override endpoint names for handler types.
+/// Provides fluent API for handler registration.
 /// </summary>
 public sealed class HandlerSelector
 {
@@ -31,24 +31,6 @@ public sealed class HandlerSelector
     {
         Services = services;
         _infos = new Lazy<HandlerInfos>(infos);
-    }
-
-    /// <summary>
-    /// Overrides the endpoint name for a specific handler type.
-    /// Updates the handler info, keyed service registration, and endpoint name map.
-    /// </summary>
-    public HandlerSelector SetEndpointName<THandler>(string endpointName)
-        => SetEndpointName(typeof(THandler), endpointName);
-
-    /// <summary>
-    /// Overrides the endpoint name for a specific handler type.
-    /// Updates the handler info, keyed service registration, and endpoint name map.
-    /// </summary>
-    public HandlerSelector SetEndpointName(Type handlerType, string endpointName)
-    {
-        _infos.Value.SetEndpointName(handlerType, endpointName);
-
-        return this;
     }
 
     /// <summary>

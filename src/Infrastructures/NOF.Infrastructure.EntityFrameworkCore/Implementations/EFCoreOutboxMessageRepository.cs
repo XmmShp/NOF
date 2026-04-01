@@ -95,7 +95,6 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
                     PayloadType = message.PayloadType,
                     Payload = message.Payload,
                     Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
-                    DestinationEndpointName = message.DestinationEndpointName,
                     CreatedAt = message.CreatedAt,
                     RetryCount = message.RetryCount,
                     TraceId = message.TraceId,

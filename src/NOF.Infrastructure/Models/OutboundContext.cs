@@ -23,11 +23,6 @@ public sealed class OutboundContext
     public IDictionary<string, string?> Headers { get; init; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Optional destination endpoint name override.
-    /// </summary>
-    public string? DestinationEndpointName { get; init; }
-
-    /// <summary>
     /// Response result set by the rider or by outbound middleware that short-circuits the pipeline.
     /// Mirrors <see cref="InboundContext.Response"/>.
     /// </summary>

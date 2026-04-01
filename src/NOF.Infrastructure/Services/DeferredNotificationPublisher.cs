@@ -40,7 +40,6 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
             MessageType = OutboxMessageType.Notification,
             PayloadType = typeName,
             Payload = _messageSerializer.Serialize(notification),
-            DestinationEndpointName = null,
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
             TraceId = currentActivity?.TraceId.ToString(),
             SpanId = currentActivity?.SpanId.ToString()

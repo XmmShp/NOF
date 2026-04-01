@@ -13,43 +13,41 @@ namespace NOF.Infrastructure.Memory;
 /// </summary>
 public sealed class MemoryCommandRider : ICommandRider
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ICommandHandlerResolver _resolver;
+	private readonly IServiceScopeFactory _scopeFactory;
+	private readonly ICommandHandlerResolver _resolver;
 
-    public MemoryCommandRider(
-        IServiceScopeFactory scopeFactory,
-        ICommandHandlerResolver resolver)
-    {
-        _scopeFactory = scopeFactory;
-        _resolver = resolver;
-    }
+	public MemoryCommandRider(
+		IServiceScopeFactory scopeFactory,
+		ICommandHandlerResolver resolver)
+	{
+		_scopeFactory = scopeFactory;
+		_resolver = resolver;
+	}
 
-    public async Task SendAsync(ICommand command,
-        IDictionary<string, string?>? headers = null,
-        string? destinationEndpointName = null,
-        CancellationToken cancellationToken = default)
-    {
-        var commandType = command.GetType();
-        var resolved = _resolver.Resolve(commandType, destinationEndpointName)
-            ?? throw new InvalidOperationException(
-                $"In-memory transport cannot route command '{commandType.Name}' " +
-                $"to endpoint '{destinationEndpointName ?? "(any)"}'. " +
-                "No matching local handler registered. Add a message transport to enable remote dispatch.");
+	public async Task SendAsync(ICommand command,
+		IDictionary<string, string?>? headers = null,
+		CancellationToken cancellationToken = default)
+	{
+		var commandType = command.GetType();
+		var resolved = _resolver.Resolve(commandType)
+			?? throw new InvalidOperationException(
+				$"In-memory transport cannot route command '{commandType.Name}'. " +
+				"No matching local handler registered. Add a message transport to enable remote dispatch.");
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
-        var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-        var context = new InboundContext
-        {
-            Message = command,
-            Handler = handler,
-            Headers = headers is not null
-                ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-        };
+		await using var scope = _scopeFactory.CreateAsyncScope();
+		var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
+		var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
+		var context = new InboundContext
+		{
+			Message = command,
+			Handler = handler,
+			Headers = headers is not null
+				? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
+				: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+		};
 
-        await pipeline.ExecuteAsync(context,
-            ct => new ValueTask(handler.HandleAsync(command, ct)),
-            cancellationToken).ConfigureAwait(false);
-    }
+		await pipeline.ExecuteAsync(context,
+			ct => new ValueTask(handler.HandleAsync(command, ct)),
+			cancellationToken).ConfigureAwait(false);
+	}
 }

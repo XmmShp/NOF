@@ -22,7 +22,7 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
         _messageSerializer = messageSerializer;
     }
 
-    public void Send(ICommand command, string? destinationEndpointName = null)
+    public void Send(ICommand command)
     {
         var currentActivity = Activity.Current;
         var tenantId = _invocationContext.TenantId;
@@ -39,7 +39,6 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
             MessageType = OutboxMessageType.Command,
             PayloadType = typeName,
             Payload = _messageSerializer.Serialize(command),
-            DestinationEndpointName = destinationEndpointName,
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
             TraceId = currentActivity?.TraceId.ToString(),
             SpanId = currentActivity?.SpanId.ToString()

@@ -43,7 +43,7 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
                 context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.MessageId, out var messageId);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, messageId);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, context.Message.GetType().Name);
-                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, context.DestinationEndpointName ?? "default");
+                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
 
                 context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var tenantId);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);

@@ -2,9 +2,9 @@ namespace NOF.Infrastructure;
 
 /// <summary>
 /// Strongly-typed marker used as keyed-service key for command handler registrations.
-/// The key is <c>CommandHandlerKey.Of(typeof(TCommand), endpointName)</c>.
+/// The key is <c>CommandHandlerKey.Of(typeof(TCommand))</c>.
 /// </summary>
-public sealed record CommandHandlerKey(CommandHandlerKey.UniqueKey Key, Type CommandType, string EndpointName)
+public sealed record CommandHandlerKey(CommandHandlerKey.UniqueKey Key, Type CommandType)
 {
     public class UniqueKey
     {
@@ -12,8 +12,8 @@ public sealed record CommandHandlerKey(CommandHandlerKey.UniqueKey Key, Type Com
         public static readonly UniqueKey Instance = new();
     }
 
-    /// <summary>Creates the composite service key for the given command type and endpoint name.</summary>
-    public static CommandHandlerKey Of(Type commandType, string endpointName) => new(UniqueKey.Instance, commandType, endpointName);
+    /// <summary>Creates the composite service key for the given command type.</summary>
+    public static CommandHandlerKey Of(Type commandType) => new(UniqueKey.Instance, commandType);
 }
 
 /// <summary>
