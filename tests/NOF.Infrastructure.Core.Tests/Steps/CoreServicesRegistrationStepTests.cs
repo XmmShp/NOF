@@ -70,6 +70,8 @@ public class CoreServicesRegistrationStepTests
         builder.Services.Should().Contain(service =>
             service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(OutboxMessageBackgroundService));
+        builder.Services.Should().ContainSingle(service =>
+            service.ServiceType == typeof(IHostedService));
 
         provider.GetRequiredService<IOptions<OutboxOptions>>().Should().NotBeNull();
         provider.GetRequiredService<IEventPublisher>().Should().BeOfType<EventPublisher>();
