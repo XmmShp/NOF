@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;
 
@@ -11,20 +12,22 @@ namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;
 public class SqliteDbContextConfigurator : IDbContextConfigurator
 {
     private readonly IConfiguration _configuration;
+    private readonly SqliteOptions _options;
 
-    public SqliteDbContextConfigurator(IConfiguration configuration)
+    public SqliteDbContextConfigurator(IConfiguration configuration, IOptions<SqliteOptions> options)
     {
         _configuration = configuration;
+        _options = options.Value;
     }
 
     public void Configure(DbContextOptionsBuilder optionsBuilder, string? tenantId)
     {
         // Get base connection string from configuration
-        var connectionString = _configuration.GetConnectionString("sqlite");
+        var connectionString = _configuration.GetConnectionString(_options.ConnectionStringName);
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("SQLite connection string 'sqlite' not found in configuration.");
+            throw new InvalidOperationException($"SQLite connection string '{_options.ConnectionStringName}' not found in configuration.");
         }
 
         // If no tenant ID, use base connection string directly (Host environment)

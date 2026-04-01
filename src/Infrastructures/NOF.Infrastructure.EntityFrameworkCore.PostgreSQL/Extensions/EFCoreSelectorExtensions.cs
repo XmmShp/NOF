@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
@@ -9,6 +10,7 @@ public static class NOFInfrastructureEntityFrameworkCorePostgreSQLExtensions
         public INOFAppBuilder UsePostgreSQL(string connectStringName = "postgres")
         {
             // Register PostgreSQL database context configurator (overrides default)
+            selector.Builder.Services.Configure<PostgreSQLOptions>(options => options.ConnectionStringName = connectStringName);
             selector.Builder.Services.ReplaceOrAddScoped<IDbContextConfigurator, PostgreSQLDbContextConfigurator>();
 
             return selector.Builder;
