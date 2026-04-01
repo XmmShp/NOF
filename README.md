@@ -29,6 +29,8 @@
 | [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis) | Application Redis extension - advanced Redis cache abstractions built on top of `ICacheService` |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI, service endpoint mapping, JSON configuration |
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - WebAssembly host builder integration |
+| [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui) | .NET MAUI hosting - MAUI app builder integration for cross-platform applications |
+| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT authorization contract - JWT service contracts, token models, and JWKS definitions |
 | [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization and authority - token issuance, key rotation, JWKS |
 | [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure - `NOFDbContext`, repositories, outbox, multi-tenancy |
 | [`NOF.Infrastructure.EntityFrameworkCore.PostgreSQL`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL) | PostgreSQL provider for NOF EF Core infrastructure |
@@ -70,8 +72,10 @@ NOF.Infrastructure             <- Builder implementation and shared runtime pipe
 NOF.UI                         <- Shared UI components and browser client primitives
 NOF.Hosting.AspNetCore         <- ASP.NET Core host integration
 NOF.Hosting.BlazorWebAssembly  <- Blazor WebAssembly host integration
+NOF.Hosting.Maui               <- .NET MAUI host integration for cross-platform apps
+NOF.Contract.Extension.*       <- Optional contract extensions (e.g., JWT)
+NOF.Infrastructure.Extension.* <- Optional infrastructure extensions (e.g., JWT)
 NOF.Infrastructure.*           <- Persistence, messaging, and caching providers
-NOF.Extensions.*               <- Optional feature extensions
 ```
 
 ## Documentation

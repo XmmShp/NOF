@@ -14,7 +14,8 @@ using NOF.Sample.Application;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
-builder.AddApplicationPart(typeof(NOFSampleService).Assembly);
+builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
+	.AddApplicationPart(typeof(JwtAuthorityService).Assembly);
 
 builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 
@@ -36,34 +37,6 @@ builder.Services.AddAntDesign();
 builder.Services.AddRazorComponents()
 	.AddInteractiveServerComponents()
 	.AddInteractiveWebAssemblyComponents();
-
-builder.Services.AddScoped<INOFSampleService>(sp =>
-{
-	var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-	var request = accessor.HttpContext?.Request;
-	var baseUri = request is null
-		? "http://localhost:55892/"
-		: $"{request.Scheme}://{request.Host}/";
-
-	return new HttpNOFSampleService(new HttpClient
-	{
-		BaseAddress = new Uri(baseUri)
-	});
-});
-
-builder.Services.AddScoped<IJwtAuthorityService>(sp =>
-{
-	var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-	var request = accessor.HttpContext?.Request;
-	var baseUri = request is null
-		? "http://localhost:55892/"
-		: $"{request.Scheme}://{request.Host}/";
-
-	return new HttpSampleJwtAuthorityService(new HttpClient
-	{
-		BaseAddress = new Uri(baseUri)
-	});
-});
 
 builder.Services.AddHostedService(async (sp, ct) =>
 {
@@ -92,6 +65,6 @@ app.MapRazorComponents<App>()
 		typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
 
 app.MapServiceToHttpEndpoints<INOFSampleService>();
-app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
+app.MapServiceToHttpEndpoints<IJwksService>();
 
 await app.RunAsync();
