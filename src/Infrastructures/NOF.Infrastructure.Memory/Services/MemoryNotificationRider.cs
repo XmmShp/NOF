@@ -7,7 +7,7 @@ namespace NOF.Infrastructure.Memory;
 /// <summary>
 /// In-memory notification rider that dispatches notifications to all typed handlers
 /// resolved from DI using keyed services (multicast).
-/// Creates a new DI scope per dispatch to match MassTransit behavior.
+/// Creates a new DI scope per dispatch.
 /// Fully AOT-compatible no reflection or <c>MakeGenericType</c> calls.
 /// </summary>
 public sealed class MemoryNotificationRider : INotificationRider

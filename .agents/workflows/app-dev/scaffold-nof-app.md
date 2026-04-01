@@ -34,7 +34,7 @@ MyApp/
    dotnet add package NOF.Hosting.AspNetCore
    dotnet add package NOF.Infrastructure
    dotnet add package NOF.Infrastructure.EntityFrameworkCore.PostgreSQL
-   dotnet add package NOF.Infrastructure.MassTransit.RabbitMQ
+   dotnet add package NOF.Infrastructure.RabbitMQ
    dotnet add package NOF.Infrastructure.StackExchangeRedis
    dotnet add package NOF.Infrastructure.Extension.Authorization.Jwt
    ```
@@ -68,8 +68,7 @@ MyApp/
    using NOF.Hosting.AspNetCore;
    using NOF.Infrastructure.EntityFrameworkCore;
    using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
-   using NOF.Infrastructure.MassTransit;
-   using NOF.Infrastructure.MassTransit.RabbitMQ;
+   using NOF.Infrastructure.RabbitMQ;
    using NOF.Infrastructure.StackExchangeRedis;
 
    var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
@@ -80,8 +79,7 @@ MyApp/
 
    builder.AddRedisCache();
 
-   builder.AddMassTransit()
-       .UseRabbitMQ();
+   builder.AddRabbitMQ();
 
    builder.AddEFCore<AppDbContext>()
        .AutoMigrate()
@@ -118,17 +116,13 @@ MyApp/
    {
      "ConnectionStrings": {
        "DefaultConnection": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
+       "rabbitmq": "Host=localhost;Port=5672;UserName=guest;Password=guest;VirtualHost=/",
        "redis": "localhost:6379"
      },
      "NOF": {
        "DbContextFactory": {
          "AutoMigrate": true
        }
-     },
-     "RabbitMQ": {
-       "Host": "localhost",
-       "Username": "guest",
-       "Password": "guest"
      }
    }
    ```

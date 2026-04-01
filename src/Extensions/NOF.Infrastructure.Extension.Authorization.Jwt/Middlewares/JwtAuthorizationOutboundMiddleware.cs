@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;

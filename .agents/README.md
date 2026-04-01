@@ -25,10 +25,10 @@ Recent framework conventions such as step-driven cache defaults, `IDistributedCa
       add-efcore-database.md
       add-handler.md
       add-jwt-auth.md
-      add-masstransit-messaging.md
       add-redis-caching.md
       add-request-handler.md
       add-state-machine.md
+      add-rabbitmq-messaging.md
       scaffold-nof-app.md
   skills/
     nof-app-development/SKILL.md — Comprehensive skill for AI agents building NOF applications

@@ -1,5 +1,4 @@
 using Microsoft.IdentityModel.Tokens;
-using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
 using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
 

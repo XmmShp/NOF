@@ -54,7 +54,7 @@ This ensures that only code with knowledge of the concrete handler type can reso
 Multicast handlers have a one-to-many relationship: multiple handlers can subscribe to the same message type. They receive **dual registration** - both the concrete type and a factory-based interface delegation:
 
 ```csharp
-// 1. Concrete registration (for MassTransit adapters and direct resolution)
+// 1. Concrete registration (for RabbitMQ adapters and direct resolution)
 services.AddKeyedScoped<MyEventHandler>(EventHandlerKey.Of(typeof(MyEvent)));
 
 // 2. Interface factory (for in-process multicast dispatch)
@@ -94,11 +94,11 @@ Each handler kind has its own typed info record:
 | `EventHandlerInfo` | `HandlerType`, `EventType` |
 | `NotificationHandlerInfo` | `HandlerType`, `NotificationType` |
 
-These are collected into typed singleton `HashSet` containers (`CommandHandlerInfos`, `EventHandlerInfos`, etc.) registered via `GetOrAddSingleton`. Infrastructure components - such as the MassTransit integration - read these collections at startup to wire up transport-level consumers.
+These are collected into typed singleton `HashSet` containers (`CommandHandlerInfos`, `EventHandlerInfos`, etc.) registered via `GetOrAddSingleton`. Infrastructure components - such as the RabbitMQ integration - read these collections at startup to wire up transport-level consumers.
 
 ## Endpoint Name Resolution
 
-Point-to-point handlers need routable endpoint names for message transport (e.g., MassTransit queues). The `EndpointNameRegistry` (a `ConcurrentDictionary<Type, string>` singleton) stores the mapping from handler/message types to endpoint names.
+Point-to-point handlers need routable endpoint names for message transport (e.g., RabbitMQ queues). The `EndpointNameRegistry` (a `ConcurrentDictionary<Type, string>` singleton) stores the mapping from handler/message types to endpoint names.
 
 Endpoint names are resolved at compile time by the source generator:
 
@@ -115,20 +115,20 @@ services.AddAllHandlers()
     .SetEndpointName<MyCommand>("custom-command-queue");
 ```
 
-## MassTransit Integration
+## RabbitMQ Integration
 
-The MassTransit integration (`MassTransitRegistrationStep`) reads the non-event handler info collections and creates typed adapter consumers:
+The RabbitMQ integration reads the non-event handler info collections and creates typed adapter consumers:
 
-- `MassTransitCommandHandlerAdapter<THandler, TCommand>`
-- `MassTransitRequestHandlerAdapter<THandler, TRequest>`
-- `MassTransitRequestHandlerAdapter<THandler, TRequest, TResponse>`
-- `MassTransitNotificationHandlerAdapter<THandler, TNotification>`
+- `RabbitMQCommandHandlerAdapter<THandler, TCommand>`
+- `RabbitMQRequestHandlerAdapter<THandler, TRequest>`
+- `RabbitMQRequestHandlerAdapter<THandler, TRequest, TResponse>`
+- `RabbitMQNotificationHandlerAdapter<THandler, TNotification>`
 
 Each adapter injects `IServiceProvider` and resolves the handler via `GetRequiredKeyedService<THandler>(Key.Of(messageType))` at consume time - **not** through constructor injection. This means:
 
 - Handlers are never registered as plain scoped services; they are only accessible through their keyed registrations
 - No other service can accidentally resolve a handler without the correct key
-- The handler's scoped lifetime is tied to the MassTransit consume context
+- The handler's scoped lifetime is tied to the RabbitMQ consume context
 
 ## Design Principles
 

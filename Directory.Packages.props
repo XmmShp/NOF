@@ -34,8 +34,6 @@
     <!-- Extensions -->
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
     <!-- Infrastructure -->
-    <PackageVersion Include="MassTransit" Version="8.5.7" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.7" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />

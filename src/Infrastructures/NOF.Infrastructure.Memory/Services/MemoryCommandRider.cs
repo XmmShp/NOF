@@ -8,7 +8,7 @@ namespace NOF.Infrastructure.Memory;
 /// In-memory command rider that dispatches commands directly to their typed handlers
 /// resolved from DI using keyed services.
 /// Uses <see cref="ICommandHandlerResolver"/> to find the correct handler by message type
-/// and optional endpoint name. Creates a new DI scope per dispatch to match MassTransit behavior.
+/// and optional endpoint name. Creates a new DI scope per dispatch.
 /// Fully AOT-compatible no reflection or <c>MakeGenericType</c> calls.
 /// </summary>
 public sealed class MemoryCommandRider : ICommandRider
@@ -34,7 +34,7 @@ public sealed class MemoryCommandRider : ICommandRider
             ?? throw new InvalidOperationException(
                 $"In-memory transport cannot route command '{commandType.Name}' " +
                 $"to endpoint '{destinationEndpointName ?? "(any)"}'. " +
-                "No matching local handler registered. Add a message transport (e.g. MassTransit) to enable remote dispatch.");
+                "No matching local handler registered. Add a message transport to enable remote dispatch.");
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);

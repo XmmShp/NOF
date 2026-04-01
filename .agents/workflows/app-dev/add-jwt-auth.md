@@ -150,5 +150,5 @@ public class GetMyOrdersHandler : IRequestHandler<GetMyOrdersRequest, GetMyOrder
 - JWT keys are automatically rotated via a background service when using Authority mode.
 - JWKS endpoint is auto-exposed at `/.well-known/jwks.json` when `AddJwksRequestHandler()` is called.
 - Key rotation publishes a `JwtKeyRotationNotification` so other services can refresh their cached keys.
-- The authorization middleware runs in the NOF inbound pipeline — it works for both HTTP and MassTransit messages.
+- The authorization middleware runs in the NOF inbound pipeline — it works for both HTTP and RabbitMQ messages.
 - Refresh token revocation uses `ICacheService` by default — override `IRevokedRefreshTokenRepository` for custom storage.

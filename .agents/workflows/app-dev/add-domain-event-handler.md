@@ -85,7 +85,7 @@ public class InvalidateCacheOnOrderUpdated : IEventHandler<OrderUpdatedEvent>
 
 | Feature | Domain Event (`IEvent`) | Notification (`INotification`) |
 |---------|------------------------|-------------------------------|
-| Scope | In-process only | In-process + distributed (MassTransit) |
+| Scope | In-process only | In-process + distributed (RabbitMQ) |
 | Dispatch | Automatic on `SaveChangesAsync()` | Manual via `INotificationPublisher` |
 | Handler | `IEventHandler<T>` | `INotificationHandler<T>` |
 | Transactional | Same transaction as aggregate | Via transactional outbox |
@@ -136,7 +136,7 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
    - Persists the aggregate root changes
    - Dispatches domain events (`IEvent`) to `IEventHandler<T>` handlers
    - Writes outbox messages to the `OutboxMessage` table
-3. A background service picks up outbox messages and publishes them via MassTransit.
+3. A background service picks up outbox messages and publishes them via RabbitMQ.
 4. The inbox (`InboxMessage` table) ensures idempotent processing on the consumer side.
 
 ## 6. Multiple Handlers for Same Event

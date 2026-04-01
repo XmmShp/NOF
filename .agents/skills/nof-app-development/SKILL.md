@@ -95,4 +95,4 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 ## References
 
 - **Code recipes** (bootstrap, value objects, aggregate roots, handlers, PATCH, outbox, caching, state machines): See [references/recipes.md](references/recipes.md)
-- **Infrastructure setup** (EF Core, Redis, MassTransit, JWT, configuration): See [references/infrastructure.md](references/infrastructure.md)
+- **Infrastructure setup** (EF Core, Redis, RabbitMQ, JWT, configuration): See [references/infrastructure.md](references/infrastructure.md)

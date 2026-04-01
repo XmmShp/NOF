@@ -1,5 +1,4 @@
 using NOF.Annotation;
-using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 
 [assembly: AssemblyInitializeAttribute<NOF.Infrastructure.Extension.Authorization.Jwt.NOFJwtAuthorizationAssemblyInitializer>]

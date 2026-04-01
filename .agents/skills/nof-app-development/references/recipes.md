@@ -32,7 +32,7 @@ builder.Services.AddAllHandlers();               // From source generator
 builder.AddRedisCache();
 builder.AddJwtAuthority().AddJwksRequestHandler();
 builder.AddJwtAuthorization();
-builder.AddMassTransit().UseRabbitMQ();
+builder.AddRabbitMQ();
 builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
 
 var app = await builder.BuildAsync();

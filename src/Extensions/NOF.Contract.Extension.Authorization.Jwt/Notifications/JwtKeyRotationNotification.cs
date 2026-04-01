@@ -1,5 +1,3 @@
-using NOF.Contract;
-
 namespace NOF.Contract.Extension.Authorization.Jwt;
 
 /// <summary>

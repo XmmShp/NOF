@@ -142,7 +142,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Scopes
 
-Use the package short name as scope: `domain`, `contract`, `application`, `hosting`, `core`, `efcore`, `masstransit`, `redis`, `jwt`, `generator`.
+Use the package short name as scope: `domain`, `contract`, `application`, `hosting`, `core`, `efcore`, `rabbitmq`, `redis`, `jwt`, `generator`.
 
 ### Examples
 
@@ -188,7 +188,7 @@ NOF.Contract            ← IRequest, ICommand, INotification, Result<T>, [HttpE
 NOF.Application         ← Handlers, state machines, caching, unit of work
 NOF.Infrastructure ← INOFAppBuilder, IStep pipeline, OpenTelemetry
 NOF.Hosting.AspNetCore  ← ASP.NET Core host, endpoint mapping, middleware
-NOF.Infrastructure.*    ← EF Core, MassTransit, Redis providers
+NOF.Infrastructure.*    ← EF Core, RabbitMQ, Redis providers
 NOF.Extensions.*        ← JWT authorization, optional features
 ```
 

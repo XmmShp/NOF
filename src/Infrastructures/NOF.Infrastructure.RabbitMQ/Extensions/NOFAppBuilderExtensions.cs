@@ -1,25 +1,35 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Contract;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.RabbitMQ;
 
 public static partial class NOFInfrastructureRabbitMQExtensions
 {
-    public static INOFAppBuilder AddRabbitMQ(this INOFAppBuilder builder)
-        => AddRabbitMQ(builder, _ => { });
-
-    public static INOFAppBuilder AddRabbitMQ(this INOFAppBuilder builder, Action<RabbitMQOptions> configureOptions)
+    extension(INOFAppBuilder builder)
     {
-        builder.Services.Configure(configureOptions);
+        public INOFAppBuilder AddRabbitMQ(string? connectionStringName = null)
+            => AddRabbitMQ(builder, options =>
+            {
+                var connectionString = builder.Configuration.GetConnectionString(connectionStringName ?? "rabbitmq");
+                if (!string.IsNullOrEmpty(connectionString))
+                {
+                    options.ConnectionString = connectionString;
+                }
+            });
 
-        builder.Services.ReplaceOrAddSingleton<RabbitMQConnectionManager, RabbitMQConnectionManager>();
-        builder.Services.ReplaceOrAddScoped<ICommandRider, RabbitMQCommandRider>();
-        builder.Services.ReplaceOrAddScoped<INotificationRider, RabbitMQNotificationRider>();
+        public INOFAppBuilder AddRabbitMQ(Action<RabbitMQOptions> configureOptions)
+        {
+            builder.Services.Configure(configureOptions);
 
-        // 注册应用启动时的消费者初始化
-        builder.Services.AddHostedService<RabbitMQConsumerHostedService>();
+            builder.Services.ReplaceOrAddSingleton<RabbitMQConnectionManager, RabbitMQConnectionManager>();
+            builder.Services.ReplaceOrAddScoped<ICommandRider, RabbitMQCommandRider>();
+            builder.Services.ReplaceOrAddScoped<INotificationRider, RabbitMQNotificationRider>();
 
-        return builder;
+            // 注册应用启动时的消费者初始化
+            builder.Services.AddHostedService<RabbitMQConsumerHostedService>();
+
+            return builder;
+        }
     }
 }

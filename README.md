@@ -34,8 +34,7 @@
 | [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization and authority - token issuance, key rotation, JWKS |
 | [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure - `NOFDbContext`, repositories, outbox, multi-tenancy |
 | [`NOF.Infrastructure.EntityFrameworkCore.PostgreSQL`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL) | PostgreSQL provider for NOF EF Core infrastructure |
-| [`NOF.Infrastructure.MassTransit`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit) | MassTransit integration - message bus adapter for commands, events, notifications |
-| [`NOF.Infrastructure.MassTransit.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.MassTransit.RabbitMQ) | RabbitMQ transport for NOF MassTransit infrastructure |
+| [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ) | RabbitMQ integration - message bus adapter for commands, events, notifications |
 | [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis caching infrastructure via StackExchange.Redis |
 
 ## Quick Start
@@ -45,8 +44,7 @@ var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddJwtAuthority();
 
-builder.AddMassTransit()
-    .UseRabbitMQ();
+builder.AddRabbitMQ();
 
 builder.AddEFCore<AppDbContext>()
     .AutoMigrate()

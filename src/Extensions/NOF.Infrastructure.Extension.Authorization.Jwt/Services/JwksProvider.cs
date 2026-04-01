@@ -1,9 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
-using NOF.Infrastructure;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 

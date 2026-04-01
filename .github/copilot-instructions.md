@@ -34,8 +34,7 @@ src/
   Infrastructures/
     NOF.Infrastructure.EntityFrameworkCore/          - NOFDbContext, repositories, outbox, multi-tenancy
     NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/ - PostgreSQL provider
-    NOF.Infrastructure.MassTransit/                  - MassTransit bus adapter
-    NOF.Infrastructure.MassTransit.RabbitMQ/         - RabbitMQ transport
+    NOF.Infrastructure.RabbitMQ/                     - RabbitMQ messaging
     NOF.Infrastructure.StackExchangeRedis/           - Redis caching
 sample/                        - Sample application demonstrating NOF usage
 tests/                         - Unit and integration tests
@@ -46,7 +45,7 @@ tests/                         - Unit and integration tests
 - **.NET 10** (C# 14, preview features enabled)
 - **Central Package Management** via root `Directory.Packages.props`
 - **Source Generators** using Microsoft.CodeAnalysis (Roslyn)
-- **MassTransit** for messaging (RabbitMQ transport)
+- **RabbitMQ** for messaging
 - **Entity Framework Core 10** with PostgreSQL
 - **StackExchange.Redis** for caching
 - **OpenTelemetry** for observability
@@ -139,7 +138,7 @@ builder.Services.AddAllHandlers();               // Source-generated
 builder.AddRedisCache();
 builder.AddJwtAuthority().AddJwksRequestHandler();
 builder.AddJwtAuthorization();
-builder.AddMassTransit().UseRabbitMQ();
+builder.AddRabbitMQ();
 builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
 var app = await builder.BuildAsync();
 app.MapAllHttpEndpoints();

@@ -1,6 +1,3 @@
-using Microsoft.IdentityModel.Tokens;
-using NOF.Contract;
-
 namespace NOF.Contract.Extension.Authorization.Jwt;
 
 /// <summary>

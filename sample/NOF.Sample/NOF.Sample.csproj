@@ -13,8 +13,7 @@
         <ProjectReference Include="..\..\src\Extensions\NOF.Contract.Extension.Authorization.Jwt\NOF.Contract.Extension.Authorization.Jwt.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
-        <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit.RabbitMQ\NOF.Infrastructure.MassTransit.RabbitMQ.csproj" />
-        <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.MassTransit\NOF.Infrastructure.MassTransit.csproj" />
+        <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.RabbitMQ\NOF.Infrastructure.RabbitMQ.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />
         <ProjectReference Include="..\..\src\Extensions\NOF.Infrastructure.Extension.Authorization.Jwt\NOF.Infrastructure.Extension.Authorization.Jwt.csproj" />
         <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />

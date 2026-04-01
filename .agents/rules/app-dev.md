@@ -78,7 +78,7 @@ builder.Services.AddAllHandlers();               // Source-generated
 builder.AddRedisCache();
 builder.AddJwtAuthority().AddJwksRequestHandler();
 builder.AddJwtAuthorization();
-builder.AddMassTransit().UseRabbitMQ();
+builder.AddRabbitMQ();
 builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
 var app = await builder.BuildAsync();
 app.MapServiceToHttpEndpoints<IMyAppService>();
@@ -179,6 +179,6 @@ See `.agents/workflows/app-dev/` for step-by-step guides:
 - `add-domain-event-handler.md` — Domain event handlers and transactional outbox
 - `add-efcore-database.md` — Set up EF Core with PostgreSQL
 - `add-jwt-auth.md` — JWT authentication and authorization
-- `add-masstransit-messaging.md` — Distributed messaging with MassTransit + RabbitMQ
+- `add-rabbitmq-messaging.md` — Distributed messaging with RabbitMQ
 - `add-redis-caching.md` — Redis caching with typed cache keys
 - `add-state-machine.md` — Declarative state machines with persistent context

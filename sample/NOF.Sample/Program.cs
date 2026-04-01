@@ -6,8 +6,7 @@ using NOF.Infrastructure;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 using NOF.Infrastructure.Extension.Authorization.Jwt;
-using NOF.Infrastructure.MassTransit;
-using NOF.Infrastructure.MassTransit.RabbitMQ;
+using NOF.Infrastructure.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Application;
@@ -25,8 +24,7 @@ builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
 
 builder.AddJwtAuthorization(o => o.Issuer = "NOF.Sample");
 
-builder.AddMassTransit()
-    .UseRabbitMQ();
+builder.AddRabbitMQ();
 
 builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()

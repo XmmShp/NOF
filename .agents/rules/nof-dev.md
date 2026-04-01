@@ -24,7 +24,7 @@ You are working in the **NOF (Neat Opinionated Framework)** repository — a mod
 - .NET 10, C# 14 (preview features, `extension` syntax)
 - Central Package Management (`Directory.Packages.props` at root)
 - Source Generators (Microsoft.CodeAnalysis / Roslyn)
-- MassTransit + RabbitMQ, EF Core 10 + PostgreSQL, StackExchange.Redis
+- RabbitMQ, EF Core 10 + PostgreSQL, StackExchange.Redis
 - OpenTelemetry, JWT/OIDC authorization
 - xUnit + FluentAssertions + Moq for testing
 - DocFX for API documentation

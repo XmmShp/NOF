@@ -1,4 +1,3 @@
-using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Application.Extension.Redis;

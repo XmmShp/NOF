@@ -4,7 +4,7 @@
 
 - [EF Core + PostgreSQL](#ef-core--postgresql)
 - [Redis Caching](#redis-caching)
-- [MassTransit + RabbitMQ](#masstransit--rabbitmq)
+- [RabbitMQ](#rabbitmq)
 - [JWT Authentication](#jwt-authentication)
 - [Configuration Reference](#configuration-reference)
 
@@ -63,12 +63,13 @@ Key points:
 
 ---
 
-## MassTransit + RabbitMQ
+## RabbitMQ
 
 ### Register
 
 ```csharp
-builder.AddMassTransit().UseRabbitMQ();
+builder.AddRabbitMQ();
+// Or: builder.AddRabbitMQ("rabbitmq"); // custom connection string name
 ```
 
 ### Cross-service messaging
@@ -86,7 +87,7 @@ await _notificationPublisher.PublishAsync(notification, ct);
 
 Key points:
 - Headers (identity, tenant, tracing) propagate automatically across services
-- Use `IRequestSender`, `ICommandSender`, `INotificationPublisher` — never use MassTransit APIs directly
+- Use `IRequestSender`, `ICommandSender`, `INotificationPublisher` — never use RabbitMQ APIs directly
 - Use `IDeferredNotificationPublisher` / `IDeferredCommandSender` for outbox-based deferred dispatch
 - Only `IRequestSender` and `ICommandSender` support `destinationEndpointName`; `INotificationPublisher` broadcasts to all subscribers
 - Handler discovery is automatic via source generators
@@ -132,7 +133,7 @@ Access identity via `IInvocationContext`:
 Key points:
 - JWT keys auto-rotate via background service in Authority mode
 - JWKS endpoint auto-exposed at `/.well-known/jwks.json`
-- Authorization middleware works for both HTTP and MassTransit messages
+- Authorization middleware works for both HTTP and RabbitMQ messages
 
 ---
 
@@ -143,7 +144,7 @@ Key points:
   "ConnectionStrings": {
     "DefaultConnection": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
     "redis": "localhost:6379",
-    "rabbitmq": "amqp://guest:guest@localhost:5672"
+    "rabbitmq": "Host=localhost;Port=5672;UserName=guest;Password=guest;VirtualHost=/"
   },
   "NOF": {
     "Jwt": {

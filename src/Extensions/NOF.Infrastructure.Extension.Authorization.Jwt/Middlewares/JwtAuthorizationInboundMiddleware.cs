@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Application;
 using NOF.Contract;
 using System.IdentityModel.Tokens.Jwt;
 
