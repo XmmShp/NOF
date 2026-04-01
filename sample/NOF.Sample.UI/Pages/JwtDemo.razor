@@ -117,8 +117,8 @@
 				<Alert Class="result-card" Type="@((_validationResult.IsSuccess ? AlertType.Success : AlertType.Error))"
 					   Message="@(_validationResult.IsSuccess ? "Token Valid!" : "Token Invalid")"
 					   Description="@(_validationResult.IsSuccess ? 
-																																																																																																																		     $"Token ID: {_validationResult.Value.TokenId}\nUser ID: {_validationResult.Value.UserId}\nTenant ID: {_validationResult.Value.TenantId}" :
-																																																																																																																		     _validationResult.Message)" ShowIcon="true" />
+																																																																																																																							 		$"Token ID: {_validationResult.Value.TokenId}\nUser ID: {_validationResult.Value.UserId}\nTenant ID: {_validationResult.Value.TenantId}" :
+																																																																																																																							 		_validationResult.Message)" ShowIcon="true" />
 			}
 		</Card>
 	</Col>
@@ -342,7 +342,7 @@
 		try
 		{
 			var result = await JwksService.GetJwksAsync();
-			_jwksResponse = result;
+			_jwksResponse = result.Value;
 			MessageService.Success("JWKS retrieved successfully!");
 		}
 		catch (Exception ex)

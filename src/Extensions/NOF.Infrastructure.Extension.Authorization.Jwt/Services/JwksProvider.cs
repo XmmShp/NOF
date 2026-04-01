@@ -155,11 +155,10 @@ public class RequestDispatcherJwksProvider : IJwksProvider
             await using var scope = _serviceProvider.CreateAsyncScope();
             var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
             var jwks = await jwksService.GetJwksAsync(cancellationToken);
-            if (jwks.Keys is not { Length: > 0 } jwkKeys)
+            if (!jwks.IsSuccess || jwks.Value?.Keys is not { Length: > 0 } jwkKeys)
             {
                 return;
             }
-
             var keys = new List<SecurityKey>();
             foreach (var jwk in jwkKeys)
             {

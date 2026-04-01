@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace NOF.Contract.SourceGenerator;
 
-internal static class ExposeToHttpEndpointHelpers
+internal static class RpcServiceHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
@@ -101,17 +101,24 @@ internal static class ExposeToHttpEndpointHelpers
 
     public static bool TryGetServiceReturnInfo(IMethodSymbol method, out ServiceReturnInfo returnInfo)
     {
-        if (method.ReturnType.ToDisplayString() == "System.Threading.Tasks.Task")
-        {
-            returnInfo = new ServiceReturnInfo(ServiceReturnKind.Task, null);
-            return true;
-        }
-
         if (method.ReturnType is INamedTypeSymbol { IsGenericType: true } generic &&
             generic.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<TResult>")
         {
-            returnInfo = new ServiceReturnInfo(ServiceReturnKind.TaskOfT, generic.TypeArguments[0]);
-            return true;
+            var taskArgument = generic.TypeArguments[0];
+            var taskArgumentDisplay = taskArgument.ToDisplayString();
+
+            if (taskArgumentDisplay == "NOF.Contract.Result")
+            {
+                returnInfo = new ServiceReturnInfo(ServiceReturnKind.TaskOfResult, null);
+                return true;
+            }
+
+            if (taskArgument is INamedTypeSymbol { IsGenericType: true } genericResult &&
+                genericResult.OriginalDefinition.ToDisplayString() == "NOF.Contract.Result<T>")
+            {
+                returnInfo = new ServiceReturnInfo(ServiceReturnKind.TaskOfResultOfT, genericResult.TypeArguments[0]);
+                return true;
+            }
         }
 
         returnInfo = default;
@@ -185,14 +192,14 @@ internal sealed class ServiceMethodInfo
 {
     public IMethodSymbol Method { get; set; } = null!;
     public INamedTypeSymbol? RequestType { get; set; }
-    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.Task, null);
+    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.TaskOfResult, null);
     public string OperationName { get; set; } = string.Empty;
 }
 
 internal class EndpointInfo
 {
     public INamedTypeSymbol? RequestType { get; set; }
-    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.Task, null);
+    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.TaskOfResult, null);
     public HttpVerb Method { get; set; }
     public string Route { get; set; } = string.Empty;
     public string OperationName { get; set; } = string.Empty;
@@ -204,8 +211,8 @@ internal class EndpointInfo
 
 internal enum ServiceReturnKind
 {
-    Task,
-    TaskOfT
+    TaskOfResult,
+    TaskOfResultOfT
 }
 
 internal readonly struct ServiceReturnInfo

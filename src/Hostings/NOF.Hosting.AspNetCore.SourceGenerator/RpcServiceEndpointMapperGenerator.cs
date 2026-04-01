@@ -13,7 +13,7 @@ using System.Threading;
 namespace NOF.Hosting.AspNetCore.SourceGenerator;
 
 [Generator]
-public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
+public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
 {
     private const string MapServiceToHttpEndpointsMethodName = "MapServiceToHttpEndpoints";
     private const string GeneratedInterceptorNamespace = "NOF.Hosting.AspNetCore.Generated";
@@ -160,7 +160,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             return null;
         }
 
-        if (!ExposeToHttpEndpointHelpers.IsRpcServiceInterface(serviceType))
+        if (!RpcServiceHelpers.IsRpcServiceInterface(serviceType))
         {
             return null;
         }
@@ -230,7 +230,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (!ExposeToHttpEndpointHelpers.TryGetRequestParameter(method, out var requestParam))
+            if (!RpcServiceHelpers.TryGetRequestParameter(method, out var requestParam))
             {
                 continue;
             }
@@ -241,7 +241,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 requestType = namedType;
             }
 
-            if (!ExposeToHttpEndpointHelpers.TryGetServiceReturnInfo(method, out var returnInfo))
+            if (!RpcServiceHelpers.TryGetServiceReturnInfo(method, out var returnInfo))
             {
                 continue;
             }
@@ -281,7 +281,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
     private static EndpointInfo GetEndpointInfo(ServiceMethodInfo method)
     {
-        return ExposeToHttpEndpointHelpers.ExtractEndpointInfo(method);
+        return RpcServiceHelpers.ExtractEndpointInfo(method);
     }
 
     private static string BuildEndpointKey(EndpointInfo endpoint)
@@ -300,7 +300,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
         };
 
         var serviceType = ep.ServiceType.ToDisplayString();
-        var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(ep.Route);
+        var routeParams = RpcServiceHelpers.ExtractRouteParameters(ep.Route);
         var hasRouteParams = routeParams.Count > 0;
 
         if (ep.RequestType == null)
@@ -322,8 +322,8 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 : $"service.{ep.ServiceMethodName}()";
             var serviceInvocation = ep.ReturnInfo.Kind switch
             {
-                ServiceReturnKind.Task => $"await {serviceCall}",
-                ServiceReturnKind.TaskOfT => $"await {serviceCall}",
+                ServiceReturnKind.TaskOfResult => $"await {serviceCall}",
+                ServiceReturnKind.TaskOfResultOfT => $"await {serviceCall}",
                 _ => throw new InvalidOperationException("Unsupported service return kind.")
             };
 
@@ -342,8 +342,8 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                 : $"service.{ep.ServiceMethodName}(request)";
             var serviceInvocation = ep.ReturnInfo.Kind switch
             {
-                ServiceReturnKind.Task => $"await {serviceCall}",
-                ServiceReturnKind.TaskOfT => $"await {serviceCall}",
+                ServiceReturnKind.TaskOfResult => $"await {serviceCall}",
+                ServiceReturnKind.TaskOfResultOfT => $"await {serviceCall}",
                 _ => throw new InvalidOperationException("Unsupported service return kind.")
             };
 
@@ -360,7 +360,7 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             }
             else
             {
-                var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(ep.RequestType);
+                var allProperties = RpcServiceHelpers.GetAllPublicProperties(ep.RequestType);
                 var (routeParamProps, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
                 var hasBody = bodyProps.Count > 0;
 
@@ -454,8 +454,8 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
                     : $"service.{ep.ServiceMethodName}(request)";
                 var serviceInvocationForConstructed = ep.ReturnInfo.Kind switch
                 {
-                    ServiceReturnKind.Task => $"await {serviceCallForConstructed}",
-                    ServiceReturnKind.TaskOfT => $"await {serviceCallForConstructed}",
+                    ServiceReturnKind.TaskOfResult => $"await {serviceCallForConstructed}",
+                    ServiceReturnKind.TaskOfResultOfT => $"await {serviceCallForConstructed}",
                     _ => throw new InvalidOperationException("Unsupported service return kind.")
                 };
 
@@ -501,13 +501,13 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
             return;
         }
 
-        var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(ep.Route);
+        var routeParams = RpcServiceHelpers.ExtractRouteParameters(ep.Route);
         if (routeParams.Count == 0)
         {
             return;
         }
 
-        var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(ep.RequestType);
+        var allProperties = RpcServiceHelpers.GetAllPublicProperties(ep.RequestType);
         var (_, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
         if (bodyProps.Count == 0)
         {
@@ -534,13 +534,6 @@ public class ExposeToHttpEndpointMapperGenerator : IIncrementalGenerator
 
     private static void EmitEndpointResponse(StringBuilder sb, ServiceReturnKind returnKind, string invocation)
     {
-        if (returnKind == ServiceReturnKind.Task)
-        {
-            sb.AppendLine($"                    {invocation};");
-            sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok();");
-            return;
-        }
-
         sb.AppendLine($"                    var response = {invocation};");
         sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
     }

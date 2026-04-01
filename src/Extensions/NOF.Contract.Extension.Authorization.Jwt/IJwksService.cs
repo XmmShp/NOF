@@ -11,5 +11,5 @@ public interface IJwksService : IRpcService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The JWKS document.</returns>
     [HttpEndpoint(HttpVerb.Get, "/.well-known/jwks.json")]
-    Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default);
+    Task<Result<JwksDocument>> GetJwksAsync(CancellationToken cancellationToken = default);
 }

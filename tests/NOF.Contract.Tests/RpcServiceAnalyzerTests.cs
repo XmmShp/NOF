@@ -10,7 +10,7 @@ using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public class ExposeToHttpEndpointAnalyzerTests
+public class RpcServiceAnalyzerTests
 {
     private static readonly Type[] _refs =
     [
@@ -26,7 +26,7 @@ public class ExposeToHttpEndpointAnalyzerTests
         var extraReferences = _refs.Select(t => t.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
 
-        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new ExposeToHttpEndpointAnalyzer());
+        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new RpcServiceAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         return await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
     }

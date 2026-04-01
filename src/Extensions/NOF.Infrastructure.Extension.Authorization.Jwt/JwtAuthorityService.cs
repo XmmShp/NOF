@@ -133,7 +133,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService, IJwksService
         return Result.Success();
     }
 
-    public Task<NOF.Contract.Extension.Authorization.Jwt.JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
+    public Task<Result<JwksDocument>> GetJwksAsync(CancellationToken cancellationToken = default)
     {
         return _jwksService.GetJwksAsync(cancellationToken);
     }

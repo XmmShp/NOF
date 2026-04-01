@@ -8,7 +8,7 @@ using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public class ExposeToHttpEndpointMapperTests
+public class RpcServiceEndpointMapperTests
 {
     private static readonly Type[] _refs =
     [
@@ -78,7 +78,7 @@ public class ExposeToHttpEndpointMapperTests
             .Append(libRef)
             .ToArray();
         var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, mainRefs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(mainComp);
+        var result = new RpcServiceEndpointMapperGenerator().GetResult(mainComp);
 
         result.GeneratedTrees.Should().ContainSingle();
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
@@ -112,7 +112,7 @@ public class ExposeToHttpEndpointMapperTests
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
+        var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().BeEmpty();
     }
@@ -147,7 +147,7 @@ public class ExposeToHttpEndpointMapperTests
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
+        var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
@@ -190,7 +190,7 @@ public class ExposeToHttpEndpointMapperTests
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new ExposeToHttpEndpointMapperGenerator().GetResult(comp);
+        var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
 
         result.GeneratedTrees.Should().ContainSingle();
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();

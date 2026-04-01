@@ -5,7 +5,7 @@ using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public class ExposeToHttpEndpointServiceGeneratorTests
+public class RpcServiceClientGeneratorTests
 {
     private static readonly Type[] _extraRefs =
     [
@@ -41,7 +41,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().HaveCount(1);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
@@ -72,7 +72,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
         runResult.GeneratedTrees.Should().BeEmpty();
     }
 
@@ -98,7 +98,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
         code.Should().Contain("HttpMethod.Post");
         code.Should().Contain("var endpoint = \"Internal\";");
@@ -132,7 +132,7 @@ public class ExposeToHttpEndpointServiceGeneratorTests
                               }
                               """;
 
-        var runResult = new ExposeToHttpEndpointServiceGenerator().GetResult(source, _extraRefs);
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
         code.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");

@@ -10,7 +10,7 @@ using System.Text;
 namespace NOF.Contract.SourceGenerator;
 
 [Generator]
-public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
+public class RpcServiceClientGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -53,7 +53,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
             return;
         }
 
-        if (!ExposeToHttpEndpointHelpers.IsRpcServiceInterface(iface))
+        if (!RpcServiceHelpers.IsRpcServiceInterface(iface))
         {
             return;
         }
@@ -64,7 +64,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
             return;
         }
 
-        var targetNamespace = ExposeToHttpEndpointHelpers.GetFullNamespace(targetClass.ContainingNamespace);
+        var targetNamespace = RpcServiceHelpers.GetFullNamespace(targetClass.ContainingNamespace);
         var serviceInterfaceFqn = iface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var shouldImplementInterface = !targetClass.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, iface));
 
@@ -97,7 +97,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
 
         foreach (var method in methods)
         {
-            var endpointInfo = ExposeToHttpEndpointHelpers.ExtractEndpointInfo(method);
+            var endpointInfo = RpcServiceHelpers.ExtractEndpointInfo(method);
             EmitHttpMethodBody(sb, method, endpointInfo);
         }
 
@@ -112,7 +112,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         serviceInterface = null;
         var attr = classSymbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass is { IsGenericType: true } ac &&
-                                 ac.OriginalDefinition.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpServiceClientAttributeFqn);
+                                 ac.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.HttpServiceClientAttributeFqn);
 
         if (attr?.AttributeClass?.TypeArguments.Length != 1)
         {
@@ -134,7 +134,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (!ExposeToHttpEndpointHelpers.TryGetRequestParameter(method, out var requestParam))
+            if (!RpcServiceHelpers.TryGetRequestParameter(method, out var requestParam))
             {
                 continue;
             }
@@ -149,12 +149,12 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
                 requestType = type;
             }
 
-            if (!ExposeToHttpEndpointHelpers.TryGetServiceReturnInfo(method, out var returnInfo))
+            if (!RpcServiceHelpers.TryGetServiceReturnInfo(method, out var returnInfo))
             {
                 continue;
             }
 
-            var operationName = ExposeToHttpEndpointHelpers.GetOperationName(method.Name);
+            var operationName = RpcServiceHelpers.GetOperationName(method.Name);
 
             methods.Add(new ServiceMethodInfo
             {
@@ -179,13 +179,13 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         var fqnHttpMethod = $"global::System.Net.Http.{httpMethod}";
 
         List<IPropertySymbol> allProperties = [];
-        var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(endpoint.Route);
+        var routeParams = RpcServiceHelpers.ExtractRouteParameters(endpoint.Route);
         var routeParamProperties = new List<(string ParamName, IPropertySymbol Property)>();
         var nonRouteProperties = new List<IPropertySymbol>();
 
         if (endpoint.RequestType != null)
         {
-            allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(endpoint.RequestType);
+            allProperties = RpcServiceHelpers.GetAllPublicProperties(endpoint.RequestType);
             foreach (var prop in allProperties)
             {
                 var matchedParam = routeParams.FirstOrDefault(rp =>
@@ -202,7 +202,7 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
         }
 
         var hasRouteParams = routeParamProperties.Count > 0;
-        var hasCancellationToken = method.Method.Parameters.Any(p => ExposeToHttpEndpointHelpers.IsCancellationToken(p.Type));
+        var hasCancellationToken = method.Method.Parameters.Any(p => RpcServiceHelpers.IsCancellationToken(p.Type));
         var cancellationTokenArgument = hasCancellationToken ? "cancellationToken" : "global::System.Threading.CancellationToken.None";
 
         sb.AppendLine("        /// <inheritdoc />");
@@ -293,13 +293,14 @@ public class ExposeToHttpEndpointServiceGenerator : IIncrementalGenerator
     {
         sb.AppendLine("            response.EnsureSuccessStatusCode();");
 
-        if (returnKind == ServiceReturnKind.Task)
+        if (returnKind == ServiceReturnKind.TaskOfResult)
         {
-            sb.AppendLine("            return;");
+            sb.AppendLine($"            var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result>(response.Content, _jsonOptions, {cancellationTokenArgument});");
+            sb.AppendLine("            return apiResponse!;");
         }
-        else if (returnKind == ServiceReturnKind.TaskOfT)
+        else if (returnKind == ServiceReturnKind.TaskOfResultOfT)
         {
-            sb.AppendLine($"            var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<{returnValueType}>(response.Content, _jsonOptions, {cancellationTokenArgument});");
+            sb.AppendLine($"            var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result<{returnValueType}>>(response.Content, _jsonOptions, {cancellationTokenArgument});");
             sb.AppendLine("            return apiResponse!;");
         }
         else

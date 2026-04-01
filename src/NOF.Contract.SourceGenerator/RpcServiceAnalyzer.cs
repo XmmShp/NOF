@@ -8,7 +8,7 @@ using System.Linq;
 namespace NOF.Contract.SourceGenerator;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
+public class RpcServiceAnalyzer : DiagnosticAnalyzer
 {
     public static readonly DiagnosticDescriptor RequestMustBeReferenceType = new(
         "NOF200",
@@ -37,7 +37,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor InvalidServiceMethodSignature = new(
         "NOF207",
         "Invalid service method signature",
-        "Method '{0}' on service interface '{1}' must have 0 or 1 request parameters (plus optional CancellationToken) and return Task or Task<T>",
+        "Method '{0}' on service interface '{1}' must have 0 or 1 request parameters (plus optional CancellationToken) and return Task<Result> or Task<Result<T>>",
         "RpcService",
         DiagnosticSeverity.Error,
         true);
@@ -68,7 +68,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeLegacyHttpEndpointAttributes(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
     {
         var httpEndpointAttributes = typeSymbol.GetAttributes()
-            .Where(attr => attr.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpEndpointAttributeFqn)
+            .Where(attr => attr.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn)
             .ToList();
 
         if (httpEndpointAttributes.Count == 0)
@@ -79,7 +79,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
         ValidateRequestPayloadShape(context, typeSymbol, typeLocation);
 
-        var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(typeSymbol);
+        var allProperties = RpcServiceHelpers.GetAllPublicProperties(typeSymbol);
         var propertyNames = new HashSet<string>(allProperties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
 
         foreach (var attr in httpEndpointAttributes)
@@ -97,7 +97,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeRpcServiceInterface(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
     {
-        if (!ExposeToHttpEndpointHelpers.IsRpcServiceInterface(typeSymbol))
+        if (!RpcServiceHelpers.IsRpcServiceInterface(typeSymbol))
         {
             return;
         }
@@ -110,8 +110,8 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            var validRequestParameter = ExposeToHttpEndpointHelpers.TryGetRequestParameter(method, out var requestParameter);
-            var validReturnType = ExposeToHttpEndpointHelpers.TryGetServiceReturnInfo(method, out _);
+            var validRequestParameter = RpcServiceHelpers.TryGetRequestParameter(method, out var requestParameter);
+            var validReturnType = RpcServiceHelpers.TryGetServiceReturnInfo(method, out _);
             if (!validRequestParameter || !validReturnType)
             {
                 context.ReportDiagnostic(
@@ -132,7 +132,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
             }
 
             var methodHttpEndpointAttr = method.GetAttributes()
-                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == ExposeToHttpEndpointHelpers.HttpEndpointAttributeFqn);
+                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn);
             if (methodHttpEndpointAttr is null)
             {
                 continue;
@@ -151,7 +151,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
-                var allProperties = ExposeToHttpEndpointHelpers.GetAllPublicProperties(requestType);
+                var allProperties = RpcServiceHelpers.GetAllPublicProperties(requestType);
                 var propertyNames = new HashSet<string>(allProperties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
                 ValidateRouteParameters(context, requestType.Name, route!, propertyNames, methodLocation);
             }
@@ -191,7 +191,7 @@ public class ExposeToHttpEndpointAnalyzer : DiagnosticAnalyzer
         HashSet<string> propertyNames,
         Location location)
     {
-        var routeParams = ExposeToHttpEndpointHelpers.ExtractRouteParameters(route);
+        var routeParams = RpcServiceHelpers.ExtractRouteParameters(route);
         foreach (var routeParam in routeParams.Where(routeParam => !propertyNames.Contains(routeParam)))
         {
             context.ReportDiagnostic(

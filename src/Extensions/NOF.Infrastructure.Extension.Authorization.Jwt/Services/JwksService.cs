@@ -1,4 +1,5 @@
 using Microsoft.IdentityModel.Tokens;
+using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
 using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
 
@@ -19,7 +20,7 @@ public class JwksService : IJwksService
     }
 
     /// <inheritdoc />
-    public Task<NOF.Contract.Extension.Authorization.Jwt.JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
+    public Task<Result<JwksDocument>> GetJwksAsync(CancellationToken cancellationToken = default)
     {
         var allKeys = _signingKeyService.AllKeys;
 
@@ -39,6 +40,6 @@ public class JwksService : IJwksService
             };
         }).ToArray();
 
-        return Task.FromResult(new NOF.Contract.Extension.Authorization.Jwt.JwksDocument { Keys = jwks });
+        return Task.FromResult(Result.Success(new JwksDocument { Keys = jwks }));
     }
 }
