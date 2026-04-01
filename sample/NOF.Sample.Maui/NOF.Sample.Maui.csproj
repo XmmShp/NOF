@@ -68,6 +68,16 @@
     <!-- On Linux (no MAUI workload), exclude all source files to produce an empty assembly -->
     <ItemGroup Condition="'$(_HasMauiWorkload)' != 'true'">
         <Compile Remove="**/*.cs" />
+        <Content Remove="**/*" />
+        <EmbeddedResource Remove="**/*" />
+        <None Remove="**/*" />
+        <Page Remove="**/*" />
+        <ApplicationDefinition Remove="**/*" />
+        <Resource Remove="**/*" />
+        <MauiImage Remove="**/*" />
+        <MauiIcon Remove="**/*" />
+        <MauiSplashScreen Remove="**/*" />
+        <MauiFont Remove="**/*" />
     </ItemGroup>
 
 </Project>
