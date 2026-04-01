@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure.Extension.Authorization.Jwt;
+namespace NOF.Contract.Extension.Authorization.Jwt;
 
 /// <summary>
 /// Represents a pair of access and refresh tokens.

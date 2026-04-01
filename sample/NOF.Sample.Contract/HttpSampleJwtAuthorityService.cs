@@ -1,5 +1,5 @@
 using NOF.Contract;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Contract.Extension.Authorization.Jwt;
 
 namespace NOF.Sample;
 

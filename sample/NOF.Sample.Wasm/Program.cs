@@ -1,6 +1,6 @@
 using AntDesign;
 using NOF.Hosting.BlazorWebAssembly;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Sample;
 
 var builder = NOFWebAssemblyHostBuilder.Create(args);

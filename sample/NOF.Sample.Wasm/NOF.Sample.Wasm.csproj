@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.BlazorWebAssembly\NOF.Hosting.BlazorWebAssembly.csproj" />
+    <ProjectReference Include="..\..\src\Extensions\NOF.Contract.Extension.Authorization.Jwt\NOF.Contract.Extension.Authorization.Jwt.csproj" />
     <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.UI\NOF.Sample.UI.csproj" />
   </ItemGroup>

@@ -1,388 +1,370 @@
 @page "/jwt-demo"
 @using System.Text.Json
 @using NOF.Contract
-@using NOF.Infrastructure.Extension.Authorization.Jwt
+@using NOF.Contract.Extension.Authorization.Jwt
 @using Result = NOF.Contract.Result
 @inject IJwtAuthorityService JwtService
+@inject IJwksService JwksService
 @inject IJSRuntime JsRuntime
 @inject IMessageService MessageService
 
 <PageTitle>JWT Authentication Demo</PageTitle>
 
 <style>
-    .jwt-section {
-        margin-bottom: 24px;
-    }
-    .token-display {
-        background: #f5f5f5;
-        padding: 8px;
-        border-radius: 6px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        word-break: break-all;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    .result-card {
-        margin-top: 16px;
-    }
-    .action-button {
-        margin-right: 8px;
-        margin-bottom: 8px;
-    }
+	.jwt-section {
+		margin-bottom: 24px;
+	}
+
+	.token-display {
+		background: #f5f5f5;
+		padding: 8px;
+		border-radius: 6px;
+		font-family: 'Courier New', monospace;
+		font-size: 12px;
+		word-break: break-all;
+		max-height: 200px;
+		overflow-y: auto;
+	}
+
+	.result-card {
+		margin-top: 16px;
+	}
+
+	.action-button {
+		margin-right: 8px;
+		margin-bottom: 8px;
+	}
 </style>
 
 <h3>JWT Authentication Demo</h3>
 
 <Row Gutter="16">
-    <!-- 令牌生成 -->
-    <Col Span="12">
-        <Card Title="🔑 Generate Token" Class="jwt-section">
-            <Form Model="@_tokenRequest" Layout="@FormLayout.Vertical" OnFinish="@GenerateToken" TModel="TokenRequestModel">
-                <FormItem Label="User ID">
-                    <Input @bind-Value="_tokenRequest.UserId" Placeholder="Enter user ID" />
-                </FormItem>
-                <FormItem Label="Tenant ID">
-                    <Input @bind-Value="_tokenRequest.TenantId" Placeholder="Enter tenant ID" />
-                </FormItem>
-                <FormItem Label="Audience">
-                    <Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
-                </FormItem>
-                <FormItem Label="Permissions">
-                    <Input @bind-Value="_tokenRequest.PermissionsInput" Placeholder="e.g., read,write,delete" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@_isGenerating" Block>
-                        Generate Token
-                    </Button>
-                </FormItem>
-            </Form>
+	<!-- 令牌生成 -->
+	<Col Span="12">
+		<Card Title="🔑 Generate Token" Class="jwt-section">
+			<Form Model="@_tokenRequest" Layout="@FormLayout.Vertical" OnFinish="@GenerateToken" TModel="TokenRequestModel">
+				<FormItem Label="User ID">
+					<Input @bind-Value="_tokenRequest.UserId" Placeholder="Enter user ID" />
+				</FormItem>
+				<FormItem Label="Tenant ID">
+					<Input @bind-Value="_tokenRequest.TenantId" Placeholder="Enter tenant ID" />
+				</FormItem>
+				<FormItem Label="Audience">
+					<Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
+				</FormItem>
+				<FormItem Label="Permissions">
+					<Input @bind-Value="_tokenRequest.PermissionsInput" Placeholder="e.g., read,write,delete" />
+				</FormItem>
+				<FormItem>
+					<Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@_isGenerating" Block>
+						Generate Token
+					</Button>
+				</FormItem>
+			</Form>
 
-            @if (_tokenResult != null)
-            {
-                <Card Class="result-card" Size="@CardSize.Small">
-                    <TitleTemplate>
-                        <Icon Type="check-circle" Theme="IconThemeType.Outline" />
-                        <Text Strong>Token Pair Generated</Text>
-                    </TitleTemplate>
-                    <ChildContent>
-                        <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
-                            <DescriptionsItem Title="Access Token">
-                                <div class="token-display">@_tokenResult.TokenPair.AccessToken</div>
-                                <Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")" OnClick="() => CopyToClipboard(_tokenResult.TokenPair.AccessToken)">
-                                    Copy
-                                </Button>
-                            </DescriptionsItem>
-                            <DescriptionsItem Title="Refresh Token">
-                                <div class="token-display">@_tokenResult.TokenPair.RefreshToken</div>
-                                <Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")" OnClick="() => CopyToClipboard(_tokenResult.TokenPair.RefreshToken)">
-                                    Copy
-                                </Button>
-                            </DescriptionsItem>
-                            <DescriptionsItem Title="Access Token Expires">
-                                <Tag Color="TagColor.Blue">@_tokenResult.TokenPair.AccessTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
-                            </DescriptionsItem>
-                            <DescriptionsItem Title="Refresh Token Expires">
-                                <Tag Color="TagColor.Green">@_tokenResult.TokenPair.RefreshTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
-                            </DescriptionsItem>
-                        </Descriptions>
-                    </ChildContent>
-                </Card>
-            }
-        </Card>
-    </Col>
+			@if (_tokenResult != null)
+			{
+				<Card Class="result-card" Size="@CardSize.Small">
+					<TitleTemplate>
+						<Icon Type="check-circle" Theme="IconThemeType.Outline" />
+						<Text Strong>Token Pair Generated</Text>
+					</TitleTemplate>
+					<ChildContent>
+						<Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
+							<DescriptionsItem Title="Access Token">
+								<div class="token-display">@_tokenResult.TokenPair.AccessToken</div>
+								<Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")"
+										OnClick="() => CopyToClipboard(_tokenResult.TokenPair.AccessToken)">
+									Copy
+								</Button>
+							</DescriptionsItem>
+							<DescriptionsItem Title="Refresh Token">
+								<div class="token-display">@_tokenResult.TokenPair.RefreshToken</div>
+								<Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")"
+										OnClick="() => CopyToClipboard(_tokenResult.TokenPair.RefreshToken)">
+									Copy
+								</Button>
+							</DescriptionsItem>
+							<DescriptionsItem Title="Access Token Expires">
+								<Tag Color="TagColor.Blue">@_tokenResult.TokenPair.AccessTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
+							</DescriptionsItem>
+							<DescriptionsItem Title="Refresh Token Expires">
+								<Tag Color="TagColor.Green">@_tokenResult.TokenPair.RefreshTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
+							</DescriptionsItem>
+						</Descriptions>
+					</ChildContent>
+				</Card>
+			}
+		</Card>
+	</Col>
 
-    <!-- 令牌验证 -->
-    <Col Span="12">
-        <Card Title="�?Validate Token" Class="jwt-section">
-            <Form Layout="@FormLayout.Vertical" TModel="object">
-                <FormItem Label="Refresh Token">
-                    <TextArea @bind-Value="_refreshTokenToValidate" 
-                              Rows="4" 
-                              Placeholder="Paste refresh token here" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Default" 
-                            OnClick="ValidateRefreshToken" 
-                            Loading="@_isValidating"
-                            Block>
-                        Validate Token
-                    </Button>
-                </FormItem>
-            </Form>
+	<!-- 令牌验证 -->
+	<Col Span="12">
+		<Card Title="�?Validate Token" Class="jwt-section">
+			<Form Layout="@FormLayout.Vertical" TModel="object">
+				<FormItem Label="Refresh Token">
+					<TextArea @bind-Value="_refreshTokenToValidate" Rows="4" Placeholder="Paste refresh token here" />
+				</FormItem>
+				<FormItem>
+					<Button Type="@ButtonType.Default" OnClick="ValidateRefreshToken" Loading="@_isValidating" Block>
+						Validate Token
+					</Button>
+				</FormItem>
+			</Form>
 
-            @if (_validationResult != null)
-            {
-                <Alert Class="result-card" 
-                       Type="@((_validationResult.IsSuccess ? AlertType.Success : AlertType.Error))"
-                       Message="@(_validationResult.IsSuccess ? "Token Valid!" : "Token Invalid")"
-                       Description="@(_validationResult.IsSuccess ? 
-                           $"Token ID: {_validationResult.Value.TokenId}\nUser ID: {_validationResult.Value.UserId}\nTenant ID: {_validationResult.Value.TenantId}" : 
-                           _validationResult.Message)"
-                       ShowIcon="true" />
-            }
-        </Card>
-    </Col>
+			@if (_validationResult != null)
+			{
+				<Alert Class="result-card" Type="@((_validationResult.IsSuccess ? AlertType.Success : AlertType.Error))"
+					   Message="@(_validationResult.IsSuccess ? "Token Valid!" : "Token Invalid")" Description="@(_validationResult.IsSuccess ? 
+																																																																																									  																					$"Token ID: {_validationResult.Value.TokenId}\nUser ID: {_validationResult.Value.UserId}\nTenant ID: {_validationResult.Value.TenantId}" :
+																																																																																									  																					_validationResult.Message)"
+					   ShowIcon="true" />
+			}
+		</Card>
+	</Col>
 </Row>
 
 <Row Gutter="16">
-    <!-- 令牌撤销 -->
-    <Col Span="12">
-        <Card Title="🚫 Revoke Token" Class="jwt-section">
-            <Form Layout="@FormLayout.Vertical" TModel="object">
-                <FormItem Label="Token ID">
-                    <Input @bind-Value="_tokenIdToRevoke" 
-                           Placeholder="Token ID from validation result" 
-                           Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" />
-                </FormItem>
-                <FormItem Label="Expiration (hours)">
-                    <AntDesign.InputNumber @bind-Value="_revokeExpirationHours" 
-                                           Min="1" 
-                                           Max="168" 
-                                           Style="width: 100%" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Default" 
-                            OnClick="RevokeRefreshToken" 
-                            Loading="@_isRevoking"
-                            Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)"
-                            Block>
-                        Revoke Token
-                    </Button>
-                </FormItem>
-            </Form>
+	<!-- 令牌撤销 -->
+	<Col Span="12">
+		<Card Title="🚫 Revoke Token" Class="jwt-section">
+			<Form Layout="@FormLayout.Vertical" TModel="object">
+				<FormItem Label="Token ID">
+					<Input @bind-Value="_tokenIdToRevoke" Placeholder="Token ID from validation result"
+						   Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" />
+				</FormItem>
+				<FormItem Label="Expiration (hours)">
+					<AntDesign.InputNumber @bind-Value="_revokeExpirationHours" Min="1" Max="168" Style="width: 100%" />
+				</FormItem>
+				<FormItem>
+					<Button Type="@ButtonType.Default" OnClick="RevokeRefreshToken" Loading="@_isRevoking"
+							Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" Block>
+						Revoke Token
+					</Button>
+				</FormItem>
+			</Form>
 
-            @if (_revokeResult != null)
-            {
-                <Alert Class="result-card" 
-                       Type="@((_revokeResult.IsSuccess ? AlertType.Success : AlertType.Error))"
-                       Message="@(_revokeResult.IsSuccess ? "Token Revoked Successfully!" : "Revocation Failed")"
-                       Description="@(_revokeResult.IsSuccess ? "The refresh token has been revoked and can no longer be used." : _revokeResult.Message)"
-                       ShowIcon="true" />
-            }
-        </Card>
-    </Col>
+			@if (_revokeResult != null)
+			{
+				<Alert Class="result-card" Type="@((_revokeResult.IsSuccess ? AlertType.Success : AlertType.Error))"
+					   Message="@(_revokeResult.IsSuccess ? "Token Revoked Successfully!" : "Revocation Failed")"
+					   Description="@(_revokeResult.IsSuccess ? "The refresh token has been revoked and can no longer be used." : _revokeResult.Message)"
+					   ShowIcon="true" />
+			}
+		</Card>
+	</Col>
 
-    <!-- JWKS 获取 -->
-    <Col Span="12">
-        <Card Title="🔐 JWKS (JSON Web Key Set)" Class="jwt-section">
-            <Form Layout="@FormLayout.Vertical" TModel="object">
-                <FormItem Label="Audience">
-                    <Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Default" 
-                            OnClick="GetJwks" 
-                            Loading="@_isLoadingJwks"
-                            Block>
-                        Get JWKS
-                    </Button>
-                </FormItem>
-            </Form>
+	<!-- JWKS 获取 -->
+	<Col Span="12">
+		<Card Title="🔐 JWKS (JSON Web Key Set)" Class="jwt-section">
+			<Form Layout="@FormLayout.Vertical" TModel="object">
+				<FormItem Label="Audience">
+					<Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
+				</FormItem>
+				<FormItem>
+					<Button Type="@ButtonType.Default" OnClick="GetJwks" Loading="@_isLoadingJwks" Block>
+						Get JWKS
+					</Button>
+				</FormItem>
+			</Form>
 
-            <Space Direction="SpaceDirection.Vertical" Style="width: 100%; margin-top: 16px;">
-                @if (_jwksResponse != null)
-                {
-                    <Card Size="@CardSize.Small">
-                        <TitleTemplate>
-                            <Icon Type="key" Theme="IconThemeType.Outline" />
-                            <Text Strong>JWKS Response</Text>
-                        </TitleTemplate>
-                        <ChildContent>
-                            <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
-                                <DescriptionsItem Title="Keys">
-                                    <pre class="token-display">@JsonSerializer.Serialize(_jwksResponse.Keys, new JsonSerializerOptions { WriteIndented = true })</pre>
-                                </DescriptionsItem>
-                            </Descriptions>
-                        </ChildContent>
-                    </Card>
-                }
-            </Space>
-        </Card>
-    </Col>
+			<Space Direction="SpaceDirection.Vertical" Style="width: 100%; margin-top: 16px;">
+				@if (_jwksResponse != null)
+				{
+					<Card Size="@CardSize.Small">
+						<TitleTemplate>
+							<Icon Type="key" Theme="IconThemeType.Outline" />
+							<Text Strong>JWKS Response</Text>
+						</TitleTemplate>
+						<ChildContent>
+							<Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
+								<DescriptionsItem Title="Keys">
+									<pre
+									class="token-display">@JsonSerializer.Serialize(_jwksResponse.Keys, new JsonSerializerOptions { WriteIndented = true })</pre>
+								</DescriptionsItem>
+							</Descriptions>
+						</ChildContent>
+					</Card>
+				}
+			</Space>
+		</Card>
+	</Col>
 </Row>
 
 @code {
-    private readonly TokenRequestModel _tokenRequest = new();
-    private GenerateJwtTokenResponse? _tokenResult;
-    private bool _isGenerating = false;
-    private bool _isValidating = false;
-    private bool _isRevoking = false;
-    private bool _isLoadingJwks = false;
+	private readonly TokenRequestModel _tokenRequest = new();
+	private GenerateJwtTokenResponse? _tokenResult;
+	private bool _isGenerating = false;
+	private bool _isValidating = false;
+	private bool _isRevoking = false;
+	private bool _isLoadingJwks = false;
 
-    private string _refreshTokenToValidate = "";
-    private Result<ValidateJwtRefreshTokenResponse>? _validationResult;
+	private string _refreshTokenToValidate = "";
+	private Result<ValidateJwtRefreshTokenResponse>? _validationResult;
 
-    private string _tokenIdToRevoke = "";
-    private int _revokeExpirationHours = 24;
-    private Result? _revokeResult;
+	private string _tokenIdToRevoke = "";
+	private int _revokeExpirationHours = 24;
+	private Result? _revokeResult;
 
-    private JwksDocument? _jwksResponse;
+	private JwksDocument? _jwksResponse;
 
-    public class TokenRequestModel
-    {
-        public string UserId { get; set; } = "user123";
-        public string TenantId { get; set; } = "tenant456";
-        public string Audience { get; set; } = "sample-client";
-        public string PermissionsInput { get; set; } = "read,write,delete";
-    }
+	public class TokenRequestModel
+	{
+		public string UserId { get; set; } = "user123";
+		public string TenantId { get; set; } = "tenant456";
+		public string Audience { get; set; } = "sample-client";
+		public string PermissionsInput { get; set; } = "read,write,delete";
+	}
 
-    private async Task GenerateToken(EditContext editContext)
-    {
-        _isGenerating = true;
-        _tokenResult = null;
+	private async Task GenerateToken(EditContext editContext)
+	{
+		_isGenerating = true;
+		_tokenResult = null;
 
-        try
-        {
-            var permissions = string.IsNullOrEmpty(_tokenRequest.PermissionsInput) 
-                ? null 
-                : _tokenRequest.PermissionsInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
+		try
+		{
+			var permissions = string.IsNullOrEmpty(_tokenRequest.PermissionsInput)
+				? null
+				: _tokenRequest.PermissionsInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-            var request = new GenerateJwtTokenRequest(
-                _tokenRequest.UserId,
-                _tokenRequest.TenantId,
-                _tokenRequest.Audience,
-                TimeSpan.FromMinutes(30),
-                TimeSpan.FromDays(7),
-                permissions
-            );
-            var result = await JwtService.GenerateJwtTokenAsync(request);
+			var request = new GenerateJwtTokenRequest(
+				_tokenRequest.UserId,
+				_tokenRequest.TenantId,
+				_tokenRequest.Audience,
+				TimeSpan.FromMinutes(30),
+				TimeSpan.FromDays(7),
+				permissions
+			);
+			var result = await JwtService.GenerateJwtTokenAsync(request);
 
-            if (result.IsSuccess)
-            {
-                _tokenResult = result.Value;
-                MessageService.Success("Token generated successfully!");
-            }
-            else
-            {
-                MessageService.Error($"Failed to generate token: {result.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error($"Error generating token: {ex.Message}");
-        }
-        finally
-        {
-            _isGenerating = false;
-        }
-    }
+			if (result.IsSuccess)
+			{
+				_tokenResult = result.Value;
+				MessageService.Success("Token generated successfully!");
+			}
+			else
+			{
+				MessageService.Error($"Failed to generate token: {result.Message}");
+			}
+		}
+		catch (Exception ex)
+		{
+			MessageService.Error($"Error generating token: {ex.Message}");
+		}
+		finally
+		{
+			_isGenerating = false;
+		}
+	}
 
-    private async Task ValidateRefreshToken()
-    {
-        if (string.IsNullOrEmpty(_refreshTokenToValidate))
-        {
-            MessageService.Warning("Please enter a refresh token to validate");
-            return;
-        }
+	private async Task ValidateRefreshToken()
+	{
+		if (string.IsNullOrEmpty(_refreshTokenToValidate))
+		{
+			MessageService.Warning("Please enter a refresh token to validate");
+			return;
+		}
 
-        _isValidating = true;
-        _validationResult = null;
+		_isValidating = true;
+		_validationResult = null;
 
-        try
-        {
-            var result = await JwtService.ValidateJwtRefreshTokenAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
-            _validationResult = result;
+		try
+		{
+			var result = await JwtService.ValidateJwtRefreshTokenAsync(new ValidateJwtRefreshTokenRequest(_refreshTokenToValidate));
+			_validationResult = result;
 
-            if (result.IsSuccess)
-            {
-                _tokenIdToRevoke = result.Value.TokenId;
-                MessageService.Success("Token is valid!");
-            }
-            else
-            {
-                MessageService.Error($"Token validation failed: {result.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _validationResult = Result.Fail("500", ex.Message);
-            MessageService.Error($"Error validating token: {ex.Message}");
-        }
-        finally
-        {
-            _isValidating = false;
-        }
-    }
+			if (result.IsSuccess)
+			{
+				_tokenIdToRevoke = result.Value.TokenId;
+				MessageService.Success("Token is valid!");
+			}
+			else
+			{
+				MessageService.Error($"Token validation failed: {result.Message}");
+			}
+		}
+		catch (Exception ex)
+		{
+			_validationResult = Result.Fail("500", ex.Message);
+			MessageService.Error($"Error validating token: {ex.Message}");
+		}
+		finally
+		{
+			_isValidating = false;
+		}
+	}
 
-    private async Task RevokeRefreshToken()
-    {
-        if (string.IsNullOrEmpty(_tokenIdToRevoke))
-        {
-            MessageService.Warning("Please validate a token first to get the Token ID");
-            return;
-        }
+	private async Task RevokeRefreshToken()
+	{
+		if (string.IsNullOrEmpty(_tokenIdToRevoke))
+		{
+			MessageService.Warning("Please validate a token first to get the Token ID");
+			return;
+		}
 
-        _isRevoking = true;
-        _revokeResult = null;
+		_isRevoking = true;
+		_revokeResult = null;
 
-        try
-        {
-            var result = await JwtService.RevokeJwtRefreshTokenAsync(
-                new RevokeJwtRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
-            );
-            _revokeResult = result;
+		try
+		{
+			var result = await JwtService.RevokeJwtRefreshTokenAsync(
+				new RevokeJwtRefreshTokenRequest(_tokenIdToRevoke, TimeSpan.FromHours(_revokeExpirationHours))
+			);
+			_revokeResult = result;
 
-            if (result.IsSuccess)
-            {
-                MessageService.Success("Token revoked successfully!");
-                // Clear the token ID after successful revocation
-                _tokenIdToRevoke = "";
-            }
-            else
-            {
-                MessageService.Error($"Token revocation failed: {result.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _revokeResult = Result.Fail("500", ex.Message);
-            MessageService.Error($"Error revoking token: {ex.Message}");
-        }
-        finally
-        {
-            _isRevoking = false;
-        }
-    }
+			if (result.IsSuccess)
+			{
+				MessageService.Success("Token revoked successfully!");
+				// Clear the token ID after successful revocation
+				_tokenIdToRevoke = "";
+			}
+			else
+			{
+				MessageService.Error($"Token revocation failed: {result.Message}");
+			}
+		}
+		catch (Exception ex)
+		{
+			_revokeResult = Result.Fail("500", ex.Message);
+			MessageService.Error($"Error revoking token: {ex.Message}");
+		}
+		finally
+		{
+			_isRevoking = false;
+		}
+	}
 
-    private async Task GetJwks()
-    {
-        _isLoadingJwks = true;
-        _jwksResponse = null;
+	private async Task GetJwks()
+	{
+		_isLoadingJwks = true;
+		_jwksResponse = null;
 
-        try
-        {
-            var result = await JwtService.GetJwksAsync(new GetJwksRequest());
-            if (result.IsSuccess)
-            {
-                _jwksResponse = result.Value.Jwks;
-                MessageService.Success("JWKS retrieved successfully!");
-            }
-            else
-            {
-                MessageService.Error($"Failed to retrieve JWKS: {result.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error($"Error retrieving JWKS: {ex.Message}");
-        }
-        finally
-        {
-            _isLoadingJwks = false;
-        }
-    }
+		try
+		{
+			var result = await JwksService.GetJwksAsync();
+			_jwksResponse = result;
+			MessageService.Success("JWKS retrieved successfully!");
+		}
+		catch (Exception ex)
+		{
+			MessageService.Error($"Error retrieving JWKS: {ex.Message}");
+		}
+		finally
+		{
+			_isLoadingJwks = false;
+		}
+	}
 
-    private async Task CopyToClipboard(string text)
-    {
-        try
-        {
-            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
-            MessageService.Success("Copied to clipboard!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error($"Failed to copy: {ex.Message}");
-        }
-    }
+	private async Task CopyToClipboard(string text)
+	{
+		try
+		{
+			await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+			MessageService.Success("Copied to clipboard!");
+		}
+		catch (Exception ex)
+		{
+			MessageService.Error($"Failed to copy: {ex.Message}");
+		}
+	}
 }

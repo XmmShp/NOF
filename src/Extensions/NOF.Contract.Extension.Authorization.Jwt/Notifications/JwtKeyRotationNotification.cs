@@ -1,6 +1,6 @@
 using NOF.Contract;
 
-namespace NOF.Infrastructure.Extension.Authorization.Jwt;
+namespace NOF.Contract.Extension.Authorization.Jwt;
 
 /// <summary>
 /// Notification published when signing keys should be rotated.

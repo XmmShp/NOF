@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure.Extension.Authorization.Jwt;
+namespace NOF.Contract.Extension.Authorization.Jwt;
 
 /// <summary>
 /// Request for generating JWT token pair.
@@ -17,6 +17,3 @@ public record GenerateJwtTokenRequest(
 /// Response for generating JWT token pair.
 /// </summary>
 public record GenerateJwtTokenResponse(TokenPair TokenPair);
-
-
-

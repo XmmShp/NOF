@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using System.Text.Json;
 
