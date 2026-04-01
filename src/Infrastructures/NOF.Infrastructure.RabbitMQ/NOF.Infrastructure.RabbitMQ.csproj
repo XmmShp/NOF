@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.RabbitMQ</PackageId>
+    <Description>RabbitMQ integration for the NOF Framework — message bus adapter for commands, events, and notifications using official RabbitMQ client.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
