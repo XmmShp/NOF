@@ -9,7 +9,7 @@
 
 - **Clean Architecture** - layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
 - **CQRS & Messaging** - first-class `IRequest`, `ICommand`, `INotification` abstractions with handler pipelines
-- **Source Generators** - compile-time code generation for HTTP endpoint mapping, DI registration, and failure definitions
+- **Source Generators** - compile-time code generation for explicit HTTP service endpoint mapping, DI registration, and failure definitions
 - **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
 - **State Machines** - declarative, event-driven state machine builder with persistent context
 - **Multi-Tenancy** - tenant-aware persistence and infrastructure integration
@@ -27,7 +27,7 @@
 | [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - app builder implementation, pipeline, OpenTelemetry, service wiring |
 | [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, client cache services |
 | [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis) | Application Redis extension - advanced Redis cache abstractions built on top of `ICacheService` |
-| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI, endpoint mapping, JSON configuration |
+| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI, service endpoint mapping, JSON configuration |
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - WebAssembly host builder integration |
 | [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization and authority - token issuance, key rotation, JWKS |
 | [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore) | EF Core infrastructure - `NOFDbContext`, repositories, outbox, multi-tenancy |
@@ -54,7 +54,7 @@ builder.AddRedisCache();
 
 var app = await builder.BuildAsync();
 
-app.MapAllHttpEndpoints();
+app.MapServiceToHttpEndpoints<IMyAppService>();
 
 await app.RunAsync();
 ```

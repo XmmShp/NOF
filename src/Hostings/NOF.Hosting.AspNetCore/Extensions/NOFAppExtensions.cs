@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Contract;
@@ -58,6 +59,15 @@ public static class NOFHostingAspNetCoreExtensions
             });
             builder.AddInitializationStep(new ScalarInitializationStep());
             return builder;
+        }
+    }
+
+    extension(WebApplication app)
+    {
+        public WebApplication MapServiceToHttpEndpoints<TService>(string prefix = "")
+            where TService : IRpcService
+        {
+            return app;
         }
     }
 }

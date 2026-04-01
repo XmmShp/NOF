@@ -51,7 +51,7 @@ MyApp/               — Host project (Program.cs, DbContext, EF migrations, app
 | `[AutoInject(Lifetime)]` | DI registration | Any |
 | `[Failure(name, message, errorCode)]` | Static `Failure` instances | Domain |
 | `[PublicApi]` | Marks request as public API operation (required by `[HttpEndpoint]` and `[GenerateService]`) | Contract |
-| `[HttpEndpoint(HttpVerb, route)]` | HTTP endpoint mapping (requires `[PublicApi]`) | Contract |
+| `[HttpEndpoint(HttpVerb, route)]` | Marks an RPC service method for HTTP mapping when its service is registered via `app.MapServiceToHttpEndpoints<TService>()` | Contract |
 | `[GenerateService]` | Service interface + HTTP client + `IRequestSender` client (on `partial interface`) | Contract |
 | `[Mappable<TSource, TDest>]` | Auto-generated mapper registrations (on `partial static class`) | Application |
 
@@ -81,7 +81,7 @@ builder.AddJwtAuthorization();
 builder.AddMassTransit().UseRabbitMQ();
 builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
 var app = await builder.BuildAsync();
-app.MapAllHttpEndpoints();
+app.MapServiceToHttpEndpoints<IMyAppService>();
 await app.RunAsync();
 ```
 

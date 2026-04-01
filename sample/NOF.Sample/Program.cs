@@ -90,6 +90,7 @@ app.MapRazorComponents<App>()
         typeof(NOF.Sample.UI.Components.Routes).Assembly,
         typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
 
-app.MapAllHttpEndpoints();
+app.MapServiceToHttpEndpoints<INOFSampleService>();
+app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
 
 await app.RunAsync();

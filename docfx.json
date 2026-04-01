@@ -1,66 +1,66 @@
 {
-  "_comment": "Using pre-built DLLs instead of .csproj due to DocFX lacking C# 14 support. See https://github.com/dotnet/docfx/issues/10808",
-  "metadata": [
-    {
-      "src": [
-        {
-          "files": [
-            "src/NOF.Annotation/bin/Release/net10.0/NOF.Annotation.dll",
-            "src/NOF.Domain/bin/Release/net10.0/NOF.Domain.dll",
-            "src/NOF.Contract/bin/Release/net10.0/NOF.Contract.dll",
-            "src/NOF.Application/bin/Release/net10.0/NOF.Application.dll",
-            "src/NOF.Infrastructure.Core/bin/Release/net10.0/NOF.Infrastructure.Core.dll",
-            "src/Hostings/NOF.Hosting.AspNetCore/bin/Release/net10.0/NOF.Hosting.AspNetCore.dll",
-            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.dll",
-            "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.dll",
-            "src/Infrastructures/NOF.Infrastructure.MassTransit/bin/Release/net10.0/NOF.Infrastructure.MassTransit.dll",
-            "src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/bin/Release/net10.0/NOF.Infrastructure.MassTransit.RabbitMQ.dll",
-            "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/bin/Release/net10.0/NOF.Infrastructure.StackExchangeRedis.dll",
-            "src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/bin/Release/net10.0/NOF.Infrastructure.Extension.Authorization.Jwt.dll"
-          ]
-        }
-      ],
-      "dest": "api"
-    }
-  ],
-  "build": {
-    "content": [
-      {
-        "files": [
-          "api/**.yml",
-          "api/index.md"
-        ]
-      },
-      {
-        "files": [
-          "**.md",
-          "**.yml"
-        ],
-        "exclude": [
-          "api/**"
-        ],
-        "src": "docs/"
-      }
-    ],
-    "resource": [
-      {
-        "files": [
-          "images/**"
-        ],
-        "src": "docs/"
-      }
-    ],
-    "output": "_site",
-    "globalMetadataFiles": [],
-    "fileMetadataFiles": [],
-    "template": [
-      "default",
-      "modern"
-    ],
-    "globalMetadata": {
-      "_appTitle": "NOF Framework",
-      "_appFooter": "NOF Framework Documentation",
-      "_enableSearch": true
-    }
-  }
+	"_comment": "Using pre-built DLLs instead of .csproj due to DocFX lacking C# 14 support. See https://github.com/dotnet/docfx/issues/10808",
+	"metadata": [
+		{
+			"src": [
+				{
+					"files": [
+						"src/NOF.Annotation/bin/Release/net10.0/NOF.Annotation.dll",
+						"src/NOF.Domain/bin/Release/net10.0/NOF.Domain.dll",
+						"src/NOF.Contract/bin/Release/net10.0/NOF.Contract.dll",
+						"src/NOF.Application/bin/Release/net10.0/NOF.Application.dll",
+						"src/NOF.Infrastructure/bin/Release/net10.0/NOF.Infrastructure.dll",
+						"src/Hostings/NOF.Hosting.AspNetCore/bin/Release/net10.0/NOF.Hosting.AspNetCore.dll",
+						"src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.dll",
+						"src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.dll",
+						"src/Infrastructures/NOF.Infrastructure.MassTransit/bin/Release/net10.0/NOF.Infrastructure.MassTransit.dll",
+						"src/Infrastructures/NOF.Infrastructure.MassTransit.RabbitMQ/bin/Release/net10.0/NOF.Infrastructure.MassTransit.RabbitMQ.dll",
+						"src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/bin/Release/net10.0/NOF.Infrastructure.StackExchangeRedis.dll",
+						"src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/bin/Release/net10.0/NOF.Infrastructure.Extension.Authorization.Jwt.dll"
+					]
+				}
+			],
+			"dest": "api"
+		}
+	],
+	"build": {
+		"content": [
+			{
+				"files": [
+					"api/**.yml",
+					"api/index.md"
+				]
+			},
+			{
+				"files": [
+					"**.md",
+					"**.yml"
+				],
+				"exclude": [
+					"api/**"
+				],
+				"src": "docs/"
+			}
+		],
+		"resource": [
+			{
+				"files": [
+					"images/**"
+				],
+				"src": "docs/"
+			}
+		],
+		"output": "_site",
+		"globalMetadataFiles": [],
+		"fileMetadataFiles": [],
+		"template": [
+			"default",
+			"modern"
+		],
+		"globalMetadata": {
+			"_appTitle": "NOF Framework",
+			"_appFooter": "NOF Framework Documentation",
+			"_enableSearch": true
+		}
+	}
 }

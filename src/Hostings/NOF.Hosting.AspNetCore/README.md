@@ -4,11 +4,11 @@ ASP.NET Core hosting package for the [NOF Framework](https://github.com/XmmShp/N
 
 ## Overview
 
-Provides the ASP.NET Core host integration for NOF applications, including automatic HTTP endpoint generation from `[HttpEndpoint]` attributes, OpenAPI/Scalar documentation, JSON serialization configuration, middleware pipeline, and the `INOFAppBuilder` implementation for web applications.
+Provides the ASP.NET Core host integration for NOF applications, including source-generated HTTP endpoint mapping from explicitly registered RPC services, OpenAPI/Scalar documentation, JSON serialization configuration, middleware pipeline, and the `INOFAppBuilder` implementation for web applications.
 
 ## Features
 
-- **Automatic Endpoint Mapping** - source generators turn `[HttpEndpoint]` requests into minimal API endpoints
+- **Explicit Service Endpoint Mapping** - source generators turn `MapServiceToHttpEndpoints<TService>()` calls into minimal API endpoints
 - **OpenAPI & Scalar** - built-in OpenAPI document generation with Scalar UI
 - **JSON Configuration** - pre-configured `System.Text.Json` options with sensible defaults
 - **Invocation Context Middleware** - propagates tenant ID and other context through the request pipeline
@@ -25,17 +25,19 @@ builder.WithAutoApplicationParts();
 
 var app = await builder.BuildAsync();
 
-app.MapAllHttpEndpoints();
+app.MapServiceToHttpEndpoints<IMyAppService>();
 
 await app.RunAsync();
 ```
 
-Requests annotated with `[HttpEndpoint]` are automatically mapped to minimal API endpoints:
+Methods on explicitly mapped RPC services are turned into minimal API endpoints:
 
 ```csharp
-[HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
-[RequirePermission("orders:read")]
-public record GetOrderRequest(Guid Id);
+public partial interface IOrderService : IRpcService
+{
+    [HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
+    Task<Result<OrderDto>> GetAsync(GetOrderRequest request);
+}
 ```
 
 ## Installation
@@ -47,5 +49,4 @@ dotnet add package NOF.Hosting.AspNetCore
 ## License
 
 Apache-2.0
-
 

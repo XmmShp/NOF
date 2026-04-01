@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace NOF.Infrastructure;
 
@@ -52,6 +53,10 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     protected NOFAppBuilder()
     {
+        if (Assembly.GetEntryAssembly() is { } assembly)
+        {
+            this.AddApplicationPart(assembly);
+        }
         ServiceConfigs.Add(new AutoInjectServiceRegistrationStep());
     }
 

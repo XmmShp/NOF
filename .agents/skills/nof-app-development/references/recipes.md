@@ -36,7 +36,7 @@ builder.AddMassTransit().UseRabbitMQ();
 builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
 
 var app = await builder.BuildAsync();
-app.MapAllHttpEndpoints();
+app.MapServiceToHttpEndpoints<IMyAppService>();
 await app.RunAsync();
 ```
 

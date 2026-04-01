@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
@@ -20,10 +20,6 @@
 		<PackageReference Include="Microsoft.CodeAnalysis.Common" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Include="..\..\Common\NOF.SourceGenerator.Shared\AssemblyPrefixHelper.cs" Link="Shared\AssemblyPrefixHelper.cs" />
 	</ItemGroup>
 
 </Project>

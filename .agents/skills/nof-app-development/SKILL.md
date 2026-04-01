@@ -56,7 +56,7 @@ IDeferredCommandSender         → Send(command)                 // Outbox (on S
 | `[NewableValueObject]` | Static `New()` method (SnowflakeId) |
 | `[AutoInject(Lifetime)]` | DI registration (Singleton/Scoped/Transient) |
 | `[PublicApi]` | Marks request as public API operation (required by `[HttpEndpoint]` and `[GenerateService]`) |
-| `[HttpEndpoint(HttpVerb, route)]` | HTTP endpoint mapping (requires `[PublicApi]`) |
+| `[HttpEndpoint(HttpVerb, route)]` | Marks an RPC service method for HTTP mapping when its service is registered via `app.MapServiceToHttpEndpoints<TService>()` |
 | `[GenerateService]` | Service interface + HTTP client + `IRequestSender` client (on `partial interface`) |
 | `[Mappable<TSource, TDest>]` | Auto-generated mapper registrations (on `partial static class`) |
 | `[Failure(name, message, errorCode)]` | Static `Failure` instances |

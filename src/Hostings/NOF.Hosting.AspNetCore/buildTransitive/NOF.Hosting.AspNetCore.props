@@ -1,6 +1,5 @@
 <Project>
   <PropertyGroup>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <InterceptorsNamespaces>$(InterceptorsNamespaces);NOF.Hosting.AspNetCore.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 </Project>
