@@ -1,7 +1,7 @@
 using AntDesign;
 using Microsoft.Extensions.Logging;
-using NOF.Hosting.Maui;
 using NOF.Contract.Extension.Authorization.Jwt;
+using NOF.Hosting.Maui;
 
 namespace NOF.Sample.Maui;
 

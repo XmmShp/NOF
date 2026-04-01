@@ -8,16 +8,16 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 internal sealed class NOFJwtAuthorizationAssemblyInitializer : IAssemblyInitializer
 {
-	private static int _initialized;
+    private static int _initialized;
 
-	public static void Initialize()
-	{
-		if (Interlocked.Exchange(ref _initialized, 1) == 1)
-		{
-			return;
-		}
+    public static void Initialize()
+    {
+        if (Interlocked.Exchange(ref _initialized, 1) == 1)
+        {
+            return;
+        }
 
-		AutoInjectRegistry.Register(typeof(IJwtAuthorityService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: false);
-		AutoInjectRegistry.Register(typeof(IJwksService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: true);
-	}
+        AutoInjectRegistry.Register(typeof(IJwtAuthorityService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: false);
+        AutoInjectRegistry.Register(typeof(IJwksService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: true);
+    }
 }

@@ -15,18 +15,18 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// </summary>
 public interface IJwksProvider
 {
-	/// <summary>
-	/// Gets the current set of security keys for token validation.
-	/// </summary>
-	/// <param name="cancellationToken">Cancellation token.</param>
-	/// <returns>A collection of security keys that can be used to validate tokens.</returns>
-	Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Gets the current set of security keys for token validation.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A collection of security keys that can be used to validate tokens.</returns>
+    Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default);
 
-	/// <summary>
-	/// Forces a refresh of the cached keys from the authority.
-	/// </summary>
-	/// <param name="cancellationToken">Cancellation token.</param>
-	Task RefreshAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Forces a refresh of the cached keys from the authority.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task RefreshAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -35,87 +35,87 @@ public interface IJwksProvider
 /// </summary>
 public class HttpJwksProvider : IJwksProvider
 {
-	private readonly JwtAuthorizationOptions _options;
-	private readonly IHttpClientFactory _httpClientFactory;
-	private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly JwtAuthorizationOptions _options;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-	private volatile IReadOnlyList<SecurityKey>? _cachedKeys;
-	private DateTime _lastRefreshUtc = DateTime.MinValue;
+    private volatile IReadOnlyList<SecurityKey>? _cachedKeys;
+    private DateTime _lastRefreshUtc = DateTime.MinValue;
 
-	public HttpJwksProvider(IOptions<JwtAuthorizationOptions> options, IHttpClientFactory httpClientFactory)
-	{
-		_options = options.Value;
-		_httpClientFactory = httpClientFactory;
-	}
+    public HttpJwksProvider(IOptions<JwtAuthorizationOptions> options, IHttpClientFactory httpClientFactory)
+    {
+        _options = options.Value;
+        _httpClientFactory = httpClientFactory;
+    }
 
-	/// <inheritdoc />
-	public async Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
-	{
-		if (_cachedKeys is not null && DateTime.UtcNow - _lastRefreshUtc < _options.CacheLifetime)
-		{
-			return _cachedKeys;
-		}
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cachedKeys is not null && DateTime.UtcNow - _lastRefreshUtc < _options.CacheLifetime)
+        {
+            return _cachedKeys;
+        }
 
-		await RefreshAsync(cancellationToken);
-		return _cachedKeys ?? [];
-	}
+        await RefreshAsync(cancellationToken);
+        return _cachedKeys ?? [];
+    }
 
-	/// <inheritdoc />
-	public async Task RefreshAsync(CancellationToken cancellationToken = default)
-	{
-		await _refreshLock.WaitAsync(cancellationToken);
-		try
-		{
-			var client = _httpClientFactory.CreateClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
-			var jwksUrl = _options.JwksEndpoint;
+    /// <inheritdoc />
+    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        await _refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            var client = _httpClientFactory.CreateClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
+            var jwksUrl = _options.JwksEndpoint;
 
-			var jwksDocument = await client.GetFromJsonAsync(jwksUrl, JwksJsonContext.Default.JwksHttpDocument, cancellationToken);
-			if (jwksDocument?.Keys is null || jwksDocument.Keys.Length == 0)
-			{
-				return;
-			}
+            var jwksDocument = await client.GetFromJsonAsync(jwksUrl, JwksJsonContext.Default.JwksHttpDocument, cancellationToken);
+            if (jwksDocument?.Keys is null || jwksDocument.Keys.Length == 0)
+            {
+                return;
+            }
 
-			var keys = new List<SecurityKey>();
-			foreach (var jwk in jwksDocument.Keys)
-			{
-				if (jwk.Kty != "RSA")
-				{
-					continue;
-				}
+            var keys = new List<SecurityKey>();
+            foreach (var jwk in jwksDocument.Keys)
+            {
+                if (jwk.Kty != "RSA")
+                {
+                    continue;
+                }
 
-				var rsa = RSA.Create();
-				rsa.ImportParameters(new RSAParameters
-				{
-					Modulus = Base64UrlDecode(jwk.N),
-					Exponent = Base64UrlDecode(jwk.E)
-				});
+                var rsa = RSA.Create();
+                rsa.ImportParameters(new RSAParameters
+                {
+                    Modulus = Base64UrlDecode(jwk.N),
+                    Exponent = Base64UrlDecode(jwk.E)
+                });
 
-				keys.Add(new RsaSecurityKey(rsa) { KeyId = jwk.Kid });
-			}
+                keys.Add(new RsaSecurityKey(rsa) { KeyId = jwk.Kid });
+            }
 
-			_cachedKeys = keys;
-			_lastRefreshUtc = DateTime.UtcNow;
-		}
-		finally
-		{
-			_refreshLock.Release();
-		}
-	}
+            _cachedKeys = keys;
+            _lastRefreshUtc = DateTime.UtcNow;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
 
-	private static byte[] Base64UrlDecode(string input)
-	{
-		var output = input.Replace('-', '+').Replace('_', '/');
-		switch (output.Length % 4)
-		{
-			case 2:
-				output += "==";
-				break;
-			case 3:
-				output += "=";
-				break;
-		}
-		return Convert.FromBase64String(output);
-	}
+    private static byte[] Base64UrlDecode(string input)
+    {
+        var output = input.Replace('-', '+').Replace('_', '/');
+        switch (output.Length % 4)
+        {
+            case 2:
+                output += "==";
+                break;
+            case 3:
+                output += "=";
+                break;
+        }
+        return Convert.FromBase64String(output);
+    }
 }
 
 /// <summary>
@@ -123,86 +123,86 @@ public class HttpJwksProvider : IJwksProvider
 /// </summary>
 public class RequestDispatcherJwksProvider : IJwksProvider
 {
-	private readonly IServiceProvider _serviceProvider;
-	private readonly JwtAuthorizationOptions _options;
-	private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly IServiceProvider _serviceProvider;
+    private readonly JwtAuthorizationOptions _options;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-	private volatile IReadOnlyList<SecurityKey>? _cachedKeys;
-	private DateTime _lastRefreshUtc = DateTime.MinValue;
+    private volatile IReadOnlyList<SecurityKey>? _cachedKeys;
+    private DateTime _lastRefreshUtc = DateTime.MinValue;
 
-	public RequestDispatcherJwksProvider(IServiceProvider serviceProvider, IOptions<JwtAuthorizationOptions> options)
-	{
-		_serviceProvider = serviceProvider;
-		_options = options.Value;
-	}
+    public RequestDispatcherJwksProvider(IServiceProvider serviceProvider, IOptions<JwtAuthorizationOptions> options)
+    {
+        _serviceProvider = serviceProvider;
+        _options = options.Value;
+    }
 
-	/// <inheritdoc />
-	public async Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
-	{
-		if (_cachedKeys is not null && DateTime.UtcNow - _lastRefreshUtc < _options.CacheLifetime)
-		{
-			return _cachedKeys;
-		}
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cachedKeys is not null && DateTime.UtcNow - _lastRefreshUtc < _options.CacheLifetime)
+        {
+            return _cachedKeys;
+        }
 
-		await RefreshAsync(cancellationToken);
-		return _cachedKeys ?? [];
-	}
+        await RefreshAsync(cancellationToken);
+        return _cachedKeys ?? [];
+    }
 
-	/// <inheritdoc />
-	public async Task RefreshAsync(CancellationToken cancellationToken = default)
-	{
-		await _refreshLock.WaitAsync(cancellationToken);
-		try
-		{
-			await using var scope = _serviceProvider.CreateAsyncScope();
-			var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
-			var jwks = await jwksService.GetJwksAsync(cancellationToken);
-			if (jwks.Keys is not { Length: > 0 } jwkKeys)
-			{
-				return;
-			}
+    /// <inheritdoc />
+    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        await _refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
+            var jwks = await jwksService.GetJwksAsync(cancellationToken);
+            if (jwks.Keys is not { Length: > 0 } jwkKeys)
+            {
+                return;
+            }
 
-			var keys = new List<SecurityKey>();
-			foreach (var jwk in jwkKeys)
-			{
-				if (jwk.Kty != "RSA")
-				{
-					continue;
-				}
+            var keys = new List<SecurityKey>();
+            foreach (var jwk in jwkKeys)
+            {
+                if (jwk.Kty != "RSA")
+                {
+                    continue;
+                }
 
-				var rsa = RSA.Create();
-				rsa.ImportParameters(new RSAParameters
-				{
-					Modulus = Base64UrlDecode(jwk.N),
-					Exponent = Base64UrlDecode(jwk.E)
-				});
+                var rsa = RSA.Create();
+                rsa.ImportParameters(new RSAParameters
+                {
+                    Modulus = Base64UrlDecode(jwk.N),
+                    Exponent = Base64UrlDecode(jwk.E)
+                });
 
-				keys.Add(new RsaSecurityKey(rsa) { KeyId = jwk.Kid });
-			}
+                keys.Add(new RsaSecurityKey(rsa) { KeyId = jwk.Kid });
+            }
 
-			_cachedKeys = keys;
-			_lastRefreshUtc = DateTime.UtcNow;
-		}
-		finally
-		{
-			_refreshLock.Release();
-		}
-	}
+            _cachedKeys = keys;
+            _lastRefreshUtc = DateTime.UtcNow;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
 
-	private static byte[] Base64UrlDecode(string input)
-	{
-		var output = input.Replace('-', '+').Replace('_', '/');
-		switch (output.Length % 4)
-		{
-			case 2:
-				output += "==";
-				break;
-			case 3:
-				output += "=";
-				break;
-		}
-		return Convert.FromBase64String(output);
-	}
+    private static byte[] Base64UrlDecode(string input)
+    {
+        var output = input.Replace('-', '+').Replace('_', '/');
+        switch (output.Length % 4)
+        {
+            case 2:
+                output += "==";
+                break;
+            case 3:
+                output += "=";
+                break;
+        }
+        return Convert.FromBase64String(output);
+    }
 }
 
 /// <summary>
@@ -211,27 +211,27 @@ public class RequestDispatcherJwksProvider : IJwksProvider
 /// </summary>
 public class LocalJwksProvider : IJwksProvider
 {
-	private readonly ISigningKeyService _signingKeyService;
+    private readonly ISigningKeyService _signingKeyService;
 
-	public LocalJwksProvider(ISigningKeyService signingKeyService)
-	{
-		_signingKeyService = signingKeyService;
-	}
+    public LocalJwksProvider(ISigningKeyService signingKeyService)
+    {
+        _signingKeyService = signingKeyService;
+    }
 
-	/// <inheritdoc />
-	public Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
-	{
-		var keys = _signingKeyService.AllKeys
-			.Select(SecurityKey (k) => k.Key)
-			.ToList();
+    /// <inheritdoc />
+    public Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
+    {
+        var keys = _signingKeyService.AllKeys
+            .Select(SecurityKey (k) => k.Key)
+            .ToList();
 
-		return Task.FromResult<IReadOnlyList<SecurityKey>>(keys);
-	}
+        return Task.FromResult<IReadOnlyList<SecurityKey>>(keys);
+    }
 
-	/// <inheritdoc />
-	public Task RefreshAsync(CancellationToken cancellationToken = default)
-	{
-		// No-op: local keys are always up-to-date since we hold the key ring directly.
-		return Task.CompletedTask;
-	}
+    /// <inheritdoc />
+    public Task RefreshAsync(CancellationToken cancellationToken = default)
+    {
+        // No-op: local keys are always up-to-date since we hold the key ring directly.
+        return Task.CompletedTask;
+    }
 }

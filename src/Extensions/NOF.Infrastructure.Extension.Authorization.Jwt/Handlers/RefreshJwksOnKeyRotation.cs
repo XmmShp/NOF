@@ -9,15 +9,15 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// </summary>
 public class RefreshJwksOnKeyRotation : INotificationHandler<JwtKeyRotationNotification>
 {
-	private readonly IJwksProvider _jwksProvider;
+    private readonly IJwksProvider _jwksProvider;
 
-	public RefreshJwksOnKeyRotation(IJwksProvider jwksProvider)
-	{
-		_jwksProvider = jwksProvider;
-	}
+    public RefreshJwksOnKeyRotation(IJwksProvider jwksProvider)
+    {
+        _jwksProvider = jwksProvider;
+    }
 
-	public async Task HandleAsync(JwtKeyRotationNotification notification, CancellationToken cancellationToken)
-	{
-		await _jwksProvider.RefreshAsync(cancellationToken);
-	}
+    public async Task HandleAsync(JwtKeyRotationNotification notification, CancellationToken cancellationToken)
+    {
+        await _jwksProvider.RefreshAsync(cancellationToken);
+    }
 }

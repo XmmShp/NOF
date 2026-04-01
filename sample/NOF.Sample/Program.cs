@@ -15,7 +15,7 @@ using NOF.Sample.Application;
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
-	.AddApplicationPart(typeof(JwtAuthorityService).Assembly);
+    .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
 
 builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 
@@ -26,30 +26,30 @@ builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
 builder.AddJwtAuthorization(o => o.Issuer = "NOF.Sample");
 
 builder.AddMassTransit()
-	.UseRabbitMQ();
+    .UseRabbitMQ();
 
 builder.AddEFCore<ConfigurationDbContext>()
-	.AutoMigrate()
-	.UsePostgreSQL();
+    .AutoMigrate()
+    .UsePostgreSQL();
 
 builder.Services.AddAntDesign();
 
 builder.Services.AddRazorComponents()
-	.AddInteractiveServerComponents()
-	.AddInteractiveWebAssemblyComponents();
+    .AddInteractiveServerComponents()
+    .AddInteractiveWebAssemblyComponents();
 
 builder.Services.AddHostedService(async (sp, ct) =>
 {
-	while (!ct.IsCancellationRequested)
-	{
-		await using var scope = sp.CreateAsyncScope();
-		var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
-		var taskId = Random.Shared.Next().ToString();
-		await publisher.PublishAsync(new TaskStarted(taskId), cancellationToken: ct);
-		await Task.Delay(TimeSpan.FromSeconds(3), ct);
-		await publisher.PublishAsync(new TaskContinued(taskId), cancellationToken: ct);
-		await Task.Delay(TimeSpan.FromSeconds(5), ct);
-	}
+    while (!ct.IsCancellationRequested)
+    {
+        await using var scope = sp.CreateAsyncScope();
+        var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var taskId = Random.Shared.Next().ToString();
+        await publisher.PublishAsync(new TaskStarted(taskId), cancellationToken: ct);
+        await Task.Delay(TimeSpan.FromSeconds(3), ct);
+        await publisher.PublishAsync(new TaskContinued(taskId), cancellationToken: ct);
+        await Task.Delay(TimeSpan.FromSeconds(5), ct);
+    }
 });
 
 var app = await builder.BuildAsync();
@@ -58,11 +58,11 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-	.AddInteractiveServerRenderMode()
-	.AddInteractiveWebAssemblyRenderMode()
-	.AddAdditionalAssemblies(
-		typeof(NOF.Sample.UI.Components.Routes).Assembly,
-		typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(
+        typeof(NOF.Sample.UI.Components.Routes).Assembly,
+        typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
 
 app.MapServiceToHttpEndpoints<INOFSampleService>();
 app.MapServiceToHttpEndpoints<IJwksService>();
