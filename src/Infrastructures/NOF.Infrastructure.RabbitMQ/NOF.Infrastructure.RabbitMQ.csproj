@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <IsAotCompatible>true</IsAotCompatible>
+
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.RabbitMQ</PackageId>
     <Description>RabbitMQ integration for the NOF Framework — message bus adapter for commands, events, and notifications using official RabbitMQ client.</Description>

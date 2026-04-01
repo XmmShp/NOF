@@ -8,9 +8,9 @@ namespace NOF.Application;
 /// </summary>
 public interface IDeferredCommandSender
 {
-	/// <summary>
-	/// Adds a command to the transactional outbox context.
-	/// The command will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
-	/// </summary>
-	void Send(ICommand command);
+    /// <summary>
+    /// Adds a command to the transactional outbox context.
+    /// The command will be persisted to the outbox when UnitOfWork.SaveChangesAsync is called.
+    /// </summary>
+    void Send(ICommand command);
 }

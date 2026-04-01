@@ -13,7 +13,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ICommandHandlerResolver _commandHandlerResolver;
     private readonly IMessageSerializer _serializer;
     private readonly HandlerInfos? _handlerInfos;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
@@ -24,14 +25,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     public RabbitMQConsumerHostedService(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        IServiceProvider serviceProvider,
+        IServiceScopeFactory scopeFactory,
+        ICommandHandlerResolver commandHandlerResolver,
         IMessageSerializer serializer,
         HandlerInfos? handlerInfos,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
+        _commandHandlerResolver = commandHandlerResolver;
         _serializer = serializer;
         _handlerInfos = handlerInfos;
         _logger = logger;
@@ -146,43 +149,62 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     {
         try
         {
-            if (!_consumerTypes.TryGetValue(queueName, out var handlerType))
-            {
-                await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, false);
-                return;
-            }
-
-            var messageType = Type.GetType(args.BasicProperties.Type!);
-            if (messageType == null)
-            {
-                await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, false);
-                return;
-            }
-
             var messageBytes = args.Body.ToArray();
             var payload = System.Text.Encoding.UTF8.GetString(messageBytes);
-            var message = _serializer.Deserialize(messageType.FullName!, payload);
+            var message = _serializer.Deserialize(args.BasicProperties.Type!, payload);
             if (message == null)
             {
                 await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, false);
                 return;
             }
 
-            using var scope = _serviceProvider.CreateScope();
-            var handler = scope.ServiceProvider.GetService(handlerType);
-            if (handler == null)
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            IDictionary<string, string?>? headers = null;
+            if (args.BasicProperties.Headers != null)
             {
-                await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, false);
-                return;
+                headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+                foreach (var (key, value) in args.BasicProperties.Headers)
+                {
+                    if (value is byte[] bytes)
+                    {
+                        headers[key] = System.Text.Encoding.UTF8.GetString(bytes);
+                    }
+                }
             }
 
-            if (handler is ICommandHandler commandHandler && message is ICommand command)
+            if (message is ICommand command)
             {
-                await commandHandler.HandleAsync(command, CancellationToken.None);
+                var resolved = _commandHandlerResolver.Resolve(command.GetType())
+                    ?? throw new InvalidOperationException($"Cannot route command '{command.GetType().Name}'. No matching handler registered.");
+
+                var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
+                var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
+                var context = new InboundContext
+                {
+                    Message = command,
+                    Handler = handler,
+                    Headers = headers ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                };
+
+                await pipeline.ExecuteAsync(context,
+                    ct => new ValueTask(handler.HandleAsync(command, ct)),
+                    CancellationToken.None);
             }
-            else if (handler is INotificationHandler notificationHandler && message is INotification notification)
+            else if (message is INotification notification)
             {
-                await notificationHandler.HandleAsync(notification, CancellationToken.None);
+                var key = NotificationHandlerKey.Of(notification.GetType());
+                var handler = scope.ServiceProvider.GetRequiredKeyedService<INotificationHandler>(key);
+                var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
+                var context = new InboundContext
+                {
+                    Message = notification,
+                    Handler = handler,
+                    Headers = headers ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                };
+
+                await pipeline.ExecuteAsync(context,
+                    ct => new ValueTask(handler.HandleAsync(notification, ct)),
+                    CancellationToken.None);
             }
 
             await consumer.Channel.BasicAckAsync(args.DeliveryTag, false);
