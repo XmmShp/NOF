@@ -8,11 +8,7 @@ namespace NOF.Application;
 /// </summary>
 public interface IExecutionContext : IUserContext
 {
-    /// <summary>
-    /// The tenant ID under which this execution is running.
-    /// Can be null for host-level operations, or a specific tenant ID for tenant operations.
-    /// </summary>
-    string? TenantId { get; }
+    string TenantId { get; }
 
     /// <summary>
     /// Shared storage for components participating in this execution.
@@ -30,7 +26,7 @@ public interface IExecutionContext : IUserContext
     /// </summary>
     string? SpanId { get; }
 
-    void SetTenantId(string? tenantId);
+    void SetTenantId(string tenantId);
 
     void SetTracingInfo(string? traceId, string? spanId);
 }

@@ -12,7 +12,7 @@ internal static class TenantModelHelper
     public const string HostOnlyAnnotationName = "NOF:HostOnly";
 
     public static HashSet<Type> CreateHostOnlyTypeSet(NOFDbContext dbContext)
-        => [.. dbContext.GetHostOnlyEntityTypesInternal()];
+        => [.. dbContext.GetHostOnlyEntityTypes()];
 
     public static bool ShouldConfigureTenantBehavior(IMutableEntityType entityType)
         => entityType.BaseType is null
@@ -37,7 +37,7 @@ internal static class TenantModelHelper
             Expression.Constant(TenantIdPropertyName));
         var currentTenant = Expression.Property(
             Expression.Constant(dbContext),
-            nameof(NOFDbContext.CurrentTenantKey));
+            nameof(NOFDbContext.CurrentTenantId));
 
         return Expression.Lambda(
             Expression.Equal(tenantProperty, currentTenant),

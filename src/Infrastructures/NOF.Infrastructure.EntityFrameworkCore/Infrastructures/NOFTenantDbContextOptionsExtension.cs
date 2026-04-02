@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 /// </summary>
 internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
-    public string? TenantId { get; set; }
+    public string TenantId { get; set; } = string.Empty;
 
     public void ApplyServices(IServiceCollection services)
     {
@@ -70,7 +70,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
         public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
         {
             debugInfo["NOF:TenantContext"] = "true";
-            debugInfo["NOF:TenantId"] = Extension.TenantId ?? "(null)";
+            debugInfo["NOF:TenantId"] = Extension.TenantId;
         }
     }
 }

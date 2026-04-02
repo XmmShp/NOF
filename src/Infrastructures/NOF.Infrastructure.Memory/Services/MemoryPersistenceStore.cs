@@ -4,45 +4,36 @@ namespace NOF.Infrastructure.Memory;
 
 public sealed class MemoryPersistenceStore : ICloneable
 {
-    private ConcurrentDictionary<string, MemoryPersistenceContext> TablesByTenant { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    private ConcurrentDictionary<Type, IMemoryPersistenceTable> _tables = new();
 
     internal void RestoreFrom(MemoryPersistenceStore snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        var staleTenants = TablesByTenant.Keys.Except(snapshot.TablesByTenant.Keys, StringComparer.OrdinalIgnoreCase).ToArray();
-        foreach (var staleTenant in staleTenants)
+        _tables.Clear();
+        foreach (var table in snapshot._tables)
         {
-            TablesByTenant.TryRemove(staleTenant, out _);
-        }
-
-        foreach (var tenant in snapshot.TablesByTenant)
-        {
-            var targetContext = TablesByTenant.GetOrAdd(tenant.Key, static _ => new MemoryPersistenceContext());
-            targetContext.RestoreFrom(tenant.Value);
+            _tables[table.Key] = (IMemoryPersistenceTable)table.Value.Clone();
         }
     }
 
-    public static string NormalizeTenantId(string? tenantId)
-        => string.IsNullOrWhiteSpace(tenantId) ? string.Empty : tenantId;
-
-    public MemoryPersistenceContext CreateContext(string? tenantId)
-        => TablesByTenant.GetOrAdd(NormalizeTenantId(tenantId), static _ => new MemoryPersistenceContext());
+    public MemoryPersistenceContext CreateContext(string tenantId)
+        => new(tenantId, _tables);
 
     public object Clone()
         => new MemoryPersistenceStore
         {
-            TablesByTenant = CloneTableDictionary(TablesByTenant)
+            _tables = CloneTableDictionary(_tables)
         };
 
-    private static ConcurrentDictionary<string, MemoryPersistenceContext> CloneTableDictionary(
-        ConcurrentDictionary<string, MemoryPersistenceContext> source)
+    private static ConcurrentDictionary<Type, IMemoryPersistenceTable> CloneTableDictionary(
+        ConcurrentDictionary<Type, IMemoryPersistenceTable> source)
     {
-        var clone = new ConcurrentDictionary<string, MemoryPersistenceContext>(StringComparer.OrdinalIgnoreCase);
+        var clone = new ConcurrentDictionary<Type, IMemoryPersistenceTable>();
 
-        foreach (var tenant in source)
+        foreach (var table in source)
         {
-            clone[tenant.Key] = (MemoryPersistenceContext)tenant.Value.Clone();
+            clone[table.Key] = (IMemoryPersistenceTable)table.Value.Clone();
         }
 
         return clone;

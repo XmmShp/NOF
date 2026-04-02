@@ -6,18 +6,6 @@ namespace NOF.Infrastructure.Core.Tests.Persistence;
 
 public class MemoryPersistenceStoreTests
 {
-    [Theory]
-    [InlineData(null, "")]
-    [InlineData("", "")]
-    [InlineData("   ", "")]
-    [InlineData("tenant-a", "tenant-a")]
-    public void NormalizeTenantId_ShouldNormalizeExpectedValue(string? tenantId, string expected)
-    {
-        var normalized = MemoryPersistenceStore.NormalizeTenantId(tenantId);
-
-        normalized.Should().Be(expected);
-    }
-
     [Fact]
     public void Clone_ShouldCreateDeepCopyOfTenantData()
     {
@@ -52,7 +40,7 @@ public class MemoryPersistenceStoreTests
     public void CreateContext_ShouldKeepDataIsolatedByTenant()
     {
         var store = new MemoryPersistenceStore();
-        var host = store.CreateContext(null);
+        var host = store.CreateContext(string.Empty);
         var tenant = store.CreateContext("tenant-a");
 
         host.Set<TestProjection>().Add(new TestProjection { Id = 1, Name = "host" });

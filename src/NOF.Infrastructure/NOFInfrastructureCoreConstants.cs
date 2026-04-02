@@ -8,6 +8,14 @@ namespace NOF.Infrastructure;
 /// </summary>
 public static class NOFInfrastructureConstants
 {
+    public static class Tenant
+    {
+        public const string HostId = "";
+
+        public static string NormalizeTenantId(string? tenantId)
+            => string.IsNullOrWhiteSpace(tenantId) ? HostId : tenantId;
+    }
+
     /// <summary>
     /// Handler pipeline tracing and metrics constants.
     /// </summary>

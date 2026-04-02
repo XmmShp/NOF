@@ -25,7 +25,7 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
     public void Publish(INotification notification)
     {
         var currentActivity = Activity.Current;
-        var tenantId = _executionContext.TenantId;
+        var tenantId = NOFInfrastructureConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         var headers = new Dictionary<string, string?>
         {

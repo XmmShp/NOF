@@ -19,7 +19,7 @@ public class PostgreSQLDbContextConfigurator : IDbContextConfigurator
         _options = options.Value;
     }
 
-    public void Configure(DbContextOptionsBuilder optionsBuilder, string? tenantId)
+    public void Configure(DbContextOptionsBuilder optionsBuilder, string tenantId)
     {
         var connectionString = _configuration.GetConnectionString(_options.ConnectionStringName);
 

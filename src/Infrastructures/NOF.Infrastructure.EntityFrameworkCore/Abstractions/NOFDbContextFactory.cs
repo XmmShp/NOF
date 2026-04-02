@@ -15,11 +15,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 /// </summary>
 public interface INOFDbContextFactory<TDbContext> : IDbContextFactory<TDbContext> where TDbContext : NOFDbContext
 {
-    /// <summary>
-    /// Create a database context for the specified tenant
-    /// If tenantId is null or empty, will create Host database context
-    /// </summary>
-    TDbContext CreateDbContext(string? tenantId);
+    TDbContext CreateDbContext(string tenantId);
 }
 
 internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDbContext>
@@ -48,11 +44,11 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
     public TDbContext CreateDbContext()
         => CreateDbContext(_executionContext.TenantId);
 
-    public TDbContext CreateDbContext(string? tenantId)
+    public TDbContext CreateDbContext(string tenantId)
     {
+        tenantId = NOF.Infrastructure.NOFInfrastructureConstants.Tenant.NormalizeTenantId(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
 
-        // Always add the tenant extension; TenantId being null/whitespace means host mode
         var extension = new NOFTenantDbContextOptionsExtension { TenantId = tenantId };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 

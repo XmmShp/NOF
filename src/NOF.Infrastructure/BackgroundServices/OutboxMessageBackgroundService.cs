@@ -211,7 +211,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             {
                 failedCount++;
                 var tenantId = GetTenantId(message);
-                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for tenant scope {TenantId}", message.Id, tenantId ?? "Host");
+                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for tenant scope {TenantId}", message.Id, tenantId);
             }
         }
 
@@ -231,7 +231,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
     }
 
-    private static string? GetTenantId(NOFOutboxMessage message)
+    private static string GetTenantId(NOFOutboxMessage message)
     {
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var headers = string.IsNullOrWhiteSpace(message.Headers)
@@ -240,7 +240,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         return headers is not null
             && headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var tenantId)
-                ? tenantId
-                : null;
+                ? NOFInfrastructureConstants.Tenant.NormalizeTenantId(tenantId)
+                : NOFInfrastructureConstants.Tenant.HostId;
     }
 }

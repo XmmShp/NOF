@@ -23,24 +23,23 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        string? tenantId = null;
+        string tenantId = NOFInfrastructureConstants.Tenant.HostId;
 
         if (_executionContext.User.IsAuthenticated)
         {
-            tenantId = _executionContext.User
-                .FindFirst(ClaimTypes.TenantId)?.Value;
+            tenantId = NOFInfrastructureConstants.Tenant.NormalizeTenantId(
+                _executionContext.User.FindFirst(ClaimTypes.TenantId)?.Value);
         }
 
-        if (string.IsNullOrEmpty(tenantId) &&
-            context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var headerTenantId) &&
-            !string.IsNullOrEmpty(headerTenantId))
+        if (string.IsNullOrWhiteSpace(tenantId) &&
+            context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
-            tenantId = headerTenantId;
+            tenantId = NOFInfrastructureConstants.Tenant.NormalizeTenantId(headerTenantId);
         }
 
         _executionContext.SetTenantId(tenantId);
 
-        if (!string.IsNullOrEmpty(tenantId))
+        if (!string.IsNullOrWhiteSpace(tenantId))
         {
             var activity = Activity.Current;
             if (activity is { IsAllDataRequested: true })

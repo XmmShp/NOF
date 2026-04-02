@@ -22,3 +22,24 @@ public sealed class MemoryPersistenceTable<TAggregateRoot> : IMemoryPersistenceT
         return clone;
     }
 }
+
+public sealed class MemoryTenantPersistenceTable<TAggregateRoot> : IMemoryPersistenceTable
+    where TAggregateRoot : class, ICloneable
+{
+    internal readonly record struct Entry(string TenantId, TAggregateRoot Entity);
+
+    List<object> IMemoryPersistenceTable.Items => Entries.Select(entry => (object)entry.Entity).ToList();
+
+    internal List<Entry> Entries { get; } = [];
+
+    public object Clone()
+    {
+        var clone = new MemoryTenantPersistenceTable<TAggregateRoot>();
+        foreach (var entry in Entries)
+        {
+            clone.Entries.Add(new Entry(entry.TenantId, (TAggregateRoot)entry.Entity.Clone()));
+        }
+
+        return clone;
+    }
+}

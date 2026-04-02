@@ -25,7 +25,7 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
     public void Send(ICommand command)
     {
         var currentActivity = Activity.Current;
-        var tenantId = _executionContext.TenantId;
+        var tenantId = NOFInfrastructureConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         var headers = new Dictionary<string, string?>
         {

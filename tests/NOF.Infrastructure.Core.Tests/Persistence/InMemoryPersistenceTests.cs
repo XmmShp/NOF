@@ -6,6 +6,7 @@ using Moq;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
+using NOF.Infrastructure;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
@@ -238,7 +239,7 @@ public class InMemoryPersistenceTests
         using (var hostScope = services.CreateScope())
         {
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            hostExecutionContext.SetTenantId(null);
+            hostExecutionContext.SetTenantId(NOFInfrastructureConstants.Tenant.HostId);
             var hostRepository = hostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
         }
@@ -255,7 +256,7 @@ public class InMemoryPersistenceTests
         using (var verifyHostScope = services.CreateScope())
         {
             var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            verifyHostExecutionContext.SetTenantId(null);
+            verifyHostExecutionContext.SetTenantId(NOFInfrastructureConstants.Tenant.HostId);
             var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             (await verifyHostRepository.FindAsync("corr", "def"))!.State.Should().Be(1);
         }

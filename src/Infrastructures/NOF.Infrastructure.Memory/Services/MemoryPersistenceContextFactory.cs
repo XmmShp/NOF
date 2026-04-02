@@ -6,7 +6,7 @@ public interface IMemoryPersistenceContextFactory
 {
     MemoryPersistenceContext CreateContext();
 
-    MemoryPersistenceContext CreateContext(string? tenantId);
+    MemoryPersistenceContext CreateContext(string tenantId);
 }
 
 public sealed class MemoryPersistenceContextFactory : IMemoryPersistenceContextFactory
@@ -23,6 +23,6 @@ public sealed class MemoryPersistenceContextFactory : IMemoryPersistenceContextF
     public MemoryPersistenceContext CreateContext()
         => CreateContext(_executionContext.TenantId);
 
-    public MemoryPersistenceContext CreateContext(string? tenantId)
+    public MemoryPersistenceContext CreateContext(string tenantId)
         => _store.CreateContext(tenantId);
 }

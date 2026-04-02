@@ -12,17 +12,14 @@ public abstract class NOFDbContext : DbContext
         _tenantOptions = options.FindExtension<NOFTenantDbContextOptionsExtension>() ?? new NOFTenantDbContextOptionsExtension();
     }
 
-    public string? CurrentTenantId => _tenantOptions.TenantId;
-    public string CurrentTenantKey => CurrentTenantId ?? string.Empty;
+    public string CurrentTenantId => _tenantOptions.TenantId;
 
     internal DbSet<NOFStateMachineContext> NOFStateMachineContexts { get; set; }
     internal DbSet<NOFInboxMessage> NOFInboxMessages { get; set; }
     internal DbSet<NOFOutboxMessage> NOFOutboxMessages { get; set; }
     internal DbSet<NOFTenant> NOFTenants { get; set; }
 
-    protected virtual Type[] GetHostOnlyEntityTypes() => [typeof(NOFTenant), typeof(NOFInboxMessage), typeof(NOFOutboxMessage)];
-
-    internal Type[] GetHostOnlyEntityTypesInternal() => GetHostOnlyEntityTypes();
+    protected internal virtual Type[] GetHostOnlyEntityTypes() => [typeof(NOFTenant), typeof(NOFInboxMessage), typeof(NOFOutboxMessage)];
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -128,11 +125,11 @@ public abstract class NOFDbContext : DbContext
                 continue;
             }
 
-            tenantProperty.OriginalValue = CurrentTenantKey;
+            tenantProperty.OriginalValue = CurrentTenantId;
 
             if (entry.State is EntityState.Added or EntityState.Modified)
             {
-                tenantProperty.CurrentValue = CurrentTenantKey;
+                tenantProperty.CurrentValue = CurrentTenantId;
             }
         }
     }
@@ -153,6 +150,6 @@ public abstract class NOFDbContext : DbContext
             return keyValues;
         }
 
-        return [.. keyValues, CurrentTenantKey];
+        return [.. keyValues, CurrentTenantId];
     }
 }

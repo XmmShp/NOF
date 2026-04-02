@@ -20,7 +20,7 @@ public class InvocationContext : IExecutionContext
     public ClaimsPrincipal User { get; private set; } = Anonymous;
 
     /// <inheritdoc />
-    public string? TenantId { get; private set; }
+    public string TenantId { get; private set; } = string.Empty;
 
     /// <inheritdoc />
     public IDictionary<string, object?> Items { get; } = new Dictionary<string, object?>();
@@ -49,7 +49,7 @@ public class InvocationContext : IExecutionContext
     }
 
     /// <inheritdoc />
-    public void SetTenantId(string? tenantId)
+    public void SetTenantId(string tenantId)
     {
         TenantId = tenantId;
     }

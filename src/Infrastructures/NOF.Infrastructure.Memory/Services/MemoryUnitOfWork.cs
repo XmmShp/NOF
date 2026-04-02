@@ -4,21 +4,18 @@ namespace NOF.Infrastructure.Memory;
 
 public sealed class MemoryUnitOfWork : IUnitOfWork
 {
-    private readonly MemoryPersistenceStore _store;
-    private readonly IExecutionContext _executionContext;
+    private readonly MemoryPersistenceContext _context;
     private readonly IEventPublisher _eventPublisher;
 
-    public MemoryUnitOfWork(MemoryPersistenceStore store, IExecutionContext executionContext, IEventPublisher eventPublisher)
+    public MemoryUnitOfWork(MemoryPersistenceContext context, IEventPublisher eventPublisher)
     {
-        _store = store;
-        _executionContext = executionContext;
+        _context = context;
         _eventPublisher = eventPublisher;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var context = _store.CreateContext(_executionContext.TenantId);
-        var changedEntities = context.ConsumeTrackedEntities();
+        var changedEntities = _context.ConsumeTrackedEntities();
 
         var domainEvents = changedEntities
             .SelectMany(aggregateRoot =>
