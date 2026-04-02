@@ -21,31 +21,31 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return Services.GetRequiredService<T>();
     }
 
-    public IInvocationContext InvocationContext => GetRequiredService<IInvocationContext>();
+    public IExecutionContext ExecutionContext => GetRequiredService<IExecutionContext>();
 
-    public IUserContext UserContext => GetRequiredService<IUserContext>();
+    public IUserContext UserContext => ExecutionContext;
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        InvocationContext.SetTenantId(tenantId);
+        ExecutionContext.SetTenantId(tenantId);
         return this;
     }
 
     public NOFTestScope SetTracing(string? traceId, string? spanId)
     {
-        InvocationContext.SetTracingInfo(traceId, spanId);
+        ExecutionContext.SetTracingInfo(traceId, spanId);
         return this;
     }
 
     public NOFTestScope SetUser(ClaimsPrincipal user)
     {
-        UserContext.SetUser(user);
+        ExecutionContext.SetUser(user);
         return this;
     }
 
     public NOFTestScope SetAnonymousUser()
     {
-        UserContext.UnsetUser();
+        ExecutionContext.UnsetUser();
         return this;
     }
 

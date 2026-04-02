@@ -54,10 +54,10 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContext>();
+        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
 
         // Save the original tenant context
-        var originalTenantId = invocationContext.TenantId;
+        var originalTenantId = executionContext.TenantId;
 
         await foreach (var tenant in tenantRepository.FindAllAsync(cancellationToken))
         {
@@ -70,7 +70,7 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
             try
             {
                 // Set the tenant context
-                invocationContext.SetTenantId(tenant.Id);
+                executionContext.SetTenantId(tenant.Id);
                 _logger.LogDebug("Cleaning inbox messages for tenant {TenantId}", tenant.Id);
 
                 // Use the current scope's DbContext, which automatically uses the set tenant context
@@ -99,6 +99,6 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
         }
 
         // Restore the original tenant context
-        invocationContext.SetTenantId(originalTenantId);
+        executionContext.SetTenantId(originalTenantId);
     }
 }

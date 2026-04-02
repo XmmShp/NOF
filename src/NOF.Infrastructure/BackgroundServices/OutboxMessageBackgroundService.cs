@@ -59,17 +59,17 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContext>();
+        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
         var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
         var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 
         // Save the original tenant context
-        var originalTenantId = invocationContext.TenantId;
+        var originalTenantId = executionContext.TenantId;
 
         // Process Host database first (TenantId = null)
         try
         {
-            invocationContext.SetTenantId(null);
+            executionContext.SetTenantId(null);
             _logger.LogDebug("Processing outbox messages for Host database");
 
             var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
@@ -99,7 +99,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             try
             {
                 // Set the tenant context
-                invocationContext.SetTenantId(tenant.Id);
+                executionContext.SetTenantId(tenant.Id);
                 _logger.LogDebug("Processing outbox messages for tenant {TenantId}", tenant.Id);
 
                 // Use the current scope's repository, which automatically uses the set tenant context
@@ -125,7 +125,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
 
         // Restore the original tenant context
-        invocationContext.SetTenantId(originalTenantId);
+        executionContext.SetTenantId(originalTenantId);
     }
 
     private async Task ProcessSingleMessageAsync(

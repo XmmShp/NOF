@@ -1,20 +1,23 @@
 using NOF.Contract;
+using System.Security.Claims;
 
 namespace NOF.Application;
 
 /// <summary>
-/// Default implementation of <see cref="IInvocationContext"/>.
+/// Default implementation of <see cref="IExecutionContext"/>.
 /// </summary>
-public class InvocationContext : IInvocationContext
+public class InvocationContext : IExecutionContext
 {
-    public InvocationContext(IUserContext userContext)
-    {
-        ArgumentNullException.ThrowIfNull(userContext);
-        UserContext = userContext;
-    }
+    public static ClaimsPrincipal Anonymous { get; } = new();
 
     /// <inheritdoc />
-    public IUserContext UserContext { get; }
+    public event Action? StateChanging;
+
+    /// <inheritdoc />
+    public event Action? StateChanged;
+
+    /// <inheritdoc />
+    public ClaimsPrincipal User { get; private set; } = Anonymous;
 
     /// <inheritdoc />
     public string? TenantId { get; private set; }
@@ -27,6 +30,23 @@ public class InvocationContext : IInvocationContext
 
     /// <inheritdoc />
     public string? SpanId { get; private set; }
+
+    /// <inheritdoc />
+    public void SetUser(ClaimsPrincipal user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        StateChanging?.Invoke();
+        User = user;
+        StateChanged?.Invoke();
+    }
+
+    /// <inheritdoc />
+    public void UnsetUser()
+    {
+        StateChanging?.Invoke();
+        User = Anonymous;
+        StateChanged?.Invoke();
+    }
 
     /// <inheritdoc />
     public void SetTenantId(string? tenantId)

@@ -7,23 +7,23 @@ public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutbou
     IAfter<TracingOutboundMiddlewareStep>;
 
 /// <summary>
-/// Outbound middleware that propagates the current <see cref="IInvocationContext.TenantId"/>
+/// Outbound middleware that propagates the current <see cref="IExecutionContext.TenantId"/>
 /// into the <see cref="NOFInfrastructureConstants.Transport.Headers.TenantId"/> header.
 /// </summary>
 public sealed class TenantOutboundMiddleware : IOutboundMiddleware
 {
-    private readonly IInvocationContext _invocationContext;
+    private readonly IExecutionContext _executionContext;
 
-    public TenantOutboundMiddleware(IInvocationContext invocationContext)
+    public TenantOutboundMiddleware(IExecutionContext executionContext)
     {
-        _invocationContext = invocationContext;
+        _executionContext = executionContext;
     }
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrEmpty(_invocationContext.TenantId))
+        if (!string.IsNullOrEmpty(_executionContext.TenantId))
         {
-            context.Headers.TryAdd(NOFInfrastructureConstants.Transport.Headers.TenantId, _invocationContext.TenantId);
+            context.Headers.TryAdd(NOFInfrastructureConstants.Transport.Headers.TenantId, _executionContext.TenantId);
         }
 
         return next(cancellationToken);

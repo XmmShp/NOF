@@ -17,7 +17,7 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
 
         using var scope = host.CreateScope();
-        scope.GetRequiredService<IInvocationContext>().Should().NotBeNull();
+        scope.GetRequiredService<IExecutionContext>().Should().NotBeNull();
         scope.GetRequiredService<IUserContext>().Should().NotBeNull();
     }
 
@@ -33,12 +33,12 @@ public class NOFTestHostTests
             .SetTracing("trace-1", "span-1")
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
 
-        scope.InvocationContext.TenantId.Should().Be("tenant-a");
-        scope.InvocationContext.TraceId.Should().Be("trace-1");
-        scope.InvocationContext.SpanId.Should().Be("span-1");
-        scope.UserContext.Id.Should().Be("user-1");
-        scope.UserContext.Name.Should().Be("Alice");
-        scope.UserContext.Permissions.Should().Contain(["orders.read", "orders.write"]);
+        scope.ExecutionContext.TenantId.Should().Be("tenant-a");
+        scope.ExecutionContext.TraceId.Should().Be("trace-1");
+        scope.ExecutionContext.SpanId.Should().Be("span-1");
+        scope.ExecutionContext.Id.Should().Be("user-1");
+        scope.ExecutionContext.Name.Should().Be("Alice");
+        scope.ExecutionContext.Permissions.Should().Contain(["orders.read", "orders.write"]);
     }
 
     [Fact]

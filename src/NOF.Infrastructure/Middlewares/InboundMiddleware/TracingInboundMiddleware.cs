@@ -13,11 +13,11 @@ public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboun
 /// </summary>
 public sealed class TracingInboundMiddleware : IInboundMiddleware
 {
-    private readonly IInvocationContext _invocationContext;
+    private readonly IExecutionContext _executionContext;
 
-    public TracingInboundMiddleware(IInvocationContext invocationContext)
+    public TracingInboundMiddleware(IExecutionContext executionContext)
     {
-        _invocationContext = invocationContext;
+        _executionContext = executionContext;
     }
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
@@ -25,7 +25,7 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
         // Resolve trace/span IDs from headers
         context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TraceId, out var traceId);
         context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.SpanId, out var spanId);
-        _invocationContext.SetTracingInfo(traceId, spanId);
+        _executionContext.SetTracingInfo(traceId, spanId);
 
         // Create Activity with resolved tracing context
         using var activity = CreateActivity(context, traceId, spanId);

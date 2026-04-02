@@ -26,27 +26,27 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
     where TDbContext : NOFDbContext
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IInvocationContext _invocationContext;
+    private readonly IExecutionContext _executionContext;
     private readonly IDbContextConfigurator _dbContextConfigurator;
     private readonly DbContextFactoryOptions _options;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        IInvocationContext invocationContext,
+        IExecutionContext executionContext,
         IDbContextConfigurator dbContextConfigurator,
         IOptions<DbContextFactoryOptions> options,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
-        _invocationContext = invocationContext;
+        _executionContext = executionContext;
         _dbContextConfigurator = dbContextConfigurator;
         _options = options.Value;
         _logger = logger;
     }
 
     public TDbContext CreateDbContext()
-        => CreateDbContext(_invocationContext.TenantId);
+        => CreateDbContext(_executionContext.TenantId);
 
     public TDbContext CreateDbContext(string? tenantId)
     {

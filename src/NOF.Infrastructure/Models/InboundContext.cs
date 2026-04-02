@@ -22,7 +22,7 @@ public sealed class InboundContext
 
     /// <summary>
     /// Transport-level headers passed from the hosting adapter (HTTP, message bus, etc.).
-    /// These are distinct from <see cref="IInvocationContext.Items"/> which is for
+    /// These are distinct from <see cref="IExecutionContext.Items"/> which is for
     /// cross-cutting application-level state within the invocation scope.
     /// </summary>
     public IDictionary<string, string?> Headers { get; init; } = new Dictionary<string, string?>();

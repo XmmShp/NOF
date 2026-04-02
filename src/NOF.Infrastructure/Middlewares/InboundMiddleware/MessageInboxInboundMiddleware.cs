@@ -16,15 +16,13 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
     private readonly IInboxMessageRepository _inboxMessageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
-    private readonly IInvocationContext _invocationContext;
 
-    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IInvocationContext invocationContext)
+    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger)
     {
         _transactionManager = transactionManager;
         _inboxMessageRepository = inboxMessageRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
-        _invocationContext = invocationContext;
     }
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)

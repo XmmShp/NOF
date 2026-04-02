@@ -12,20 +12,20 @@ namespace NOF.Infrastructure;
 public sealed class DeferredCommandSender : IDeferredCommandSender
 {
     private readonly IOutboxMessageRepository _repository;
-    private readonly IInvocationContext _invocationContext;
+    private readonly IExecutionContext _executionContext;
     private readonly IMessageSerializer _messageSerializer;
 
-    public DeferredCommandSender(IOutboxMessageRepository repository, IInvocationContext invocationContext, IMessageSerializer messageSerializer)
+    public DeferredCommandSender(IOutboxMessageRepository repository, IExecutionContext executionContext, IMessageSerializer messageSerializer)
     {
         _repository = repository;
-        _invocationContext = invocationContext;
+        _executionContext = executionContext;
         _messageSerializer = messageSerializer;
     }
 
     public void Send(ICommand command)
     {
         var currentActivity = Activity.Current;
-        var tenantId = _invocationContext.TenantId;
+        var tenantId = _executionContext.TenantId;
 
         var headers = new Dictionary<string, string?>
         {

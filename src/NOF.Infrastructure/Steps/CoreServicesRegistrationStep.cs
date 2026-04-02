@@ -35,8 +35,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.TryAddScoped<IDeferredCommandSender, DeferredCommandSender>();
         builder.Services.TryAddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
-        builder.Services.TryAddScoped<IUserContext, UserContext>();
-        builder.Services.TryAddScoped<IInvocationContext, InvocationContext>();
+        builder.Services.TryAddScoped<IExecutionContext, InvocationContext>();
         builder.Services.TryAddScoped<ICommandSender, CommandSender>();
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
@@ -44,6 +43,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
         builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+        builder.Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IExecutionContext>());
         builder.Services.AddHostedService<OutboxMessageBackgroundService>();
         builder.Services.AddOptions<OutboxOptions>();
         return ValueTask.CompletedTask;

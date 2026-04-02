@@ -27,8 +27,8 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             builder.Services.ReplaceOrAddScoped(sp =>
             {
                 var factory = sp.GetRequiredService<INOFDbContextFactory<TDbContext>>();
-                var invocationContext = sp.GetRequiredService<IInvocationContext>();
-                return factory.CreateDbContext(invocationContext.TenantId);
+                var executionContext = sp.GetRequiredService<IExecutionContext>();
+                return factory.CreateDbContext(executionContext.TenantId);
             });
             builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
@@ -39,7 +39,7 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
 
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>>(sp => new NOFDbContextFactory<TDbContext>(
                 sp,
-                sp.GetRequiredService<IInvocationContext>(),
+                sp.GetRequiredService<IExecutionContext>(),
                 sp.GetRequiredService<IDbContextConfigurator>(),
                 sp.GetRequiredService<IOptions<DbContextFactoryOptions>>(),
                 sp.GetRequiredService<ILogger<NOFDbContextFactory<TDbContext>>>()));

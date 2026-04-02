@@ -237,16 +237,16 @@ public class InMemoryPersistenceTests
         using var services = CreateServiceProvider();
         using (var hostScope = services.CreateScope())
         {
-            var hostInvocationContext = hostScope.ServiceProvider.GetRequiredService<IInvocationContext>();
-            hostInvocationContext.SetTenantId(null);
+            var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
+            hostExecutionContext.SetTenantId(null);
             var hostRepository = hostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
         }
 
         using (var tenantScope = services.CreateScope())
         {
-            var tenantInvocationContext = tenantScope.ServiceProvider.GetRequiredService<IInvocationContext>();
-            tenantInvocationContext.SetTenantId("tenant-a");
+            var tenantExecutionContext = tenantScope.ServiceProvider.GetRequiredService<IExecutionContext>();
+            tenantExecutionContext.SetTenantId("tenant-a");
             var tenantRepository = tenantScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             tenantRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
             (await tenantRepository.FindAsync("corr", "def"))!.State.Should().Be(2);
@@ -254,8 +254,8 @@ public class InMemoryPersistenceTests
 
         using (var verifyHostScope = services.CreateScope())
         {
-            var verifyHostInvocationContext = verifyHostScope.ServiceProvider.GetRequiredService<IInvocationContext>();
-            verifyHostInvocationContext.SetTenantId(null);
+            var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
+            verifyHostExecutionContext.SetTenantId(null);
             var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             (await verifyHostRepository.FindAsync("corr", "def"))!.State.Should().Be(1);
         }
@@ -300,9 +300,9 @@ public class InMemoryPersistenceTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<MemoryPersistenceStore>();
-        services.AddScoped<IUserContext, UserContext>();
-        services.AddScoped<IInvocationContext, InvocationContext>();
-        services.AddScoped(sp => sp.GetRequiredService<MemoryPersistenceStore>().CreateContext(sp.GetRequiredService<IInvocationContext>().TenantId));
+        services.AddScoped<IExecutionContext, InvocationContext>();
+        services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IExecutionContext>());
+        services.AddScoped(sp => sp.GetRequiredService<MemoryPersistenceStore>().CreateContext(sp.GetRequiredService<IExecutionContext>().TenantId));
         services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();
         services.AddScoped<ITransactionManager, MemoryTransactionManager>();
         services.AddScoped<IInboxMessageRepository, MemoryInboxMessageRepository>();
