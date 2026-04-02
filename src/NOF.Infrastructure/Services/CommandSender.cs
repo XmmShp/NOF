@@ -25,12 +25,12 @@ public sealed class CommandSender : ICommandSender
         var context = new OutboundContext
         {
             Message = command,
-            ExecutionContext = _executionContext
+            ExecutionContext = (IExecutionContext)_executionContext.Clone()
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, _executionContext, ct);
+            await _rider.SendAsync(command, context.ExecutionContext, ct);
         }, cancellationToken);
     }
 }

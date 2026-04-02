@@ -25,12 +25,12 @@ public sealed class NotificationPublisher : INotificationPublisher
         var context = new OutboundContext
         {
             Message = notification,
-            ExecutionContext = _executionContext
+            ExecutionContext = (IExecutionContext)_executionContext.Clone()
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.PublishAsync(notification, _executionContext, ct);
+            await _rider.PublishAsync(notification, context.ExecutionContext, ct);
         }, cancellationToken);
     }
 }

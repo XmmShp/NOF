@@ -300,71 +300,26 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
         };
 
         var serviceType = ep.ServiceType.ToDisplayString();
+        var requestType = ep.RequestType?.ToDisplayString();
         var routeParams = RpcServiceHelpers.ExtractRouteParameters(ep.Route);
         var hasRouteParams = routeParams.Count > 0;
+        var isGet = ep.Method == HttpVerb.Get;
 
-        if (ep.RequestType == null)
+        var lambdaParams = new List<string>();
+
+        if (requestType != null)
         {
-            var lambdaParams = new List<string>();
-            foreach (var param in routeParams)
-            {
-                lambdaParams.Add($"string {param}");
-            }
-            lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service");
-            if (ep.ServiceHasCancellationToken)
-            {
-                lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
-            }
-            var lambdaParamStr = string.Join(", ", lambdaParams);
-
-            var serviceCall = ep.ServiceHasCancellationToken
-                ? $"service.{ep.ServiceMethodName}(cancellationToken)"
-                : $"service.{ep.ServiceMethodName}()";
-            var serviceInvocation = ep.ReturnInfo.Kind switch
-            {
-                ServiceReturnKind.TaskOfResult => $"await {serviceCall}",
-                ServiceReturnKind.TaskOfResultOfT => $"await {serviceCall}",
-                _ => throw new InvalidOperationException("Unsupported service return kind.")
-            };
-
-            sb.Append($"            app.{mapMethod}({routeExpression},");
-            sb.AppendLine();
-            sb.AppendLine($"                async ({lambdaParamStr}) =>");
-            sb.AppendLine("                {");
-            EmitEndpointResponse(sb, ep.ReturnInfo.Kind, serviceInvocation);
-            sb.Append("                })");
-        }
-        else
-        {
-            var requestType = ep.RequestType.ToDisplayString();
-            var serviceCall = ep.ServiceHasCancellationToken
-                ? $"service.{ep.ServiceMethodName}(request, cancellationToken)"
-                : $"service.{ep.ServiceMethodName}(request)";
-            var serviceInvocation = ep.ReturnInfo.Kind switch
-            {
-                ServiceReturnKind.TaskOfResult => $"await {serviceCall}",
-                ServiceReturnKind.TaskOfResultOfT => $"await {serviceCall}",
-                _ => throw new InvalidOperationException("Unsupported service return kind.")
-            };
-
-            var isGet = ep.Method == HttpVerb.Get;
             if (isGet || !hasRouteParams)
             {
                 var fromAttr = isGet ? "[global::Microsoft.AspNetCore.Http.AsParametersAttribute]" : "[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute]";
-                sb.Append($"            app.{mapMethod}({routeExpression},");
-                sb.AppendLine();
-                sb.AppendLine($"                async ({fromAttr} {requestType} request, [global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service{(ep.ServiceHasCancellationToken ? ", global::System.Threading.CancellationToken cancellationToken" : string.Empty)}) =>");
-                sb.AppendLine("                {");
-                EmitEndpointResponse(sb, ep.ReturnInfo.Kind, serviceInvocation);
-                sb.Append("                })");
+                lambdaParams.Add($"{fromAttr} {requestType} request");
             }
             else
             {
-                var allProperties = RpcServiceHelpers.GetAllPublicProperties(ep.RequestType);
+                var allProperties = RpcServiceHelpers.GetAllPublicProperties(ep.RequestType!);
                 var (routeParamProps, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
                 var hasBody = bodyProps.Count > 0;
 
-                var lambdaParams = new List<string>();
                 foreach (var (_, prop) in routeParamProps)
                 {
                     lambdaParams.Add($"{prop.Type.ToDisplayString()} {ToCamelCase(prop.Name)}");
@@ -374,95 +329,167 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
                 {
                     lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromBodyAttribute] {bodyDtoName} __body__");
                 }
-
-                lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service");
-                if (ep.ServiceHasCancellationToken)
-                {
-                    lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
-                }
-                var lambdaParamStr = string.Join(", ", lambdaParams);
-
-                sb.Append($"            app.{mapMethod}({routeExpression},");
-                sb.AppendLine();
-                sb.AppendLine($"                async ({lambdaParamStr}) =>");
-                sb.AppendLine("                {");
-
-                var bestCtor = FindBestConstructor(ep.RequestType, allProperties);
-                var ctorParamNames = bestCtor != null
-                    ? new HashSet<string>(bestCtor.Parameters.Select(p => p.Name), StringComparer.OrdinalIgnoreCase)
-                    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                var ctorArgStr = "";
-                if (bestCtor != null)
-                {
-                    var ctorArgs = new List<string>();
-                    foreach (var ctorParam in bestCtor.Parameters)
-                    {
-                        var routeMatch = routeParamProps.FirstOrDefault(rp =>
-                            string.Equals(rp.Property.Name, ctorParam.Name, StringComparison.OrdinalIgnoreCase));
-                        if (routeMatch.Property != null)
-                        {
-                            ctorArgs.Add(ToCamelCase(routeMatch.Property.Name));
-                        }
-                        else
-                        {
-                            var bodyMatch = bodyProps.FirstOrDefault(bp =>
-                                string.Equals(bp.Name, ctorParam.Name, StringComparison.OrdinalIgnoreCase));
-                            ctorArgs.Add(bodyMatch != null ? $"__body__.{bodyMatch.Name}" : "default");
-                        }
-                    }
-
-                    ctorArgStr = string.Join(", ", ctorArgs);
-                }
-
-                var initLines = new List<string>();
-                foreach (var (_, prop) in routeParamProps)
-                {
-                    if (!ctorParamNames.Contains(prop.Name))
-                    {
-                        initLines.Add($"                        {prop.Name} = {ToCamelCase(prop.Name)}");
-                    }
-                }
-
-                foreach (var prop in bodyProps)
-                {
-                    if (!ctorParamNames.Contains(prop.Name))
-                    {
-                        initLines.Add($"                        {prop.Name} = __body__.{prop.Name}");
-                    }
-                }
-
-                if (initLines.Count > 0)
-                {
-                    sb.AppendLine($"                    var request = new {requestType}({ctorArgStr})");
-                    sb.AppendLine("                    {");
-                    for (var i = 0; i < initLines.Count; i++)
-                    {
-                        sb.Append(initLines[i]);
-                        sb.AppendLine(i < initLines.Count - 1 ? "," : "");
-                    }
-
-                    sb.AppendLine("                    };");
-                }
-                else
-                {
-                    sb.AppendLine($"                    var request = new {requestType}({ctorArgStr});");
-                }
-
-                var serviceCallForConstructed = ep.ServiceHasCancellationToken
-                    ? $"service.{ep.ServiceMethodName}(request, cancellationToken)"
-                    : $"service.{ep.ServiceMethodName}(request)";
-                var serviceInvocationForConstructed = ep.ReturnInfo.Kind switch
-                {
-                    ServiceReturnKind.TaskOfResult => $"await {serviceCallForConstructed}",
-                    ServiceReturnKind.TaskOfResultOfT => $"await {serviceCallForConstructed}",
-                    _ => throw new InvalidOperationException("Unsupported service return kind.")
-                };
-
-                EmitEndpointResponse(sb, ep.ReturnInfo.Kind, serviceInvocationForConstructed);
-                sb.Append("                })");
             }
         }
+        else
+        {
+            foreach (var param in routeParams)
+            {
+                lambdaParams.Add($"string {param}");
+            }
+        }
+
+        lambdaParams.Add("global::Microsoft.AspNetCore.Http.HttpContext httpContext");
+        if (ep.ServiceHasCancellationToken)
+        {
+            lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
+        }
+        var lambdaParamStr = string.Join(", ", lambdaParams);
+
+        sb.Append($"            app.{mapMethod}({routeExpression},");
+        sb.AppendLine();
+        sb.AppendLine($"                async ({lambdaParamStr}) =>");
+        sb.AppendLine("                {");
+
+        if (requestType != null && hasRouteParams && !isGet)
+        {
+            var allProperties = RpcServiceHelpers.GetAllPublicProperties(ep.RequestType!);
+            var (routeParamProps, bodyProps) = SplitRouteAndBodyProps(allProperties, routeParams);
+            var bestCtor = FindBestConstructor(ep.RequestType!, allProperties);
+            var ctorParamNames = bestCtor != null
+                ? new HashSet<string>(bestCtor.Parameters.Select(p => p.Name), StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var ctorArgStr = "";
+            if (bestCtor != null)
+            {
+                var ctorArgs = new List<string>();
+                foreach (var ctorParam in bestCtor.Parameters)
+                {
+                    var routeMatch = routeParamProps.FirstOrDefault(rp =>
+                        string.Equals(rp.Property.Name, ctorParam.Name, StringComparison.OrdinalIgnoreCase));
+                    if (routeMatch.Property != null)
+                    {
+                        ctorArgs.Add(ToCamelCase(routeMatch.Property.Name));
+                    }
+                    else
+                    {
+                        var bodyMatch = bodyProps.FirstOrDefault(bp =>
+                            string.Equals(bp.Name, ctorParam.Name, StringComparison.OrdinalIgnoreCase));
+                        ctorArgs.Add(bodyMatch != null ? $"__body__.{bodyMatch.Name}" : "default");
+                    }
+                }
+
+                ctorArgStr = string.Join(", ", ctorArgs);
+            }
+
+            var initLines = new List<string>();
+            foreach (var (_, prop) in routeParamProps)
+            {
+                if (!ctorParamNames.Contains(prop.Name))
+                {
+                    initLines.Add($"                        {prop.Name} = {ToCamelCase(prop.Name)}");
+                }
+            }
+
+            foreach (var prop in bodyProps)
+            {
+                if (!ctorParamNames.Contains(prop.Name))
+                {
+                    initLines.Add($"                        {prop.Name} = __body__.{prop.Name}");
+                }
+            }
+
+            if (initLines.Count > 0)
+            {
+                sb.AppendLine($"                    var request = new {requestType}({ctorArgStr})");
+                sb.AppendLine("                    {");
+                for (var i = 0; i < initLines.Count; i++)
+                {
+                    sb.Append(initLines[i]);
+                    sb.AppendLine(i < initLines.Count - 1 ? "," : "");
+                }
+
+                sb.AppendLine("                    };");
+            }
+            else
+            {
+                sb.AppendLine($"                    var request = new {requestType}({ctorArgStr});");
+            }
+        }
+
+        var messageVarName = requestType != null ? "request" : "new object()";
+
+        sb.AppendLine("                    await using var scope = httpContext.RequestServices.CreateAsyncScope();");
+        sb.AppendLine("                    var sp = scope.ServiceProvider;");
+        sb.AppendLine("                    var inboundPipeline = sp.GetRequiredService<global::NOF.Infrastructure.IInboundPipelineExecutor>();");
+        sb.AppendLine("                    var outboundPipeline = sp.GetRequiredService<global::NOF.Contract.IOutboundPipelineExecutor>();");
+        sb.AppendLine("                    var executionContext = sp.GetRequiredService<global::NOF.Contract.IExecutionContext>();");
+        sb.AppendLine();
+
+        sb.AppendLine("                    foreach (var header in httpContext.Request.Headers)");
+        sb.AppendLine("                    {");
+        sb.AppendLine("                        executionContext[header.Key] = header.Value.FirstOrDefault();");
+        sb.AppendLine("                    }");
+        sb.AppendLine();
+
+        sb.AppendLine($"                    var message = {messageVarName};");
+        sb.AppendLine("                    var outboundContext = new global::NOF.Contract.OutboundContext");
+        sb.AppendLine("                    {");
+        sb.AppendLine("                        Message = message,");
+        sb.AppendLine("                        ExecutionContext = (global::NOF.Contract.IExecutionContext)executionContext.Clone()");
+        sb.AppendLine("                    };");
+        sb.AppendLine();
+
+        sb.AppendLine("                    global::NOF.Contract.IResult? result = null;");
+        sb.AppendLine();
+
+        sb.AppendLine("                    await outboundPipeline.ExecuteAsync(outboundContext, async (ct) =>");
+        sb.AppendLine("                    {");
+        sb.AppendLine("                        var inboundContext = new global::NOF.Infrastructure.InboundContext");
+        sb.AppendLine("                        {");
+        sb.AppendLine("                            Message = message,");
+        sb.AppendLine($"                            HandlerType = typeof({serviceType}),");
+        sb.AppendLine("                            ExecutionContext = outboundContext.ExecutionContext");
+        sb.AppendLine("                        };");
+        sb.AppendLine();
+
+        sb.AppendLine("                        await inboundPipeline.ExecuteAsync(inboundContext, async (ct2) =>");
+        sb.AppendLine("                        {");
+
+        sb.AppendLine($"                            var service = sp.GetRequiredService<{serviceType}>();");
+
+        var serviceCall = "";
+        if (requestType != null)
+        {
+            serviceCall = ep.ServiceHasCancellationToken
+                ? $"service.{ep.ServiceMethodName}(request, ct2)"
+                : $"service.{ep.ServiceMethodName}(request)";
+        }
+        else
+        {
+            serviceCall = ep.ServiceHasCancellationToken
+                ? $"service.{ep.ServiceMethodName}(ct2)"
+                : $"service.{ep.ServiceMethodName}()";
+        }
+
+        var serviceInvocation = ep.ReturnInfo.Kind switch
+        {
+            ServiceReturnKind.TaskOfResult => $"await {serviceCall}",
+            ServiceReturnKind.TaskOfResultOfT => $"await {serviceCall}",
+            _ => throw new InvalidOperationException("Unsupported service return kind.")
+        };
+
+        sb.AppendLine($"                            var serviceResult = {serviceInvocation};");
+        sb.AppendLine("                            inboundContext.Response = serviceResult;");
+        sb.AppendLine("                            result = serviceResult;");
+        sb.AppendLine("                        }, ct).ConfigureAwait(false);");
+        sb.AppendLine("                    }, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine();
+
+        EmitEndpointResponse(sb, ep.ReturnInfo.Kind, "result!", "                    ");
+
+        sb.Append("                })");
 
         if (!string.IsNullOrEmpty(ep.DisplayName))
         {
@@ -532,10 +559,10 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void EmitEndpointResponse(StringBuilder sb, ServiceReturnKind returnKind, string invocation)
+    private static void EmitEndpointResponse(StringBuilder sb, ServiceReturnKind returnKind, string invocation, string indent = "                    ")
     {
-        sb.AppendLine($"                    var response = {invocation};");
-        sb.AppendLine("                    return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
+        sb.AppendLine($"{indent}var response = {invocation};");
+        sb.AppendLine($"{indent}return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
     }
 
     private static IMethodSymbol? FindBestConstructor(INamedTypeSymbol typeSymbol, List<IPropertySymbol> allProperties)

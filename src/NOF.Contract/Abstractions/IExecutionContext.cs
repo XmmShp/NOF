@@ -6,7 +6,7 @@ namespace NOF.Contract;
 /// Represents the context of a logical execution (e.g., HTTP request, command execution,
 /// event handling, background task). Provides ambient access to headers, tenant, and tracing metadata.
 /// </summary>
-public interface IExecutionContext : IDictionary<string, string?>
+public interface IExecutionContext : IDictionary<string, string?>, ICloneable
 {
 }
 
@@ -17,6 +17,16 @@ public sealed class ExecutionContext : Dictionary<string, string?>, IExecutionCo
 {
     public ExecutionContext() : base(StringComparer.OrdinalIgnoreCase)
     {
+    }
+
+    public object Clone()
+    {
+        var copy = new ExecutionContext();
+        foreach (var kvp in this)
+        {
+            copy[kvp.Key] = kvp.Value;
+        }
+        return copy;
     }
 }
 

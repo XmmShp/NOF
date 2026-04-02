@@ -86,12 +86,18 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine(classDecl);
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
+        sb.AppendLine("        private readonly global::NOF.Contract.IOutboundPipelineExecutor _outboundPipeline;");
+        sb.AppendLine("        private readonly global::NOF.Contract.IExecutionContext _executionContext;");
         sb.AppendLine("        private static readonly global::System.Text.Json.JsonSerializerOptions _jsonOptions = global::System.Text.Json.JsonSerializerOptions.NOF;");
         sb.AppendLine();
-        sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient)");
+        sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient, global::NOF.Contract.IOutboundPipelineExecutor outboundPipeline, global::NOF.Contract.IExecutionContext executionContext)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(httpClient);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(outboundPipeline);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(executionContext);");
         sb.AppendLine("            _httpClient = httpClient;");
+        sb.AppendLine("            _outboundPipeline = outboundPipeline;");
+        sb.AppendLine("            _executionContext = executionContext;");
         sb.AppendLine("        }");
         sb.AppendLine();
 
@@ -204,6 +210,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         var hasRouteParams = routeParamProperties.Count > 0;
         var hasCancellationToken = method.Method.Parameters.Any(p => RpcServiceHelpers.IsCancellationToken(p.Type));
         var cancellationTokenArgument = hasCancellationToken ? "cancellationToken" : "global::System.Threading.CancellationToken.None";
+        var messageVarName = endpoint.RequestType != null ? "request" : "new object()";
 
         sb.AppendLine("        /// <inheritdoc />");
         if (endpoint.RequestType != null)
@@ -217,21 +224,33 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
         sb.AppendLine("        {");
 
+        sb.AppendLine($"            var message = {messageVarName};");
+        sb.AppendLine("            var context = new global::NOF.Contract.OutboundContext");
+        sb.AppendLine("            {");
+        sb.AppendLine("                Message = message,");
+        sb.AppendLine("                ExecutionContext = (global::NOF.Contract.IExecutionContext)_executionContext.Clone()");
+        sb.AppendLine("            };");
+        sb.AppendLine();
+        sb.AppendLine("            global::NOF.Contract.IResult? result = null;");
+        sb.AppendLine();
+        sb.AppendLine("            await _outboundPipeline.ExecuteAsync(context, async (ct) =>");
+        sb.AppendLine("            {");
+
         if (hasRouteParams)
         {
             if (endpoint.RequestType != null)
             {
                 var routeExpression = BuildRouteInterpolation(sb, endpoint.Route, routeParamProperties);
-                sb.AppendLine($"            var endpoint = {routeExpression};");
+                sb.AppendLine($"                var endpoint = {routeExpression};");
             }
             else
             {
-                sb.AppendLine($"            var endpoint = \"{endpoint.Route}\";");
+                sb.AppendLine($"                var endpoint = \"{endpoint.Route}\";");
             }
         }
         else
         {
-            sb.AppendLine($"            var endpoint = \"{endpoint.Route}\";");
+            sb.AppendLine($"                var endpoint = \"{endpoint.Route}\";");
         }
 
         if (endpoint.RequestType != null)
@@ -241,50 +260,94 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
             {
                 if (hasRouteParams && nonRouteProperties.Count > 0)
                 {
-                    sb.AppendLine($"            var body = new global::System.Collections.Generic.Dictionary<string, object?>({nonRouteProperties.Count});");
+                    sb.AppendLine($"                var body = new global::System.Collections.Generic.Dictionary<string, object?>({nonRouteProperties.Count});");
                     foreach (var prop in nonRouteProperties)
                     {
-                        sb.AppendLine($"            body[\"{prop.Name}\"] = request.{prop.Name};");
+                        sb.AppendLine($"                body[\"{prop.Name}\"] = request.{prop.Name};");
                     }
-                    sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
-                    sb.AppendLine("            httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(body, options: _jsonOptions);");
+                    sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
+                    sb.AppendLine("                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(body, options: _jsonOptions);");
                 }
                 else if (hasRouteParams && nonRouteProperties.Count == 0)
                 {
-                    sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
+                    sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
                 }
                 else
                 {
-                    sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
-                    sb.AppendLine($"            httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request, typeof({requestType}), options: _jsonOptions);");
+                    sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
+                    sb.AppendLine($"                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request, typeof({requestType}), options: _jsonOptions);");
                 }
             }
             else
             {
                 if (nonRouteProperties.Count > 0)
                 {
-                    sb.AppendLine("            var queryParts = new global::System.Collections.Generic.List<string>();");
+                    sb.AppendLine("                var queryParts = new global::System.Collections.Generic.List<string>();");
                     foreach (var prop in nonRouteProperties)
                     {
-                        EmitQueryParamAppend(sb, prop);
+                        EmitQueryParamAppend(sb, prop, indent: "                ");
                     }
-                    sb.AppendLine("            if (queryParts.Count > 0)");
-                    sb.AppendLine("            {");
-                    sb.AppendLine("                endpoint = endpoint + \"?\" + string.Join(\"&\", queryParts);");
-                    sb.AppendLine("            }");
+                    sb.AppendLine("                if (queryParts.Count > 0)");
+                    sb.AppendLine("                {");
+                    sb.AppendLine("                    endpoint = endpoint + \"?\" + string.Join(\"&\", queryParts);");
+                    sb.AppendLine("                }");
                 }
 
-                sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
+                sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
             }
         }
         else
         {
-            sb.AppendLine("            using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
+            sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
         }
 
-        sb.AppendLine($"            using var response = await _httpClient.SendAsync(httpRequest, {cancellationTokenArgument}).ConfigureAwait(false);");
+        sb.AppendLine();
+        sb.AppendLine("                foreach (var kvp in context.ExecutionContext)");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    if (kvp.Value != null)");
+        sb.AppendLine("                    {");
+        sb.AppendLine("                        httpRequest.Headers.Remove(kvp.Key);");
+        sb.AppendLine("                        httpRequest.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);");
+        sb.AppendLine("                    }");
+        sb.AppendLine("                }");
+        sb.AppendLine();
+        sb.AppendLine($"                using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);");
+        sb.AppendLine("                response.EnsureSuccessStatusCode();");
+        sb.AppendLine();
 
-        EmitResponseHandling(sb, returnKind, returnValueType, cancellationTokenArgument);
+        if (returnKind == ServiceReturnKind.TaskOfResult)
+        {
+            sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result>(response.Content, _jsonOptions, ct);");
+            sb.AppendLine("                result = apiResponse!;");
+            sb.AppendLine("                context.Response = result;");
+        }
+        else if (returnKind == ServiceReturnKind.TaskOfResultOfT)
+        {
+            sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<global::NOF.Contract.Result<{returnValueType}>>(response.Content, _jsonOptions, ct);");
+            sb.AppendLine("                result = apiResponse!;");
+            sb.AppendLine("                context.Response = result;");
+        }
+        else
+        {
+            sb.AppendLine("                throw new global::System.InvalidOperationException(\"Unsupported service return kind.\");");
+        }
+
+        sb.AppendLine("            }, " + cancellationTokenArgument + ").ConfigureAwait(false);");
+        sb.AppendLine();
+
+        if (returnKind == ServiceReturnKind.TaskOfResult)
+        {
+            sb.AppendLine("            return (global::NOF.Contract.Result)result!;");
+        }
+        else if (returnKind == ServiceReturnKind.TaskOfResultOfT)
+        {
+            sb.AppendLine($"            return (global::NOF.Contract.Result<{returnValueType}>)result!;");
+        }
+        else
+        {
+            sb.AppendLine("            throw new global::System.InvalidOperationException(\"Unsupported service return kind.\");");
+        }
+
         sb.AppendLine("        }");
         sb.AppendLine();
     }
@@ -309,22 +372,24 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
     }
 
-    private static void EmitQueryParamAppend(StringBuilder sb, IPropertySymbol prop)
+    private static void EmitQueryParamAppend(StringBuilder sb, IPropertySymbol prop, string indent = "            ")
     {
+        var indent1 = indent;
+        var indent2 = indent + "    ";
         var propName = prop.Name;
         var isNullable = prop.Type.NullableAnnotation == NullableAnnotation.Annotated
                          || prop.Type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
         if (isNullable)
         {
-            sb.AppendLine($"            if (request.{propName} is not null)");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                queryParts.Add(global::System.Uri.EscapeDataString(\"{propName}\") + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, true)}));");
-            sb.AppendLine("            }");
+            sb.AppendLine($"{indent1}if (request.{propName} is not null)");
+            sb.AppendLine($"{indent1}{{");
+            sb.AppendLine($"{indent2}queryParts.Add(global::System.Uri.EscapeDataString(\"{propName}\") + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, true)}));");
+            sb.AppendLine($"{indent1}}}");
         }
         else
         {
-            sb.AppendLine($"            queryParts.Add(global::System.Uri.EscapeDataString(\"{propName}\") + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, false)}));");
+            sb.AppendLine($"{indent1}queryParts.Add(global::System.Uri.EscapeDataString(\"{propName}\") + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, false)}));");
         }
     }
 
