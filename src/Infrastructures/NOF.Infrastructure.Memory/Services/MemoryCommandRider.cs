@@ -37,13 +37,19 @@ public sealed class MemoryCommandRider : ICommandRider
         await using var scope = _scopeFactory.CreateAsyncScope();
         var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
         var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
+        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+        if (headers is not null)
+        {
+            foreach (var (key, value) in headers)
+            {
+                executionContext.Headers[key] = value;
+            }
+        }
         var context = new InboundContext
         {
             Message = command,
             HandlerType = resolved.HandlerType,
-            Headers = headers is not null
-                ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            ExecutionContext = executionContext
         };
 
         await pipeline.ExecuteAsync(context,

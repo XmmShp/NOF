@@ -106,9 +106,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
         headers = new Dictionary<string, string?>(headers);
-        headers.TryAdd(NOFInfrastructureConstants.Transport.Headers.MessageId, messageId.ToString());
-        headers.TryAdd(NOFInfrastructureConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
-        headers.TryAdd(NOFInfrastructureConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
+        headers.TryAdd(NOFApplicationConstants.Transport.Headers.MessageId, messageId.ToString());
+        headers.TryAdd(NOFApplicationConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
+        headers.TryAdd(NOFApplicationConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
 
         if (activity is { IsAllDataRequested: true })
         {
@@ -116,7 +116,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, payload.GetType().Name);
             activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
             activity.SetTag("OutboxMessageId", message.Id);
-            if (headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var tenantId))
+            if (headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId))
             {
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
             }
@@ -239,8 +239,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo);
 
         return headers is not null
-            && headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var tenantId)
-                ? NOFInfrastructureConstants.Tenant.NormalizeTenantId(tenantId)
-                : NOFInfrastructureConstants.Tenant.HostId;
+            && headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId)
+                ? NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId)
+                : NOFApplicationConstants.Tenant.HostId;
     }
 }

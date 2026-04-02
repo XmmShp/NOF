@@ -28,15 +28,21 @@ public sealed class MemoryNotificationRider : INotificationRider
         var handlers = scope.ServiceProvider.GetKeyedServices<INotificationHandler>(NotificationHandlerKey.Of(notificationType));
         var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
 
+        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+        if (headers is not null)
+        {
+            foreach (var (key, value) in headers)
+            {
+                executionContext.Headers[key] = value;
+            }
+        }
         foreach (var handler in handlers)
         {
             var context = new InboundContext
             {
                 Message = notification,
                 HandlerType = handler.GetType(),
-                Headers = headers is not null
-                    ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                ExecutionContext = executionContext
             };
 
             await pipeline.ExecuteAsync(context,

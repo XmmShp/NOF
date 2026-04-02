@@ -46,7 +46,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     public TDbContext CreateDbContext(string tenantId)
     {
-        tenantId = NOF.Infrastructure.NOFInfrastructureConstants.Tenant.NormalizeTenantId(tenantId);
+        tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
 
         var extension = new NOFTenantDbContextOptionsExtension { TenantId = tenantId };

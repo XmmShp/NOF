@@ -11,26 +11,33 @@ public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
     private readonly IOutboundPipelineExecutor _outboundPipeline;
+    private readonly IExecutionContext _executionContext;
 
-    public CommandSender(ICommandRider rider, IOutboundPipelineExecutor outboundPipeline)
+    public CommandSender(ICommandRider rider, IOutboundPipelineExecutor outboundPipeline, IExecutionContext executionContext)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
+        _executionContext = executionContext;
     }
 
     public async Task SendAsync(ICommand command, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
     {
+        if (headers is not null)
+        {
+            foreach (var (key, value) in headers)
+            {
+                _executionContext.Headers[key] = value;
+            }
+        }
         var context = new OutboundContext
         {
             Message = command,
-            Headers = headers is not null
-                ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            ExecutionContext = _executionContext
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, context.Headers, ct);
+            await _rider.SendAsync(command, _executionContext.Headers, ct);
         }, cancellationToken);
     }
 }

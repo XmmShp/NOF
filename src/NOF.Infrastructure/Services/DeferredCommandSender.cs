@@ -25,11 +25,11 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
     public void Send(ICommand command)
     {
         var currentActivity = Activity.Current;
-        var tenantId = NOFInfrastructureConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
+        var tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFInfrastructureConstants.Transport.Headers.TenantId] = tenantId
+            [NOFApplicationConstants.Transport.Headers.TenantId] = tenantId
         };
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var typeName = TypeRegistry.Register(command.GetType());

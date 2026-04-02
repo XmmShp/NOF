@@ -35,7 +35,7 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.TryAddScoped<IDeferredCommandSender, DeferredCommandSender>();
         builder.Services.TryAddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
-        builder.Services.TryAddScoped<IExecutionContext, InvocationContext>();
+        builder.Services.TryAddScoped<IExecutionContext, ExecutionContext>();
         builder.Services.TryAddScoped<ICommandSender, CommandSender>();
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();

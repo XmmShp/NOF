@@ -31,10 +31,10 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
 
         try
         {
-            context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.MessageId, out var messageIdStr);
+            context.ExecutionContext.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
 
-            context.Headers[NOFInfrastructureConstants.Transport.Headers.MessageId] = messageId.ToString();
+            context.ExecutionContext.Headers[NOFApplicationConstants.Transport.Headers.MessageId] = messageId.ToString();
 
             var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
             if (messageExists)

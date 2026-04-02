@@ -23,12 +23,21 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
         // Resolve trace/span IDs from headers
-        context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TraceId, out var traceId);
-        context.Headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.SpanId, out var spanId);
-        _executionContext.SetTracingInfo(traceId, spanId);
+        context.ExecutionContext.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TraceId, out var traceId);
+        context.ExecutionContext.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.SpanId, out var spanId);
 
         // Create Activity with resolved tracing context
         using var activity = CreateActivity(context, traceId, spanId);
+
+        // Update ExecutionContext with current Activity's trace and span IDs
+        if (activity is not null)
+        {
+            _executionContext.SetTracingInfo(new TracingInfo(activity.TraceId.ToString(), activity.SpanId.ToString()));
+        }
+        else if (traceId is not null && spanId is not null)
+        {
+            _executionContext.SetTracingInfo(new TracingInfo(traceId, spanId));
+        }
 
         if (activity is { IsAllDataRequested: true })
         {

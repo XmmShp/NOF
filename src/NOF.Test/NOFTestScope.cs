@@ -27,13 +27,16 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        ExecutionContext.SetTenantId(NOF.Infrastructure.NOFInfrastructureConstants.Tenant.NormalizeTenantId(tenantId));
+        ExecutionContext.SetTenantId(NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId));
         return this;
     }
 
     public NOFTestScope SetTracing(string? traceId, string? spanId)
     {
-        ExecutionContext.SetTracingInfo(traceId, spanId);
+        if (traceId is not null && spanId is not null)
+        {
+            ExecutionContext.SetTracingInfo(new TracingInfo(traceId, spanId));
+        }
         return this;
     }
 

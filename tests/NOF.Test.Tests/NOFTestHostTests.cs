@@ -34,8 +34,9 @@ public class NOFTestHostTests
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
 
         scope.ExecutionContext.TenantId.Should().Be("tenant-a");
-        scope.ExecutionContext.TraceId.Should().Be("trace-1");
-        scope.ExecutionContext.SpanId.Should().Be("span-1");
+        scope.ExecutionContext.TracingInfo.Should().NotBeNull();
+        scope.ExecutionContext.TracingInfo!.TraceId.Should().Be("trace-1");
+        scope.ExecutionContext.TracingInfo!.SpanId.Should().Be("span-1");
         scope.ExecutionContext.Id.Should().Be("user-1");
         scope.ExecutionContext.Name.Should().Be("Alice");
         scope.ExecutionContext.Permissions.Should().Contain(["orders.read", "orders.write"]);

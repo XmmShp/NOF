@@ -1,3 +1,5 @@
+using NOF.Application;
+
 namespace NOF.Infrastructure;
 
 /// <summary>Assigns a unique message ID to outbound messages.</summary>
@@ -12,7 +14,7 @@ public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
 {
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        context.Headers.TryAdd(NOFInfrastructureConstants.Transport.Headers.MessageId, Guid.NewGuid().ToString());
+        context.ExecutionContext.Headers.TryAdd(NOFApplicationConstants.Transport.Headers.MessageId, Guid.NewGuid().ToString());
         return next(cancellationToken);
     }
 }

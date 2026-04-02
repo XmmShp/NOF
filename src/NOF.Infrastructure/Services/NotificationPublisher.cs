@@ -11,26 +11,33 @@ public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
     private readonly IOutboundPipelineExecutor _outboundPipeline;
+    private readonly IExecutionContext _executionContext;
 
-    public NotificationPublisher(INotificationRider rider, IOutboundPipelineExecutor outboundPipeline)
+    public NotificationPublisher(INotificationRider rider, IOutboundPipelineExecutor outboundPipeline, IExecutionContext executionContext)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
+        _executionContext = executionContext;
     }
 
     public async Task PublishAsync(INotification notification, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
     {
+        if (headers is not null)
+        {
+            foreach (var (key, value) in headers)
+            {
+                _executionContext.Headers[key] = value;
+            }
+        }
         var context = new OutboundContext
         {
             Message = notification,
-            Headers = headers is not null
-                ? new Dictionary<string, string?>(headers, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            ExecutionContext = _executionContext
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.PublishAsync(notification, context.Headers, ct);
+            await _rider.PublishAsync(notification, _executionContext.Headers, ct);
         }, cancellationToken);
     }
 }

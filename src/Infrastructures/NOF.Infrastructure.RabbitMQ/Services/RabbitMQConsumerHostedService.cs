@@ -179,11 +179,19 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
                 var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
                 var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
+                var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+                if (headers is not null)
+                {
+                    foreach (var (key, value) in headers)
+                    {
+                        executionContext.Headers[key] = value;
+                    }
+                }
                 var context = new InboundContext
                 {
                     Message = command,
                     HandlerType = resolved.HandlerType,
-                    Headers = headers ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                    ExecutionContext = executionContext
                 };
 
                 await pipeline.ExecuteAsync(context,
@@ -195,11 +203,19 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 var key = NotificationHandlerKey.Of(notification.GetType());
                 var handler = scope.ServiceProvider.GetRequiredKeyedService<INotificationHandler>(key);
                 var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
+                var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+                if (headers is not null)
+                {
+                    foreach (var (headerKey, value) in headers)
+                    {
+                        executionContext.Headers[headerKey] = value;
+                    }
+                }
                 var context = new InboundContext
                 {
                     Message = notification,
                     HandlerType = handler.GetType(),
-                    Headers = headers ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                    ExecutionContext = executionContext
                 };
 
                 await pipeline.ExecuteAsync(context,

@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Infrastructure;
 using NOF.Domain;
 using System.Collections.Concurrent;
@@ -9,7 +10,7 @@ public sealed class MemoryPersistenceContext : ICloneable
     private int _pendingChanges;
     private readonly ConcurrentDictionary<IAggregateRoot, byte> _trackedEntities = new(ReferenceEqualityComparer.Instance);
 
-    public MemoryPersistenceContext() : this(NOFInfrastructureConstants.Tenant.HostId, new ConcurrentDictionary<Type, IMemoryPersistenceTable>())
+    public MemoryPersistenceContext() : this(NOFApplicationConstants.Tenant.HostId, new ConcurrentDictionary<Type, IMemoryPersistenceTable>())
     {
     }
 
@@ -18,7 +19,7 @@ public sealed class MemoryPersistenceContext : ICloneable
         ArgumentNullException.ThrowIfNull(tenantId);
         ArgumentNullException.ThrowIfNull(tables);
 
-        TenantId = NOFInfrastructureConstants.Tenant.NormalizeTenantId(tenantId);
+        TenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId);
         Tables = tables;
     }
 

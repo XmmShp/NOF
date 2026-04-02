@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Contract;
 using System.ComponentModel;
 
@@ -21,11 +22,10 @@ public sealed class InboundContext
     public required Type HandlerType { get; init; }
 
     /// <summary>
-    /// Transport-level headers passed from the hosting adapter (HTTP, message bus, etc.).
-    /// These are distinct from <see cref="IExecutionContext.Items"/> which is for
-    /// cross-cutting application-level state within the invocation scope.
+    /// Execution context for cross-cutting concerns (tenant, user, tracing, headers).
+    /// This is the context that gets propagated across requests/operations.
     /// </summary>
-    public IDictionary<string, string?> Headers { get; init; } = new Dictionary<string, string?>();
+    public required IExecutionContext ExecutionContext { get; init; }
 
     /// <summary>
     /// Response result (only used for Request handlers)

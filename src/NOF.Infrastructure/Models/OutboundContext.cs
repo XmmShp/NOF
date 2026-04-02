@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Contract;
 using System.ComponentModel;
 
@@ -16,11 +17,10 @@ public sealed class OutboundContext
     public required object Message { get; init; }
 
     /// <summary>
-    /// Headers to be sent with the message.
-    /// Outbound middleware populates these (tracing, tenant, JWT, etc.).
-    /// Caller-provided headers are merged in before the pipeline runs.
+    /// Execution context for cross-cutting concerns (tenant, user, tracing, headers).
+    /// This is the context that gets propagated across requests/operations.
     /// </summary>
-    public IDictionary<string, string?> Headers { get; init; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    public required IExecutionContext ExecutionContext { get; init; }
 
     /// <summary>
     /// Response result set by the rider or by outbound middleware that short-circuits the pipeline.
