@@ -5,23 +5,24 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public abstract class NOFDbContext : DbContext
 {
-    private readonly DbContextOptions _options;
+    private readonly NOFTenantDbContextOptionsExtension _tenantOptions;
 
     protected NOFDbContext(DbContextOptions options) : base(options)
     {
-        _options = options;
+        _tenantOptions = options.FindExtension<NOFTenantDbContextOptionsExtension>() ?? new NOFTenantDbContextOptionsExtension();
     }
+
+    public string? CurrentTenantId => _tenantOptions.TenantId;
+    public string CurrentTenantKey => CurrentTenantId ?? string.Empty;
 
     internal DbSet<NOFStateMachineContext> NOFStateMachineContexts { get; set; }
     internal DbSet<NOFInboxMessage> NOFInboxMessages { get; set; }
     internal DbSet<NOFOutboxMessage> NOFOutboxMessages { get; set; }
     internal DbSet<NOFTenant> NOFTenants { get; set; }
 
-    /// <summary>
-    /// Override this method to specify additional entity types that should be ignored
-    /// in tenant mode, beyond those marked with <see cref="HostOnlyAttribute"/>.
-    /// </summary>
-    protected virtual Type[] GetTenantIgnoredEntityTypes() => [typeof(NOFTenant)];
+    protected virtual Type[] GetHostOnlyEntityTypes() => [typeof(NOFTenant), typeof(NOFInboxMessage), typeof(NOFOutboxMessage)];
+
+    internal Type[] GetHostOnlyEntityTypesInternal() => GetHostOnlyEntityTypes();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,18 +71,88 @@ public abstract class NOFDbContext : DbContext
         });
     }
 
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-    {
-        base.ConfigureConventions(configurationBuilder);
+    public override object? Find(Type entityType, params object?[]? keyValues)
+        => base.Find(entityType, AppendTenantKeyIfNeeded(entityType, keyValues));
 
-        // In tenant mode, register a finalizing convention that removes [HostOnly] entities
-        // after all OnModelCreating configurations have been applied
-        var tenantExtension = _options.FindExtension<NOFTenantDbContextOptionsExtension>();
-        if (tenantExtension is not null && !string.IsNullOrWhiteSpace(tenantExtension.TenantId))
+    public override TEntity? Find<TEntity>(params object?[]? keyValues)
+        where TEntity : class
+        => base.Find<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues));
+
+    public override ValueTask<object?> FindAsync(Type entityType, params object?[]? keyValues)
+        => base.FindAsync(entityType, AppendTenantKeyIfNeeded(entityType, keyValues));
+
+    public override ValueTask<object?> FindAsync(Type entityType, object?[]? keyValues, CancellationToken cancellationToken)
+        => base.FindAsync(entityType, AppendTenantKeyIfNeeded(entityType, keyValues), cancellationToken);
+
+    public override ValueTask<TEntity?> FindAsync<TEntity>(params object?[]? keyValues)
+        where TEntity : class
+        => base.FindAsync<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues));
+
+    public override ValueTask<TEntity?> FindAsync<TEntity>(object?[]? keyValues, CancellationToken cancellationToken)
+        where TEntity : class
+        => base.FindAsync<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues), cancellationToken);
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ApplyTenantRules();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        ApplyTenantRules();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void ApplyTenantRules()
+    {
+        var hostOnlyTypes = TenantModelHelper.CreateHostOnlyTypeSet(this);
+
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
         {
-            var additionalIgnoredTypes = GetTenantIgnoredEntityTypes();
-            tenantExtension.TenantIgnoredEntityTypes = additionalIgnoredTypes;
-            configurationBuilder.Conventions.Add(_ => new HostOnlyModelFinalizingConvention(additionalIgnoredTypes));
+            if (entry.Metadata.IsOwned())
+            {
+                continue;
+            }
+
+            if (entry.Metadata.ClrType is not null
+                && TenantModelHelper.IsHostOnlyType(entry.Metadata.ClrType, hostOnlyTypes))
+            {
+                continue;
+            }
+
+            var tenantProperty = entry.Properties.FirstOrDefault(property => property.Metadata.Name == TenantModelHelper.TenantIdPropertyName);
+            if (tenantProperty is null)
+            {
+                continue;
+            }
+
+            tenantProperty.OriginalValue = CurrentTenantKey;
+
+            if (entry.State is EntityState.Added or EntityState.Modified)
+            {
+                tenantProperty.CurrentValue = CurrentTenantKey;
+            }
         }
+    }
+
+    private object?[]? AppendTenantKeyIfNeeded(Type entityClrType, object?[]? keyValues)
+    {
+        if (keyValues is null)
+        {
+            return null;
+        }
+
+        var entityType = Model.FindEntityType(entityClrType);
+        var primaryKey = entityType?.FindPrimaryKey();
+        if (primaryKey is null
+            || primaryKey.Properties.Count != keyValues.Length + 1
+            || primaryKey.Properties[^1].Name != TenantModelHelper.TenantIdPropertyName)
+        {
+            return keyValues;
+        }
+
+        return [.. keyValues, CurrentTenantKey];
     }
 }

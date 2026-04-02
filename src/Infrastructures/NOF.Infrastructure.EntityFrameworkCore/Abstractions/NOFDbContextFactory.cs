@@ -56,11 +56,8 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         var extension = new NOFTenantDbContextOptionsExtension { TenantId = tenantId };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
-        // Use configurator to configure database-specific options
         _dbContextConfigurator.Configure(optionsBuilder, tenantId);
-
-        // Register value object converter selector so EF Core automatically
-        // converts NOF value objects to/from their primitive types
+        optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 
         var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);

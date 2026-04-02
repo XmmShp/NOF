@@ -19,4 +19,11 @@
 		<ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Include="..\..\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.dll"
+			  Pack="true"
+			  PackagePath="analyzers/dotnet/cs"
+			  Visible="false" />
+	</ItemGroup>
+
 </Project>

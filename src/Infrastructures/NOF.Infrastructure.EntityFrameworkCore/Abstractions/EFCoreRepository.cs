@@ -14,7 +14,7 @@ public abstract class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateR
 
     public virtual ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken)
     {
-        return DbContext.Set<TAggregateRoot>().FindAsync(keyValues: keyValues, cancellationToken: cancellationToken);
+        return DbContext.FindAsync<TAggregateRoot>(keyValues, cancellationToken);
     }
 
     public virtual IAsyncEnumerable<TAggregateRoot> FindAllAsync(CancellationToken cancellationToken = default)

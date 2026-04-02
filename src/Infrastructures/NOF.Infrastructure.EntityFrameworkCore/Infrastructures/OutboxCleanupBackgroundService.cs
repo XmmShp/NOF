@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Application;
-
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
@@ -53,53 +51,22 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     private async Task CleanupOutboxAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var olderThan = DateTime.UtcNow - _retentionPeriod;
+        var deletedCount = await dbContext.Set<NOFOutboxMessage>()
+            .Where(m => m.Status == OutboxMessageStatus.Sent)
+            .Where(m => m.SentAt != null && m.SentAt < olderThan)
+            .ExecuteDeleteAsync(cancellationToken);
 
-        // Save the original tenant context
-        var originalTenantId = executionContext.TenantId;
-
-        await foreach (var tenant in tenantRepository.FindAllAsync(cancellationToken))
+        if (deletedCount > 0)
         {
-            if (!tenant.IsActive)
-            {
-                _logger.LogDebug("Skipping inactive tenant {TenantId}", tenant.Id);
-                continue;
-            }
-
-            try
-            {
-                // Set the tenant context
-                executionContext.SetTenantId(tenant.Id);
-                _logger.LogDebug("Cleaning outbox messages for tenant {TenantId}", tenant.Id);
-
-                // Use the current scope's DbContext, which automatically uses the set tenant context
-                var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
-
-                var olderThan = DateTime.UtcNow - _retentionPeriod;
-                var deletedCount = await dbContext.Set<NOFOutboxMessage>()
-                    .Where(m => m.Status == OutboxMessageStatus.Sent)
-                    .Where(m => m.SentAt != null && m.SentAt < olderThan)
-                    .ExecuteDeleteAsync(cancellationToken);
-
-                if (deletedCount > 0)
-                {
-                    _logger.LogInformation(
-                        "Tenant {TenantId} outbox cleanup completed. Deleted {Count} sent messages older than {Date}",
-                        tenant.Id, deletedCount, olderThan);
-                }
-                else
-                {
-                    _logger.LogDebug("Tenant {TenantId} outbox cleanup completed. No messages to delete", tenant.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error cleaning outbox messages for tenant {TenantId}", tenant.Id);
-            }
+            _logger.LogInformation(
+                "Outbox cleanup completed. Deleted {Count} sent messages older than {Date}",
+                deletedCount, olderThan);
         }
-
-        // Restore the original tenant context
-        executionContext.SetTenantId(originalTenantId);
+        else
+        {
+            _logger.LogDebug("Outbox cleanup completed. No messages to delete");
+        }
     }
 }

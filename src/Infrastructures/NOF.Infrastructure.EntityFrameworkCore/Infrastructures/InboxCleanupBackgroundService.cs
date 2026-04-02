@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Application;
-
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
@@ -53,52 +51,21 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     private async Task CleanupInboxAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+        var olderThan = DateTime.UtcNow - _retentionPeriod;
+        var deletedCount = await dbContext.NOFInboxMessages
+            .Where(m => m.CreatedAt < olderThan)
+            .ExecuteDeleteAsync(cancellationToken);
 
-        // Save the original tenant context
-        var originalTenantId = executionContext.TenantId;
-
-        await foreach (var tenant in tenantRepository.FindAllAsync(cancellationToken))
+        if (deletedCount > 0)
         {
-            if (!tenant.IsActive)
-            {
-                _logger.LogDebug("Skipping inactive tenant {TenantId}", tenant.Id);
-                continue;
-            }
-
-            try
-            {
-                // Set the tenant context
-                executionContext.SetTenantId(tenant.Id);
-                _logger.LogDebug("Cleaning inbox messages for tenant {TenantId}", tenant.Id);
-
-                // Use the current scope's DbContext, which automatically uses the set tenant context
-                var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
-
-                var olderThan = DateTime.UtcNow - _retentionPeriod;
-                var deletedCount = await dbContext.NOFInboxMessages
-                    .Where(m => m.CreatedAt < olderThan)
-                    .ExecuteDeleteAsync(cancellationToken);
-
-                if (deletedCount > 0)
-                {
-                    _logger.LogInformation(
-                        "Tenant {TenantId} inbox cleanup completed. Deleted {Count} processed messages older than {Date}",
-                        tenant.Id, deletedCount, olderThan);
-                }
-                else
-                {
-                    _logger.LogDebug("Tenant {TenantId} inbox cleanup completed. No messages to delete", tenant.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error cleaning inbox messages for tenant {TenantId}", tenant.Id);
-            }
+            _logger.LogInformation(
+                "Inbox cleanup completed. Deleted {Count} processed messages older than {Date}",
+                deletedCount, olderThan);
         }
-
-        // Restore the original tenant context
-        executionContext.SetTenantId(originalTenantId);
+        else
+        {
+            _logger.LogDebug("Inbox cleanup completed. No messages to delete");
+        }
     }
 }

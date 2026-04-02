@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 
@@ -22,7 +21,6 @@ public class PostgreSQLDbContextConfigurator : IDbContextConfigurator
 
     public void Configure(DbContextOptionsBuilder optionsBuilder, string? tenantId)
     {
-        // Get base connection string from configuration
         var connectionString = _configuration.GetConnectionString(_options.ConnectionStringName);
 
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -30,19 +28,6 @@ public class PostgreSQLDbContextConfigurator : IDbContextConfigurator
             throw new InvalidOperationException($"PostgreSQL connection string '{_options.ConnectionStringName}' not found in configuration.");
         }
 
-        // If no tenant ID, use base connection string directly (Host environment)
-        if (string.IsNullOrWhiteSpace(tenantId))
-        {
-            optionsBuilder.UseNpgsql(connectionString);
-            return;
-        }
-
-        // Apply tenant isolation database naming strategy
-        var connBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-        connBuilder.Database = string.IsNullOrWhiteSpace(connBuilder.Database)
-            ? tenantId
-            : $"{connBuilder.Database}-{tenantId}";
-
-        optionsBuilder.UseNpgsql(connBuilder.ConnectionString);
+        optionsBuilder.UseNpgsql(connectionString);
     }
 }

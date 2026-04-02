@@ -58,74 +58,27 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
         var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
         var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
+        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
 
-        // Save the original tenant context
-        var originalTenantId = executionContext.TenantId;
-
-        // Process Host database first (TenantId = null)
         try
         {
-            executionContext.SetTenantId(null);
-            _logger.LogDebug("Processing outbox messages for Host database");
-
-            var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
             var pendingMessages = await repository.AtomicClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken)
                 .ToListAsync(cancellationToken);
 
-            if (pendingMessages.Count > 0)
+            if (pendingMessages.Count == 0)
             {
-                _logger.LogDebug("Claimed {Count} pending messages for Host database", pendingMessages.Count);
-                await ProcessMessagesBatch(pendingMessages, repository, commandRider, notificationRider, "Host", null, cancellationToken);
+                return;
             }
+
+            _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
+            await ProcessMessagesBatch(pendingMessages, repository, commandRider, notificationRider, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing outbox messages for Host database");
+            _logger.LogError(ex, "Error processing outbox messages");
         }
-
-        // Process all tenant databases
-        await foreach (var tenant in tenantRepository.FindAllAsync(cancellationToken))
-        {
-            if (!tenant.IsActive)
-            {
-                _logger.LogDebug("Skipping inactive tenant {TenantId}", tenant.Id);
-                continue;
-            }
-
-            try
-            {
-                // Set the tenant context
-                executionContext.SetTenantId(tenant.Id);
-                _logger.LogDebug("Processing outbox messages for tenant {TenantId}", tenant.Id);
-
-                // Use the current scope's repository, which automatically uses the set tenant context
-                var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-
-                // Use claim-based retrieval to avoid duplicate processing across instances
-                var pendingMessages = await repository.AtomicClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken)
-                    .ToListAsync(cancellationToken);
-
-                if (pendingMessages.Count == 0)
-                {
-                    _logger.LogDebug("No pending messages claimed for tenant {TenantId}", tenant.Id);
-                    continue;
-                }
-
-                _logger.LogDebug("Claimed {Count} pending messages for tenant {TenantId}", pendingMessages.Count, tenant.Id);
-                await ProcessMessagesBatch(pendingMessages, repository, commandRider, notificationRider, "Tenant", tenant.Id, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing outbox messages for tenant {TenantId}", tenant.Id);
-            }
-        }
-
-        // Restore the original tenant context
-        executionContext.SetTenantId(originalTenantId);
     }
 
     private async Task ProcessSingleMessageAsync(
@@ -242,8 +195,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         IOutboxMessageRepository repository,
         ICommandRider commandRider,
         INotificationRider notificationRider,
-        string contextType,
-        string? tenantId,
         CancellationToken cancellationToken)
     {
         var succeededIds = new List<long>(pendingMessages.Count);
@@ -259,14 +210,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 failedCount++;
-                if (tenantId != null)
-                {
-                    _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for tenant {TenantId}", message.Id, tenantId);
-                }
-                else
-                {
-                    _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for Host database", message.Id);
-                }
+                var tenantId = GetTenantId(message);
+                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for tenant scope {TenantId}", message.Id, tenantId ?? "Host");
             }
         }
 
@@ -275,30 +220,27 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             try
             {
                 await repository.AtomicMarkAsSentAsync(succeededIds, cancellationToken);
-                if (tenantId != null)
-                {
-                    _logger.LogInformation(
-                        "Tenant {TenantId} batch processed: {Succeeded} sent, {Failed} failed",
-                        tenantId, succeededIds.Count, failedCount);
-                }
-                else
-                {
-                    _logger.LogInformation(
-                        "Host database batch processed: {Succeeded} sent, {Failed} failed",
-                        succeededIds.Count, failedCount);
-                }
+                _logger.LogInformation(
+                    "Outbox batch processed: {Succeeded} sent, {Failed} failed",
+                    succeededIds.Count, failedCount);
             }
             catch (Exception ex)
             {
-                if (tenantId != null)
-                {
-                    _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent for tenant {TenantId}", succeededIds.Count, tenantId);
-                }
-                else
-                {
-                    _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent for Host database", succeededIds.Count);
-                }
+                _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
             }
         }
+    }
+
+    private static string? GetTenantId(NOFOutboxMessage message)
+    {
+        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
+        var headers = string.IsNullOrWhiteSpace(message.Headers)
+            ? null
+            : JsonSerializer.Deserialize(message.Headers, headersTypeInfo);
+
+        return headers is not null
+            && headers.TryGetValue(NOFInfrastructureConstants.Transport.Headers.TenantId, out var tenantId)
+                ? tenantId
+                : null;
     }
 }
