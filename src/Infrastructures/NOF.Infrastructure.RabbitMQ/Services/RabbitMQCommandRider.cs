@@ -33,31 +33,14 @@ public class RabbitMQCommandRider : ICommandRider
         await using var channel = await _connectionManager.CreateChannelAsync();
 
         var commandType = command.GetType();
-        var exchangeName = $"nof.command.{commandType.Name}";
-        var queueName = $"nof.command.{commandType.Name}";
-        var routingKey = commandType.Name;
+        var exchangeName = commandType.FullName ?? commandType.Name;
+        var routingKey = exchangeName;
 
-        // 声明 direct exchange（用于 command）
         await channel.ExchangeDeclareAsync(
             exchange: exchangeName,
             type: "direct",
             durable: _options.Value.Durable,
             autoDelete: _options.Value.AutoDelete,
-            cancellationToken: cancellationToken);
-
-        // 声明 queue（确保发送时 queue 存在，消息可以被保留）
-        await channel.QueueDeclareAsync(
-            queue: queueName,
-            durable: _options.Value.Durable,
-            exclusive: false,
-            autoDelete: _options.Value.AutoDelete,
-            cancellationToken: cancellationToken);
-
-        // 绑定 queue 到 exchange
-        await channel.QueueBindAsync(
-            queue: queueName,
-            exchange: exchangeName,
-            routingKey: routingKey,
             cancellationToken: cancellationToken);
 
         var properties = new BasicProperties
@@ -72,6 +55,7 @@ public class RabbitMQCommandRider : ICommandRider
         var messageString = _serializer.Serialize(command);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);
         var body = new ReadOnlyMemory<byte>(messageBytes);
+
         await channel.BasicPublishAsync(
             exchange: exchangeName,
             routingKey: routingKey,

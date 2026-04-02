@@ -5,7 +5,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var rabbitMqUserName = builder.AddParameter("rabbitMqUserName", "guest");
 var rabbitMqPassword = builder.AddParameter("rabbitMqPassword", "guest");
 var rabbitMq = builder.AddRabbitMQ("rabbitmq", rabbitMqUserName, rabbitMqPassword)
-    .WithHttpEndpoint(targetPort: 15672, name: "RabbitMQManagePlugin")
+    .WithManagementPlugin(15672)
     .WithLifetime(ContainerLifetime.Persistent)
     .PublishAsConnectionString();
 rabbitMqUserName.WithParentRelationship(rabbitMq);

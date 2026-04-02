@@ -227,37 +227,6 @@ namespace NOF.Sample.Migrations
                     b.HasAnnotation("NOF:TenantScoped", true);
                 });
 
-            modelBuilder.Entity("NOF.Application.NOFStateMachineContext", b =>
-                {
-                    b.OwnsOne("NOF.Contract.TracingInfo", "TracingInfo", b1 =>
-                        {
-                            b1.Property<string>("NOFStateMachineContextCorrelationId")
-                                .HasColumnType("text");
-
-                            b1.Property<string>("NOFStateMachineContextDefinitionTypeName")
-                                .HasColumnType("text");
-
-                            b1.Property<string>("SpanId")
-                                .IsRequired()
-                                .HasMaxLength(128)
-                                .HasColumnType("character varying(128)");
-
-                            b1.Property<string>("TraceId")
-                                .IsRequired()
-                                .HasMaxLength(128)
-                                .HasColumnType("character varying(128)");
-
-                            b1.HasKey("NOFStateMachineContextCorrelationId", "NOFStateMachineContextDefinitionTypeName");
-
-                            b1.ToTable("NOFStateMachineContext");
-
-                            b1.WithOwner()
-                                .HasForeignKey("NOFStateMachineContextCorrelationId", "NOFStateMachineContextDefinitionTypeName");
-                        });
-
-                    b.Navigation("TracingInfo");
-                });
-
             modelBuilder.Entity("NOF.Sample.ConfigNode", b =>
                 {
                     b.OwnsMany("NOF.Sample.ConfigFile", "ConfigFiles", b1 =>

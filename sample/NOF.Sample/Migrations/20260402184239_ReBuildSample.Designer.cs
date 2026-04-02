@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NOF.Sample.Migrations
 {
     [DbContext(typeof(ConfigurationDbContext))]
-    [Migration("20260402151828_MakeStateMachineContextHostOnly")]
-    partial class MakeStateMachineContextHostOnly
+    [Migration("20260402184239_ReBuildSample")]
+    partial class ReBuildSample
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -18,8 +18,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly IMessageSerializer _serializer;
     private readonly HandlerInfos? _handlerInfos;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
-    private readonly List<IChannel> _channels = new();
-    private readonly Dictionary<string, Type> _consumerTypes = new();
+    private readonly List<IChannel> _channels = [];
+    private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
     private bool _disposed;
 
     public RabbitMQConsumerHostedService(
@@ -44,8 +44,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     {
         try
         {
-            // 从 HandlerInfos 注册所有消费者
-            await RegisterConsumersFromHandlerInfosAsync();
+            await RegisterConsumersFromHandlerInfosAsync(cancellationToken);
             _logger.LogInformation("RabbitMQ consumers initialized successfully");
         }
         catch (Exception ex)
@@ -60,81 +59,121 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    // 从 HandlerInfos 注册所有消费者
-    private async Task RegisterConsumersFromHandlerInfosAsync()
+    private async Task RegisterConsumersFromHandlerInfosAsync(CancellationToken cancellationToken)
     {
-        if (_handlerInfos == null)
+        if (_handlerInfos is null)
         {
             return;
         }
 
-        // 注册命令消费者
-        foreach (var commandInfo in _handlerInfos.Commands)
-        {
-            var queueName = $"nof.command.{commandInfo.CommandType.Name}";
-            _consumerTypes[queueName] = commandInfo.HandlerType;
-            await SetupConsumerAsync(queueName, commandInfo.CommandType);
-        }
+        var commandTypes = _handlerInfos.Commands
+            .Select(info => info.CommandType)
+            .Distinct()
+            .ToArray();
 
-        // 注册通知消费者
-        foreach (var notificationInfo in _handlerInfos.Notifications)
+        await SetupCommandConsumersAsync(commandTypes, cancellationToken);
+
+        var notificationGroups = _handlerInfos.Notifications
+            .GroupBy(info => info.HandlerType)
+            .ToArray();
+
+        foreach (var group in notificationGroups)
         {
-            var queueName = $"nof.notification.{notificationInfo.NotificationType.Name}";
-            _consumerTypes[queueName] = notificationInfo.HandlerType;
-            await SetupConsumerAsync(queueName, notificationInfo.NotificationType);
+            var handlerType = group.Key;
+            var queueName = handlerType.FullName ?? handlerType.Name;
+            var notificationTypes = group
+                .Select(info => info.NotificationType)
+                .Distinct()
+                .ToArray();
+
+            _notificationHandlerTypes[queueName] = handlerType;
+            await SetupNotificationConsumerAsync(queueName, notificationTypes, cancellationToken);
         }
     }
 
-    private async Task SetupConsumerAsync(string queueName, Type messageType)
+    private async Task SetupCommandConsumersAsync(Type[] commandTypes, CancellationToken cancellationToken)
     {
+        if (commandTypes.Length == 0)
+        {
+            return;
+        }
+
+        foreach (var commandType in commandTypes)
+        {
+            var channel = await _connectionManager.CreateChannelAsync();
+            _channels.Add(channel);
+
+            var exchangeName = GetMessageExchangeName(commandType);
+            var queueName = exchangeName;
+
+            await channel.ExchangeDeclareAsync(
+                exchange: exchangeName,
+                type: "direct",
+                durable: _options.Value.Durable,
+                autoDelete: _options.Value.AutoDelete,
+                cancellationToken: cancellationToken);
+
+            await channel.QueueDeclareAsync(
+                queue: queueName,
+                durable: _options.Value.Durable,
+                exclusive: false,
+                autoDelete: _options.Value.AutoDelete,
+                cancellationToken: cancellationToken);
+
+            await channel.QueueBindAsync(
+                queue: queueName,
+                exchange: exchangeName,
+                routingKey: exchangeName,
+                cancellationToken: cancellationToken);
+
+            await channel.BasicQosAsync(0, _options.Value.PrefetchCount, false, cancellationToken);
+
+            var consumer = new AsyncEventingBasicConsumer(channel);
+            consumer.ReceivedAsync += async (sender, args) => await HandleMessageAsync(queueName, (AsyncEventingBasicConsumer)sender, args);
+
+            await channel.BasicConsumeAsync(
+                queue: queueName,
+                autoAck: false,
+                consumer: consumer,
+                cancellationToken: cancellationToken);
+        }
+    }
+
+    private async Task SetupNotificationConsumerAsync(string queueName, IReadOnlyCollection<Type> notificationTypes, CancellationToken cancellationToken)
+    {
+        if (notificationTypes.Count == 0)
+        {
+            return;
+        }
+
         var channel = await _connectionManager.CreateChannelAsync();
         _channels.Add(channel);
 
-        string exchangeName;
-        string exchangeType;
-        string routingKey;
-
-        // 根据消息类型设置不同的拓扑结构
-        if (typeof(ICommand).IsAssignableFrom(messageType))
-        {
-            // Command：使用 direct exchange，每个 Command 类型一个 exchange
-            exchangeName = $"nof.command.{messageType.Name}";
-            exchangeType = "direct";
-            routingKey = messageType.Name;
-        }
-        else if (typeof(INotification).IsAssignableFrom(messageType))
-        {
-            // Notification：使用 fanout exchange，每个 Notification 类型一个 exchange
-            exchangeName = $"nof.notification.{messageType.Name}";
-            exchangeType = "fanout";
-            routingKey = string.Empty; // fanout exchange 不需要 routing key
-        }
-        else
-        {
-            throw new NotSupportedException($"Unsupported message type: {messageType.Name}");
-        }
-
-        // 声明 exchange
-        await channel.ExchangeDeclareAsync(
-            exchange: exchangeName,
-            type: exchangeType,
-            durable: _options.Value.Durable,
-            autoDelete: _options.Value.AutoDelete);
-
-        // 声明 queue（多实例会共享同一个 queue，由 RabbitMQ 做负载均衡）
         await channel.QueueDeclareAsync(
             queue: queueName,
             durable: _options.Value.Durable,
             exclusive: false,
-            autoDelete: _options.Value.AutoDelete);
+            autoDelete: _options.Value.AutoDelete,
+            cancellationToken: cancellationToken);
 
-        // 绑定 queue 到 exchange
-        await channel.QueueBindAsync(
-            queue: queueName,
-            exchange: exchangeName,
-            routingKey: routingKey);
+        foreach (var notificationType in notificationTypes)
+        {
+            var exchangeName = GetMessageExchangeName(notificationType);
+            await channel.ExchangeDeclareAsync(
+                exchange: exchangeName,
+                type: "fanout",
+                durable: _options.Value.Durable,
+                autoDelete: _options.Value.AutoDelete,
+                cancellationToken: cancellationToken);
 
-        await channel.BasicQosAsync(0, _options.Value.PrefetchCount, false);
+            await channel.QueueBindAsync(
+                queue: queueName,
+                exchange: exchangeName,
+                routingKey: string.Empty,
+                cancellationToken: cancellationToken);
+        }
+
+        await channel.BasicQosAsync(0, _options.Value.PrefetchCount, false, cancellationToken);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (sender, args) => await HandleMessageAsync(queueName, (AsyncEventingBasicConsumer)sender, args);
@@ -142,7 +181,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         await channel.BasicConsumeAsync(
             queue: queueName,
             autoAck: false,
-            consumer: consumer);
+            consumer: consumer,
+            cancellationToken: cancellationToken);
     }
 
     private async Task HandleMessageAsync(string queueName, AsyncEventingBasicConsumer consumer, BasicDeliverEventArgs args)
@@ -151,16 +191,18 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         {
             var messageBytes = args.Body.ToArray();
             var payload = System.Text.Encoding.UTF8.GetString(messageBytes);
-            var message = _serializer.Deserialize(args.BasicProperties.Type!, payload);
-            if (message == null)
+
+            var messageTypeName = args.BasicProperties.Type;
+            if (string.IsNullOrWhiteSpace(messageTypeName))
             {
-                await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, false);
-                return;
+                throw new InvalidOperationException("RabbitMQ message type was missing in BasicProperties.Type.");
             }
 
+            var message = _serializer.Deserialize(messageTypeName, payload);
+
             await using var scope = _scopeFactory.CreateAsyncScope();
-            IDictionary<string, string?>? headers = null;
-            if (args.BasicProperties.Headers != null)
+            Dictionary<string, string?>? headers = null;
+            if (args.BasicProperties.Headers is not null)
             {
                 headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
                 foreach (var (key, value) in args.BasicProperties.Headers)
@@ -187,6 +229,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                         executionContext[key] = value;
                     }
                 }
+
                 var context = new InboundContext
                 {
                     Message = command,
@@ -194,14 +237,24 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     ExecutionContext = executionContext
                 };
 
-                await pipeline.ExecuteAsync(context,
+                await pipeline.ExecuteAsync(
+                    context,
                     ct => new ValueTask(handler.HandleAsync(command, ct)),
                     CancellationToken.None);
             }
             else if (message is INotification notification)
             {
+                if (!_notificationHandlerTypes.TryGetValue(queueName, out var handlerType))
+                {
+                    throw new InvalidOperationException($"Cannot resolve notification handler type for queue '{queueName}'.");
+                }
+
                 var key = NotificationHandlerKey.Of(notification.GetType());
-                var handler = scope.ServiceProvider.GetRequiredKeyedService<INotificationHandler>(key);
+                var handlers = scope.ServiceProvider.GetKeyedServices<INotificationHandler>(key);
+                var handler = handlers.FirstOrDefault(candidate => handlerType.IsInstanceOfType(candidate))
+                    ?? throw new InvalidOperationException(
+                        $"Cannot resolve notification handler '{handlerType.FullName}' for notification '{notification.GetType().FullName}'.");
+
                 var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
                 var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
                 if (headers is not null)
@@ -211,14 +264,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                         executionContext[headerKey] = value;
                     }
                 }
+
                 var context = new InboundContext
                 {
                     Message = notification,
-                    HandlerType = handler.GetType(),
+                    HandlerType = handlerType,
                     ExecutionContext = executionContext
                 };
 
-                await pipeline.ExecuteAsync(context,
+                await pipeline.ExecuteAsync(
+                    context,
                     ct => new ValueTask(handler.HandleAsync(notification, ct)),
                     CancellationToken.None);
             }
@@ -238,6 +293,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             }
         }
     }
+
+    private static string GetMessageExchangeName(Type messageType)
+        => messageType.FullName ?? messageType.Name;
 
     public void Dispose()
     {

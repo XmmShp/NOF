@@ -85,12 +85,11 @@ namespace NOF.Sample.Migrations
                 {
                     CorrelationId = table.Column<string>(type: "text", nullable: false),
                     DefinitionTypeName = table.Column<string>(type: "text", nullable: false),
-                    TenantId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     State = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_NOFStateMachineContext", x => new { x.CorrelationId, x.DefinitionTypeName, x.TenantId });
+                    table.PrimaryKey("PK_NOFStateMachineContext", x => new { x.CorrelationId, x.DefinitionTypeName });
                 });
 
             migrationBuilder.CreateTable(
@@ -180,11 +179,6 @@ namespace NOF.Sample.Migrations
                 name: "IX_NOFOutboxMessage_TraceId",
                 table: "NOFOutboxMessage",
                 column: "TraceId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NOFStateMachineContext_TenantId",
-                table: "NOFStateMachineContext",
-                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_NOFTenant_Name",

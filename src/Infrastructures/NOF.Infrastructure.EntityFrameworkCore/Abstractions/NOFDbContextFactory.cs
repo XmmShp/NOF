@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
 using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
@@ -22,6 +23,9 @@ public interface INOFDbContextFactory<TDbContext> : IDbContextFactory<TDbContext
 internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDbContext>
     where TDbContext : NOFDbContext
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationLocks = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, byte> MigratedContexts = new(StringComparer.Ordinal);
+
     private readonly IServiceProvider _serviceProvider;
     private readonly IExecutionContext _executionContext;
     private readonly IDbContextConfigurator _dbContextConfigurator;
@@ -76,8 +80,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         {
             if (dbContext.Database.IsRelational())
             {
-                dbContext.Database.Migrate();
-                _logger.LogDebug("Migrated database for {ContextType}", contextType);
+                EnsureMigratedOnce(dbContext, contextType);
             }
         }
         else
@@ -93,5 +96,39 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
                 }
             }
         }
+    }
+
+    private void EnsureMigratedOnce(TDbContext dbContext, string contextType)
+    {
+        var key = GetMigrationKey(dbContext);
+        if (MigratedContexts.ContainsKey(key))
+        {
+            return;
+        }
+
+        var migrationLock = MigrationLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        migrationLock.Wait();
+        try
+        {
+            if (MigratedContexts.ContainsKey(key))
+            {
+                return;
+            }
+
+            dbContext.Database.Migrate();
+            MigratedContexts.TryAdd(key, 0);
+            _logger.LogDebug("Migrated database for {ContextType}", contextType);
+        }
+        finally
+        {
+            migrationLock.Release();
+        }
+    }
+
+    private static string GetMigrationKey(TDbContext dbContext)
+    {
+        var provider = dbContext.Database.ProviderName ?? "unknown";
+        var connectionString = dbContext.Database.GetConnectionString() ?? string.Empty;
+        return $"{typeof(TDbContext).AssemblyQualifiedName}|{provider}|{connectionString}";
     }
 }

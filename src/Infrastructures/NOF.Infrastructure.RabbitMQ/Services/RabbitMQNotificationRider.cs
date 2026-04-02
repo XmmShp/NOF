@@ -28,9 +28,8 @@ public class RabbitMQNotificationRider : INotificationRider
         await using var channel = await _connectionManager.CreateChannelAsync();
 
         var notificationType = notification.GetType();
-        var exchangeName = $"nof.notification.{notificationType.Name}";
+        var exchangeName = notificationType.FullName ?? notificationType.Name;
 
-        // 声明 fanout exchange（用于 notification）
         await channel.ExchangeDeclareAsync(
             exchange: exchangeName,
             type: "fanout",
@@ -50,9 +49,10 @@ public class RabbitMQNotificationRider : INotificationRider
         var messageString = _serializer.Serialize(notification);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);
         var body = new ReadOnlyMemory<byte>(messageBytes);
+
         await channel.BasicPublishAsync(
             exchange: exchangeName,
-            routingKey: string.Empty, // fanout exchange 不需要 routing key
+            routingKey: string.Empty,
             basicProperties: properties,
             body: body,
             mandatory: false,

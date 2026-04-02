@@ -20,15 +20,6 @@ public record ProcessingSucceeded(string TaskId) : INotification;
 public record ProcessingFailed(string TaskId, string Reason) : INotification;
 public record StartProcessingCommand(string TaskId) : ICommand;
 
-public class SampleStateMachineContext
-{
-    public string TaskId { get; set; } = null!;
-    public DateTime StartOn { get; set; }
-    public DateTime? SucceededOn { get; set; }
-    public DateTime? FailedOn { get; set; }
-    public string FailReason { get; set; } = null!;
-}
-
 public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
 {
     private readonly IUnitOfWork _uow;

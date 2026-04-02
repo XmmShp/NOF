@@ -1,11 +1,10 @@
-using NOF.Contract;
 using NOF.Domain;
 using System.ComponentModel;
 
 namespace NOF.Application;
 
 /// <summary>
-/// State machine context entity containing the context, state, and tracing information.
+/// State machine context entity containing the correlation and current state.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
@@ -26,25 +25,18 @@ public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
     public required int State { get; set; }
 
     /// <summary>
-    /// The tracing information.
-    /// </summary>
-    public TracingInfo? TracingInfo { get; set; }
-
-    /// <summary>
     /// Creates a new state machine context instance.
     /// </summary>
     public static NOFStateMachineContext Create(
         string correlationId,
         string definitionTypeName,
-        int state,
-        TracingInfo? tracingInfo = null)
+        int state)
     {
         return new NOFStateMachineContext
         {
             CorrelationId = correlationId,
             DefinitionTypeName = definitionTypeName,
-            State = state,
-            TracingInfo = tracingInfo
+            State = state
         };
     }
 
@@ -53,7 +45,6 @@ public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
         {
             CorrelationId = CorrelationId,
             DefinitionTypeName = DefinitionTypeName,
-            State = State,
-            TracingInfo = TracingInfo
+            State = State
         };
 }
