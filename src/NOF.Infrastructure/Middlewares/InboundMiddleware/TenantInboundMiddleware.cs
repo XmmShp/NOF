@@ -14,9 +14,9 @@ public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundM
 /// </summary>
 public sealed class TenantInboundMiddleware : IInboundMiddleware
 {
-    private readonly IMutableInvocationContext _invocationContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public TenantInboundMiddleware(IMutableInvocationContext invocationContext)
+    public TenantInboundMiddleware(IInvocationContext invocationContext)
     {
         _invocationContext = invocationContext;
     }

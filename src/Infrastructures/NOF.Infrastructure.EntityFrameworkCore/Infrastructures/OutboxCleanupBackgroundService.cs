@@ -54,7 +54,7 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
-        var invocationContext = scope.ServiceProvider.GetRequiredService<IMutableInvocationContext>();
+        var invocationContext = scope.ServiceProvider.GetRequiredService<IInvocationContext>();
 
         // Save the original tenant context
         var originalTenantId = invocationContext.TenantId;

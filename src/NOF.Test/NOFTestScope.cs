@@ -21,9 +21,9 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return Services.GetRequiredService<T>();
     }
 
-    public IMutableInvocationContext InvocationContext => GetRequiredService<IMutableInvocationContext>();
+    public IInvocationContext InvocationContext => GetRequiredService<IInvocationContext>();
 
-    public IMutableUserContext UserContext => GetRequiredService<IMutableUserContext>();
+    public IUserContext UserContext => GetRequiredService<IUserContext>();
 
     public NOFTestScope SetTenant(string? tenantId)
     {

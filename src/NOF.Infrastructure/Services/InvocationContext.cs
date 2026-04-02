@@ -5,16 +5,16 @@ namespace NOF.Application;
 /// <summary>
 /// Default implementation of <see cref="IInvocationContext"/>.
 /// </summary>
-public class InvocationContext : IMutableInvocationContext
+public class InvocationContext : IInvocationContext
 {
-    public InvocationContext(IMutableUserContext userContext)
+    public InvocationContext(IUserContext userContext)
     {
         ArgumentNullException.ThrowIfNull(userContext);
         UserContext = userContext;
     }
 
     /// <inheritdoc />
-    public IMutableUserContext UserContext { get; }
+    public IUserContext UserContext { get; }
 
     /// <inheritdoc />
     public string? TenantId { get; private set; }

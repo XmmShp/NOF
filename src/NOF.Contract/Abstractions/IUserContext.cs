@@ -28,6 +28,10 @@ public interface IUserContext
     /// </summary>
     event Action? StateChanged;
 
+    void SetUser(ClaimsPrincipal user);
+
+    void UnsetUser();
+
     /// <summary>
     /// Gets a value indicating whether the current user is authenticated.
     /// </summary>

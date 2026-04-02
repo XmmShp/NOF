@@ -13,9 +13,9 @@ public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboun
 /// </summary>
 public sealed class TracingInboundMiddleware : IInboundMiddleware
 {
-    private readonly IMutableInvocationContext _invocationContext;
+    private readonly IInvocationContext _invocationContext;
 
-    public TracingInboundMiddleware(IMutableInvocationContext invocationContext)
+    public TracingInboundMiddleware(IInvocationContext invocationContext)
     {
         _invocationContext = invocationContext;
     }

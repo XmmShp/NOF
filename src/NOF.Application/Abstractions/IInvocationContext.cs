@@ -34,30 +34,8 @@ public interface IInvocationContext
     /// The span ID for the current operation within the trace.
     /// </summary>
     string? SpanId { get; }
-}
 
-/// <summary>
-/// Represents mutable operations for the invocation context.
-/// </summary>
-public interface IMutableInvocationContext : IInvocationContext
-{
-    IUserContext IInvocationContext.UserContext => UserContext;
-
-    /// <summary>
-    /// Gets the mutable user context associated with this invocation.
-    /// </summary>
-    new IMutableUserContext UserContext { get; }
-
-    /// <summary>
-    /// Sets the current tenant identifier.
-    /// </summary>
-    /// <param name="tenantId">The tenant identifier. Can be null for host-level operations.</param>
     void SetTenantId(string? tenantId);
 
-    /// <summary>
-    /// Sets the tracing information for this invocation.
-    /// </summary>
-    /// <param name="traceId">The trace ID for distributed tracing.</param>
-    /// <param name="spanId">The span ID for the current operation.</param>
     void SetTracingInfo(string? traceId, string? spanId);
 }

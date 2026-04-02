@@ -6,7 +6,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Default infrastructure-level implementation of <see cref="IUserContext"/>.
 /// </summary>
-public sealed class UserContext : IMutableUserContext
+public sealed class UserContext : IUserContext
 {
     /// <summary>
     /// A shared, unauthenticated <see cref="ClaimsPrincipal"/> instance.

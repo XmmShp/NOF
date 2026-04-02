@@ -17,14 +17,14 @@ public class JwtAuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<JwtA
 /// </summary>
 public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
 {
-    private readonly IMutableUserContext _userContext;
+    private readonly IUserContext _userContext;
     private readonly IJwksProvider _jwksProvider;
     private readonly JwtAuthorizationOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<JwtAuthorizationInboundMiddleware> _logger;
 
     public JwtAuthorizationInboundMiddleware(
-        IMutableUserContext userContext,
+        IUserContext userContext,
         IJwksProvider jwksProvider,
         IOptions<JwtAuthorizationOptions> jwtOptions,
         ILogger<JwtAuthorizationInboundMiddleware> logger)

@@ -17,8 +17,8 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
 
         using var scope = host.CreateScope();
-        scope.GetRequiredService<IMutableInvocationContext>().Should().NotBeNull();
-        scope.GetRequiredService<IMutableUserContext>().Should().NotBeNull();
+        scope.GetRequiredService<IInvocationContext>().Should().NotBeNull();
+        scope.GetRequiredService<IUserContext>().Should().NotBeNull();
     }
 
     [Fact]
@@ -153,4 +153,3 @@ public class NOFTestHostTests
         }
     }
 }
-
