@@ -7,10 +7,6 @@ namespace NOF.Application;
 /// </summary>
 public interface ICommandSender
 {
-    /// <summary>Sends a command with headers.</summary>
-    Task SendAsync(ICommand command, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default);
-
     /// <summary>Sends a command.</summary>
-    Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
-        => SendAsync(command, null, cancellationToken);
+    Task SendAsync(ICommand command, CancellationToken cancellationToken = default);
 }

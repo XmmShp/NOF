@@ -20,7 +20,7 @@ public sealed class MemoryNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(INotification notification,
-        IDictionary<string, string?>? headers = null,
+        IExecutionContext executionContext,
         CancellationToken cancellationToken = default)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -28,13 +28,10 @@ public sealed class MemoryNotificationRider : INotificationRider
         var handlers = scope.ServiceProvider.GetKeyedServices<INotificationHandler>(NotificationHandlerKey.Of(notificationType));
         var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
 
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-        if (headers is not null)
+        var scopedExecutionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+        foreach (var (key, value) in executionContext)
         {
-            foreach (var (key, value) in headers)
-            {
-                executionContext.Headers[key] = value;
-            }
+            scopedExecutionContext[key] = value;
         }
         foreach (var handler in handlers)
         {

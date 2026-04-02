@@ -28,7 +28,7 @@ public sealed class JwtAuthorizationOutboundMiddleware : IOutboundMiddleware
     {
         if (_userContext.User is JwtClaimsPrincipal { Token: { Length: > 0 } token })
         {
-            context.ExecutionContext.Headers.TryAdd(_options.HeaderName, $"{_options.TokenType} {token}");
+            context.ExecutionContext.TryAdd(_options.HeaderName, $"{_options.TokenType} {token}");
         }
 
         return next(cancellationToken);

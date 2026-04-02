@@ -20,15 +20,8 @@ public sealed class CommandSender : ICommandSender
         _executionContext = executionContext;
     }
 
-    public async Task SendAsync(ICommand command, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
+    public async Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
     {
-        if (headers is not null)
-        {
-            foreach (var (key, value) in headers)
-            {
-                _executionContext.Headers[key] = value;
-            }
-        }
         var context = new OutboundContext
         {
             Message = command,
@@ -37,7 +30,7 @@ public sealed class CommandSender : ICommandSender
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, _executionContext.Headers, ct);
+            await _rider.SendAsync(command, _executionContext, ct);
         }, cancellationToken);
     }
 }

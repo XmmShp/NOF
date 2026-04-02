@@ -105,10 +105,20 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             ? new Dictionary<string, string?>()
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
-        headers = new Dictionary<string, string?>(headers);
-        headers.TryAdd(NOFApplicationConstants.Transport.Headers.MessageId, messageId.ToString());
-        headers.TryAdd(NOFApplicationConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
-        headers.TryAdd(NOFApplicationConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
+        // Create a new scope to get a fresh ExecutionContext
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var scopedExecutionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+
+        // Copy headers to the scoped execution context
+        foreach (var (key, value) in headers)
+        {
+            scopedExecutionContext[key] = value;
+        }
+
+        // Add additional headers
+        scopedExecutionContext.TryAdd(NOFApplicationConstants.Transport.Headers.MessageId, messageId.ToString());
+        scopedExecutionContext.TryAdd(NOFApplicationConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
+        scopedExecutionContext.TryAdd(NOFApplicationConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
 
         if (activity is { IsAllDataRequested: true })
         {
@@ -116,7 +126,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, payload.GetType().Name);
             activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
             activity.SetTag("OutboxMessageId", message.Id);
-            if (headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId))
+            if (scopedExecutionContext.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId))
             {
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
             }
@@ -126,13 +136,13 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             if (payload is ICommand command)
             {
-                await commandRider.SendAsync(command, headers, cancellationToken);
+                await commandRider.SendAsync(command, scopedExecutionContext, cancellationToken);
                 _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
                     message.Id, command.GetType().Name, message.RetryCount);
             }
             else if (payload is INotification notification)
             {
-                await notificationRider.PublishAsync(notification, headers, cancellationToken);
+                await notificationRider.PublishAsync(notification, scopedExecutionContext, cancellationToken);
                 _logger.LogDebug("Published notification {MessageId} of type {Type} (retry {Retry})",
                     message.Id, notification.GetType().Name, message.RetryCount);
             }

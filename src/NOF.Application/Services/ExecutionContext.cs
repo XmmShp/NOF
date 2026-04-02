@@ -5,11 +5,20 @@ namespace NOF.Application;
 
 /// <summary>
 /// Represents the context of a logical execution (e.g., HTTP request, command execution,
-/// event handling, background task). Provides ambient access to user, tenant, and metadata.
+/// event handling, background task). Provides ambient access to headers, tenant, and tracing metadata.
 /// </summary>
-public interface IExecutionContext : IUserContext
+public interface IExecutionContext : IDictionary<string, string?>
 {
-    IDictionary<string, string?> Headers { get; }
+}
+
+/// <summary>
+/// Default implementation of <see cref="IExecutionContext"/>.
+/// </summary>
+public sealed class ExecutionContext : Dictionary<string, string?>, IExecutionContext
+{
+    public ExecutionContext() : base(StringComparer.OrdinalIgnoreCase)
+    {
+    }
 }
 
 public static partial class NOFApplicationExtensions
@@ -23,12 +32,12 @@ public static partial class NOFApplicationExtensions
         {
             get
             {
-                context.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId);
+                context.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId);
                 return NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId);
             }
             set
             {
-                context.Headers[NOFApplicationConstants.Transport.Headers.TenantId] = NOFApplicationConstants.Tenant.NormalizeTenantId(value);
+                context[NOFApplicationConstants.Transport.Headers.TenantId] = NOFApplicationConstants.Tenant.NormalizeTenantId(value);
             }
         }
 
@@ -39,8 +48,8 @@ public static partial class NOFApplicationExtensions
         {
             get
             {
-                context.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TraceId, out var traceId);
-                context.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.SpanId, out var spanId);
+                context.TryGetValue(NOFApplicationConstants.Transport.Headers.TraceId, out var traceId);
+                context.TryGetValue(NOFApplicationConstants.Transport.Headers.SpanId, out var spanId);
                 if (traceId is not null && spanId is not null)
                 {
                     return new TracingInfo(traceId, spanId);
@@ -62,8 +71,8 @@ public static partial class NOFApplicationExtensions
         /// </summary>
         public void SetTracingInfo(TracingInfo tracingInfo)
         {
-            context.Headers[NOFApplicationConstants.Transport.Headers.TraceId] = tracingInfo.TraceId;
-            context.Headers[NOFApplicationConstants.Transport.Headers.SpanId] = tracingInfo.SpanId;
+            context[NOFApplicationConstants.Transport.Headers.TraceId] = tracingInfo.TraceId;
+            context[NOFApplicationConstants.Transport.Headers.SpanId] = tracingInfo.SpanId;
         }
 
         /// <summary>
@@ -73,8 +82,8 @@ public static partial class NOFApplicationExtensions
         {
             ArgumentNullException.ThrowIfNull(source);
 
-            context.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TraceId, out var traceId);
-            context.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.SpanId, out var spanId);
+            context.TryGetValue(NOFApplicationConstants.Transport.Headers.TraceId, out var traceId);
+            context.TryGetValue(NOFApplicationConstants.Transport.Headers.SpanId, out var spanId);
 
             Activity? activity;
 

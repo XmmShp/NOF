@@ -25,7 +25,7 @@ public sealed class MemoryCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ICommand command,
-        IDictionary<string, string?>? headers = null,
+        IExecutionContext executionContext,
         CancellationToken cancellationToken = default)
     {
         var commandType = command.GetType();
@@ -37,13 +37,10 @@ public sealed class MemoryCommandRider : ICommandRider
         await using var scope = _scopeFactory.CreateAsyncScope();
         var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
         var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-        if (headers is not null)
+        var scopedExecutionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+        foreach (var (key, value) in executionContext)
         {
-            foreach (var (key, value) in headers)
-            {
-                executionContext.Headers[key] = value;
-            }
+            scopedExecutionContext[key] = value;
         }
         var context = new InboundContext
         {

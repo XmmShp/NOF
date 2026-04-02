@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using NOF.Application;
 using NOF.Contract;
 using RabbitMQ.Client;
 
@@ -21,7 +22,7 @@ public class RabbitMQNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(INotification notification,
-        IDictionary<string, string?>? headers = null,
+        IExecutionContext executionContext,
         CancellationToken cancellationToken = default)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
@@ -44,10 +45,7 @@ public class RabbitMQNotificationRider : INotificationRider
             Type = notification.GetType().FullName
         };
 
-        if (headers != null)
-        {
-            properties.Headers = headers.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
-        }
+        properties.Headers = executionContext.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
 
         var messageString = _serializer.Serialize(notification);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);

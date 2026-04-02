@@ -23,7 +23,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public IExecutionContext ExecutionContext => GetRequiredService<IExecutionContext>();
 
-    public IUserContext UserContext => ExecutionContext;
+    public IUserContext UserContext => GetRequiredService<IUserContext>();
 
     public NOFTestScope SetTenant(string? tenantId)
     {
@@ -42,13 +42,13 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetUser(ClaimsPrincipal user)
     {
-        ExecutionContext.SetUser(user);
+        UserContext.SetUser(user);
         return this;
     }
 
     public NOFTestScope SetAnonymousUser()
     {
-        ExecutionContext.UnsetUser();
+        UserContext.UnsetUser();
         return this;
     }
 

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using NOF.Application;
 using NOF.Contract;
 using RabbitMQ.Client;
 
@@ -21,13 +22,13 @@ public class RabbitMQCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ICommand command,
-        IDictionary<string, string?>? headers = null,
+        IExecutionContext executionContext,
         CancellationToken cancellationToken = default)
     {
-        await PublishToRabbitMQAsync(command, headers, cancellationToken);
+        await PublishToRabbitMQAsync(command, executionContext, cancellationToken);
     }
 
-    private async Task PublishToRabbitMQAsync(ICommand command, IDictionary<string, string?>? headers, CancellationToken cancellationToken)
+    private async Task PublishToRabbitMQAsync(ICommand command, IExecutionContext executionContext, CancellationToken cancellationToken)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 
@@ -66,10 +67,7 @@ public class RabbitMQCommandRider : ICommandRider
             Type = command.GetType().FullName
         };
 
-        if (headers != null)
-        {
-            properties.Headers = headers.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
-        }
+        properties.Headers = executionContext.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
 
         var messageString = _serializer.Serialize(command);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);

@@ -1,6 +1,6 @@
 using NOF.Application;
-using NOF.Infrastructure;
 using NOF.Domain;
+using NOF.Infrastructure;
 using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure.Memory;

@@ -59,9 +59,9 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
                 }
 
                 // Caller-provided headers take precedence
-                if (!context.ExecutionContext.Headers.ContainsKey(header.Key))
+                if (!context.ExecutionContext.ContainsKey(header.Key))
                 {
-                    context.ExecutionContext.Headers[header.Key] = header.Value.ToString();
+                    context.ExecutionContext[header.Key] = header.Value.ToString();
                 }
             }
         }

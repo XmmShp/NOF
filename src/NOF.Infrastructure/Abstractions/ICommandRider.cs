@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Infrastructure;
@@ -5,6 +6,6 @@ namespace NOF.Infrastructure;
 public interface ICommandRider
 {
     Task SendAsync(ICommand command,
-        IDictionary<string, string?>? headers = null,
+        IExecutionContext executionContext,
         CancellationToken cancellationToken = default);
 }

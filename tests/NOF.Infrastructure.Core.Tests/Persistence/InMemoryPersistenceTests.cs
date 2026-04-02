@@ -301,8 +301,8 @@ public class InMemoryPersistenceTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<MemoryPersistenceStore>();
-        services.AddScoped<IExecutionContext, ExecutionContext>();
-        services.AddScoped<IUserContext>(sp => sp.GetRequiredService<IExecutionContext>());
+        services.AddScoped<IExecutionContext, NOF.Application.ExecutionContext>();
+        services.AddScoped<IUserContext, NOF.Infrastructure.UserContext>();
         services.AddScoped(sp => sp.GetRequiredService<MemoryPersistenceStore>().CreateContext(sp.GetRequiredService<IExecutionContext>().TenantId));
         services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();
         services.AddScoped<ITransactionManager, MemoryTransactionManager>();

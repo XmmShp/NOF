@@ -21,7 +21,7 @@ public sealed class TenantOutboundMiddleware : IOutboundMiddleware
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        context.ExecutionContext.Headers[NOFApplicationConstants.Transport.Headers.TenantId] =
+        context.ExecutionContext[NOFApplicationConstants.Transport.Headers.TenantId] =
             NOFApplicationConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         return next(cancellationToken);

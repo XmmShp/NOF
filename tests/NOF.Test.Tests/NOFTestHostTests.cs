@@ -37,9 +37,9 @@ public class NOFTestHostTests
         scope.ExecutionContext.TracingInfo.Should().NotBeNull();
         scope.ExecutionContext.TracingInfo!.TraceId.Should().Be("trace-1");
         scope.ExecutionContext.TracingInfo!.SpanId.Should().Be("span-1");
-        scope.ExecutionContext.Id.Should().Be("user-1");
-        scope.ExecutionContext.Name.Should().Be("Alice");
-        scope.ExecutionContext.Permissions.Should().Contain(["orders.read", "orders.write"]);
+        scope.UserContext.User.Id.Should().Be("user-1");
+        scope.UserContext.User.Name.Should().Be("Alice");
+        scope.UserContext.User.Permissions.Should().Contain(["orders.read", "orders.write"]);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class NOFTestHostTests
 
     private sealed class FakeCommandSender : ICommandSender
     {
-        public Task SendAsync(ICommand command, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
+        public Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
@@ -116,7 +116,7 @@ public class NOFTestHostTests
 
     private sealed class FakeNotificationPublisher : INotificationPublisher
     {
-        public Task PublishAsync(INotification notification, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
+        public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

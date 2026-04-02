@@ -184,7 +184,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 {
                     foreach (var (key, value) in headers)
                     {
-                        executionContext.Headers[key] = value;
+                        executionContext[key] = value;
                     }
                 }
                 var context = new InboundContext
@@ -208,7 +208,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 {
                     foreach (var (headerKey, value) in headers)
                     {
-                        executionContext.Headers[headerKey] = value;
+                        executionContext[headerKey] = value;
                     }
                 }
                 var context = new InboundContext

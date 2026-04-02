@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Infrastructure;
@@ -5,6 +6,6 @@ namespace NOF.Infrastructure;
 public interface INotificationRider
 {
     Task PublishAsync(INotification notification,
-        IDictionary<string, string?>? headers = null,
+        IExecutionContext executionContext,
         CancellationToken cancellationToken = default);
 }

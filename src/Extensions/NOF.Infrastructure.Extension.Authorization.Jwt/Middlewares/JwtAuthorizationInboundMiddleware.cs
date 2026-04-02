@@ -38,7 +38,7 @@ public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        if (!context.ExecutionContext.Headers.TryGetValue(_jwtOptions.HeaderName, out var authHeader) ||
+        if (!context.ExecutionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) ||
             string.IsNullOrEmpty(authHeader))
         {
             _userContext.UnsetUser();

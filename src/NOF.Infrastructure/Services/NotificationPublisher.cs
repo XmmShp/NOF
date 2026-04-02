@@ -20,15 +20,8 @@ public sealed class NotificationPublisher : INotificationPublisher
         _executionContext = executionContext;
     }
 
-    public async Task PublishAsync(INotification notification, IDictionary<string, string?>? headers, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
     {
-        if (headers is not null)
-        {
-            foreach (var (key, value) in headers)
-            {
-                _executionContext.Headers[key] = value;
-            }
-        }
         var context = new OutboundContext
         {
             Message = notification,
@@ -37,7 +30,7 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.PublishAsync(notification, _executionContext.Headers, ct);
+            await _rider.PublishAsync(notification, _executionContext, ct);
         }, cancellationToken);
     }
 }

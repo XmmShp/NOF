@@ -15,24 +15,26 @@ public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundM
 public sealed class TenantInboundMiddleware : IInboundMiddleware
 {
     private readonly IExecutionContext _executionContext;
+    private readonly IUserContext _userContext;
 
-    public TenantInboundMiddleware(IExecutionContext executionContext)
+    public TenantInboundMiddleware(IExecutionContext executionContext, IUserContext userContext)
     {
         _executionContext = executionContext;
+        _userContext = userContext;
     }
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
         string tenantId = NOFApplicationConstants.Tenant.HostId;
 
-        if (_executionContext.User.IsAuthenticated)
+        if (_userContext.User.IsAuthenticated)
         {
             tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(
-                _executionContext.User.FindFirst(ClaimTypes.TenantId)?.Value);
+                _userContext.User.FindFirst(ClaimTypes.TenantId)?.Value);
         }
 
         if (string.IsNullOrWhiteSpace(tenantId) &&
-            context.ExecutionContext.Headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var headerTenantId))
+            context.ExecutionContext.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
             tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(headerTenantId);
         }
