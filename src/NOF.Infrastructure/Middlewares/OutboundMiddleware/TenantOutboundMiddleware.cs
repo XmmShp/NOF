@@ -1,4 +1,4 @@
-using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure;
 
@@ -21,8 +21,8 @@ public sealed class TenantOutboundMiddleware : IOutboundMiddleware
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        context.ExecutionContext[NOFApplicationConstants.Transport.Headers.TenantId] =
-            NOFApplicationConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
+        context.ExecutionContext[NOFContractConstants.Transport.Headers.TenantId] =
+            NOFContractConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         return next(cancellationToken);
     }

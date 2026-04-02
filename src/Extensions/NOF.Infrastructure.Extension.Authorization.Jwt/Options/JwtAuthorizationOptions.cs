@@ -1,4 +1,4 @@
-using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -11,7 +11,7 @@ public class JwtAuthorizationOptions
     /// Gets or sets the header name used to propagate the authorization token.
     /// Default is "Authorization".
     /// </summary>
-    public string HeaderName { get; set; } = NOFApplicationConstants.Transport.Headers.Authorization;
+    public string HeaderName { get; set; } = NOFContractConstants.Transport.Headers.Authorization;
 
     /// <summary>
     /// Gets or sets the JWKS endpoint URL used to fetch signing keys for token validation.

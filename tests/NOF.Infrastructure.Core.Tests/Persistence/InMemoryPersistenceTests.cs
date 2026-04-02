@@ -239,7 +239,7 @@ public class InMemoryPersistenceTests
         using (var hostScope = services.CreateScope())
         {
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            hostExecutionContext.SetTenantId(NOFApplicationConstants.Tenant.HostId);
+            hostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
             var hostRepository = hostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
         }
@@ -256,7 +256,7 @@ public class InMemoryPersistenceTests
         using (var verifyHostScope = services.CreateScope())
         {
             var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            verifyHostExecutionContext.SetTenantId(NOFApplicationConstants.Tenant.HostId);
+            verifyHostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
             var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             (await verifyHostRepository.FindAsync("corr", "def"))!.State.Should().Be(1);
         }
@@ -301,7 +301,7 @@ public class InMemoryPersistenceTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<MemoryPersistenceStore>();
-        services.AddScoped<IExecutionContext, NOF.Application.ExecutionContext>();
+        services.AddScoped<IExecutionContext, NOF.Contract.ExecutionContext>();
         services.AddScoped<IUserContext, NOF.Infrastructure.UserContext>();
         services.AddScoped(sp => sp.GetRequiredService<MemoryPersistenceStore>().CreateContext(sp.GetRequiredService<IExecutionContext>().TenantId));
         services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();

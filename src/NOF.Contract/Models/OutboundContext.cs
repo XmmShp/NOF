@@ -1,8 +1,6 @@
-using NOF.Application;
-using NOF.Contract;
 using System.ComponentModel;
 
-namespace NOF.Infrastructure;
+namespace NOF.Contract;
 
 /// <summary>
 /// Context for outbound message pipeline execution.

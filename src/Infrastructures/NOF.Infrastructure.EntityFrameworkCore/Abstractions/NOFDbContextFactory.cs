@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Contract;
 using System.Reflection;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
@@ -46,7 +47,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     public TDbContext CreateDbContext(string tenantId)
     {
-        tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId);
+        tenantId = NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
 
         var extension = new NOFTenantDbContextOptionsExtension { TenantId = tenantId };

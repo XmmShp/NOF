@@ -116,9 +116,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
 
         // Add additional headers
-        scopedExecutionContext.TryAdd(NOFApplicationConstants.Transport.Headers.MessageId, messageId.ToString());
-        scopedExecutionContext.TryAdd(NOFApplicationConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
-        scopedExecutionContext.TryAdd(NOFApplicationConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
+        scopedExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.MessageId, messageId.ToString());
+        scopedExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
+        scopedExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
 
         if (activity is { IsAllDataRequested: true })
         {
@@ -126,7 +126,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, payload.GetType().Name);
             activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
             activity.SetTag("OutboxMessageId", message.Id);
-            if (scopedExecutionContext.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId))
+            if (scopedExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId))
             {
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
             }
@@ -249,8 +249,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo);
 
         return headers is not null
-            && headers.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var tenantId)
-                ? NOFApplicationConstants.Tenant.NormalizeTenantId(tenantId)
-                : NOFApplicationConstants.Tenant.HostId;
+            && headers.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId)
+                ? NOFContractConstants.Tenant.NormalizeTenantId(tenantId)
+                : NOFContractConstants.Tenant.HostId;
     }
 }

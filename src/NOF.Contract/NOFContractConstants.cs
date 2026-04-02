@@ -1,9 +1,9 @@
-namespace NOF.Application;
+namespace NOF.Contract;
 
 /// <summary>
-/// Central constants for the NOF Application layer.
+/// Central constants for the NOF Framework.
 /// </summary>
-public static class NOFApplicationConstants
+public static class NOFContractConstants
 {
     /// <summary>
     /// Tenant-related constants.

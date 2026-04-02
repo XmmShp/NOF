@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF.Infrastructure;
+namespace NOF.Contract;
 
 /// <summary>
 /// Outbound pipeline delegate.

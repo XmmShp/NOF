@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure;
 
@@ -31,10 +32,10 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
 
         try
         {
-            context.ExecutionContext.TryGetValue(NOFApplicationConstants.Transport.Headers.MessageId, out var messageIdStr);
+            context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
 
-            context.ExecutionContext[NOFApplicationConstants.Transport.Headers.MessageId] = messageId.ToString();
+            context.ExecutionContext[NOFContractConstants.Transport.Headers.MessageId] = messageId.ToString();
 
             var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
             if (messageExists)

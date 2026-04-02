@@ -1,4 +1,4 @@
-using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure.Memory;
 

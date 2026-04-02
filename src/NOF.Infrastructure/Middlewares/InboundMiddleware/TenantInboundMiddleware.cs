@@ -25,18 +25,18 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        string tenantId = NOFApplicationConstants.Tenant.HostId;
+        string tenantId = NOFContractConstants.Tenant.HostId;
 
         if (_userContext.User.IsAuthenticated)
         {
-            tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(
+            tenantId = NOFContractConstants.Tenant.NormalizeTenantId(
                 _userContext.User.FindFirst(ClaimTypes.TenantId)?.Value);
         }
 
         if (string.IsNullOrWhiteSpace(tenantId) &&
-            context.ExecutionContext.TryGetValue(NOFApplicationConstants.Transport.Headers.TenantId, out var headerTenantId))
+            context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
-            tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(headerTenantId);
+            tenantId = NOFContractConstants.Tenant.NormalizeTenantId(headerTenantId);
         }
 
         _executionContext.SetTenantId(tenantId);

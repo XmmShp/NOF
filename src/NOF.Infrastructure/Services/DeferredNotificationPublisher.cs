@@ -25,12 +25,12 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
     public void Publish(INotification notification)
     {
         var currentActivity = Activity.Current;
-        var tenantId = NOFApplicationConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
+        var tenantId = NOFContractConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         var headers = new Dictionary<string, string?>
         {
-            [NOFApplicationConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString(),
-            [NOFApplicationConstants.Transport.Headers.TenantId] = tenantId
+            [NOFContractConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString(),
+            [NOFContractConstants.Transport.Headers.TenantId] = tenantId
         };
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var typeName = TypeRegistry.Register(notification.GetType());
