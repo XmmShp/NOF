@@ -66,29 +66,151 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
         var definitionTypeName = typeof(TStateMachineDefinition).FullName;
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionTypeName);
 
-        Activity.Current?.SetTag("correlationId", correlationId);
-
         var existing = await _repository.FindAsync(correlationId, definitionTypeName);
-        if (existing is not null)
+
+        var originalActivity = Activity.Current;
+
+        Activity? childActivity = null;
+        Activity? standaloneActivity = null;
+        int? oldState = null;
+        int? newState = null;
+        int? initialState = null;
+
+        try
         {
-            var newState = await bp.TransferAsync(existing.State, notification, _serviceProvider, cancellationToken);
-            existing.State = newState;
-        }
-        else
-        {
-            var initialState = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
-            if (initialState is not null)
+            Activity.Current = originalActivity;
+            childActivity = CreateChildActivity(existing, correlationId, definitionTypeName);
+
+            Activity.Current = null;
+            standaloneActivity = CreateStandaloneActivity(existing, correlationId, definitionTypeName);
+
+            if (childActivity is not null && standaloneActivity is not null)
             {
-                var currentActivity = Activity.Current;
+                childActivity.AddLink(new ActivityLink(standaloneActivity.Context));
+                standaloneActivity.AddLink(new ActivityLink(childActivity.Context));
+            }
+
+            Activity.Current = originalActivity;
+
+            if (existing is not null)
+            {
+                oldState = existing.State;
+                newState = await bp.TransferAsync(existing.State, notification, _serviceProvider, cancellationToken);
+                existing.State = newState.Value;
+            }
+            else
+            {
+                initialState = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
+            }
+
+            if (childActivity is not null)
+            {
+                if (oldState.HasValue)
+                {
+                    childActivity.SetTag(NOFApplicationConstants.StateMachine.Tags.FromState, oldState.Value.ToString());
+                }
+                childActivity.SetTag(NOFApplicationConstants.StateMachine.Tags.ToState, (newState ?? initialState)!.Value.ToString());
+            }
+
+            if (standaloneActivity is not null)
+            {
+                if (oldState.HasValue)
+                {
+                    standaloneActivity.SetTag(NOFApplicationConstants.StateMachine.Tags.FromState, oldState.Value.ToString());
+                }
+                standaloneActivity.SetTag(NOFApplicationConstants.StateMachine.Tags.ToState, (newState ?? initialState)!.Value.ToString());
+
+                if (standaloneActivity.TraceId != default && standaloneActivity.SpanId != default)
+                {
+                    var tracingInfo = new TracingInfo(standaloneActivity.TraceId.ToString(), standaloneActivity.SpanId.ToString());
+                    if (existing is not null)
+                    {
+                        existing.TracingInfo = tracingInfo;
+                    }
+                    else if (initialState.HasValue)
+                    {
+                        _repository.Add(NOFStateMachineContext.Create(
+                            correlationId: correlationId,
+                            definitionTypeName: definitionTypeName,
+                            state: initialState.Value,
+                            tracingInfo: tracingInfo));
+                    }
+                }
+                else if (existing is null && initialState.HasValue)
+                {
+                    _repository.Add(NOFStateMachineContext.Create(
+                        correlationId: correlationId,
+                        definitionTypeName: definitionTypeName,
+                        state: initialState.Value,
+                        tracingInfo: null));
+                }
+            }
+            else if (existing is null && initialState.HasValue)
+            {
                 _repository.Add(NOFStateMachineContext.Create(
                     correlationId: correlationId,
                     definitionTypeName: definitionTypeName,
                     state: initialState.Value,
-                    traceId: currentActivity?.TraceId.ToString(),
-                    spanId: currentActivity?.SpanId.ToString()));
+                    tracingInfo: null));
+            }
+
+            await _uow.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            childActivity?.Dispose();
+            standaloneActivity?.Dispose();
+            Activity.Current = originalActivity;
+        }
+    }
+
+    private Activity? CreateChildActivity(NOFStateMachineContext? existing, string correlationId, string definitionTypeName)
+    {
+        var activity = NOFApplicationConstants.StateMachine.Source.StartActivity(
+            NOFApplicationConstants.StateMachine.ActivityNames.StateTransition,
+            ActivityKind.Internal);
+
+        if (activity is not null)
+        {
+            activity.SetTag(NOFApplicationConstants.StateMachine.Tags.CorrelationId, correlationId);
+            activity.SetTag(NOFApplicationConstants.StateMachine.Tags.DefinitionType, definitionTypeName);
+            activity.SetTag(NOFApplicationConstants.StateMachine.Tags.NotificationType, typeof(TNotification).FullName);
+            activity.SetTag("state_machine.link_type", "child");
+        }
+
+        return activity;
+    }
+
+    private Activity? CreateStandaloneActivity(NOFStateMachineContext? existing, string correlationId, string definitionTypeName)
+    {
+        ActivityContext? parentContext = null;
+
+        if (existing?.TracingInfo is not null)
+        {
+            try
+            {
+                var traceId = ActivityTraceId.CreateFromString(existing.TracingInfo.TraceId.AsSpan());
+                var spanId = ActivitySpanId.CreateFromString(existing.TracingInfo.SpanId.AsSpan());
+                parentContext = new ActivityContext(traceId, spanId, ActivityTraceFlags.Recorded);
+            }
+            catch
+            {
             }
         }
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        var activity = NOFApplicationConstants.StateMachine.Source.StartActivity(
+            NOFApplicationConstants.StateMachine.ActivityNames.StateTransition,
+            ActivityKind.Internal,
+            parentContext ?? default);
+
+        if (activity is not null)
+        {
+            activity.SetTag(NOFApplicationConstants.StateMachine.Tags.CorrelationId, correlationId);
+            activity.SetTag(NOFApplicationConstants.StateMachine.Tags.DefinitionType, definitionTypeName);
+            activity.SetTag(NOFApplicationConstants.StateMachine.Tags.NotificationType, typeof(TNotification).FullName);
+            activity.SetTag("state_machine.link_type", "standalone");
+        }
+
+        return activity;
     }
 }

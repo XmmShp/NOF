@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NOF.Sample;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NOF.Sample.Migrations
 {
     [DbContext(typeof(ConfigurationDbContext))]
-    partial class ConfigurationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402151828_MakeStateMachineContextHostOnly")]
+    partial class MakeStateMachineContextHostOnly
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -225,37 +228,6 @@ namespace NOF.Sample.Migrations
                     b.ToTable("ConfigNode", (string)null);
 
                     b.HasAnnotation("NOF:TenantScoped", true);
-                });
-
-            modelBuilder.Entity("NOF.Application.NOFStateMachineContext", b =>
-                {
-                    b.OwnsOne("NOF.Contract.TracingInfo", "TracingInfo", b1 =>
-                        {
-                            b1.Property<string>("NOFStateMachineContextCorrelationId")
-                                .HasColumnType("text");
-
-                            b1.Property<string>("NOFStateMachineContextDefinitionTypeName")
-                                .HasColumnType("text");
-
-                            b1.Property<string>("SpanId")
-                                .IsRequired()
-                                .HasMaxLength(128)
-                                .HasColumnType("character varying(128)");
-
-                            b1.Property<string>("TraceId")
-                                .IsRequired()
-                                .HasMaxLength(128)
-                                .HasColumnType("character varying(128)");
-
-                            b1.HasKey("NOFStateMachineContextCorrelationId", "NOFStateMachineContextDefinitionTypeName");
-
-                            b1.ToTable("NOFStateMachineContext");
-
-                            b1.WithOwner()
-                                .HasForeignKey("NOFStateMachineContextCorrelationId", "NOFStateMachineContextDefinitionTypeName");
-                        });
-
-                    b.Navigation("TracingInfo");
                 });
 
             modelBuilder.Entity("NOF.Sample.ConfigNode", b =>

@@ -19,7 +19,7 @@ public abstract class NOFDbContext : DbContext
     internal DbSet<NOFOutboxMessage> NOFOutboxMessages { get; set; }
     internal DbSet<NOFTenant> NOFTenants { get; set; }
 
-    protected internal virtual Type[] GetHostOnlyEntityTypes() => [typeof(NOFTenant), typeof(NOFInboxMessage), typeof(NOFOutboxMessage)];
+    protected internal virtual Type[] GetHostOnlyEntityTypes() => [typeof(NOFTenant), typeof(NOFInboxMessage), typeof(NOFOutboxMessage), typeof(NOFStateMachineContext)];
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,6 +65,11 @@ public abstract class NOFDbContext : DbContext
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionTypeName });
             entity.Property(e => e.CorrelationId).IsRequired();
             entity.Property(e => e.DefinitionTypeName).IsRequired();
+            entity.OwnsOne(e => e.TracingInfo, tracing =>
+            {
+                tracing.Property(t => t.TraceId).HasMaxLength(128);
+                tracing.Property(t => t.SpanId).HasMaxLength(128);
+            });
         });
     }
 

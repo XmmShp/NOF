@@ -31,6 +31,7 @@ public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationSte
             {
                 tracing.AddSource(NOFInfrastructureConstants.InboundPipeline.ActivitySourceName);
                 tracing.AddSource(NOFInfrastructureConstants.Messaging.ActivitySourceName);
+                tracing.AddSource(NOF.Application.NOFApplicationConstants.StateMachine.ActivitySourceName);
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddHttpClientInstrumentation();
             });

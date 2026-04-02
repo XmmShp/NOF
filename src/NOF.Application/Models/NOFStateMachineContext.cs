@@ -1,3 +1,4 @@
+using NOF.Contract;
 using NOF.Domain;
 using System.ComponentModel;
 
@@ -25,20 +26,25 @@ public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
     public required int State { get; set; }
 
     /// <summary>
+    /// The tracing information.
+    /// </summary>
+    public TracingInfo? TracingInfo { get; set; }
+
+    /// <summary>
     /// Creates a new state machine context instance.
     /// </summary>
     public static NOFStateMachineContext Create(
         string correlationId,
         string definitionTypeName,
         int state,
-        string? traceId = null,
-        string? spanId = null)
+        TracingInfo? tracingInfo = null)
     {
         return new NOFStateMachineContext
         {
             CorrelationId = correlationId,
             DefinitionTypeName = definitionTypeName,
-            State = state
+            State = state,
+            TracingInfo = tracingInfo
         };
     }
 
@@ -47,6 +53,7 @@ public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
         {
             CorrelationId = CorrelationId,
             DefinitionTypeName = DefinitionTypeName,
-            State = State
+            State = State,
+            TracingInfo = TracingInfo
         };
 }
