@@ -31,12 +31,21 @@ namespace NOF.Sample.Migrations
                     b.Property<string>("DefinitionTypeName")
                         .HasColumnType("text");
 
+                    b.Property<string>("TenantId")
+                        .IsConcurrencyToken()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
-                    b.HasKey("CorrelationId", "DefinitionTypeName");
+                    b.HasKey("CorrelationId", "DefinitionTypeName", "TenantId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("NOFStateMachineContext", (string)null);
+
+                    b.HasAnnotation("NOF:TenantScoped", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFInboxMessage", b =>
@@ -53,6 +62,8 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.ToTable("NOFInboxMessage", (string)null);
+
+                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFOutboxMessage", b =>
@@ -124,6 +135,8 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("NOFOutboxMessage", (string)null);
+
+                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFTenant", b =>
@@ -156,6 +169,8 @@ namespace NOF.Sample.Migrations
                         .IsUnique();
 
                     b.ToTable("NOFTenant", (string)null);
+
+                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Sample.Application.Entities.ConfigNodeChildren", b =>
@@ -167,9 +182,19 @@ namespace NOF.Sample.Migrations
                         .IsRequired()
                         .HasColumnType("bigint[]");
 
+                    b.Property<string>("TenantId")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.HasKey("NodeId");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("ConfigNodeChildren", (string)null);
+
+                    b.HasAnnotation("NOF:TenantScoped", true);
                 });
 
             modelBuilder.Entity("NOF.Sample.ConfigNode", b =>
@@ -189,12 +214,24 @@ namespace NOF.Sample.Migrations
                     b.Property<long?>("ParentId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("TenantId")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("Name");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
                     b.ToTable("ConfigNode", (string)null);
+
+                    b.HasAnnotation("NOF:TenantScoped", true);
                 });
 
             modelBuilder.Entity("NOF.Sample.ConfigNode", b =>

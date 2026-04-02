@@ -1,12 +1,14 @@
-﻿#nullable disable
-
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
 
 namespace NOF.Sample.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class ReBuildSample : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,7 +20,8 @@ namespace NOF.Sample.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false),
                     ParentId = table.Column<long>(type: "bigint", nullable: true),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    ActiveFileName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true)
+                    ActiveFileName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    TenantId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -30,7 +33,8 @@ namespace NOF.Sample.Migrations
                 columns: table => new
                 {
                     NodeId = table.Column<long>(type: "bigint", nullable: false),
-                    ChildrenIds = table.Column<List<long>>(type: "bigint[]", nullable: false)
+                    ChildrenIds = table.Column<List<long>>(type: "bigint[]", nullable: false),
+                    TenantId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -38,7 +42,7 @@ namespace NOF.Sample.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "EFCoreInboxMessage",
+                name: "NOFInboxMessage",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -46,53 +50,51 @@ namespace NOF.Sample.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EFCoreInboxMessage", x => x.Id);
+                    table.PrimaryKey("PK_NOFInboxMessage", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "EFCoreOutboxMessage",
+                name: "NOFOutboxMessage",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RetryCount = table.Column<int>(type: "integer", nullable: false),
                     MessageType = table.Column<int>(type: "integer", nullable: false),
                     PayloadType = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
                     Payload = table.Column<string>(type: "text", nullable: false),
-                    DestinationEndpointName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Headers = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    SentAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    FailedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FailedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ErrorMessage = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
-                    RetryCount = table.Column<int>(type: "integer", nullable: false),
                     ClaimedBy = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    ClaimExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    ClaimExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     TraceId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     SpanId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EFCoreOutboxMessage", x => x.Id);
+                    table.PrimaryKey("PK_NOFOutboxMessage", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "EFCoreStateMachineContext",
+                name: "NOFStateMachineContext",
                 columns: table => new
                 {
                     CorrelationId = table.Column<string>(type: "text", nullable: false),
-                    DefinitionType = table.Column<string>(type: "text", nullable: false),
-                    ContextType = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    ContextData = table.Column<string>(type: "text", nullable: false),
+                    DefinitionTypeName = table.Column<string>(type: "text", nullable: false),
+                    TenantId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     State = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EFCoreStateMachineContext", x => new { x.CorrelationId, x.DefinitionType });
+                    table.PrimaryKey("PK_NOFStateMachineContext", x => new { x.CorrelationId, x.DefinitionTypeName, x.TenantId });
                 });
 
             migrationBuilder.CreateTable(
-                name: "EFCoreTenant",
+                name: "NOFTenant",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
@@ -104,7 +106,7 @@ namespace NOF.Sample.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EFCoreTenant", x => x.Id);
+                    table.PrimaryKey("PK_NOFTenant", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -136,37 +138,57 @@ namespace NOF.Sample.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ConfigNode_Name",
                 table: "ConfigNode",
-                column: "Name",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConfigNode_TenantId",
+                table: "ConfigNode",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConfigNode_TenantId_Name",
+                table: "ConfigNode",
+                columns: new[] { "TenantId", "Name" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_EFCoreInboxMessage_CreatedAt",
-                table: "EFCoreInboxMessage",
+                name: "IX_ConfigNodeChildren_TenantId",
+                table: "ConfigNodeChildren",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NOFInboxMessage_CreatedAt",
+                table: "NOFInboxMessage",
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
-                name: "IX_EFCoreOutboxMessage_ClaimedBy",
-                table: "EFCoreOutboxMessage",
+                name: "IX_NOFOutboxMessage_ClaimedBy",
+                table: "NOFOutboxMessage",
                 column: "ClaimedBy");
 
             migrationBuilder.CreateIndex(
-                name: "IX_EFCoreOutboxMessage_Status_ClaimExpiresAt",
-                table: "EFCoreOutboxMessage",
+                name: "IX_NOFOutboxMessage_Status_ClaimExpiresAt",
+                table: "NOFOutboxMessage",
                 columns: new[] { "Status", "ClaimExpiresAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_EFCoreOutboxMessage_Status_CreatedAt",
-                table: "EFCoreOutboxMessage",
+                name: "IX_NOFOutboxMessage_Status_CreatedAt",
+                table: "NOFOutboxMessage",
                 columns: new[] { "Status", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_EFCoreOutboxMessage_TraceId",
-                table: "EFCoreOutboxMessage",
+                name: "IX_NOFOutboxMessage_TraceId",
+                table: "NOFOutboxMessage",
                 column: "TraceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_EFCoreTenant_Name",
-                table: "EFCoreTenant",
+                name: "IX_NOFStateMachineContext_TenantId",
+                table: "NOFStateMachineContext",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NOFTenant_Name",
+                table: "NOFTenant",
                 column: "Name",
                 unique: true);
         }
@@ -181,16 +203,16 @@ namespace NOF.Sample.Migrations
                 name: "ConfigNodeChildren");
 
             migrationBuilder.DropTable(
-                name: "EFCoreInboxMessage");
+                name: "NOFInboxMessage");
 
             migrationBuilder.DropTable(
-                name: "EFCoreOutboxMessage");
+                name: "NOFOutboxMessage");
 
             migrationBuilder.DropTable(
-                name: "EFCoreStateMachineContext");
+                name: "NOFStateMachineContext");
 
             migrationBuilder.DropTable(
-                name: "EFCoreTenant");
+                name: "NOFTenant");
 
             migrationBuilder.DropTable(
                 name: "ConfigNode");
