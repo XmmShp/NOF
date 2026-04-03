@@ -339,7 +339,7 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
             }
         }
 
-        lambdaParams.Add("global::Microsoft.AspNetCore.Http.HttpContext httpContext");
+        lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service");
         if (ep.ServiceHasCancellationToken)
         {
             lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
@@ -418,58 +418,19 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
             }
         }
 
-        var messageVarName = requestType != null ? "request" : "new object()";
 
-        sb.AppendLine("                    await using var scope = httpContext.RequestServices.CreateAsyncScope();");
-        sb.AppendLine("                    var sp = scope.ServiceProvider;");
-        sb.AppendLine("                    var inboundPipeline = sp.GetRequiredService<global::NOF.Infrastructure.IInboundPipelineExecutor>();");
-        sb.AppendLine("                    var outboundPipeline = sp.GetRequiredService<global::NOF.Contract.IOutboundPipelineExecutor>();");
-        sb.AppendLine("                    var executionContext = sp.GetRequiredService<global::NOF.Contract.IExecutionContext>();");
-        sb.AppendLine();
-
-        sb.AppendLine("                    foreach (var header in httpContext.Request.Headers)");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        executionContext[header.Key] = header.Value.FirstOrDefault();");
-        sb.AppendLine("                    }");
-        sb.AppendLine();
-
-        sb.AppendLine($"                    var message = {messageVarName};");
-        sb.AppendLine("                    var outboundContext = new global::NOF.Contract.OutboundContext");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        Message = message,");
-        sb.AppendLine("                        ExecutionContext = (global::NOF.Contract.IExecutionContext)executionContext.Clone()");
-        sb.AppendLine("                    };");
-        sb.AppendLine();
-
-        sb.AppendLine("                    global::NOF.Contract.IResult? result = null;");
-        sb.AppendLine();
-
-        sb.AppendLine("                    await outboundPipeline.ExecuteAsync(outboundContext, async (ct) =>");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        var inboundContext = new global::NOF.Infrastructure.InboundContext");
-        sb.AppendLine("                        {");
-        sb.AppendLine("                            Message = message,");
-        sb.AppendLine($"                            HandlerType = typeof({serviceType}),");
-        sb.AppendLine("                            ExecutionContext = outboundContext.ExecutionContext");
-        sb.AppendLine("                        };");
-        sb.AppendLine();
-
-        sb.AppendLine("                        await inboundPipeline.ExecuteAsync(inboundContext, async (ct2) =>");
-        sb.AppendLine("                        {");
-
-        sb.AppendLine($"                            var service = sp.GetRequiredService<{serviceType}>();");
 
         var serviceCall = "";
         if (requestType != null)
         {
             serviceCall = ep.ServiceHasCancellationToken
-                ? $"service.{ep.ServiceMethodName}(request, ct2)"
+                ? $"service.{ep.ServiceMethodName}(request, cancellationToken)"
                 : $"service.{ep.ServiceMethodName}(request)";
         }
         else
         {
             serviceCall = ep.ServiceHasCancellationToken
-                ? $"service.{ep.ServiceMethodName}(ct2)"
+                ? $"service.{ep.ServiceMethodName}(cancellationToken)"
                 : $"service.{ep.ServiceMethodName}()";
         }
 
@@ -480,12 +441,7 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
             _ => throw new InvalidOperationException("Unsupported service return kind.")
         };
 
-        sb.AppendLine($"                            var serviceResult = {serviceInvocation};");
-        sb.AppendLine("                            inboundContext.Response = serviceResult;");
-        sb.AppendLine("                            result = serviceResult;");
-        sb.AppendLine("                        }, ct).ConfigureAwait(false);");
-        sb.AppendLine("                    }, cancellationToken).ConfigureAwait(false);");
-        sb.AppendLine();
+        sb.AppendLine($"                    var result = {serviceInvocation};");
 
         EmitEndpointResponse(sb, ep.ReturnInfo.Kind, "result!", "                    ");
 
@@ -561,8 +517,7 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
 
     private static void EmitEndpointResponse(StringBuilder sb, ServiceReturnKind returnKind, string invocation, string indent = "                    ")
     {
-        sb.AppendLine($"{indent}var response = {invocation};");
-        sb.AppendLine($"{indent}return global::Microsoft.AspNetCore.Http.TypedResults.Ok(response);");
+        sb.AppendLine($"{indent}return global::Microsoft.AspNetCore.Http.TypedResults.Ok({invocation});");
     }
 
     private static IMethodSymbol? FindBestConstructor(INamedTypeSymbol typeSymbol, List<IPropertySymbol> allProperties)

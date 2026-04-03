@@ -27,11 +27,9 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 
         // Propagate trace/span IDs into headers before inner middleware run
         var currentActivity = Activity.Current;
-        if (currentActivity is not null)
-        {
-            context.ExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.TraceId, currentActivity.TraceId.ToString());
-            context.ExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.SpanId, currentActivity.SpanId.ToString());
-        }
+        context.ExecutionContext[NOFContractConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
+        context.ExecutionContext[NOFContractConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+
 
         try
         {

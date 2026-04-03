@@ -116,9 +116,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
 
         // Add additional headers
-        scopedExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.MessageId, messageId.ToString());
-        scopedExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.SpanId, activity?.SpanId.ToString());
-        scopedExecutionContext.TryAdd(NOFContractConstants.Transport.Headers.TraceId, activity?.TraceId.ToString());
+        scopedExecutionContext[NOFContractConstants.Transport.Headers.MessageId] = messageId.ToString();
+        scopedExecutionContext[NOFContractConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
+        scopedExecutionContext[NOFContractConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
 
         if (activity is { IsAllDataRequested: true })
         {
