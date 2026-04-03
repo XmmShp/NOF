@@ -6,18 +6,19 @@ namespace NOF.Infrastructure;
 
 public static class InboundHandlerInvoker
 {
-    public static async Task ExecuteCommandAsync(
+    public static async Task ExecuteHandlerAsync(
         IServiceProvider rootServiceProvider,
+        object message,
         Type handlerType,
-        ICommand command,
         IEnumerable<KeyValuePair<string, string?>>? headers,
+        Func<IServiceProvider, CancellationToken, ValueTask> terminal,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(rootServiceProvider);
+        ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(handlerType);
-        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(terminal);
         await using var scope = rootServiceProvider.CreateAsyncScope();
-        var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredService(handlerType);
         var pipeline = rootServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
         var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
         if (headers is not null)
@@ -29,13 +30,33 @@ public static class InboundHandlerInvoker
         }
         var context = new InboundContext
         {
-            Message = command,
+            Message = message,
             HandlerType = handlerType,
             Services = scope.ServiceProvider
         };
         await pipeline.ExecuteAsync(
             context,
-            ct => new ValueTask(handler.HandleAsync(command, ct)),
+            ct => terminal(scope.ServiceProvider, ct),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task ExecuteCommandAsync(
+        IServiceProvider rootServiceProvider,
+        Type handlerType,
+        ICommand command,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        CancellationToken cancellationToken)
+    {
+        await ExecuteHandlerAsync(
+            rootServiceProvider,
+            command,
+            handlerType,
+            headers,
+            async (sp, ct) =>
+            {
+                var handler = (ICommandHandler)sp.GetRequiredService(handlerType);
+                await handler.HandleAsync(command, ct);
+            },
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -46,29 +67,16 @@ public static class InboundHandlerInvoker
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(rootServiceProvider);
-        ArgumentNullException.ThrowIfNull(notification);
-        ArgumentNullException.ThrowIfNull(handlerType);
-        await using var scope = rootServiceProvider.CreateAsyncScope();
-        var handler = (INotificationHandler)scope.ServiceProvider.GetRequiredService(handlerType);
-        var pipeline = rootServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-        if (headers is not null)
-        {
-            foreach (var (keyName, value) in headers)
+        await ExecuteHandlerAsync(
+            rootServiceProvider,
+            notification,
+            handlerType,
+            headers,
+            async (sp, ct) =>
             {
-                executionContext[keyName] = value;
-            }
-        }
-        var context = new InboundContext
-        {
-            Message = notification,
-            HandlerType = handlerType,
-            Services = scope.ServiceProvider
-        };
-        await pipeline.ExecuteAsync(
-            context,
-            ct => new ValueTask(handler.HandleAsync(notification, ct)),
+                var handler = (INotificationHandler)sp.GetRequiredService(handlerType);
+                await handler.HandleAsync(notification, ct);
+            },
             cancellationToken).ConfigureAwait(false);
     }
 }

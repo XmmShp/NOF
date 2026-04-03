@@ -6,7 +6,6 @@ using Moq;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
-using NOF.Infrastructure;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
