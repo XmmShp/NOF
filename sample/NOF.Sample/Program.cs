@@ -21,7 +21,12 @@ builder.AddRedisCache();
 
 builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
 
-builder.AddJwtAuthorization(o => o.Issuer = "NOF.Sample");
+builder.AddJwtResourceServer(o =>
+{
+    o.Issuer = "NOF.Sample";
+    o.RequireHttpsMetadata = false;
+    o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
+});
 
 builder.AddRabbitMQ();
 

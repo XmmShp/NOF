@@ -4,20 +4,10 @@ using NOF.Contract.Extension.Authorization.Jwt;
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>
-/// Handles <see cref="JwtKeyRotationNotification"/> by refreshing the cached JWKS from the authority.
-/// This ensures clients pick up new signing keys promptly after a key rotation event.
+/// Refreshes cached JWKS keys when the authority rotates signing keys.
 /// </summary>
-public class RefreshJwksOnKeyRotation : INotificationHandler<JwtKeyRotationNotification>
+public sealed class RefreshJwksOnKeyRotation(IJwksProvider jwksProvider) : INotificationHandler<JwtKeyRotationNotification>
 {
-    private readonly IJwksProvider _jwksProvider;
-
-    public RefreshJwksOnKeyRotation(IJwksProvider jwksProvider)
-    {
-        _jwksProvider = jwksProvider;
-    }
-
-    public async Task HandleAsync(JwtKeyRotationNotification notification, CancellationToken cancellationToken)
-    {
-        await _jwksProvider.RefreshAsync(cancellationToken);
-    }
+    public Task HandleAsync(JwtKeyRotationNotification notification, CancellationToken cancellationToken)
+        => jwksProvider.RefreshAsync(cancellationToken);
 }

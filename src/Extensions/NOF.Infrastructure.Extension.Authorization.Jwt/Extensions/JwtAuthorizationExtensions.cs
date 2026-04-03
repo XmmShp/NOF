@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
-using System.Text.Json;
+using NOF.Hosting.Extension.Authorization.Jwt;
+using JwtHostingExtensions = NOF.Hosting.Extension.Authorization.Jwt.NOFJwtAuthorizationExtensions;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -20,55 +20,46 @@ public static partial class NOFJwtAuthorizationExtensions
         /// Adds JWT authorization services that fetch JWKS from a remote authority and configure token validation.
         /// This turns the application into an OIDC resource server that validates tokens issued by the authority.
         /// </summary>
-        /// <param name="configureOptions">Action to configure JWT authorization options.</param>
-        /// <returns>A <see cref="JwtAuthorizationSelector"/> for further configuration.</returns>
-        public JwtAuthorizationSelector AddJwtAuthorization(Action<JwtAuthorizationOptions>? configureOptions = null)
+        /// <param name="configureOptions">Action to configure JWT resource server options.</param>
+        /// <returns>The NOF application builder for chaining.</returns>
+        public INOFAppBuilder AddJwtResourceServer(Action<JwtResourceServerOptions>? configureOptions = null)
         {
+            builder.Services.ReplaceOrAddSingleton<IValidateOptions<JwtResourceServerOptions>, JwtResourceServerOptionsValidator>();
+
             if (configureOptions is not null)
             {
                 builder.Services.Configure(configureOptions);
             }
             else
             {
-                builder.Services.AddOptions<JwtAuthorizationOptions>();
+                builder.Services.AddOptions<JwtResourceServerOptions>();
             }
 
-            // Register JwksJsonContext into the shared NOF JSON resolver chain
-            JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
+            builder.Services.ReplaceOrAddSingleton<IConfigureOptions<JwtTokenPropagationOptions>>(
+                sp =>
+                {
+                    var resourceOptions = sp.GetRequiredService<IOptions<JwtResourceServerOptions>>().Value;
+                    return new ConfigureOptions<JwtTokenPropagationOptions>(opts =>
+                    {
+                        opts.HeaderName = resourceOptions.HeaderName;
+                        opts.TokenType = resourceOptions.TokenType;
+                    });
+                });
+
+            JwtHostingExtensions.AddJwtTokenPropagation(builder);
+
+            builder.Services.AddHttpClient<HttpJwksService>();
+            if (builder.Services.All(sd => sd.ServiceType != typeof(IJwksService)))
             {
-                options.TypeInfoResolverChain.Add(JwksJsonContext.Default);
-            });
-
-            // JWKS HTTP client
-            builder.Services.AddHttpClient(NOFJwtAuthorizationConstants.JwtClient.JwksHttpClientName);
-
-            builder.Services.ReplaceOrAddSingleton<IJwksProvider, HttpJwksProvider>();
-
-            // Inbound/outbound JWT middleware steps
-            builder.AddRegistrationStep(new JwtAuthorizationInboundMiddlewareStep());
-
-            builder.AddRegistrationStep(new JwtAuthorizationOutboundMiddlewareStep());
-
-#pragma warning disable CS8620
-            // Key rotation handler
+                builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksService>());
+            }
+            builder.Services.ReplaceOrAddSingleton<IJwksProvider, JwksProvider>();
             builder.Services.AddHandlerInfo(
                 new NotificationHandlerInfo(typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification)));
-#pragma warning restore CS8620
 
-            return new JwtAuthorizationSelector(builder);
-        }
+            builder.AddRegistrationStep(new JwtResourceServerInboundMiddlewareStep());
 
-        /// <summary>
-        /// Adds JWT authorization services with minimal configuration.
-        /// </summary>
-        /// <param name="jwksEndpoint">The JWKS endpoint URL (e.g., https://auth.example.com/.well-known/jwks.json).</param>
-        /// <returns>A <see cref="JwtAuthorizationSelector"/> for further configuration.</returns>
-        public JwtAuthorizationSelector AddJwtAuthorization(string jwksEndpoint)
-        {
-            return builder.AddJwtAuthorization(options =>
-            {
-                options.JwksEndpoint = jwksEndpoint;
-            });
+            return builder;
         }
 
         /// <summary>
@@ -79,6 +70,9 @@ public static partial class NOFJwtAuthorizationExtensions
         /// <returns>The NOF application builder for chaining.</returns>
         public JwtAuthoritySelector AddJwtAuthority(Action<JwtAuthorityOptions>? configureOptions = null)
         {
+            builder.Services.ReplaceOrAddScoped<JwtAuthorityService, JwtAuthorityService>();
+            builder.Services.ReplaceOrAddScoped<IJwtAuthorityService>(sp => sp.GetRequiredService<JwtAuthorityService>());
+
             if (configureOptions is not null)
             {
                 builder.Services.Configure(configureOptions);
@@ -98,17 +92,14 @@ public static partial class NOFJwtAuthorizationExtensions
             // Key rotation background service
             builder.Services.AddHostedService<JwtKeyRotationBackgroundService>();
 
-            // Local JWKS provider overrides HttpJwksProvider (authority always uses local)
-            builder.Services.ReplaceOrAddSingleton<IJwksProvider, LocalJwksProvider>();
-
             builder.Services.ReplaceOrAddSingleton<IRevokedRefreshTokenRepository, CacheRevokedRefreshTokenRepository>();
 
-            // Bridge JwtAuthorityOptions.Issuer into JwtAuthorizationOptions
-            builder.Services.ReplaceOrAddSingleton<IConfigureOptions<JwtAuthorizationOptions>>(
+            // Bridge JwtAuthorityOptions.Issuer into JwtResourceServerOptions
+            builder.Services.ReplaceOrAddSingleton<IConfigureOptions<JwtResourceServerOptions>>(
                 sp =>
                 {
                     var authorityOptions = sp.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value;
-                    return new ConfigureOptions<JwtAuthorizationOptions>(opts =>
+                    return new ConfigureOptions<JwtResourceServerOptions>(opts =>
                     {
                         opts.Issuer ??= authorityOptions.Issuer;
                     });

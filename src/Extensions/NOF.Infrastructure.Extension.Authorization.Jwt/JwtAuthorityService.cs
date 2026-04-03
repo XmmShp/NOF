@@ -7,22 +7,19 @@ using System.Security.Claims;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-public sealed class JwtAuthorityService : IJwtAuthorityService, IJwksService
+public sealed class JwtAuthorityService : IJwtAuthorityService
 {
     private readonly ISigningKeyService _signingKeyService;
     private readonly IRevokedRefreshTokenRepository _revokedRefreshTokenRepository;
-    private readonly IJwksService _jwksService;
     private readonly JwtAuthorityOptions _options;
 
     public JwtAuthorityService(
         ISigningKeyService signingKeyService,
         IRevokedRefreshTokenRepository revokedRefreshTokenRepository,
-        IJwksService jwksService,
         IOptions<JwtAuthorityOptions> options)
     {
         _signingKeyService = signingKeyService;
         _revokedRefreshTokenRepository = revokedRefreshTokenRepository;
-        _jwksService = jwksService;
         _options = options.Value;
     }
 
@@ -131,10 +128,5 @@ public sealed class JwtAuthorityService : IJwtAuthorityService, IJwksService
             .ConfigureAwait(false);
 
         return Result.Success();
-    }
-
-    public Task<Result<JwksDocument>> GetJwksAsync(CancellationToken cancellationToken = default)
-    {
-        return _jwksService.GetJwksAsync(cancellationToken);
     }
 }

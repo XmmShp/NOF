@@ -4,11 +4,12 @@ using Microsoft.IdentityModel.Tokens;
 using NOF.Contract;
 using System.IdentityModel.Tokens.Jwt;
 using NOF.Hosting;
+using NOF.Hosting.Extension.Authorization.Jwt;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>Resolves the current user from a JWT before tenant resolution runs.</summary>
-public class JwtAuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<JwtAuthorizationInboundMiddlewareStep, JwtAuthorizationInboundMiddleware>,
+public class JwtResourceServerInboundMiddlewareStep : IInboundMiddlewareStep<JwtResourceServerInboundMiddlewareStep, JwtResourceServerInboundMiddleware>,
     IAfter<ExceptionInboundMiddlewareStep>,
     IBefore<TenantInboundMiddlewareStep>;
 
@@ -16,20 +17,20 @@ public class JwtAuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<JwtA
 /// Inbound middleware that extracts and validates a JWT from inbound headers,
 /// then populates the current user context.
 /// </summary>
-public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
+public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware
 {
     private readonly IUserContext _userContext;
     private readonly IJwksProvider _jwksProvider;
-    private readonly JwtAuthorizationOptions _jwtOptions;
+    private readonly JwtResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
-    private readonly ILogger<JwtAuthorizationInboundMiddleware> _logger;
+    private readonly ILogger<JwtResourceServerInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;
 
-    public JwtAuthorizationInboundMiddleware(
+    public JwtResourceServerInboundMiddleware(
         IUserContext userContext,
         IJwksProvider jwksProvider,
-        IOptions<JwtAuthorizationOptions> jwtOptions,
-        ILogger<JwtAuthorizationInboundMiddleware> logger,
+        IOptions<JwtResourceServerOptions> jwtOptions,
+        ILogger<JwtResourceServerInboundMiddleware> logger,
         IExecutionContext executionContext)
     {
         _userContext = userContext;
@@ -45,7 +46,6 @@ public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
         if (!_executionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) ||
             string.IsNullOrEmpty(authHeader))
         {
-            _userContext.UnsetUser();
             await next(cancellationToken);
             return;
         }
@@ -57,7 +57,6 @@ public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
 
         if (string.IsNullOrEmpty(token))
         {
-            _userContext.UnsetUser();
             await next(cancellationToken);
             return;
         }
@@ -65,6 +64,12 @@ public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
         try
         {
             var keys = await _jwksProvider.GetSecurityKeysAsync(cancellationToken);
+            if (keys.Count == 0)
+            {
+                _logger.LogDebug("No JWKS keys available for JWT validation");
+                await next(cancellationToken);
+                return;
+            }
 
             var validationParameters = new TokenValidationParameters
             {
@@ -79,21 +84,19 @@ public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
 
             var principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
             _userContext.SetUser(new JwtClaimsPrincipal(principal, token));
+            _executionContext.Remove(_jwtOptions.HeaderName);
         }
         catch (SecurityTokenExpiredException)
         {
             _logger.LogDebug("JWT token expired");
-            _userContext.UnsetUser();
         }
         catch (SecurityTokenValidationException ex)
         {
             _logger.LogDebug(ex, "JWT token validation failed: {Message}", ex.Message);
-            _userContext.UnsetUser();
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Unexpected error during JWT token validation");
-            _userContext.UnsetUser();
         }
 
         await next(cancellationToken);
