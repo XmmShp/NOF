@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Extensions.Options;
 using NOF.Application;
 using System.Collections;
 using Xunit;
@@ -8,18 +7,18 @@ namespace NOF.Infrastructure.Core.Tests.Services;
 
 public class ManualMapperTests
 {
-    private static ManualMapper CreateMapper(Action<MapperOptions>? configure = null)
+    private static ManualMapper CreateMapper(Action<IMapper>? configure = null)
     {
-        var options = new MapperOptions();
-        configure?.Invoke(options);
-        return new ManualMapper(Options.Create(options));
+        var mapper = new ManualMapper();
+        configure?.Invoke(mapper);
+        return mapper;
     }
 
     [Fact]
     public void Map_Generic_ReturnsExpectedResult()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<int, string>(x => x.ToString()));
+        var mapper = CreateMapper(m =>
+            m.Add<int, string>(x => x.ToString()));
 
         var result = mapper.Map<int, string>(42);
 
@@ -29,8 +28,8 @@ public class ManualMapperTests
     [Fact]
     public void TryMap_Generic_ReturnsTrueAndValue()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<int, string>(x => x.ToString()));
+        var mapper = CreateMapper(m =>
+            m.Add<int, string>(x => x.ToString()));
 
         var found = mapper.TryMap<int, string>(42, out var result);
 
@@ -61,8 +60,8 @@ public class ManualMapperTests
     [Fact]
     public void Map_NonGeneric_ReturnsExpectedResult()
     {
-        var mapper = CreateMapper(o =>
-            o.Add(typeof(int), typeof(string), (src, _) => ((int)src).ToString()));
+        var mapper = CreateMapper(m =>
+            m.Add(typeof(int), typeof(string), (src, _) => ((int)src).ToString()));
 
         var result = mapper.Map(typeof(int), typeof(string), 42);
 
@@ -72,8 +71,8 @@ public class ManualMapperTests
     [Fact]
     public void TryMap_NonGeneric_ReturnsTrueAndValue()
     {
-        var mapper = CreateMapper(o =>
-            o.Add(typeof(int), typeof(string), (src, _) => ((int)src).ToString()));
+        var mapper = CreateMapper(m =>
+            m.Add(typeof(int), typeof(string), (src, _) => ((int)src).ToString()));
 
         var found = mapper.TryMap(typeof(int), typeof(string), 42, out var result);
 
@@ -104,11 +103,11 @@ public class ManualMapperTests
     [Fact]
     public void Map_NamedMapping_ReturnsCorrectResult()
     {
-        var mapper = CreateMapper(o =>
+        var mapper = CreateMapper(m =>
         {
-            o.Add<int, string>(x => $"default:{x}");
-            o.Add<int, string>(x => $"summary:{x}", name: "summary");
-            o.Add<int, string>(x => $"full:{x}", name: "full");
+            m.Add<int, string>(x => $"default:{x}");
+            m.Add<int, string>(x => $"summary:{x}", name: "summary");
+            m.Add<int, string>(x => $"full:{x}", name: "full");
         });
 
         mapper.Map<int, string>(1).Should().Be("default:1");
@@ -119,8 +118,8 @@ public class ManualMapperTests
     [Fact]
     public void Map_NamedMapping_NotFound_ThrowsEvenIfDefaultExists()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<int, string>(x => x.ToString()));
+        var mapper = CreateMapper(m =>
+            m.Add<int, string>(x => x.ToString()));
 
         var act = () => mapper.Map<int, string>(1, name: "nonexistent");
 
@@ -165,10 +164,10 @@ public class ManualMapperTests
     [Fact]
     public void Add_Generic_ReplacesExistingDelegate()
     {
-        var mapper = CreateMapper(o =>
+        var mapper = CreateMapper(m =>
         {
-            o.Add<int, string>(x => $"first:{x}");
-            o.Add<int, string>(x => $"second:{x}");
+            m.Add<int, string>(x => $"first:{x}");
+            m.Add<int, string>(x => $"second:{x}");
         });
 
         mapper.Map<int, string>(1).Should().Be("second:1");
@@ -177,8 +176,8 @@ public class ManualMapperTests
     [Fact]
     public void OpenGenericSource_FallbackWorks()
     {
-        var mapper = CreateMapper(o =>
-            o.Add(typeof(List<>), typeof(int), (src, _) => ((IList)src).Count));
+        var mapper = CreateMapper(m =>
+            m.Add(typeof(List<>), typeof(int), (src, _) => ((IList)src).Count));
 
         var result = mapper.Map<List<string>, int>(["a", "b", "c"]);
 
@@ -188,8 +187,8 @@ public class ManualMapperTests
     [Fact]
     public void OpenGenericDest_FallbackWorks()
     {
-        var mapper = CreateMapper(o =>
-            o.Add(typeof(string), typeof(List<>), (src, _) => new List<string> { (string)src }));
+        var mapper = CreateMapper(m =>
+            m.Add(typeof(string), typeof(List<>), (src, _) => new List<string> { (string)src }));
 
         var result = mapper.Map(typeof(string), typeof(List<string>), "hello");
 
@@ -221,10 +220,10 @@ public class ManualMapperTests
     [Fact]
     public void ClosedType_TakesPriorityOverOpenGeneric()
     {
-        var mapper = CreateMapper(o =>
+        var mapper = CreateMapper(m =>
         {
-            o.Add(typeof(List<>), typeof(int), (src, _) => 999);
-            o.Add(typeof(List<string>), typeof(int), (src, _) => 42);
+            m.Add(typeof(List<>), typeof(int), (src, _) => 999);
+            m.Add(typeof(List<string>), typeof(int), (src, _) => 42);
         });
 
         var result = mapper.Map<List<string>, int>(["a"]);
@@ -237,8 +236,8 @@ public class ManualMapperTests
     [Fact]
     public void NullableFallback_MappingToNullableT_UsesRegisteredTMapping()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<string, int>(s => s.Length));
+        var mapper = CreateMapper(m =>
+            m.Add<string, int>(s => s.Length));
 
         var found = mapper.TryMap<string, int?>("hello", out var result);
 
@@ -249,8 +248,8 @@ public class ManualMapperTests
     [Fact]
     public void NullableFallback_MappingToT_DoesNotUseNullableTMapping()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<string, int?>(s => s.Length));
+        var mapper = CreateMapper(m =>
+            m.Add<string, int?>(s => s.Length));
 
         var act = () => mapper.Map<string, int>("hello");
 
@@ -260,10 +259,10 @@ public class ManualMapperTests
     [Fact]
     public void NullableFallback_DirectNullableRegistration_TakesPriority()
     {
-        var mapper = CreateMapper(o =>
+        var mapper = CreateMapper(m =>
         {
-            o.Add<string, int>(s => s.Length);
-            o.Add<string, int?>(s => s.Length * 10);
+            m.Add<string, int>(s => s.Length);
+            m.Add<string, int?>(s => s.Length * 10);
         });
 
         var result = mapper.Map<string, int?>("hi");
@@ -286,8 +285,8 @@ public class ManualMapperTests
     [Fact]
     public void Map_UseRuntimeType_ResolvesUsingActualType()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<DerivedSource, TargetDto>(d => new TargetDto($"derived:{d.Extra}")));
+        var mapper = CreateMapper(m =>
+            m.Add<DerivedSource, TargetDto>(d => new TargetDto($"derived:{d.Extra}")));
 
         BaseSource source = new DerivedSource { Name = "base", Extra = "ext" };
 
@@ -301,8 +300,8 @@ public class ManualMapperTests
     [Fact]
     public void TryMap_UseRuntimeType_ResolvesUsingActualType()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<DerivedSource, TargetDto>(d => new TargetDto($"derived:{d.Extra}")));
+        var mapper = CreateMapper(m =>
+            m.Add<DerivedSource, TargetDto>(d => new TargetDto($"derived:{d.Extra}")));
 
         BaseSource source = new DerivedSource { Name = "base", Extra = "ext" };
 
@@ -317,16 +316,11 @@ public class ManualMapperTests
     [Fact]
     public void Merge_ExistingKeysNotOverwritten()
     {
-        var primary = new MapperOptions();
-        primary.Add<int, string>(x => $"primary:{x}");
-
-        var secondary = new MapperOptions();
-        secondary.Add<int, string>(x => $"secondary:{x}");
-        secondary.Add<int, double>(x => x * 1.5);
-
-        primary.Merge(secondary);
-
-        var mapper = new ManualMapper(Options.Create(primary));
+        var mapper = CreateMapper(m =>
+        {
+            m.Add<int, string>(x => $"primary:{x}");
+            m.TryAdd<int, double>(x => x * 1.5);
+        });
 
         mapper.Map<int, string>(1).Should().Be("primary:1");
         mapper.Map<int, double>(10).Should().Be(15.0);
@@ -335,13 +329,10 @@ public class ManualMapperTests
     [Fact]
     public void Merge_NewKey_IsAvailable()
     {
-        var primary = new MapperOptions();
-        var secondary = new MapperOptions();
-        secondary.Add<string, int>(s => s.Length);
-
-        primary.Merge(secondary);
-
-        var mapper = new ManualMapper(Options.Create(primary));
+        var mapper = CreateMapper(m =>
+        {
+            m.TryAdd<string, int>(s => s.Length);
+        });
         mapper.Map<string, int>("test").Should().Be(4);
     }
 
@@ -358,8 +349,8 @@ public class ManualMapperTests
     [Fact]
     public void IMapper_TryAdd_SkipsIfAlreadyRegistered()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<int, string>(x => $"options:{x}"));
+        var mapper = CreateMapper(m =>
+            m.Add<int, string>(x => $"options:{x}"));
 
         mapper.TryAdd<int, string>(x => $"runtime:{x}");
 
@@ -369,8 +360,8 @@ public class ManualMapperTests
     [Fact]
     public void IMapper_Add_ReplacesExisting()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<int, string>(x => $"options:{x}"));
+        var mapper = CreateMapper(m =>
+            m.Add<int, string>(x => $"options:{x}"));
 
         mapper.Add<int, string>(x => $"runtime:{x}");
 
@@ -380,10 +371,10 @@ public class ManualMapperTests
     [Fact]
     public void Add_WithMapper_DelegateCanUseMapperForNestedMapping()
     {
-        var mapper = CreateMapper(o =>
+        var mapper = CreateMapper(m =>
         {
-            o.Add<int, string>(x => $"mapped:{x}");
-            o.Add<Wrapper<int>, string>((src, m) => $"wrapped({m.Map<int, string>(src.Inner)})");
+            m.Add<int, string>(x => $"mapped:{x}");
+            m.Add<Wrapper<int>, string>((src, mm) => $"wrapped({mm.Map<int, string>(src.Inner)})");
         });
 
         var wrapped = new Wrapper<int>(5);
@@ -393,8 +384,8 @@ public class ManualMapperTests
     [Fact]
     public void TryAdd_WithMapper_DelegateCanUseMapper()
     {
-        var mapper = CreateMapper(o =>
-            o.Add<int, string>(x => x.ToString()));
+        var mapper = CreateMapper(m =>
+            m.Add<int, string>(x => x.ToString()));
 
         var added = mapper.TryAdd<Wrapper<int>, string>((src, m) => $"w:{m.Map<int, string>(src.Inner)}");
         added.Should().BeTrue();

@@ -17,7 +17,7 @@ public static class Mapper
     {
         get => field ?? throw new InvalidOperationException(
             "Mapper has not been initialized. " +
-            "Configure mappings via services.Configure<MapperOptions>() during application setup.");
+            "Ensure application parts are added so assembly initializers run and mappings are registered.");
         private set;
     }
 

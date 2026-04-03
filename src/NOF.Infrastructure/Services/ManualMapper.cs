@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using NOF.Application;
 
 namespace NOF.Infrastructure;
@@ -15,15 +15,17 @@ namespace NOF.Infrastructure;
 /// </summary>
 public sealed class ManualMapper : IMapper
 {
-    private readonly MapperOptions _options;
+    private readonly ConcurrentDictionary<MapKey, MapFunc> _mappings = new();
 
     /// <summary>
-    /// Creates a new <see cref="ManualMapper"/> seeded with mappings from <paramref name="options"/>.
+    /// Creates a new <see cref="ManualMapper"/> seeded with mappings from the global registry.
     /// </summary>
-    public ManualMapper(IOptions<MapperOptions> options)
+    public ManualMapper()
     {
-        ArgumentNullException.ThrowIfNull(options);
-        _options = options.Value;
+        foreach (var kvp in MapperRegistry.GetRegistrationsSnapshot())
+        {
+            _mappings[kvp.Key] = kvp.Value;
+        }
     }
 
     #region Generic registration
@@ -31,24 +33,36 @@ public sealed class ManualMapper : IMapper
     /// <inheritdoc />
     public IMapper Add<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null)
     {
-        _options.Add(mappingFunc, name);
+        ArgumentNullException.ThrowIfNull(mappingFunc);
+        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
+        _mappings[key] = (src, _) => mappingFunc((TSource)src)!;
         return this;
     }
 
     /// <inheritdoc />
     public IMapper Add<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
     {
-        _options.Add(mappingFunc, name);
+        ArgumentNullException.ThrowIfNull(mappingFunc);
+        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
+        _mappings[key] = (src, mapper) => mappingFunc((TSource)src, mapper)!;
         return this;
     }
 
     /// <inheritdoc />
     public bool TryAdd<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null)
-        => _options.TryAdd(mappingFunc, name);
+    {
+        ArgumentNullException.ThrowIfNull(mappingFunc);
+        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
+        return _mappings.TryAdd(key, (src, _) => mappingFunc((TSource)src)!);
+    }
 
     /// <inheritdoc />
     public bool TryAdd<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
-        => _options.TryAdd(mappingFunc, name);
+    {
+        ArgumentNullException.ThrowIfNull(mappingFunc);
+        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
+        return _mappings.TryAdd(key, (src, mapper) => mappingFunc((TSource)src, mapper)!);
+    }
 
     #endregion
 
@@ -57,13 +71,23 @@ public sealed class ManualMapper : IMapper
     /// <inheritdoc />
     public IMapper Add(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
     {
-        _options.Add(sourceType, destinationType, mappingFunc, name);
+        ArgumentNullException.ThrowIfNull(sourceType);
+        ArgumentNullException.ThrowIfNull(destinationType);
+        ArgumentNullException.ThrowIfNull(mappingFunc);
+        var key = new MapKey(sourceType, destinationType, name);
+        _mappings[key] = mappingFunc;
         return this;
     }
 
     /// <inheritdoc />
     public bool TryAdd(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
-        => _options.TryAdd(sourceType, destinationType, mappingFunc, name);
+    {
+        ArgumentNullException.ThrowIfNull(sourceType);
+        ArgumentNullException.ThrowIfNull(destinationType);
+        ArgumentNullException.ThrowIfNull(mappingFunc);
+        var key = new MapKey(sourceType, destinationType, name);
+        return _mappings.TryAdd(key, mappingFunc);
+    }
 
     #endregion
 
@@ -148,7 +172,7 @@ public sealed class ManualMapper : IMapper
         while (true)
         {
             var key = new MapKey(sourceType, destType, name);
-            if (_options.TryGetValue(key, out var func))
+            if (_mappings.TryGetValue(key, out var func))
             {
                 return func;
             }
@@ -160,7 +184,7 @@ public sealed class ManualMapper : IMapper
             if (openSource is not null)
             {
                 key = new MapKey(openSource, destType, name);
-                if (_options.TryGetValue(key, out func))
+                if (_mappings.TryGetValue(key, out func))
                 {
                     return func;
                 }
@@ -169,7 +193,7 @@ public sealed class ManualMapper : IMapper
             if (openDest is not null)
             {
                 key = new MapKey(sourceType, openDest, name);
-                if (_options.TryGetValue(key, out func))
+                if (_mappings.TryGetValue(key, out func))
                 {
                     return func;
                 }
@@ -178,7 +202,7 @@ public sealed class ManualMapper : IMapper
             if (openSource is not null && openDest is not null)
             {
                 key = new MapKey(openSource, openDest, name);
-                if (_options.TryGetValue(key, out func))
+                if (_mappings.TryGetValue(key, out func))
                 {
                     return func;
                 }

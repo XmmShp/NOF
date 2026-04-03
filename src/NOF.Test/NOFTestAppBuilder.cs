@@ -8,6 +8,7 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure;
+using NOF.Contract;
 
 namespace NOF.Test;
 
@@ -41,6 +42,7 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
         Services.AddOptions();
         Services.TryAddSingleton<InboundPipelineTypes>();
         Services.TryAddSingleton<OutboundPipelineTypes>();
+        this.AddHostingDefaults();
 
         new CoreServicesRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
     }

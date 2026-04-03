@@ -18,12 +18,12 @@ public class MappableGeneratorTests
 
     private static readonly Type[] _extraRefs =
     [
-        typeof(MappableAttribute),               // NOF.Application (includes MappableAttribute<,>)
-        typeof(IMapper),                          // NOF.Application
-        typeof(MapperOptions),                    // NOF.Application
-        typeof(Contract.Optional<>),             // NOF.Contract
-        typeof(Result),                           // NOF.Contract
-        typeof(IValueObject<>),                   // NOF.Domain
+        typeof(MappableAttribute),
+        typeof(IMapper),
+        typeof(MapperRegistry),
+        typeof(Contract.Optional<>),
+        typeof(Result),
+        typeof(IValueObject<>),
     ];
 
     private static GeneratorDriverRunResult RunGenerator(string source)
@@ -65,8 +65,8 @@ public class MappableGeneratorTests
         result.GeneratedTrees.Should().ContainSingle();
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("options.Add<");
-        code.Should().Contain("ConfigureAutoMappings");
+        code.Should().Contain("MapperRegistry.Register<");
+        code.Should().Contain("MapperAssemblyInitializer");
         code.Should().Contain("Id = src.Id");
         code.Should().Contain("Name = src.Name");
     }
@@ -116,9 +116,8 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // Should contain both A→B and B→A
-        code.Should().Contain("options.Add<global::Test.Order, global::Test.OrderDto>");
-        code.Should().Contain("options.Add<global::Test.OrderDto, global::Test.Order>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>");
     }
 
     // -----------------------------------------------------------------------
@@ -213,7 +212,7 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("options.Add<global::Test.Order, global::Test.OrderDto>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>");
     }
 
     // -----------------------------------------------------------------------
@@ -244,10 +243,10 @@ public class MappableGeneratorTests
         result.GeneratedTrees.Should().ContainSingle();
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("options.Add<global::Test.A, global::Test.B>");
-        code.Should().Contain("options.Add<global::Test.A, global::Test.C>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.A, global::Test.B>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.A, global::Test.C>");
         // One method
-        code.Should().Contain("ConfigureAutoMappings");
+        code.Should().Contain("MapperAssemblyInitializer");
     }
 
     // -----------------------------------------------------------------------
@@ -1000,10 +999,10 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Forward: OrderName → string (unwrap)
-        code.Should().Contain("options.Add<global::Test.Order, global::Test.OrderDto>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>");
         code.Should().Contain("(string)src.Name)");
         // Reverse: string → OrderName (wrap)
-        code.Should().Contain("options.Add<global::Test.OrderDto, global::Test.Order>");
+        code.Should().Contain("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>");
         code.Should().Contain("OrderName.Of(src.Name)");
     }
 
@@ -1258,4 +1257,3 @@ public class MappableGeneratorTests
         code.Should().NotContain(".Select(");
     }
 }
-

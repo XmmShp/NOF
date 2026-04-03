@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using NOF.SourceGenerator.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -12,11 +13,11 @@ namespace NOF.Application.SourceGenerator;
 
 /// <summary>
 /// Source generator that discovers <c>partial static class</c> types annotated with
-/// <c>[Mappable&lt;TSource, TDest&gt;]</c> or <c>[Mappable(typeof(...), typeof(...))]</c>
-/// and generates a <c>ConfigureAutoMappings</c> extension method on <c>MapperOptions</c>.
+/// <c>[Mappable&lt;TSource, TDest&gt;]</c> or <c>[Mappable(typeof(...), typeof(...))]</c>,
+/// and generates an AssemblyInitializer that registers mapping delegates into the global MapperRegistry.
 /// <para>
 /// Attributes can be scattered across multiple partial declarations of the same class.
-/// The generator merges them into a single extension method per class.
+/// The generator merges them logically and emits a single AssemblyInitializer for the assembly.
 /// </para>
 /// </summary>
 [Generator]
@@ -62,16 +63,25 @@ public class MappableGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Collect per-declaration info: the class identity + the [Mappable] attributes on that specific declaration
         var perDeclaration = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax { AttributeLists.Count: > 0 },
                 transform: static (ctx, _) => ExtractDeclarationInfo(ctx))
             .Where(static info => info is not null);
 
-        context.RegisterSourceOutput(
-            perDeclaration.Collect().Combine(context.CompilationProvider),
-            static (spc, data) => Execute(data.Left, data.Right, spc));
+        var withAssembly = context.CompilationProvider
+            .Combine(perDeclaration.Collect())
+            .Select(static (data, _) =>
+            {
+                var (compilation, decls) = data;
+                var asm = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
+                return (AssemblyName: asm, Compilation: compilation, Declarations: decls);
+            });
+
+        context.RegisterSourceOutput(withAssembly, static (spc, data) =>
+        {
+            Execute(data.Declarations, data.Compilation, data.AssemblyName, spc);
+        });
     }
 
     #region Extraction
@@ -166,7 +176,7 @@ public class MappableGenerator : IIncrementalGenerator
 
     #region Execute
 
-    private static void Execute(ImmutableArray<DeclarationInfo?> declarations, Compilation compilation, SourceProductionContext spc)
+    private static void Execute(ImmutableArray<DeclarationInfo?> declarations, Compilation compilation, string assemblyName, SourceProductionContext spc)
     {
         if (declarations.IsDefaultOrEmpty)
         {
@@ -179,27 +189,23 @@ public class MappableGenerator : IIncrementalGenerator
             return;
         }
 
-        // Group by (Namespace, TypeName) to merge partial declarations
-        var grouped = valid
-            .GroupBy(d => new { d!.Namespace, d.TypeName })
-            .ToList();
+        var grouped = valid.GroupBy(d => new { d!.Namespace, d.TypeName }).ToList();
+
+        var registrationLines = new List<string>();
+        var allAutoPairs = new HashSet<(string, string)>();
 
         foreach (var group in grouped)
         {
             var first = group.First()!;
 
-            // Validate: must be partial static
             if (!first.IsPartialStatic)
             {
-                spc.ReportDiagnostic(Diagnostic.Create(
-                    _mustBePartialStatic, first.Location, first.TypeName));
+                spc.ReportDiagnostic(Diagnostic.Create(_mustBePartialStatic, first.Location, first.TypeName));
                 continue;
             }
 
-            // Merge all pairs
             var allPairs = group.SelectMany(d => d!.Pairs).ToList();
 
-            // Duplicate detection across the merged set
             var seen = new Dictionary<(string, string), MappingPairInfo>();
             var validPairs = new List<MappingPairInfo>();
             var hasDuplicate = false;
@@ -209,8 +215,7 @@ public class MappableGenerator : IIncrementalGenerator
                 var fwd = (pair.SourceFullName, pair.DestFullName);
                 if (seen.ContainsKey(fwd))
                 {
-                    spc.ReportDiagnostic(Diagnostic.Create(
-                        _duplicateMapping, pair.Location, pair.SourceFullName, pair.DestFullName));
+                    spc.ReportDiagnostic(Diagnostic.Create(_duplicateMapping, pair.Location, pair.SourceFullName, pair.DestFullName));
                     hasDuplicate = true;
                     continue;
                 }
@@ -222,8 +227,7 @@ public class MappableGenerator : IIncrementalGenerator
                     var rev = (pair.DestFullName, pair.SourceFullName);
                     if (seen.ContainsKey(rev))
                     {
-                        spc.ReportDiagnostic(Diagnostic.Create(
-                            _duplicateMapping, pair.Location, pair.DestFullName, pair.SourceFullName));
+                        spc.ReportDiagnostic(Diagnostic.Create(_duplicateMapping, pair.Location, pair.DestFullName, pair.SourceFullName));
                         hasDuplicate = true;
                     }
                     else
@@ -238,21 +242,32 @@ public class MappableGenerator : IIncrementalGenerator
                 continue;
             }
 
-            // Build the full set of auto-generated (Source, Dest) pairs for NOF023 detection
-            var allAutoGeneratedPairs = new HashSet<(string, string)>();
             foreach (var p in validPairs)
             {
-                allAutoGeneratedPairs.Add((p.SourceFullName, p.DestFullName));
+                allAutoPairs.Add((p.SourceFullName, p.DestFullName));
                 if (p.TwoWay)
                 {
-                    allAutoGeneratedPairs.Add((p.DestFullName, p.SourceFullName));
+                    allAutoPairs.Add((p.DestFullName, p.SourceFullName));
                 }
             }
 
-            var source = GenerateCode(first.Namespace, first.TypeName, validPairs, compilation, allAutoGeneratedPairs, spc);
-            var fileName = $"{first.Namespace.Replace('.', '_')}_{first.TypeName}.g.cs";
-            spc.AddSource(fileName, SourceText.From(source, Encoding.UTF8));
+            foreach (var pair in validPairs)
+            {
+                EmitMapping(registrationLines, pair.SourceType, pair.DestType, compilation, allAutoPairs, spc, pair.Location);
+                if (pair.TwoWay)
+                {
+                    EmitMapping(registrationLines, pair.DestType, pair.SourceType, compilation, allAutoPairs, spc, pair.Location);
+                }
+            }
         }
+
+        if (registrationLines.Count == 0)
+        {
+            return;
+        }
+
+        var sourceText = GenerateAssemblyInitializer(assemblyName, registrationLines);
+        spc.AddSource("MapperAssemblyInitializer.g.cs", SourceText.From(sourceText, Encoding.UTF8));
     }
 
     #endregion
@@ -262,45 +277,44 @@ public class MappableGenerator : IIncrementalGenerator
     private static readonly SymbolDisplayFormat _fullyQualifiedFormat = SymbolDisplayFormat.FullyQualifiedFormat
         .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
 
-    private static string GenerateCode(
-        string ns, string typeName, List<MappingPairInfo> pairs, Compilation compilation,
-        HashSet<(string, string)> allAutoGeneratedPairs, SourceProductionContext spc)
+    private static string GenerateAssemblyInitializer(string assemblyName, List<string> registrations)
     {
+        var sanitizedName = assemblyName.Replace(".", "");
+        var initializerTypeName = $"__{sanitizedName}MapperAssemblyInitializer";
+
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
         sb.AppendLine("#nullable enable");
         sb.AppendLine("using System.Linq;");
         sb.AppendLine();
-
-        sb.AppendLine($"namespace {ns}");
+        sb.AppendLine("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::" + assemblyName + "." + initializerTypeName + ">]");
+        sb.AppendLine();
+        sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
-        sb.AppendLine($"    partial class {typeName}");
+        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        /// <summary>");
-        sb.AppendLine("        /// Registers all auto-generated mappings declared via [Mappable] attributes on this class.");
-        sb.AppendLine("        /// </summary>");
-        sb.AppendLine("        public static global::NOF.Application.MapperOptions ConfigureAutoMappings(this global::NOF.Application.MapperOptions options)");
+        sb.AppendLine("        private static int _initialized;");
+        sb.AppendLine();
+        sb.AppendLine("        public static void Initialize()");
         sb.AppendLine("        {");
-
-        foreach (var pair in pairs)
+        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        foreach (var line in registrations)
         {
-            EmitMapping(sb, pair.SourceType, pair.DestType, compilation, allAutoGeneratedPairs, spc, pair.Location);
-            if (pair.TwoWay)
-            {
-                EmitMapping(sb, pair.DestType, pair.SourceType, compilation, allAutoGeneratedPairs, spc, pair.Location);
-            }
+            sb.Append("            ");
+            sb.AppendLine(line);
         }
-
-        sb.AppendLine("            return options;");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}");
-
         return sb.ToString();
     }
 
     private static void EmitMapping(
-        StringBuilder sb, ITypeSymbol sourceType, ITypeSymbol destType, Compilation compilation,
+        List<string> registrations, ITypeSymbol sourceType, ITypeSymbol destType, Compilation compilation,
         HashSet<(string, string)> allAutoGeneratedPairs, SourceProductionContext spc, Location location)
     {
         var srcFull = sourceType.ToDisplayString(_fullyQualifiedFormat);
@@ -362,17 +376,12 @@ public class MappableGenerator : IIncrementalGenerator
             }
         }
 
-        // Emit the Add call
-        if (needsMapper)
-        {
-            sb.AppendLine($"            options.Add<{srcFull}, {dstFull}>((src, mapper) =>");
-        }
-        else
-        {
-            sb.AppendLine($"            options.Add<{srcFull}, {dstFull}>(src =>");
-        }
+        var header = needsMapper
+            ? $"global::NOF.Application.MapperRegistry.Register<{srcFull}, {dstFull}>((src, mapper) =>"
+            : $"global::NOF.Application.MapperRegistry.Register<{srcFull}, {dstFull}>(src =>";
 
-        // Constructor call
+        var sb = new StringBuilder();
+        sb.AppendLine(header);
         sb.Append($"                new {dstFull}(");
 
         if (bestCtor != null && bestCtor.Parameters.Length > 0)
@@ -409,7 +418,7 @@ public class MappableGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine(");");
-        sb.AppendLine();
+        registrations.Add(sb.ToString());
     }
 
     #endregion

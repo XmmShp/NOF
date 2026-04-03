@@ -51,10 +51,12 @@ public class CoreServicesRegistrationStepTests
 
         await step.ExecuteAsync(context);
 
-        using var provider = builder.Services.BuildServiceProvider();
-        var hostedServices = provider.GetServices<IHostedService>().ToList();
+        var hostedImplementationTypes = builder.Services
+            .Where(sd => sd.ServiceType == typeof(IHostedService))
+            .Select(sd => sd.ImplementationType)
+            .ToList();
 
-        hostedServices.Should().NotContain(service => service is MemoryPersistenceWarningHostedService);
+        hostedImplementationTypes.Should().NotContain(typeof(MemoryPersistenceWarningHostedService));
     }
 
     [Fact]

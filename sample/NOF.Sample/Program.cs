@@ -17,8 +17,6 @@ var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
     .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
 
-builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
-
 builder.AddRedisCache();
 
 builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
