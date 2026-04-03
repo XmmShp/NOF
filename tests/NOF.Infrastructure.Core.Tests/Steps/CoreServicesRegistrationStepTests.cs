@@ -17,18 +17,16 @@ using Xunit;
 
 namespace NOF.Infrastructure.Core.Tests.Steps;
 
-public class CoreServicesRegistrationStepTests
+public class InfrastructureDefaultsTests
 {
     [Fact]
-    public async Task CoreServicesStep_ExecuteAsync_ShouldNotRegisterInMemoryPersistenceServicesByDefault()
+    public void AddInfrastructureDefaults_ShouldNotRegisterInMemoryPersistenceServicesByDefault()
     {
         var builder = new TestServiceRegistrationContext();
-        var context = new TestServiceRegistrationContext(builder);
-        var step = new CoreServicesRegistrationStep();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 
-        await step.ExecuteAsync(context);
+        builder.AddInfrastructureDefaults();
 
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -43,13 +41,10 @@ public class CoreServicesRegistrationStepTests
     }
 
     [Fact]
-    public async Task CoreServicesStep_ExecuteAsync_ShouldNotRegisterMemoryPersistenceWarningHostedServiceByDefault()
+    public void AddInfrastructureDefaults_ShouldNotRegisterMemoryPersistenceWarningHostedServiceByDefault()
     {
         var builder = new TestServiceRegistrationContext();
-        var context = new TestServiceRegistrationContext(builder);
-        var step = new CoreServicesRegistrationStep();
-
-        await step.ExecuteAsync(context);
+        builder.AddInfrastructureDefaults();
 
         var hostedImplementationTypes = builder.Services
             .Where(sd => sd.ServiceType == typeof(IHostedService))
@@ -60,13 +55,10 @@ public class CoreServicesRegistrationStepTests
     }
 
     [Fact]
-    public async Task CoreServicesStep_ExecuteAsync_ShouldRegisterCoreServicesAndOutboxOptions()
+    public void AddInfrastructureDefaults_ShouldRegisterCoreServicesAndOutboxOptions()
     {
         var builder = new TestServiceRegistrationContext();
-        var context = new TestServiceRegistrationContext(builder);
-        var step = new CoreServicesRegistrationStep();
-
-        await step.ExecuteAsync(context);
+        builder.AddInfrastructureDefaults();
 
         using var provider = builder.Services.BuildServiceProvider();
 
@@ -101,7 +93,7 @@ public class CoreServicesRegistrationStepTests
         descriptors.Should().HaveCount(1);
     }
 
-    private sealed class TestServiceRegistrationContext : IServiceRegistrationContext
+    private sealed class TestServiceRegistrationContext : INOFAppBuilder
     {
         private readonly IServiceCollection _services;
         private readonly ConfigurationManager _configuration;
@@ -109,6 +101,8 @@ public class CoreServicesRegistrationStepTests
         private readonly ILoggingBuilder _logging;
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
+        private readonly List<IServiceRegistrationStep> _registrationSteps;
+        private readonly List<IApplicationInitializationStep> _initializationSteps;
 
         public TestServiceRegistrationContext()
         {
@@ -120,6 +114,8 @@ public class CoreServicesRegistrationStepTests
             _logging = new TestLoggingBuilder(_services);
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
+            _registrationSteps = [];
+            _initializationSteps = [];
         }
 
         public TestServiceRegistrationContext(TestServiceRegistrationContext other)
@@ -130,13 +126,33 @@ public class CoreServicesRegistrationStepTests
             _logging = other._logging;
             _metrics = other._metrics;
             _properties = other._properties;
+            _registrationSteps = other._registrationSteps;
+            _initializationSteps = other._initializationSteps;
         }
 
-        public IServiceRegistrationContext AddInitializationStep(IApplicationInitializationStep initializationStep)
-            => this;
+        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
+        {
+            _registrationSteps.Add(registrationStep);
+            return this;
+        }
 
-        public IServiceRegistrationContext RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-            => this;
+        public INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
+        {
+            _registrationSteps.RemoveAll(predicate);
+            return this;
+        }
+
+        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
+        {
+            _initializationSteps.Add(initializationStep);
+            return this;
+        }
+
+        public INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
+        {
+            _initializationSteps.RemoveAll(predicate);
+            return this;
+        }
 
         public IDictionary<object, object> Properties => _properties;
 

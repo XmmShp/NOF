@@ -101,10 +101,10 @@ public interface IBaseSettingsServiceRegistrationStep<TSelf>
 Concrete steps implement the CRTP variant:
 
 ```csharp
-public class CoreServicesRegistrationStep
-    : IBaseSettingsServiceRegistrationStep<CoreServicesRegistrationStep>
+public class OpenTelemetryRegistrationStep
+    : IBaseSettingsServiceRegistrationStep<OpenTelemetryRegistrationStep>
 {
-    // IStep.Type is automatically typeof(CoreServicesRegistrationStep)
+    // IStep.Type is automatically typeof(OpenTelemetryRegistrationStep)
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder) { ... }
 }
 ```

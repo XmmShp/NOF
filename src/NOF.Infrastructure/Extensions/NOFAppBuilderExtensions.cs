@@ -1,5 +1,10 @@
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-
+using NOF.Application;
+using NOF.Contract;
+using NOF.Domain;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -15,8 +20,32 @@ public static partial class NOFInfrastructureExtensions
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             builder.AddHostingDefaults();
-            builder.TryAddRegistrationStep<CoreServicesRegistrationStep>()
-                .TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
+            builder.Services.TryAddSingleton<ICacheSerializer, JsonCacheSerializer>();
+            builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
+            builder.Services.TryAddSingleton<ICacheServiceFactory, CacheServiceFactory>();
+            builder.Services.TryAddSingleton<IMapper, ManualMapper>();
+
+            if (builder.Services.FirstOrDefault(sd => sd.ServiceType == typeof(IIdGenerator)) is null)
+            {
+                builder.Services.AddOptions<SnowflakeIdGeneratorOptions>();
+                builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+            }
+
+            builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
+            builder.Services.TryAddSingleton<IInboundPipelineExecutor, InboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
+            builder.Services.TryAddScoped<IDeferredCommandSender, DeferredCommandSender>();
+            builder.Services.TryAddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
+            builder.Services.TryAddScoped<ICommandSender, CommandSender>();
+            builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
+            builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
+            builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
+            builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+            builder.Services.TryAddScoped<IUserContext, UserContext>();
+            builder.Services.AddHostedService<OutboxMessageBackgroundService>();
+            builder.Services.AddOptions<OutboxOptions>();
+
+            builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<ExceptionInboundMiddlewareStep>()
                 .TryAddRegistrationStep<TenantInboundMiddlewareStep>()
                 .TryAddRegistrationStep<AuthorizationInboundMiddlewareStep>()

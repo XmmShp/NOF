@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,6 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure;
-using NOF.Contract;
 
 namespace NOF.Test;
 
@@ -39,12 +37,8 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
 
     private void ConfigureDefaultTestServices()
     {
-        Services.AddOptions();
-        Services.TryAddSingleton<InboundPipelineTypes>();
-        Services.TryAddSingleton<OutboundPipelineTypes>();
         this.AddHostingDefaults();
-
-        new CoreServicesRegistrationStep().ExecuteAsync(this).GetAwaiter().GetResult();
+        this.AddInfrastructureDefaults();
     }
 
     protected override Task<IHost> BuildApplicationAsync()
