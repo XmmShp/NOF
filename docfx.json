@@ -15,6 +15,7 @@
 						"src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/bin/Release/net10.0/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.dll",
 						"src/Infrastructures/NOF.Infrastructure.RabbitMQ/bin/Release/net10.0/NOF.Infrastructure.RabbitMQ.dll",
 						"src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/bin/Release/net10.0/NOF.Infrastructure.StackExchangeRedis.dll",
+						"src/Extensions/NOF.Hosting.Extension.Authorization.Jwt/bin/Release/net10.0/NOF.Hosting.Extension.Authorization.Jwt.dll",
 						"src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/bin/Release/net10.0/NOF.Infrastructure.Extension.Authorization.Jwt.dll"
 					]
 				}
