@@ -1,8 +1,8 @@
-using NOF.Application;
 using Microsoft.Extensions.Logging;
+using NOF.Application;
 using NOF.Contract;
-using System.Reflection;
 using NOF.Hosting;
+using System.Reflection;
 
 namespace NOF.Infrastructure;
 

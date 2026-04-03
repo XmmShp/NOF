@@ -53,7 +53,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
         {
             await InboundHandlerInvoker.ExecuteHandlerAsync(
                 _serviceProvider,
-                request!,
+                request,
                 handlerType,
                 _executionContext,
                 async (sp, ct2) =>
@@ -80,7 +80,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
 
         var accessClaims = new List<Claim>
         {
-            new(ClaimTypes.Subject, request.UserId),
+            new(ClaimTypes.NameIdentifier, request.UserId),
             new(ClaimTypes.TenantId, request.TenantId)
         };
 
@@ -109,7 +109,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
         var refreshClaims = new[]
         {
             new Claim(ClaimTypes.JwtId, refreshTokenId),
-            new Claim(ClaimTypes.Subject, request.UserId),
+            new Claim(ClaimTypes.NameIdentifier, request.UserId),
             new Claim(ClaimTypes.TenantId, request.TenantId)
         };
 
@@ -156,7 +156,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
 
             var principal = tokenHandler.ValidateToken(request.RefreshToken, validationParameters, out _);
             var tokenId = principal.FindFirst(ClaimTypes.JwtId)?.Value;
-            var userId = principal.FindFirst(ClaimTypes.Subject)?.Value;
+            var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var tenantId = principal.FindFirst(ClaimTypes.TenantId)?.Value;
 
             if (string.IsNullOrWhiteSpace(tokenId) || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(tenantId))

@@ -1,7 +1,7 @@
-using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Contract.Extension.Authorization.Jwt;
+using System.Security.Cryptography;
 using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;

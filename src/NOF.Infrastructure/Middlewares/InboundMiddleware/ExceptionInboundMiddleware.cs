@@ -1,5 +1,5 @@
-using NOF.Application;
 using Microsoft.Extensions.Logging;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
 

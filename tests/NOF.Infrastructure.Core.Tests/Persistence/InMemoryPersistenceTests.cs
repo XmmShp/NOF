@@ -165,7 +165,7 @@ public class InMemoryPersistenceTests
 
         var stored = await repository.FindAsync(claimed[0].Id);
         stored.Should().NotBeNull();
-        stored!.Status.Should().Be(OutboxMessageStatus.Sent);
+        stored.Status.Should().Be(OutboxMessageStatus.Sent);
         stored.SentAt.Should().NotBeNull();
     }
 
@@ -198,11 +198,11 @@ public class InMemoryPersistenceTests
 
         var exhausted = await repository.FindAsync(id1);
         exhausted.Should().NotBeNull();
-        exhausted!.RetryCount = 2;
+        exhausted.RetryCount = 2;
 
         var claimedUntilFuture = await repository.FindAsync(id2);
         claimedUntilFuture.Should().NotBeNull();
-        claimedUntilFuture!.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
+        claimedUntilFuture.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
 
@@ -229,7 +229,7 @@ public class InMemoryPersistenceTests
 
         var stored = await repository.FindAsync(claimed[0].Id);
         stored.Should().NotBeNull();
-        stored!.Status.Should().Be(OutboxMessageStatus.Failed);
+        stored.Status.Should().Be(OutboxMessageStatus.Failed);
         stored.ErrorMessage.Should().Be("boom");
     }
 

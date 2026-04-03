@@ -5,7 +5,6 @@ using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using HttpJwksClient = NOF.Contract.Extension.Authorization.Jwt.HttpJwksService;
-using JwtHostingExtensions = NOF.Hosting.Extension.Authorization.Jwt.NOFJwtAuthorizationExtensions;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -55,8 +54,9 @@ public static partial class NOFJwtAuthorizationExtensions
                 builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksClient>());
             }
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, JwksProvider>();
-            builder.Services.AddHandlerInfo(
-                new NotificationHandlerInfo(typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification)));
+#pragma warning disable CS8620
+            builder.Services.AddHandlerInfo(new NotificationHandlerInfo(typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification)));
+#pragma warning restore CS8620
 
             builder.AddRegistrationStep(new JwtResourceServerInboundMiddlewareStep());
 

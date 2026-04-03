@@ -3,9 +3,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
 using NOF.Contract;
-using System.IdentityModel.Tokens.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 

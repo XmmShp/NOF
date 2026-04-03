@@ -11,8 +11,8 @@ using Microsoft.Extensions.Primitives;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
-using NOF.Infrastructure.Memory;
 using NOF.Hosting;
+using NOF.Infrastructure.Memory;
 using Xunit;
 
 namespace NOF.Infrastructure.Core.Tests.Steps;
