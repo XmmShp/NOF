@@ -31,12 +31,10 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
 
         builder.Services.TryAddSingleton<IInboundPipelineExecutor, InboundPipelineExecutor>();
-        builder.Services.TryAddSingleton<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
         builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
 
         builder.Services.TryAddScoped<IDeferredCommandSender, DeferredCommandSender>();
         builder.Services.TryAddScoped<IDeferredNotificationPublisher, DeferredNotificationPublisher>();
-        builder.Services.TryAddScoped<IExecutionContext, NOF.Contract.ExecutionContext>();
         builder.Services.TryAddScoped<ICommandSender, CommandSender>();
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();

@@ -16,7 +16,8 @@ internal sealed class NOFJwtAuthorizationAssemblyInitializer : IAssemblyInitiali
             return;
         }
 
-        AutoInjectRegistry.Register(typeof(IJwtAuthorityService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: false);
+        AutoInjectRegistry.Register(typeof(JwtAuthorityService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: false);
+        AutoInjectRegistry.Register(typeof(IJwtAuthorityService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: true);
         AutoInjectRegistry.Register(typeof(IJwksService), typeof(JwtAuthorityService), Lifetime.Scoped, useFactory: true);
     }
 }

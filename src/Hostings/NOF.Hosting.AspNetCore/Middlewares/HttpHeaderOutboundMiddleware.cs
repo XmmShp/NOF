@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
-using NOF.Infrastructure;
+using NOF.Hosting;
 
 namespace NOF.Hosting.AspNetCore;
 

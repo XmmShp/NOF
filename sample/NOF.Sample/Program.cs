@@ -64,6 +64,7 @@ app.MapRazorComponents<App>()
         typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
 
 app.MapServiceToHttpEndpoints<INOFSampleService>();
+app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
 app.MapServiceToHttpEndpoints<IJwksService>();
 
 await app.RunAsync();

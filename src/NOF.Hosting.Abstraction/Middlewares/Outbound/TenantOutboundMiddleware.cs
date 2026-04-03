@@ -1,16 +1,9 @@
 using NOF.Contract;
-using NOF.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
-/// <summary>Propagates tenant context to outbound messages.</summary>
-public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutboundMiddlewareStep, TenantOutboundMiddleware>,
-    IAfter<TracingOutboundMiddlewareStep>;
+public class TenantOutboundMiddlewareStep : IOutboundMiddlewareStep<TenantOutboundMiddlewareStep, TenantOutboundMiddleware>;
 
-/// <summary>
-/// Outbound middleware that propagates the current <see cref="IExecutionContext.TenantId"/>
-/// into the <see cref="NOFInfrastructureConstants.Transport.Headers.TenantId"/> header.
-/// </summary>
 public sealed class TenantOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IExecutionContext _executionContext;

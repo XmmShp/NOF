@@ -25,6 +25,7 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
     public static NOFWebAssemblyHostBuilder Create(string[]? args)
     {
         var builder = new NOFWebAssemblyHostBuilder(args);
+        builder.AddHostingDefaults();
         builder.AddRegistrationStep(new BrowserStorageRegistrationStep());
         return builder;
     }

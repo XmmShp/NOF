@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NOF.Abstraction\NOF.Abstraction.csproj" />
+    <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
   </ItemGroup>
 
 </Project>

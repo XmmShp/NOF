@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Hosting;
-using NOF.Infrastructure;
 using NOF.UI;
 
 namespace NOF.Hosting.BlazorWebAssembly;
@@ -8,7 +7,7 @@ namespace NOF.Hosting.BlazorWebAssembly;
 /// <summary>
 /// Registers built-in browser storage primitives for Blazor WebAssembly hosting.
 /// </summary>
-public sealed class BrowserStorageRegistrationStep : IBaseSettingsServiceRegistrationStep<BrowserStorageRegistrationStep>
+public sealed class BrowserStorageRegistrationStep : IServiceRegistrationStep<BrowserStorageRegistrationStep>
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {

@@ -14,6 +14,7 @@ public static partial class NOFInfrastructureExtensions
         /// </summary>
         public INOFAppBuilder AddInfrastructureDefaults()
         {
+            builder.AddHostingDefaults();
             builder.TryAddRegistrationStep<CoreServicesRegistrationStep>()
                 .TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<ExceptionInboundMiddlewareStep>()
@@ -24,9 +25,6 @@ public static partial class NOFInfrastructureExtensions
                 .TryAddRegistrationStep<MessageInboxInboundMiddlewareStep>()
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
                 .TryAddRegistrationStep<HandlerServiceRegistrationStep>()
-                .TryAddRegistrationStep<MessageIdOutboundMiddlewareStep>()
-                .TryAddRegistrationStep<TracingOutboundMiddlewareStep>()
-                .TryAddRegistrationStep<TenantOutboundMiddlewareStep>()
                 .TryAddInitializationStep<IdGeneratorInitializationStep>()
                 .TryAddInitializationStep<MapperInitializationStep>();
 

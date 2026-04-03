@@ -116,7 +116,7 @@ public interface INOFAppBuilder : IServiceRegistrationContext
         => (INOFAppBuilder)((IServiceRegistrationContext)this).TryAddInitializationStep<T>();
 }
 
-public static class NOFAppBuilderExtensions
+public static partial class NOFAppBuilderExtensions
 {
     extension(INOFAppBuilder builder)
     {

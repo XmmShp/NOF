@@ -1,16 +1,9 @@
 using NOF.Contract;
-using NOF.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
-/// <summary>Assigns a unique message ID to outbound messages.</summary>
-public class MessageIdOutboundMiddlewareStep : IOutboundMiddlewareStep<MessageIdOutboundMiddlewareStep, MessageIdOutboundMiddleware>,
-    IAfter<TracingOutboundMiddlewareStep>;
+public class MessageIdOutboundMiddlewareStep : IOutboundMiddlewareStep<MessageIdOutboundMiddlewareStep, MessageIdOutboundMiddleware>;
 
-/// <summary>
-/// Outbound middleware that assigns a unique <see cref="NOFConstants.Headers.MessageId"/>
-/// to each outbound message if not already set.
-/// </summary>
 public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IExecutionContext _executionContext;
