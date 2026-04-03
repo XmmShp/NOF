@@ -30,6 +30,11 @@ public static partial class NOFContractExtensions
             .AsReadOnly();
 
         /// <summary>
+        /// Gets the tenant identifier of the current user from the NOF tenant claim.
+        /// </summary>
+        public string? TenantId => user.FindFirst(ClaimTypes.TenantId)?.Value;
+
+        /// <summary>
         /// Determines whether the current user has the specified permission.
         /// Supports exact match and wildcard patterns (for example: "order.*").
         /// </summary>

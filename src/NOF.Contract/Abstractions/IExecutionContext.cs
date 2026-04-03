@@ -91,31 +91,11 @@ public static partial class NOFContractExtensions
         {
             ArgumentNullException.ThrowIfNull(source);
 
-            context.TryGetValue(NOFContractConstants.Transport.Headers.TraceId, out var traceId);
-            context.TryGetValue(NOFContractConstants.Transport.Headers.SpanId, out var spanId);
-
-            Activity? activity;
-
-            if (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
-            {
-                var activityId = ActivityTraceId.CreateFromString(traceId.AsSpan());
-                var parentSpanId = ActivitySpanId.CreateFromString(spanId.AsSpan());
-                var activityContext = new ActivityContext(activityId, parentSpanId, ActivityTraceFlags.Recorded);
-                activity = source.CreateActivity(name, kind, parentContext: activityContext);
-            }
-            else
-            {
-                activity = source.CreateActivity(name, kind);
-                if (!string.IsNullOrEmpty(traceId))
-                {
-                    activity?.SetParentId(traceId);
-                }
-            }
+            var activity = source.StartActivityWithParent(name, kind, context.TracingInfo);
 
             if (activity is not null)
             {
                 context.SetTracingInfo(new TracingInfo(activity.TraceId.ToString(), activity.SpanId.ToString()));
-                activity.Start();
             }
 
             return activity;

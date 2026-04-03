@@ -64,15 +64,12 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
 
     private static Activity? CreateActivity(InboundContext context, string? traceId, string? spanId)
     {
-        var activityContext = new ActivityContext(
-            traceId: string.IsNullOrEmpty(traceId) ? ActivityTraceId.CreateRandom() : ActivityTraceId.CreateFromString(traceId),
-            spanId: string.IsNullOrEmpty(spanId) ? ActivitySpanId.CreateRandom() : ActivitySpanId.CreateFromString(spanId),
-            traceFlags: ActivityTraceFlags.Recorded,
-            isRemote: true);
-
-        return NOFInfrastructureConstants.InboundPipeline.Source.StartActivity(
+        TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
+            ? new TracingInfo(traceId!, spanId!)
+            : null;
+        return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{context.HandlerType.FullName}.Handle: {context.Message.GetType().FullName}",
-            kind: ActivityKind.Consumer,
-            parentContext: activityContext);
+            ActivityKind.Consumer,
+            parent);
     }
 }

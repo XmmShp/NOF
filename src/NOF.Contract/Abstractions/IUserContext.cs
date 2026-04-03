@@ -13,6 +13,11 @@ public interface IUserContext
     public const string PermissionClaimType = "nof.permission";
 
     /// <summary>
+    /// Tenant identifier claim type used by NOF.
+    /// </summary>
+    public const string TenantIdClaimType = "nof.tenant_id";
+
+    /// <summary>
     /// The claims principal representing the current user.
     /// May be unauthenticated.
     /// </summary>
@@ -51,6 +56,11 @@ public interface IUserContext
     /// Gets the permissions granted to the current user.
     /// </summary>
     IReadOnlyList<string> Permissions => User.Permissions;
+
+    /// <summary>
+    /// Gets the tenant identifier of the current user.
+    /// </summary>
+    string? TenantId => User.TenantId;
 
     /// <summary>
     /// Determines whether the current user has the specified permission.

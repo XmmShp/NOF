@@ -14,6 +14,6 @@ public static partial class NOFContractExtensions
         /// <summary>
         /// Well-known claim type for tenant identifier.
         /// </summary>
-        public static string TenantId => "nof.tenant_id";
+        public static string TenantId => IUserContext.TenantIdClaimType;
     }
 }
