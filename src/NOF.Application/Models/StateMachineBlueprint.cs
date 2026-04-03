@@ -14,7 +14,7 @@ public abstract class StateMachineBlueprint
             return field;
         }
         set;
-    } = null!;
+    } = null;
 
     public HashSet<Type> ObservedTypes { get; } = [];
     public Dictionary<Type, Func<object, string>> CorrelationIdSelectors { get; } = [];

@@ -25,23 +25,22 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
     public void Send(ICommand command)
     {
         var currentActivity = Activity.Current;
-        var tenantId = NOFContractConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
-
-        var headers = new Dictionary<string, string?>
+        var headers = new Dictionary<string, string?>();
+        foreach (var (k, v) in _executionContext)
         {
-            [NOFContractConstants.Transport.Headers.TenantId] = tenantId
-        };
+            headers[k] = v;
+        }
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var typeName = TypeRegistry.Register(command.GetType());
 
         _repository.Add(new NOFOutboxMessage
         {
+            Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Command,
             PayloadType = typeName,
             Payload = _messageSerializer.Serialize(command),
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
-            TraceId = currentActivity?.TraceId.ToString(),
-            SpanId = currentActivity?.SpanId.ToString()
+            ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });
     }
 }

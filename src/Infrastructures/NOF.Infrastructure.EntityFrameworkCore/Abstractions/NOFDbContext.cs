@@ -49,14 +49,17 @@ public abstract class NOFDbContext : DbContext
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
             entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
             entity.HasIndex(e => e.ClaimedBy);
-            entity.HasIndex(e => e.TraceId);
             entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.Headers).IsRequired();
             entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
             entity.Property(e => e.ClaimedBy).HasMaxLength(256);
-            entity.Property(e => e.TraceId).HasMaxLength(128);
-            entity.Property(e => e.SpanId).HasMaxLength(128);
+            entity.OwnsOne(e => e.ParentTracingInfo, b =>
+            {
+                b.Property(p => p.TraceId).HasMaxLength(128).HasColumnName("TraceId");
+                b.Property(p => p.SpanId).HasMaxLength(128).HasColumnName("SpanId");
+                b.HasIndex(p => p.TraceId);
+            });
         });
 
         modelBuilder.Entity<NOFStateMachineContext>(entity =>

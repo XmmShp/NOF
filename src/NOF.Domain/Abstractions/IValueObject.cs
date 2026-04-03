@@ -39,7 +39,7 @@ public interface IValueObject<T> : IValueObject where T : notnull
 
     /// <inheritdoc />
     [EditorBrowsable(EditorBrowsableState.Never)]
-    object IValueObject.GetUnderlyingValue() => GetUnderlyingValue()!;
+    object IValueObject.GetUnderlyingValue() => GetUnderlyingValue();
 
     /// <summary>
     /// Validates the primitive value before constructing the value object.

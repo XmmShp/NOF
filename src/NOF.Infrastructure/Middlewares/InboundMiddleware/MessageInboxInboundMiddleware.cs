@@ -36,9 +36,6 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
         {
             _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
-
-            _executionContext[NOFContractConstants.Transport.Headers.MessageId] = messageId.ToString();
-
             var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
             if (messageExists)
             {
@@ -53,6 +50,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
             _inboxMessageRepository.Add(inboxMessage);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _executionContext.Remove(NOFContractConstants.Transport.Headers.MessageId);
 
             await next(cancellationToken);
 

@@ -15,6 +15,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IMessageSerializer _messageSerializer;
+    private readonly ICommandRider _commandRider;
+    private readonly INotificationRider _notificationRider;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
@@ -26,6 +28,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         _options = options.Value;
         _logger = logger;
         _messageSerializer = messageSerializer;
+        _commandRider = serviceProvider.GetRequiredService<ICommandRider>();
+        _notificationRider = serviceProvider.GetRequiredService<INotificationRider>();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -57,8 +61,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
-        var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
 
         try
@@ -72,7 +74,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
 
             _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
-            await ProcessMessagesBatch(pendingMessages, repository, commandRider, notificationRider, cancellationToken);
+            await ProcessMessagesBatch(pendingMessages, repository, _commandRider, _notificationRider, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -97,51 +99,35 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
-        var messageId = Guid.NewGuid();
         var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var headers = string.IsNullOrWhiteSpace(message.Headers)
             ? new Dictionary<string, string?>()
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
-        // Create a new scope to get a fresh ExecutionContext
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var scopedExecutionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-
-        // Copy headers to the scoped execution context
-        foreach (var (key, value) in headers)
-        {
-            scopedExecutionContext[key] = value;
-        }
-
         // Add additional headers
-        scopedExecutionContext[NOFContractConstants.Transport.Headers.MessageId] = messageId.ToString();
-        scopedExecutionContext[NOFContractConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
-        scopedExecutionContext[NOFContractConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
+        headers[NOFContractConstants.Transport.Headers.MessageId] = message.Id.ToString();
+        headers[NOFContractConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
+        headers[NOFContractConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
 
-        if (activity is { IsAllDataRequested: true })
+        activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, message.Id.ToString());
+        activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, payload.GetType().Name);
+        if (headers.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId))
         {
-            activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, messageId);
-            activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, payload.GetType().Name);
-            activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
-            activity.SetTag("OutboxMessageId", message.Id);
-            if (scopedExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId))
-            {
-                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
-            }
+            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
         }
 
         try
         {
             if (payload is ICommand command)
             {
-                await commandRider.SendAsync(command, scopedExecutionContext, cancellationToken);
+                await commandRider.SendAsync(command, headers, cancellationToken);
                 _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
                     message.Id, command.GetType().Name, message.RetryCount);
             }
             else if (payload is INotification notification)
             {
-                await notificationRider.PublishAsync(notification, scopedExecutionContext, cancellationToken);
+                await notificationRider.PublishAsync(notification, headers, cancellationToken);
                 _logger.LogDebug("Published notification {MessageId} of type {Type} (retry {Retry})",
                     message.Id, notification.GetType().Name, message.RetryCount);
             }
@@ -174,29 +160,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.TraceId))
-        {
-            return null;
-        }
-
-        var traceId = ActivityTraceId.CreateFromString(message.TraceId);
-        var spanId = string.IsNullOrWhiteSpace(message.SpanId)
-            ? ActivitySpanId.CreateRandom()
-            : ActivitySpanId.CreateFromString(message.SpanId);
-
-        var activityContext = new ActivityContext(
-            traceId: traceId,
-            spanId: spanId,
-            traceFlags: ActivityTraceFlags.Recorded,
-            isRemote: true);
-
         var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
-        var activity = NOFInfrastructureConstants.Messaging.Source.StartActivity(
+        var parent = message.ParentTracingInfo;
+        return NOFInfrastructureConstants.Messaging.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.Messaging.ActivityNames.MessageSending}: {payload.GetType().FullName}",
-            kind: ActivityKind.Producer,
-            parentContext: activityContext);
-
-        return activity;
+            ActivityKind.Producer,
+            parent);
     }
 
     private async Task ProcessMessagesBatch(
@@ -206,7 +175,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         INotificationRider notificationRider,
         CancellationToken cancellationToken)
     {
-        var succeededIds = new List<long>(pendingMessages.Count);
+        var succeededIds = new List<Guid>(pendingMessages.Count);
         var failedCount = 0;
 
         foreach (var message in pendingMessages)
@@ -219,8 +188,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 failedCount++;
-                var tenantId = GetTenantId(message);
-                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId} for tenant scope {TenantId}", message.Id, tenantId);
+                _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId}", message.Id);
             }
         }
 
@@ -238,18 +206,5 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
             }
         }
-    }
-
-    private static string GetTenantId(NOFOutboxMessage message)
-    {
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
-        var headers = string.IsNullOrWhiteSpace(message.Headers)
-            ? null
-            : JsonSerializer.Deserialize(message.Headers, headersTypeInfo);
-
-        return headers is not null
-            && headers.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId)
-                ? NOFContractConstants.Tenant.NormalizeTenantId(tenantId)
-                : NOFContractConstants.Tenant.HostId;
     }
 }

@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NOF.Sample.Migrations
 {
     /// <inheritdoc />
-    public partial class ReBuildSample : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -57,8 +57,7 @@ namespace NOF.Sample.Migrations
                 name: "NOFOutboxMessage",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     RetryCount = table.Column<int>(type: "integer", nullable: false),
                     MessageType = table.Column<int>(type: "integer", nullable: false),

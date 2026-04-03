@@ -1,3 +1,4 @@
+using NOF.Contract;
 using NOF.Domain;
 using System.ComponentModel;
 
@@ -12,7 +13,7 @@ public class NOFOutboxMessage : AggregateRoot, ICloneable
     /// <summary>
     /// The message ID.
     /// </summary>
-    public long Id { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// The creation time.
@@ -43,8 +44,7 @@ public class NOFOutboxMessage : AggregateRoot, ICloneable
     public DateTime? ClaimExpiresAt { get; set; }
 
     public OutboxMessageStatus Status { get; set; }
-    public string? TraceId { get; set; }
-    public string? SpanId { get; set; }
+    public TracingInfo? ParentTracingInfo { get; set; }
 
     public object Clone()
         => new NOFOutboxMessage
@@ -62,8 +62,7 @@ public class NOFOutboxMessage : AggregateRoot, ICloneable
             ClaimedBy = ClaimedBy,
             ClaimExpiresAt = ClaimExpiresAt,
             Status = Status,
-            TraceId = TraceId,
-            SpanId = SpanId
+            ParentTracingInfo = ParentTracingInfo is null ? null : new TracingInfo(ParentTracingInfo.TraceId, ParentTracingInfo.SpanId)
         };
 }
 

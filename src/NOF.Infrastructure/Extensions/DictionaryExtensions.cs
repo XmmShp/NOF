@@ -95,7 +95,7 @@ public static partial class NOFInfrastructureExtensions
 
             ArgumentNullException.ThrowIfNull(valueFactory);
             var newValue = valueFactory(key);
-            properties[key] = newValue!;
+            properties[key] = newValue;
             return newValue;
         }
 

@@ -176,29 +176,31 @@ public class InMemoryPersistenceTests
         using var scope = services.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
 
+        var id1 = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
         {
-            Id = 1,
+            Id = id1,
             PayloadType = typeof(string).AssemblyQualifiedName!,
             Payload = "a",
             Headers = "{}",
             MessageType = OutboxMessageType.Command
         });
 
+        var id2 = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
         {
-            Id = 2,
+            Id = id2,
             PayloadType = typeof(string).AssemblyQualifiedName!,
             Payload = "b",
             Headers = "{}",
             MessageType = OutboxMessageType.Command
         });
 
-        var exhausted = await repository.FindAsync(1L);
+        var exhausted = await repository.FindAsync(id1);
         exhausted.Should().NotBeNull();
         exhausted!.RetryCount = 2;
 
-        var claimedUntilFuture = await repository.FindAsync(2L);
+        var claimedUntilFuture = await repository.FindAsync(id2);
         claimedUntilFuture.Should().NotBeNull();
         claimedUntilFuture!.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
 
@@ -275,7 +277,7 @@ public class InMemoryPersistenceTests
 
         var order = await ((IRepository<TestOrder, long>)repository).FindAsync(42L);
         order.Should().NotBeNull();
-        order!.Number.Should().Be("custom");
+        order.Number.Should().Be("custom");
     }
 
     [Fact]

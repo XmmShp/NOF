@@ -21,7 +21,10 @@ public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        _executionContext[NOFContractConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString();
+        if (!_executionContext.ContainsKey(NOFContractConstants.Transport.Headers.MessageId))
+        {
+            _executionContext[NOFContractConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString();
+        }
         return next(cancellationToken);
     }
 }

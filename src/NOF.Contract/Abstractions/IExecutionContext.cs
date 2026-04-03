@@ -85,9 +85,9 @@ public static partial class NOFContractExtensions
         }
 
         /// <summary>
-        /// Creates a new Activity with the current tracing information as the parent.
+        /// Starts a new Activity with the current tracing information as the parent.
         /// </summary>
-        public Activity? CreateChildActivity(string name, ActivityKind kind, ActivitySource source)
+        public Activity? StartChildActivity(string name, ActivityKind kind, ActivitySource source)
         {
             ArgumentNullException.ThrowIfNull(source);
 

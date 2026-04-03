@@ -44,16 +44,10 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
             await next(cancellationToken);
 
             // Set tags from populated headers after successful dispatch
-            if (activity is { IsAllDataRequested: true })
-            {
-                _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageId);
-                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, messageId);
-                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, context.Message.GetType().Name);
-                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
-
-                _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId);
-                activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
-            }
+            _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageId);
+            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, messageId);
+            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, context.Message.GetType().Name);
+            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, _executionContext.TenantId);
 
             activity?.SetStatus(ActivityStatusCode.Ok);
         }

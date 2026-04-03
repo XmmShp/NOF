@@ -96,7 +96,6 @@ public static class NOFInfrastructureConstants
         {
             public const string MessageId = "messaging.message_id";
             public const string MessageType = "messaging.message_type";
-            public const string Destination = "messaging.destination";
             public const string TenantId = "messaging.tenant_id";
         }
 

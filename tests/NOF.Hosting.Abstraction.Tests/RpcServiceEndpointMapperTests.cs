@@ -86,11 +86,10 @@ public class RpcServiceEndpointMapperTests
         code.Should().Contain("InterceptsLocation");
         code.Should().Contain("app.MapGet(BuildRoute(prefix, \"/api/user\")");
         code.Should().Contain("app.MapPost(BuildRoute(prefix, \"/api/user\")");
-        code.Should().Contain("HttpContext httpContext");
-        code.Should().Contain("sp.GetRequiredService<Lib.ILibService>()");
-        code.Should().Contain("sp.GetRequiredService<App.IAppService>()");
+        code.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] Lib.ILibService service");
+        code.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] App.IAppService service");
         code.Should().Contain("GetUserAsync(request)");
-        code.Should().Contain("CreateUserAsync(request, ct2)");
+        code.Should().Contain("CreateUserAsync(request, cancellationToken)");
     }
 
     [Fact]

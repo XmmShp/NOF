@@ -33,7 +33,7 @@ public static class NOFInfrastructureExtensions
             var cacheName = name ?? ICacheServiceFactory.DefaultName;
             builder.Services.ReplaceOrAddCacheService<RedisCacheService>(cacheName, configureOptions);
             builder.Services.AddKeyedScoped(cacheName, (sp, key) =>
-                (IRedisCacheService)sp.GetRequiredKeyedService<ICacheService>(key!));
+                (IRedisCacheService)sp.GetRequiredKeyedService<ICacheService>(key));
             builder.Services.ReplaceOrAddScoped(sp =>
                 sp.GetRequiredKeyedService<IRedisCacheService>(ICacheServiceFactory.DefaultName));
 

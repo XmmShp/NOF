@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NOF.Sample.Migrations
 {
     [DbContext(typeof(ConfigurationDbContext))]
-    [Migration("20260402184239_ReBuildSample")]
-    partial class ReBuildSample
+    [Migration("20260403082950_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -64,11 +64,9 @@ namespace NOF.Sample.Migrations
 
             modelBuilder.Entity("NOF.Infrastructure.NOFOutboxMessage", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ClaimExpiresAt")
                         .HasColumnType("timestamp with time zone");
@@ -109,22 +107,12 @@ namespace NOF.Sample.Migrations
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("SpanId")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
-
-                    b.Property<string>("TraceId")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ClaimedBy");
-
-                    b.HasIndex("TraceId");
 
                     b.HasIndex("Status", "ClaimExpiresAt");
 
@@ -228,6 +216,38 @@ namespace NOF.Sample.Migrations
                     b.ToTable("ConfigNode", (string)null);
 
                     b.HasAnnotation("NOF:TenantScoped", true);
+                });
+
+            modelBuilder.Entity("NOF.Infrastructure.NOFOutboxMessage", b =>
+                {
+                    b.OwnsOne("NOF.Contract.TracingInfo", "ParentTracingInfo", b1 =>
+                        {
+                            b1.Property<Guid>("NOFOutboxMessageId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("SpanId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("character varying(128)")
+                                .HasColumnName("SpanId");
+
+                            b1.Property<string>("TraceId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("character varying(128)")
+                                .HasColumnName("TraceId");
+
+                            b1.HasKey("NOFOutboxMessageId");
+
+                            b1.HasIndex("TraceId");
+
+                            b1.ToTable("NOFOutboxMessage");
+
+                            b1.WithOwner()
+                                .HasForeignKey("NOFOutboxMessageId");
+                        });
+
+                    b.Navigation("ParentTracingInfo");
                 });
 
             modelBuilder.Entity("NOF.Sample.ConfigNode", b =>

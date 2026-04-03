@@ -29,21 +29,12 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
         // Create Activity with resolved tracing context
         using var activity = CreateActivity(context, traceId, spanId);
 
-        // Update ExecutionContext with current Activity's trace and span IDs
-        if (activity is not null)
-        {
-            _executionContext.SetTracingInfo(new TracingInfo(activity.TraceId.ToString(), activity.SpanId.ToString()));
-        }
-        else if (traceId is not null && spanId is not null)
-        {
-            _executionContext.SetTracingInfo(new TracingInfo(traceId, spanId));
-        }
+        // Stop propagating inbound header-based tracing once Activity is created
+        _executionContext.Remove(NOFContractConstants.Transport.Headers.TraceId);
+        _executionContext.Remove(NOFContractConstants.Transport.Headers.SpanId);
 
-        if (activity is { IsAllDataRequested: true })
-        {
-            activity.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.FullName);
-            activity.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().FullName);
-        }
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.FullName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().FullName);
 
         try
         {
@@ -65,7 +56,7 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
     private static Activity? CreateActivity(InboundContext context, string? traceId, string? spanId)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
-            ? new TracingInfo(traceId!, spanId!)
+            ? new TracingInfo(traceId, spanId)
             : null;
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{context.HandlerType.FullName}.Handle: {context.Message.GetType().FullName}",

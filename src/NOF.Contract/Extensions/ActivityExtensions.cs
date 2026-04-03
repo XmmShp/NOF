@@ -19,7 +19,8 @@ public static class ActivityExtensions
         }
         else
         {
-            return source.StartActivity(name, kind);
+            var randomParent = new ActivityContext(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded, isRemote: true);
+            return source.StartActivity(name, kind, randomParent);
         }
     }
 }

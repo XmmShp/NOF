@@ -47,7 +47,7 @@ public static partial class NOFContractExtensions
             options.TypeInfoResolverChain.Add(defaultResolver);
         }
 
-        options.TypeInfoResolver = options.TypeInfoResolver!
+        options.TypeInfoResolver = options.TypeInfoResolver
             .WithAddedModifier(OptionalTypeInfoResolverModifier.Modifier);
 
         return options;

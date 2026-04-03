@@ -71,7 +71,7 @@ public class MappableGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(
             perDeclaration.Collect().Combine(context.CompilationProvider),
-            static (spc, data) => Execute(data.Left!, data.Right, spc));
+            static (spc, data) => Execute(data.Left, data.Right, spc));
     }
 
     #region Extraction

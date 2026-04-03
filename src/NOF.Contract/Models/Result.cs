@@ -267,7 +267,7 @@ public record Result<T> : IResult
         ArgumentNullException.ThrowIfNull(onFailure);
 
         return IsSuccess
-            ? onSuccess(Value!)
+            ? onSuccess(Value)
             : onFailure(ErrorCode, Message);
     }
 
@@ -288,7 +288,7 @@ public record Result<T> : IResult
 
         if (IsSuccess)
         {
-            onSuccess(Value!);
+            onSuccess(Value);
         }
         else
         {

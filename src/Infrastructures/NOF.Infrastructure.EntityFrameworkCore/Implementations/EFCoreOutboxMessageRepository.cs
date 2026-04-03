@@ -97,8 +97,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
                     Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
                     CreatedAt = message.CreatedAt,
                     RetryCount = message.RetryCount,
-                    TraceId = message.TraceId,
-                    SpanId = message.SpanId,
+                    ParentTracingInfo = message.ParentTracingInfo is null ? null : new TracingInfo(message.ParentTracingInfo.TraceId, message.ParentTracingInfo.SpanId),
                     Status = message.Status,
                     ClaimedBy = message.ClaimedBy,
                     ClaimExpiresAt = message.ClaimExpiresAt,
@@ -121,7 +120,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     }
 
     public async ValueTask AtomicMarkAsSentAsync(
-        IEnumerable<long> messageIds,
+        IEnumerable<Guid> messageIds,
         CancellationToken cancellationToken = default)
     {
         // Avoid duplicate marking (e.g., already processed by another instance)
@@ -139,7 +138,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     /// <summary>
     /// Records a delivery failure and determines whether to retry or permanently fail based on retry count.
     /// </summary>
-    public async ValueTask AtomicRecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
+    public async ValueTask AtomicRecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
         var failedAt = DateTime.UtcNow;
         var rowsUpdated = await DbContext.NOFOutboxMessages
@@ -192,7 +191,7 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFDbCont
     /// Releases the claim lock and marks the message as failed.
     /// </summary>
     private async Task ReleaseClaimAndMarkAsFailedAsync(
-        long messageId,
+        Guid messageId,
         string errorMessage,
         CancellationToken cancellationToken = default)
     {

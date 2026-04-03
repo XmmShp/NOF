@@ -107,7 +107,7 @@ public class RedisCacheService : IRedisCacheService
             return Optional.None;
         }
 
-        var value = _serializer.Deserialize<T>(data!);
+        var value = _serializer.Deserialize<T>(data);
         return value != null ? Optional.Of(value) : Optional.None;
     }
 
@@ -202,7 +202,7 @@ public class RedisCacheService : IRedisCacheService
         {
             if (values[i].HasValue)
             {
-                var deserialized = _serializer.Deserialize<T>(values[i]!);
+                var deserialized = _serializer.Deserialize<T>(values[i]);
                 result[keyList[i]] = deserialized != null ? Optional.Of(deserialized) : Optional.None;
             }
             else
@@ -303,7 +303,7 @@ public class RedisCacheService : IRedisCacheService
             await _database.KeyExpireAsync(prefixedKey, expiry.Value);
         }
 
-        var oldValue = _serializer.Deserialize<T>(oldData!);
+        var oldValue = _serializer.Deserialize<T>(oldData);
         return oldValue != null ? Optional.Of(oldValue) : Optional.None;
     }
 
@@ -318,7 +318,7 @@ public class RedisCacheService : IRedisCacheService
             return Optional.None;
         }
 
-        var value = _serializer.Deserialize<T>(data!);
+        var value = _serializer.Deserialize<T>(data);
         return value != null ? Optional.Of(value) : Optional.None;
     }
 
@@ -413,7 +413,7 @@ public class RedisCacheService : IRedisCacheService
             return Optional.None;
         }
 
-        var value = _serializer.Deserialize<T>(data!);
+        var value = _serializer.Deserialize<T>(data);
         return value is not null ? Optional.Of(value) : Optional.None;
     }
 
@@ -432,7 +432,7 @@ public class RedisCacheService : IRedisCacheService
                 continue;
             }
 
-            var value = _serializer.Deserialize<T>(values[i]!);
+            var value = _serializer.Deserialize<T>(values[i]);
             result[fieldList[i]] = value is not null ? Optional.Of(value) : Optional.None;
         }
 
@@ -495,7 +495,7 @@ public class RedisCacheService : IRedisCacheService
             return Optional.None;
         }
 
-        var value = _serializer.Deserialize<T>(data!);
+        var value = _serializer.Deserialize<T>(data);
         return value is not null ? Optional.Of(value) : Optional.None;
     }
 
@@ -594,7 +594,7 @@ public class RedisCacheService : IRedisCacheService
                 continue;
             }
 
-            var deserialized = _serializer.Deserialize<T>(value!);
+            var deserialized = _serializer.Deserialize<T>(value);
             if (deserialized is not null)
             {
                 result.Add(deserialized);

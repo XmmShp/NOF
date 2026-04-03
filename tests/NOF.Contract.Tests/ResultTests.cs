@@ -294,7 +294,7 @@ public class ResultTests
         deserialized.Should().NotBeNull();
         deserialized.IsSuccess.Should().BeTrue();
         deserialized.Value.Should().NotBeNull();
-        deserialized.Value!.Id.Should().Be(1);
+        deserialized.Value.Id.Should().Be(1);
         deserialized.Value.Name.Should().Be("test");
     }
 

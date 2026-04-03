@@ -95,7 +95,7 @@ internal static class RpcServiceHelpers
             return true;
         }
 
-        parameter = null!;
+        parameter = null;
         return false;
     }
 

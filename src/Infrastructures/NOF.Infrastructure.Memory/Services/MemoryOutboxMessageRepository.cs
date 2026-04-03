@@ -4,31 +4,28 @@ using NOF.Domain;
 
 namespace NOF.Infrastructure.Memory;
 
-public sealed class MemoryOutboxMessageRepository : MemoryRepository<NOFOutboxMessage, long>, IOutboxMessageRepository
+public sealed class MemoryOutboxMessageRepository : MemoryRepository<NOFOutboxMessage, Guid>, IOutboxMessageRepository
 {
     private readonly IOptions<OutboxOptions> _options;
     private readonly ILogger<MemoryOutboxMessageRepository> _logger;
-    private readonly IIdGenerator _idGenerator;
 
     public MemoryOutboxMessageRepository(
         MemoryPersistenceContext context,
         IOptions<OutboxOptions> options,
-        ILogger<MemoryOutboxMessageRepository> logger,
-        IIdGenerator idGenerator)
+        ILogger<MemoryOutboxMessageRepository> logger)
         : base(
             context,
             static message => message.Id)
     {
         _options = options;
         _logger = logger;
-        _idGenerator = idGenerator;
     }
 
     public override void Add(NOFOutboxMessage entity)
     {
-        if (entity.Id == 0)
+        if (entity.Id == Guid.Empty)
         {
-            entity.Id = _idGenerator.NextId();
+            entity.Id = Guid.NewGuid();
         }
 
         entity.Status = OutboxMessageStatus.Pending;
@@ -67,7 +64,7 @@ public sealed class MemoryOutboxMessageRepository : MemoryRepository<NOFOutboxMe
         }
     }
 
-    public ValueTask AtomicMarkAsSentAsync(IEnumerable<long> messageIds, CancellationToken cancellationToken = default)
+    public ValueTask AtomicMarkAsSentAsync(IEnumerable<Guid> messageIds, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -88,7 +85,7 @@ public sealed class MemoryOutboxMessageRepository : MemoryRepository<NOFOutboxMe
         return ValueTask.CompletedTask;
     }
 
-    public ValueTask AtomicRecordDeliveryFailureAsync(long messageId, string errorMessage, CancellationToken cancellationToken = default)
+    public ValueTask AtomicRecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
