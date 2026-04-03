@@ -30,7 +30,7 @@ public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationSte
             .WithTracing(tracing =>
             {
                 tracing.AddSource(NOFInfrastructureConstants.InboundPipeline.ActivitySourceName);
-                tracing.AddSource(NOFInfrastructureConstants.Messaging.ActivitySourceName);
+                tracing.AddSource(NOFInfrastructureConstants.OutboundPipeline.ActivitySourceName);
                 tracing.AddSource(NOF.Application.NOFApplicationConstants.StateMachine.ActivitySourceName);
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddHttpClientInstrumentation();

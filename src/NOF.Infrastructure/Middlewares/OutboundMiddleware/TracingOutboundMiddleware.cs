@@ -28,8 +28,8 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 
     public async ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        using var activity = NOFInfrastructureConstants.Messaging.Source.StartActivity(
-            $"{NOFInfrastructureConstants.Messaging.ActivityNames.MessageSending}: {context.Message.GetType().FullName}",
+        using var activity = NOFInfrastructureConstants.OutboundPipeline.Source.StartActivity(
+            $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {context.Message.GetType().FullName}",
             ActivityKind.Producer);
 
         // Propagate trace/span IDs into headers before inner middleware run
@@ -45,9 +45,9 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 
             // Set tags from populated headers after successful dispatch
             _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageId);
-            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, messageId);
-            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, context.Message.GetType().Name);
-            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, _executionContext.TenantId);
+            activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, messageId);
+            activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, context.Message.GetType().Name);
+            activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, _executionContext.TenantId);
 
             activity?.SetStatus(ActivityStatusCode.Ok);
         }

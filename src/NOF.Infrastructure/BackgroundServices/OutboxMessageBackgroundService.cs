@@ -110,11 +110,11 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         headers[NOFContractConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
         headers[NOFContractConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
 
-        activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, message.Id.ToString());
-        activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, payload.GetType().Name);
+        activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
+        activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, payload.GetType().Name);
         if (headers.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId))
         {
-            activity?.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
+            activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, tenantId);
         }
 
         try
@@ -162,8 +162,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
         var parent = message.ParentTracingInfo;
-        return NOFInfrastructureConstants.Messaging.Source.StartActivityWithParent(
-            $"{NOFInfrastructureConstants.Messaging.ActivityNames.MessageSending}: {payload.GetType().FullName}",
+        return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
+            $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
             ActivityKind.Producer,
             parent);
     }

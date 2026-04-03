@@ -75,14 +75,19 @@ public static class NOFInfrastructureConstants
 
 
     /// <summary>
-    /// Message tracing constants.
+    /// Outbound pipeline tracing and metrics constants.
     /// </summary>
-    public static class Messaging
+    public static class OutboundPipeline
     {
         /// <summary>
         /// The ActivitySource name.
         /// </summary>
-        public const string ActivitySourceName = "NOF.Messaging";
+        public const string ActivitySourceName = "NOF.OutboundPipeline";
+
+        /// <summary>
+        /// The Meter name.
+        /// </summary>
+        public const string MeterName = "NOF.OutboundPipeline";
 
         /// <summary>
         /// The ActivitySource instance.
@@ -90,13 +95,46 @@ public static class NOFInfrastructureConstants
         public static readonly ActivitySource Source = new(ActivitySourceName);
 
         /// <summary>
+        /// The Meter instance.
+        /// </summary>
+        public static readonly Meter Meter = new(MeterName);
+
+        /// <summary>
         /// Activity tag names.
         /// </summary>
         public static class Tags
         {
-            public const string MessageId = "messaging.message_id";
-            public const string MessageType = "messaging.message_type";
-            public const string TenantId = "messaging.tenant_id";
+            public const string MessageId = "outbound.message_id";
+            public const string MessageType = "outbound.message_type";
+            public const string TenantId = "outbound.tenant_id";
+        }
+
+        /// <summary>
+        /// Metric names.
+        /// </summary>
+        public static class Metrics
+        {
+            public const string ExecutionCounter = "nof.outbound.executions";
+            public const string ExecutionDuration = "nof.outbound.duration";
+            public const string ErrorCounter = "nof.outbound.errors";
+        }
+
+        /// <summary>
+        /// Metric descriptions.
+        /// </summary>
+        public static class MetricDescriptions
+        {
+            public const string ExecutionCounter = "Total number of outbound dispatches";
+            public const string ExecutionDuration = "Outbound dispatch duration in milliseconds";
+            public const string ErrorCounter = "Total number of outbound dispatch errors";
+        }
+
+        /// <summary>
+        /// Metric units.
+        /// </summary>
+        public static class MetricUnits
+        {
+            public const string Milliseconds = "ms";
         }
 
         /// <summary>
