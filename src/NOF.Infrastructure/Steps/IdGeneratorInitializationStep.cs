@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Domain;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

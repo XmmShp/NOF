@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

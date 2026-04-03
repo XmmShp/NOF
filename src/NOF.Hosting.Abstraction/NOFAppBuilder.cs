@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Provides a base implementation of <see cref="INOFAppBuilder"/> that coordinates

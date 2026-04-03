@@ -1,3 +1,5 @@
+using NOF.Hosting;
+
 namespace NOF.Infrastructure;
 
 public class ServiceRegistrationStep : IServiceRegistrationStep<ServiceRegistrationStep>

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Contract;
-using NOF.Infrastructure;
+using NOF.Hosting;
 using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;

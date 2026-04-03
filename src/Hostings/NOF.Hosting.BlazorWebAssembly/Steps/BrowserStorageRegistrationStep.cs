@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Hosting;
 using NOF.Infrastructure;
 using NOF.UI;
 

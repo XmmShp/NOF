@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

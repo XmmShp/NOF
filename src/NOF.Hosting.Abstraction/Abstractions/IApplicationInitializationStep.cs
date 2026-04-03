@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Defines an application-level configuration unit that runs after the host application has been fully constructed.

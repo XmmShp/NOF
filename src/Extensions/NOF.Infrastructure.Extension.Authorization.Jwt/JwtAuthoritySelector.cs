@@ -1,3 +1,5 @@
+using NOF.Hosting;
+
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>

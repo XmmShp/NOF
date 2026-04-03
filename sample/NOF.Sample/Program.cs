@@ -2,6 +2,7 @@ using ConfigurationCenter;
 using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting.AspNetCore;
+using NOF.Hosting;
 using NOF.Infrastructure;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;

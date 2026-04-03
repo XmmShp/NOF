@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Annotation;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Registers services from source-generated AutoInject metadata.

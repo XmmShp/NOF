@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NOF.Contract;
 using System.Reflection;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Represents a marker interface for all configuration units in the application.

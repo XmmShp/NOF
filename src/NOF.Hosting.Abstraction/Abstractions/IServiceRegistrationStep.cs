@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Defines a service-level configuration unit that participates in the DI container registration phase.

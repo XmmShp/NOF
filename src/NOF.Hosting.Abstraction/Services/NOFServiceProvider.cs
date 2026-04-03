@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 public sealed class NOFServiceProvider : IServiceScopeFactory, IKeyedServiceProvider
 {

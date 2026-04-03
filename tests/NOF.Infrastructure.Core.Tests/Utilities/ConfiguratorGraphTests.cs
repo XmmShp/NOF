@@ -1,4 +1,5 @@
 using FluentAssertions;
+using NOF.Hosting;
 using Xunit;
 
 namespace NOF.Infrastructure.Core.Tests.Utilities;

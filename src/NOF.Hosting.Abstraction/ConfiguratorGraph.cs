@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Represents a directed acyclic graph (DAG) of configurators that supports topological sorting

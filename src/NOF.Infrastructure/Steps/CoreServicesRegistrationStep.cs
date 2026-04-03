@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

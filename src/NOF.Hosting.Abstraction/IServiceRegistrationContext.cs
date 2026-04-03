@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Context available during service registration steps.

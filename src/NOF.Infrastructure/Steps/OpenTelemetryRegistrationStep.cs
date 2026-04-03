@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

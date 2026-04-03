@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

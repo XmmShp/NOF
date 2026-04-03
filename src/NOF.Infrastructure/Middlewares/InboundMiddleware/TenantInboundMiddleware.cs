@@ -1,4 +1,5 @@
 using NOF.Contract;
+using NOF.Hosting;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;

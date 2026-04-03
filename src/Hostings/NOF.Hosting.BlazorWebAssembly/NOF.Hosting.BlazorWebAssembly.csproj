@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
     <ProjectReference Include="..\..\NOF.UI\NOF.UI.csproj" />
   </ItemGroup>
 

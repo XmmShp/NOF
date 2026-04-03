@@ -12,6 +12,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Infrastructure.Memory;
+using NOF.Hosting;
 using Xunit;
 
 namespace NOF.Infrastructure.Core.Tests.Steps;

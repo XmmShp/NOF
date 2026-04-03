@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 public sealed class NOFServiceScopeFactory(IServiceScopeFactory innerScopeFactory) : IServiceScopeFactory
 {

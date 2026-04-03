@@ -2,7 +2,7 @@ using Microsoft.Extensions.Hosting;
 using NOF.Annotation;
 using System.Reflection;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Represents a configurable application host builder for the NOF framework,
