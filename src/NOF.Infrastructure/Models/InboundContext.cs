@@ -28,6 +28,11 @@ public sealed class InboundContext
     public required IExecutionContext ExecutionContext { get; init; }
 
     /// <summary>
+    /// Service provider for resolving dependencies during pipeline execution.
+    /// </summary>
+    public required IServiceProvider Services { get; init; }
+
+    /// <summary>
     /// Response result (only used for Request handlers)
     /// </summary>
     public IResult? Response { get; set; }

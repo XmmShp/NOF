@@ -39,7 +39,8 @@ public sealed class MemoryNotificationRider : INotificationRider
             {
                 Message = notification,
                 HandlerType = handler.GetType(),
-                ExecutionContext = executionContext
+                ExecutionContext = scopedExecutionContext,
+                Services = scope.ServiceProvider
             };
 
             await pipeline.ExecuteAsync(context,

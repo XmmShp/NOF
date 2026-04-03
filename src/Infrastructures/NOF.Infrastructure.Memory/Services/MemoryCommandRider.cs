@@ -46,7 +46,8 @@ public sealed class MemoryCommandRider : ICommandRider
         {
             Message = command,
             HandlerType = resolved.HandlerType,
-            ExecutionContext = executionContext
+            ExecutionContext = scopedExecutionContext,
+            Services = scope.ServiceProvider
         };
 
         await pipeline.ExecuteAsync(context,

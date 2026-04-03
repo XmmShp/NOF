@@ -29,8 +29,8 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
 
         builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
 
-        builder.Services.TryAddScoped<IInboundPipelineExecutor, InboundPipelineExecutor>();
-        builder.Services.TryAddScoped<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
+        builder.Services.TryAddSingleton<IInboundPipelineExecutor, InboundPipelineExecutor>();
+        builder.Services.TryAddSingleton<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
         builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
 
         builder.Services.TryAddScoped<IDeferredCommandSender, DeferredCommandSender>();

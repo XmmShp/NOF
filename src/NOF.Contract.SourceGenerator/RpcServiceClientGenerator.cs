@@ -88,16 +88,19 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
         sb.AppendLine("        private readonly global::NOF.Contract.IOutboundPipelineExecutor _outboundPipeline;");
         sb.AppendLine("        private readonly global::NOF.Contract.IExecutionContext _executionContext;");
+        sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
         sb.AppendLine("        private static readonly global::System.Text.Json.JsonSerializerOptions _jsonOptions = global::System.Text.Json.JsonSerializerOptions.NOF;");
         sb.AppendLine();
-        sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient, global::NOF.Contract.IOutboundPipelineExecutor outboundPipeline, global::NOF.Contract.IExecutionContext executionContext)");
+        sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient, global::NOF.Contract.IOutboundPipelineExecutor outboundPipeline, global::NOF.Contract.IExecutionContext executionContext, global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(httpClient);");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(outboundPipeline);");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(executionContext);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(serviceProvider);");
         sb.AppendLine("            _httpClient = httpClient;");
         sb.AppendLine("            _outboundPipeline = outboundPipeline;");
         sb.AppendLine("            _executionContext = executionContext;");
+        sb.AppendLine("            _serviceProvider = serviceProvider;");
         sb.AppendLine("        }");
         sb.AppendLine();
 
@@ -228,7 +231,8 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine("            var context = new global::NOF.Contract.OutboundContext");
         sb.AppendLine("            {");
         sb.AppendLine("                Message = message,");
-        sb.AppendLine("                ExecutionContext = (global::NOF.Contract.IExecutionContext)_executionContext.Clone()");
+        sb.AppendLine("                ExecutionContext = (global::NOF.Contract.IExecutionContext)_executionContext.Clone(),");
+        sb.AppendLine("                Services = _serviceProvider");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine("            global::NOF.Contract.IResult? result = null;");

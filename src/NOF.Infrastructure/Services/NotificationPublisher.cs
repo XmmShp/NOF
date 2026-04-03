@@ -12,12 +12,14 @@ public sealed class NotificationPublisher : INotificationPublisher
     private readonly INotificationRider _rider;
     private readonly IOutboundPipelineExecutor _outboundPipeline;
     private readonly IExecutionContext _executionContext;
+    private readonly IServiceProvider _serviceProvider;
 
-    public NotificationPublisher(INotificationRider rider, IOutboundPipelineExecutor outboundPipeline, IExecutionContext executionContext)
+    public NotificationPublisher(INotificationRider rider, IOutboundPipelineExecutor outboundPipeline, IExecutionContext executionContext, IServiceProvider serviceProvider)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
         _executionContext = executionContext;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
@@ -25,7 +27,8 @@ public sealed class NotificationPublisher : INotificationPublisher
         var context = new OutboundContext
         {
             Message = notification,
-            ExecutionContext = (IExecutionContext)_executionContext.Clone()
+            ExecutionContext = (IExecutionContext)_executionContext.Clone(),
+            Services = _serviceProvider
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>

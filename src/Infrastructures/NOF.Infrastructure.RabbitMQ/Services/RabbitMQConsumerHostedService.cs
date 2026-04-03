@@ -234,7 +234,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 {
                     Message = command,
                     HandlerType = resolved.HandlerType,
-                    ExecutionContext = executionContext
+                    ExecutionContext = executionContext,
+                    Services = scope.ServiceProvider
                 };
 
                 await pipeline.ExecuteAsync(
@@ -269,7 +270,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 {
                     Message = notification,
                     HandlerType = handlerType,
-                    ExecutionContext = executionContext
+                    ExecutionContext = executionContext,
+                    Services = scope.ServiceProvider
                 };
 
                 await pipeline.ExecuteAsync(

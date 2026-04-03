@@ -21,6 +21,11 @@ public sealed class OutboundContext
     public required IExecutionContext ExecutionContext { get; init; }
 
     /// <summary>
+    /// Service provider for resolving dependencies during pipeline execution.
+    /// </summary>
+    public required IServiceProvider Services { get; init; }
+
+    /// <summary>
     /// Response result set by the rider or by outbound middleware that short-circuits the pipeline.
     /// Mirrors <see cref="InboundContext.Response"/>.
     /// </summary>

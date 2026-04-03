@@ -10,14 +10,10 @@ namespace NOF.Infrastructure;
 /// </summary>
 public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
 {
-    private readonly IServiceProvider _serviceProvider;
     private readonly InboundPipelineTypes _middlewareTypes;
 
-    public InboundPipelineExecutor(
-        IServiceProvider serviceProvider,
-        InboundPipelineTypes middlewareTypes)
+    public InboundPipelineExecutor(InboundPipelineTypes middlewareTypes)
     {
-        _serviceProvider = serviceProvider;
         _middlewareTypes = middlewareTypes;
     }
 
@@ -27,7 +23,7 @@ public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
         var pipeline = inbound;
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (IInboundMiddleware)_serviceProvider.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (IInboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, ct2 => next(ct2), ct);
         }
