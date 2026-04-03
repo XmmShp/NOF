@@ -4,6 +4,7 @@ using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
+using HttpJwksClient = NOF.Contract.Extension.Authorization.Jwt.HttpJwksService;
 using JwtHostingExtensions = NOF.Hosting.Extension.Authorization.Jwt.NOFJwtAuthorizationExtensions;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
@@ -46,12 +47,12 @@ public static partial class NOFJwtAuthorizationExtensions
                     });
                 });
 
-            JwtHostingExtensions.AddJwtTokenPropagation(builder);
+            builder.AddJwtTokenPropagation();
 
-            builder.Services.AddHttpClient<HttpJwksService>();
+            builder.Services.AddHttpClient<HttpJwksClient>();
             if (builder.Services.All(sd => sd.ServiceType != typeof(IJwksService)))
             {
-                builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksService>());
+                builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksClient>());
             }
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, JwksProvider>();
             builder.Services.AddHandlerInfo(
@@ -70,8 +71,7 @@ public static partial class NOFJwtAuthorizationExtensions
         /// <returns>The NOF application builder for chaining.</returns>
         public JwtAuthoritySelector AddJwtAuthority(Action<JwtAuthorityOptions>? configureOptions = null)
         {
-            builder.Services.ReplaceOrAddScoped<JwtAuthorityService, JwtAuthorityService>();
-            builder.Services.ReplaceOrAddScoped<IJwtAuthorityService>(sp => sp.GetRequiredService<JwtAuthorityService>());
+            builder.Services.ReplaceOrAddScoped<IJwtAuthorityService, JwtAuthorityService>();
 
             if (configureOptions is not null)
             {

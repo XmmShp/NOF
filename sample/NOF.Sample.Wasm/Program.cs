@@ -6,8 +6,8 @@ var builder = NOFWebAssemblyHostBuilder.Create(args);
 
 builder.Services.AddAntDesign();
 builder.Services.AddScoped<INOFSampleService, HttpNOFSampleService>();
-builder.Services.AddScoped<IJwtAuthorityService, HttpSampleJwtAuthorityService>();
-builder.Services.AddScoped<IJwksService, HttpSampleJwksService>();
+builder.Services.AddScoped<IJwtAuthorityService, HttpJwtAuthorityService>();
+builder.Services.AddScoped<IJwksService, HttpJwksService>();
 builder.Services.AddScoped(_ => new HttpClient
 {
     BaseAddress = new Uri(builder.WebAssemblyHostBuilder.HostEnvironment.BaseAddress)

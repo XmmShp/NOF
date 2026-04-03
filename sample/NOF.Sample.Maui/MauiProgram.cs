@@ -20,7 +20,7 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddAntDesign();
         builder.Services.AddScoped<INOFSampleService, HttpNOFSampleService>();
-        builder.Services.AddScoped<IJwtAuthorityService, HttpSampleJwtAuthorityService>();
+        builder.Services.AddScoped<IJwtAuthorityService, HttpJwtAuthorityService>();
         builder.Services.AddScoped(_ => new HttpClient
         {
             BaseAddress = new Uri(builder.Configuration["SampleApiBaseAddress"] ?? "https://localhost:5001/")

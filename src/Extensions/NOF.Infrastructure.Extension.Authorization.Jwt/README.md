@@ -10,7 +10,7 @@ Provides JWT infrastructure for NOF applications as a resource server (token val
 
 ### Resource Server
 
-- **JWKS Client** - `AddJwtResourceServer()` registers `HttpJwksService` as the default `IJwksService` client
+- **JWKS Client** - `AddJwtResourceServer()` registers `NOF.Contract.Extension.Authorization.Jwt.HttpJwksService` as the default `IJwksService` client
 - **JWKS Provider** - `IJwksProvider` caches signing keys locally and serves validation from cache; when the host also acts as an authority it refreshes directly from local signing keys instead of re-calling `IJwksService`
 - **Token Validation** - `JwtResourceServerInboundMiddleware` validates Bearer tokens with configurable issuer, audience, and lifetime checks
 - **Outbound Propagation** - resource server setup also enables JWT token propagation for downstream NOF calls

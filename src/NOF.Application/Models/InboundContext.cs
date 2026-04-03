@@ -1,22 +1,21 @@
 using NOF.Contract;
 using System.ComponentModel;
 
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 /// <summary>
-/// Handler execution context
-/// Contains metadata during handler execution
+/// Handler execution context.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class InboundContext
 {
     /// <summary>
-    /// Message instance
+    /// Message instance.
     /// </summary>
     public required object Message { get; init; }
 
     /// <summary>
-    /// Handler type
+    /// Handler type.
     /// </summary>
     public required Type HandlerType { get; init; }
 
@@ -26,7 +25,7 @@ public sealed class InboundContext
     public required IServiceProvider Services { get; init; }
 
     /// <summary>
-    /// Response result (only used for Request handlers)
+    /// Response result (only used for request handlers).
     /// </summary>
     public IResult? Response { get; set; }
 }

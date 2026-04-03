@@ -208,7 +208,7 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine("        await outboundPipeline.ExecuteAsync(outboundContext, async (ct) =>");
             sb.AppendLine("        {");
-            sb.AppendLine("            await global::NOF.Infrastructure.InboundHandlerInvoker.ExecuteHandlerAsync(");
+            sb.AppendLine("            await global::NOF.Application.InboundHandlerInvoker.ExecuteHandlerAsync(");
             sb.AppendLine("                _serviceProvider,");
             sb.AppendLine("                request,");
             sb.AppendLine($"                typeof({nestedInterfaceFqn}),");

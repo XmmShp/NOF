@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;

@@ -1,8 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
 using NOF.Contract;
 
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 public static class InboundHandlerInvoker
 {
@@ -18,9 +17,11 @@ public static class InboundHandlerInvoker
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(handlerType);
         ArgumentNullException.ThrowIfNull(terminal);
+
         await using var scope = rootServiceProvider.CreateAsyncScope();
         var pipeline = rootServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
         var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
+
         if (headers is not null)
         {
             foreach (var (headerKey, value) in headers)
@@ -28,12 +29,14 @@ public static class InboundHandlerInvoker
                 executionContext[headerKey] = value;
             }
         }
+
         var context = new InboundContext
         {
             Message = message,
             HandlerType = handlerType,
             Services = scope.ServiceProvider
         };
+
         await pipeline.ExecuteAsync(
             context,
             ct => terminal(scope.ServiceProvider, ct),
