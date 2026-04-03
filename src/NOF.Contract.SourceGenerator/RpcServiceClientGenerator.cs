@@ -231,7 +231,6 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine("            var context = new global::NOF.Contract.OutboundContext");
         sb.AppendLine("            {");
         sb.AppendLine("                Message = message,");
-        sb.AppendLine("                ExecutionContext = (global::NOF.Contract.IExecutionContext)_executionContext.Clone(),");
         sb.AppendLine("                Services = _serviceProvider");
         sb.AppendLine("            };");
         sb.AppendLine();
@@ -306,7 +305,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine();
-        sb.AppendLine("                foreach (var kvp in context.ExecutionContext)");
+        sb.AppendLine("                foreach (var kvp in _executionContext)");
         sb.AppendLine("                {");
         sb.AppendLine("                    if (kvp.Value != null)");
         sb.AppendLine("                    {");

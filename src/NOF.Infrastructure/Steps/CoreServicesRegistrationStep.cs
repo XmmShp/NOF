@@ -39,7 +39,6 @@ public class CoreServicesRegistrationStep : IBaseSettingsServiceRegistrationStep
         builder.Services.TryAddScoped<ICommandSender, CommandSender>();
         builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
         builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
-        builder.Services.TryAddSingleton<ICommandHandlerResolver, CommandHandlerResolver>();
 
         builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
         builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());

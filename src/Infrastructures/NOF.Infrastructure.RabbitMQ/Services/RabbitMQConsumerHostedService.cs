@@ -13,8 +13,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ICommandHandlerResolver _commandHandlerResolver;
+    private readonly IServiceProvider _rootServiceProvider;
     private readonly IMessageSerializer _serializer;
     private readonly HandlerInfos? _handlerInfos;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
@@ -25,16 +24,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     public RabbitMQConsumerHostedService(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        IServiceScopeFactory scopeFactory,
-        ICommandHandlerResolver commandHandlerResolver,
+        IServiceProvider rootServiceProvider,
         IMessageSerializer serializer,
         HandlerInfos? handlerInfos,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _scopeFactory = scopeFactory;
-        _commandHandlerResolver = commandHandlerResolver;
+        _rootServiceProvider = rootServiceProvider;
         _serializer = serializer;
         _handlerInfos = handlerInfos;
         _logger = logger;
@@ -200,7 +197,6 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
             var message = _serializer.Deserialize(messageTypeName, payload);
 
-            await using var scope = _scopeFactory.CreateAsyncScope();
             Dictionary<string, string?>? headers = null;
             if (args.BasicProperties.Headers is not null)
             {
@@ -216,31 +212,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
             if (message is ICommand command)
             {
-                var resolved = _commandHandlerResolver.Resolve(command.GetType())
-                    ?? throw new InvalidOperationException($"Cannot route command '{command.GetType().Name}'. No matching handler registered.");
-
-                var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
-                var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-                var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-                if (headers is not null)
-                {
-                    foreach (var (key, value) in headers)
-                    {
-                        executionContext[key] = value;
-                    }
-                }
-
-                var context = new InboundContext
-                {
-                    Message = command,
-                    HandlerType = resolved.HandlerType,
-                    ExecutionContext = executionContext,
-                    Services = scope.ServiceProvider
-                };
-
-                await pipeline.ExecuteAsync(
-                    context,
-                    ct => new ValueTask(handler.HandleAsync(command, ct)),
+                var commandType = command.GetType();
+                var handlerType = _handlerInfos?.GetCommandHandlers(commandType).FirstOrDefault()
+                    ?? throw new InvalidOperationException($"Cannot route command '{commandType.Name}'. No matching handler registered.");
+                await InboundHandlerInvoker.ExecuteCommandAsync(
+                    _rootServiceProvider,
+                    handlerType,
+                    command,
+                    headers,
                     CancellationToken.None);
             }
             else if (message is INotification notification)
@@ -250,33 +229,11 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     throw new InvalidOperationException($"Cannot resolve notification handler type for queue '{queueName}'.");
                 }
 
-                var key = NotificationHandlerKey.Of(notification.GetType());
-                var handlers = scope.ServiceProvider.GetKeyedServices<INotificationHandler>(key);
-                var handler = handlers.FirstOrDefault(candidate => handlerType.IsInstanceOfType(candidate))
-                    ?? throw new InvalidOperationException(
-                        $"Cannot resolve notification handler '{handlerType.FullName}' for notification '{notification.GetType().FullName}'.");
-
-                var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-                var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-                if (headers is not null)
-                {
-                    foreach (var (headerKey, value) in headers)
-                    {
-                        executionContext[headerKey] = value;
-                    }
-                }
-
-                var context = new InboundContext
-                {
-                    Message = notification,
-                    HandlerType = handlerType,
-                    ExecutionContext = executionContext,
-                    Services = scope.ServiceProvider
-                };
-
-                await pipeline.ExecuteAsync(
-                    context,
-                    ct => new ValueTask(handler.HandleAsync(notification, ct)),
+                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
+                    _rootServiceProvider,
+                    notification,
+                    handlerType,
+                    headers,
                     CancellationToken.None);
             }
 

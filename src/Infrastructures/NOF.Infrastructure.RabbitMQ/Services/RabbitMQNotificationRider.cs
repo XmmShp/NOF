@@ -22,7 +22,7 @@ public class RabbitMQNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(INotification notification,
-        IExecutionContext executionContext,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
@@ -44,7 +44,15 @@ public class RabbitMQNotificationRider : INotificationRider
             Type = notification.GetType().FullName
         };
 
-        properties.Headers = executionContext.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
+        if (headers is not null)
+        {
+            var headerDict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (k, v) in headers)
+            {
+                headerDict[k] = v;
+            }
+            properties.Headers = headerDict;
+        }
 
         var messageString = _serializer.Serialize(notification);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);

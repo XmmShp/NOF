@@ -4,54 +4,30 @@ using NOF.Contract;
 
 namespace NOF.Infrastructure.Memory;
 
-/// <summary>
-/// In-memory command rider that dispatches commands directly to their typed handlers
-/// resolved from DI using keyed services.
-/// Uses <see cref="ICommandHandlerResolver"/> to find the correct handler by message type
-/// and optional endpoint name. Creates a new DI scope per dispatch.
-/// Fully AOT-compatible no reflection or <c>MakeGenericType</c> calls.
-/// </summary>
 public sealed class MemoryCommandRider : ICommandRider
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ICommandHandlerResolver _resolver;
+    private readonly IServiceProvider _rootServiceProvider;
 
     public MemoryCommandRider(
-        IServiceScopeFactory scopeFactory,
-        ICommandHandlerResolver resolver)
+        IServiceProvider rootServiceProvider)
     {
-        _scopeFactory = scopeFactory;
-        _resolver = resolver;
+        _rootServiceProvider = rootServiceProvider;
     }
 
     public async Task SendAsync(ICommand command,
-        IExecutionContext executionContext,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
+        var handlerInfos = _rootServiceProvider.GetService<HandlerInfos>();
         var commandType = command.GetType();
-        var resolved = _resolver.Resolve(commandType)
+        var handlerType = handlerInfos?.GetCommandHandlers(commandType).FirstOrDefault()
             ?? throw new InvalidOperationException(
-                $"In-memory transport cannot route command '{commandType.Name}'. " +
-                "No matching local handler registered. Add a message transport to enable remote dispatch.");
-
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var handler = (ICommandHandler)scope.ServiceProvider.GetRequiredKeyedService(resolved.HandlerType, resolved.Key);
-        var pipeline = scope.ServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-        var scopedExecutionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-        foreach (var (key, value) in executionContext)
-        {
-            scopedExecutionContext[key] = value;
-        }
-        var context = new InboundContext
-        {
-            Message = command,
-            HandlerType = resolved.HandlerType,
-            ExecutionContext = scopedExecutionContext,
-            Services = scope.ServiceProvider
-        };
-
-        await pipeline.ExecuteAsync(context,
-            ct => new ValueTask(handler.HandleAsync(command, ct)),
+                $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
+        await InboundHandlerInvoker.ExecuteCommandAsync(
+            _rootServiceProvider,
+            handlerType,
+            command,
+            headers,
             cancellationToken).ConfigureAwait(false);
     }
 }

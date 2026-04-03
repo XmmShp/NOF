@@ -23,8 +23,8 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
         // Resolve trace/span IDs from headers
-        context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.TraceId, out var traceId);
-        context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.SpanId, out var spanId);
+        _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.TraceId, out var traceId);
+        _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.SpanId, out var spanId);
 
         // Create Activity with resolved tracing context
         using var activity = CreateActivity(context, traceId, spanId);

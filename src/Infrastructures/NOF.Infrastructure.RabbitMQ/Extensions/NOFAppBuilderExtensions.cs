@@ -23,8 +23,8 @@ public static partial class NOFInfrastructureRabbitMQExtensions
             builder.Services.Configure(configureOptions);
 
             builder.Services.ReplaceOrAddSingleton<RabbitMQConnectionManager, RabbitMQConnectionManager>();
-            builder.Services.ReplaceOrAddScoped<ICommandRider, RabbitMQCommandRider>();
-            builder.Services.ReplaceOrAddScoped<INotificationRider, RabbitMQNotificationRider>();
+            builder.Services.ReplaceOrAddSingleton<ICommandRider, RabbitMQCommandRider>();
+            builder.Services.ReplaceOrAddSingleton<INotificationRider, RabbitMQNotificationRider>();
 
             // 注册应用启动时的消费者初始化
             builder.Services.AddHostedService<RabbitMQConsumerHostedService>();

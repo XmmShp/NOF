@@ -39,11 +39,13 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly HttpHeaderOutboundMiddlewareOptions _options;
+    private readonly IExecutionContext _executionContext;
 
-    public HttpHeaderOutboundMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderOutboundMiddlewareOptions> options)
+    public HttpHeaderOutboundMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderOutboundMiddlewareOptions> options, IExecutionContext executionContext)
     {
         _httpContextAccessor = httpContextAccessor;
         _options = options.Value;
+        _executionContext = executionContext;
     }
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
@@ -59,9 +61,9 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
                 }
 
                 // Caller-provided headers take precedence
-                if (!context.ExecutionContext.ContainsKey(header.Key))
+                if (!_executionContext.ContainsKey(header.Key))
                 {
-                    context.ExecutionContext[header.Key] = header.Value.ToString();
+                    _executionContext[header.Key] = header.Value.ToString();
                 }
             }
         }

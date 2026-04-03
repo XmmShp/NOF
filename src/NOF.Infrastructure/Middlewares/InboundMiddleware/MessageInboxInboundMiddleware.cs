@@ -17,13 +17,15 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
     private readonly IInboxMessageRepository _inboxMessageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
+    private readonly IExecutionContext _executionContext;
 
-    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger)
+    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
     {
         _transactionManager = transactionManager;
         _inboxMessageRepository = inboxMessageRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _executionContext = executionContext;
     }
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
@@ -32,10 +34,10 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
 
         try
         {
-            context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageIdStr);
+            _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
 
-            context.ExecutionContext[NOFContractConstants.Transport.Headers.MessageId] = messageId.ToString();
+            _executionContext[NOFContractConstants.Transport.Headers.MessageId] = messageId.ToString();
 
             var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
             if (messageExists)

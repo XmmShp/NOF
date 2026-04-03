@@ -19,6 +19,13 @@ public class TracingOutboundMiddlewareStep : IOutboundMiddlewareStep<TracingOutb
 /// </summary>
 public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 {
+    private readonly IExecutionContext _executionContext;
+
+    public TracingOutboundMiddleware(IExecutionContext executionContext)
+    {
+        _executionContext = executionContext;
+    }
+
     public async ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
         using var activity = NOFInfrastructureConstants.Messaging.Source.StartActivity(
@@ -27,8 +34,8 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 
         // Propagate trace/span IDs into headers before inner middleware run
         var currentActivity = Activity.Current;
-        context.ExecutionContext[NOFContractConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
-        context.ExecutionContext[NOFContractConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+        _executionContext[NOFContractConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
+        _executionContext[NOFContractConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
 
 
         try
@@ -39,12 +46,12 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
             // Set tags from populated headers after successful dispatch
             if (activity is { IsAllDataRequested: true })
             {
-                context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageId);
+                _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageId);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageId, messageId);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.MessageType, context.Message.GetType().Name);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.Destination, "default");
 
-                context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId);
+                _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId);
                 activity.SetTag(NOFInfrastructureConstants.Messaging.Tags.TenantId, tenantId);
             }
 

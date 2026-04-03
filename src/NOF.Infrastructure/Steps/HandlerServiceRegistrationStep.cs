@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 /// Registers keyed transient services for all handler infos collected during base registration.
 /// Runs after all <see cref="IBaseSettingsServiceRegistrationStep"/>s so that handler infos are finalized.
 /// </summary>
-public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistrationStep<HandlerKeyedServiceRegistrationStep>
+public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep<HandlerServiceRegistrationStep>
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
@@ -22,22 +22,18 @@ public class HandlerKeyedServiceRegistrationStep : IDependentServiceRegistration
         foreach (var info in infos.Commands)
         {
             TypeRegistry.Register(info.CommandType);
-            builder.Services.AddKeyedTransient(info.HandlerType, CommandHandlerKey.Of(info.CommandType));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
         foreach (var info in infos.Events)
         {
-            var key = EventHandlerKey.Of(info.EventType);
-            builder.Services.AddKeyedTransient(info.HandlerType, key);
-            builder.Services.AddKeyedTransient(key, (sp, k) => (IEventHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
         foreach (var info in infos.Notifications)
         {
             TypeRegistry.Register(info.NotificationType);
-            var key = NotificationHandlerKey.Of(info.NotificationType);
-            builder.Services.AddKeyedTransient(info.HandlerType, key);
-            builder.Services.AddKeyedTransient(key, (sp, k) => (INotificationHandler)sp.GetRequiredKeyedService(info.HandlerType, k));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
         return ValueTask.CompletedTask;

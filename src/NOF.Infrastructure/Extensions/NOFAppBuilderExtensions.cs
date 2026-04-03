@@ -21,7 +21,7 @@ public static partial class NOFInfrastructureExtensions
                 .TryAddRegistrationStep<AutoInstrumentationInboundMiddlewareStep>()
                 .TryAddRegistrationStep<MessageInboxInboundMiddlewareStep>()
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
-                .TryAddRegistrationStep<HandlerKeyedServiceRegistrationStep>()
+                .TryAddRegistrationStep<HandlerServiceRegistrationStep>()
                 .TryAddRegistrationStep<MessageIdOutboundMiddlewareStep>()
                 .TryAddRegistrationStep<TracingOutboundMiddlewareStep>()
                 .TryAddRegistrationStep<TenantOutboundMiddlewareStep>()

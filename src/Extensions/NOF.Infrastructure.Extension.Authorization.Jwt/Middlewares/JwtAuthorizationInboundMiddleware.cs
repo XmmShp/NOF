@@ -22,23 +22,26 @@ public sealed class JwtAuthorizationInboundMiddleware : IInboundMiddleware
     private readonly JwtAuthorizationOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<JwtAuthorizationInboundMiddleware> _logger;
+    private readonly IExecutionContext _executionContext;
 
     public JwtAuthorizationInboundMiddleware(
         IUserContext userContext,
         IJwksProvider jwksProvider,
         IOptions<JwtAuthorizationOptions> jwtOptions,
-        ILogger<JwtAuthorizationInboundMiddleware> logger)
+        ILogger<JwtAuthorizationInboundMiddleware> logger,
+        IExecutionContext executionContext)
     {
         _userContext = userContext;
         _jwksProvider = jwksProvider;
         _jwtOptions = jwtOptions.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
         _logger = logger;
+        _executionContext = executionContext;
     }
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        if (!context.ExecutionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) ||
+        if (!_executionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) ||
             string.IsNullOrEmpty(authHeader))
         {
             _userContext.UnsetUser();

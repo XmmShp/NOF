@@ -23,8 +23,8 @@ public static class NOFInfrastructureMemoryExtensions
             builder.Services.ReplaceOrAddScoped<IOutboxMessageRepository, MemoryOutboxMessageRepository>();
             builder.Services.ReplaceOrAddScoped<IStateMachineContextRepository, MemoryStateMachineContextRepository>();
 
-            builder.Services.ReplaceOrAddScoped<ICommandRider, MemoryCommandRider>();
-            builder.Services.ReplaceOrAddScoped<INotificationRider, MemoryNotificationRider>();
+            builder.Services.ReplaceOrAddSingleton<ICommandRider, MemoryCommandRider>();
+            builder.Services.ReplaceOrAddSingleton<INotificationRider, MemoryNotificationRider>();
 
             builder.Services.AddHostedService<MemoryPersistenceWarningHostedService>();
 

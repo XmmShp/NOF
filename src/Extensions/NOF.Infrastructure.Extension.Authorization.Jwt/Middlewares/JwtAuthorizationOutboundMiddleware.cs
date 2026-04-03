@@ -17,18 +17,20 @@ public sealed class JwtAuthorizationOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IUserContext _userContext;
     private readonly JwtAuthorizationOptions _options;
+    private readonly IExecutionContext _executionContext;
 
-    public JwtAuthorizationOutboundMiddleware(IUserContext userContext, IOptions<JwtAuthorizationOptions> options)
+    public JwtAuthorizationOutboundMiddleware(IUserContext userContext, IOptions<JwtAuthorizationOptions> options, IExecutionContext executionContext)
     {
         _userContext = userContext;
         _options = options.Value;
+        _executionContext = executionContext;
     }
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
         if (_userContext.User is JwtClaimsPrincipal { Token: { Length: > 0 } token })
         {
-            context.ExecutionContext[_options.HeaderName] = $"{_options.TokenType} {token}";
+            _executionContext[_options.HeaderName] = $"{_options.TokenType} {token}";
         }
 
         return next(cancellationToken);

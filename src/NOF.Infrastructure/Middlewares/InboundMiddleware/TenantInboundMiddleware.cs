@@ -34,7 +34,7 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware
         }
 
         if (string.IsNullOrWhiteSpace(tenantId) &&
-            context.ExecutionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var headerTenantId))
+            _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
             tenantId = NOFContractConstants.Tenant.NormalizeTenantId(headerTenantId);
         }

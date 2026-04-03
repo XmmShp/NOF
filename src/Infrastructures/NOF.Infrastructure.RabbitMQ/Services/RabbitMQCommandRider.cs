@@ -22,13 +22,13 @@ public class RabbitMQCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ICommand command,
-        IExecutionContext executionContext,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        await PublishToRabbitMQAsync(command, executionContext, cancellationToken);
+        await PublishToRabbitMQAsync(command, headers, cancellationToken);
     }
 
-    private async Task PublishToRabbitMQAsync(ICommand command, IExecutionContext executionContext, CancellationToken cancellationToken)
+    private async Task PublishToRabbitMQAsync(ICommand command, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 
@@ -50,7 +50,15 @@ public class RabbitMQCommandRider : ICommandRider
             Type = command.GetType().FullName
         };
 
-        properties.Headers = executionContext.ToDictionary(kvp => kvp.Key, kvp => (object?)kvp.Value);
+        if (headers is not null)
+        {
+            var headerDict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (k, v) in headers)
+            {
+                headerDict[k] = v;
+            }
+            properties.Headers = headerDict;
+        }
 
         var messageString = _serializer.Serialize(command);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);

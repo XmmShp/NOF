@@ -6,6 +6,6 @@ namespace NOF.Infrastructure;
 public interface INotificationRider
 {
     Task PublishAsync(INotification notification,
-        IExecutionContext executionContext,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default);
 }

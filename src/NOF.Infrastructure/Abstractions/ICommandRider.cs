@@ -6,6 +6,6 @@ namespace NOF.Infrastructure;
 public interface ICommandRider
 {
     Task SendAsync(ICommand command,
-        IExecutionContext executionContext,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default);
 }
