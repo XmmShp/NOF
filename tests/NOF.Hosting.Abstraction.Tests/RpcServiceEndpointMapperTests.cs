@@ -17,7 +17,7 @@ public class RpcServiceEndpointMapperTests
         typeof(HttpVerb),
         typeof(Result),
         typeof(Result<>),
-        typeof(NOF.Hosting.AspNetCore.NOFHostingAspNetCoreExtensions),
+        typeof(Hosting.AspNetCore.NOFHostingAspNetCoreExtensions),
         typeof(Microsoft.AspNetCore.Builder.WebApplication)
     ];
 
