@@ -13,6 +13,7 @@ public abstract class NOFDbContext : DbContext
     }
 
     public string CurrentTenantId => _tenantOptions.TenantId;
+    public TenantMode CurrentTenantMode => _tenantOptions.TenantMode;
 
     internal DbSet<NOFStateMachineContext> NOFStateMachineContexts { get; set; }
     internal DbSet<NOFInboxMessage> NOFInboxMessages { get; set; }
@@ -106,6 +107,11 @@ public abstract class NOFDbContext : DbContext
 
     private void ApplyTenantRules()
     {
+        if (CurrentTenantMode != TenantMode.SharedDatabase)
+        {
+            return;
+        }
+
         var hostOnlyTypes = TenantModelHelper.CreateHostOnlyTypeSet(this);
 
         foreach (var entry in ChangeTracker.Entries()
@@ -139,6 +145,11 @@ public abstract class NOFDbContext : DbContext
 
     private object?[]? AppendTenantKeyIfNeeded(Type entityClrType, object?[]? keyValues)
     {
+        if (CurrentTenantMode != TenantMode.SharedDatabase)
+        {
+            return keyValues;
+        }
+
         if (keyValues is null)
         {
             return null;

@@ -36,11 +36,10 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             #endregion
 
             #region Infrastructure Services
-            builder.Services.AddOptionsInConfiguration<DbContextFactoryOptions>("NOF:DbContextFactory");
-
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>>(sp => new NOFDbContextFactory<TDbContext>(
                 sp,
                 sp.GetRequiredService<IExecutionContext>(),
+                sp.GetRequiredService<IOptions<TenantOptions>>(),
                 sp.GetRequiredService<IDbContextConfigurator>(),
                 sp.GetRequiredService<IOptions<DbContextFactoryOptions>>(),
                 sp.GetRequiredService<ILogger<NOFDbContextFactory<TDbContext>>>()));

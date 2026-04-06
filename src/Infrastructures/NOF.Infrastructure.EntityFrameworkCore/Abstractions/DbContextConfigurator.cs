@@ -11,5 +11,6 @@ public interface IDbContextConfigurator
     /// Configure database context options
     /// </summary>
     /// <param name="optionsBuilder">DbContext options builder</param>
-    void Configure(DbContextOptionsBuilder optionsBuilder, string tenantId);
+    /// <param name="tenantMode">Tenant mode.</param>
+    void Configure(DbContextOptionsBuilder optionsBuilder, string tenantId, TenantMode tenantMode);
 }

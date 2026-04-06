@@ -10,6 +10,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
     public string TenantId { get; set; } = string.Empty;
+    public TenantMode TenantMode { get; set; } = TenantMode.SingleTenant;
 
     public void ApplyServices(IServiceCollection services)
     {
@@ -59,7 +60,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
             => (NOFTenantDbContextOptionsExtension)base.Extension;
 
         public override bool IsDatabaseProvider => false;
-        public override string LogFragment => $"TenantContext(TenantId={Extension.TenantId}) ";
+        public override string LogFragment => $"TenantContext(TenantId={Extension.TenantId},Mode={Extension.TenantMode}) ";
 
         public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
             => other is ExtensionInfo;
@@ -71,6 +72,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
         {
             debugInfo["NOF:TenantContext"] = "true";
             debugInfo["NOF:TenantId"] = Extension.TenantId;
+            debugInfo["NOF:TenantMode"] = Extension.TenantMode.ToString();
         }
     }
 }

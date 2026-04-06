@@ -23,6 +23,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
         var hostOnlyTypes = TenantModelHelper.CreateHostOnlyTypeSet(dbContext);
         var entityTypes = modelBuilder.Model.GetEntityTypes().ToList();
+        var useTenantDiscriminator = dbContext.CurrentTenantMode == TenantMode.SharedDatabase;
 
         foreach (var entityType in entityTypes)
         {
@@ -33,6 +34,12 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             }
 
             var entityBuilder = modelBuilder.Entity(entityType.ClrType);
+            if (!useTenantDiscriminator)
+            {
+                entityType.RemoveAnnotation(TenantModelHelper.TenantScopedAnnotationName);
+                entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
+                continue;
+            }
 
             if (TenantModelHelper.IsHostOnlyType(entityType.ClrType, hostOnlyTypes))
             {

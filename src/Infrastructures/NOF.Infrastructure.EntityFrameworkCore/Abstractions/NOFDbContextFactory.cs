@@ -27,6 +27,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     private readonly IServiceProvider _serviceProvider;
     private readonly IExecutionContext _executionContext;
+    private readonly TenantOptions _tenantOptions;
     private readonly IDbContextConfigurator _dbContextConfigurator;
     private readonly DbContextFactoryOptions _options;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
@@ -34,12 +35,14 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         IExecutionContext executionContext,
+        IOptions<TenantOptions> tenantOptions,
         IDbContextConfigurator dbContextConfigurator,
         IOptions<DbContextFactoryOptions> options,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
         _executionContext = executionContext;
+        _tenantOptions = tenantOptions.Value;
         _dbContextConfigurator = dbContextConfigurator;
         _options = options.Value;
         _logger = logger;
@@ -53,10 +56,14 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         tenantId = NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
 
-        var extension = new NOFTenantDbContextOptionsExtension { TenantId = tenantId };
+        var extension = new NOFTenantDbContextOptionsExtension
+        {
+            TenantId = tenantId,
+            TenantMode = _tenantOptions.Mode
+        };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
-        _dbContextConfigurator.Configure(optionsBuilder, tenantId);
+        _dbContextConfigurator.Configure(optionsBuilder, tenantId, _tenantOptions.Mode);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 

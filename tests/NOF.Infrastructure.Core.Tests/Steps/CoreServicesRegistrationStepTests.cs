@@ -69,6 +69,7 @@ public class InfrastructureDefaultsTests
             service.ServiceType == typeof(IHostedService));
 
         provider.GetRequiredService<IOptions<OutboxOptions>>().Should().NotBeNull();
+        provider.GetRequiredService<IOptions<TenantOptions>>().Value.Mode.Should().Be(TenantMode.SingleTenant);
         provider.GetRequiredService<IEventPublisher>().Should().BeOfType<EventPublisher>();
 
         builder.Services.Should().NotContain(service => service.ServiceType == typeof(IUnitOfWork));
@@ -91,6 +92,33 @@ public class InfrastructureDefaultsTests
             .ToList();
 
         descriptors.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void UseSharedDatabaseTenancy_ShouldSwitchTenantMode()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddInfrastructureDefaults();
+        builder.UseSharedDatabaseTenancy();
+
+        using var provider = builder.Services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<TenantOptions>>().Value;
+
+        options.Mode.Should().Be(TenantMode.SharedDatabase);
+    }
+
+    [Fact]
+    public void UseDatabasePerTenant_ShouldSwitchTenantMode_AndApplyFormat()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddInfrastructureDefaults();
+        builder.UseDatabasePerTenant("{database}__{tenantId}");
+
+        using var provider = builder.Services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<TenantOptions>>().Value;
+
+        options.Mode.Should().Be(TenantMode.DatabasePerTenant);
+        options.TenantDatabaseNameFormat.Should().Be("{database}__{tenantId}");
     }
 
     private sealed class TestServiceRegistrationContext : INOFAppBuilder

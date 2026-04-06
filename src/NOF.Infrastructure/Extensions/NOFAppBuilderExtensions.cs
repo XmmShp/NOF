@@ -61,6 +61,47 @@ public static partial class NOFInfrastructureExtensions
         }
 
         /// <summary>
+        /// Uses classic single-tenant mode (default).
+        /// </summary>
+        public INOFAppBuilder UseSingleTenant(string? tenantId = null)
+        {
+            builder.Services.Configure<TenantOptions>(options =>
+            {
+                options.Mode = TenantMode.SingleTenant;
+                options.SingleTenantId = NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
+            });
+            return builder;
+        }
+
+        /// <summary>
+        /// Uses shared-database multi-tenant mode with a TenantId discriminator column.
+        /// </summary>
+        public INOFAppBuilder UseSharedDatabaseTenancy()
+        {
+            builder.Services.Configure<TenantOptions>(options =>
+            {
+                options.Mode = TenantMode.SharedDatabase;
+            });
+            return builder;
+        }
+
+        /// <summary>
+        /// Uses database-per-tenant mode on the same DB instance.
+        /// </summary>
+        public INOFAppBuilder UseDatabasePerTenant(string? tenantDatabaseNameFormat = null)
+        {
+            builder.Services.Configure<TenantOptions>(options =>
+            {
+                options.Mode = TenantMode.DatabasePerTenant;
+                if (!string.IsNullOrWhiteSpace(tenantDatabaseNameFormat))
+                {
+                    options.TenantDatabaseNameFormat = tenantDatabaseNameFormat;
+                }
+            });
+            return builder;
+        }
+
+        /// <summary>
         /// Adds a service configuration delegate that will be executed during the service registration phase.
         /// </summary>
         public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)

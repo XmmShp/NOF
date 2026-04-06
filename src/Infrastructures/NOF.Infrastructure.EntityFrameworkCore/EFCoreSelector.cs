@@ -20,4 +20,36 @@ public readonly struct EFCoreSelector
         });
         return this;
     }
+
+    public EFCoreSelector UseSingleTenant(string? tenantId = null)
+    {
+        Builder.Services.Configure<TenantOptions>(options =>
+        {
+            options.Mode = TenantMode.SingleTenant;
+            options.SingleTenantId = NOF.Contract.NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
+        });
+        return this;
+    }
+
+    public EFCoreSelector UseSharedDatabaseTenancy()
+    {
+        Builder.Services.Configure<TenantOptions>(options =>
+        {
+            options.Mode = TenantMode.SharedDatabase;
+        });
+        return this;
+    }
+
+    public EFCoreSelector UseDatabasePerTenant(string? tenantDatabaseNameFormat = null)
+    {
+        Builder.Services.Configure<TenantOptions>(options =>
+        {
+            options.Mode = TenantMode.DatabasePerTenant;
+            if (!string.IsNullOrWhiteSpace(tenantDatabaseNameFormat))
+            {
+                options.TenantDatabaseNameFormat = tenantDatabaseNameFormat;
+            }
+        });
+        return this;
+    }
 }
