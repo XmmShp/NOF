@@ -104,6 +104,7 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
             : null;
 
         var serviceInterfaceFqn = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var implementationTypeFqn = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var shouldImplementServiceInterface = !classSymbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, serviceInterface));
 
         var usedNames = new HashSet<string>(System.StringComparer.Ordinal);
@@ -247,6 +248,7 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
         {
             sb.AppendLine($"        global::NOF.Application.RequestHandlerRegistry.Register(typeof({serviceType}), typeof({implementationType}));");
         }
+        sb.AppendLine($"        global::NOF.Annotation.AutoInjectRegistry.Register(typeof({serviceInterfaceFqn}), typeof({implementationTypeFqn}), global::NOF.Annotation.Lifetime.Scoped, useFactory: false);");
         sb.AppendLine("    }");
         sb.AppendLine("}");
 
@@ -367,7 +369,6 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
 public sealed class ServiceImplementationAnalyzer : DiagnosticAnalyzer
 {
     private const string ServiceImplementationAttributeFqn = "NOF.Application.ServiceImplementationAttribute<TService>";
-    private const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
 
     public static readonly DiagnosticDescriptor ServiceImplementationMustBePartial = new(
         "NOF300",
@@ -377,18 +378,9 @@ public sealed class ServiceImplementationAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
-    public static readonly DiagnosticDescriptor ServiceTypeMustBeRpcServiceInterface = new(
-        "NOF301",
-        "TService must be an RPC service interface",
-        "Type argument '{1}' on [ServiceImplementation<TService>] of class '{0}' must be an interface implementing IRpcService",
-        "ServiceImplementation",
-        DiagnosticSeverity.Error,
-        true);
-
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
-        ServiceImplementationMustBePartial,
-        ServiceTypeMustBeRpcServiceInterface
+        ServiceImplementationMustBePartial
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -401,7 +393,7 @@ public sealed class ServiceImplementationAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeNamedType(SymbolAnalysisContext context)
     {
         var type = (INamedTypeSymbol)context.Symbol;
-        if (type.TypeKind != TypeKind.Class || !TryGetServiceInterface(type, out var serviceInterface) || serviceInterface is null)
+        if (type.TypeKind != TypeKind.Class || !TryGetServiceInterface(type, out _))
         {
             return;
         }
@@ -416,13 +408,6 @@ public sealed class ServiceImplementationAnalyzer : DiagnosticAnalyzer
             context.ReportDiagnostic(Diagnostic.Create(ServiceImplementationMustBePartial, location, type.Name));
         }
 
-        var isRpcServiceInterface = serviceInterface.TypeKind == TypeKind.Interface &&
-                                    (serviceInterface.ToDisplayString() == RpcServiceInterfaceFqn ||
-                                     serviceInterface.AllInterfaces.Any(i => i.ToDisplayString() == RpcServiceInterfaceFqn));
-        if (!isRpcServiceInterface)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(ServiceTypeMustBeRpcServiceInterface, location, type.Name, serviceInterface.ToDisplayString()));
-        }
     }
 
     private static bool TryGetServiceInterface(INamedTypeSymbol classSymbol, out INamedTypeSymbol? serviceInterface)

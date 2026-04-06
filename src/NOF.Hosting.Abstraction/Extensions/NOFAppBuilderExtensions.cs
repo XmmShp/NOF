@@ -12,6 +12,7 @@ public static partial class NOFAppBuilderExtensions
             builder.Services.TryAddSingleton<OutboundPipelineTypes>();
             builder.Services.TryAddSingleton<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IExecutionContext, Contract.ExecutionContext>();
+            builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
 
             builder.TryAddRegistrationStep<MessageIdOutboundMiddlewareStep>()
                    .TryAddRegistrationStep<TracingOutboundMiddlewareStep>()

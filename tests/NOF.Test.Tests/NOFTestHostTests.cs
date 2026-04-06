@@ -102,6 +102,27 @@ public class NOFTestHostTests
         second.ScopeInstanceId.Should().NotBe(firstA.ScopeInstanceId);
     }
 
+    [Fact]
+    public async Task CreateScope_ShouldResolveLazyServiceFromHostingDefaults()
+    {
+        LazyProbe.Reset();
+        var builder = NOFTestAppBuilder.Create();
+        builder.Services.AddScoped<LazyProbe>();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        var lazy = scope.GetRequiredService<Lazy<LazyProbe>>();
+        lazy.IsValueCreated.Should().BeFalse();
+        LazyProbe.CreatedCount.Should().Be(0);
+
+        var probe = lazy.Value;
+
+        probe.Should().NotBeNull();
+        lazy.IsValueCreated.Should().BeTrue();
+        LazyProbe.CreatedCount.Should().Be(1);
+    }
+
     private sealed record TestCommand(string Value) : ICommand;
 
     private sealed record TestNotification(string Value) : INotification;
@@ -151,6 +172,23 @@ public class NOFTestHostTests
         {
             InitializeCount++;
             _isInitialized = true;
+        }
+    }
+
+    private sealed class LazyProbe
+    {
+        private static int _createdCount;
+
+        public LazyProbe()
+        {
+            Interlocked.Increment(ref _createdCount);
+        }
+
+        public static int CreatedCount => _createdCount;
+
+        public static void Reset()
+        {
+            Interlocked.Exchange(ref _createdCount, 0);
         }
     }
 }
