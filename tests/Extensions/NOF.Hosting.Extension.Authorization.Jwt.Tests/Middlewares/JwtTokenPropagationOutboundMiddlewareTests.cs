@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
@@ -31,9 +30,11 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             called = true;
             return ValueTask.CompletedTask;
         }, default);
+        Assert.True(
 
-        called.Should().BeTrue();
-        executionContext[NOFContractConstants.Transport.Headers.Authorization].Should().Be("Bearer jwt-token");
+        called);
+        Assert.Equal("Bearer jwt-token",
+        executionContext[NOFContractConstants.Transport.Headers.Authorization]);
     }
 
     [Fact]
@@ -50,8 +51,9 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
+        Assert.False(
 
-        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization).Should().BeFalse();
+        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization));
     }
 
     [Fact]
@@ -67,9 +69,11 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
         var options = scope.GetRequiredService<IOptions<JwtTokenPropagationOptions>>().Value;
+        Assert.Equal("X-Auth",
 
-        options.HeaderName.Should().Be("X-Auth");
-        options.TokenType.Should().Be("Token");
+        options.HeaderName);
+        Assert.Equal("Token",
+        options.TokenType);
     }
 
     private static OutboundContext CreateOutboundContext()
@@ -102,3 +106,4 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         }
     }
 }
+

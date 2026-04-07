@@ -1,7 +1,7 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
+using Xunit;
 
 namespace NOF.SourceGenerator.Tests.Extensions;
 
@@ -44,9 +44,11 @@ public static class CSharpCompilationExtensions
         {
             using var ms = new MemoryStream();
             var result = compilation.Emit(ms);
-            result.Success.Should().BeTrue($"Compilation of {compilation.AssemblyName} failed: {string.Join(", ", result.Diagnostics)}");
+            Assert.True(result.Success, $"Compilation of {compilation.AssemblyName} failed: {string.Join(", ", result.Diagnostics)}");
             ms.Position = 0;
             return MetadataReference.CreateFromStream(ms);
         }
     }
 }
+
+

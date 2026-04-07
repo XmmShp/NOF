@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -26,7 +25,8 @@ public class InMemoryPersistenceTests
         await transaction.RollbackAsync();
 
         var tenant = await repository.FindAsync("tenant-1");
-        tenant.Should().BeNull();
+        Assert.Null(
+        tenant);
     }
 
     [Fact]
@@ -44,9 +44,11 @@ public class InMemoryPersistenceTests
         repository.Add(new NOFTenant { Id = "inner", Name = "Inner" });
         await inner.RollbackAsync();
         await outer.CommitAsync();
+        Assert.NotNull(
 
-        (await repository.FindAsync("outer")).Should().NotBeNull();
-        (await repository.FindAsync("inner")).Should().BeNull();
+        (await repository.FindAsync("outer")));
+        Assert.Null(
+        (await repository.FindAsync("inner")));
     }
 
     [Fact]
@@ -61,8 +63,9 @@ public class InMemoryPersistenceTests
         {
             repository.Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
         }
+        Assert.Null(
 
-        (await repository.FindAsync("tenant-dispose")).Should().BeNull();
+        (await repository.FindAsync("tenant-dispose")));
     }
 
     [Fact]
@@ -77,8 +80,8 @@ public class InMemoryPersistenceTests
 
         Func<Task> act = () => outer.CommitAsync();
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*LIFO order*");
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(act);
+        Assert.Contains("LIFO order", ex.Message);
 
         await inner.RollbackAsync();
         await outer.RollbackAsync();
@@ -99,10 +102,12 @@ public class InMemoryPersistenceTests
         await ((IRepository<TestOrder, long>)repository).FindAsync(1L);
 
         var changeCount = await unitOfWork.SaveChangesAsync();
+        Assert.Equal(1,
 
-        changeCount.Should().Be(1);
-        publisher.Events.Should().ContainSingle().Which.Should().BeOfType<TestEvent>();
-        order.Events.Should().BeEmpty();
+        changeCount);
+        Assert.IsType<TestEvent>(Assert.Single(publisher.Events));
+        Assert.Empty(
+        order.Events);
     }
 
     [Fact]
@@ -117,8 +122,9 @@ public class InMemoryPersistenceTests
 
         await unitOfWork.SaveChangesAsync();
         var second = await unitOfWork.SaveChangesAsync();
+        Assert.Equal(0,
 
-        second.Should().Be(0);
+        second);
     }
 
     [Fact]
@@ -130,13 +136,16 @@ public class InMemoryPersistenceTests
         var message = new NOFInboxMessage(Guid.NewGuid());
 
         repository.Add(message);
+        Assert.True(
 
-        (await repository.ExistsAsync(message.Id)).Should().BeTrue();
-        (await repository.FindAsync(message.Id)).Should().NotBeNull();
+        (await repository.ExistsAsync(message.Id)));
+        Assert.NotNull(
+        (await repository.FindAsync(message.Id)));
 
         repository.Remove(message);
+        Assert.False(
 
-        (await repository.ExistsAsync(message.Id)).Should().BeFalse();
+        (await repository.ExistsAsync(message.Id)));
     }
 
     [Fact]
@@ -157,16 +166,20 @@ public class InMemoryPersistenceTests
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
 
-        claimed.Should().ContainSingle();
-        claimed[0].RetryCount.Should().Be(1);
-        claimed[0].ClaimedBy.Should().NotBeNullOrWhiteSpace();
+        Assert.Single(claimed);
+        Assert.Equal(1,
+        claimed[0].RetryCount);
+        Assert.False(string.IsNullOrWhiteSpace(claimed[0].ClaimedBy));
 
         await repository.AtomicMarkAsSentAsync([claimed[0].Id]);
 
         var stored = await repository.FindAsync(claimed[0].Id);
-        stored.Should().NotBeNull();
-        stored.Status.Should().Be(OutboxMessageStatus.Sent);
-        stored.SentAt.Should().NotBeNull();
+        Assert.NotNull(
+        stored);
+        Assert.Equal(OutboxMessageStatus.Sent,
+        stored.Status);
+        Assert.NotNull(
+        stored.SentAt);
     }
 
     [Fact]
@@ -197,16 +210,19 @@ public class InMemoryPersistenceTests
         });
 
         var exhausted = await repository.FindAsync(id1);
-        exhausted.Should().NotBeNull();
+        Assert.NotNull(
+        exhausted);
         exhausted.RetryCount = 2;
 
         var claimedUntilFuture = await repository.FindAsync(id2);
-        claimedUntilFuture.Should().NotBeNull();
+        Assert.NotNull(
+        claimedUntilFuture);
         claimedUntilFuture.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
+        Assert.Empty(
 
-        claimed.Should().BeEmpty();
+        claimed);
     }
 
     [Fact]
@@ -228,9 +244,12 @@ public class InMemoryPersistenceTests
         await repository.AtomicRecordDeliveryFailureAsync(claimed[0].Id, "boom");
 
         var stored = await repository.FindAsync(claimed[0].Id);
-        stored.Should().NotBeNull();
-        stored.Status.Should().Be(OutboxMessageStatus.Failed);
-        stored.ErrorMessage.Should().Be("boom");
+        Assert.NotNull(
+        stored);
+        Assert.Equal(OutboxMessageStatus.Failed,
+        stored.Status);
+        Assert.Equal("boom",
+        stored.ErrorMessage);
     }
 
     [Fact]
@@ -251,7 +270,8 @@ public class InMemoryPersistenceTests
             tenantExecutionContext.SetTenantId("tenant-a");
             var tenantRepository = tenantScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
             tenantRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
-            (await tenantRepository.FindAsync("corr", "def"))!.State.Should().Be(2);
+            Assert.Equal(2,
+            (await tenantRepository.FindAsync("corr", "def"))!.State);
         }
 
         using (var verifyHostScope = services.CreateScope())
@@ -259,7 +279,8 @@ public class InMemoryPersistenceTests
             var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             verifyHostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
             var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
-            (await verifyHostRepository.FindAsync("corr", "def"))!.State.Should().Be(1);
+            Assert.Equal(1,
+            (await verifyHostRepository.FindAsync("corr", "def"))!.State);
         }
     }
 
@@ -276,8 +297,10 @@ public class InMemoryPersistenceTests
         await transaction.CommitAsync();
 
         var order = await ((IRepository<TestOrder, long>)repository).FindAsync(42L);
-        order.Should().NotBeNull();
-        order.Number.Should().Be("custom");
+        Assert.NotNull(
+        order);
+        Assert.Equal("custom",
+        order.Number);
     }
 
     [Fact]
@@ -370,3 +393,5 @@ public class InMemoryPersistenceTests
         }
     }
 }
+
+

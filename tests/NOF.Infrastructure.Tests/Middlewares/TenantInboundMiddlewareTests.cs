@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Application;
@@ -25,8 +24,9 @@ public class TenantInboundMiddlewareTests
             }));
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);
+        Assert.Equal("host",
 
-        executionContext.TenantId.Should().Be("host");
+        executionContext.TenantId);
     }
 
     [Fact]
@@ -44,8 +44,9 @@ public class TenantInboundMiddlewareTests
             }));
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);
+        Assert.Equal("tenant-a",
 
-        executionContext.TenantId.Should().Be("tenant-a");
+        executionContext.TenantId);
     }
 
     private static InboundContext CreateContext()
@@ -58,3 +59,4 @@ public class TenantInboundMiddlewareTests
         };
     }
 }
+

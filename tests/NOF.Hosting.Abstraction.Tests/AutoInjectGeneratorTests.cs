@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,16 +43,17 @@ public class AutoInjectGeneratorTests
 
         var result = new AutoInjectGenerator().GetResult(mainComp);
         var trees = result.GeneratedTrees;
-        trees.Should().ContainSingle();
+        Assert.Single(trees);
 
         var appRoot = trees.Single().GetRoot();
         var appNs = appRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().Single();
-        appNs.Name.ToString().Should().Be("App");
+        Assert.Equal("App",
+        appNs.Name.ToString());
 
         var generatedCode = appRoot.ToFullString();
-        generatedCode.Should().Contain("class __AppAutoInjectAssemblyInitializer");
-        generatedCode.Should().Contain("AppService");
-        generatedCode.Should().NotContain("LibService");
+        Assert.Contains("class __AppAutoInjectAssemblyInitializer", generatedCode);
+        Assert.Contains("AppService", generatedCode);
+        Assert.DoesNotContain("LibService", generatedCode);
     }
 
     [Fact]
@@ -75,12 +75,12 @@ public class AutoInjectGeneratorTests
 
         var result = new AutoInjectGenerator().GetResult(compilation);
         var trees = result.GeneratedTrees;
-        trees.Should().ContainSingle();
+        Assert.Single(trees);
 
         var generatedCode = trees.Single().GetRoot().ToFullString();
-        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]");
-        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register");
-        generatedCode.Should().Contain("typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, useFactory: false");
+        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]", generatedCode);
+        Assert.Contains("global::NOF.Annotation.AutoInjectRegistry.Register", generatedCode);
+        Assert.Contains("typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, useFactory: false", generatedCode);
     }
 
     [Fact]
@@ -103,8 +103,8 @@ public class AutoInjectGeneratorTests
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().NotContain("AddAppAutoInjectServices");
-        generatedCode.Should().NotContain("IServiceCollection");
+        Assert.DoesNotContain("AddAppAutoInjectServices", generatedCode);
+        Assert.DoesNotContain("IServiceCollection", generatedCode);
     }
 
     [Fact]
@@ -128,9 +128,11 @@ public class AutoInjectGeneratorTests
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, useFactory: false");
-        generatedCode.Should().Contain("typeof(global::App.IFoo)");
-        generatedCode.Should().Contain("typeof(global::App.IBar)");
-        generatedCode.Should().Contain("useFactory: true");
+        Assert.Contains("typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, useFactory: false", generatedCode);
+        Assert.Contains("typeof(global::App.IFoo)", generatedCode);
+        Assert.Contains("typeof(global::App.IBar)", generatedCode);
+        Assert.Contains("useFactory: true", generatedCode);
     }
 }
+
+

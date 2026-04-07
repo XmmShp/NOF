@@ -19,9 +19,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Http" />
-    <PackageReference Include="FluentAssertions" />
-  </ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http" />  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
@@ -40,3 +38,4 @@
   </ItemGroup>
 
 </Project>
+

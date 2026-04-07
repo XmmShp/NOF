@@ -13,9 +13,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Moq" />
-    <PackageReference Include="FluentAssertions" />
-  </ItemGroup>
+    <PackageReference Include="Moq" />  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
@@ -25,3 +23,4 @@
   </ItemGroup>
 
 </Project>
+

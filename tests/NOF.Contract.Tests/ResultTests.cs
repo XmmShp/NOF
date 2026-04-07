@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Text.Json;
 using Xunit;
 
@@ -12,10 +11,13 @@ public class ResultTests
     public void Success_ReturnsSuccessResult()
     {
         var result = Result.Success();
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.ErrorCode.Should().BeEmpty();
-        result.Message.Should().BeEmpty();
+        result.IsSuccess);
+        Assert.Empty(
+        result.ErrorCode);
+        Assert.Empty(
+        result.Message);
     }
 
     #endregion
@@ -26,11 +28,15 @@ public class ResultTests
     public void SuccessT_ReturnsSuccessResultWithValue()
     {
         var result = Result.Success("hello");
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.ErrorCode.Should().BeEmpty();
-        result.Message.Should().BeEmpty();
-        result.Value.Should().Be("hello");
+        result.IsSuccess);
+        Assert.Empty(
+        result.ErrorCode);
+        Assert.Empty(
+        result.Message);
+        Assert.Equal("hello",
+        result.Value);
     }
 
     [Fact]
@@ -38,9 +44,10 @@ public class ResultTests
     {
         var dto = new TestDto { Id = 42, Name = "test" };
         var result = Result.Success(dto);
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeSameAs(dto);
+        result.IsSuccess);
+        Assert.Same(dto, result.Value);
     }
 
     #endregion
@@ -51,9 +58,11 @@ public class ResultTests
     public void Fail_ReturnsFailResult()
     {
         var fail = Result.Fail("404", "Not found");
+        Assert.Equal("404",
 
-        fail.ErrorCode.Should().Be("404");
-        fail.Message.Should().Be("Not found");
+        fail.ErrorCode);
+        Assert.Equal("Not found",
+        fail.Message);
     }
 
     #endregion
@@ -66,20 +75,26 @@ public class ResultTests
         FailResult fail = Result.Fail("500", "Server error");
 
         Result result = fail;
+        Assert.False(
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("500");
-        result.Message.Should().Be("Server error");
+        result.IsSuccess);
+        Assert.Equal("500",
+        result.ErrorCode);
+        Assert.Equal("Server error",
+        result.Message);
     }
 
     [Fact]
     public void FailResult_ImplicitConversion_ToResult_InMethodReturn()
     {
         var result = ReturnResultFromFail();
+        Assert.False(
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("403");
-        result.Message.Should().Be("Forbidden");
+        result.IsSuccess);
+        Assert.Equal("403",
+        result.ErrorCode);
+        Assert.Equal("Forbidden",
+        result.Message);
     }
 
     private static Result ReturnResultFromFail()
@@ -97,22 +112,30 @@ public class ResultTests
         FailResult fail = Result.Fail("400", "Bad request");
 
         Result<string> result = fail;
+        Assert.False(
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("400");
-        result.Message.Should().Be("Bad request");
-        result.Value.Should().BeNull();
+        result.IsSuccess);
+        Assert.Equal("400",
+        result.ErrorCode);
+        Assert.Equal("Bad request",
+        result.Message);
+        Assert.Null(
+        result.Value);
     }
 
     [Fact]
     public void FailResult_ImplicitConversion_ToResultT_InMethodReturn()
     {
         var result = ReturnResultTFromFail();
+        Assert.False(
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("401");
-        result.Message.Should().Be("Unauthorized");
-        result.Value.Should().BeNull();
+        result.IsSuccess);
+        Assert.Equal("401",
+        result.ErrorCode);
+        Assert.Equal("Unauthorized",
+        result.Message);
+        Assert.Null(
+        result.Value);
     }
 
     private static Result<TestDto> ReturnResultTFromFail()
@@ -122,7 +145,7 @@ public class ResultTests
 
     #endregion
 
-    #region FailResult runtime cast — the actual bug scenario
+    #region FailResult runtime cast 閳?the actual bug scenario
 
     [Fact]
     public void FailResult_DirectRuntimeCast_ToResult_Throws()
@@ -130,7 +153,7 @@ public class ResultTests
         object response = Result.Fail("500", "Internal server error");
 
         var act = () => (Result)response;
-        act.Should().Throw<InvalidCastException>();
+        Assert.Throws<InvalidCastException>(act);
     }
 
     [Fact]
@@ -139,7 +162,7 @@ public class ResultTests
         object response = Result.Fail("500", "Internal server error");
 
         var act = () => (Result<string>)response;
-        act.Should().Throw<InvalidCastException>();
+        Assert.Throws<InvalidCastException>(act);
     }
 
     #endregion
@@ -152,10 +175,13 @@ public class ResultTests
         IResult response = Result.Fail("500", "Internal server error");
 
         var result = Result.From(response);
+        Assert.False(
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("500");
-        result.Message.Should().Be("Internal server error");
+        result.IsSuccess);
+        Assert.Equal("500",
+        result.ErrorCode);
+        Assert.Equal("Internal server error",
+        result.Message);
     }
 
     [Fact]
@@ -164,11 +190,15 @@ public class ResultTests
         IResult response = Result.Fail("500", "Internal server error");
 
         var result = Result.From<string>(response);
+        Assert.False(
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("500");
-        result.Message.Should().Be("Internal server error");
-        result.Value.Should().BeNull();
+        result.IsSuccess);
+        Assert.Equal("500",
+        result.ErrorCode);
+        Assert.Equal("Internal server error",
+        result.Message);
+        Assert.Null(
+        result.Value);
     }
 
     [Fact]
@@ -177,8 +207,9 @@ public class ResultTests
         IResult response = Result.Success();
 
         var result = Result.From(response);
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
+        result.IsSuccess);
     }
 
     [Fact]
@@ -187,23 +218,25 @@ public class ResultTests
         IResult response = Result.Success("data");
 
         var result = Result.From<string>(response);
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("data");
+        result.IsSuccess);
+        Assert.Equal("data",
+        result.Value);
     }
 
     [Fact]
     public void From_WithNull_Throws()
     {
         var act = () => Result.From(null!);
-        act.Should().Throw<ArgumentNullException>();
+        Assert.Throws<ArgumentNullException>(act);
     }
 
     [Fact]
     public void FromT_WithNull_Throws()
     {
         var act = () => Result.From<string>(null!);
-        act.Should().Throw<ArgumentNullException>();
+        Assert.Throws<ArgumentNullException>(act);
     }
 
     #endregion
@@ -214,18 +247,22 @@ public class ResultTests
     public void Value_ImplicitConversion_ToResultT()
     {
         Result<int> result = 42;
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.IsSuccess);
+        Assert.Equal(42,
+        result.Value);
     }
 
     [Fact]
     public void StringValue_ImplicitConversion_ToResultT()
     {
         Result<string> result = "hello";
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("hello");
+        result.IsSuccess);
+        Assert.Equal("hello",
+        result.Value);
     }
 
     #endregion
@@ -238,10 +275,13 @@ public class ResultTests
         var original = Result.Success();
         var json = JsonSerializer.Serialize(original);
         var deserialized = JsonSerializer.Deserialize<Result>(json);
+        Assert.NotNull(
 
-        deserialized.Should().NotBeNull();
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.ErrorCode.Should().BeEmpty();
+        deserialized);
+        Assert.True(
+        deserialized.IsSuccess);
+        Assert.Empty(
+        deserialized.ErrorCode);
     }
 
     [Fact]
@@ -250,11 +290,15 @@ public class ResultTests
         Result original = Result.Fail("404", "Not found");
         var json = JsonSerializer.Serialize(original);
         var deserialized = JsonSerializer.Deserialize<Result>(json);
+        Assert.NotNull(
 
-        deserialized.Should().NotBeNull();
-        deserialized.IsSuccess.Should().BeFalse();
-        deserialized.ErrorCode.Should().Be("404");
-        deserialized.Message.Should().Be("Not found");
+        deserialized);
+        Assert.False(
+        deserialized.IsSuccess);
+        Assert.Equal("404",
+        deserialized.ErrorCode);
+        Assert.Equal("Not found",
+        deserialized.Message);
     }
 
     [Fact]
@@ -263,10 +307,13 @@ public class ResultTests
         var original = Result.Success("hello");
         var json = JsonSerializer.Serialize(original);
         var deserialized = JsonSerializer.Deserialize<Result<string>>(json);
+        Assert.NotNull(
 
-        deserialized.Should().NotBeNull();
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Value.Should().Be("hello");
+        deserialized);
+        Assert.True(
+        deserialized.IsSuccess);
+        Assert.Equal("hello",
+        deserialized.Value);
     }
 
     [Fact]
@@ -275,12 +322,17 @@ public class ResultTests
         Result<string> original = Result.Fail("500", "Error");
         var json = JsonSerializer.Serialize(original);
         var deserialized = JsonSerializer.Deserialize<Result<string>>(json);
+        Assert.NotNull(
 
-        deserialized.Should().NotBeNull();
-        deserialized.IsSuccess.Should().BeFalse();
-        deserialized.ErrorCode.Should().Be("500");
-        deserialized.Message.Should().Be("Error");
-        deserialized.Value.Should().BeNull();
+        deserialized);
+        Assert.False(
+        deserialized.IsSuccess);
+        Assert.Equal("500",
+        deserialized.ErrorCode);
+        Assert.Equal("Error",
+        deserialized.Message);
+        Assert.Null(
+        deserialized.Value);
     }
 
     [Fact]
@@ -290,12 +342,17 @@ public class ResultTests
         var original = Result.Success(dto);
         var json = JsonSerializer.Serialize(original);
         var deserialized = JsonSerializer.Deserialize<Result<TestDto>>(json);
+        Assert.NotNull(
 
-        deserialized.Should().NotBeNull();
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Value.Should().NotBeNull();
-        deserialized.Value.Id.Should().Be(1);
-        deserialized.Value.Name.Should().Be("test");
+        deserialized);
+        Assert.True(
+        deserialized.IsSuccess);
+        Assert.NotNull(
+        deserialized.Value);
+        Assert.Equal(1,
+        deserialized.Value.Id);
+        Assert.Equal("test",
+        deserialized.Value.Name);
     }
 
     #endregion
@@ -306,21 +363,24 @@ public class ResultTests
     public void FailResult_IsIResult()
     {
         var fail = Result.Fail("400", "Bad");
-        (fail is IResult).Should().BeTrue();
+        Assert.True(
+        (fail is IResult));
     }
 
     [Fact]
     public void Result_IsIResult()
     {
         var result = Result.Success();
-        (result is IResult).Should().BeTrue();
+        Assert.True(
+        (result is IResult));
     }
 
     [Fact]
     public void ResultT_IsIResult()
     {
         var result = Result.Success(42);
-        (result is IResult).Should().BeTrue();
+        Assert.True(
+        (result is IResult));
     }
 
     [Fact]
@@ -328,8 +388,9 @@ public class ResultTests
     {
         var a = Result.Fail("404", "Not found");
         var b = Result.Fail("404", "Not found");
+        Assert.Equal(b,
 
-        a.Should().Be(b);
+        a);
     }
 
     [Fact]
@@ -337,8 +398,9 @@ public class ResultTests
     {
         var a = Result.Fail("404", "Not found");
         var b = Result.Fail("500", "Server error");
+        Assert.NotEqual(b,
 
-        a.Should().NotBe(b);
+        a);
     }
 
     [Fact]
@@ -346,21 +408,27 @@ public class ResultTests
     {
         var result = Result.Success();
 
-        // Properties have private init — cannot be changed after creation
-        result.IsSuccess.Should().BeTrue();
-        result.ErrorCode.Should().BeEmpty();
-        result.Message.Should().BeEmpty();
+        // Properties have private init and cannot be changed after creation.
+        Assert.True(result.IsSuccess);
+        Assert.Empty(
+        result.ErrorCode);
+        Assert.Empty(
+        result.Message);
     }
 
     [Fact]
     public void ResultT_Properties_AreImmutable()
     {
         var result = Result.Success("value");
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("value");
-        result.ErrorCode.Should().BeEmpty();
-        result.Message.Should().BeEmpty();
+        result.IsSuccess);
+        Assert.Equal("value",
+        result.Value);
+        Assert.Empty(
+        result.ErrorCode);
+        Assert.Empty(
+        result.Message);
     }
 
     #endregion
@@ -371,3 +439,5 @@ public class ResultTests
         public string Name { get; set; } = string.Empty;
     }
 }
+
+

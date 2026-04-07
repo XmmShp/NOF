@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Text.Json;
 using Xunit;
 
@@ -14,23 +13,26 @@ public class OptionalTests
     public void Of_SetsHasValue_True()
     {
         var opt = Optional.Of(42);
-        opt.HasValue.Should().BeTrue();
-        opt.Value.Should().Be(42);
+        Assert.True(
+        opt.HasValue);
+        Assert.Equal(42,
+        opt.Value);
     }
 
     [Fact]
     public void None_SetsHasValue_False()
     {
         Optional<int> opt = Optional.None;
-        opt.HasValue.Should().BeFalse();
+        Assert.False(
+        opt.HasValue);
     }
 
     [Fact]
     public void Value_WhenNone_Throws()
     {
         Optional<int> opt = Optional.None;
-        var act = () => opt.Value;
-        act.Should().Throw<InvalidOperationException>();
+        Action act = () => { _ = opt.Value; };
+        Assert.Throws<InvalidOperationException>(act);
     }
 
     // -----------------------------------------------------------------------
@@ -41,31 +43,38 @@ public class OptionalTests
     public void ImplicitConversion_FromInt_SetsHasValue()
     {
         Optional<int> opt = 99;
-        opt.HasValue.Should().BeTrue();
-        opt.Value.Should().Be(99);
+        Assert.True(
+        opt.HasValue);
+        Assert.Equal(99,
+        opt.Value);
     }
 
     [Fact]
     public void ImplicitConversion_FromString_SetsHasValue()
     {
         Optional<string> opt = "hello";
-        opt.HasValue.Should().BeTrue();
-        opt.Value.Should().Be("hello");
+        Assert.True(
+        opt.HasValue);
+        Assert.Equal("hello",
+        opt.Value);
     }
 
     [Fact]
     public void ImplicitConversion_FromNullString_SetsHasValue_WithNullValue()
     {
         Optional<string> opt = null!;
-        opt.HasValue.Should().BeTrue();
-        opt.Value.Should().BeNull();
+        Assert.True(
+        opt.HasValue);
+        Assert.Null(
+        opt.Value);
     }
 
     [Fact]
     public void ImplicitConversion_FromNoneOptional_SetsHasValue_False()
     {
         Optional<int> opt = Optional.None;
-        opt.HasValue.Should().BeFalse();
+        Assert.False(
+        opt.HasValue);
     }
 
     // -----------------------------------------------------------------------
@@ -76,14 +85,16 @@ public class OptionalTests
     public void ValueOr_WhenHasValue_ReturnsValue()
     {
         Optional<int> opt = 5;
-        opt.ValueOr(99).Should().Be(5);
+        Assert.Equal(5,
+        opt.ValueOr(99));
     }
 
     [Fact]
     public void ValueOr_WhenNone_ReturnsDefault()
     {
         Optional<int> opt = Optional.None;
-        opt.ValueOr(99).Should().Be(99);
+        Assert.Equal(99,
+        opt.ValueOr(99));
     }
 
     // -----------------------------------------------------------------------
@@ -95,7 +106,8 @@ public class OptionalTests
     {
         Optional<int> opt = 7;
         var result = opt.Match(v => v * 2, () => -1);
-        result.Should().Be(14);
+        Assert.Equal(14,
+        result);
     }
 
     [Fact]
@@ -103,7 +115,8 @@ public class OptionalTests
     {
         Optional<int> opt = Optional.None;
         var result = opt.Match(v => v * 2, () => -1);
-        result.Should().Be(-1);
+        Assert.Equal(-1,
+        result);
     }
 }
 
@@ -112,7 +125,7 @@ public class OptionalJsonTests
     private static JsonSerializerOptions Options() => JsonSerializerOptions.NOF;
 
     // -----------------------------------------------------------------------
-    // Serialization — Optional<T> present
+    // Serialization 鈥?Optional<T> present
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -120,7 +133,7 @@ public class OptionalJsonTests
     {
         var dto = new DtoWithOptional { Name = Optional.Of<string?>("Alice") };
         var json = JsonSerializer.Serialize(dto, Options());
-        json.Should().Contain("\"name\":\"Alice\"", because: $"actual json was: {json}");
+        Assert.Contains("\"name\":\"Alice\"", json);
     }
 
     [Fact]
@@ -128,7 +141,7 @@ public class OptionalJsonTests
     {
         var dto = new DtoWithOptional { Name = Optional.None };
         var json = JsonSerializer.Serialize(dto, Options());
-        json.Should().NotContain("name");
+        Assert.DoesNotContain("name", json);
     }
 
     [Fact]
@@ -136,7 +149,7 @@ public class OptionalJsonTests
     {
         var dto = new DtoWithOptional { Name = Optional.Of<string?>("test"), Age = Optional.Of(30) };
         var act = () => JsonSerializer.Serialize(dto, Options());
-        act.Should().NotThrow();
+        Assert.Null(Record.Exception(act));
     }
 
     // -----------------------------------------------------------------------
@@ -149,10 +162,13 @@ public class OptionalJsonTests
         const string json = """{"name":"Bob","age":25}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        dto.Name.HasValue.Should().BeTrue(because: "converter should set HasValue=true for present property");
-        dto.Name.Value.Should().Be("Bob");
-        dto.Age.HasValue.Should().BeTrue();
-        dto.Age.Value.Should().Be(25);
+        Assert.True(dto.Name.HasValue, "converter should set HasValue=true for present property");
+        Assert.Equal("Bob",
+        dto.Name.Value);
+        Assert.True(
+        dto.Age.HasValue);
+        Assert.Equal(25,
+        dto.Age.Value);
     }
 
     [Fact]
@@ -161,8 +177,10 @@ public class OptionalJsonTests
         const string json = """{"name":"Bob"}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        dto.Name.HasValue.Should().BeTrue();
-        dto.Age.HasValue.Should().BeFalse();
+        Assert.True(
+        dto.Name.HasValue);
+        Assert.False(
+        dto.Age.HasValue);
     }
 
     [Fact]
@@ -171,8 +189,10 @@ public class OptionalJsonTests
         const string json = """{"name":null}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        dto.Name.HasValue.Should().BeTrue();
-        dto.Name.Value.Should().BeNull();
+        Assert.True(
+        dto.Name.HasValue);
+        Assert.Null(
+        dto.Name.Value);
     }
 
     // -----------------------------------------------------------------------
@@ -186,11 +206,15 @@ public class OptionalJsonTests
         var opts = Options();
         var json = JsonSerializer.Serialize(original, opts);
         var restored = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
+        Assert.True(
 
-        restored.Name.HasValue.Should().BeTrue();
-        restored.Name.Value.Should().Be("Charlie");
-        restored.Age.HasValue.Should().BeTrue();
-        restored.Age.Value.Should().Be(42);
+        restored.Name.HasValue);
+        Assert.Equal("Charlie",
+        restored.Name.Value);
+        Assert.True(
+        restored.Age.HasValue);
+        Assert.Equal(42,
+        restored.Age.Value);
     }
 
     [Fact]
@@ -200,10 +224,11 @@ public class OptionalJsonTests
         var opts = Options();
         var json = JsonSerializer.Serialize(original, opts);
 
-        json.Should().NotContain("age");
+        Assert.DoesNotContain("age", json);
 
         var restored = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        restored.Age.HasValue.Should().BeFalse();
+        Assert.False(
+        restored.Age.HasValue);
     }
 
     // -----------------------------------------------------------------------
@@ -216,3 +241,4 @@ public class OptionalJsonTests
         public Optional<int> Age { get; set; }
     }
 }
+

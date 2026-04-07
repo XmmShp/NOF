@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Xunit;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.Options;
@@ -11,9 +10,10 @@ public sealed class JwtResourceServerOptionsValidatorTests
         var validator = new JwtResourceServerOptionsValidator();
 
         var result = validator.Validate(null, new JwtResourceServerOptions { JwksEndpoint = "" });
+        Assert.True(
 
-        result.Failed.Should().BeTrue();
-        result.Failures.Should().ContainSingle(f => f.Contains("JwksEndpoint must be configured."));
+        result.Failed);
+        Assert.Single(result.Failures, f => f.Contains("JwksEndpoint must be configured."));
     }
 
     [Fact]
@@ -21,10 +21,11 @@ public sealed class JwtResourceServerOptionsValidatorTests
     {
         var validator = new JwtResourceServerOptionsValidator();
 
-        var result = validator.Validate(null, new JwtResourceServerOptions { JwksEndpoint = "/.well-known/jwks.json" });
+        var result = validator.Validate(null, new JwtResourceServerOptions { JwksEndpoint = "not-an-absolute-uri" });
+        Assert.True(
 
-        result.Failed.Should().BeTrue();
-        result.Failures.Should().ContainSingle(f => f.Contains("must be an absolute URI"));
+        result.Failed);
+        Assert.Single(result.Failures, f => f.Contains("must be an absolute URI"));
     }
 
     [Fact]
@@ -37,9 +38,10 @@ public sealed class JwtResourceServerOptionsValidatorTests
             JwksEndpoint = "http://auth.local/.well-known/jwks.json",
             RequireHttpsMetadata = true
         });
+        Assert.True(
 
-        result.Failed.Should().BeTrue();
-        result.Failures.Should().ContainSingle(f => f.Contains("must use HTTPS"));
+        result.Failed);
+        Assert.Single(result.Failures, f => f.Contains("must use HTTPS"));
     }
 
     [Fact]
@@ -52,7 +54,9 @@ public sealed class JwtResourceServerOptionsValidatorTests
             JwksEndpoint = "https://auth.local/.well-known/jwks.json",
             RequireHttpsMetadata = true
         });
+        Assert.True(
 
-        result.Succeeded.Should().BeTrue();
+        result.Succeeded);
     }
 }
+

@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,14 +29,21 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
+        Assert.Null(
 
-        scope.ServiceProvider.GetService<MemoryPersistenceStore>().Should().BeNull();
-        scope.ServiceProvider.GetService<IUnitOfWork>().Should().BeNull();
-        scope.ServiceProvider.GetService<ITransactionManager>().Should().BeNull();
-        scope.ServiceProvider.GetService<IInboxMessageRepository>().Should().BeNull();
-        scope.ServiceProvider.GetService<IOutboxMessageRepository>().Should().BeNull();
-        scope.ServiceProvider.GetService<ITenantRepository>().Should().BeNull();
-        scope.ServiceProvider.GetService<IStateMachineContextRepository>().Should().BeNull();
+        scope.ServiceProvider.GetService<MemoryPersistenceStore>());
+        Assert.Null(
+        scope.ServiceProvider.GetService<IUnitOfWork>());
+        Assert.Null(
+        scope.ServiceProvider.GetService<ITransactionManager>());
+        Assert.Null(
+        scope.ServiceProvider.GetService<IInboxMessageRepository>());
+        Assert.Null(
+        scope.ServiceProvider.GetService<IOutboxMessageRepository>());
+        Assert.Null(
+        scope.ServiceProvider.GetService<ITenantRepository>());
+        Assert.Null(
+        scope.ServiceProvider.GetService<IStateMachineContextRepository>());
     }
 
     [Fact]
@@ -51,7 +57,7 @@ public class InfrastructureDefaultsTests
             .Select(sd => sd.ImplementationType)
             .ToList();
 
-        hostedImplementationTypes.Should().NotContain(typeof(MemoryPersistenceWarningHostedService));
+        Assert.DoesNotContain(typeof(MemoryPersistenceWarningHostedService), hostedImplementationTypes);
     }
 
     [Fact]
@@ -62,18 +68,20 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
 
-        builder.Services.Should().Contain(service =>
+        Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(OutboxMessageBackgroundService));
-        builder.Services.Should().ContainSingle(service =>
+        Assert.Single(builder.Services, service =>
             service.ServiceType == typeof(IHostedService));
+        Assert.NotNull(
 
-        provider.GetRequiredService<IOptions<OutboxOptions>>().Should().NotBeNull();
-        provider.GetRequiredService<IOptions<TenantOptions>>().Value.Mode.Should().Be(TenantMode.SingleTenant);
-        provider.GetRequiredService<IEventPublisher>().Should().BeOfType<EventPublisher>();
+        provider.GetRequiredService<IOptions<OutboxOptions>>());
+        Assert.Equal(TenantMode.SingleTenant,
+        provider.GetRequiredService<IOptions<TenantOptions>>().Value.Mode);
+        Assert.IsType<EventPublisher>(provider.GetRequiredService<IEventPublisher>());
 
-        builder.Services.Should().NotContain(service => service.ServiceType == typeof(IUnitOfWork));
-        builder.Services.Should().NotContain(service => service.ServiceType == typeof(ITransactionManager));
+        Assert.DoesNotContain(builder.Services, service => service.ServiceType == typeof(IUnitOfWork));
+        Assert.DoesNotContain(builder.Services, service => service.ServiceType == typeof(ITransactionManager));
     }
 
     [Fact]
@@ -91,7 +99,7 @@ public class InfrastructureDefaultsTests
             .Where(service => service.ServiceType == typeof(ICacheService) && Equals(service.ServiceKey, ICacheServiceFactory.DefaultName))
             .ToList();
 
-        descriptors.Should().HaveCount(1);
+        Assert.Single(descriptors);
     }
 
     [Fact]
@@ -103,8 +111,9 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<TenantOptions>>().Value;
+        Assert.Equal(TenantMode.SharedDatabase,
 
-        options.Mode.Should().Be(TenantMode.SharedDatabase);
+        options.Mode);
     }
 
     [Fact]
@@ -116,9 +125,11 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<TenantOptions>>().Value;
+        Assert.Equal(TenantMode.DatabasePerTenant,
 
-        options.Mode.Should().Be(TenantMode.DatabasePerTenant);
-        options.TenantDatabaseNameFormat.Should().Be("{database}__{tenantId}");
+        options.Mode);
+        Assert.Equal("{database}__{tenantId}",
+        options.TenantDatabaseNameFormat);
     }
 
     private sealed class TestServiceRegistrationContext : INOFAppBuilder
@@ -327,3 +338,5 @@ public class InfrastructureDefaultsTests
             => ValueTask.CompletedTask;
     }
 }
+
+

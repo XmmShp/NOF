@@ -1,4 +1,3 @@
-using FluentAssertions;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Xunit;
@@ -44,16 +43,18 @@ public class PatchRequestTests
 
     #endregion
 
-    #region Deserialization — present vs absent vs null
+    #region Deserialization 鈥?present vs absent vs null
 
     [Fact]
     public void Deserialize_MissingProperty_ReturnsNone()
     {
         var json = """{}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.False(
 
-        patch.Name.HasValue.Should().BeFalse();
-        patch.Age.HasValue.Should().BeFalse();
+        patch.Name.HasValue);
+        Assert.False(
+        patch.Age.HasValue);
     }
 
     [Fact]
@@ -61,9 +62,11 @@ public class PatchRequestTests
     {
         var json = """{"name": "Alice"}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Name.HasValue.Should().BeTrue();
-        patch.Name.Value.Should().Be("Alice");
+        patch.Name.HasValue);
+        Assert.Equal("Alice",
+        patch.Name.Value);
     }
 
     [Fact]
@@ -71,9 +74,11 @@ public class PatchRequestTests
     {
         var json = """{"nickName": null}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.NickName.HasValue.Should().BeTrue();
-        patch.NickName.Value.Should().BeNull();
+        patch.NickName.HasValue);
+        Assert.Null(
+        patch.NickName.Value);
     }
 
     [Fact]
@@ -81,9 +86,11 @@ public class PatchRequestTests
     {
         var json = """{"age": 30}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Age.HasValue.Should().BeTrue();
-        patch.Age.Value.Should().Be(30);
+        patch.Age.HasValue);
+        Assert.Equal(30,
+        patch.Age.Value);
     }
 
     [Fact]
@@ -91,9 +98,11 @@ public class PatchRequestTests
     {
         var json = """{"age": null}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Age.HasValue.Should().BeTrue();
-        patch.Age.Value.Should().BeNull();
+        patch.Age.HasValue);
+        Assert.Null(
+        patch.Age.Value);
     }
 
     [Fact]
@@ -101,14 +110,19 @@ public class PatchRequestTests
     {
         var json = """{"name": "Bob", "age": null}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Name.HasValue.Should().BeTrue();
-        patch.Name.Value.Should().Be("Bob");
+        patch.Name.HasValue);
+        Assert.Equal("Bob",
+        patch.Name.Value);
+        Assert.True(
 
-        patch.Age.HasValue.Should().BeTrue();
-        patch.Age.Value.Should().BeNull();
+        patch.Age.HasValue);
+        Assert.Null(
+        patch.Age.Value);
+        Assert.False(
 
-        patch.NickName.HasValue.Should().BeFalse();
+        patch.NickName.HasValue);
     }
 
     [Fact]
@@ -116,10 +130,13 @@ public class PatchRequestTests
     {
         var json = """{"address": {"city": "Shanghai", "street": "Nanjing Rd"}}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Address.HasValue.Should().BeTrue();
-        patch.Address.Value.City.Should().Be("Shanghai");
-        patch.Address.Value.Street.Should().Be("Nanjing Rd");
+        patch.Address.HasValue);
+        Assert.Equal("Shanghai",
+        patch.Address.Value.City);
+        Assert.Equal("Nanjing Rd",
+        patch.Address.Value.Street);
     }
 
     [Fact]
@@ -127,14 +144,16 @@ public class PatchRequestTests
     {
         var json = """{"address": null}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Address.HasValue.Should().BeTrue();
-        patch.Address.Value.Should().BeNull();
+        patch.Address.HasValue);
+        Assert.Null(
+        patch.Address.Value);
     }
 
     #endregion
 
-    #region Set — write back
+    #region Set 鈥?write back
 
     [Fact]
     public void Set_Value_WritesToExtensionData()
@@ -142,10 +161,13 @@ public class PatchRequestTests
         var patch = new TestPatchRequest();
 
         patch.Name = Optional.Of("Charlie");
+        Assert.NotNull(
 
-        patch.ExtensionData.Should().NotBeNull();
-        patch.Name.HasValue.Should().BeTrue();
-        patch.Name.Value.Should().Be("Charlie");
+        patch.ExtensionData);
+        Assert.True(
+        patch.Name.HasValue);
+        Assert.Equal("Charlie",
+        patch.Name.Value);
     }
 
     [Fact]
@@ -153,12 +175,14 @@ public class PatchRequestTests
     {
         var json = """{"name": "Alice"}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Name.HasValue.Should().BeTrue();
+        patch.Name.HasValue);
 
         patch.Name = Optional.None;
+        Assert.False(
 
-        patch.Name.HasValue.Should().BeFalse();
+        patch.Name.HasValue);
     }
 
     [Fact]
@@ -168,10 +192,13 @@ public class PatchRequestTests
         var address = new AddressDto { City = "Beijing", Street = "Chang'an Ave" };
 
         patch.Address = Optional.Of(address);
+        Assert.True(
 
-        patch.Address.HasValue.Should().BeTrue();
-        patch.Address.Value.City.Should().Be("Beijing");
-        patch.Address.Value.Street.Should().Be("Chang'an Ave");
+        patch.Address.HasValue);
+        Assert.Equal("Beijing",
+        patch.Address.Value.City);
+        Assert.Equal("Chang'an Ave",
+        patch.Address.Value.Street);
     }
 
     [Fact]
@@ -183,9 +210,11 @@ public class PatchRequestTests
         var addr = patch.Address.Value;
         addr = addr with { City = "Beijing" };
         patch.Address = Optional.Of(addr);
+        Assert.Equal("Beijing",
 
-        patch.Address.Value.City.Should().Be("Beijing");
-        patch.Address.Value.Street.Should().Be("Nanjing Rd");
+        patch.Address.Value.City);
+        Assert.Equal("Nanjing Rd",
+        patch.Address.Value.Street);
     }
 
     #endregion
@@ -199,10 +228,13 @@ public class PatchRequestTests
 
         var json = JsonSerializer.Serialize(patch, JsonSerializerOptions.NOF);
         var doc = JsonDocument.Parse(json);
+        Assert.True(
 
-        doc.RootElement.TryGetProperty("name", out _).Should().BeTrue();
-        doc.RootElement.TryGetProperty("age", out _).Should().BeFalse();
-        doc.RootElement.TryGetProperty("nickName", out _).Should().BeFalse();
+        doc.RootElement.TryGetProperty("name", out _));
+        Assert.False(
+        doc.RootElement.TryGetProperty("age", out _));
+        Assert.False(
+        doc.RootElement.TryGetProperty("nickName", out _));
     }
 
     [Fact]
@@ -216,14 +248,19 @@ public class PatchRequestTests
 
         var json = JsonSerializer.Serialize(original, JsonSerializerOptions.NOF);
         var deserialized = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        deserialized.Name.HasValue.Should().BeTrue();
-        deserialized.Name.Value.Should().Be("Alice");
+        deserialized.Name.HasValue);
+        Assert.Equal("Alice",
+        deserialized.Name.Value);
+        Assert.True(
 
-        deserialized.Age.HasValue.Should().BeTrue();
-        deserialized.Age.Value.Should().Be(25);
+        deserialized.Age.HasValue);
+        Assert.Equal(25,
+        deserialized.Age.Value);
+        Assert.False(
 
-        deserialized.NickName.HasValue.Should().BeFalse();
+        deserialized.NickName.HasValue);
     }
 
     #endregion
@@ -238,8 +275,10 @@ public class PatchRequestTests
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
 
         var name = patch.Get<string>("Name", JsonSerializerOptions.NOF);
-        name.HasValue.Should().BeTrue();
-        name.Value.Should().Be("Alice");
+        Assert.True(
+        name.HasValue);
+        Assert.Equal("Alice",
+        name.Value);
     }
 
     [Fact]
@@ -263,9 +302,10 @@ public class PatchRequestTests
         };
 
         // Looking for "name" (camelCase of "Name") won't find "Name" with case-sensitive + no naming policy
-        // propertyName = "name", key = "name" (no policy → as-is), dict has "Name" → miss
+        // propertyName = "name", key = "name" (no policy 鈫?as-is), dict has "Name" 鈫?miss
         var result = patch.Get<string>("name", strictOptions);
-        result.HasValue.Should().BeFalse();
+        Assert.False(
+        result.HasValue);
     }
 
     #endregion
@@ -276,10 +316,13 @@ public class PatchRequestTests
     public void Get_OnEmptyPatch_ReturnsNone()
     {
         var patch = new TestPatchRequest();
+        Assert.False(
 
-        patch.Name.HasValue.Should().BeFalse();
-        patch.Age.HasValue.Should().BeFalse();
-        patch.Address.HasValue.Should().BeFalse();
+        patch.Name.HasValue);
+        Assert.False(
+        patch.Age.HasValue);
+        Assert.False(
+        patch.Address.HasValue);
     }
 
     [Fact]
@@ -287,11 +330,15 @@ public class PatchRequestTests
     {
         var json = """{}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.False(
 
-        patch.Name.HasValue.Should().BeFalse();
-        patch.Age.HasValue.Should().BeFalse();
-        patch.NickName.HasValue.Should().BeFalse();
-        patch.Address.HasValue.Should().BeFalse();
+        patch.Name.HasValue);
+        Assert.False(
+        patch.Age.HasValue);
+        Assert.False(
+        patch.NickName.HasValue);
+        Assert.False(
+        patch.Address.HasValue);
     }
 
     [Fact]
@@ -299,9 +346,10 @@ public class PatchRequestTests
     {
         var json = """{"name": "Alice", "unknownField": 42}""";
         var patch = JsonSerializer.Deserialize<TestPatchRequest>(json, JsonSerializerOptions.NOF)!;
+        Assert.True(
 
-        patch.Name.HasValue.Should().BeTrue();
-        patch.ExtensionData.Should().ContainKey("unknownField");
+        patch.Name.HasValue);
+        Assert.True(patch.ExtensionData.ContainsKey("unknownField"));
     }
 
     [Fact]
@@ -311,8 +359,9 @@ public class PatchRequestTests
 
         patch.Name = Optional.Of("First");
         patch.Name = Optional.Of("Second");
+        Assert.Equal("Second",
 
-        patch.Name.Value.Should().Be("Second");
+        patch.Name.Value);
     }
 
     [Fact]
@@ -321,11 +370,15 @@ public class PatchRequestTests
         var patch = new TestPatchRequest();
 
         patch.Name = Optional.Of("Alice");
-        patch.Name.HasValue.Should().BeTrue();
+        Assert.True(
+        patch.Name.HasValue);
 
         patch.Name = Optional.None;
-        patch.Name.HasValue.Should().BeFalse();
+        Assert.False(
+        patch.Name.HasValue);
     }
 
     #endregion
 }
+
+

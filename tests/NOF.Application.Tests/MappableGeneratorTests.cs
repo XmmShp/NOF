@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Application;
@@ -62,13 +61,13 @@ public class MappableGeneratorTests
             """;
 
         var result = RunGenerator(source);
-        result.GeneratedTrees.Should().ContainSingle();
+        Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("MapperRegistry.Register<");
-        code.Should().Contain("MapperAssemblyInitializer");
-        code.Should().Contain("Id = src.Id");
-        code.Should().Contain("Name = src.Name");
+        Assert.Contains("MapperRegistry.Register<", code);
+        Assert.Contains("MapperAssemblyInitializer", code);
+        Assert.Contains("Id = src.Id", code);
+        Assert.Contains("Name = src.Name", code);
     }
 
     // -----------------------------------------------------------------------
@@ -92,7 +91,7 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("new global::Test.OrderDto(src.Id, src.Name)");
+        Assert.Contains("new global::Test.OrderDto(src.Id, src.Name)", code);
     }
 
     // -----------------------------------------------------------------------
@@ -116,8 +115,8 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>");
-        code.Should().Contain("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>");
+        Assert.Contains("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>", code);
+        Assert.Contains("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>", code);
     }
 
     // -----------------------------------------------------------------------
@@ -141,11 +140,11 @@ public class MappableGeneratorTests
             """;
 
         var (_, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF020");
+        Assert.Contains(diagnostics, d => d.Id == "NOF020");
     }
 
     // -----------------------------------------------------------------------
-    // TwoWay duplicate: A→B + B→A explicit = duplicate
+    // TwoWay duplicate: A閳墪 + B閳墣 explicit = duplicate
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -165,7 +164,7 @@ public class MappableGeneratorTests
             """;
 
         var (_, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF020");
+        Assert.Contains(diagnostics, d => d.Id == "NOF020");
     }
 
     // -----------------------------------------------------------------------
@@ -188,7 +187,7 @@ public class MappableGeneratorTests
             """;
 
         var (_, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF021");
+        Assert.Contains(diagnostics, d => d.Id == "NOF021");
     }
 
     // -----------------------------------------------------------------------
@@ -212,7 +211,7 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>");
+        Assert.Contains("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>", code);
     }
 
     // -----------------------------------------------------------------------
@@ -240,17 +239,17 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         // Should produce exactly one generated file for the class
-        result.GeneratedTrees.Should().ContainSingle();
+        Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("MapperRegistry.Register<global::Test.A, global::Test.B>");
-        code.Should().Contain("MapperRegistry.Register<global::Test.A, global::Test.C>");
+        Assert.Contains("MapperRegistry.Register<global::Test.A, global::Test.B>", code);
+        Assert.Contains("MapperRegistry.Register<global::Test.A, global::Test.C>", code);
         // One method
-        code.Should().Contain("MapperAssemblyInitializer");
+        Assert.Contains("MapperAssemblyInitializer", code);
     }
 
     // -----------------------------------------------------------------------
-    // int → string conversion (ToString)
+    // int 閳?string conversion (ToString)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -270,11 +269,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("ToString()");
+        Assert.Contains("ToString()", code);
     }
 
     // -----------------------------------------------------------------------
-    // string → int conversion (Parse)
+    // string 閳?int conversion (Parse)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -294,11 +293,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("Parse(src.Id)");
+        Assert.Contains("Parse(src.Id)", code);
     }
 
     // -----------------------------------------------------------------------
-    // Enum conversion: int → enum, enum → string
+    // Enum conversion: int 閳?enum, enum 閳?string
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -319,10 +318,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // int → enum: cast
-        code.Should().Contain("(global::Test.Status)(src.StatusCode)");
-        // enum → string: ToString
-        code.Should().Contain("src.Status").And.Contain("ToString()");
+        // int 閳?enum: cast
+        Assert.Contains("(global::Test.Status)(src.StatusCode)", code);
+        // enum 閳?string: ToString
+        Assert.Contains("src.Status", code);
+        Assert.Contains("ToString()", code);
     }
 
     // -----------------------------------------------------------------------
@@ -348,9 +348,9 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("mapper.Map<global::Test.Address, global::Test.AddressDto>(src.Addr)");
+        Assert.Contains("mapper.Map<global::Test.Address, global::Test.AddressDto>(src.Addr)", code);
         // Should use the (src, mapper) overload
-        code.Should().Contain("(src, mapper) =>");
+        Assert.Contains("(src, mapper) =>", code);
     }
 
     // -----------------------------------------------------------------------
@@ -382,9 +382,9 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should pick the 2-param constructor (id, name) since it matches more
-        code.Should().Contain("new global::Test.OrderDto(src.Id, src.Name)");
+        Assert.Contains("new global::Test.OrderDto(src.Id, src.Name)", code);
         // Code should still appear in init list since it's writable
-        code.Should().Contain("Code = src.Code");
+        Assert.Contains("Code = src.Code", code);
     }
 
     // -----------------------------------------------------------------------
@@ -402,7 +402,8 @@ public class MappableGeneratorTests
             """;
 
         var result = RunGenerator(source);
-        result.GeneratedTrees.Should().BeEmpty();
+        Assert.Empty(
+        result.GeneratedTrees);
     }
 
     // =======================================================================
@@ -410,7 +411,7 @@ public class MappableGeneratorTests
     // =======================================================================
 
     // -----------------------------------------------------------------------
-    // Optional<T> → T? : valid unwrap via .Value
+    // Optional<T> 閳?T? : valid unwrap via .Value
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -432,11 +433,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("src.Name.Value");
+        Assert.Contains("src.Name.Value", code);
     }
 
     // -----------------------------------------------------------------------
-    // Optional<T> → T (non-nullable): semantic mismatch → NOF022 warning + mapper fallback
+    // Optional<T> 閳?T (non-nullable): semantic mismatch 閳?NOF022 warning + mapper fallback
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -457,13 +458,13 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF022");
+        Assert.Contains(diagnostics, d => d.Id == "NOF022");
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("mapper.Map<");
+        Assert.Contains("mapper.Map<", code);
     }
 
     // -----------------------------------------------------------------------
-    // T → Optional<T>  (implicit conversion — direct assignment)
+    // T 閳?Optional<T>  (implicit conversion 閳?direct assignment)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -484,13 +485,13 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // T → Optional<T> via implicit operator — direct assignment, no Optional.Of
-        code.Should().Contain("Name = src.Name");
-        code.Should().NotContain("Optional.Of");
+        // T 閳?Optional<T> via implicit operator 閳?direct assignment, no Optional.Of
+        Assert.Contains("Name = src.Name", code);
+        Assert.DoesNotContain("Optional.Of", code);
     }
 
     // -----------------------------------------------------------------------
-    // Optional<T> → Optional<T>  (same type, no conversion)
+    // Optional<T> 閳?Optional<T>  (same type, no conversion)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -511,9 +512,9 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // Same type → direct assignment, no .Value or Optional.Of
-        code.Should().Contain("Score = src.Score");
-        code.Should().NotContain("Optional.Of");
+        // Same type 閳?direct assignment, no .Value or Optional.Of
+        Assert.Contains("Score = src.Score", code);
+        Assert.DoesNotContain("Optional.Of", code);
     }
 
     // =======================================================================
@@ -521,7 +522,7 @@ public class MappableGeneratorTests
     // =======================================================================
 
     // -----------------------------------------------------------------------
-    // Result<T> → T? : valid unwrap via .Value!
+    // Result<T> 閳?T? : valid unwrap via .Value!
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -543,11 +544,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("src.Name.Value!");
+        Assert.Contains("src.Name.Value!", code);
     }
 
     // -----------------------------------------------------------------------
-    // Result<T> → T (non-nullable): semantic mismatch → NOF022
+    // Result<T> 閳?T (non-nullable): semantic mismatch 閳?NOF022
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -568,13 +569,13 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF022");
+        Assert.Contains(diagnostics, d => d.Id == "NOF022");
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("mapper.Map<");
+        Assert.Contains("mapper.Map<", code);
     }
 
     // -----------------------------------------------------------------------
-    // T → Result<T>  (wrap via implicit conversion)
+    // T 閳?Result<T>  (wrap via implicit conversion)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -595,13 +596,13 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // T → Result<T> is ok (implicit conversion)
-        code.Should().Contain("Name = src.Name");
-        code.Should().NotContain(".Value!");
+        // T 閳?Result<T> is ok (implicit conversion)
+        Assert.Contains("Name = src.Name", code);
+        Assert.DoesNotContain(".Value!", code);
     }
 
     // -----------------------------------------------------------------------
-    // T → Result<T?>  (implicit conversion — direct assignment)
+    // T 閳?Result<T?>  (implicit conversion 閳?direct assignment)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -623,11 +624,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("Name = src.Name");
+        Assert.Contains("Name = src.Name", code);
     }
 
     // -----------------------------------------------------------------------
-    // T? → Result<T> : follows C# implicit conversion rules (direct assignment)
+    // T? 閳?Result<T> : follows C# implicit conversion rules (direct assignment)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -647,15 +648,15 @@ public class MappableGeneratorTests
             }
             """;
 
-        // C# implicit operator Result<T>(T value) accepts string? → Result<string>
-        // We follow C#'s own implicit conversion rules — no special-casing
+        // C# implicit operator Result<T>(T value) accepts string? 閳?Result<string>
+        // We follow C#'s own implicit conversion rules 閳?no special-casing
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("Name = src.Name");
+        Assert.Contains("Name = src.Name", code);
     }
 
     // -----------------------------------------------------------------------
-    // T? → Result<T?> : implicit conversion (direct assignment)
+    // T? 閳?Result<T?> : implicit conversion (direct assignment)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -677,11 +678,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("Name = src.Name");
+        Assert.Contains("Name = src.Name", code);
     }
 
     // -----------------------------------------------------------------------
-    // Result<T?> → T? : semantic mismatch → NOF022
+    // Result<T?> 閳?T? : semantic mismatch 閳?NOF022
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -702,7 +703,7 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF022");
+        Assert.Contains(diagnostics, d => d.Id == "NOF022");
     }
 
     // =======================================================================
@@ -724,7 +725,7 @@ public class MappableGeneratorTests
         """;
 
     // -----------------------------------------------------------------------
-    // IValueObject<T> → T  (unwrap via explicit cast, exact underlying type)
+    // IValueObject<T> 閳?T  (unwrap via explicit cast, exact underlying type)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -747,11 +748,11 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should unwrap via explicit cast to the underlying type
-        code.Should().Contain("(string)src.Name)");
+        Assert.Contains("(string)src.Name)", code);
     }
 
     // -----------------------------------------------------------------------
-    // T → IValueObject<T>  (wrap via VoType.Of, exact underlying type)
+    // T 閳?IValueObject<T>  (wrap via VoType.Of, exact underlying type)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -774,11 +775,11 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should wrap via OrderName.Of(...)
-        code.Should().Contain("OrderName.Of(src.Name)");
+        Assert.Contains("OrderName.Of(src.Name)", code);
     }
 
     // -----------------------------------------------------------------------
-    // IValueObject<string> → int : VO to non-underlying type → mapper fallback + NOF023
+    // IValueObject<string> 閳?int : VO to non-underlying type 閳?mapper fallback + NOF023
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -799,14 +800,14 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF023");
+        Assert.Contains(diagnostics, d => d.Id == "NOF023");
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("mapper.Map<");
-        code.Should().NotContain("Parse(");
+        Assert.Contains("mapper.Map<", code);
+        Assert.DoesNotContain("Parse(", code);
     }
 
     // -----------------------------------------------------------------------
-    // int → IValueObject<int>  (wrap via Of with direct value)
+    // int 閳?IValueObject<int>  (wrap via Of with direct value)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -836,11 +837,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("Score.Of(src.Score)");
+        Assert.Contains("Score.Of(src.Score)", code);
     }
 
     // -----------------------------------------------------------------------
-    // IValueObject<T> → IValueObject<T> (different VO types): fallback to mapper + NOF023
+    // IValueObject<T> 閳?IValueObject<T> (different VO types): fallback to mapper + NOF023
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -877,11 +878,11 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF023");
+        Assert.Contains(diagnostics, d => d.Id == "NOF023");
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should NOT auto-unwrap and rewrap; should fall back to mapper
-        code.Should().Contain("mapper.Map<");
-        code.Should().NotContain("DisplayName.Of(");
+        Assert.Contains("mapper.Map<", code);
+        Assert.DoesNotContain("DisplayName.Of(", code);
     }
 
     // =======================================================================
@@ -889,7 +890,7 @@ public class MappableGeneratorTests
     // =======================================================================
 
     // -----------------------------------------------------------------------
-    // Optional<IValueObject<string>> → string : Optional unwrap is to non-nullable → NOF022
+    // Optional<IValueObject<string>> 閳?string : Optional unwrap is to non-nullable 閳?NOF022
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -912,12 +913,12 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        // Optional<OrderName> → string (non-nullable) is a semantic mismatch
-        diagnostics.Should().Contain(d => d.Id == "NOF022");
+        // Optional<OrderName> 閳?string (non-nullable) is a semantic mismatch
+        Assert.Contains(diagnostics, d => d.Id == "NOF022");
     }
 
     // -----------------------------------------------------------------------
-    // Optional<IValueObject<string>> → string? : valid — unwrap Optional, then unwrap VO
+    // Optional<IValueObject<string>> 閳?string? : valid 閳?unwrap Optional, then unwrap VO
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -942,12 +943,12 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should unwrap Optional via .Value, yielding OrderName, then unwrap VO via explicit cast
-        code.Should().Contain("src.Name.Value");
-        code.Should().Contain("(string)");
+        Assert.Contains("src.Name.Value", code);
+        Assert.Contains("(string)", code);
     }
 
     // -----------------------------------------------------------------------
-    // string → Optional<IValueObject<string>>  (nested conversion — mapper fallback)
+    // string 閳?Optional<IValueObject<string>>  (nested conversion 閳?mapper fallback)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -970,13 +971,13 @@ public class MappableGeneratorTests
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // Nested conversion (string → OrderName → Optional<OrderName>) is too complex;
-        // no implicit conversion from string to Optional<OrderName> — falls back to mapper
-        code.Should().Contain("mapper.Map<");
+        // Nested conversion (string 閳?OrderName 閳?Optional<OrderName>) is too complex;
+        // no implicit conversion from string to Optional<OrderName> 閳?falls back to mapper
+        Assert.Contains("mapper.Map<", code);
     }
 
     // -----------------------------------------------------------------------
-    // TwoWay: ValueObject property (domain ↔ DTO round-trip)
+    // TwoWay: ValueObject property (domain 閳?DTO round-trip)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -998,12 +999,12 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // Forward: OrderName → string (unwrap)
-        code.Should().Contain("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>");
-        code.Should().Contain("(string)src.Name)");
-        // Reverse: string → OrderName (wrap)
-        code.Should().Contain("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>");
-        code.Should().Contain("OrderName.Of(src.Name)");
+        // Forward: OrderName 閳?string (unwrap)
+        Assert.Contains("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>", code);
+        Assert.Contains("(string)src.Name)", code);
+        // Reverse: string 閳?OrderName (wrap)
+        Assert.Contains("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>", code);
+        Assert.Contains("OrderName.Of(src.Name)", code);
     }
 
     // -----------------------------------------------------------------------
@@ -1028,9 +1029,9 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF023");
+        Assert.Contains(diagnostics, d => d.Id == "NOF023");
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("mapper.Map<");
+        Assert.Contains("mapper.Map<", code);
     }
 
     // -----------------------------------------------------------------------
@@ -1056,9 +1057,9 @@ public class MappableGeneratorTests
             """;
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
-        diagnostics.Should().NotContain(d => d.Id == "NOF023");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF023");
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain("mapper.Map<");
+        Assert.Contains("mapper.Map<", code);
     }
 
     // =======================================================================
@@ -1066,7 +1067,7 @@ public class MappableGeneratorTests
     // =======================================================================
 
     // -----------------------------------------------------------------------
-    // Nullable<VO> → T?  (e.g. ConfigNodeId? → long?)
+    // Nullable<VO> 閳?T?  (e.g. ConfigNodeId? 閳?long?)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -1097,12 +1098,12 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should unwrap Nullable<NodeId> via .HasValue / .Value, then explicit cast to long
-        code.Should().Contain(".HasValue");
-        code.Should().Contain("(long)");
+        Assert.Contains(".HasValue", code);
+        Assert.Contains("(long)", code);
     }
 
     // -----------------------------------------------------------------------
-    // T? → Nullable<VO>  (e.g. long? → ConfigNodeId?)
+    // T? 閳?Nullable<VO>  (e.g. long? 閳?ConfigNodeId?)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -1133,8 +1134,8 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should unwrap Nullable<long>, then wrap via NodeId.Of
-        code.Should().Contain(".HasValue");
-        code.Should().Contain("NodeId.Of(");
+        Assert.Contains(".HasValue", code);
+        Assert.Contains("NodeId.Of(", code);
     }
 
     // =======================================================================
@@ -1142,7 +1143,7 @@ public class MappableGeneratorTests
     // =======================================================================
 
     // -----------------------------------------------------------------------
-    // List<T> → List<U>  (recursive element conversion)
+    // List<T> 閳?List<U>  (recursive element conversion)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -1167,12 +1168,12 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should emit [..src.Items.Select(...)] collection expression
-        code.Should().Contain(".Select(");
-        code.Should().Contain("[..");
+        Assert.Contains(".Select(", code);
+        Assert.Contains("[..", code);
     }
 
     // -----------------------------------------------------------------------
-    // IReadOnlyList<T> → List<U>  (different collection types)
+    // IReadOnlyList<T> 閳?List<U>  (different collection types)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -1196,12 +1197,12 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        code.Should().Contain(".Select(");
-        code.Should().Contain("[..");
+        Assert.Contains(".Select(", code);
+        Assert.Contains("[..", code);
     }
 
     // -----------------------------------------------------------------------
-    // List<VO> → List<T>  (element-level VO unwrap)
+    // List<VO> 閳?List<T>  (element-level VO unwrap)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -1225,13 +1226,13 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Should emit [..Select with explicit cast] collection expression
-        code.Should().Contain(".Select(");
-        code.Should().Contain("(string)");
-        code.Should().Contain("[..");
+        Assert.Contains(".Select(", code);
+        Assert.Contains("(string)", code);
+        Assert.Contains("[..", code);
     }
 
     // -----------------------------------------------------------------------
-    // List<T> → List<T>  (same element type, no conversion)
+    // List<T> 閳?List<T>  (same element type, no conversion)
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -1252,8 +1253,11 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // Same element type — no .Select needed, just direct assignment
-        code.Should().Contain("Scores = src.Scores");
-        code.Should().NotContain(".Select(");
+        // Same element type 閳?no .Select needed, just direct assignment
+        Assert.Contains("Scores = src.Scores", code);
+        Assert.DoesNotContain(".Select(", code);
     }
 }
+
+
+

@@ -12,9 +12,7 @@
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="FluentAssertions" />
-  </ItemGroup>
+    </PackageReference>  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Extensions\NOF.Hosting.Extension.Authorization.Jwt\NOF.Hosting.Extension.Authorization.Jwt.csproj" />
@@ -22,3 +20,4 @@
   </ItemGroup>
 
 </Project>
+

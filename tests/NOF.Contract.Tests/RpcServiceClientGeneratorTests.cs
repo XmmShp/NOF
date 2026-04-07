@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NOF.Contract;
 using NOF.Contract.SourceGenerator;
 using Xunit;
@@ -42,12 +41,12 @@ public class RpcServiceClientGeneratorTests
                               """;
 
         var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        runResult.GeneratedTrees.Should().HaveCount(1);
+        Assert.Single(runResult.GeneratedTrees);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
-        code.Should().Contain("public partial class MyServiceClient : global::MyApp.IMyService");
-        code.Should().Contain("CreateUserAsync");
-        code.Should().Contain("HttpMethod.Post");
+        Assert.Contains("public partial class MyServiceClient : global::MyApp.IMyService", code);
+        Assert.Contains("CreateUserAsync", code);
+        Assert.Contains("HttpMethod.Post", code);
     }
 
     [Fact]
@@ -73,7 +72,8 @@ public class RpcServiceClientGeneratorTests
                               """;
 
         var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        runResult.GeneratedTrees.Should().BeEmpty();
+        Assert.Empty(
+        runResult.GeneratedTrees);
     }
 
     [Fact]
@@ -100,8 +100,8 @@ public class RpcServiceClientGeneratorTests
 
         var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
-        code.Should().Contain("HttpMethod.Post");
-        code.Should().Contain("var endpoint = \"Internal\";");
+        Assert.Contains("HttpMethod.Post", code);
+        Assert.Contains("var endpoint = \"Internal\";", code);
     }
 
     [Fact]
@@ -135,11 +135,13 @@ public class RpcServiceClientGeneratorTests
         var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
 
-        code.Should().Contain("global::System.Uri.EscapeDataString(request.Id.ToString()!)");
-        code.Should().Contain("Dictionary<string, object?>");
-        code.Should().Contain("body[\"Name\"] = request.Name");
-        code.Should().Contain("body[\"Email\"] = request.Email");
-        code.Should().NotContain("body[\"Id\"]");
+        Assert.Contains("global::System.Uri.EscapeDataString(request.Id.ToString()!)", code);
+        Assert.Contains("Dictionary<string, object?>", code);
+        Assert.Contains("body[\"Name\"] = request.Name", code);
+        Assert.Contains("body[\"Email\"] = request.Email", code);
+        Assert.DoesNotContain("body[\"Id\"]", code);
     }
 }
+
+
 

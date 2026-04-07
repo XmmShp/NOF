@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
@@ -38,9 +37,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]");
-        generatedCode.Should().Contain("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));");
-        generatedCode.Should().NotContain("SourceModule.ReferencedAssemblySymbols");
+        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
+        Assert.Contains("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.CommandHandlerInfo(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
+        Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
 
     }
 
@@ -70,9 +69,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]");
-        generatedCode.Should().Contain("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));");
-        generatedCode.Should().NotContain("SourceModule.ReferencedAssemblySymbols");
+        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
+        Assert.Contains("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
+        Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
 
     }
 
@@ -102,9 +101,11 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]");
-        generatedCode.Should().Contain("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));");
-        generatedCode.Should().NotContain("SourceModule.ReferencedAssemblySymbols");
+        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
+        Assert.Contains("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.NotificationHandlerInfo(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
+        Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }
+
+
 

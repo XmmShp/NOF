@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
@@ -17,8 +16,10 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
 
         using var scope = host.CreateScope();
-        scope.GetRequiredService<IExecutionContext>().Should().NotBeNull();
-        scope.GetRequiredService<IUserContext>().Should().NotBeNull();
+        Assert.NotNull(
+        scope.GetRequiredService<IExecutionContext>());
+        Assert.NotNull(
+        scope.GetRequiredService<IUserContext>());
     }
 
     [Fact]
@@ -32,14 +33,21 @@ public class NOFTestHostTests
         scope.SetTenant("tenant-a")
             .SetTracing("trace-1", "span-1")
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
+        Assert.Equal("tenant-a",
 
-        scope.ExecutionContext.TenantId.Should().Be("tenant-a");
-        scope.ExecutionContext.TracingInfo.Should().NotBeNull();
-        scope.ExecutionContext.TracingInfo!.TraceId.Should().Be("trace-1");
-        scope.ExecutionContext.TracingInfo!.SpanId.Should().Be("span-1");
-        scope.UserContext.User.Id.Should().Be("user-1");
-        scope.UserContext.User.Name.Should().Be("Alice");
-        scope.UserContext.User.Permissions.Should().Contain(["orders.read", "orders.write"]);
+        scope.ExecutionContext.TenantId);
+        Assert.NotNull(
+        scope.ExecutionContext.TracingInfo);
+        Assert.Equal("trace-1",
+        scope.ExecutionContext.TracingInfo!.TraceId);
+        Assert.Equal("span-1",
+        scope.ExecutionContext.TracingInfo!.SpanId);
+        Assert.Equal("user-1",
+        scope.UserContext.User.Id);
+        Assert.Equal("Alice",
+        scope.UserContext.User.Name);
+        Assert.Contains("orders.read", scope.UserContext.User.Permissions);
+        Assert.Contains("orders.write", scope.UserContext.User.Permissions);
     }
 
     [Fact]
@@ -51,7 +59,7 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
         Func<Task> act = () => host.SendAsync(new TestCommand("do-it"));
 
-        await act.Should().NotThrowAsync();
+        await Record.ExceptionAsync(act);
     }
 
     [Fact]
@@ -63,7 +71,7 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
         Func<Task> act = () => host.PublishAsync(new TestNotification("evt"));
 
-        await act.Should().NotThrowAsync();
+        await Record.ExceptionAsync(act);
     }
 
     [Fact]
@@ -77,8 +85,9 @@ public class NOFTestHostTests
         var first = host.GetRequiredService<SingletonInitializable>();
         var second = host.GetRequiredService<SingletonInitializable>();
 
-        first.Should().BeSameAs(second);
-        first.InitializeCount.Should().Be(1);
+        Assert.Same(first, second);
+        Assert.Equal(1,
+        first.InitializeCount);
     }
 
     [Fact]
@@ -96,10 +105,13 @@ public class NOFTestHostTests
         using var secondScope = host.CreateScope();
         var second = secondScope.GetRequiredService<ScopedInitializable>();
 
-        firstA.Should().BeSameAs(firstB);
-        firstA.InitializeCount.Should().Be(1);
-        second.InitializeCount.Should().Be(1);
-        second.ScopeInstanceId.Should().NotBe(firstA.ScopeInstanceId);
+        Assert.Same(firstA, firstB);
+        Assert.Equal(1,
+        firstA.InitializeCount);
+        Assert.Equal(1,
+        second.InitializeCount);
+        Assert.NotEqual(firstA.ScopeInstanceId,
+        second.ScopeInstanceId);
     }
 
     [Fact]
@@ -113,14 +125,19 @@ public class NOFTestHostTests
         using var scope = host.CreateScope();
 
         var lazy = scope.GetRequiredService<Lazy<LazyProbe>>();
-        lazy.IsValueCreated.Should().BeFalse();
-        LazyProbe.CreatedCount.Should().Be(0);
+        Assert.False(
+        lazy.IsValueCreated);
+        Assert.Equal(0,
+        LazyProbe.CreatedCount);
 
         var probe = lazy.Value;
+        Assert.NotNull(
 
-        probe.Should().NotBeNull();
-        lazy.IsValueCreated.Should().BeTrue();
-        LazyProbe.CreatedCount.Should().Be(1);
+        probe);
+        Assert.True(
+        lazy.IsValueCreated);
+        Assert.Equal(1,
+        LazyProbe.CreatedCount);
     }
 
     private sealed record TestCommand(string Value) : ICommand;
@@ -192,3 +209,4 @@ public class NOFTestHostTests
         }
     }
 }
+

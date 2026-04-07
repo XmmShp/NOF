@@ -1,7 +1,7 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.SourceGenerator.Tests.Extensions;
+using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
@@ -27,7 +27,7 @@ internal static class IncrementalGeneratorExtensions
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
                 .ToList();
 
-            diagnostics.Should().BeEmpty("Generated code should compile successfully");
+            Assert.Empty(diagnostics);
 
             return driver.GetRunResult();
         }
@@ -51,9 +51,11 @@ internal static class IncrementalGeneratorExtensions
                 .Where(d => d.Severity == DiagnosticSeverity.Error)
                 .ToList();
 
-            diagnostics.Should().BeEmpty("Generated code should compile successfully");
+            Assert.Empty(diagnostics);
 
             return driver.GetRunResult();
         }
     }
 }
+
+

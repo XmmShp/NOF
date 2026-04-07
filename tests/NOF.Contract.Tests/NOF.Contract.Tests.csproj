@@ -17,9 +17,7 @@
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="FluentAssertions" />
-  </ItemGroup>
+    </PackageReference>  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
@@ -31,3 +29,4 @@
   </ItemGroup>
 
 </Project>
+

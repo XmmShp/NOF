@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
@@ -16,8 +15,9 @@ public class MemoryPersistenceStoreTests
         var clone = (MemoryPersistenceStore)store.Clone();
         var clonedContext = clone.CreateContext("tenant-a");
         clonedContext.Set<TestProjection>()[0].Name = "after";
+        Assert.Equal("before",
 
-        context.Set<TestProjection>()[0].Name.Should().Be("before");
+        context.Set<TestProjection>()[0].Name);
     }
 
     [Fact]
@@ -33,7 +33,8 @@ public class MemoryPersistenceStoreTests
         store.RestoreFrom(snapshot);
 
         var restored = store.CreateContext("tenant-a").Set<TestProjection>();
-        restored[0].Name.Should().Be("before");
+        Assert.Equal("before",
+        restored[0].Name);
     }
 
     [Fact]
@@ -46,8 +47,8 @@ public class MemoryPersistenceStoreTests
         host.Set<TestProjection>().Add(new TestProjection { Id = 1, Name = "host" });
         tenant.Set<TestProjection>().Add(new TestProjection { Id = 2, Name = "tenant" });
 
-        host.Set<TestProjection>().Should().ContainSingle(item => item.Name == "host");
-        tenant.Set<TestProjection>().Should().ContainSingle(item => item.Name == "tenant");
+        Assert.Single(host.Set<TestProjection>(), item => item.Name == "host");
+        Assert.Single(tenant.Set<TestProjection>(), item => item.Name == "tenant");
     }
 
     private sealed class TestProjection : ICloneable
@@ -60,3 +61,4 @@ public class MemoryPersistenceStoreTests
             => new TestProjection { Id = Id, Name = Name };
     }
 }
+

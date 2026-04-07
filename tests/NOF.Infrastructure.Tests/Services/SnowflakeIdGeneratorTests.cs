@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NOF.Domain;
 using Xunit;
@@ -17,7 +16,7 @@ public class SnowflakeIdGeneratorTests
     public void NextId_ReturnsPositiveLong()
     {
         var gen = Default();
-        gen.NextId().Should().BePositive();
+        Assert.True(gen.NextId() > 0);
     }
 
     [Fact]
@@ -25,7 +24,7 @@ public class SnowflakeIdGeneratorTests
     {
         var gen = Default();
         var ids = Enumerable.Range(0, 1000).Select(_ => gen.NextId()).ToList();
-        ids.Distinct().Should().HaveCount(1000);
+        Assert.Equal(1000, ids.Distinct().Count());
     }
 
     [Fact]
@@ -33,7 +32,7 @@ public class SnowflakeIdGeneratorTests
     {
         var gen = Default();
         var ids = Enumerable.Range(0, 100).Select(_ => gen.NextId()).ToList();
-        ids.Should().BeInAscendingOrder();
+        Assert.True((ids).SequenceEqual((ids).OrderBy(x => x)));
     }
 
     // -----------------------------------------------------------------------
@@ -52,8 +51,9 @@ public class SnowflakeIdGeneratorTests
         const int machineIdBits = 10;
         const long maxMachineId = (1L << machineIdBits) - 1;
         var extractedMachineId = (int)((id >> sequenceBits) & maxMachineId);
+        Assert.Equal(machineId,
 
-        extractedMachineId.Should().Be(machineId);
+        extractedMachineId);
     }
 
     // -----------------------------------------------------------------------
@@ -77,7 +77,8 @@ public class SnowflakeIdGeneratorTests
         var id = gen.NextId();
         var maxMachineId = (1L << machineIdBits) - 1;
         var extracted = (int)((id >> sequenceBits) & maxMachineId);
-        extracted.Should().Be(machineId);
+        Assert.Equal(machineId,
+        extracted);
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public class SnowflakeIdGeneratorTests
         }));
 
         var ids = Enumerable.Range(0, 500).Select(_ => gen.NextId()).ToList();
-        ids.Distinct().Should().HaveCount(500);
+        Assert.Equal(500, ids.Distinct().Count());
     }
 
     // -----------------------------------------------------------------------
@@ -103,7 +104,7 @@ public class SnowflakeIdGeneratorTests
         // A later epoch means smaller timestamp component (less time has elapsed)
         var laterEpoch = DateTimeOffset.UtcNow.AddSeconds(-10);
         var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { Epoch = laterEpoch }));
-        gen.NextId().Should().BePositive();
+        Assert.True(gen.NextId() > 0);
     }
 
     // -----------------------------------------------------------------------
@@ -114,28 +115,28 @@ public class SnowflakeIdGeneratorTests
     public void MachineId_OutOfRange_Throws()
     {
         var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = 9999 }));
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.Throws<ArgumentOutOfRangeException>(act);
     }
 
     [Fact]
     public void NegativeMachineId_Throws()
     {
         var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = -1 }));
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.Throws<ArgumentOutOfRangeException>(act);
     }
 
     [Fact]
     public void InvalidMachineIdBits_Throws()
     {
         var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineIdBits = 0 }));
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.Throws<ArgumentOutOfRangeException>(act);
     }
 
     [Fact]
     public void BitLayoutOverflow_Throws()
     {
         var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineIdBits = 32, SequenceBits = 32 }));
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        Assert.Throws<ArgumentOutOfRangeException>(act);
     }
 
     // -----------------------------------------------------------------------
@@ -146,7 +147,7 @@ public class SnowflakeIdGeneratorTests
     public void ImplementsIIdGenerator()
     {
         IIdGenerator gen = Default();
-        gen.NextId().Should().BePositive();
+        Assert.True(gen.NextId() > 0);
     }
 
     // -----------------------------------------------------------------------
@@ -158,13 +159,16 @@ public class SnowflakeIdGeneratorTests
     {
         var gen = Default();
         IdGenerator.SetCurrent(gen);
-        IdGenerator.Current.Should().BeSameAs(gen);
+        Assert.Same(gen, IdGenerator.Current);
     }
 
     [Fact]
     public void IdGenerator_SetCurrent_Null_Throws()
     {
         var act = () => IdGenerator.SetCurrent(null!);
-        act.Should().Throw<ArgumentNullException>();
+        Assert.Throws<ArgumentNullException>(act);
     }
 }
+
+
+

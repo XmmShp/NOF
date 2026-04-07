@@ -12,12 +12,11 @@
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="FluentAssertions" />
-  </ItemGroup>
+    </PackageReference>  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Extensions\NOF.Application.Extension.Redis\NOF.Application.Extension.Redis.csproj" />
   </ItemGroup>
 
 </Project>
+

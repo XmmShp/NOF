@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Contract.Extension.Authorization.Jwt;
@@ -14,7 +13,8 @@ public sealed class JwtAuthorizationExtensionsTests
     [Fact]
     public void JwtId_ShouldExposeStandardJtiClaimType()
     {
-        ClaimTypes.JwtId.Should().Be("jti");
+        Assert.Equal("jti",
+        ClaimTypes.JwtId);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public sealed class JwtAuthorizationExtensionsTests
 
         var chained = selector.AddJwksRequestHandler();
 
-        chained.Builder.Should().BeSameAs(builder);
+        Assert.Same(builder, chained.Builder);
     }
 
     [Fact]
@@ -36,10 +36,13 @@ public sealed class JwtAuthorizationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
+        Assert.NotNull(
 
-        scope.GetRequiredService<IJwtAuthorityService>().Should().NotBeNull();
-        scope.GetRequiredService<IJwksService>().Should().NotBeNull();
-        scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value.Issuer.Should().Be("https://issuer.local");
+        scope.GetRequiredService<IJwtAuthorityService>());
+        Assert.NotNull(
+        scope.GetRequiredService<IJwksService>());
+        Assert.Equal("https://issuer.local",
+        scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value.Issuer);
     }
 
     [Fact]
@@ -59,11 +62,16 @@ public sealed class JwtAuthorizationExtensionsTests
 
         var resourceOptions = scope.GetRequiredService<IOptions<JwtResourceServerOptions>>().Value;
         var propagationOptions = scope.GetRequiredService<IOptions<JwtTokenPropagationOptions>>().Value;
+        Assert.Equal("https://auth.local/.well-known/jwks.json",
 
-        resourceOptions.JwksEndpoint.Should().Be("https://auth.local/.well-known/jwks.json");
-        propagationOptions.HeaderName.Should().Be("X-Authorization");
-        propagationOptions.TokenType.Should().Be("Token");
-        scope.GetRequiredService<IJwksProvider>().Should().NotBeNull();
-        scope.GetRequiredService<IJwksService>().Should().BeOfType<HttpJwksService>();
+        resourceOptions.JwksEndpoint);
+        Assert.Equal("X-Authorization",
+        propagationOptions.HeaderName);
+        Assert.Equal("Token",
+        propagationOptions.TokenType);
+        Assert.NotNull(
+        scope.GetRequiredService<IJwksProvider>());
+        Assert.IsType<HttpJwksService>(scope.GetRequiredService<IJwksService>());
     }
 }
+

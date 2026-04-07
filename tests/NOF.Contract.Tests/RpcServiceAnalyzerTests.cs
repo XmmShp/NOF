@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -47,7 +46,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF200");
+        Assert.Contains(diagnostics, d => d.Id == "NOF200");
     }
 
     [Fact]
@@ -66,7 +65,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF201");
+        Assert.Single(diagnostics, d => d.Id == "NOF201");
     }
 
     [Fact]
@@ -86,7 +85,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().Contain(d => d.Id == "NOF202");
+        Assert.Contains(diagnostics, d => d.Id == "NOF202");
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF207");
+        Assert.Single(diagnostics, d => d.Id == "NOF207");
     }
 
     [Fact]
@@ -130,7 +129,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF207");
+        Assert.Single(diagnostics, d => d.Id == "NOF207");
     }
 
     [Fact]
@@ -152,7 +151,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF207");
+        Assert.Single(diagnostics, d => d.Id == "NOF207");
     }
 
     [Fact]
@@ -175,7 +174,8 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        diagnostics.Should().NotContain(d => d.Id == "NOF207");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF207");
     }
 }
+
 

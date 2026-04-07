@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NOF.Hosting;
 using Xunit;
 
@@ -36,7 +35,8 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IStep>([]);
 
         var executionOrder = graph.GetExecutionOrder();
-        executionOrder.Should().BeEmpty();
+        Assert.Empty(
+        executionOrder);
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IStep>([taskA]);
 
         var executionOrder = graph.GetExecutionOrder();
-        executionOrder.Should().ContainSingle()
-            .Which.Should().Be(taskA);
+        Assert.Equal(taskA,
+        Assert.Single(executionOrder));
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class ConfiguratorGraphTests
         var graph = new ConfiguratorGraph<IStep>([taskA, taskA, taskA]);
 
         var executionOrder = graph.GetExecutionOrder();
-        executionOrder.Should().ContainSingle()
-            .Which.Should().Be(taskA);
+        Assert.Equal(taskA,
+        Assert.Single(executionOrder));
     }
 
     [Fact]
@@ -73,10 +73,10 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder();
 
-        executionOrder.Should().HaveCount(3);
-        executionOrder.Should().Contain(taskA);
-        executionOrder.Should().Contain(taskB);
-        executionOrder.Should().Contain(taskC);
+        Assert.Equal(3, executionOrder.Count());
+        Assert.Contains(taskA, executionOrder);
+        Assert.Contains(taskB, executionOrder);
+        Assert.Contains(taskC, executionOrder);
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.Should().HaveCount(2);
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskB));
+        Assert.Equal(2, executionOrder.Count());
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
     }
 
     [Fact]
@@ -102,8 +102,8 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskB));
-        executionOrder.IndexOf(taskB).Should().BeLessThan(executionOrder.IndexOf(taskC));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
+        Assert.True(executionOrder.IndexOf(taskB) < executionOrder.IndexOf(taskC));
     }
 
     [Fact]
@@ -117,10 +117,10 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskB));
-        executionOrder.IndexOf(taskB).Should().BeLessThan(executionOrder.IndexOf(taskC));
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskD));
-        executionOrder.IndexOf(taskC).Should().BeLessThan(executionOrder.IndexOf(taskD));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
+        Assert.True(executionOrder.IndexOf(taskB) < executionOrder.IndexOf(taskC));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskD));
+        Assert.True(executionOrder.IndexOf(taskC) < executionOrder.IndexOf(taskD));
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class ConfiguratorGraphTests
 
         var act = () => graph.GetExecutionOrder();
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Circular dependency*");
+        var ex = Assert.Throws<InvalidOperationException>(act);
+        Assert.Contains("Circular dependency", ex.Message);
     }
 
     [Fact]
@@ -144,8 +144,8 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(multiDepsConfigurator));
-        executionOrder.IndexOf(taskB).Should().BeLessThan(executionOrder.IndexOf(multiDepsConfigurator));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(multiDepsConfigurator));
+        Assert.True(executionOrder.IndexOf(taskB) < executionOrder.IndexOf(multiDepsConfigurator));
     }
 
     [Fact]
@@ -158,8 +158,8 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskB));
-        executionOrder.Should().Contain(independent);
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
+        Assert.Contains(independent, executionOrder);
     }
 
     [Fact]
@@ -172,8 +172,8 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA1).Should().BeLessThan(executionOrder.IndexOf(dependentConfigurator));
-        executionOrder.IndexOf(taskA2).Should().BeLessThan(executionOrder.IndexOf(dependentConfigurator));
+        Assert.True(executionOrder.IndexOf(taskA1) < executionOrder.IndexOf(dependentConfigurator));
+        Assert.True(executionOrder.IndexOf(taskA2) < executionOrder.IndexOf(dependentConfigurator));
     }
 
     [Fact]
@@ -188,10 +188,10 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskB));
-        executionOrder.IndexOf(taskB).Should().BeLessThan(executionOrder.IndexOf(taskC));
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskD));
-        executionOrder.IndexOf(taskC).Should().BeLessThan(executionOrder.IndexOf(taskD));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
+        Assert.True(executionOrder.IndexOf(taskB) < executionOrder.IndexOf(taskC));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskD));
+        Assert.True(executionOrder.IndexOf(taskC) < executionOrder.IndexOf(taskD));
     }
 
     [Fact]
@@ -206,8 +206,8 @@ public class ConfiguratorGraphTests
         var executionOrder2 = graph.GetExecutionOrder();
         var executionOrder3 = graph.GetExecutionOrder();
 
-        executionOrder1.Should().Equal(executionOrder2);
-        executionOrder2.Should().Equal(executionOrder3);
+        Assert.Equal(executionOrder1, executionOrder2);
+        Assert.Equal(executionOrder2, executionOrder3);
     }
 
     [Fact]
@@ -220,8 +220,10 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder();
 
-        executionOrder.Should().HaveCount(3);
-        executionOrder.Should().Contain([task1, task2, task3]);
+        Assert.Equal(3, executionOrder.Count());
+        Assert.Contains(task1, executionOrder);
+        Assert.Contains(task2, executionOrder);
+        Assert.Contains(task3, executionOrder);
     }
 
     [Fact]
@@ -235,10 +237,10 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder().ToList();
 
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskB));
-        executionOrder.IndexOf(taskA).Should().BeLessThan(executionOrder.IndexOf(taskD));
-        executionOrder.IndexOf(taskB).Should().BeLessThan(executionOrder.IndexOf(taskC));
-        executionOrder.IndexOf(taskC).Should().BeLessThan(executionOrder.IndexOf(taskD));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
+        Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskD));
+        Assert.True(executionOrder.IndexOf(taskB) < executionOrder.IndexOf(taskC));
+        Assert.True(executionOrder.IndexOf(taskC) < executionOrder.IndexOf(taskD));
     }
 
     [Fact]
@@ -250,8 +252,10 @@ public class ConfiguratorGraphTests
 
         var executionOrder = graph.GetExecutionOrder();
 
-        executionOrder.Should().HaveCount(2);
-        executionOrder.Should().Contain(taskA);
-        executionOrder.Should().Contain(taskWithMissingDep);
+        Assert.Equal(2, executionOrder.Count());
+        Assert.Contains(taskA, executionOrder);
+        Assert.Contains(taskWithMissingDep, executionOrder);
     }
 }
+
+

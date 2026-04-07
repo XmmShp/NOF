@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
@@ -24,10 +23,13 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             nextCalled = true;
             return ValueTask.CompletedTask;
         }, default);
+        Assert.True(
 
-        nextCalled.Should().BeTrue();
-        jwksProvider.CallCount.Should().Be(0);
-        userContext.User.Should().Be(UserContext.Anonymous);
+        nextCalled);
+        Assert.Equal(0,
+        jwksProvider.CallCount);
+        Assert.Equal(UserContext.Anonymous,
+        userContext.User);
     }
 
     [Fact]
@@ -47,11 +49,15 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             nextCalled = true;
             return ValueTask.CompletedTask;
         }, default);
+        Assert.True(
 
-        nextCalled.Should().BeTrue();
-        jwksProvider.CallCount.Should().Be(1);
-        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization).Should().BeTrue();
-        userContext.User.Should().Be(UserContext.Anonymous);
+        nextCalled);
+        Assert.Equal(1,
+        jwksProvider.CallCount);
+        Assert.True(
+        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization));
+        Assert.Equal(UserContext.Anonymous,
+        userContext.User);
     }
 
     [Fact]
@@ -79,9 +85,11 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
 
-        await act.Should().NotThrowAsync();
-        nextCalled.Should().BeTrue();
-        userContext.User.Should().Be(UserContext.Anonymous);
+        Assert.Null(await Record.ExceptionAsync(act));
+        Assert.True(
+        nextCalled);
+        Assert.Equal(UserContext.Anonymous,
+        userContext.User);
     }
 
     private static JwtResourceServerInboundMiddleware CreateMiddleware(
@@ -129,3 +137,5 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         }
     }
 }
+
+

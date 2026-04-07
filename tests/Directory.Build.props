@@ -2,4 +2,8 @@
   <PropertyGroup>
     <NoWarn>$(NoWarn);CS1591;CS8620</NoWarn>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Common\Assertions\*.cs" Link="Assertions\%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>
+

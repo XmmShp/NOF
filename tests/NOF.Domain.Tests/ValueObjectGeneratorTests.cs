@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Domain;
@@ -45,7 +44,7 @@ public class ValueObjectGeneratorTests
     }
 
     // -----------------------------------------------------------------------
-    // NOF010 — must be partial
+    // NOF010 鈥?must be partial
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -61,12 +60,13 @@ public class ValueObjectGeneratorTests
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF010");
-        result.GeneratedTrees.Should().BeEmpty();
+        Assert.Single(diagnostics, d => d.Id == "NOF010");
+        Assert.Empty(
+        result.GeneratedTrees);
     }
 
     // -----------------------------------------------------------------------
-    // NOF012 — [NewableValueObject] only on ValueObject<long>
+    // NOF012 鈥?[NewableValueObject] only on ValueObject<long>
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -83,8 +83,9 @@ public class ValueObjectGeneratorTests
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF012");
-        result.GeneratedTrees.Should().BeEmpty();
+        Assert.Single(diagnostics, d => d.Id == "NOF012");
+        Assert.Empty(
+        result.GeneratedTrees);
     }
 
     [Fact]
@@ -101,12 +102,13 @@ public class ValueObjectGeneratorTests
 
         var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "NOF012");
-        result.GeneratedTrees.Should().BeEmpty();
+        Assert.Single(diagnostics, d => d.Id == "NOF012");
+        Assert.Empty(
+        result.GeneratedTrees);
     }
 
     // -----------------------------------------------------------------------
-    // Happy path — basic generation
+    // Happy path 鈥?basic generation
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -123,17 +125,17 @@ public class ValueObjectGeneratorTests
 
         var result = RunGenerator(source);
 
-        result.GeneratedTrees.Should().ContainSingle();
+        Assert.Single(result.GeneratedTrees);
         var code = GetVoCode(result);
 
-        code.Should().Contain("public static Name Of(string value)");
-        code.Should().Contain("global::System.ArgumentNullException.ThrowIfNull(value)");
-        code.Should().Contain("public static explicit operator string(Name vo)");
-        code.Should().Contain("public static bool operator ==(Name left, Name right)");
-        code.Should().Contain("public static bool operator !=(Name left, Name right)");
-        code.Should().Contain("public sealed class __JsonConverter");
-        code.Should().NotContain("Of(string? value)"); // no nullable overload for ref types
-        code.Should().NotContain("public static Name New()");
+        Assert.Contains("public static Name Of(string value)", code);
+        Assert.Contains("global::System.ArgumentNullException.ThrowIfNull(value)", code);
+        Assert.Contains("public static explicit operator string(Name vo)", code);
+        Assert.Contains("public static bool operator ==(Name left, Name right)", code);
+        Assert.Contains("public static bool operator !=(Name left, Name right)", code);
+        Assert.Contains("public sealed class __JsonConverter", code);
+        Assert.DoesNotContain("Of(string? value)", code); // no nullable overload for ref types
+        Assert.DoesNotContain("public static Name New()", code);
     }
 
     [Fact]
@@ -152,7 +154,7 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
-        code.Should().NotContain("ArgumentNullException.ThrowIfNull");
+        Assert.DoesNotContain("ArgumentNullException.ThrowIfNull", code);
     }
 
     [Fact]
@@ -169,17 +171,17 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
-        code.Should().Contain("public static OrderId? Of(long? value)");
-        code.Should().Contain("value.HasValue ? Of(value.Value) : null");
-        code.Should().NotContain("ArgumentNullException.ThrowIfNull");
-        code.Should().Contain("_value.GetHashCode()");   // value type — no ?.
-        code.Should().Contain("_value.ToString()");
+        Assert.Contains("public static OrderId? Of(long? value)", code);
+        Assert.Contains("value.HasValue ? Of(value.Value) : null", code);
+        Assert.DoesNotContain("ArgumentNullException.ThrowIfNull", code);
+        Assert.Contains("_value.GetHashCode()", code);   // value type 鈥?no ?.
+        Assert.Contains("_value.ToString()", code);
     }
 
     [Fact]
     public void AlwaysCallsValidateInOf()
     {
-        // Validate is a static virtual on IValueObject<T> — always called even without override
+        // Validate is a static virtual on IValueObject<T> 鈥?always called even without override
         const string source = """
             using NOF.Domain;
             namespace Test
@@ -191,7 +193,7 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
-        code.Should().Contain("__CallValidate<OrderId>(value);");
+        Assert.Contains("__CallValidate<OrderId>(value);", code);
     }
 
     [Fact]
@@ -214,7 +216,7 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
-        code.Should().Contain("__CallValidate<OrderId>(value);");
+        Assert.Contains("__CallValidate<OrderId>(value);", code);
     }
 
     [Fact]
@@ -232,8 +234,8 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
-        code.Should().Contain("public static EntityId New()");
-        code.Should().Contain("global::NOF.Domain.IdGenerator.Current.NextId()");
+        Assert.Contains("public static EntityId New()", code);
+        Assert.Contains("global::NOF.Domain.IdGenerator.Current.NextId()", code);
     }
 
     [Fact]
@@ -254,6 +256,9 @@ public class ValueObjectGeneratorTests
         // null guard must come before Validate
         var nullGuardIdx = code.IndexOf("ArgumentNullException.ThrowIfNull", StringComparison.Ordinal);
         var validateIdx = code.IndexOf("__CallValidate<Tag>(value);", StringComparison.Ordinal);
-        nullGuardIdx.Should().BeLessThan(validateIdx);
+        Assert.True(nullGuardIdx < validateIdx);
     }
 }
+
+
+

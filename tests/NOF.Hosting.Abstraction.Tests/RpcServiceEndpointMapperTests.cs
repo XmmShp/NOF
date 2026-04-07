@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
@@ -80,16 +79,16 @@ public class RpcServiceEndpointMapperTests
         var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, mainRefs);
         var result = new RpcServiceEndpointMapperGenerator().GetResult(mainComp);
 
-        result.GeneratedTrees.Should().ContainSingle();
+        Assert.Single(result.GeneratedTrees);
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        code.Should().Contain("InterceptsLocation");
-        code.Should().Contain("app.MapGet(BuildRoute(prefix, \"/api/user\")");
-        code.Should().Contain("app.MapPost(BuildRoute(prefix, \"/api/user\")");
-        code.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] Lib.ILibService service");
-        code.Should().Contain("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] App.IAppService service");
-        code.Should().Contain("GetUserAsync(request)");
-        code.Should().Contain("CreateUserAsync(request, cancellationToken)");
+        Assert.Contains("InterceptsLocation", code);
+        Assert.Contains("app.MapGet(BuildRoute(prefix, \"/api/user\")", code);
+        Assert.Contains("app.MapPost(BuildRoute(prefix, \"/api/user\")", code);
+        Assert.Contains("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] Lib.ILibService service", code);
+        Assert.Contains("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] App.IAppService service", code);
+        Assert.Contains("GetUserAsync(request)", code);
+        Assert.Contains("CreateUserAsync(request, cancellationToken)", code);
     }
 
     [Fact]
@@ -113,8 +112,9 @@ public class RpcServiceEndpointMapperTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
+        Assert.Empty(
 
-        result.GeneratedTrees.Should().BeEmpty();
+        result.GeneratedTrees);
     }
 
     [Fact]
@@ -149,10 +149,10 @@ public class RpcServiceEndpointMapperTests
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
 
-        result.GeneratedTrees.Should().ContainSingle();
+        Assert.Single(result.GeneratedTrees);
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
-        code.Should().Contain("MapPost");
-        code.Should().Contain("BuildRoute(prefix, \"Internal\")");
+        Assert.Contains("MapPost", code);
+        Assert.Contains("BuildRoute(prefix, \"Internal\")", code);
     }
 
     [Fact]
@@ -192,13 +192,15 @@ public class RpcServiceEndpointMapperTests
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
         var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
 
-        result.GeneratedTrees.Should().ContainSingle();
+        Assert.Single(result.GeneratedTrees);
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        code.Should().Contain("class __App_IMyService_UpdateItemRequest_Body__");
-        code.Should().Contain("new App.UpdateItemRequest(id)");
-        code.Should().Contain("Value = __body__.Value");
-        code.Should().Contain("Priority = __body__.Priority");
-        code.Should().Contain("UpdateItemAsync(request)");
+        Assert.Contains("class __App_IMyService_UpdateItemRequest_Body__", code);
+        Assert.Contains("new App.UpdateItemRequest(id)", code);
+        Assert.Contains("Value = __body__.Value", code);
+        Assert.Contains("Priority = __body__.Priority", code);
+        Assert.Contains("UpdateItemAsync(request)", code);
     }
 }
+
+

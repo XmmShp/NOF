@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Annotation;
 using NOF.Application;
@@ -43,7 +42,7 @@ public class ServiceImplementationGeneratorTests
         var result = new ServiceImplementationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Transient, useFactory: false);");
+        Assert.Contains("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Transient, useFactory: false);", generatedCode);
     }
 
     [Fact]
@@ -80,7 +79,7 @@ public class ServiceImplementationGeneratorTests
         var result = new ServiceImplementationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Transient, useFactory: false);");
+        Assert.Contains("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Transient, useFactory: false);", generatedCode);
     }
 
     [Fact]
@@ -89,6 +88,8 @@ public class ServiceImplementationGeneratorTests
         var analyzer = new ServiceImplementationAnalyzer();
         var ids = analyzer.SupportedDiagnostics.Select(d => d.Id).ToArray();
 
-        ids.Should().Equal("NOF300");
+        Assert.Equal(["NOF300"], ids);
     }
 }
+
+

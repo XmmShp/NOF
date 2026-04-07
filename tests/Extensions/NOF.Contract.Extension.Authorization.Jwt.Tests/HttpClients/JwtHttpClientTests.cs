@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Contract;
 using System.Net;
@@ -44,19 +43,26 @@ public sealed class JwtHttpClientTests
         var service = new HttpJwksService(httpClient, pipeline, executionContext, new SimpleServiceProvider());
 
         var result = await service.GetJwksAsync();
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value!.Keys.Should().ContainSingle(k => k.Kid == "kid-1");
+        result.IsSuccess);
+        Assert.NotNull(
+        result.Value);
+        Assert.Single(result.Value!.Keys, k => k.Kid == "kid-1");
+        Assert.NotNull(
 
-        handler.LastRequest.Should().NotBeNull();
-        handler.LastRequest!.Method.Should().Be(HttpMethod.Get);
-        handler.LastRequest.PathAndQuery.Should().Be(JwtAuthorizationEndpoints.Jwks);
-        handler.LastRequest.Headers.Should().ContainKey("X-Tenant");
-        handler.LastRequest.Headers["X-Tenant"].Should().ContainSingle("tenant-a");
+        handler.LastRequest);
+        Assert.Equal(HttpMethod.Get,
+        handler.LastRequest!.Method);
+        Assert.Equal(JwtAuthorizationEndpoints.Jwks,
+        handler.LastRequest.PathAndQuery);
+        Assert.True(handler.LastRequest.Headers.ContainsKey("X-Tenant"));
+        Assert.Single(handler.LastRequest.Headers["X-Tenant"]);
+        Assert.Equal("tenant-a", handler.LastRequest.Headers["X-Tenant"][0]);
+        Assert.NotNull(
 
-        pipeline.LastContext.Should().NotBeNull();
-        pipeline.LastContext!.Response.Should().BeAssignableTo<Result<JwksDocument>>();
+        pipeline.LastContext);
+        Assert.IsAssignableFrom<Result<JwksDocument>>(pipeline.LastContext!.Response);
     }
 
     [Fact]
@@ -93,33 +99,47 @@ public sealed class JwtHttpClientTests
             CustomClaims: new Dictionary<string, string> { ["role"] = "admin" });
 
         var result = await service.GenerateJwtTokenAsync(request);
+        Assert.True(
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value!.TokenPair.AccessToken.Should().Be("access-token");
+        result.IsSuccess);
+        Assert.NotNull(
+        result.Value);
+        Assert.Equal("access-token",
+        result.Value!.TokenPair.AccessToken);
+        Assert.NotNull(
 
-        handler.LastRequest.Should().NotBeNull();
-        handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
-        handler.LastRequest.PathAndQuery.Should().Be(JwtAuthorizationEndpoints.Token);
-        handler.LastRequest.Headers.Should().ContainKey("Authorization");
+        handler.LastRequest);
+        Assert.Equal(HttpMethod.Post,
+        handler.LastRequest!.Method);
+        Assert.Equal(JwtAuthorizationEndpoints.Token,
+        handler.LastRequest.PathAndQuery);
+        Assert.True(handler.LastRequest.Headers.ContainsKey("Authorization"));
 
         var payload = JsonSerializer.Deserialize<GenerateJwtTokenRequest>(handler.LastRequest.Body!, JsonSerializerOptions.NOF);
-        payload.Should().NotBeNull();
-        payload!.UserId.Should().Be("user-1");
-        payload.Permissions.Should().ContainSingle("orders.read");
+        Assert.NotNull(
+        payload);
+        Assert.Equal("user-1",
+        payload!.UserId);
+        Assert.Single(payload.Permissions);
+        Assert.Equal("orders.read", payload.Permissions[0]);
+        Assert.NotNull(
 
-        pipeline.LastContext.Should().NotBeNull();
-        pipeline.LastContext!.Message.Should().BeOfType<GenerateJwtTokenRequest>();
-        pipeline.LastContext.Response.Should().BeAssignableTo<Result<GenerateJwtTokenResponse>>();
+        pipeline.LastContext);
+        Assert.IsType<GenerateJwtTokenRequest>(pipeline.LastContext!.Message);
+        Assert.IsAssignableFrom<Result<GenerateJwtTokenResponse>>(pipeline.LastContext.Response);
     }
 
     [Fact]
     public void JwtAuthorizationEndpoints_ShouldMatchWellKnownRoutes()
     {
-        JwtAuthorizationEndpoints.Jwks.Should().Be("/.well-known/jwks.json");
-        JwtAuthorizationEndpoints.Token.Should().Be("/connect/token");
-        JwtAuthorizationEndpoints.Introspect.Should().Be("/connect/introspect");
-        JwtAuthorizationEndpoints.Revocation.Should().Be("/connect/revocation");
+        Assert.Equal("/.well-known/jwks.json",
+        JwtAuthorizationEndpoints.Jwks);
+        Assert.Equal("/connect/token",
+        JwtAuthorizationEndpoints.Token);
+        Assert.Equal("/connect/introspect",
+        JwtAuthorizationEndpoints.Introspect);
+        Assert.Equal("/connect/revocation",
+        JwtAuthorizationEndpoints.Revocation);
     }
 
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)
@@ -181,3 +201,5 @@ public sealed class JwtHttpClientTests
         }
     }
 }
+
+

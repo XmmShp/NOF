@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NOF.Application;
 using System.Reflection;
 using Xunit;
@@ -10,7 +9,8 @@ public sealed class IRedisCacheServiceContractTests
     [Fact]
     public void IRedisCacheService_ShouldInherit_ICacheService()
     {
-        typeof(ICacheService).IsAssignableFrom(typeof(IRedisCacheService)).Should().BeTrue();
+        Assert.True(
+        typeof(ICacheService).IsAssignableFrom(typeof(IRedisCacheService)));
     }
 
     [Fact]
@@ -21,14 +21,13 @@ public sealed class IRedisCacheServiceContractTests
             .Where(HasCacheKeyFirstParameter)
             .ToArray();
 
-        methods.Length.Should().BeGreaterThanOrEqualTo(20);
-        methods.Select(m => m.Name).Should().Contain([
-            "HashSetAsync",
-            "HashGetAsync",
-            "SetAddAsync",
-            "ListRangeAsync",
-            "SortedSetIncrementScoreAsync"
-        ]);
+        Assert.True(methods.Length >= 20);
+        var names = methods.Select(m => m.Name).ToArray();
+        Assert.Contains("HashSetAsync", names);
+        Assert.Contains("HashGetAsync", names);
+        Assert.Contains("SetAddAsync", names);
+        Assert.Contains("ListRangeAsync", names);
+        Assert.Contains("SortedSetIncrementScoreAsync", names);
     }
 
     private static bool HasCacheKeyFirstParameter(MethodInfo method)
@@ -43,3 +42,5 @@ public sealed class IRedisCacheServiceContractTests
         return first.IsGenericType && first.GetGenericTypeDefinition() == typeof(CacheKey<>);
     }
 }
+
+
