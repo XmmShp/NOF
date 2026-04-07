@@ -10,6 +10,7 @@ public sealed class OutboundPipelineExecutor : IOutboundPipelineExecutor
     public OutboundPipelineExecutor(OutboundPipelineTypes middlewareTypes)
     {
         _middlewareTypes = middlewareTypes;
+        _middlewareTypes.Freeze();
     }
 
     public ValueTask ExecuteAsync(OutboundContext context, OutboundDelegate dispatch, CancellationToken cancellationToken)

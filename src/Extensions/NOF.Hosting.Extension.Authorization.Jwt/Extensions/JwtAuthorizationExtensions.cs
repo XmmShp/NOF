@@ -24,11 +24,10 @@ public static partial class NOFJwtAuthorizationExtensions
                 builder.Services.AddOptions<JwtTokenPropagationOptions>();
             }
 
-            builder.AddRegistrationStep(
-                new OutboundMiddlewareRegistrationStep<JwtTokenPropagationOutboundMiddleware>(),
-                [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<JwtTokenPropagationOutboundMiddleware>()]);
+            builder.Services.AddOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
 
             return builder;
         }
     }
 }
+

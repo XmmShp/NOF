@@ -45,25 +45,14 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddHostedService<OutboxMessageBackgroundService>();
             builder.Services.AddOptions<OutboxOptions>();
 
+            builder.Services.AddInboundMiddleware<ExceptionInboundMiddleware>();
+            builder.Services.AddInboundMiddleware<TenantInboundMiddleware>();
+            builder.Services.AddInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddInboundMiddleware<TracingInboundMiddleware>();
+            builder.Services.AddInboundMiddleware<AutoInstrumentationInboundMiddleware>();
+            builder.Services.AddInboundMiddleware<MessageInboxInboundMiddleware>();
+
             builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
-                .TryAddRegistrationStep(
-                    new InboundMiddlewareRegistrationStep<ExceptionInboundMiddleware>(),
-                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<ExceptionInboundMiddleware>()])
-                .TryAddRegistrationStep(
-                    new InboundMiddlewareRegistrationStep<TenantInboundMiddleware>(),
-                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TenantInboundMiddleware>()])
-                .TryAddRegistrationStep(
-                    new InboundMiddlewareRegistrationStep<AuthorizationInboundMiddleware>(),
-                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<AuthorizationInboundMiddleware>()])
-                .TryAddRegistrationStep(
-                    new InboundMiddlewareRegistrationStep<TracingInboundMiddleware>(),
-                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TracingInboundMiddleware>()])
-                .TryAddRegistrationStep(
-                    new InboundMiddlewareRegistrationStep<AutoInstrumentationInboundMiddleware>(),
-                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<AutoInstrumentationInboundMiddleware>()])
-                .TryAddRegistrationStep(
-                    new InboundMiddlewareRegistrationStep<MessageInboxInboundMiddleware>(),
-                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<MessageInboxInboundMiddleware>()])
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
                 .TryAddRegistrationStep<HandlerServiceRegistrationStep>()
                 .TryAddInitializationStep<IdGeneratorInitializationStep>()
@@ -126,3 +115,4 @@ public static partial class NOFInfrastructureExtensions
             => builder.AddInitializationStep(new ApplicationInitializationStep(func));
     }
 }
+

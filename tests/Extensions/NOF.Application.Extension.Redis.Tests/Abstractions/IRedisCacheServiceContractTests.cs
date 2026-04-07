@@ -16,8 +16,8 @@ public sealed class IRedisCacheServiceContractTests
     [Fact]
     public void IRedisCacheService_ShouldExposeCacheKeyBasedConvenienceOverloads()
     {
-        var methods = typeof(IRedisCacheService)
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+        var methods = typeof(NOFApplicationExtensionRedisExtensions)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Where(HasCacheKeyFirstParameter)
             .ToArray();
 
@@ -33,14 +33,13 @@ public sealed class IRedisCacheServiceContractTests
     private static bool HasCacheKeyFirstParameter(MethodInfo method)
     {
         var parameters = method.GetParameters();
-        if (parameters.Length == 0)
+        if (parameters.Length < 2)
         {
             return false;
         }
 
-        var first = parameters[0].ParameterType;
+        var first = parameters[1].ParameterType;
         return first.IsGenericType && first.GetGenericTypeDefinition() == typeof(CacheKey<>);
     }
 }
-
 

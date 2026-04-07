@@ -9,36 +9,44 @@ public interface IStateMachineBuilderWhenClause<in TState, out TNotification>
 {
     IStateMachineBuilderWhenClause<TState, TNotification> ExecuteAsync(Func<TNotification, IServiceProvider, CancellationToken, Task> actionFunc);
     void TransitionTo(TState state);
+}
 
-    /// <summary>Executes a synchronous action when the state machine transition is triggered.</summary>
-    IStateMachineBuilderWhenClause<TState, TNotification> Execute(Action<TNotification, IServiceProvider> action)
+public static partial class NOFApplicationExtensions
+{
+    extension<TState, TNotification>(IStateMachineBuilderWhenClause<TState, TNotification> clause)
+        where TNotification : class, INotification
+        where TState : struct, Enum
     {
-        return ExecuteAsync((notification, sp, _) =>
+        /// <summary>Executes a synchronous action when the state machine transition is triggered.</summary>
+        public IStateMachineBuilderWhenClause<TState, TNotification> Execute(Action<TNotification, IServiceProvider> action)
         {
-            action(notification, sp);
-            return Task.CompletedTask;
-        });
-    }
+            return clause.ExecuteAsync((notification, sp, _) =>
+            {
+                action(notification, sp);
+                return Task.CompletedTask;
+            });
+        }
 
-    /// <summary>Sends a command asynchronously when the transition is triggered.</summary>
-    IStateMachineBuilderWhenClause<TState, TNotification> SendCommandAsync<TCommand>(Func<TNotification, TCommand> commandFactory)
-        where TCommand : class, ICommand
-    {
-        return ExecuteAsync(async (notification, sp, cancellationToken) =>
+        /// <summary>Sends a command asynchronously when the transition is triggered.</summary>
+        public IStateMachineBuilderWhenClause<TState, TNotification> SendCommandAsync<TCommand>(Func<TNotification, TCommand> commandFactory)
+            where TCommand : class, ICommand
         {
-            var commandSender = sp.GetRequiredService<ICommandSender>();
-            await commandSender.SendAsync(commandFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
-        });
-    }
+            return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
+            {
+                var commandSender = sp.GetRequiredService<ICommandSender>();
+                await commandSender.SendAsync(commandFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
+            });
+        }
 
-    /// <summary>Publishes a notification asynchronously when the transition is triggered.</summary>
-    IStateMachineBuilderWhenClause<TState, TNotification> PublishNotificationAsync<TAnotherNotification>(Func<TNotification, TAnotherNotification> notificationFactory)
-        where TAnotherNotification : class, INotification
-    {
-        return ExecuteAsync(async (notification, sp, cancellationToken) =>
+        /// <summary>Publishes a notification asynchronously when the transition is triggered.</summary>
+        public IStateMachineBuilderWhenClause<TState, TNotification> PublishNotificationAsync<TAnotherNotification>(Func<TNotification, TAnotherNotification> notificationFactory)
+            where TAnotherNotification : class, INotification
         {
-            var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
-            await notificationPublisher.PublishAsync(notificationFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
-        });
+            return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
+            {
+                var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
+                await notificationPublisher.PublishAsync(notificationFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
+            });
+        }
     }
 }

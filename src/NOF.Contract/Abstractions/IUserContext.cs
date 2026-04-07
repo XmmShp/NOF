@@ -36,38 +36,49 @@ public interface IUserContext
     void SetUser(ClaimsPrincipal user);
 
     void UnsetUser();
+}
 
-    /// <summary>
-    /// Gets a value indicating whether the current user is authenticated.
-    /// </summary>
-    bool IsAuthenticated => User.IsAuthenticated;
+public static partial class NOFContractExtensions
+{
+    extension(IUserContext userContext)
+    {
+        /// <summary>
+        /// Gets a value indicating whether the current user is authenticated.
+        /// </summary>
+        public bool IsAuthenticated
+            => userContext.User.IsAuthenticated;
 
-    /// <summary>
-    /// Gets the unique identifier of the current user.
-    /// </summary>
-    string? Id => User.Id;
+        /// <summary>
+        /// Gets the unique identifier of the current user.
+        /// </summary>
+        public string? Id
+            => userContext.User.Id;
 
-    /// <summary>
-    /// Gets the display name of the current user.
-    /// </summary>
-    string? Name => User.Name;
+        /// <summary>
+        /// Gets the display name of the current user.
+        /// </summary>
+        public string? Name
+            => userContext.User.Name;
 
-    /// <summary>
-    /// Gets the permissions granted to the current user.
-    /// </summary>
-    IReadOnlyList<string> Permissions => User.Permissions;
+        /// <summary>
+        /// Gets the permissions granted to the current user.
+        /// </summary>
+        public IReadOnlyList<string> Permissions
+            => userContext.User.Permissions;
 
-    /// <summary>
-    /// Gets the tenant identifier of the current user.
-    /// </summary>
-    string? TenantId => User.TenantId;
+        /// <summary>
+        /// Gets the tenant identifier of the current user.
+        /// </summary>
+        public string? TenantId
+            => userContext.User.TenantId;
 
-    /// <summary>
-    /// Determines whether the current user has the specified permission.
-    /// </summary>
-    /// <param name="permission">The permission to check.</param>
-    /// <param name="comparison">The string comparison used for matching.</param>
-    /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
-    bool HasPermission(string permission, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
-        => User.HasPermission(permission, comparison);
+        /// <summary>
+        /// Determines whether the current user has the specified permission.
+        /// </summary>
+        /// <param name="permission">The permission to check.</param>
+        /// <param name="comparison">The string comparison used for matching.</param>
+        /// <returns><c>true</c> if the user has the permission; otherwise, <c>false</c>.</returns>
+        public bool HasPermission(string permission, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
+            => userContext.User.HasPermission(permission, comparison);
+    }
 }

@@ -8,42 +8,50 @@ namespace NOF.Hosting;
 /// </summary>
 public interface IServiceRegistrationContext : IHostApplicationBuilder
 {
-    IServiceRegistrationContext AddInitializationStep(IApplicationInitializationStep initializationStep, params Type[] allInterfaces);
-
-    IServiceRegistrationContext AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
-        where TStep : IApplicationInitializationStep
-        => AddInitializationStep(initializationStep, [.. DependencyNode<IApplicationInitializationStep>.CollectRelatedTypes<TStep>()]);
+    IServiceRegistrationContext AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep, params Type[] allInterfaces)
+        where TStep : IApplicationInitializationStep;
 
     IServiceRegistrationContext RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate);
+}
 
-    IServiceRegistrationContext RemoveInitializationStep<T>() where T : IApplicationInitializationStep
-        => RemoveInitializationStep(t => t is T);
-
-    IServiceRegistrationContext TryAddInitializationStep(IApplicationInitializationStep initializationStep, params Type[] allInterfaces)
+public static partial class NOFHostingExtensions
+{
+    extension(IServiceRegistrationContext context)
     {
-        ArgumentNullException.ThrowIfNull(initializationStep);
-        var exists = false;
-        RemoveInitializationStep(existing =>
-        {
-            if (existing.GetType() == initializationStep.GetType())
-            {
-                exists = true;
-            }
-            return false;
-        });
+        public IServiceRegistrationContext AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
+            where TStep : IApplicationInitializationStep
+            => context.AddInitializationStep(initializationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
 
-        if (exists)
+        public IServiceRegistrationContext RemoveInitializationStep<T>() where T : IApplicationInitializationStep
+            => context.RemoveInitializationStep(t => t is T);
+
+        public IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep, params Type[] allInterfaces)
+            where TStep : IApplicationInitializationStep
         {
-            return this;
+            ArgumentNullException.ThrowIfNull(initializationStep);
+            var exists = false;
+            context.RemoveInitializationStep(existing =>
+            {
+                if (existing.GetType() == initializationStep.GetType())
+                {
+                    exists = true;
+                }
+                return false;
+            });
+
+            if (exists)
+            {
+                return context;
+            }
+
+            return context.AddInitializationStep(initializationStep, allInterfaces);
         }
 
-        return AddInitializationStep(initializationStep, allInterfaces);
+        public IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
+            where TStep : IApplicationInitializationStep
+            => context.TryAddInitializationStep(initializationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
+
+        public IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] T>() where T : IApplicationInitializationStep, new()
+            => context.TryAddInitializationStep(new T());
     }
-
-    IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
-        where TStep : IApplicationInitializationStep
-        => TryAddInitializationStep(initializationStep, [.. DependencyNode<IApplicationInitializationStep>.CollectRelatedTypes<TStep>()]);
-
-    IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] T>() where T : IApplicationInitializationStep, new()
-        => TryAddInitializationStep(new T());
 }

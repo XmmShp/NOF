@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
 using NOF.Hosting;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
@@ -23,6 +25,18 @@ public static partial class NOFInfrastructureExtensions
                 set.Add(info);
             }
 
+            return services;
+        }
+
+        /// <summary>
+        /// Registers an inbound middleware type and appends it to <see cref="InboundPipelineTypes"/>.
+        /// The final execution order is resolved when the pipeline freezes.
+        /// </summary>
+        public IServiceCollection AddInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, IInboundMiddleware
+        {
+            services.TryAddScoped<TMiddleware>();
+            services.GetOrAddSingleton<InboundPipelineTypes>().Add<TMiddleware>();
             return services;
         }
     }

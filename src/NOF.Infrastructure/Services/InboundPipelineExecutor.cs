@@ -1,13 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
 /// <summary>
 /// Default implementation of <see cref="IInboundPipelineExecutor"/>.
 /// Middleware instances are resolved from DI (scoped, like ASP.NET Core's <c>IMiddleware</c>).
-/// Middleware ordering is determined at startup by the topological sort of
-/// <see cref="IInboundMiddlewareStep{TMiddleware}"/> registrations, stored in <see cref="InboundPipelineTypes"/>.
+/// Middleware ordering is determined at startup by dependency sorting in <see cref="InboundPipelineTypes"/>.
 /// </summary>
 public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
 {
@@ -16,6 +16,7 @@ public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
     public InboundPipelineExecutor(InboundPipelineTypes middlewareTypes)
     {
         _middlewareTypes = middlewareTypes;
+        _middlewareTypes.Freeze();
     }
 
     public ValueTask ExecuteAsync(InboundContext context, InboundDelegate inbound, CancellationToken cancellationToken)

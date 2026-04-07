@@ -11,7 +11,7 @@ Provides the core host-builder abstraction contracts used by NOF hosting impleme
 - `IAfter<>` / `IBefore<>`
 - `IServiceRegistrationStep`
 - `IApplicationInitializationStep`
-- `DependencyGraph<T>` (dependency-aware topological ordering for steps)
+- `DependencyGraph` (dependency-aware topological ordering)
 - `NOFServiceProviderFactory` / `NOFServiceProvider` (provider wrapper for initialization and daemon resolution)
 
 This package enables host scenarios that do not require the full application/infrastructure stack.

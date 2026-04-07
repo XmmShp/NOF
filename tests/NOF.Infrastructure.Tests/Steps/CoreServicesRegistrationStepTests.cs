@@ -169,7 +169,8 @@ public class InfrastructureDefaultsTests
             _initializationSteps = other._initializationSteps;
         }
 
-        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep, params Type[] allInterfaces)
+        public INOFAppBuilder AddRegistrationStep<TStep>(TStep registrationStep, params Type[] allInterfaces)
+            where TStep : IServiceRegistrationStep
         {
             _registrationSteps.Add(registrationStep);
             return this;
@@ -181,7 +182,8 @@ public class InfrastructureDefaultsTests
             return this;
         }
 
-        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep, params Type[] allInterfaces)
+        public INOFAppBuilder AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
+            where TStep : IApplicationInitializationStep
         {
             _initializationSteps.Add(initializationStep);
             return this;
@@ -192,6 +194,12 @@ public class InfrastructureDefaultsTests
             _initializationSteps.RemoveAll(predicate);
             return this;
         }
+
+        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
+            => AddInitializationStep(initializationStep, allInterfaces);
+
+        IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
+            => RemoveInitializationStep(predicate);
 
         public IDictionary<object, object> Properties => _properties;
 
@@ -338,4 +346,3 @@ public class InfrastructureDefaultsTests
             => ValueTask.CompletedTask;
     }
 }
-

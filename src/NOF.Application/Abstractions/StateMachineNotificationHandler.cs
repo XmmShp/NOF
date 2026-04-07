@@ -1,4 +1,5 @@
 using NOF.Contract;
+using NOF.Domain;
 using System.ComponentModel;
 
 namespace NOF.Application;

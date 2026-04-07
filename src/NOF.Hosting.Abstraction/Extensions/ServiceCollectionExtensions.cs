@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -212,6 +214,18 @@ public static partial class NOFHostingExtensions
 
                 configurator?.Invoke(sp, client);
             });
+        }
+
+        /// <summary>
+        /// Registers an outbound middleware type and appends it to <see cref="OutboundPipelineTypes"/>.
+        /// The final execution order is resolved when the pipeline freezes.
+        /// </summary>
+        public IServiceCollection AddOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, IOutboundMiddleware
+        {
+            services.TryAddScoped<TMiddleware>();
+            services.GetOrAddSingleton<OutboundPipelineTypes>().Add<TMiddleware>();
+            return services;
         }
     }
 }

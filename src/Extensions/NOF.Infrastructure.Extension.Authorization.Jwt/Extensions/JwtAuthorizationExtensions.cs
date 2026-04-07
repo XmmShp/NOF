@@ -58,9 +58,7 @@ public static partial class NOFJwtAuthorizationExtensions
             builder.Services.AddHandlerInfo(new NotificationHandlerInfo(typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification)));
 #pragma warning restore CS8620
 
-            builder.AddRegistrationStep(
-                new InboundMiddlewareRegistrationStep<JwtResourceServerInboundMiddleware>(),
-                [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<JwtResourceServerInboundMiddleware>()]);
+            builder.Services.AddInboundMiddleware<JwtResourceServerInboundMiddleware>();
 
             return builder;
         }
@@ -125,3 +123,4 @@ public static partial class NOFJwtAuthorizationExtensions
     }
 
 }
+

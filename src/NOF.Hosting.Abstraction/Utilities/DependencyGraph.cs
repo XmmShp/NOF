@@ -5,27 +5,25 @@ namespace NOF.Hosting;
 /// based on explicit dependencies declared via the <see cref="IAfter{TDependency}"/> and <see cref="IBefore{TDependency}"/> interfaces.
 /// This ensures nodes are executed in a valid order where dependencies run before their dependents.
 /// </summary>
-/// <typeparam name="T">The node type.</typeparam>
-public class DependencyGraph<T>
+public sealed class DependencyGraph
 {
-    private readonly HashSet<DependencyNode<T>> _nodes;
-    private IReadOnlyList<T>? _orderedNodes;
+    private readonly HashSet<DependencyNode> _nodes;
+    private IReadOnlyList<DependencyNode>? _orderedNodes;
 
-    // Maps a contract type (e.g., IDb, BaseConfig) to all nodes that implement/inherit it
-    private readonly Dictionary<Type, HashSet<DependencyNode<T>>> _typeNodeMap;
+    private readonly Dictionary<Type, HashSet<DependencyNode>> _typeNodeMap;
 
-    public DependencyGraph(IEnumerable<DependencyNode<T>> nodes)
+    public DependencyGraph(IEnumerable<DependencyNode> nodes)
     {
         ArgumentNullException.ThrowIfNull(nodes);
 
         _typeNodeMap = [];
-        var nodesSet = new HashSet<DependencyNode<T>>();
+        var nodesSet = new HashSet<DependencyNode>();
 
         foreach (var node in nodes)
         {
             if (!nodesSet.Add(node))
             {
-                continue; // skip duplicates
+                continue;
             }
             IndexNode(node);
         }
@@ -33,9 +31,9 @@ public class DependencyGraph<T>
         _nodes = nodesSet;
     }
 
-    private void IndexNode(DependencyNode<T> node)
+    private void IndexNode(DependencyNode node)
     {
-        foreach (var relatedType in node.AllInterfaces.Where(ancestor => ancestor.IsAssignableTo(typeof(T))))
+        foreach (var relatedType in node.AllInterfaces)
         {
             if (!_typeNodeMap.TryGetValue(relatedType, out var nodes))
             {
@@ -46,14 +44,14 @@ public class DependencyGraph<T>
         }
     }
 
-    public IReadOnlyList<T> GetExecutionOrder()
+    public IReadOnlyList<DependencyNode> GetExecutionOrder()
     {
         if (_orderedNodes is not null)
         {
             return _orderedNodes;
         }
 
-        var graph = _nodes.ToDictionary(n => n, _ => new HashSet<DependencyNode<T>>());
+        var graph = _nodes.ToDictionary(n => n, _ => new HashSet<DependencyNode>());
         var inDegree = _nodes.ToDictionary(n => n, _ => 0);
 
         foreach (var node in _nodes)
@@ -95,13 +93,13 @@ public class DependencyGraph<T>
             }
         }
 
-        var queue = new Queue<DependencyNode<T>>(_nodes.Where(n => inDegree[n] == 0));
-        var result = new List<T>();
+        var queue = new Queue<DependencyNode>(_nodes.Where(n => inDegree[n] == 0));
+        var result = new List<DependencyNode>();
 
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            result.Add(current.Instance);
+            result.Add(current);
 
             foreach (var dependent in graph[current])
             {

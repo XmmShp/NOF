@@ -27,9 +27,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         var builder = new NOFWebApplicationBuilder(args);
         builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
-        builder.AddRegistrationStep(
-            new OutboundMiddlewareRegistrationStep<HttpHeaderOutboundMiddleware>(),
-            [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<HttpHeaderOutboundMiddleware>()]);
+        builder.Services.AddOutboundMiddleware<HttpHeaderOutboundMiddleware>();
         if (useDefaults)
         {
             builder.UseDefaultSettings();
@@ -67,3 +65,4 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     /// <inheritdoc />
     public override IServiceCollection Services => WebApplicationBuilder.Services;
 }
+

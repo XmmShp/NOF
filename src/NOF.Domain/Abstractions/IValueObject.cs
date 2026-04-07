@@ -8,14 +8,7 @@ namespace NOF.Domain;
 /// The source generator will produce all boilerplate.</para>
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IValueObject
-{
-    /// <summary>
-    /// Returns the underlying primitive value as an <see cref="object"/>.
-    /// </summary>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    object GetUnderlyingValue();
-}
+public interface IValueObject;
 
 /// <summary>
 /// Marks a <c>readonly partial struct</c> as a value object wrapping <typeparamref name="T"/>.
@@ -35,11 +28,7 @@ public interface IValueObject<T> : IValueObject where T : notnull
     /// <summary>
     /// Returns the underlying primitive value.
     /// </summary>
-    new T GetUnderlyingValue();
-
-    /// <inheritdoc />
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    object IValueObject.GetUnderlyingValue() => GetUnderlyingValue();
+    T GetUnderlyingValue();
 
     /// <summary>
     /// Validates the primitive value before constructing the value object.

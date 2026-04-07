@@ -3,7 +3,7 @@ using NOF.Contract;
 
 namespace NOF.Hosting;
 
-public static partial class NOFAppBuilderExtensions
+public static partial class NOFHostingExtensions
 {
     extension(INOFAppBuilder builder)
     {
@@ -13,17 +13,11 @@ public static partial class NOFAppBuilderExtensions
             builder.Services.TryAddSingleton<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IExecutionContext, Contract.ExecutionContext>();
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
-
-            builder.TryAddRegistrationStep(
-                       new OutboundMiddlewareRegistrationStep<MessageIdOutboundMiddleware>(),
-                       [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<MessageIdOutboundMiddleware>()])
-                   .TryAddRegistrationStep(
-                       new OutboundMiddlewareRegistrationStep<TracingOutboundMiddleware>(),
-                       [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TracingOutboundMiddleware>()])
-                   .TryAddRegistrationStep(
-                       new OutboundMiddlewareRegistrationStep<TenantOutboundMiddleware>(),
-                       [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TenantOutboundMiddleware>()]);
+            builder.Services.AddOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddOutboundMiddleware<TenantOutboundMiddleware>();
             return builder;
         }
     }
 }
+
