@@ -21,6 +21,7 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 {
     private static readonly ConcurrentDictionary<Type, ValueConverterInfo?> _cache = new();
     private static readonly Type _interfaceOpenType = typeof(IValueObject<>);
+    private static readonly string _ofMethodName = "Of";
 
     public ValueObjectValueConverterSelector(ValueConverterSelectorDependencies dependencies)
         : base(dependencies) { }
@@ -50,7 +51,7 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
             return null;
         }
 
-        var ofMethod = voType.GetMethod("Of",
+        var ofMethod = voType.GetMethod(_ofMethodName,
             BindingFlags.Public | BindingFlags.Static,
             null, [primitiveType], null);
         if (ofMethod is null)

@@ -201,10 +201,6 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine("            => vo._value;");
         sb.AppendLine();
 
-        // IValueObject<T>.GetUnderlyingValue()
-        sb.AppendLine($"        public {info.PrimitiveFullName} GetUnderlyingValue() => _value;");
-        sb.AppendLine();
-
         // Equals / GetHashCode / ToString
         sb.AppendLine($"        public bool Equals({info.TypeName} other) => global::System.Collections.Generic.EqualityComparer<{info.PrimitiveFullName}>.Default.Equals(_value, other._value);");
         sb.AppendLine($"        public override bool Equals(object? obj) => obj is {info.TypeName} other && Equals(other);");
