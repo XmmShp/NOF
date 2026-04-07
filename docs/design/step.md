@@ -18,7 +18,7 @@ public interface IAfter<TDependency> where TDependency : IStep;
 public interface IBefore<TDependency> where TDependency : IStep;
 ```
 
-The `ConfiguratorGraph<T>` class took a collection of steps and built a dependency graph. For each step, it called `node.GetType()` to get the runtime type, then `type.GetInterfaces()` to find which `IAfter<>` and `IBefore<>` interfaces the step implemented. Those interfaces named the dependency targets; the graph resolver matched them to concrete steps in the collection.
+The `DependencyGraph<T>` class took a collection of steps and built a dependency graph. For each step, it called `node.GetType()` to get the runtime type, then `type.GetInterfaces()` to find which `IAfter<>` and `IBefore<>` interfaces the step implemented. Those interfaces named the dependency targets; the graph resolver matched them to concrete steps in the collection.
 
 It worked well enough for JIT-compiled applications. But when we turned our attention to Native AOT, the cracks appeared.
 
@@ -118,9 +118,9 @@ public class ExceptionInboundMiddlewareStep
 // MiddlewareType => typeof(ExceptionInboundMiddleware)
 ```
 
-## The ConfiguratorGraph Fix
+## The DependencyGraph Fix
 
-With the `Type` property in place, `ConfiguratorGraph` becomes trim-safe without any suppression:
+With the `Type` property in place, `DependencyGraph` becomes trim-safe without any suppression:
 
 ```csharp
 private void IndexNode(T node)

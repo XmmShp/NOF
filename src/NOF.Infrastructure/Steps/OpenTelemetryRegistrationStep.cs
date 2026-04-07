@@ -11,7 +11,7 @@ namespace NOF.Infrastructure;
 /// Configures OpenTelemetry logging, metrics, and tracing infrastructure.
 /// Conditionally enables the OTLP exporter when the OTEL_EXPORTER_OTLP_ENDPOINT environment variable is set.
 /// </summary>
-public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationStep<OpenTelemetryRegistrationStep>
+public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
@@ -48,3 +48,4 @@ public class OpenTelemetryRegistrationStep : IBaseSettingsServiceRegistrationSte
         return ValueTask.CompletedTask;
     }
 }
+

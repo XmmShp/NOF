@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Registers RPC request handlers discovered by source generators as transient services.
 /// </summary>
-public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceRegistrationStep<RequestHandlerServiceRegistrationStep>
+public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
@@ -19,3 +19,4 @@ public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceReg
         return ValueTask.CompletedTask;
     }
 }
+

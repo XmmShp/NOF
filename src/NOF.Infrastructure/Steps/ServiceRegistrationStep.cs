@@ -2,7 +2,7 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public class ServiceRegistrationStep : IServiceRegistrationStep<ServiceRegistrationStep>
+public class ServiceRegistrationStep : IServiceRegistrationStep
 {
     private readonly Func<IServiceRegistrationContext, ValueTask> _configurator;
 
@@ -15,3 +15,4 @@ public class ServiceRegistrationStep : IServiceRegistrationStep<ServiceRegistrat
         return _configurator(builder);
     }
 }
+

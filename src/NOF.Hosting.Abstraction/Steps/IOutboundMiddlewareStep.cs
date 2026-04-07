@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -16,13 +17,10 @@ public interface IOutboundMiddlewareStep : IServiceRegistrationStep
     }
 }
 
-public interface IOutboundMiddlewareStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TSelf> : IOutboundMiddlewareStep, IStep<TSelf>
-    where TSelf : IOutboundMiddlewareStep<TSelf>;
-
-public interface IOutboundMiddlewareStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TSelf, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>
-    : IOutboundMiddlewareStep<TSelf>
-    where TSelf : IOutboundMiddlewareStep<TSelf, TMiddleware>
+public sealed class OutboundMiddlewareRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>
+    : IOutboundMiddlewareStep
+    where TMiddleware : class, IOutboundMiddleware
 {
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
-    Type IOutboundMiddlewareStep.MiddlewareType => typeof(TMiddleware);
+    public Type MiddlewareType => typeof(TMiddleware);
 }

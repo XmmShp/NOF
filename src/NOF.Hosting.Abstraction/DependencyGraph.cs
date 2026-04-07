@@ -1,62 +1,46 @@
 namespace NOF.Hosting;
 
 /// <summary>
-/// Represents a directed acyclic graph (DAG) of configurators that supports topological sorting
+/// Represents a directed acyclic graph (DAG) that supports topological sorting
 /// based on explicit dependencies declared via the <see cref="IAfter{TDependency}"/> and <see cref="IBefore{TDependency}"/> interfaces.
-/// This ensures configurators are executed in a valid order where dependencies run before their dependents.
+/// This ensures nodes are executed in a valid order where dependencies run before their dependents.
 /// </summary>
-/// <typeparam name="T">The type of configurator, which must implement <see cref="IStep"/>.</typeparam>
-public class ConfiguratorGraph<T> where T : IStep
+/// <typeparam name="T">The node type.</typeparam>
+public class DependencyGraph<T>
 {
-    private readonly HashSet<T> _nodes;
-    private IReadOnlyList<T>? _orderedConfigs;
+    private readonly HashSet<DependencyNode<T>> _nodes;
+    private IReadOnlyList<T>? _orderedNodes;
 
     // Maps a contract type (e.g., IDb, BaseConfig) to all nodes that implement/inherit it
-    private readonly Dictionary<Type, HashSet<T>> _typeNodeMap;
+    private readonly Dictionary<Type, HashSet<DependencyNode<T>>> _typeNodeMap;
 
-    public ConfiguratorGraph(IEnumerable<T> tasks)
+    public DependencyGraph(IEnumerable<DependencyNode<T>> nodes)
     {
-        ArgumentNullException.ThrowIfNull(tasks);
+        ArgumentNullException.ThrowIfNull(nodes);
 
         _typeNodeMap = [];
-        var tasksSet = new HashSet<T>();
+        var nodesSet = new HashSet<DependencyNode<T>>();
 
-        foreach (var task in tasks)
+        foreach (var node in nodes)
         {
-            if (!tasksSet.Add(task))
+            if (!nodesSet.Add(node))
             {
                 continue; // skip duplicates
             }
-            IndexNode(task);
+            IndexNode(node);
         }
 
-        _nodes = tasksSet;
+        _nodes = nodesSet;
     }
 
-    private void IndexNode(T node)
+    private void IndexNode(DependencyNode<T> node)
     {
-        var type = node.Type;
-        var ancestors = new HashSet<Type>();
-
-        // Collect all base types
-        for (var t = type; t is not null; t = t.BaseType)
+        foreach (var relatedType in node.AllInterfaces.Where(ancestor => ancestor.IsAssignableTo(typeof(T))))
         {
-            ancestors.Add(t);
-        }
-
-        // Collect all interfaces
-        foreach (var iface in type.GetInterfaces())
-        {
-            ancestors.Add(iface);
-        }
-
-        // Register node under every ancestor type (except root IConfig / T itself if undesired)
-        foreach (var ancestor in ancestors.Where(ancestor => ancestor.IsAssignableTo(typeof(T))))
-        {
-            if (!_typeNodeMap.TryGetValue(ancestor, out var nodes))
+            if (!_typeNodeMap.TryGetValue(relatedType, out var nodes))
             {
                 nodes = [];
-                _typeNodeMap[ancestor] = nodes;
+                _typeNodeMap[relatedType] = nodes;
             }
             nodes.Add(node);
         }
@@ -64,17 +48,17 @@ public class ConfiguratorGraph<T> where T : IStep
 
     public IReadOnlyList<T> GetExecutionOrder()
     {
-        if (_orderedConfigs is not null)
+        if (_orderedNodes is not null)
         {
-            return _orderedConfigs;
+            return _orderedNodes;
         }
 
-        var graph = _nodes.ToDictionary(n => n, _ => new HashSet<T>());
+        var graph = _nodes.ToDictionary(n => n, _ => new HashSet<DependencyNode<T>>());
         var inDegree = _nodes.ToDictionary(n => n, _ => 0);
 
         foreach (var node in _nodes)
         {
-            foreach (var iface in node.Type.GetInterfaces())
+            foreach (var iface in node.AllInterfaces)
             {
                 if (!iface.IsGenericType)
                 {
@@ -86,7 +70,6 @@ public class ConfiguratorGraph<T> where T : IStep
 
                 if (def == typeof(IAfter<>))
                 {
-                    // node should run AFTER any node that provides 'contract'
                     if (!_typeNodeMap.TryGetValue(contract, out var providers))
                     {
                         continue;
@@ -99,7 +82,6 @@ public class ConfiguratorGraph<T> where T : IStep
                 }
                 else if (def == typeof(IBefore<>))
                 {
-                    // node should run BEFORE any node that provides 'contract'
                     if (!_typeNodeMap.TryGetValue(contract, out var followers))
                     {
                         continue;
@@ -113,13 +95,13 @@ public class ConfiguratorGraph<T> where T : IStep
             }
         }
 
-        var queue = new Queue<T>(_nodes.Where(n => inDegree[n] == 0));
+        var queue = new Queue<DependencyNode<T>>(_nodes.Where(n => inDegree[n] == 0));
         var result = new List<T>();
 
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            result.Add(current);
+            result.Add(current.Instance);
 
             foreach (var dependent in graph[current])
             {
@@ -137,6 +119,6 @@ public class ConfiguratorGraph<T> where T : IStep
                 "Please ensure that dependency chains declared via IAfter<> / IBefore<> do not form cycles.");
         }
 
-        return _orderedConfigs = result.AsReadOnly();
+        return _orderedNodes = result.AsReadOnly();
     }
 }

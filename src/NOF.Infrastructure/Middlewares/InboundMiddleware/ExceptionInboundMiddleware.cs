@@ -6,8 +6,6 @@ using NOF.Domain;
 namespace NOF.Infrastructure;
 
 /// <summary>Outermost middleware step catches all exceptions.</summary>
-public class ExceptionInboundMiddlewareStep : IInboundMiddlewareStep<ExceptionInboundMiddlewareStep, ExceptionInboundMiddleware>;
-
 /// <summary>
 /// Handler exception handling middleware
 /// Catches and converts exceptions to unified error responses
@@ -51,3 +49,4 @@ public sealed class ExceptionInboundMiddleware : IInboundMiddleware
         }
     }
 }
+

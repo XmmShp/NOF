@@ -6,14 +6,11 @@ using System.Diagnostics;
 namespace NOF.Infrastructure;
 
 /// <summary>Activity tracing step resolves trace/span IDs from headers and creates distributed tracing Activity per handler execution.</summary>
-public class TracingInboundMiddlewareStep : IInboundMiddlewareStep<TracingInboundMiddlewareStep, TracingInboundMiddleware>,
-    IAfter<TenantInboundMiddlewareStep>;
-
 /// <summary>
 /// Inbound middleware that resolves tracing information from transport headers
 /// and creates a distributed tracing <see cref="Activity"/> for each handler execution.
 /// </summary>
-public sealed class TracingInboundMiddleware : IInboundMiddleware
+public sealed class TracingInboundMiddleware : IInboundMiddleware, IAfter<TenantInboundMiddleware>
 {
     private readonly IExecutionContext _executionContext;
 
@@ -66,3 +63,4 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware
             parent);
     }
 }
+

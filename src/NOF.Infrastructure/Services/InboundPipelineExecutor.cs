@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 /// Default implementation of <see cref="IInboundPipelineExecutor"/>.
 /// Middleware instances are resolved from DI (scoped, like ASP.NET Core's <c>IMiddleware</c>).
 /// Middleware ordering is determined at startup by the topological sort of
-/// <see cref="IInboundMiddlewareStep"/> instances, stored in <see cref="InboundPipelineTypes"/>.
+/// <see cref="IInboundMiddlewareStep{TMiddleware}"/> registrations, stored in <see cref="InboundPipelineTypes"/>.
 /// </summary>
 public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
 {

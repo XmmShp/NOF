@@ -6,7 +6,7 @@ using Scalar.AspNetCore;
 
 namespace NOF.Hosting.AspNetCore;
 
-public class ScalarInitializationStep : IEndpointInitializationStep<ScalarInitializationStep>
+public class ScalarInitializationStep : IEndpointInitializationStep
 {
     public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
     {
@@ -15,3 +15,4 @@ public class ScalarInitializationStep : IEndpointInitializationStep<ScalarInitia
         return Task.CompletedTask;
     }
 }
+

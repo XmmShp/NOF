@@ -6,9 +6,7 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-public class TenantInboundMiddlewareStep : IInboundMiddlewareStep<TenantInboundMiddlewareStep, TenantInboundMiddleware>, IAfter<ExceptionInboundMiddlewareStep>;
-
-public sealed class TenantInboundMiddleware : IInboundMiddleware
+public sealed class TenantInboundMiddleware : IInboundMiddleware, IAfter<ExceptionInboundMiddleware>
 {
     private readonly IExecutionContext _executionContext;
     private readonly TenantOptions _tenantOptions;
@@ -34,3 +32,4 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware
         await next(cancellationToken);
     }
 }
+

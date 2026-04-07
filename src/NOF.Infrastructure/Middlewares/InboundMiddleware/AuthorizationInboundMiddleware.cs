@@ -7,14 +7,12 @@ using System.Reflection;
 namespace NOF.Infrastructure;
 
 /// <summary>Permission authorization step checks [RequirePermission] / [AllowAnonymous].</summary>
-public class AuthorizationInboundMiddlewareStep : IInboundMiddlewareStep<AuthorizationInboundMiddlewareStep, AuthorizationInboundMiddleware>, IAfter<TenantInboundMiddlewareStep>;
-
 /// <summary>
 /// Handler middleware that enforces permission-based authorization.
 /// Checks <see cref="AllowAnonymousAttribute"/> and <see cref="RequirePermissionAttribute"/>
 /// on the message/handler types and short-circuits with an error response when unauthorized.
 /// </summary>
-public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
+public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<TenantInboundMiddleware>
 {
     private readonly IUserContext _userContext;
     private readonly ILogger<AuthorizationInboundMiddleware> _logger;
@@ -84,3 +82,4 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware
                ?? handlerType.GetCustomAttribute<T>(false);
     }
 }
+

@@ -14,7 +14,7 @@ namespace NOF.Hosting.AspNetCore;
 /// Registers ASP.NET Core-specific services including health checks and
 /// ASP.NET Core OpenTelemetry instrumentation, and maps health check endpoints.
 /// </summary>
-public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep<AspNetCoreRegistrationStep>
+public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
@@ -40,7 +40,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep<A
         return ValueTask.CompletedTask;
     }
 
-    private class HealthCheckInitializationStep : IBusinessLogicInitializationStep<HealthCheckInitializationStep>
+    private class HealthCheckInitializationStep : IBusinessLogicInitializationStep
     {
         public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
         {
@@ -57,3 +57,4 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep<A
         }
     }
 }
+

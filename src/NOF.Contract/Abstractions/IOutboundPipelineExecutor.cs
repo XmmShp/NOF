@@ -4,7 +4,7 @@ namespace NOF.Contract;
 /// Executes the outbound middleware pipeline for messages being sent out.
 /// Mirrors <see cref="IInboundPipelineExecutor"/> for the outbound direction.
 /// Middleware instances are resolved from DI (scoped) in the order determined
-/// by the topological sort of <see cref="IOutboundMiddlewareStep"/> instances.
+/// by the topological sort of <see cref="IOutboundMiddlewareStep{TMiddleware}"/> registrations.
 /// </summary>
 public interface IOutboundPipelineExecutor
 {

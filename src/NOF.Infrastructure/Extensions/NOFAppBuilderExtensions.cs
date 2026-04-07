@@ -46,12 +46,24 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddOptions<OutboxOptions>();
 
             builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
-                .TryAddRegistrationStep<ExceptionInboundMiddlewareStep>()
-                .TryAddRegistrationStep<TenantInboundMiddlewareStep>()
-                .TryAddRegistrationStep<AuthorizationInboundMiddlewareStep>()
-                .TryAddRegistrationStep<TracingInboundMiddlewareStep>()
-                .TryAddRegistrationStep<AutoInstrumentationInboundMiddlewareStep>()
-                .TryAddRegistrationStep<MessageInboxInboundMiddlewareStep>()
+                .TryAddRegistrationStep(
+                    new InboundMiddlewareRegistrationStep<ExceptionInboundMiddleware>(),
+                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<ExceptionInboundMiddleware>()])
+                .TryAddRegistrationStep(
+                    new InboundMiddlewareRegistrationStep<TenantInboundMiddleware>(),
+                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TenantInboundMiddleware>()])
+                .TryAddRegistrationStep(
+                    new InboundMiddlewareRegistrationStep<AuthorizationInboundMiddleware>(),
+                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<AuthorizationInboundMiddleware>()])
+                .TryAddRegistrationStep(
+                    new InboundMiddlewareRegistrationStep<TracingInboundMiddleware>(),
+                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TracingInboundMiddleware>()])
+                .TryAddRegistrationStep(
+                    new InboundMiddlewareRegistrationStep<AutoInstrumentationInboundMiddleware>(),
+                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<AutoInstrumentationInboundMiddleware>()])
+                .TryAddRegistrationStep(
+                    new InboundMiddlewareRegistrationStep<MessageInboxInboundMiddleware>(),
+                    [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<MessageInboxInboundMiddleware>()])
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
                 .TryAddRegistrationStep<HandlerServiceRegistrationStep>()
                 .TryAddInitializationStep<IdGeneratorInitializationStep>()

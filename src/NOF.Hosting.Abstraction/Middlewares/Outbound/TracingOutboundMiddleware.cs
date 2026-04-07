@@ -3,8 +3,6 @@ using System.Diagnostics;
 
 namespace NOF.Hosting;
 
-public class TracingOutboundMiddlewareStep : IOutboundMiddlewareStep<TracingOutboundMiddlewareStep, TracingOutboundMiddleware>;
-
 public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IExecutionContext _executionContext;
@@ -41,3 +39,4 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
         }
     }
 }
+

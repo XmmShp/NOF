@@ -6,13 +6,11 @@ using NOF.Hosting;
 namespace NOF.Infrastructure;
 
 /// <summary>Inbox message processing step deduplication via inbox pattern.</summary>
-public class MessageInboxInboundMiddlewareStep : IInboundMiddlewareStep<MessageInboxInboundMiddlewareStep, MessageInboxInboundMiddleware>, IAfter<AutoInstrumentationInboundMiddlewareStep>;
-
 /// <summary>
 /// Inbox middleware
 /// Responsible for recording inbox messages in transactions to ensure reliable message processing
 /// </summary>
-public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
+public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
 {
     private readonly ITransactionManager _transactionManager;
     private readonly IInboxMessageRepository _inboxMessageRepository;
@@ -82,3 +80,4 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware
         }
     }
 }
+

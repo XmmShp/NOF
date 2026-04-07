@@ -7,7 +7,7 @@ namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
 /// Outbound middleware step that populates <see cref="OutboundContext.Headers"/> from HTTP request headers.
-/// Runs before <see cref="TracingOutboundMiddlewareStep"/> so that internal headers (tracing, tenant, etc.)
+/// Runs before <see cref="TracingOutboundMiddleware"/> so that internal headers (tracing, tenant, etc.)
 /// written by later middleware take precedence over raw HTTP headers.
 /// <para>
 /// A configurable blacklist of wildcard patterns prevents external HTTP callers from forging
@@ -15,9 +15,6 @@ namespace NOF.Hosting.AspNetCore;
 /// internal service-to-service calls via the message bus.
 /// </para>
 /// </summary>
-public class HttpHeaderOutboundMiddlewareStep : IOutboundMiddlewareStep<HttpHeaderOutboundMiddlewareStep, HttpHeaderOutboundMiddleware>,
-    IBefore<TracingOutboundMiddlewareStep>;
-
 /// <summary>
 /// Configuration options for <see cref="HttpHeaderOutboundMiddleware"/>.
 /// </summary>
@@ -35,7 +32,7 @@ public class HttpHeaderOutboundMiddlewareOptions
 /// Copies HTTP request headers into <see cref="OutboundContext.Headers"/>,
 /// filtering out blacklisted headers (matched by wildcard patterns) to prevent request forgery.
 /// </summary>
-public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
+public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware, IBefore<TracingOutboundMiddleware>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly HttpHeaderOutboundMiddlewareOptions _options;
@@ -83,3 +80,4 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware
         return false;
     }
 }
+

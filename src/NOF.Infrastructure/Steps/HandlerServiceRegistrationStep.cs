@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 /// Registers keyed transient services for all handler infos collected during base registration.
 /// Runs after all <see cref="IBaseSettingsServiceRegistrationStep"/>s so that handler infos are finalized.
 /// </summary>
-public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep<HandlerServiceRegistrationStep>
+public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
@@ -39,3 +39,4 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep<
         return ValueTask.CompletedTask;
     }
 }
+

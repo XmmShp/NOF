@@ -169,7 +169,7 @@ public class InfrastructureDefaultsTests
             _initializationSteps = other._initializationSteps;
         }
 
-        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
+        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep, params Type[] allInterfaces)
         {
             _registrationSteps.Add(registrationStep);
             return this;
@@ -181,7 +181,7 @@ public class InfrastructureDefaultsTests
             return this;
         }
 
-        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
+        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep, params Type[] allInterfaces)
         {
             _initializationSteps.Add(initializationStep);
             return this;
@@ -338,5 +338,4 @@ public class InfrastructureDefaultsTests
             => ValueTask.CompletedTask;
     }
 }
-
 

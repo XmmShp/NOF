@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 /// Sets <see cref="IdGenerator.Current"/> from the DI container after the host is built.
 /// Added to the builder by default.
 /// </summary>
-public sealed class IdGeneratorInitializationStep : IApplicationInitializationStep<IdGeneratorInitializationStep>
+public sealed class IdGeneratorInitializationStep : IApplicationInitializationStep
 {
     public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
     {
@@ -18,3 +18,4 @@ public sealed class IdGeneratorInitializationStep : IApplicationInitializationSt
         return Task.CompletedTask;
     }
 }
+

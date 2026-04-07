@@ -6,7 +6,7 @@ namespace NOF.Hosting;
 /// <summary>
 /// Registers services from source-generated AutoInject metadata.
 /// </summary>
-public sealed class AutoInjectServiceRegistrationStep : IServiceRegistrationStep<AutoInjectServiceRegistrationStep>
+public sealed class AutoInjectServiceRegistrationStep : IServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
@@ -42,3 +42,4 @@ public sealed class AutoInjectServiceRegistrationStep : IServiceRegistrationStep
         };
     }
 }
+

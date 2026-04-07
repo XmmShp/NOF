@@ -36,20 +36,9 @@ namespace NOF.Hosting;
 public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     where THostApplication : class, IHost
 {
-    /// <summary>
-    /// A collection of service configuration units that will be executed during the DI registration phase.
-    /// These configurations are typically added via <see cref="AddRegistrationStep"/> or delegate overloads,
-    /// and are executed in dependency-aware order before the host application is constructed.
-    /// </summary>
-    protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs = [];
+    protected readonly HashSet<DependencyNode<IServiceRegistrationStep>> ServiceConfigs = [];
 
-    /// <summary>
-    /// A collection of application configuration units that will be executed after the host application
-    /// has been built, but before it starts running. These allow final setup such as middleware registration,
-    /// event subscriptions, or background task initialization.
-    /// Configurations are executed in dependency-resolved order via <see cref="AddInitializationStep"/>.
-    /// </summary>
-    protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs = [];
+    protected readonly HashSet<DependencyNode<IApplicationInitializationStep>> ApplicationConfigs = [];
 
     protected NOFAppBuilder()
     {
@@ -57,50 +46,45 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         {
             this.AddApplicationPart(assembly);
         }
-        ServiceConfigs.Add(new AutoInjectServiceRegistrationStep());
+
+        this.AddRegistrationStep(new AutoInjectServiceRegistrationStep());
     }
 
-    /// <inheritdoc />
-    public virtual INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
+    public virtual INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep, params Type[] allInterfaces)
     {
         ArgumentNullException.ThrowIfNull(registrationStep);
-        ServiceConfigs.Add(registrationStep);
+        ArgumentNullException.ThrowIfNull(allInterfaces);
+
+        ServiceConfigs.Add(new DependencyNode<IServiceRegistrationStep>(registrationStep, allInterfaces));
         return this;
     }
 
-    /// <inheritdoc />
     public virtual INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        ServiceConfigs.RemoveWhere(predicate);
+        ServiceConfigs.RemoveWhere(node => predicate(node.Instance));
         return this;
     }
 
-    /// <inheritdoc />
-    public virtual INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
+    public virtual INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep, params Type[] allInterfaces)
     {
         ArgumentNullException.ThrowIfNull(initializationStep);
-        ApplicationConfigs.Add(initializationStep);
+        ArgumentNullException.ThrowIfNull(allInterfaces);
+
+        ApplicationConfigs.Add(new DependencyNode<IApplicationInitializationStep>(initializationStep, allInterfaces));
         return this;
     }
 
-    /// <inheritdoc />
     public virtual INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        ApplicationConfigs.RemoveWhere(predicate);
+        ApplicationConfigs.RemoveWhere(node => predicate(node.Instance));
         return this;
     }
 
-    /// <summary>
-    /// Asynchronously constructs and initializes the final host application instance.
-    /// Executes all registered service registration steps in dependency order,
-    /// builds the host, then executes all application initialization steps.
-    /// </summary>
-    /// <returns>A task that resolves to the fully configured host application.</returns>
     public virtual async Task<THostApplication> BuildAsync()
     {
-        var regGraph = new ConfiguratorGraph<IServiceRegistrationStep>(ServiceConfigs);
+        var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
         foreach (var task in regGraph.GetExecutionOrder())
         {
             await task.ExecuteAsync(this).ConfigureAwait(false);
@@ -110,7 +94,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
         var app = await BuildApplicationAsync();
 
-        var startGraph = new ConfiguratorGraph<IApplicationInitializationStep>(ApplicationConfigs);
+        var startGraph = new DependencyGraph<IApplicationInitializationStep>(ApplicationConfigs);
         foreach (var task in startGraph.GetExecutionOrder())
         {
             await task.ExecuteAsync(this, app).ConfigureAwait(false);
@@ -119,27 +103,15 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         return app;
     }
 
-    /// <summary>
-    /// When overridden in a derived class, constructs the concrete host application, using the current service collection and configuration.
-    /// This method is called after all service configurations have been applied and before application configurations run.
-    /// </summary>
-    /// <returns>A task that resolves to the built host application instance.</returns>
     protected abstract Task<THostApplication> BuildApplicationAsync();
 
     #region Abstractions
-    /// <inheritdoc/>
     public abstract void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null) where TContainerBuilder : notnull;
-    /// <inheritdoc/>
     public abstract IDictionary<object, object> Properties { get; }
-    /// <inheritdoc/>
     public abstract IConfigurationManager Configuration { get; }
-    /// <inheritdoc/>
     public abstract IHostEnvironment Environment { get; }
-    /// <inheritdoc/>
     public abstract ILoggingBuilder Logging { get; }
-    /// <inheritdoc/>
     public abstract IMetricsBuilder Metrics { get; }
-    /// <inheritdoc/>
     public abstract IServiceCollection Services { get; }
     #endregion
 }

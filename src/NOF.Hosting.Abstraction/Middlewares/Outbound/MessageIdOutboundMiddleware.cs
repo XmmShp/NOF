@@ -2,8 +2,6 @@ using NOF.Contract;
 
 namespace NOF.Hosting;
 
-public class MessageIdOutboundMiddlewareStep : IOutboundMiddlewareStep<MessageIdOutboundMiddlewareStep, MessageIdOutboundMiddleware>;
-
 public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
 {
     private readonly IExecutionContext _executionContext;
@@ -22,3 +20,4 @@ public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
         return next(cancellationToken);
     }
 }
+

@@ -5,14 +5,12 @@ using NOF.Hosting;
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
 /// <summary>Propagates JWT tokens to outbound messages.</summary>
-public class JwtTokenPropagationOutboundMiddlewareStep : IOutboundMiddlewareStep<JwtTokenPropagationOutboundMiddlewareStep, JwtTokenPropagationOutboundMiddleware>,
-    IAfter<MessageIdOutboundMiddlewareStep>;
-
 /// <summary>
 /// Outbound middleware that propagates the current user's JWT token
 /// into outbound message headers for inter-service calls.
 /// </summary>
-public sealed class JwtTokenPropagationOutboundMiddleware : IOutboundMiddleware
+public sealed class JwtTokenPropagationOutboundMiddleware : IOutboundMiddleware,
+    IAfter<MessageIdOutboundMiddleware>
 {
     private readonly IUserContext _userContext;
     private readonly JwtTokenPropagationOptions _options;
@@ -38,3 +36,4 @@ public sealed class JwtTokenPropagationOutboundMiddleware : IOutboundMiddleware
         return next(cancellationToken);
     }
 }
+

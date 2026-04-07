@@ -10,15 +10,13 @@ using System.IdentityModel.Tokens.Jwt;
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>Resolves the current user from a JWT before tenant resolution runs.</summary>
-public class JwtResourceServerInboundMiddlewareStep : IInboundMiddlewareStep<JwtResourceServerInboundMiddlewareStep, JwtResourceServerInboundMiddleware>,
-    IAfter<ExceptionInboundMiddlewareStep>,
-    IBefore<TenantInboundMiddlewareStep>;
-
 /// <summary>
 /// Inbound middleware that extracts and validates a JWT from inbound headers,
 /// then populates the current user context.
 /// </summary>
-public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware
+public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware,
+    IAfter<ExceptionInboundMiddleware>,
+    IBefore<TenantInboundMiddleware>
 {
     private readonly IUserContext _userContext;
     private readonly IJwksProvider _jwksProvider;
@@ -103,3 +101,4 @@ public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware
         await next(cancellationToken);
     }
 }
+

@@ -14,9 +14,15 @@ public static partial class NOFAppBuilderExtensions
             builder.Services.TryAddScoped<IExecutionContext, Contract.ExecutionContext>();
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
 
-            builder.TryAddRegistrationStep<MessageIdOutboundMiddlewareStep>()
-                   .TryAddRegistrationStep<TracingOutboundMiddlewareStep>()
-                   .TryAddRegistrationStep<TenantOutboundMiddlewareStep>();
+            builder.TryAddRegistrationStep(
+                       new OutboundMiddlewareRegistrationStep<MessageIdOutboundMiddleware>(),
+                       [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<MessageIdOutboundMiddleware>()])
+                   .TryAddRegistrationStep(
+                       new OutboundMiddlewareRegistrationStep<TracingOutboundMiddleware>(),
+                       [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TracingOutboundMiddleware>()])
+                   .TryAddRegistrationStep(
+                       new OutboundMiddlewareRegistrationStep<TenantOutboundMiddleware>(),
+                       [.. DependencyNode<IServiceRegistrationStep>.CollectRelatedTypes<TenantOutboundMiddleware>()]);
             return builder;
         }
     }

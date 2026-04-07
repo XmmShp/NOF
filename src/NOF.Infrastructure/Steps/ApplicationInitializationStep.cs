@@ -3,7 +3,7 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public class ApplicationInitializationStep : IApplicationInitializationStep<ApplicationInitializationStep>
+public class ApplicationInitializationStep : IApplicationInitializationStep
 {
     private readonly Func<IHostApplicationBuilder, IHost, Task> _configurator;
 
@@ -17,3 +17,4 @@ public class ApplicationInitializationStep : IApplicationInitializationStep<Appl
         return _configurator(context, app);
     }
 }
+
