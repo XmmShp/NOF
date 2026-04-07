@@ -2,7 +2,7 @@ using FluentAssertions;
 using NOF.Hosting;
 using Xunit;
 
-namespace NOF.Infrastructure.Core.Tests.Utilities;
+namespace NOF.Infrastructure.Tests.Utilities;
 
 public interface IStepA : IStep;
 public interface IStepB : IStep;

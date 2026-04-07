@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using NOF.Domain;
 using Xunit;
 
-namespace NOF.Infrastructure.Core.Tests.Services;
+namespace NOF.Infrastructure.Tests.Services;
 
 public class SnowflakeIdGeneratorTests
 {

@@ -5,7 +5,7 @@ using NOF.Application;
 using NOF.Contract;
 using Xunit;
 
-namespace NOF.Infrastructure.Core.Tests.Middlewares;
+namespace NOF.Infrastructure.Tests.Middlewares;
 
 public class TenantInboundMiddlewareTests
 {

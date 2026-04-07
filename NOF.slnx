@@ -56,7 +56,13 @@
     <Project Path="tests/NOF.Application.Tests/NOF.Application.Tests.csproj" />
     <Project Path="tests/NOF.Domain.Tests/NOF.Domain.Tests.csproj" />
     <Project Path="tests/NOF.Hosting.Abstraction.Tests/NOF.Hosting.Abstraction.Tests.csproj" />
-    <Project Path="tests/NOF.Infrastructure.Core.Tests/NOF.Infrastructure.Core.Tests.csproj" />
+    <Project Path="tests/NOF.Infrastructure.Tests/NOF.Infrastructure.Tests.csproj" />
     <Project Path="tests/NOF.Test.Tests/NOF.Test.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Extensions/">
+    <Project Path="tests/Extensions/NOF.Application.Extension.Redis.Tests/NOF.Application.Extension.Redis.Tests.csproj" />
+    <Project Path="tests/Extensions/NOF.Contract.Extension.Authorization.Jwt.Tests/NOF.Contract.Extension.Authorization.Jwt.Tests.csproj" />
+    <Project Path="tests/Extensions/NOF.Hosting.Extension.Authorization.Jwt.Tests/NOF.Hosting.Extension.Authorization.Jwt.Tests.csproj" />
+    <Project Path="tests/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt.Tests/NOF.Infrastructure.Extension.Authorization.Jwt.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,143 +1,65 @@
-# NOF Infrastructure Setup
-
-## Table of Contents
-
-- [EF Core + PostgreSQL](#ef-core--postgresql)
-- [Redis Caching](#redis-caching)
-- [RabbitMQ](#rabbitmq)
-- [JWT Authentication](#jwt-authentication)
-- [Configuration Reference](#configuration-reference)
-
----
+# NOF Infrastructure Setup Reference
 
 ## EF Core + PostgreSQL
 
-### Register
-
 ```csharp
-builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
+builder.AddEFCore<AppDbContext>()
+    .UseSharedDatabaseTenancy()
+    .AutoMigrate()
+    .UsePostgreSQL();
 ```
 
-### Migrations
+Notes:
+- `NOFDbContext` handles outbox/inbox/state machine tables.
+- `ChangeTracker.AutoDetectChangesEnabled` is disabled; call `_uow.Update(entity)` explicitly.
+- Value object conversion is auto-wired for `IValueObject<T>`.
 
-```bash
-dotnet tool install --global dotnet-ef
-dotnet ef migrations add InitialCreate --project MyApp --context AppDbContext
-dotnet ef database update --project MyApp --context AppDbContext
-```
-
-Key points:
-- `NOFDbContext` auto-configures outbox/inbox/state machine tables
-- `NOFDbContext` sets `ChangeTracker.AutoDetectChangesEnabled = false` — all updates must be explicit via `IUnitOfWork.Update(entity)`
-- `AutoMigrate()` applies pending migrations on startup (dev only)
-- `IUnitOfWork` is registered as `EFCoreUnitOfWork` by `AddEFCore<T>()`
-- `IUnitOfWork.Update(entity)` marks the aggregate root and its entire object graph (including owned/child entities) as modified
-- `IRepository<T>` provides `FindAsync`, `FindAllAsync` (`IAsyncEnumerable<T>`), `Add`, `Remove`
-- **Value objects are automatically handled** — `ValueObjectValueConverterSelector` detects all `IValueObject<T>` types and provides EF Core `ValueConverter` instances at runtime. No manual converter registration needed.
-
----
-
-## Redis Caching
-
-### Register
+## Redis Cache
 
 ```csharp
 builder.AddRedisCache();
 ```
 
-### ICacheService API
-
-| Method | Description |
-|--------|-------------|
-| `GetAsync<T>(key, ct)` | Returns `Optional<T>` — check `.HasValue` |
-| `GetOrSetAsync<T>(key, factory, options, ct)` | Get or compute and cache |
-| `SetAsync<T>(key, value, options, ct)` | Store a value |
-| `RemoveAsync(key, ct)` | Remove a cached entry |
-| `ExistsAsync(key, ct)` | Check if key exists |
-| `GetManyAsync<T>(keys, ct)` | Batch get multiple keys |
-
-Key points:
-- Without Redis, NOF uses in-memory cache by default
-- `CacheKey<T>` is strongly typed — generic `T` ensures compile-time safety
-- `Optional<T>` distinguishes "not in cache" from "cached null"
-
----
+Use `ICacheService` and `CacheKey<T>` for typed access.
 
 ## RabbitMQ
 
-### Register
-
 ```csharp
 builder.AddRabbitMQ();
-// Or: builder.AddRabbitMQ("rabbitmq"); // custom connection string name
 ```
 
-### Cross-service messaging
+Send through abstractions:
+- generated RPC service clients
+- `ICommandSender`
+- `INotificationPublisher`
+
+## JWT
+
+Authority mode:
 
 ```csharp
-// Send command to specific service
-await _commandSender.SendAsync(command, destinationEndpointName: "payment-service", cancellationToken: ct);
-
-// Send request to specific service (RPC)
-var result = await _requestSender.SendAsync(request, destinationEndpointName: "inventory-service", cancellationToken: ct);
-
-// Broadcast notification to all subscribers
-await _notificationPublisher.PublishAsync(notification, ct);
+builder.AddJwtAuthority(o => o.Issuer = "MyApp");
 ```
 
-Key points:
-- Headers (identity, tenant, tracing) propagate automatically across services
-- Use `IRequestSender`, `ICommandSender`, `INotificationPublisher` — never use RabbitMQ APIs directly
-- Use `IDeferredNotificationPublisher` / `IDeferredCommandSender` for outbox-based deferred dispatch
-- Only `IRequestSender` and `ICommandSender` support `destinationEndpointName`; `INotificationPublisher` broadcasts to all subscribers
-- Handler discovery is automatic via source generators
-
----
-
-## JWT Authentication
-
-### Authority mode (issue + validate tokens)
+Resource server mode:
 
 ```csharp
-builder.AddJwtAuthority().AddJwksRequestHandler();
-builder.AddJwtAuthorization();
-```
-
-### Authorization-only mode (validate tokens from external authority)
-
-```csharp
-builder.AddJwtAuthorization();
-// Or: builder.AddJwtAuthorization("https://auth.example.com/.well-known/jwks.json");
-```
-
-### Issue tokens
-
-```csharp
-var result = await _requestSender.SendAsync(new GenerateJwtTokenRequest
+builder.AddJwtResourceServer(o =>
 {
-    Subject = userId,
-    Claims = new Dictionary<string, string> { ["role"] = "admin" }
+    o.Issuer = "MyApp";
+    o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
+    o.RequireHttpsMetadata = false;
 });
-// result.Value.AccessToken, result.Value.RefreshToken
 ```
 
-### Protect endpoints
+Map service contracts:
 
-All endpoints require authentication by default. Use `[AllowAnonymous]` to opt out.
+```csharp
+app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
+app.MapServiceToHttpEndpoints<IJwksService>();
+```
 
-Access identity via `IInvocationContext`:
-- `_context.User` — `ClaimsPrincipal` (the current user)
-- `_context.TenantId` — `string?` (tenant ID)
-- `_context.TraceId` / `_context.SpanId` — distributed tracing
-
-Key points:
-- JWT keys auto-rotate via background service in Authority mode
-- JWKS endpoint auto-exposed at `/.well-known/jwks.json`
-- Authorization middleware works for both HTTP and RabbitMQ messages
-
----
-
-## Configuration Reference
+## Configuration Snippet
 
 ```json
 {
@@ -145,20 +67,6 @@ Key points:
     "DefaultConnection": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
     "redis": "localhost:6379",
     "rabbitmq": "Host=localhost;Port=5672;UserName=guest;Password=guest;VirtualHost=/"
-  },
-  "NOF": {
-    "Jwt": {
-      "Authority": {
-        "Issuer": "https://myapp.example.com",
-        "AccessTokenLifetime": "01:00:00",
-        "RefreshTokenLifetime": "30.00:00:00",
-        "KeyRotationInterval": "7.00:00:00"
-      },
-      "Authorization": {
-        "Issuer": "https://auth.example.com",
-        "JwksEndpoint": "https://auth.example.com/.well-known/jwks.json"
-      }
-    }
   }
 }
 ```

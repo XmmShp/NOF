@@ -9,7 +9,7 @@ using NOF.Domain;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
-namespace NOF.Infrastructure.Core.Tests.Persistence;
+namespace NOF.Infrastructure.Tests.Persistence;
 
 public class InMemoryPersistenceTests
 {

@@ -1,217 +1,48 @@
 ---
-description: How to add a CQRS request handler with HTTP endpoint in a NOF application
+description: Add a request/response operation using NOF RPC service contracts
 ---
 
-# Add a Request Handler
+# Add Request-Response Operation
 
-NOF uses CQRS with `IRequest`, `ICommand`, and `INotification`. Request handlers return `Result<T>` and can be auto-mapped to HTTP endpoints.
+NOF request-response is modeled via `IRpcService` contracts and generated service implementations.
 
-## Request with Typed Response (Query)
-
-### 1. Define the request and response in the Contract project
+## 1. Define Contract
 
 ```csharp
-using NOF.Contract;
-using System.ComponentModel;
-
-[AllowAnonymous]  // Skip authentication (remove for protected endpoints)
-[PublicApi]
-[HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
-[Summary("Get order by ID")]
-[EndpointDescription("Retrieves a single order by its unique identifier")]
-[Category("Orders")]
-public record GetOrderRequest(long Id) : IRequest<GetOrderResponse>;
-
-public record GetOrderResponse(long Id, string CustomerName, string Status);
-```
-
-### 2. Register mappings (Options pattern — in Program.cs or extension method)
-
-```csharp
-builder.Services.Configure<MapperOptions>(o =>
-    o.Add<Order, GetOrderResponse>(order => new GetOrderResponse(
-        (long)order.Id,
-        order.CustomerName,
-        order.Status.ToString())));
-```
-
-> Alternatively, register at runtime in the handler constructor via `_mapper.TryAdd(...)` (no-op if key already exists).
-
-### 3. Implement the handler in the Application project
-
-```csharp
-using NOF.Application;
-using NOF.Contract;
-
-public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse>
+[GenerateService]
+public partial interface IOrderService : IRpcService
 {
-    private readonly IOrderRepository _orderRepository;
-    private readonly IMapper _mapper;
+    [PublicApi]
+    [HttpEndpoint(HttpVerb.Post, "api/orders/query")]
+    Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken = default);
+}
 
-    public GetOrderHandler(IOrderRepository orderRepository, IMapper mapper)
+public record GetOrderRequest(string Id);
+public record GetOrderResponse(string Id, string Name);
+```
+
+## 2. Implement Generated Base Type
+
+```csharp
+public sealed class GetOrder : OrderService.GetOrder
+{
+    public override async Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
-        _orderRepository = orderRepository;
-        _mapper = mapper;
-    }
-
-    public async Task<Result<GetOrderResponse>> HandleAsync(
-        GetOrderRequest request, CancellationToken cancellationToken)
-    {
-        var order = await _orderRepository.FindAsync(
-            OrderId.Of(request.Id), cancellationToken);
-
-        if (order is null)
-        {
-            return Result.Fail("404", "Order not found");
-        }
-
-        return _mapper.Map<Order, GetOrderResponse>(order);
-        // Or fluent: return order.Map.To<GetOrderResponse>();
+        // query repository...
+        return new GetOrderResponse(request.Id, "demo");
     }
 }
 ```
 
-## Request without Response (Command-style via Request)
+## 3. Wire in Program.cs
 
 ```csharp
-// Contract
-[PublicApi]
-[HttpEndpoint(HttpVerb.Post, "api/orders")]
-[Summary("Create a new order")]
-[Category("Orders")]
-public record CreateOrderRequest(string CustomerName) : IRequest;
-
-// Handler
-public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
-{
-    private readonly IOrderRepository _orderRepository;
-    private readonly IUnitOfWork _uow;
-
-    public CreateOrderHandler(IOrderRepository orderRepository, IUnitOfWork uow)
-    {
-        _orderRepository = orderRepository;
-        _uow = uow;
-    }
-
-    public async Task<Result> HandleAsync(
-        CreateOrderRequest request, CancellationToken cancellationToken)
-    {
-        var order = Order.Create(request.CustomerName);
-        _orderRepository.Add(order);
-        await _uow.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-}
-
-// Mutation (update existing entity) — explicit Update required:
-public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
-{
-    private readonly IOrderRepository _orderRepository;
-    private readonly IUnitOfWork _uow;
-
-    public UpdateOrderHandler(IOrderRepository orderRepository, IUnitOfWork uow)
-    {
-        _orderRepository = orderRepository;
-        _uow = uow;
-    }
-
-    public async Task<Result> HandleAsync(
-        UpdateOrderRequest request, CancellationToken cancellationToken)
-    {
-        var order = await _orderRepository.FindAsync(
-            OrderId.Of(request.Id), cancellationToken);
-        if (order is null)
-        {
-            return Result.Fail("404", "Order not found");
-        }
-
-        order.UpdateName(request.CustomerName);
-        _uow.Update(order);  // Explicit — marks aggregate + child entities for persistence
-        await _uow.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-}
+builder.AddApplicationPart(typeof(IOrderService).Assembly);
+var app = await builder.BuildAsync();
+app.MapServiceToHttpEndpoints<IOrderService>();
 ```
 
-## Fire-and-Forget Command
+## 4. Call from Other Components
 
-Commands are dispatched without waiting for a response. Useful for background processing.
-
-```csharp
-// Contract
-public record ProcessPaymentCommand(long OrderId, decimal Amount) : ICommand;
-
-// Handler
-public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand>
-{
-    public async Task HandleAsync(
-        ProcessPaymentCommand command, CancellationToken cancellationToken)
-    {
-        // Process payment asynchronously
-    }
-}
-
-// Sending a command from a request handler:
-public class PlaceOrderHandler : IRequestHandler<PlaceOrderRequest>
-{
-    private readonly ICommandSender _commandSender;
-
-    public PlaceOrderHandler(ICommandSender commandSender)
-    {
-        _commandSender = commandSender;
-    }
-
-    public async Task<Result> HandleAsync(
-        PlaceOrderRequest request, CancellationToken cancellationToken)
-    {
-        await _commandSender.SendAsync(
-            new ProcessPaymentCommand(request.OrderId, request.Amount),
-            cancellationToken);
-        return Result.Success();
-    }
-}
-```
-
-## Publish/Subscribe Notification
-
-Notifications are delivered to all registered handlers.
-
-```csharp
-// Contract
-public record OrderShippedNotification(long OrderId) : INotification;
-
-// Handler (can have multiple handlers for the same notification)
-public class SendShippingEmailHandler : INotificationHandler<OrderShippedNotification>
-{
-    public async Task HandleAsync(
-        OrderShippedNotification notification, CancellationToken cancellationToken)
-    {
-        // Send email
-    }
-}
-
-// Publishing from a handler:
-private readonly INotificationPublisher _publisher;
-
-await _publisher.PublishAsync(
-    new OrderShippedNotification(orderId), cancellationToken);
-```
-
-## Endpoint Metadata Attributes
-
-| Attribute | Purpose |
-|-----------|---------|
-| `[PublicApi]` | Mark as public API operation |
-| `[HttpEndpoint(HttpVerb, route)]` | Map to HTTP endpoint (requires `[PublicApi]`) |
-| `[AllowAnonymous]` | Skip authentication |
-| `[Summary("...")]` | OpenAPI summary |
-| `[EndpointDescription("...")]` | OpenAPI description |
-| `[Category("...")]` | OpenAPI tag/group |
-
-## Notes
-
-- Handlers are auto-discovered — no manual DI registration needed (via source-generated `AddAllHandlers()`).
-- Route parameters like `{id}` are matched to request record properties by name.
-- `Result.Fail(errorCode, message)` maps to HTTP status codes automatically.
-- `Result.Success()` returns HTTP 200; `Result<T>` serializes the value as JSON.
-- Use `IRequestSender` to send requests programmatically (e.g., service-to-service).
+- In-process: inject generated service implementation/client.
+- Cross-service: use generated HTTP service client.

@@ -1,0 +1,131 @@
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.IdentityModel.Tokens;
+using NOF.Application;
+using NOF.Contract;
+using Xunit;
+
+namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.Middlewares;
+
+public sealed class JwtResourceServerInboundMiddlewareTests
+{
+    [Fact]
+    public async Task InvokeAsync_WhenAuthorizationHeaderMissing_ShouldContinueWithoutValidation()
+    {
+        var userContext = new UserContext();
+        var jwksProvider = new FakeJwksProvider([]);
+        var executionContext = new NOF.Contract.ExecutionContext();
+        var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
+
+        var nextCalled = false;
+        await middleware.InvokeAsync(CreateInboundContext(), _ =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        nextCalled.Should().BeTrue();
+        jwksProvider.CallCount.Should().Be(0);
+        userContext.User.Should().Be(UserContext.Anonymous);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenKeysUnavailable_ShouldContinueAndKeepHeader()
+    {
+        var userContext = new UserContext();
+        var jwksProvider = new FakeJwksProvider([]);
+        var executionContext = new NOF.Contract.ExecutionContext
+        {
+            [NOFContractConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
+        };
+        var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
+
+        var nextCalled = false;
+        await middleware.InvokeAsync(CreateInboundContext(), _ =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        nextCalled.Should().BeTrue();
+        jwksProvider.CallCount.Should().Be(1);
+        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization).Should().BeTrue();
+        userContext.User.Should().Be(UserContext.Anonymous);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenTokenInvalid_ShouldContinueWithoutThrowing()
+    {
+        var userContext = new UserContext();
+        var jwksProvider = new FakeJwksProvider([new JsonWebKey
+        {
+            Kid = "kid-1",
+            Kty = "RSA",
+            Use = "sig",
+            N = "abc",
+            E = "AQAB"
+        }]);
+        var executionContext = new NOF.Contract.ExecutionContext
+        {
+            [NOFContractConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
+        };
+        var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
+
+        var nextCalled = false;
+        var act = async () => await middleware.InvokeAsync(CreateInboundContext(), _ =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        await act.Should().NotThrowAsync();
+        nextCalled.Should().BeTrue();
+        userContext.User.Should().Be(UserContext.Anonymous);
+    }
+
+    private static JwtResourceServerInboundMiddleware CreateMiddleware(
+        IUserContext userContext,
+        IJwksProvider jwksProvider,
+        IExecutionContext executionContext)
+    {
+        return new JwtResourceServerInboundMiddleware(
+            userContext,
+            jwksProvider,
+            global::Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
+            {
+                HeaderName = NOFContractConstants.Transport.Headers.Authorization,
+                TokenType = "Bearer",
+                JwksEndpoint = "https://auth.local/.well-known/jwks.json",
+                RequireHttpsMetadata = true
+            }),
+            NullLogger<JwtResourceServerInboundMiddleware>.Instance,
+            executionContext);
+    }
+
+    private static InboundContext CreateInboundContext()
+    {
+        return new InboundContext
+        {
+            Message = new object(),
+            HandlerType = typeof(object),
+            Services = new ServiceCollection().BuildServiceProvider()
+        };
+    }
+
+    private sealed class FakeJwksProvider(IReadOnlyCollection<SecurityKey> keys) : IJwksProvider
+    {
+        public int CallCount { get; private set; }
+
+        public Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            return Task.FromResult((IReadOnlyList<SecurityKey>)keys.ToList());
+        }
+
+        public Task<IReadOnlyList<SecurityKey>> RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            return GetSecurityKeysAsync(cancellationToken);
+        }
+    }
+}

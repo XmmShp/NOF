@@ -4,56 +4,39 @@ trigger: always_on
 
 # NOF Framework Development Rules
 
-> **Audience**: Human developers AND AI coding assistants contributing to the NOF framework itself.
-> If you are building an application that USES NOF, see `rules/app-dev.md` instead.
-
-You are working in the **NOF (Neat Opinionated Framework)** repository — a modular, convention-driven .NET application framework.
+Use this file when contributing to the NOF framework itself.
 
 ## Repository Layout
 
-- `src/` — Framework source packages (Domain, Contract, Application, Infrastructure, Hosting, Extensions)
-- `src/Hostings/NOF.Hosting.BlazorWebAssembly/` — Blazor WebAssembly hosting package and client auth UI primitives
-- `src/*SourceGenerator/` — Roslyn source generators (compile-time code generation)
-- `sample/` — Sample application demonstrating NOF usage
-- `tests/` — xUnit tests (Contract, Integration, SourceGenerator)
-- `docs/` — DocFX API documentation source
-- `.github/workflows/` — CI (develop), CD (main → nightly NuGet + docs), Release (tags)
+- `src/` framework source packages.
+- `src/Hostings/` host-specific packages.
+- `src/Infrastructures/` infrastructure providers.
+- `src/Extensions/` optional extension packages.
+- `sample/` runnable sample app.
+- `tests/` test projects. Extension package tests live in `tests/Extensions/`.
+- `docs/` DocFX documentation.
 
 ## Tech Stack
 
-- .NET 10, C# 14 (preview features, `extension` syntax)
-- Central Package Management (`Directory.Packages.props` at root)
-- Source Generators (Microsoft.CodeAnalysis / Roslyn)
-- RabbitMQ, EF Core 10 + PostgreSQL, StackExchange.Redis
-- OpenTelemetry, JWT/OIDC authorization
-- xUnit + FluentAssertions + Moq for testing
-- DocFX for API documentation
-- GitHub Actions for CI/CD
+- .NET 10 / C# 14 preview features (`extension` blocks are used in this repo).
+- Central Package Management via root `Directory.Packages.props`.
+- Roslyn incremental generators.
+- xUnit + FluentAssertions + Moq.
 
 ## Key Patterns
 
-- **CQRS**: `IRequest`/`ICommand`/`INotification` with typed handlers
-- **Step Pipeline**: `IServiceRegistrationStep` / `IApplicationInitializationStep` with `IAfter<T>`/`IBefore<T>` ordering, CRTP `IStep<TSelf>` for AOT-safe type metadata
-- **Cache Registration**: global cache defaults should be installed once via registration steps; named cache registrations should layer on top and expose both `ICacheService` and `IDistributedCache`
-- **Source Gen Attributes**: `[AutoInject]`, `[PublicApi]`, `[HttpEndpoint]`, `[GenerateService]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`; `IValueObject<T>` (interface trigger)
-- **Transactional Outbox**: `IDeferredNotificationPublisher` via EF Core
-
-## Package Placement Notes
-
-- Generic cache abstractions stay in `NOF.Application`
-- Redis-specific cache abstractions live in `src/Extensions/NOF.Application.Extension.Redis/`
-- Redis infrastructure implementation stays in `src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/`
+- CQRS: `IRpcService`, `ICommand`, `INotification`, `IEvent`.
+- Step pipeline: registration and initialization steps with `IAfter<T>` / `IBefore<T>`.
+- Source-gen attributes: `[AutoInject]`, `[PublicApi]`, `[HttpEndpoint]`, `[GenerateService]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`.
+- Transactional outbox: `IDeferredNotificationPublisher` / `IDeferredCommandSender`.
 
 ## Coding Rules
 
-- File-scoped namespaces (enforced as warning)
-- Braces required on all control-flow blocks (enforced as warning)
-- Allman-style braces
-- Private instance fields: `_camelCase`; static/readonly/const: `PascalCase`
-- All public APIs in `src/` must have XML doc comments
-- `TreatWarningsAsErrors` enabled for `src/` projects
-- NuGet versions only in root `Directory.Packages.props`
-- Conventional Commits: `<type>(<scope>): <summary>`
+- File-scoped namespaces.
+- Braces on all control-flow.
+- Allman style.
+- Public APIs in `src/` require XML comments.
+- Do not place NuGet versions in individual `.csproj` files.
 
 ## Build Commands
 
@@ -64,62 +47,20 @@ dotnet test
 dotnet format --verify-no-changes
 ```
 
----
+## Change Checklist
 
-## ⚠️ CRITICAL: Complete Change Checklist
+Before considering work done, verify all applicable items:
 
-> **For both human developers and AI agents**: Every change to the NOF framework MUST consider ALL of the following areas. Do NOT only update the source code — incomplete changes cause CI failures, documentation drift, and broken samples.
+1. Tests updated:
+- Parent package tests and source generator tests are kept together (for example `NOF.Domain` + `NOF.Domain.SourceGenerator` in `tests/NOF.Domain.Tests`).
+- Extension package tests are added under `tests/Extensions/*`.
 
-### Before You Consider a Change "Done"
+2. Sample app still compiles and demonstrates changed behavior.
 
-Ask yourself (or your AI agent) these questions:
+3. Docs updated:
+- XML docs on public APIs.
+- `README.md`, `docs/`, and `.agents/*` where relevant.
 
-1. **Tests** — Did you add or update tests?
-   - Unit tests in `tests/NOF.Contract.Tests/` or `tests/NOF.SourceGenerator.Tests/`
-   - Integration tests in `tests/NOF.Infrastructure.Core.Tests/`
-   - Source generator tests if you changed any generator
-   - Run `dotnet test` to verify
+4. CI/CD updated when adding package/test projects.
 
-2. **Sample Application** — Does `sample/` still compile and demonstrate the feature correctly?
-   - If you added a new API or changed behavior, update the sample to showcase it
-   - If you renamed or removed an API, update the sample to avoid compile errors
-   - Run `dotnet build sample/NOF.Sample.AppHost/NOF.Sample.AppHost.csproj` to verify
-
-3. **Documentation** — Did you update the docs?
-   - XML doc comments on all new/changed public APIs (enforced by `GenerateDocumentationFile`)
-   - `docs/` — DocFX API documentation if the public surface changed
-   - `README.md` — Package table, Quick Start, Architecture diagram if affected
-   - `CONTRIBUTING.md` — If conventions or processes changed
-   - `.github/copilot-instructions.md` — If abstractions, patterns, or usage changed
-
-4. **CI/CD Pipelines** — Do the GitHub Actions workflows need updating?
-   - `.github/workflows/ci.yml` — If you added a new test project or changed build steps
-   - `.github/workflows/cd.yml` — If you added a new NuGet package (add `dotnet pack` command), including hosting packages like Blazor WebAssembly
-   - `.github/workflows/cd.yml` — No separate release.yml is used currently; keep cd.yml in sync for packaging changes
-
-5. **Agent Instructions** — Did you update the AI agent files?
-   - `.agents/rules/nof-dev.md` (this file) — If framework conventions changed
-   - `.agents/rules/app-dev.md` — If usage patterns for app developers changed
-   - `.agents/workflows/nof-dev/*` — If framework development workflows changed
-   - `.agents/workflows/app-dev/*` — If app development workflows changed
-   - `.agents/skills/nof-app-development/SKILL.md` — If the app development skill needs updating
-   - `.github/copilot-instructions.md` — Keep in sync with agent rules
-
-6. **Central Package Management** — If you added new NuGet dependencies:
-   - Add version to root `Directory.Packages.props`
-   - Never specify `Version` in individual `.csproj` files
-
-### Quick Self-Check (Copy-Paste for PR Description)
-
-```markdown
-- [ ] Source code updated
-- [ ] Tests added/updated (`dotnet test` passes)
-- [ ] Sample application updated (compiles and demonstrates the change)
-- [ ] XML doc comments on all new public APIs
-- [ ] Documentation updated (README / docs/ / CONTRIBUTING.md as needed)
-- [ ] CI/CD workflows updated (if new package or test project)
-- [ ] Agent instructions updated (.agents/ and .github/copilot-instructions.md)
-- [ ] `dotnet format --verify-no-changes` passes
-- [ ] `dotnet build --configuration Release` succeeds with no warnings
-- [ ] Commit messages follow conventional commits
-```
+5. Central package management respected (versions only in root `Directory.Packages.props`).

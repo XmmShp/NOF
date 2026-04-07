@@ -97,13 +97,13 @@ The outbox ensures notifications are only published after the database transacti
 ### Using IDeferredNotificationPublisher
 
 ```csharp
-public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
+public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand>
 {
     private readonly IOrderRepository _orderRepo;
     private readonly IUnitOfWork _uow;
     private readonly IDeferredNotificationPublisher _publisher;
 
-    public CreateOrderHandler(
+    public CreateOrderCommandHandler(
         IOrderRepository orderRepo,
         IUnitOfWork uow,
         IDeferredNotificationPublisher publisher)
@@ -113,9 +113,9 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
         _publisher = publisher;
     }
 
-    public async Task<Result> HandleAsync(CreateOrderRequest request, CancellationToken ct)
+    public async Task HandleAsync(CreateOrderCommand command, CancellationToken ct)
     {
-        var order = Order.Create(request.CustomerName);
+        var order = Order.Create(command.CustomerName);
         _orderRepo.Add(order);
 
         // Deferred — written to outbox table in the same transaction
@@ -124,7 +124,6 @@ public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
         // Domain events (IEvent) + outbox messages are all committed atomically
         await _uow.SaveChangesAsync(ct);
 
-        return Result.Success();
     }
 }
 ```

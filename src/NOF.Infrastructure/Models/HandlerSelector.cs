@@ -5,8 +5,7 @@ using NOF.Hosting;
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Returned by the source-generated <c>AddAllHandlers</c> method.
-/// Provides fluent API for handler registration.
+/// Provides fluent APIs for enriching handler metadata during service registration.
 /// </summary>
 public sealed class HandlerSelector
 {

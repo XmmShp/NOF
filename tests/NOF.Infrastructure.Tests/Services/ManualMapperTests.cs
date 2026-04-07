@@ -3,7 +3,7 @@ using NOF.Application;
 using System.Collections;
 using Xunit;
 
-namespace NOF.Infrastructure.Core.Tests.Services;
+namespace NOF.Infrastructure.Tests.Services;
 
 public class ManualMapperTests
 {

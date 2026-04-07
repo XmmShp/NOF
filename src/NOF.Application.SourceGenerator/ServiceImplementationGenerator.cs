@@ -248,7 +248,7 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
         {
             sb.AppendLine($"        global::NOF.Application.RequestHandlerRegistry.Register(typeof({serviceType}), typeof({implementationType}));");
         }
-        sb.AppendLine($"        global::NOF.Annotation.AutoInjectRegistry.Register(typeof({serviceInterfaceFqn}), typeof({implementationTypeFqn}), global::NOF.Annotation.Lifetime.Scoped, useFactory: false);");
+        sb.AppendLine($"        global::NOF.Annotation.AutoInjectRegistry.Register(typeof({serviceInterfaceFqn}), typeof({implementationTypeFqn}), global::NOF.Annotation.Lifetime.Transient, useFactory: false);");
         sb.AppendLine("    }");
         sb.AppendLine("}");
 

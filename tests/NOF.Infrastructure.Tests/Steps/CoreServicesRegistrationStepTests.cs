@@ -15,7 +15,7 @@ using NOF.Hosting;
 using NOF.Infrastructure.Memory;
 using Xunit;
 
-namespace NOF.Infrastructure.Core.Tests.Steps;
+namespace NOF.Infrastructure.Tests.Steps;
 
 public class InfrastructureDefaultsTests
 {
@@ -204,7 +204,7 @@ public class InfrastructureDefaultsTests
     {
         public string EnvironmentName { get; set; } = Environments.Development;
 
-        public string ApplicationName { get; set; } = "NOF.Infrastructure.Core.Tests";
+        public string ApplicationName { get; set; } = "NOF.Infrastructure.Tests";
 
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
 

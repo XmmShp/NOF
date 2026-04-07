@@ -5,7 +5,7 @@
 ## Key Features
 
 - **Clean Architecture** — Layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns.
-- **CQRS & Messaging** — First-class `IRequest`, `ICommand`, `INotification` abstractions with handler pipelines.
+- **CQRS & Messaging** — First-class `IRpcService`, `ICommand`, `INotification` abstractions with handler pipelines.
 - **Source Generators** — Compile-time code generation for HTTP endpoint mapping, DI registration, failure definitions, and more.
 - **Transactional Outbox** — Reliable message delivery with inbox/outbox pattern built into EF Core infrastructure.
 - **State Machines** — Declarative, event-driven state machine builder with persistent context.

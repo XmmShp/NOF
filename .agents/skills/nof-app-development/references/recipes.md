@@ -1,294 +1,69 @@
-# NOF Common Recipes
+# NOF Recipes
 
-## Table of Contents
-
-- [Application Bootstrap](#application-bootstrap)
-- [Value Objects](#value-objects)
-- [Aggregate Root with Domain Events](#aggregate-root-with-domain-events)
-- [Repository](#repository)
-- [Request Handler (HTTP Endpoint)](#request-handler-http-endpoint)
-- [PATCH with Optional Fields](#patch-with-optional-fields)
-- [Failure Definitions](#failure-definitions)
-- [Transactional Outbox](#transactional-outbox)
-- [Typed Cache Keys](#typed-cache-keys)
-- [State Machine](#state-machine)
-- [Accessing User Identity](#accessing-user-identity)
-- [DbContext Setup](#dbcontext-setup)
-
----
-
-## Application Bootstrap
+## Program Bootstrap
 
 ```csharp
-using NOF.Hosting.AspNetCore;
-
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
-// Source-generated registrations
-builder.Services.AddMyAppAutoInjectServices();  // From [AutoInject]
-builder.Services.AddAllHandlers();               // From source generator
+builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-// Infrastructure
 builder.AddRedisCache();
-builder.AddJwtAuthority().AddJwksRequestHandler();
-builder.AddJwtAuthorization();
+builder.AddJwtAuthority(o => o.Issuer = "MyApp");
+builder.AddJwtResourceServer(o =>
+{
+    o.Issuer = "MyApp";
+    o.RequireHttpsMetadata = false;
+    o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
+});
 builder.AddRabbitMQ();
-builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
+builder.AddEFCore<AppDbContext>().UseSharedDatabaseTenancy().AutoMigrate().UsePostgreSQL();
 
 var app = await builder.BuildAsync();
 app.MapServiceToHttpEndpoints<IMyAppService>();
 await app.RunAsync();
 ```
 
-## Value Objects
+## RPC Contract + Implementation
 
 ```csharp
-// Simple ID (SnowflakeId)
-[NewableValueObject]
-public readonly partial struct OrderId : IValueObject<long>;
-
-// Validated value object
-public readonly partial struct EmailAddress : IValueObject<string>
+[GenerateService]
+public partial interface IOrderService : IRpcService
 {
-    public static void Validate(string input)
-    {
-        if (!input.Contains('@'))
-            throw new ValidationException("Invalid email format.");
-    }
+    [PublicApi]
+    [HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
+    Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken = default);
 }
 
-// Usage:
-var id = OrderId.New();              // Generate SnowflakeId
-var id = OrderId.Of(12345L);         // From primitive
-long raw = (long)id;                 // Explicit cast to primitive
-var email = EmailAddress.Of("a@b");  // Validated
-```
-
-## Aggregate Root with Domain Events
-
-```csharp
-public class Order : AggregateRoot
+public sealed class GetOrder : OrderService.GetOrder
 {
-    public OrderId Id { get; init; }
-    public string CustomerName { get; private set; }
-
-    private Order() { }  // EF Core requires parameterless constructor
-
-    public static Order Create(string customerName)
+    public Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
-        var order = new Order { Id = OrderId.New(), CustomerName = customerName };
-        order.AddEvent(new OrderCreatedEvent(order.Id, customerName));
-        return order;
-    }
-
-    public void UpdateName(string newName)
-    {
-        CustomerName = newName;
-        AddEvent(new OrderUpdatedEvent(Id));
-    }
-}
-
-public record OrderCreatedEvent(OrderId Id, string CustomerName) : IEvent;
-public record OrderUpdatedEvent(OrderId Id) : IEvent;
-
-// Child entity (owned by aggregate root) — uses IEntity marker interface
-public class OrderItem : IEntity
-{
-    public string ProductName { get; init; }
-    public int Quantity { get; private set; }
-    internal OrderItem() { }
-    public OrderItem(string productName, int quantity)
-    {
-        ProductName = productName;
-        Quantity = quantity;
+        return Task.FromResult(Result.Success(new GetOrderResponse(request.Id, "sample")));
     }
 }
 ```
 
-## Repository
+## Domain Update
 
 ```csharp
-// Domain layer — interface
-public interface IOrderRepository : IRepository<Order, OrderId>
-{
-    Task<Order?> FindByCustomerAsync(string name, CancellationToken ct = default);
-}
-
-// Host project — EF Core implementation
-[AutoInject(Lifetime.Scoped)]
-public class OrderRepository : EFCoreRepository<Order>, IOrderRepository
-{
-    public OrderRepository(NOFDbContext dbContext) : base(dbContext) { }
-
-    public async Task<Order?> FindByCustomerAsync(string name, CancellationToken ct)
-        => await DbContext.Set<Order>().FirstOrDefaultAsync(o => o.CustomerName == name, ct);
-}
-
-// IRepository<T> provides: FindAsync, FindAllAsync, Add, Remove
-// FindAllAsync returns IAsyncEnumerable<T> for streaming large result sets
+order.UpdateName(request.Name);
+_uow.Update(order);
+await _uow.SaveChangesAsync(cancellationToken);
 ```
 
-## Request Handler (HTTP Endpoint)
+## Access User/Tenant
 
 ```csharp
-// Contract
-[PublicApi]
-[HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
-[Summary("Get order by ID")]
-[Category("Orders")]
-public record GetOrderRequest(long Id) : IRequest<GetOrderResponse>;
-public record GetOrderResponse(long Id, string CustomerName);
-
-// Handler
-public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse>
+public sealed class MyHandler(IUserContext userContext, IExecutionContext executionContext)
 {
-    private readonly IOrderRepository _repo;
-    public GetOrderHandler(IOrderRepository repo) => _repo = repo;
-
-    public async Task<Result<GetOrderResponse>> HandleAsync(
-        GetOrderRequest request, CancellationToken ct)
-    {
-        var order = await _repo.FindAsync(OrderId.Of(request.Id), ct);
-        if (order is null)
-            return Result.Fail(OrderFailures.OrderNotFound);
-
-        return new GetOrderResponse((long)order.Id, order.CustomerName);
-    }
+    public string? CurrentUserId => userContext.Id;
+    public string CurrentTenant => executionContext.TenantId;
 }
 ```
 
-## PATCH with Optional Fields
+## Deferred Outbox Dispatch
 
 ```csharp
-[PublicApi]
-[HttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
-public record UpdateOrderRequest : PatchRequest, IRequest
-{
-    public long Id { get; init; }
-    public Optional<string> CustomerName { get => Get<string>(); set => Set(value); }
-    public Optional<string?> Notes { get => Get<string?>(); set => Set(value); }
-}
-
-// In handler:
-request.CustomerName.IfSome(name => order.UpdateName(name));
-request.Notes.IfSome(notes => order.UpdateNotes(notes));
-```
-
-## Failure Definitions
-
-```csharp
-[Failure("OrderNotFound", "Order not found.", "404")]
-[Failure("OrderAlreadyConfirmed", "Already confirmed.", "409")]
-public static partial class OrderFailures;
-
-// Usage: return Result.Fail(OrderFailures.OrderNotFound);
-```
-
-## Mutation Handler (Explicit Update)
-
-```csharp
-public class UpdateOrderHandler : IRequestHandler<UpdateOrderRequest>
-{
-    private readonly IOrderRepository _repo;
-    private readonly IUnitOfWork _uow;
-
-    public async Task<Result> HandleAsync(UpdateOrderRequest request, CancellationToken ct)
-    {
-        var order = await _repo.FindAsync(OrderId.Of(request.Id), ct);
-        if (order is null) return Result.Fail("404", "Order not found");
-
-        order.UpdateName(request.CustomerName);
-        _uow.Update(order);  // Explicit — marks aggregate + child entities
-        await _uow.SaveChangesAsync(ct);
-        return Result.Success();
-    }
-}
-```
-
-## Transactional Outbox
-
-```csharp
-public class CreateOrderHandler : IRequestHandler<CreateOrderRequest>
-{
-    private readonly IOrderRepository _repo;
-    private readonly IUnitOfWork _uow;
-    private readonly IDeferredNotificationPublisher _publisher;
-
-    public async Task<Result> HandleAsync(CreateOrderRequest request, CancellationToken ct)
-    {
-        var order = Order.Create(request.CustomerName);
-        _repo.Add(order);
-
-        _publisher.Publish(new OrderCreatedNotification((long)order.Id));  // Deferred
-        await _uow.SaveChangesAsync(ct);  // Commits entity + outbox atomically
-
-        return Result.Success();
-    }
-}
-```
-
-## Typed Cache Keys
-
-```csharp
-public record OrderCacheKey(long Id) : CacheKey<OrderDto>($"Order:{Id}");
-
-// Usage:
-var cached = await _cache.GetAsync(new OrderCacheKey(id), ct);
-if (cached.HasValue) return cached.Value;
-
-await _cache.SetAsync(new OrderCacheKey(id), dto, options, ct);
-await _cache.RemoveAsync(new OrderCacheKey(id), ct);
-
-// Get-or-set pattern:
-var dto = await _cache.GetOrSetAsync(new OrderCacheKey(id), async ct => { ... }, options, ct);
-```
-
-## State Machine
-
-```csharp
-public class OrderStateMachine : IStateMachineDefinition<OrderState>
-{
-    public void Build(IStateMachineBuilder<OrderState> builder)
-    {
-        builder.Correlate<OrderPlacedNotification>(n => $"Order-{n.OrderId}");
-        builder.StartWhen<OrderPlacedNotification>(OrderState.Pending);
-        builder.On(OrderState.Pending)
-            .When<PaymentReceivedNotification>()
-            .TransitionTo(OrderState.Processing);
-    }
-}
-```
-
-## Accessing User Identity
-
-```csharp
-public class MyHandler : IRequestHandler<MyRequest>
-{
-    private readonly IInvocationContext _context;
-
-    public async Task<Result> HandleAsync(MyRequest request, CancellationToken ct)
-    {
-        var user = _context.User;           // ClaimsPrincipal
-        var tenantId = _context.TenantId;   // string?
-        var traceId = _context.TraceId;     // string?
-        // ...
-    }
-}
-```
-
-## DbContext Setup
-
-```csharp
-public class AppDbContext : NOFDbContext
-{
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-    public DbSet<Order> Orders { get; set; }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);  // REQUIRED: configures outbox/inbox tables
-        // Configure entity mappings...
-    }
-}
+_deferredNotificationPublisher.Publish(new OrderCreatedNotification(order.Id));
+await _uow.SaveChangesAsync(cancellationToken);
 ```

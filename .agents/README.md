@@ -1,48 +1,47 @@
-# .agents — AI Agent Instructions for NOF
+# .agents - AI Agent Instructions for NOF
 
-> **Audience**: Both human developers and AI coding assistants (Copilot, Windsurf Cascade, Cursor, Cline, etc.)
+> Audience: human developers and AI coding assistants.
 
-This directory contains structured instructions that help AI agents work effectively with the NOF codebase. Human developers should also read these files to understand the conventions and workflows.
-
-Recent framework conventions such as step-driven cache defaults, `IDistributedCache` compatibility, the `NOF.Application.Extension.Redis` package, and hosting packages like `NOF.Hosting.BlazorWebAssembly` should be reflected here when framework behavior changes.
+This directory contains shared instructions for working with the NOF codebase.  
+When framework behavior changes, keep these files in sync with `src/`, `tests/`, and sample usage.
 
 ## Directory Structure
 
-```
+```text
 .agents/
   rules/
-    nof-dev.md        — Rules for developing the NOF framework itself (src/, tests/, CI/CD)
-    app-dev.md        — Rules for developing applications that USE the NOF framework
+    nof-dev.md
+    app-dev.md
   workflows/
-    nof-dev/          — Step-by-step workflows for NOF framework contributors
+    nof-dev/
       add-infrastructure-package.md
       add-source-generator.md
       add-step.md
       run-ci-locally.md
-    app-dev/          — Step-by-step workflows for NOF application developers
+    app-dev/
+      scaffold-nof-app.md
       add-domain-entity.md
       add-domain-event-handler.md
       add-efcore-database.md
       add-handler.md
       add-jwt-auth.md
+      add-rabbitmq-messaging.md
       add-redis-caching.md
       add-request-handler.md
       add-state-machine.md
-      add-rabbitmq-messaging.md
-      scaffold-nof-app.md
   skills/
-    nof-app-development/SKILL.md — Comprehensive skill for AI agents building NOF applications
+    nof-app-development/SKILL.md
 ```
 
-## Who Should Use What
+## Which File To Use
 
-| You are… | Read rules | Use workflows | Use skills |
-|----------|-----------|---------------|------------|
-| **Contributing to NOF** (framework code, tests, CI/CD) | `rules/nof-dev.md` | `workflows/nof-dev/*` | — |
-| **Building an app with NOF** (your own project) | `rules/app-dev.md` | `workflows/app-dev/*` | `skills/nof-app-development/SKILL.md` |
+| Scenario | Read Rules | Use Workflows | Use Skills |
+|---|---|---|---|
+| Contributing to NOF framework (`src/`, `tests/`, CI/CD) | `rules/nof-dev.md` | `workflows/nof-dev/*` | N/A |
+| Building an app with NOF | `rules/app-dev.md` | `workflows/app-dev/*` | `skills/nof-app-development/SKILL.md` |
 
-## For AI Agent Clients
+## Test Layout Notes
 
-The `.agents/` directory is **checked into Git** so all contributors share the same instructions. However, each AI client (Windsurf, Cursor, Copilot, etc.) has its own configuration directory that is **gitignored** (see `.gitignore`).
-
-To share these instructions with your AI client, create a **symlink** from your client's config directory to the relevant files here. See the comments in `.gitignore` for details.
+- `tests/` mirrors `src/` at a package level as much as possible.
+- Source generator tests are colocated with their parent package test projects (for example `NOF.Domain` and `NOF.Domain.SourceGenerator` are tested in `tests/NOF.Domain.Tests`).
+- Extension package tests are under `tests/Extensions/*`.

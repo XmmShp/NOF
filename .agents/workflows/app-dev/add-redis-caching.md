@@ -59,18 +59,18 @@ using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 
-public class GetOrderHandler : IRequestHandler<GetOrderRequest, GetOrderResponse>
+public class GetOrder : OrderService.GetOrder
 {
     private readonly ICacheService _cache;
     private readonly IOrderRepository _orderRepository;
 
-    public GetOrderHandler(ICacheService cache, IOrderRepository orderRepository)
+    public GetOrder(ICacheService cache, IOrderRepository orderRepository)
     {
         _cache = cache;
         _orderRepository = orderRepository;
     }
 
-    public async Task<Result<GetOrderResponse>> HandleAsync(
+    public async Task<Result<GetOrderResponse>> GetOrderAsync(
         GetOrderRequest request, CancellationToken ct)
     {
         var cacheKey = new OrderCacheKey(request.Id);

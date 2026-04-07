@@ -8,7 +8,7 @@
 ## Features
 
 - **Clean Architecture** - layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
-- **CQRS & Messaging** - first-class `IRequest`, `ICommand`, `INotification` abstractions with handler pipelines
+- **CQRS & Messaging** - first-class `IRpcService`, `ICommand`, `INotification` abstractions with handler pipelines
 - **Source Generators** - compile-time code generation for explicit HTTP service endpoint mapping, DI registration, and failure definitions
 - **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
 - **State Machines** - declarative, event-driven state machine builder with persistent context
@@ -79,6 +79,14 @@ NOF.Infrastructure.*           <- Persistence, messaging, and caching providers
 ## Documentation
 
 Full API documentation is available at the [GitHub Pages site](https://xmmshp.github.io/NOF/).
+
+## Testing
+
+The test layout mirrors `src/` at package level:
+
+- Core package tests: `tests/NOF.*.Tests`
+- Extension package tests: `tests/Extensions/NOF.*.Tests`
+- Source generator tests are colocated with parent package tests (for example `NOF.Domain` + `NOF.Domain.SourceGenerator` in `tests/NOF.Domain.Tests`)
 
 ## Dependency Version Management
 

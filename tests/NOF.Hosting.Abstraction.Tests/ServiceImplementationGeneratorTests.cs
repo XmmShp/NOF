@@ -43,7 +43,7 @@ public class ServiceImplementationGeneratorTests
         var result = new ServiceImplementationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Scoped, useFactory: false);");
+        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Transient, useFactory: false);");
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ServiceImplementationGeneratorTests
         var result = new ServiceImplementationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Scoped, useFactory: false);");
+        generatedCode.Should().Contain("global::NOF.Annotation.AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Transient, useFactory: false);");
     }
 
     [Fact]
