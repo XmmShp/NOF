@@ -37,7 +37,6 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
 
     private void ConfigureDefaultTestServices()
     {
-        this.AddHostingDefaults();
         this.AddInfrastructureDefaults();
     }
 

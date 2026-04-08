@@ -47,8 +47,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         {
             this.AddApplicationPart(assembly);
         }
-
-        this.AddRegistrationStep(new AutoInjectServiceRegistrationStep());
     }
 
     public virtual INOFAppBuilder AddRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep registrationStep, params Type[] allInterfaces)
@@ -99,6 +97,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     public virtual async Task<THostApplication> BuildAsync()
     {
+        AddRegistrationStep(new AutoInjectServiceRegistrationStep());
+        this.AddHostingDefaults();
         var regGraph = new DependencyGraph(ServiceConfigs);
         foreach (var node in regGraph.GetExecutionOrder())
         {

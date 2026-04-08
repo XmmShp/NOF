@@ -5,7 +5,6 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Hosting;
 
 namespace NOF.Hosting.BlazorWebAssembly;
 
@@ -25,7 +24,6 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
     public static NOFWebAssemblyHostBuilder Create(string[]? args)
     {
         var builder = new NOFWebAssemblyHostBuilder(args);
-        builder.AddHostingDefaults();
         builder.AddRegistrationStep(new BrowserStorageRegistrationStep());
         return builder;
     }

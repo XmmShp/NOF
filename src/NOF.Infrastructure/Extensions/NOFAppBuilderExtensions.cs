@@ -19,7 +19,6 @@ public static partial class NOFInfrastructureExtensions
         /// </summary>
         public INOFAppBuilder AddInfrastructureDefaults()
         {
-            builder.AddHostingDefaults();
             builder.Services.TryAddSingleton<ICacheSerializer, JsonCacheSerializer>();
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
             builder.Services.TryAddSingleton<ICacheServiceFactory, CacheServiceFactory>();
