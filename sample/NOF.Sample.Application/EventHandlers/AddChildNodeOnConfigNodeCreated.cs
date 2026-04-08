@@ -4,19 +4,19 @@ using NOF.Sample.Application.Repositories;
 namespace NOF.Sample.Application.EventHandlers;
 
 /// <summary>
-/// 节点创建时更新父节点的子节点列表
+/// 节点创建时添加到子节点列表
 /// </summary>
 public class AddChildNodeOnConfigNodeCreated : IEventHandler<ConfigNodeCreatedEvent>
 {
-    private readonly IConfigNodeViewRepository _viewRepository;
+    private readonly IConfigNodeChildrenRepository _childrenRepository;
 
-    public AddChildNodeOnConfigNodeCreated(IConfigNodeViewRepository viewRepository)
+    public AddChildNodeOnConfigNodeCreated(IConfigNodeChildrenRepository childrenRepository)
     {
-        _viewRepository = viewRepository;
+        _childrenRepository = childrenRepository;
     }
 
     public async Task HandleAsync(ConfigNodeCreatedEvent @event, CancellationToken cancellationToken)
     {
-        await _viewRepository.AddChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
+        await _childrenRepository.AddChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
     }
 }

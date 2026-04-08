@@ -8,15 +8,15 @@ namespace NOF.Sample.Application.EventHandlers;
 /// </summary>
 public class RemoveChildNodeOnConfigNodeDeleted : IEventHandler<ConfigNodeDeletedEvent>
 {
-    private readonly IConfigNodeViewRepository _viewRepository;
+    private readonly IConfigNodeChildrenRepository _childrenRepository;
 
-    public RemoveChildNodeOnConfigNodeDeleted(IConfigNodeViewRepository viewRepository)
+    public RemoveChildNodeOnConfigNodeDeleted(IConfigNodeChildrenRepository childrenRepository)
     {
-        _viewRepository = viewRepository;
+        _childrenRepository = childrenRepository;
     }
 
     public async Task HandleAsync(ConfigNodeDeletedEvent @event, CancellationToken cancellationToken)
     {
-        await _viewRepository.RemoveChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
+        await _childrenRepository.RemoveChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
     }
 }

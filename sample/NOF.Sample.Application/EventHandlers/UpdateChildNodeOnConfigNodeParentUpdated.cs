@@ -8,15 +8,15 @@ namespace NOF.Sample.Application.EventHandlers;
 /// </summary>
 public class UpdateChildNodeOnConfigNodeParentUpdated : IEventHandler<ConfigNodeParentUpdatedEvent>
 {
-    private readonly IConfigNodeViewRepository _viewRepository;
+    private readonly IConfigNodeChildrenRepository _childrenRepository;
 
-    public UpdateChildNodeOnConfigNodeParentUpdated(IConfigNodeViewRepository viewRepository)
+    public UpdateChildNodeOnConfigNodeParentUpdated(IConfigNodeChildrenRepository childrenRepository)
     {
-        _viewRepository = viewRepository;
+        _childrenRepository = childrenRepository;
     }
 
     public async Task HandleAsync(ConfigNodeParentUpdatedEvent @event, CancellationToken cancellationToken)
     {
-        await _viewRepository.UpdateChildNodeParentAsync(@event.NodeId, @event.OldParentId, @event.NewParentId, cancellationToken);
+        await _childrenRepository.UpdateChildNodeParentAsync(@event.NodeId, @event.OldParentId, @event.NewParentId, cancellationToken);
     }
 }

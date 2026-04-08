@@ -11,6 +11,8 @@ using NOF.Infrastructure.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Application;
+using NOF.Sample.Application.Repositories;
+using NOF.Sample.Repositories;
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
@@ -34,6 +36,8 @@ builder.AddEFCore<ConfigurationDbContext>()
     .UseSharedDatabaseTenancy()
     .AutoMigrate()
     .UsePostgreSQL();
+
+builder.Services.AddScoped<IConfigNodeChildrenRepository, ConfigNodeChildrenRepository>();
 
 builder.Services.AddAntDesign();
 

@@ -1,28 +1,25 @@
+using NOF.Application;
 using NOF.Contract;
-using NOF.Sample.Application.Repositories;
+using NOF.Domain;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
 {
-    private readonly IConfigNodeViewRepository _viewRepository;
+    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly IMapper _mapper;
 
-    public GetRootConfigNodes(IConfigNodeViewRepository viewRepository)
+    public GetRootConfigNodes(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, IMapper mapper)
     {
-        _viewRepository = viewRepository;
+        _configNodeRepository = configNodeRepository;
+        _mapper = mapper;
     }
 
     public async Task<Result<GetRootConfigNodesResponse>> GetRootConfigNodesAsync(GetRootConfigNodesRequest request, CancellationToken cancellationToken)
     {
-        var nodes = await _viewRepository.GetRootNodesAsync(cancellationToken);
+        var nodes = await _configNodeRepository.GetRootNodesAsync(cancellationToken);
 
-        var response = nodes.Select(node => new ConfigNodeDto(
-            node.Id,
-            node.ParentId,
-            node.Name,
-            node.ActiveFileName,
-            node.ConfigFiles.Select(f => new ConfigFileDto(f.Name, f.Content)).ToList()
-        )).ToList();
+        var response = nodes.Select(node => _mapper.Map<ConfigNode, ConfigNodeDto>(node)).ToList();
 
         return new GetRootConfigNodesResponse(response);
     }

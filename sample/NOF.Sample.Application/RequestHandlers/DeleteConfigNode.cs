@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
+using NOF.Sample.Application.CacheKeys;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
@@ -8,16 +10,19 @@ namespace NOF.Sample.Application.RequestHandlers;
 public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 {
     private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
-    private readonly IConfigNodeViewRepository _configNodeViewRepository;
+    private readonly IConfigNodeChildrenRepository _childrenRepository;
+    private readonly ICacheService _cache;
     private readonly IUnitOfWork _uow;
 
     public DeleteConfigNode(
         IRepository<ConfigNode, ConfigNodeId> configNodeRepository,
-        IConfigNodeViewRepository configNodeViewRepository,
+        IConfigNodeChildrenRepository childrenRepository,
+        ICacheService cache,
         IUnitOfWork uow)
     {
         _configNodeRepository = configNodeRepository;
-        _configNodeViewRepository = configNodeViewRepository;
+        _childrenRepository = childrenRepository;
+        _cache = cache;
         _uow = uow;
     }
 
@@ -30,7 +35,9 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
             return Result.Fail("404", "Node not found.");
         }
 
-        if (await _configNodeViewRepository.HasChildrenAsync(id, cancellationToken))
+        // 检查是否有子节点
+        var hasChildren = await _childrenRepository.HasChildrenAsync(id, cancellationToken);
+        if (hasChildren)
         {
             return Result.Fail("400", "Cannot delete node with children.");
         }
@@ -38,6 +45,11 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         node.MarkAsDeleted();
         _configNodeRepository.Remove(node);
         await _uow.SaveChangesAsync(cancellationToken);
+
+        // 写后删：清除相关缓存
+        await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
+        await _cache.RemoveAsync(new ConfigNodeByNameCacheKey(node.Name), cancellationToken);
+
         return Result.Success();
     }
 }

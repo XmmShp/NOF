@@ -1,15 +1,25 @@
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 using NOF.Sample.Application.CacheKeys;
-using NOF.Sample.Application.Repositories;
 using System.Text.Json.Nodes;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
-public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheService cache)
-    : NOFSampleService.GetConfiguration
+public class GetConfiguration : NOFSampleService.GetConfiguration
 {
+    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly ICacheService _cache;
+    private readonly IMapper _mapper;
+
+    public GetConfiguration(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, ICacheService cache, IMapper mapper)
+    {
+        _configNodeRepository = configNodeRepository;
+        _cache = cache;
+        _mapper = mapper;
+    }
+
     public async Task<Result<GetConfigurationResponse>> GetConfigurationAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
     {
         var appNameStr = request.AppName;
@@ -17,21 +27,21 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         // 1. Find App Node
         var appName = ConfigNodeName.Of(appNameStr);
-        var appNode = await viewRepository.GetByNameAsync(appName, cancellationToken);
+        var appNodeDto = await GetNodeByNameAsync(appName, cancellationToken);
 
-        if (appNode is null)
+        if (appNodeDto is null)
         {
             return Result.Fail("404", "Config node not found.");
         }
 
         // 2. Expand Path to Root
-        var fullPath = await ExpandPathToRoot(appNode, cancellationToken);
+        var fullPath = await ExpandPathToRoot(appNodeDto, cancellationToken);
 
         // Check versions
         var maxVersion = 0L;
         foreach (var versionKey in fullPath.Select(node => new ConfigNodeVersionCacheKey(ConfigNodeId.Of(node.Id))))
         {
-            var version = await cache.GetAsync(versionKey, cancellationToken: cancellationToken);
+            var version = await _cache.GetAsync(versionKey, cancellationToken: cancellationToken);
             version.IfSome(versionVal =>
             {
                 if (versionVal > maxVersion)
@@ -41,7 +51,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
             });
         }
 
-        var cachedResult = await cache.GetAsync(appCacheKey, cancellationToken: cancellationToken);
+        var cachedResult = await _cache.GetAsync(appCacheKey, cancellationToken: cancellationToken);
         if (cachedResult.HasValue && cachedResult.Value.Version >= maxVersion)
         {
             return new GetConfigurationResponse(cachedResult.Value.Content);
@@ -54,13 +64,63 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         // 4. Update Result Cache
         var newResult = new CachedConfigResult(jsonString, maxVersion);
-        await cache.SetAsync(
+        await _cache.SetAsync(
             appCacheKey,
             newResult,
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) },
             cancellationToken);
 
         return new GetConfigurationResponse(jsonString);
+    }
+
+    private async Task<ConfigNodeDto?> GetNodeByNameAsync(ConfigNodeName name, CancellationToken cancellationToken)
+    {
+        var cacheKey = new ConfigNodeByNameCacheKey(name);
+        var cachedValue = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
+        if (cachedValue.HasValue)
+        {
+            return cachedValue.Value;
+        }
+
+        var node = await _configNodeRepository.GetNodeByNameAsync(name, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        var dto = _mapper.Map<ConfigNode, ConfigNodeDto>(node);
+        await _cache.SetAsync(
+            cacheKey,
+            dto,
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) },
+            cancellationToken);
+
+        return dto;
+    }
+
+    private async Task<ConfigNodeDto?> GetNodeByIdAsync(ConfigNodeId id, CancellationToken cancellationToken)
+    {
+        var cacheKey = new ConfigNodeByIdCacheKey(id);
+        var cachedValue = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
+        if (cachedValue.HasValue)
+        {
+            return cachedValue.Value;
+        }
+
+        var node = await _configNodeRepository.GetNodeByIdAsync(id, cancellationToken);
+        if (node is null)
+        {
+            return null;
+        }
+
+        var dto = _mapper.Map<ConfigNode, ConfigNodeDto>(node);
+        await _cache.SetAsync(
+            cacheKey,
+            dto,
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) },
+            cancellationToken);
+
+        return dto;
     }
 
     private async Task<List<ConfigNodeDto>> ExpandPathToRoot(ConfigNodeDto appNode, CancellationToken cancellationToken)
@@ -73,7 +133,7 @@ public class GetConfiguration(IConfigNodeViewRepository viewRepository, ICacheSe
 
         while (current.ParentId.HasValue)
         {
-            var parent = await viewRepository.GetByIdAsync(ConfigNodeId.Of(current.ParentId.Value), cancellationToken);
+            var parent = await GetNodeByIdAsync(ConfigNodeId.Of(current.ParentId.Value), cancellationToken);
             if (parent is null)
             {
                 break;
