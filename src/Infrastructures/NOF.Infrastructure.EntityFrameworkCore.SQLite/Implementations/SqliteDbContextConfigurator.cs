@@ -17,15 +17,30 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
     private readonly IConfiguration _configuration;
     private readonly SqliteOptions _options;
     private readonly TenantOptions _tenantOptions;
+    private readonly SqliteInMemoryConnectionKeeper _connectionKeeper;
 
-    public SqliteDbContextConfigurator(IConfiguration configuration, IOptions<SqliteOptions> options, IOptions<TenantOptions> tenantOptions)
+    public SqliteDbContextConfigurator(
+        IConfiguration configuration,
+        IOptions<SqliteOptions> options,
+        IOptions<TenantOptions> tenantOptions,
+        SqliteInMemoryConnectionKeeper connectionKeeper)
     {
         _configuration = configuration;
         _options = options.Value;
         _tenantOptions = tenantOptions.Value;
+        _connectionKeeper = connectionKeeper;
     }
 
     public void Configure(DbContextOptionsBuilder optionsBuilder, string tenantId, TenantMode tenantMode)
+    {
+        var connectionString = _options.UseInMemory
+            ? BuildInMemoryConnectionString(tenantId, tenantMode)
+            : BuildConfiguredConnectionString(tenantId, tenantMode);
+
+        optionsBuilder.UseSqlite(connectionString);
+    }
+
+    private string BuildConfiguredConnectionString(string tenantId, TenantMode tenantMode)
     {
         var connectionString = _configuration.GetConnectionString(_options.ConnectionStringName);
 
@@ -39,7 +54,16 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
             connectionString = BuildDatabasePerTenantConnectionString(connectionString, tenantId);
         }
 
-        optionsBuilder.UseSqlite(connectionString);
+        return connectionString;
+    }
+
+    private string BuildInMemoryConnectionString(string tenantId, TenantMode tenantMode)
+    {
+        var databaseName = tenantMode == TenantMode.DatabasePerTenant
+            ? BuildDatabasePerTenantDatabaseName(_options.InMemoryDatabaseName, tenantId)
+            : _options.InMemoryDatabaseName;
+
+        return _connectionKeeper.EnsureDatabase(databaseName);
     }
 
     private string BuildDatabasePerTenantConnectionString(string connectionString, string tenantId)
@@ -64,6 +88,14 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
             ? $"{tenantFileName}{extension}"
             : Path.Combine(directory, $"{tenantFileName}{extension}");
         return builder.ToString();
+    }
+
+    private string BuildDatabasePerTenantDatabaseName(string databaseName, string tenantId)
+    {
+        var normalizedTenantId = NormalizeTenantIdForDatabaseName(tenantId);
+        return _tenantOptions.TenantDatabaseNameFormat
+            .Replace("{database}", databaseName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{tenantId}", normalizedTenantId, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeTenantIdForDatabaseName(string tenantId)

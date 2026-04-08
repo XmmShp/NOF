@@ -304,6 +304,63 @@ public class InMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task Repository_ShouldProvideQueryableTrackingAccess()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
+
+        repository.Add(TestOrder.Create(7, "before"));
+        await unitOfWork.SaveChangesAsync();
+
+        var tracked = repository.Single(order => order.Id == 7);
+        tracked.Raise(new TestEvent("tracked-query"));
+
+        var changeCount = await unitOfWork.SaveChangesAsync();
+
+        Assert.Equal(1, changeCount);
+        Assert.Single(publisher.Events);
+    }
+
+    [Fact]
+    public async Task Repository_AsNoTracking_ShouldReturnDetachedReadModel()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
+
+        repository.Add(TestOrder.Create(8, "before"));
+        await unitOfWork.SaveChangesAsync();
+
+        var detached = repository.AsNoTracking().Single(order => order.Id == 8);
+        detached.Raise(new TestEvent("detached-query"));
+
+        var changeCount = await unitOfWork.SaveChangesAsync();
+        var stored = await ((IRepository<TestOrder, long>)repository).FindAsync(8L);
+
+        Assert.Equal(0, changeCount);
+        Assert.Equal("before", stored!.Number);
+        Assert.Empty(publisher.Events);
+    }
+
+    [Fact]
+    public async Task Repository_RawSql_ShouldThrowForMemoryProvider()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+
+        Assert.Throws<NotSupportedException>(() => repository.FromSql($"select * from TestOrder").ToList());
+        Assert.Throws<NotSupportedException>(() => repository.FromSqlRaw("select * from TestOrder").ToList());
+        await Assert.ThrowsAsync<NotSupportedException>(() => repository.ExecuteSqlAsync($"delete from TestOrder"));
+        await Assert.ThrowsAsync<NotSupportedException>(() => repository.ExecuteSqlRawAsync("delete from TestOrder"));
+    }
+
+    [Fact]
     public async Task WarningHostedService_ShouldLogWarning_WhenUsingBuiltInPersistence()
     {
         var logger = new Mock<ILogger<MemoryPersistenceWarningHostedService>>();
@@ -393,5 +450,3 @@ public class InMemoryPersistenceTests
         }
     }
 }
-
-

@@ -1,4 +1,7 @@
 using NOF.Domain;
+using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 
 namespace NOF.Infrastructure.Memory;
 
@@ -20,6 +23,20 @@ public abstract class MemoryRepository<TAggregateRoot> : IRepository<TAggregateR
 
     protected MemoryPersistenceContext Context { get; }
 
+    protected virtual IQueryable<TAggregateRoot> QueryableSource => CreateTrackingQueryable();
+
+    public Type ElementType => QueryableSource.ElementType;
+
+    public Expression Expression => QueryableSource.Expression;
+
+    public IQueryProvider Provider => QueryableSource.Provider;
+
+    public IEnumerator<TAggregateRoot> GetEnumerator() => QueryableSource.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public virtual IQueryable<TAggregateRoot> AsNoTracking() => CreateNoTrackingQueryable();
+
     public virtual ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -39,15 +56,39 @@ public abstract class MemoryRepository<TAggregateRoot> : IRepository<TAggregateR
 
     public virtual async IAsyncEnumerable<TAggregateRoot> FindAllAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var snapshot = Context.Set<TAggregateRoot>();
-
-        foreach (var entity in snapshot)
+        foreach (var entity in Context.Set<TAggregateRoot>())
         {
             cancellationToken.ThrowIfCancellationRequested();
             Context.TrackEntity(entity);
             yield return entity;
             await Task.CompletedTask;
         }
+    }
+
+    public virtual IQueryable<TAggregateRoot> FromSql(FormattableString sql)
+    {
+        ArgumentNullException.ThrowIfNull(sql);
+        throw CreateRawSqlNotSupportedException();
+    }
+
+    public virtual IQueryable<TAggregateRoot> FromSqlRaw(string sql, params object?[] parameters)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
+        throw CreateRawSqlNotSupportedException();
+    }
+
+    public virtual Task<int> ExecuteSqlAsync(FormattableString sql, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(sql);
+        throw CreateRawSqlNotSupportedException();
+    }
+
+    public virtual Task<int> ExecuteSqlRawAsync(string sql, object?[]? parameters = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
+        throw CreateRawSqlNotSupportedException();
     }
 
     public virtual void Add(TAggregateRoot entity)
@@ -75,6 +116,36 @@ public abstract class MemoryRepository<TAggregateRoot> : IRepository<TAggregateR
             Context.TrackEntity(entity);
         }
     }
+
+    protected IEnumerable<TAggregateRoot> Track(IEnumerable<TAggregateRoot> entities)
+    {
+        foreach (var entity in entities)
+        {
+            Context.TrackEntity(entity);
+            yield return entity;
+        }
+    }
+
+    protected IEnumerable<TAggregateRoot> Detach(IEnumerable<TAggregateRoot> entities)
+    {
+        foreach (var entity in entities)
+        {
+            yield return (TAggregateRoot)entity.Clone();
+        }
+    }
+
+    [UnconditionalSuppressMessage("Aot", "IL3050", Justification = "In-memory IQueryable support is limited to the memory provider and intentionally uses EnumerableQuery.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "In-memory IQueryable support is limited to the memory provider and intentionally uses EnumerableQuery.")]
+    protected virtual IQueryable<TAggregateRoot> CreateTrackingQueryable()
+        => new EnumerableQuery<TAggregateRoot>(Track(Context.Set<TAggregateRoot>()));
+
+    [UnconditionalSuppressMessage("Aot", "IL3050", Justification = "In-memory IQueryable support is limited to the memory provider and intentionally uses EnumerableQuery.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "In-memory IQueryable support is limited to the memory provider and intentionally uses EnumerableQuery.")]
+    protected virtual IQueryable<TAggregateRoot> CreateNoTrackingQueryable()
+        => new EnumerableQuery<TAggregateRoot>(Detach(Context.Set<TAggregateRoot>()));
+
+    private NotSupportedException CreateRawSqlNotSupportedException()
+        => new($"{GetType().Name} does not support raw SQL operations.");
 }
 
 public abstract class MemoryRepository<TAggregateRoot, TKey> : MemoryRepository<TAggregateRoot>, IRepository<TAggregateRoot, TKey>

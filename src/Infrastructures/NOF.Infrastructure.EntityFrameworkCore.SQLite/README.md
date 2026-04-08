@@ -29,7 +29,20 @@ builder.AddEFCore<AppDbContext>()
 dotnet add package NOF.Infrastructure.EntityFrameworkCore.SQLite
 ```
 
+## In-Memory SQLite
+
+For tests or lightweight local scenarios, you can use SQLite's in-memory mode while
+still keeping relational behavior:
+
+```csharp
+builder.AddEFCore<AppDbContext>()
+    .UseSingleTenant()
+    .UseSqliteInMemory();
+```
+
+`UseSqliteInMemory()` keeps a named in-memory database alive across `DbContext`
+instances by holding an internal shared connection open for the process lifetime.
+
 ## License
 
 Apache-2.0
-

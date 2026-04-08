@@ -1,20 +1,17 @@
-using System.ComponentModel;
-
 namespace NOF.Domain;
 
 /// <summary>
-/// Non-generic marker interface for repositories. Not intended for direct use.
-/// </summary>
-[EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRepository;
-
-/// <summary>
-/// Generic repository interface for aggregate root persistence.
+/// Generic repository interface for aggregate root persistence and querying.
 /// </summary>
 /// <typeparam name="TAggregateRoot">The aggregate root type.</typeparam>
-public interface IRepository<TAggregateRoot> : IRepository
+public interface IRepository<TAggregateRoot> : IQueryable<TAggregateRoot>
     where TAggregateRoot : class, IAggregateRoot
 {
+    /// <summary>
+    /// Gets a no-tracking queryable source for read-only scenarios.
+    /// </summary>
+    IQueryable<TAggregateRoot> AsNoTracking();
+
     /// <summary>Finds an aggregate root by its composite key values.</summary>
     /// <param name="keyValues">The primary key values.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -25,6 +22,38 @@ public interface IRepository<TAggregateRoot> : IRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An async enumerable of all aggregate roots.</returns>
     IAsyncEnumerable<TAggregateRoot> FindAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a parameterized SQL query for the aggregate root set.
+    /// </summary>
+    /// <param name="sql">The interpolated SQL query.</param>
+    /// <returns>A queryable for the SQL query.</returns>
+    IQueryable<TAggregateRoot> FromSql(FormattableString sql);
+
+    /// <summary>
+    /// Creates a raw SQL query for the aggregate root set.
+    /// </summary>
+    /// <param name="sql">The raw SQL query.</param>
+    /// <param name="parameters">The SQL parameters.</param>
+    /// <returns>A queryable for the SQL query.</returns>
+    IQueryable<TAggregateRoot> FromSqlRaw(string sql, params object?[] parameters);
+
+    /// <summary>
+    /// Executes a parameterized SQL command.
+    /// </summary>
+    /// <param name="sql">The interpolated SQL command.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of affected rows.</returns>
+    Task<int> ExecuteSqlAsync(FormattableString sql, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a raw SQL command.
+    /// </summary>
+    /// <param name="sql">The raw SQL command.</param>
+    /// <param name="parameters">The SQL parameters.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of affected rows.</returns>
+    Task<int> ExecuteSqlRawAsync(string sql, object?[]? parameters = null, CancellationToken cancellationToken = default);
 
     /// <summary>Adds an aggregate root to the repository.</summary>
     /// <param name="entity">The aggregate root to add.</param>
