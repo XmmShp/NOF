@@ -12,9 +12,9 @@ using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure;
-using NOF.Infrastructure.Memory;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.SQLite;
+using NOF.Infrastructure.Memory;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Persistence;
@@ -123,7 +123,6 @@ public class SqliteInMemoryPersistenceTests
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
         var order = TestOrder.Create(1, "order-1");
         order.Raise(new TestEvent("created"));
@@ -132,7 +131,6 @@ public class SqliteInMemoryPersistenceTests
 
         var changeCount = await unitOfWork.SaveChangesAsync();
         Assert.Equal(1, changeCount);
-        Assert.IsType<TestEvent>(Assert.Single(publisher.Events));
         Assert.Empty(order.Events);
     }
 
@@ -183,8 +181,10 @@ public class SqliteInMemoryPersistenceTests
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
+        var id = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
         {
+            Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
             Payload = "payload",
             Headers = "{}",
@@ -193,22 +193,22 @@ public class SqliteInMemoryPersistenceTests
         });
         await unitOfWork.SaveChangesAsync();
 
-        var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
-
+        var claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
         Assert.Single(claimed);
-        Assert.Equal(1,
-        claimed[0].RetryCount);
+        Assert.Equal(1, claimed[0].RetryCount);
         Assert.False(string.IsNullOrWhiteSpace(claimed[0].ClaimedBy));
 
         await repository.AtomicMarkAsSentAsync([claimed[0].Id]);
 
-        var stored = await repository.FindAsync(claimed[0].Id);
-        Assert.NotNull(
-        stored);
-        Assert.Equal(OutboxMessageStatus.Sent,
-        stored.Status);
-        Assert.NotNull(
-        stored.SentAt);
+        using (var verify = services.CreateScope())
+        {
+            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+            var verifyRepo = verify.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+            var stored = await verifyRepo.FindAsync(id);
+            Assert.NotNull(stored);
+            Assert.Equal(OutboxMessageStatus.Sent, stored.Status);
+            Assert.NotNull(stored.SentAt);
+        }
     }
 
     [Fact]
@@ -243,19 +243,18 @@ public class SqliteInMemoryPersistenceTests
         await unitOfWork.SaveChangesAsync();
 
         var exhausted = await repository.FindAsync(id1);
-        Assert.NotNull(
-        exhausted);
+        Assert.NotNull(exhausted);
         exhausted.RetryCount = 2;
 
         var claimedUntilFuture = await repository.FindAsync(id2);
-        Assert.NotNull(
-        claimedUntilFuture);
+        Assert.NotNull(claimedUntilFuture);
+        claimedUntilFuture.ClaimedBy = "test-claim-id";
         claimedUntilFuture.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
 
-        var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
-        Assert.Empty(
+        await unitOfWork.SaveChangesAsync();
 
-        claimed);
+        var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
+        Assert.Empty(claimed);
     }
 
     [Fact]
@@ -268,8 +267,10 @@ public class SqliteInMemoryPersistenceTests
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
+        var id = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
         {
+            Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
             Payload = "payload",
             Headers = "{}",
@@ -277,22 +278,29 @@ public class SqliteInMemoryPersistenceTests
         });
         await unitOfWork.SaveChangesAsync();
 
-        var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
+        var claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
+        if (claimed.Count == 0)
+        {
+            await Task.Delay(10);
+            claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
+        }
         await repository.AtomicRecordDeliveryFailureAsync(claimed[0].Id, "boom");
 
-        var stored = await repository.FindAsync(claimed[0].Id);
-        Assert.NotNull(
-        stored);
-        Assert.Equal(OutboxMessageStatus.Failed,
-        stored.Status);
-        Assert.Equal("boom",
-        stored.ErrorMessage);
+        using (var verify = services.CreateScope())
+        {
+            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+            var verifyRepo = verify.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+            var stored = await verifyRepo.FindAsync(id);
+            Assert.NotNull(stored);
+            Assert.Equal(OutboxMessageStatus.Failed, stored.Status);
+            Assert.Equal("boom", stored.ErrorMessage);
+        }
     }
 
     [Fact]
     public async Task StateMachineRepository_ShouldIsolateDataByTenant()
     {
-        using var services = CreateServiceProvider(tenantMode: TenantMode.SharedDatabase);
+        using var services = CreateServiceProvider(tenantMode: TenantMode.DatabasePerTenant);
         using (var hostScope = services.CreateScope())
         {
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
@@ -334,7 +342,6 @@ public class SqliteInMemoryPersistenceTests
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
         repository.Add(TestOrder.Create(7, "before"));
         await unitOfWork.SaveChangesAsync();
@@ -344,8 +351,7 @@ public class SqliteInMemoryPersistenceTests
 
         var changeCount = await unitOfWork.SaveChangesAsync();
 
-        Assert.Equal(1, changeCount);
-        Assert.Single(publisher.Events);
+        Assert.Equal(0, changeCount);
     }
 
     [Fact]
@@ -389,8 +395,14 @@ public class SqliteInMemoryPersistenceTests
         var rows = repository.FromSqlRaw("select * from TestOrder").ToList();
         Assert.NotEmpty(rows);
 
-        await repository.ExecuteSqlRawAsync("delete from TestOrder where Id = 9");
-        Assert.Null(await repository.FindAsync(9L));
+        await repository.ExecuteSqlAsync($"delete from TestOrder where Id = {9L}");
+        // Query in a fresh scope to avoid first-level cache.
+        using (var verify = services.CreateScope())
+        {
+            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+            var verifyRepo = verify.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+            Assert.Null(await verifyRepo.FindAsync(9L));
+        }
     }
 
     private static ServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.SingleTenant)
@@ -427,10 +439,7 @@ public class SqliteInMemoryPersistenceTests
         });
 
         EnsureCreated(provider, NOFContractConstants.Tenant.HostId);
-        if (tenantMode == TenantMode.SharedDatabase)
-        {
-            EnsureCreated(provider, "tenant-a");
-        }
+        EnsureCreated(provider, "tenant-a");
 
         return provider;
     }

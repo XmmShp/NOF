@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
@@ -12,18 +10,15 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutbox
     private readonly NOFDbContext _dbContext;
     private readonly OutboxOptions _options;
     private readonly ILogger<EFCoreOutboxMessageRepository> _logger;
-    private readonly IMessageSerializer _messageSerializer;
 
     public EFCoreOutboxMessageRepository(
         NOFDbContext dbContext,
         IOptions<OutboxOptions> options,
-        ILogger<EFCoreOutboxMessageRepository> logger,
-        IMessageSerializer messageSerializer) : base(dbContext)
+        ILogger<EFCoreOutboxMessageRepository> logger) : base(dbContext)
     {
         _dbContext = dbContext;
         _options = options.Value;
         _logger = logger;
-        _messageSerializer = messageSerializer;
     }
 
     public override void Add(NOFOutboxMessage aggregateRoot)
@@ -42,30 +37,24 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutbox
         TimeSpan? claimTimeout = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (batchSize <= 0)
+        {
+            batchSize = _options.BatchSize;
+        }
         var timeout = claimTimeout ?? _options.ClaimTimeout;
         var lockId = Guid.NewGuid().ToString();
         var now = DateTime.UtcNow;
         var expiresAt = now.Add(timeout);
 
         int rowsUpdated;
-        // Step 1: Claim pending messages (including those with expired locks).
-        // Some providers don't translate ExecuteUpdate with OrderBy/Take. Use a two-step approach: select IDs then update by IN.
-        var toClaimIds = await _dbContext.NOFOutboxMessages
-            .Where(m => m.Status == OutboxMessageStatus.Pending &&
-                        m.RetryCount < _options.MaxRetryCount &&
-                        (m.ClaimExpiresAt == null || m.ClaimExpiresAt <= now))
-            .OrderBy(m => m.CreatedAt)
-            .Select(m => m.Id)
-            .Take(batchSize)
-            .ToListAsync(cancellationToken);
-
-        if (toClaimIds.Count == 0)
-        {
-            yield break;
-        }
+        var maxRetry = _options.MaxRetryCount;
 
         rowsUpdated = await _dbContext.NOFOutboxMessages
-            .Where(m => toClaimIds.Contains(m.Id))
+            .Where(m => m.Status == OutboxMessageStatus.Pending &&
+                        m.RetryCount < maxRetry &&
+                        (m.ClaimedBy == null || m.ClaimExpiresAt == null || m.ClaimExpiresAt <= now))
+            .OrderBy(m => m.CreatedAt)
+            .Take(batchSize)
             .ExecuteUpdateAsync(setters => setters
                     .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
                     .SetProperty(m => m.ClaimedBy, lockId)
@@ -77,51 +66,26 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutbox
             yield break;
         }
 
-        // Step 2: Retrieve successfully claimed messages
-        var claimedMessages = await _dbContext.NOFOutboxMessages
+        var claimedMessagesFromDb = await _dbContext.NOFOutboxMessages
+            .AsNoTracking()
             .Where(m => m.ClaimedBy == lockId)
             .ToListAsync(cancellationToken);
 
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
-
-        foreach (var message in claimedMessages)
+        foreach (var msgFromDb in claimedMessagesFromDb)
         {
-            NOFOutboxMessage claimedMessage;
-            try
+            var trackedEntry = _dbContext.ChangeTracker.Entries<NOFOutboxMessage>()
+                .FirstOrDefault(e => e.Entity.Id == msgFromDb.Id);
+
+            if (trackedEntry != null)
             {
-                var deserializedMessage = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
-                var headers = string.IsNullOrWhiteSpace(message.Headers)
-                    ? new Dictionary<string, string?>()
-                    : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
-
-                claimedMessage = new NOFOutboxMessage
-                {
-                    Id = message.Id,
-                    MessageType = deserializedMessage is ICommand ? OutboxMessageType.Command : OutboxMessageType.Notification,
-                    PayloadType = message.PayloadType,
-                    Payload = message.Payload,
-                    Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
-                    CreatedAt = message.CreatedAt,
-                    RetryCount = message.RetryCount,
-                    ParentTracingInfo = message.ParentTracingInfo is null ? null : new TracingInfo(message.ParentTracingInfo.TraceId, message.ParentTracingInfo.SpanId),
-                    Status = message.Status,
-                    ClaimedBy = message.ClaimedBy,
-                    ClaimExpiresAt = message.ClaimExpiresAt,
-                    SentAt = message.SentAt,
-                    FailedAt = message.FailedAt,
-                    ErrorMessage = message.ErrorMessage
-                };
+                await trackedEntry.ReloadAsync(cancellationToken);
+                yield return trackedEntry.Entity;
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, "Deserialization failed for claimed message {MessageId}, type: {TypeName}",
-                    message.Id, message.PayloadType);
-
-                await ReleaseClaimAndMarkAsFailedAsync(message.Id, $"Deserialization error: {ex.Message}", cancellationToken);
-                continue;
+                _dbContext.Attach(msgFromDb);
+                yield return msgFromDb;
             }
-
-            yield return claimedMessage;
         }
     }
 
@@ -160,9 +124,18 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutbox
             return;
         }
 
-        // Step 2: Load the latest state to determine the final status
-        var message = await _dbContext.NOFOutboxMessages
-            .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+        NOFOutboxMessage? message;
+        var trackedEntry = _dbContext.ChangeTracker.Entries<NOFOutboxMessage>().FirstOrDefault(e => e.Entity.Id == messageId);
+        if (trackedEntry != null)
+        {
+            await trackedEntry.ReloadAsync(cancellationToken);
+            message = trackedEntry.Entity;
+        }
+        else
+        {
+            message = await _dbContext.NOFOutboxMessages
+                .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+        }
 
         if (message == null)
         {
@@ -171,7 +144,6 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutbox
 
         if (message.RetryCount >= _options.MaxRetryCount)
         {
-            // Permanently failed
             message.Status = OutboxMessageStatus.Failed;
             message.ClaimedBy = null;
             message.ClaimExpiresAt = null;

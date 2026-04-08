@@ -14,7 +14,7 @@ namespace NOF.Infrastructure;
 public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
 {
     private readonly ITransactionManager _transactionManager;
-        private readonly IRepository<NOFInboxMessage, Guid> _inboxMessageRepository;
+    private readonly IRepository<NOFInboxMessage, Guid> _inboxMessageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;

@@ -1,5 +1,5 @@
-using NOF.Domain;
 using NOF.Abstraction;
+using NOF.Domain;
 
 namespace NOF.Sample.Application;
 
