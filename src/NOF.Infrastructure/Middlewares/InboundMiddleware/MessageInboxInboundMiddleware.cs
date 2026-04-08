@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -13,12 +14,12 @@ namespace NOF.Infrastructure;
 public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
 {
     private readonly ITransactionManager _transactionManager;
-    private readonly IInboxMessageRepository _inboxMessageRepository;
+        private readonly IRepository<NOFInboxMessage, Guid> _inboxMessageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;
 
-    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IInboxMessageRepository inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
+    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IRepository<NOFInboxMessage, Guid> inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
     {
         _transactionManager = transactionManager;
         _inboxMessageRepository = inboxMessageRepository;
@@ -35,7 +36,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
         {
             _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
-            var messageExists = await _inboxMessageRepository.ExistsAsync(messageId, cancellationToken);
+            var messageExists = await _inboxMessageRepository.FindAsync(messageId, cancellationToken) is not null;
             if (messageExists)
             {
                 _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, context.Message.GetType().FullName);
@@ -80,4 +81,3 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
         }
     }
 }
-

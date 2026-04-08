@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
@@ -16,10 +17,11 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             where TDbContext : NOFDbContext
         {
             #region Common Services
-            builder.Services.ReplaceOrAddScoped<IInboxMessageRepository, EFCoreInboxMessageRepository>();
-            builder.Services.ReplaceOrAddScoped<IStateMachineContextRepository, EFCoreStateMachineContextRepository>();
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<>), typeof(EFCoreRepository<>)));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<,>), typeof(EFCoreRepository<,>)));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<,,>), typeof(EFCoreRepository<,,>)));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<,,,>), typeof(EFCoreRepository<,,,>)));
             builder.Services.ReplaceOrAddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
-            builder.Services.ReplaceOrAddScoped<ITenantRepository, EFCoreTenantRepository>();
             builder.Services.ReplaceOrAddScoped<IUnitOfWork, EFCoreUnitOfWork>();
             builder.Services.ReplaceOrAddScoped<ITransactionManager, EFCoreTransactionManager>();
             #endregion

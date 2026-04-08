@@ -199,7 +199,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                 sb.AppendLine($"    public sealed class {handlerClassName} : global::NOF.Application.StateMachineNotificationHandler<{defFullName}, {stateFullName}, {notificationFullName}>");
                 sb.AppendLine("    {");
                 sb.AppendLine($"        public {handlerClassName}(");
-                sb.AppendLine("            global::NOF.Application.IStateMachineContextRepository repository,");
+                sb.AppendLine("            global::NOF.Domain.IRepository<global::NOF.Application.NOFStateMachineContext, string, string> repository,");
                 sb.AppendLine("            global::NOF.Application.IUnitOfWork uow,");
                 sb.AppendLine("            global::System.IServiceProvider serviceProvider,");
                 sb.AppendLine("            global::NOF.Application.IStateMachineRegistry stateMachineRegistry)");

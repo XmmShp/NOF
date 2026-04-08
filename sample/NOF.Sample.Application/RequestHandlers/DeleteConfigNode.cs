@@ -1,17 +1,18 @@
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 {
-    private readonly IConfigNodeRepository _configNodeRepository;
+    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
     private readonly IConfigNodeViewRepository _configNodeViewRepository;
     private readonly IUnitOfWork _uow;
 
     public DeleteConfigNode(
-        IConfigNodeRepository configNodeRepository,
+        IRepository<ConfigNode, ConfigNodeId> configNodeRepository,
         IConfigNodeViewRepository configNodeViewRepository,
         IUnitOfWork uow)
     {
@@ -40,7 +41,6 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         return Result.Success();
     }
 }
-
 
 
 

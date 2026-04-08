@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
 using System.IO;
@@ -17,18 +18,18 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
     private readonly IConfiguration _configuration;
     private readonly SqliteOptions _options;
     private readonly TenantOptions _tenantOptions;
-    private readonly SqliteInMemoryConnectionKeeper _connectionKeeper;
+    private readonly Lazy<SqliteInMemoryConnectionKeeper> _connectionKeeper;
 
     public SqliteDbContextConfigurator(
         IConfiguration configuration,
         IOptions<SqliteOptions> options,
         IOptions<TenantOptions> tenantOptions,
-        SqliteInMemoryConnectionKeeper connectionKeeper)
+        Lazy<SqliteInMemoryConnectionKeeper> connectionKeeperLazy)
     {
         _configuration = configuration;
         _options = options.Value;
         _tenantOptions = tenantOptions.Value;
-        _connectionKeeper = connectionKeeper;
+        _connectionKeeper = connectionKeeperLazy;
     }
 
     public void Configure(DbContextOptionsBuilder optionsBuilder, string tenantId, TenantMode tenantMode)
@@ -63,7 +64,7 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
             ? BuildDatabasePerTenantDatabaseName(_options.InMemoryDatabaseName, tenantId)
             : _options.InMemoryDatabaseName;
 
-        return _connectionKeeper.EnsureDatabase(databaseName);
+        return _connectionKeeper.Value.EnsureDatabase(databaseName);
     }
 
     private string BuildDatabasePerTenantConnectionString(string connectionString, string tenantId)

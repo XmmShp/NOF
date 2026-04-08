@@ -1,14 +1,15 @@
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class SetActiveFile : NOFSampleService.SetActiveFile
 {
-    private readonly IConfigNodeRepository _configNodeRepository;
+    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
     private readonly IUnitOfWork _uow;
 
-    public SetActiveFile(IConfigNodeRepository configNodeRepository, IUnitOfWork uow)
+    public SetActiveFile(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, IUnitOfWork uow)
     {
         _configNodeRepository = configNodeRepository;
         _uow = uow;
@@ -30,7 +31,6 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         return Result.Success();
     }
 }
-
 
 
 

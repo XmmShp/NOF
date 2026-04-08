@@ -17,7 +17,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     where TState : struct, Enum
     where TNotification : class, INotification
 {
-    private readonly IStateMachineContextRepository _repository;
+    private readonly IRepository<NOFStateMachineContext, string, string> _repository;
     private readonly IUnitOfWork _uow;
     private readonly IServiceProvider _serviceProvider;
     private readonly IStateMachineRegistry _stateMachineRegistry;
@@ -28,7 +28,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="stateMachineRegistry">The state machine registry.</param>
     protected StateMachineNotificationHandler(
-        IStateMachineContextRepository repository,
+        IRepository<NOFStateMachineContext, string, string> repository,
         IUnitOfWork uow,
         IServiceProvider serviceProvider,
         IStateMachineRegistry stateMachineRegistry)

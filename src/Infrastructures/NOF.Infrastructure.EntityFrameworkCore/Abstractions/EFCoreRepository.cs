@@ -5,11 +5,11 @@ using System.Linq.Expressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-public abstract class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateRoot>
+public class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateRoot>
     where TAggregateRoot : class, IAggregateRoot
 {
     protected readonly DbContext DbContext;
-    protected EFCoreRepository(DbContext dbContext)
+    public EFCoreRepository(DbContext dbContext)
     {
         DbContext = dbContext;
     }
@@ -73,13 +73,14 @@ public abstract class EFCoreRepository<TAggregateRoot> : IRepository<TAggregateR
     }
 }
 
-public abstract class EFCoreRepository<TDbContext, TAggregateRoot> : EFCoreRepository<TAggregateRoot>
-    where TDbContext : DbContext
-    where TAggregateRoot : class, IAggregateRoot
-{
-    protected new readonly TDbContext DbContext;
-    protected EFCoreRepository(TDbContext dbContext) : base(dbContext)
-    {
-        DbContext = dbContext;
-    }
-}
+public class EFCoreRepository<TAggregateRoot, TKey>(DbContext dbContext)
+    : EFCoreRepository<TAggregateRoot>(dbContext), IRepository<TAggregateRoot, TKey>
+    where TAggregateRoot : class, IAggregateRoot;
+
+public class EFCoreRepository<TAggregateRoot, TKey1, TKey2>(DbContext dbContext)
+    : EFCoreRepository<TAggregateRoot>(dbContext), IRepository<TAggregateRoot, TKey1, TKey2>
+    where TAggregateRoot : class, IAggregateRoot;
+
+public class EFCoreRepository<TAggregateRoot, TKey1, TKey2, TKey3>(DbContext dbContext)
+    : EFCoreRepository<TAggregateRoot>(dbContext), IRepository<TAggregateRoot, TKey1, TKey2, TKey3>
+    where TAggregateRoot : class, IAggregateRoot;

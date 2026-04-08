@@ -19,7 +19,7 @@ namespace NOF.Infrastructure.Tests.Steps;
 public class InfrastructureDefaultsTests
 {
     [Fact]
-    public void AddInfrastructureDefaults_ShouldNotRegisterInMemoryPersistenceServicesByDefault()
+    public void AddInfrastructureDefaults_ShouldNotRegisterPersistenceServicesByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -29,35 +29,10 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        Assert.Null(
-
-        scope.ServiceProvider.GetService<MemoryPersistenceStore>());
-        Assert.Null(
-        scope.ServiceProvider.GetService<IUnitOfWork>());
-        Assert.Null(
-        scope.ServiceProvider.GetService<ITransactionManager>());
-        Assert.Null(
-        scope.ServiceProvider.GetService<IInboxMessageRepository>());
-        Assert.Null(
-        scope.ServiceProvider.GetService<IOutboxMessageRepository>());
-        Assert.Null(
-        scope.ServiceProvider.GetService<ITenantRepository>());
-        Assert.Null(
-        scope.ServiceProvider.GetService<IStateMachineContextRepository>());
-    }
-
-    [Fact]
-    public void AddInfrastructureDefaults_ShouldNotRegisterMemoryPersistenceWarningHostedServiceByDefault()
-    {
-        var builder = new TestServiceRegistrationContext();
-        builder.AddInfrastructureDefaults();
-
-        var hostedImplementationTypes = builder.Services
-            .Where(sd => sd.ServiceType == typeof(IHostedService))
-            .Select(sd => sd.ImplementationType)
-            .ToList();
-
-        Assert.DoesNotContain(typeof(MemoryPersistenceWarningHostedService), hostedImplementationTypes);
+        Assert.Null(scope.ServiceProvider.GetService<IUnitOfWork>());
+        Assert.Null(scope.ServiceProvider.GetService<ITransactionManager>());
+        Assert.Null(scope.ServiceProvider.GetService<IOutboxMessageRepository>());
+        Assert.Null(scope.ServiceProvider.GetService<IRepository<NOFTenant, string>>());
     }
 
     [Fact]

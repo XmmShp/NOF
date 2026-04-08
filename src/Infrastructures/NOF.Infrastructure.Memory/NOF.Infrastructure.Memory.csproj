@@ -8,11 +8,13 @@
     <IsAotCompatible>true</IsAotCompatible>
 
     <PackageId>NOF.Infrastructure.Memory</PackageId>
-    <Description>In-memory infrastructure implementation for the NOF Framework — cache, riders, persistence store, repositories, and transaction components.</Description>
+    <Description>In-memory infrastructure implementation for the NOF Framework — cache and riders.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\NOF.Infrastructure.EntityFrameworkCore.SQLite\NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,14 +1,15 @@
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 {
-    private readonly IConfigNodeRepository _configNodeRepository;
+    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
     private readonly IUnitOfWork _uow;
 
-    public RemoveConfigFile(IConfigNodeRepository configNodeRepository, IUnitOfWork uow)
+    public RemoveConfigFile(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, IUnitOfWork uow)
     {
         _configNodeRepository = configNodeRepository;
         _uow = uow;
@@ -30,7 +31,6 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
         return Result.Success();
     }
 }
-
 
 
 

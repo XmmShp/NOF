@@ -1,32 +1,47 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
+using Microsoft.Extensions.Primitives;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
+using NOF.Hosting;
+using NOF.Infrastructure;
 using NOF.Infrastructure.Memory;
+using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Infrastructure.EntityFrameworkCore.SQLite;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Persistence;
 
-public class InMemoryPersistenceTests
+public class SqliteInMemoryPersistenceTests
 {
     [Fact]
     public async Task Transaction_Rollback_ShouldRestorePreviousState()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using var transaction = await transactionManager.BeginTransactionAsync();
         repository.Add(new NOFTenant { Id = "tenant-1", Name = "Tenant 1" });
+        await unitOfWork.SaveChangesAsync();
         await transaction.RollbackAsync();
 
-        var tenant = await repository.FindAsync("tenant-1");
-        Assert.Null(
-        tenant);
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var tenant = await verifyRepo.FindAsync("tenant-1");
+        Assert.Null(tenant);
     }
 
     [Fact]
@@ -34,21 +49,27 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using var outer = await transactionManager.BeginTransactionAsync();
         repository.Add(new NOFTenant { Id = "outer", Name = "Outer" });
+        await unitOfWork.SaveChangesAsync();
 
         await using var inner = await transactionManager.BeginTransactionAsync();
         repository.Add(new NOFTenant { Id = "inner", Name = "Inner" });
+        await unitOfWork.SaveChangesAsync();
         await inner.RollbackAsync();
         await outer.CommitAsync();
-        Assert.NotNull(
 
-        (await repository.FindAsync("outer")));
-        Assert.Null(
-        (await repository.FindAsync("inner")));
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        Assert.NotNull(await verifyRepo.FindAsync("outer"));
+        Assert.Null(await verifyRepo.FindAsync("inner"));
     }
 
     [Fact]
@@ -56,16 +77,22 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using (await transactionManager.BeginTransactionAsync())
         {
             repository.Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
+            await unitOfWork.SaveChangesAsync();
         }
-        Assert.Null(
 
-        (await repository.FindAsync("tenant-dispose")));
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        Assert.Null(await verifyRepo.FindAsync("tenant-dispose"));
     }
 
     [Fact]
@@ -92,22 +119,21 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
         var order = TestOrder.Create(1, "order-1");
         order.Raise(new TestEvent("created"));
         repository.Add(order);
-        await ((IRepository<TestOrder, long>)repository).FindAsync(1L);
+        await repository.FindAsync(1L);
 
         var changeCount = await unitOfWork.SaveChangesAsync();
-        Assert.Equal(1,
-
-        changeCount);
+        Assert.Equal(1, changeCount);
         Assert.IsType<TestEvent>(Assert.Single(publisher.Events));
-        Assert.Empty(
-        order.Events);
+        Assert.Empty(order.Events);
     }
 
     [Fact]
@@ -115,16 +141,16 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         repository.Add(TestOrder.Create(1, "order-1"));
 
         await unitOfWork.SaveChangesAsync();
         var second = await unitOfWork.SaveChangesAsync();
-        Assert.Equal(0,
-
-        second);
+        Assert.Equal(0, second);
     }
 
     [Fact]
@@ -132,20 +158,19 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IInboxMessageRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFInboxMessage, Guid>>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var message = new NOFInboxMessage(Guid.NewGuid());
 
         repository.Add(message);
-        Assert.True(
-
-        (await repository.ExistsAsync(message.Id)));
-        Assert.NotNull(
-        (await repository.FindAsync(message.Id)));
+        await unitOfWork.SaveChangesAsync();
+        Assert.NotNull(await repository.FindAsync(message.Id));
 
         repository.Remove(message);
-        Assert.False(
-
-        (await repository.ExistsAsync(message.Id)));
+        await unitOfWork.SaveChangesAsync();
+        Assert.Null(await repository.FindAsync(message.Id));
     }
 
     [Fact]
@@ -153,7 +178,10 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         repository.Add(new NOFOutboxMessage
         {
@@ -163,6 +191,7 @@ public class InMemoryPersistenceTests
             MessageType = OutboxMessageType.Command,
             CreatedAt = DateTime.UtcNow.AddMinutes(-1)
         });
+        await unitOfWork.SaveChangesAsync();
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
 
@@ -187,7 +216,10 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) });
         using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var id1 = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
@@ -208,6 +240,7 @@ public class InMemoryPersistenceTests
             Headers = "{}",
             MessageType = OutboxMessageType.Command
         });
+        await unitOfWork.SaveChangesAsync();
 
         var exhausted = await repository.FindAsync(id1);
         Assert.NotNull(
@@ -230,7 +263,10 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 1, ClaimTimeout = TimeSpan.FromMinutes(1) });
         using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         repository.Add(new NOFOutboxMessage
         {
@@ -239,6 +275,7 @@ public class InMemoryPersistenceTests
             Headers = "{}",
             MessageType = OutboxMessageType.Notification
         });
+        await unitOfWork.SaveChangesAsync();
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
         await repository.AtomicRecordDeliveryFailureAsync(claimed[0].Id, "boom");
@@ -255,21 +292,25 @@ public class InMemoryPersistenceTests
     [Fact]
     public async Task StateMachineRepository_ShouldIsolateDataByTenant()
     {
-        using var services = CreateServiceProvider();
+        using var services = CreateServiceProvider(tenantMode: TenantMode.SharedDatabase);
         using (var hostScope = services.CreateScope())
         {
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             hostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
-            var hostRepository = hostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+            var hostRepository = hostScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
+            var hostUow = hostScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
+            await hostUow.SaveChangesAsync();
         }
 
         using (var tenantScope = services.CreateScope())
         {
             var tenantExecutionContext = tenantScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             tenantExecutionContext.SetTenantId("tenant-a");
-            var tenantRepository = tenantScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+            var tenantRepository = tenantScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
+            var tenantUow = tenantScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             tenantRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
+            await tenantUow.SaveChangesAsync();
             Assert.Equal(2,
             (await tenantRepository.FindAsync("corr", "def"))!.State);
         }
@@ -278,29 +319,10 @@ public class InMemoryPersistenceTests
         {
             var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             verifyHostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
-            var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IStateMachineContextRepository>();
+            var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
             Assert.Equal(1,
             (await verifyHostRepository.FindAsync("corr", "def"))!.State);
         }
-    }
-
-    [Fact]
-    public async Task BusinessRepositoryBase_ShouldSupportCustomRepositoryReuse()
-    {
-        using var services = CreateServiceProvider();
-        using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
-        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
-
-        await using var transaction = await transactionManager.BeginTransactionAsync();
-        repository.Add(TestOrder.Create(42, "custom"));
-        await transaction.CommitAsync();
-
-        var order = await ((IRepository<TestOrder, long>)repository).FindAsync(42L);
-        Assert.NotNull(
-        order);
-        Assert.Equal("custom",
-        order.Number);
     }
 
     [Fact]
@@ -308,7 +330,9 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
@@ -329,7 +353,9 @@ public class InMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
@@ -340,7 +366,7 @@ public class InMemoryPersistenceTests
         detached.Raise(new TestEvent("detached-query"));
 
         var changeCount = await unitOfWork.SaveChangesAsync();
-        var stored = await ((IRepository<TestOrder, long>)repository).FindAsync(8L);
+        var stored = await repository.FindAsync(8L);
 
         Assert.Equal(0, changeCount);
         Assert.Equal("before", stored!.Number);
@@ -348,62 +374,72 @@ public class InMemoryPersistenceTests
     }
 
     [Fact]
-    public async Task Repository_RawSql_ShouldThrowForMemoryProvider()
+    public async Task Repository_RawSql_ShouldWorkForSqliteProvider()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<TestOrderRepository>();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
 
-        Assert.Throws<NotSupportedException>(() => repository.FromSql($"select * from TestOrder").ToList());
-        Assert.Throws<NotSupportedException>(() => repository.FromSqlRaw("select * from TestOrder").ToList());
-        await Assert.ThrowsAsync<NotSupportedException>(() => repository.ExecuteSqlAsync($"delete from TestOrder"));
-        await Assert.ThrowsAsync<NotSupportedException>(() => repository.ExecuteSqlRawAsync("delete from TestOrder"));
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        repository.Add(TestOrder.Create(9, "n"));
+        await unitOfWork.SaveChangesAsync();
+
+        var rows = repository.FromSqlRaw("select * from TestOrder").ToList();
+        Assert.NotEmpty(rows);
+
+        await repository.ExecuteSqlRawAsync("delete from TestOrder where Id = 9");
+        Assert.Null(await repository.FindAsync(9L));
     }
 
-    [Fact]
-    public async Task WarningHostedService_ShouldLogWarning_WhenUsingBuiltInPersistence()
+    private static ServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.SingleTenant)
     {
-        var logger = new Mock<ILogger<MemoryPersistenceWarningHostedService>>();
-        using var services = CreateServiceProvider(warningLogger: logger.Object);
-        var hostedService = new MemoryPersistenceWarningHostedService(services, logger.Object);
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<TestEventPublisher>();
+        builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
+        builder.Services.AddSingleton<HandlerInfos>();
 
-        await hostedService.StartAsync(CancellationToken.None);
+        builder.AddInfrastructureDefaults();
+        builder.AddMemoryInfrastructure();
 
-        logger.Verify(x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("NOF is using NOF.Infrastructure.Memory for persistence fallback")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-    }
-
-    private static ServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, ILogger<MemoryPersistenceWarningHostedService>? warningLogger = null)
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<MemoryPersistenceStore>();
-        services.AddScoped<IExecutionContext, NOF.Contract.ExecutionContext>();
-        services.AddScoped<IUserContext, NOF.Infrastructure.UserContext>();
-        services.AddScoped(sp => sp.GetRequiredService<MemoryPersistenceStore>().CreateContext(sp.GetRequiredService<IExecutionContext>().TenantId));
-        services.AddScoped<IUnitOfWork, MemoryUnitOfWork>();
-        services.AddScoped<ITransactionManager, MemoryTransactionManager>();
-        services.AddScoped<IInboxMessageRepository, MemoryInboxMessageRepository>();
-        services.AddScoped<IOutboxMessageRepository, MemoryOutboxMessageRepository>();
-        services.AddScoped<ITenantRepository, MemoryTenantRepository>();
-        services.AddScoped<IStateMachineContextRepository, MemoryStateMachineContextRepository>();
-        services.AddScoped<TestOrderRepository>();
-        services.AddSingleton<IIdGenerator>(new TestIdGenerator());
-        services.AddSingleton<TestEventPublisher>();
-        services.AddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
-        services.AddSingleton(Options.Create(outboxOptions ?? new OutboxOptions()));
-        services.AddLogging();
-
-        if (warningLogger is not null)
+        var selector = builder.AddEFCore<TestDbContext>();
+        selector = tenantMode switch
         {
-            services.AddSingleton(warningLogger);
+            TenantMode.SharedDatabase => selector.UseSharedDatabaseTenancy(),
+            TenantMode.DatabasePerTenant => selector.UseDatabasePerTenant(),
+            _ => selector.UseSingleTenant()
+        };
+
+        selector.UseSqliteInMemory($"nof-tests-{Guid.NewGuid():N}");
+
+        if (outboxOptions is not null)
+        {
+            builder.Services.ReplaceOrAddSingleton<IOptions<OutboxOptions>>(Options.Create(outboxOptions));
         }
 
-        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+        var provider = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        EnsureCreated(provider, NOFContractConstants.Tenant.HostId);
+        if (tenantMode == TenantMode.SharedDatabase)
+        {
+            EnsureCreated(provider, "tenant-a");
+        }
+
+        return provider;
+    }
+
+    private static void EnsureCreated(ServiceProvider provider, string tenantId)
+    {
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(tenantId);
+        scope.ServiceProvider.GetRequiredService<TestDbContext>().Database.EnsureCreated();
     }
 
     private sealed class TestIdGenerator : IIdGenerator
@@ -442,11 +478,114 @@ public class InMemoryPersistenceTests
             => Create(Id, Number);
     }
 
-    private sealed class TestOrderRepository : MemoryRepository<TestOrder, long>
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : NOFDbContext(options)
     {
-        public TestOrderRepository(MemoryPersistenceContext context)
-            : base(context, static order => order.Id)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<TestOrder>(entity =>
+            {
+                entity.ToTable(nameof(TestOrder));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Number).HasMaxLength(256).IsRequired();
+            });
+        }
+    }
+
+    private sealed class TestServiceRegistrationContext : INOFAppBuilder
+    {
+        private readonly IServiceCollection _services;
+        private readonly ConfigurationManager _configuration;
+        private readonly IHostEnvironment _environment;
+        private readonly ILoggingBuilder _logging;
+        private readonly IMetricsBuilder _metrics;
+        private readonly Dictionary<object, object> _properties;
+        private readonly List<IServiceRegistrationStep> _registrationSteps;
+        private readonly List<IApplicationInitializationStep> _initializationSteps;
+
+        public TestServiceRegistrationContext()
+        {
+            _services = new ServiceCollection();
+            _services.AddLogging();
+            _services.AddMetrics();
+            _configuration = new ConfigurationManager();
+            _environment = new TestHostEnvironment();
+            _logging = new TestLoggingBuilder(_services);
+            _metrics = new TestMetricsBuilder(_services);
+            _properties = [];
+            _registrationSteps = [];
+            _initializationSteps = [];
+        }
+
+        public INOFAppBuilder AddRegistrationStep<TStep>(TStep registrationStep, params Type[] allInterfaces)
+            where TStep : IServiceRegistrationStep
+        {
+            _registrationSteps.Add(registrationStep);
+            return this;
+        }
+
+        public INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
+        {
+            _registrationSteps.RemoveAll(predicate);
+            return this;
+        }
+
+        public INOFAppBuilder AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
+            where TStep : IApplicationInitializationStep
+        {
+            _initializationSteps.Add(initializationStep);
+            return this;
+        }
+
+        public INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
+        {
+            _initializationSteps.RemoveAll(predicate);
+            return this;
+        }
+
+        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
+            => AddInitializationStep(initializationStep, allInterfaces);
+
+        IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
+            => RemoveInitializationStep(predicate);
+
+        public IDictionary<object, object> Properties => _properties;
+
+        public IConfigurationManager Configuration => _configuration;
+
+        public IHostEnvironment Environment => _environment;
+
+        public ILoggingBuilder Logging => _logging;
+
+        public IMetricsBuilder Metrics => _metrics;
+
+        public IServiceCollection Services => _services;
+
+        public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+            where TContainerBuilder : notnull
         {
         }
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+
+        public string ApplicationName { get; set; } = "NOF.Infrastructure.Tests";
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class TestLoggingBuilder(IServiceCollection services) : ILoggingBuilder
+    {
+        public IServiceCollection Services { get; } = services;
+    }
+
+    private sealed class TestMetricsBuilder(IServiceCollection services) : IMetricsBuilder
+    {
+        public IServiceCollection Services { get; } = services;
     }
 }
