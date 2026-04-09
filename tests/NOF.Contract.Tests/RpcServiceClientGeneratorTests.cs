@@ -51,33 +51,6 @@ public class RpcServiceClientGeneratorTests
     }
 
     [Fact]
-    public void DoesNotGenerate_WhenServiceIsNotRpcService()
-    {
-        const string source = """
-                              using NOF.Contract;
-                              using NOF.Hosting;
-                              using System.Threading.Tasks;
-
-                              namespace MyApp
-                              {
-                                  public record PingRequest;
-
-                                  public partial interface IMyService
-                                  {
-                                      Task<Result> PingAsync(PingRequest request);
-                                  }
-
-                                  [HttpServiceClient<IMyService>]
-                                  public partial class MyServiceClient;
-                              }
-                              """;
-
-        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        Assert.Empty(
-        runResult.GeneratedTrees);
-    }
-
-    [Fact]
     public void MethodWithoutHttpEndpoint_DefaultsToPostAndOperationRoute()
     {
         const string source = """

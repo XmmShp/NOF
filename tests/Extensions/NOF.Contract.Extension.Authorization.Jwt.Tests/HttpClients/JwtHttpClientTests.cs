@@ -1,10 +1,10 @@
 using Microsoft.IdentityModel.Tokens;
+using NOF.Hosting;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Xunit;
-using NOF.Hosting;
 
 namespace NOF.Contract.Extension.Authorization.Jwt.Tests.HttpClients;
 
@@ -43,25 +43,16 @@ public sealed class JwtHttpClientTests
         var service = new HttpJwksService(httpClient, pipeline, executionContext, new SimpleServiceProvider());
 
         var result = await service.GetJwksAsync();
-        Assert.True(
-
-        result.IsSuccess);
-        Assert.NotNull(
-        result.Value);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
         Assert.Single(result.Value!.Keys, k => k.Kid == "kid-1");
-        Assert.NotNull(
-
-        handler.LastRequest);
-        Assert.Equal(HttpMethod.Get,
-        handler.LastRequest!.Method);
-        Assert.Equal(JwtAuthorizationEndpoints.Jwks,
-        handler.LastRequest.PathAndQuery);
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(HttpMethod.Get, handler.LastRequest!.Method);
+        Assert.Equal(JwtAuthorizationEndpoints.Jwks, handler.LastRequest.PathAndQuery);
         Assert.True(handler.LastRequest.Headers.ContainsKey("X-Tenant"));
         Assert.Single(handler.LastRequest.Headers["X-Tenant"]);
         Assert.Equal("tenant-a", handler.LastRequest.Headers["X-Tenant"][0]);
-        Assert.NotNull(
-
-        pipeline.LastContext);
+        Assert.NotNull(pipeline.LastContext);
         Assert.IsAssignableFrom<Result<JwksDocument>>(pipeline.LastContext!.Response);
     }
 
@@ -104,43 +95,31 @@ public sealed class JwtHttpClientTests
         };
 
         var result = await service.GenerateJwtTokenAsync(request);
-        Assert.True(
-
-        result.IsSuccess);
-        Assert.NotNull(
-        result.Value);
-        Assert.Equal("access-token",
-        result.Value!.TokenPair.AccessToken);
-        Assert.NotNull(
-
-        handler.LastRequest);
-        Assert.Equal(HttpMethod.Post,
-        handler.LastRequest!.Method);
-        Assert.Equal(JwtAuthorizationEndpoints.Token,
-        handler.LastRequest.PathAndQuery);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal("access-token", result.Value!.TokenPair.AccessToken);
+        Assert.NotNull(handler.LastRequest);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal(JwtAuthorizationEndpoints.Token, handler.LastRequest.PathAndQuery);
         Assert.True(handler.LastRequest.Headers.ContainsKey("Authorization"));
 
         var payload = JsonSerializer.Deserialize<GenerateJwtTokenRequest>(handler.LastRequest.Body!, JsonSerializerOptions.NOF);
         Assert.NotNull(payload);
         Assert.Equal("user-1", payload!.UserId);
-        Assert.Single(payload.Permissions);
-        Assert.Equal("orders.read", payload.Permissions[0]);
+        Assert.Single(payload.Permissions!);
+        Assert.Equal("orders.read", payload.Permissions![0]);
         Assert.NotNull(pipeline.LastContext);
         Assert.IsType<GenerateJwtTokenRequest>(pipeline.LastContext!.Message);
-        Assert.IsAssignableFrom<Result<GenerateJwtTokenResponse>>(pipeline.LastContext.Response);
+        Assert.IsType<Result<GenerateJwtTokenResponse>>(pipeline.LastContext.Response, exactMatch: true);
     }
 
     [Fact]
     public void JwtAuthorizationEndpoints_ShouldMatchWellKnownRoutes()
     {
-        Assert.Equal("/.well-known/jwks.json",
-        JwtAuthorizationEndpoints.Jwks);
-        Assert.Equal("/connect/token",
-        JwtAuthorizationEndpoints.Token);
-        Assert.Equal("/connect/introspect",
-        JwtAuthorizationEndpoints.Introspect);
-        Assert.Equal("/connect/revocation",
-        JwtAuthorizationEndpoints.Revocation);
+        Assert.Equal("/.well-known/jwks.json", JwtAuthorizationEndpoints.Jwks);
+        Assert.Equal("/connect/token", JwtAuthorizationEndpoints.Token);
+        Assert.Equal("/connect/introspect", JwtAuthorizationEndpoints.Introspect);
+        Assert.Equal("/connect/revocation", JwtAuthorizationEndpoints.Revocation);
     }
 
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)

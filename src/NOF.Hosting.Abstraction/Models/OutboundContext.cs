@@ -1,5 +1,5 @@
-using System.ComponentModel;
 using NOF.Contract;
+using System.ComponentModel;
 
 namespace NOF.Hosting;
 
