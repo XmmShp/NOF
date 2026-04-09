@@ -186,7 +186,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            Payload = "payload",
+            Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command,
             CreatedAt = DateTime.UtcNow.AddMinutes(-1)
@@ -226,7 +226,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id1,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            Payload = "a",
+            Payload = System.Text.Encoding.UTF8.GetBytes("a"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command
         });
@@ -236,7 +236,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id2,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            Payload = "b",
+            Payload = System.Text.Encoding.UTF8.GetBytes("b"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command
         });
@@ -272,7 +272,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            Payload = "payload",
+            Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Notification
         });
@@ -414,6 +414,7 @@ public class SqliteInMemoryPersistenceTests
         builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
         builder.Services.AddSingleton<HandlerInfos>();
 
+        builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
         builder.AddMemoryInfrastructure();
 

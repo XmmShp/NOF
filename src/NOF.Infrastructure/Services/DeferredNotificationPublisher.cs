@@ -38,7 +38,7 @@ public sealed class DeferredNotificationPublisher : IDeferredNotificationPublish
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Notification,
             PayloadType = typeName,
-            Payload = _objectSerializer.SerializeToString(notification, notification.GetType()),
+            Payload = _objectSerializer.Serialize(notification).ToArray(),
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
             ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });

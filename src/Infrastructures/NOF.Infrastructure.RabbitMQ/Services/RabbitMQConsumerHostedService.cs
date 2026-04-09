@@ -185,8 +185,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     {
         try
         {
-            var messageBytes = args.Body.ToArray();
-            var payload = System.Text.Encoding.UTF8.GetString(messageBytes);
+            var payload = args.Body;
 
             var messageTypeName = args.BasicProperties.Type;
             if (string.IsNullOrWhiteSpace(messageTypeName))

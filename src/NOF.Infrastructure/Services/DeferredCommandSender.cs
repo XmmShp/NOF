@@ -38,7 +38,7 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Command,
             PayloadType = typeName,
-            Payload = _objectSerializer.SerializeToString(command, command.GetType()),
+            Payload = _objectSerializer.Serialize(command).ToArray(),
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
             ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -62,7 +62,7 @@ namespace NOF.Sample.Migrations
                     RetryCount = table.Column<int>(type: "integer", nullable: false),
                     MessageType = table.Column<int>(type: "integer", nullable: false),
                     PayloadType = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
-                    Payload = table.Column<string>(type: "text", nullable: false),
+                    Payload = table.Column<byte[]>(type: "bytea", nullable: false),
                     Headers = table.Column<string>(type: "text", nullable: false),
                     SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     FailedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),

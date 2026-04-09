@@ -39,7 +39,7 @@ public class RabbitMQNotificationRider : INotificationRider
         var properties = new BasicProperties
         {
             Persistent = _options.Value.Durable,
-            ContentType = "application/json",
+            ContentType = "application/octet-stream",
             Type = notification.GetType().FullName
         };
 
@@ -53,9 +53,7 @@ public class RabbitMQNotificationRider : INotificationRider
             properties.Headers = headerDict;
         }
 
-        var messageString = _serializer.SerializeToString(notification, notificationType);
-        var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);
-        var body = new ReadOnlyMemory<byte>(messageBytes);
+        var body = _serializer.Serialize(notification);
 
         await channel.BasicPublishAsync(
             exchange: exchangeName,

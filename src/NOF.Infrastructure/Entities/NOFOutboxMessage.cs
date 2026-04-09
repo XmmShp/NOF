@@ -27,7 +27,7 @@ public class NOFOutboxMessage : AggregateRoot, ICloneable
 
     public OutboxMessageType MessageType { get; set; }
     public string PayloadType { get; set; } = null!;
-    public string Payload { get; set; } = null!;
+    public byte[] Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
     public DateTime? SentAt { get; set; }
     public DateTime? FailedAt { get; set; }
@@ -54,7 +54,7 @@ public class NOFOutboxMessage : AggregateRoot, ICloneable
             RetryCount = RetryCount,
             MessageType = MessageType,
             PayloadType = PayloadType,
-            Payload = Payload,
+            Payload = [.. Payload],
             Headers = Headers,
             SentAt = SentAt,
             FailedAt = FailedAt,

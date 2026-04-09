@@ -45,7 +45,7 @@ public class RabbitMQCommandRider : ICommandRider
         var properties = new BasicProperties
         {
             Persistent = _options.Value.Durable,
-            ContentType = "application/json",
+            ContentType = "application/octet-stream",
             Type = command.GetType().FullName
         };
 
@@ -59,9 +59,7 @@ public class RabbitMQCommandRider : ICommandRider
             properties.Headers = headerDict;
         }
 
-        var messageString = _serializer.SerializeToString(command, commandType);
-        var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);
-        var body = new ReadOnlyMemory<byte>(messageBytes);
+        var body = _serializer.Serialize(command);
 
         await channel.BasicPublishAsync(
             exchange: exchangeName,
