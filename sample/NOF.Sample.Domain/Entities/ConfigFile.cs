@@ -1,8 +1,6 @@
-using NOF.Domain;
-
 namespace NOF.Sample;
 
-public class ConfigFile : IEntity
+public class ConfigFile
 {
     public ConfigFileName Name { get; init; }
     public ConfigContent Content { get; private set; }
