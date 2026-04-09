@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace NOF.Contract;
+namespace NOF.Infrastructure;
 
 public static class TypeRegistry
 {
