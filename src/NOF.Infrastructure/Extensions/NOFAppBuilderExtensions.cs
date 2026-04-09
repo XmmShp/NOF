@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using NOF.Application;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
@@ -64,7 +65,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.Configure<TenantOptions>(options =>
             {
                 options.Mode = TenantMode.SingleTenant;
-                options.SingleTenantId = NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
+                options.SingleTenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
             });
             return builder;
         }

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Contract;
-using NOF.Hosting;
 using NOF.Test;
 using System.Security.Claims;
 using Xunit;

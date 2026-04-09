@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NOF.Application;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
 

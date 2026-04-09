@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
 using System.Security.Claims;
@@ -28,7 +29,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        ExecutionContext.SetTenantId(NOFContractConstants.Tenant.NormalizeTenantId(tenantId));
+        ExecutionContext.SetTenantId(NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId));
         return this;
     }
 
@@ -69,7 +70,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         {
             foreach (var permission in permissions)
             {
-                claims.Add(new Claim(ClaimTypes.Permission, permission));
+                claims.Add(new Claim(NOFAbstractionConstants.Claims.Permission, permission));
             }
         }
 

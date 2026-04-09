@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using NOF.Contract;
+using NOF.Abstraction;
 
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 

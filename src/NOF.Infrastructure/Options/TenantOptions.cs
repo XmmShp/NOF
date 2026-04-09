@@ -1,4 +1,4 @@
-using NOF.Contract;
+using NOF.Abstraction;
 
 namespace NOF.Infrastructure;
 
@@ -16,7 +16,7 @@ public sealed class TenantOptions
     /// <summary>
     /// Tenant id used in single-tenant mode.
     /// </summary>
-    public string SingleTenantId { get; set; } = NOFContractConstants.Tenant.HostId;
+    public string SingleTenantId { get; set; } = NOFAbstractionConstants.Tenant.HostId;
 
     /// <summary>
     /// Database naming format used by DatabasePerTenant mode.

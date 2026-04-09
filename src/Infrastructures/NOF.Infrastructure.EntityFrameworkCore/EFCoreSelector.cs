@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
@@ -26,7 +27,7 @@ public readonly struct EFCoreSelector
         Builder.Services.Configure<TenantOptions>(options =>
         {
             options.Mode = TenantMode.SingleTenant;
-            options.SingleTenantId = NOF.Contract.NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
+            options.SingleTenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
         });
         return this;
     }

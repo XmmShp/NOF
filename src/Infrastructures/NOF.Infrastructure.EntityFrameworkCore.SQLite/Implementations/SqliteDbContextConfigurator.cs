@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using NOF.Contract;
+using NOF.Abstraction;
 using System.Text.RegularExpressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;
@@ -99,7 +99,7 @@ public class SqliteDbContextConfigurator : IDbContextConfigurator
 
     private static string NormalizeTenantIdForDatabaseName(string tenantId)
     {
-        var normalized = NOFContractConstants.Tenant.NormalizeTenantId(tenantId).ToLowerInvariant();
-        return Regex.Replace(normalized, "[^a-z0-9_]+", "_", RegexOptions.CultureInvariant);
+        var normalized = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId).ToLowerInvariant();
+        return Regex.Replace(normalized, "[^a-z0-9_]+", "_", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
     }
 }

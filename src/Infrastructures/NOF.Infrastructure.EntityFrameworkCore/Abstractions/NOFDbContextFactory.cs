@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NOF.Contract;
+using NOF.Abstraction;
 using NOF.Hosting;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -54,7 +54,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     public TDbContext CreateDbContext(string tenantId)
     {
-        tenantId = NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
+        tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
 
         var extension = new NOFTenantDbContextOptionsExtension

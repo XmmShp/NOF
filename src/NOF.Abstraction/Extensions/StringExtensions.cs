@@ -1,9 +1,9 @@
-namespace NOF.Contract;
+namespace NOF.Abstraction;
 
 /// <summary>
-/// Extension methods for the NOF.Contract layer.
+/// Extension methods for the NOF.Abstraction layer.
 /// </summary>
-public static partial class NOFContractExtensions
+public static partial class NOFAbstractionExtensions
 {
     extension(string str)
     {

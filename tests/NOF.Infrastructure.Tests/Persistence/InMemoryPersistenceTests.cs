@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
@@ -24,7 +25,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
@@ -36,7 +37,7 @@ public class SqliteInMemoryPersistenceTests
         await transaction.RollbackAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
         var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var tenant = await verifyRepo.FindAsync("tenant-1");
         Assert.Null(tenant);
@@ -47,7 +48,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
@@ -64,7 +65,7 @@ public class SqliteInMemoryPersistenceTests
         await outer.CommitAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
         var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         Assert.NotNull(await verifyRepo.FindAsync("outer"));
         Assert.Null(await verifyRepo.FindAsync("inner"));
@@ -75,7 +76,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
@@ -88,7 +89,7 @@ public class SqliteInMemoryPersistenceTests
         }
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
         var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
         Assert.Null(await verifyRepo.FindAsync("tenant-dispose"));
     }
@@ -117,7 +118,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -137,7 +138,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -154,7 +155,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFInboxMessage, Guid>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -174,7 +175,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -200,7 +201,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var verify = services.CreateScope())
         {
-            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
             var verifyRepo = verify.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
             var stored = await verifyRepo.FindAsync(id);
             Assert.NotNull(stored);
@@ -214,7 +215,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) });
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -260,7 +261,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 1, ClaimTimeout = TimeSpan.FromMinutes(1) });
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -286,7 +287,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var verify = services.CreateScope())
         {
-            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
             var verifyRepo = verify.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
             var stored = await verifyRepo.FindAsync(id);
             Assert.NotNull(stored);
@@ -302,7 +303,7 @@ public class SqliteInMemoryPersistenceTests
         using (var hostScope = services.CreateScope())
         {
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            hostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
+            hostExecutionContext.SetTenantId(NOFAbstractionConstants.Tenant.HostId);
             var hostRepository = hostScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
             var hostUow = hostScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
@@ -324,7 +325,7 @@ public class SqliteInMemoryPersistenceTests
         using (var verifyHostScope = services.CreateScope())
         {
             var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            verifyHostExecutionContext.SetTenantId(NOFContractConstants.Tenant.HostId);
+            verifyHostExecutionContext.SetTenantId(NOFAbstractionConstants.Tenant.HostId);
             var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
             Assert.Equal(1,
             (await verifyHostRepository.FindAsync("corr", "def"))!.State);
@@ -336,7 +337,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -357,7 +358,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -382,7 +383,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
 
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
@@ -397,7 +398,7 @@ public class SqliteInMemoryPersistenceTests
         // Query in a fresh scope to avoid first-level cache.
         using (var verify = services.CreateScope())
         {
-            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFContractConstants.Tenant.HostId);
+            verify.ServiceProvider.GetRequiredService<IExecutionContext>().SetTenantId(NOFAbstractionConstants.Tenant.HostId);
             var verifyRepo = verify.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
             Assert.Null(await verifyRepo.FindAsync(9L));
         }
@@ -437,7 +438,7 @@ public class SqliteInMemoryPersistenceTests
             ValidateScopes = true
         });
 
-        EnsureCreated(provider, NOFContractConstants.Tenant.HostId);
+        EnsureCreated(provider, NOFAbstractionConstants.Tenant.HostId);
         EnsureCreated(provider, "tenant-a");
 
         return provider;

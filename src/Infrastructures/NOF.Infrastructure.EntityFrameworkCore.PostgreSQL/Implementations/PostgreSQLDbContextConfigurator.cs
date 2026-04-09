@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using NOF.Contract;
+using NOF.Abstraction;
 using Npgsql;
 using System.Text.RegularExpressions;
 
@@ -60,7 +60,7 @@ public class PostgreSQLDbContextConfigurator : IDbContextConfigurator
 
     private static string NormalizeTenantIdForDatabaseName(string tenantId)
     {
-        var normalized = NOFContractConstants.Tenant.NormalizeTenantId(tenantId).ToLowerInvariant();
-        return Regex.Replace(normalized, "[^a-z0-9_]+", "_", RegexOptions.CultureInvariant);
+        var normalized = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId).ToLowerInvariant();
+        return Regex.Replace(normalized, "[^a-z0-9_]+", "_", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
     }
 }

@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace NOF.Contract;
+namespace NOF.Abstraction;
 
 /// <summary>
 /// 表示当前逻辑执行上下文中的用户信息。
@@ -25,7 +25,7 @@ public interface IUserContext
     void UnsetUser();
 }
 
-public static partial class NOFContractExtensions
+public static partial class NOFAbstractionExtensions
 {
     extension(IUserContext userContext)
     {
