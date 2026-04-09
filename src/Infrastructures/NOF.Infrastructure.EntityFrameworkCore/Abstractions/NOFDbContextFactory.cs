@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Collections.Concurrent;
 using System.Reflection;
 

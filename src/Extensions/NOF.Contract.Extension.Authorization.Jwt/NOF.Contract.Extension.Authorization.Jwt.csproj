@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\NOF.Contract\NOF.Contract.csproj" />
+    <ProjectReference Include="..\..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
   </ItemGroup>
 
 </Project>

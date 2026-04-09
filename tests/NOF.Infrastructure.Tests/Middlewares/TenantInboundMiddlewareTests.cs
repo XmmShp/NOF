@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Middlewares;
@@ -11,7 +12,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_SingleTenantMode_ShouldIgnoreIncomingTenantHeader()
     {
-        var executionContext = new Contract.ExecutionContext
+        var executionContext = new NOF.Hosting.ExecutionContext
         {
             [NOFContractConstants.Transport.Headers.TenantId] = "tenant-a"
         };
@@ -32,7 +33,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_SharedDatabaseMode_ShouldUseIncomingTenantHeader()
     {
-        var executionContext = new Contract.ExecutionContext
+        var executionContext = new NOF.Hosting.ExecutionContext
         {
             [NOFContractConstants.Transport.Headers.TenantId] = "tenant-a"
         };

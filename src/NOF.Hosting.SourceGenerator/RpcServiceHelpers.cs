@@ -5,12 +5,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace NOF.Contract.SourceGenerator;
+namespace NOF.Hosting.SourceGenerator;
 
 internal static class RpcServiceHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
+    public const string HttpServiceClientAttributeFqn = "NOF.Hosting.HttpServiceClientAttribute<TService>";
 
     public static bool HasHttpEndpointAttribute(IMethodSymbol symbol)
     {
@@ -234,3 +235,4 @@ internal enum HttpVerb
     Delete,
     Patch
 }
+

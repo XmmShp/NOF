@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace NOF.Contract;
+namespace NOF.Hosting;
 
 public static class ActivityExtensions
 {

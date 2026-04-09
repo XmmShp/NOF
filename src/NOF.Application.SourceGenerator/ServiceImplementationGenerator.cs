@@ -219,10 +219,10 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
             sb.AppendLine($"            throw new global::System.InvalidOperationException(\"RPC operation implementation is missing: {nestedInterfaceFqn}.\");");
             sb.AppendLine("        }");
             sb.AppendLine();
-            sb.AppendLine("        var outboundPipeline = _serviceProvider.GetRequiredService<global::NOF.Contract.IOutboundPipelineExecutor>();");
-            sb.AppendLine("        var outboundExecutionContext = _serviceProvider.GetRequiredService<global::NOF.Contract.IExecutionContext>();");
+            sb.AppendLine("        var outboundPipeline = _serviceProvider.GetRequiredService<global::NOF.Hosting.IOutboundPipelineExecutor>();");
+            sb.AppendLine("        var outboundExecutionContext = _serviceProvider.GetRequiredService<global::NOF.Hosting.IExecutionContext>();");
             sb.AppendLine();
-            sb.AppendLine("        var outboundContext = new global::NOF.Contract.OutboundContext");
+            sb.AppendLine("        var outboundContext = new global::NOF.Hosting.OutboundContext");
             sb.AppendLine("        {");
             sb.AppendLine(hasRequestParam
                 ? "            Message = request,"

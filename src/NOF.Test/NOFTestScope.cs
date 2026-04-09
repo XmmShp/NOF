@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Security.Claims;
 
 namespace NOF.Test;

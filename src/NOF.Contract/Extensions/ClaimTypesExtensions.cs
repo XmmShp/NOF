@@ -9,11 +9,11 @@ public static partial class NOFContractExtensions
         /// <summary>
         /// Custom claim type for permissions, separate from standard Role claims.
         /// </summary>
-        public static string Permission => IUserContext.PermissionClaimType;
+        public static string Permission => NOFContractConstants.Claims.Permission;
 
         /// <summary>
         /// Well-known claim type for tenant identifier.
         /// </summary>
-        public static string TenantId => IUserContext.TenantIdClaimType;
+        public static string TenantId => NOFContractConstants.Claims.TenantId;
     }
 }

@@ -37,7 +37,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
             builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
             builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
-            builder.Services.TryAddScoped<IUserContext, UserContext>();
             builder.Services.AddHostedService<OutboxMessageBackgroundService>();
             builder.Services.AddOptions<OutboxOptions>();
 

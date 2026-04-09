@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace NOF.Contract;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Represents the context of a logical execution (e.g., HTTP request, command execution,
@@ -30,7 +30,7 @@ public sealed class ExecutionContext : Dictionary<string, string?>, IExecutionCo
     }
 }
 
-public static partial class NOFContractExtensions
+public static partial class NOFHostingExtensions
 {
     extension(IExecutionContext context)
     {
@@ -41,12 +41,12 @@ public static partial class NOFContractExtensions
         {
             get
             {
-                context.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId);
-                return NOFContractConstants.Tenant.NormalizeTenantId(tenantId);
+                context.TryGetValue(NOFHostingConstants.Transport.Headers.TenantId, out var tenantId);
+                return NOFHostingConstants.Tenant.NormalizeTenantId(tenantId);
             }
             set
             {
-                context[NOFContractConstants.Transport.Headers.TenantId] = NOFContractConstants.Tenant.NormalizeTenantId(value);
+                context[NOFHostingConstants.Transport.Headers.TenantId] = NOFHostingConstants.Tenant.NormalizeTenantId(value);
             }
         }
 
@@ -57,8 +57,8 @@ public static partial class NOFContractExtensions
         {
             get
             {
-                context.TryGetValue(NOFContractConstants.Transport.Headers.TraceId, out var traceId);
-                context.TryGetValue(NOFContractConstants.Transport.Headers.SpanId, out var spanId);
+                context.TryGetValue(NOFHostingConstants.Transport.Headers.TraceId, out var traceId);
+                context.TryGetValue(NOFHostingConstants.Transport.Headers.SpanId, out var spanId);
                 if (traceId is not null && spanId is not null)
                 {
                     return new TracingInfo(traceId, spanId);
@@ -80,8 +80,8 @@ public static partial class NOFContractExtensions
         /// </summary>
         public void SetTracingInfo(TracingInfo tracingInfo)
         {
-            context[NOFContractConstants.Transport.Headers.TraceId] = tracingInfo.TraceId;
-            context[NOFContractConstants.Transport.Headers.SpanId] = tracingInfo.SpanId;
+            context[NOFHostingConstants.Transport.Headers.TraceId] = tracingInfo.TraceId;
+            context[NOFHostingConstants.Transport.Headers.SpanId] = tracingInfo.SpanId;
         }
 
         /// <summary>

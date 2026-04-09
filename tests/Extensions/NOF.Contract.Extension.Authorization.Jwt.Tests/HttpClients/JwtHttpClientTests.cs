@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using NOF.Hosting;
 
 namespace NOF.Contract.Extension.Authorization.Jwt.Tests.HttpClients;
 
@@ -34,7 +35,7 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new ExecutionContext
+        var executionContext = new Hosting.ExecutionContext
         {
             ["X-Tenant"] = "tenant-a",
             ["X-Trace"] = "trace-a"
@@ -85,7 +86,7 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new ExecutionContext
+        var executionContext = new Hosting.ExecutionContext
         {
             ["Authorization"] = "Bearer upstream-token"
         };
@@ -201,5 +202,4 @@ public sealed class JwtHttpClientTests
         }
     }
 }
-
 

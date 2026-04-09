@@ -1,5 +1,6 @@
 using NOF.Contract;
-using NOF.Contract.SourceGenerator;
+using NOF.Hosting;
+using NOF.Hosting.SourceGenerator;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -21,7 +22,7 @@ public class RpcServiceClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
-                              using NOF.Contract;
+                              using NOF.Hosting;
                               using System.Threading;
                               using System.Threading.Tasks;
 
@@ -54,7 +55,7 @@ public class RpcServiceClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
-                              using NOF.Contract;
+                              using NOF.Hosting;
                               using System.Threading.Tasks;
 
                               namespace MyApp
@@ -81,7 +82,7 @@ public class RpcServiceClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
-                              using NOF.Contract;
+                              using NOF.Hosting;
                               using System.Threading.Tasks;
 
                               namespace MyApp
@@ -109,7 +110,7 @@ public class RpcServiceClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
-                              using NOF.Contract;
+                              using NOF.Hosting;
                               using System.Threading.Tasks;
 
                               namespace MyApp
@@ -142,6 +143,5 @@ public class RpcServiceClientGeneratorTests
         Assert.DoesNotContain("body[\"Id\"]", code);
     }
 }
-
 
 

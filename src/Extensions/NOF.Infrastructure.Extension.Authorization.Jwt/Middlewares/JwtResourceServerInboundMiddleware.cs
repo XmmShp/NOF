@@ -101,4 +101,3 @@ public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware,
         await next(cancellationToken);
     }
 }
-

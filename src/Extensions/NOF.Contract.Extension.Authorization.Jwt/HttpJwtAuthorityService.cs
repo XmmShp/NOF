@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using NOF.Hosting;
 
 namespace NOF.Contract.Extension.Authorization.Jwt;
 

@@ -35,4 +35,3 @@ public sealed class JwtTokenPropagationOutboundMiddleware : IOutboundMiddleware,
         return next(cancellationToken);
     }
 }
-

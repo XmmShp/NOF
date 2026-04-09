@@ -79,4 +79,3 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware, IBefore<
         return false;
     }
 }
-

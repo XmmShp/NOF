@@ -19,10 +19,12 @@
         <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />
         <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
         <ProjectReference Include="..\NOF.Sample.UI\NOF.Sample.UI.csproj" />
+        <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
         <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore.SourceGenerator\NOF.Hosting.AspNetCore.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\src\NOF.Abstraction.SourceGenerator\NOF.Abstraction.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\src\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\..\src\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\NOF.Sample.Wasm\NOF.Sample.Wasm.csproj" />
     </ItemGroup>
     <ItemGroup>

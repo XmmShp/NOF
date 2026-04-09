@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting.Maui;
+using NOF.Sample.Maui.Services;
 
 namespace NOF.Sample.Maui;
 

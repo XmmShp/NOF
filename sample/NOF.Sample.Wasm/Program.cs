@@ -1,6 +1,7 @@
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting.BlazorWebAssembly;
 using NOF.Sample;
+using NOF.Sample.Wasm.Services;
 
 var builder = NOFWebAssemblyHostBuilder.Create(args);
 

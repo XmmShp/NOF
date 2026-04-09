@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Reflection;
 
 namespace NOF.Application;

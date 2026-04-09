@@ -1,4 +1,4 @@
-namespace NOF.Contract;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Represents distributed tracing information (trace ID and span ID).

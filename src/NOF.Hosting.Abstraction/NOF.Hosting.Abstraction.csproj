@@ -25,4 +25,8 @@
     <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\NOF.Hosting.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Hosting.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Contract;
 
 namespace NOF.Hosting;
 
