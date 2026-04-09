@@ -19,7 +19,6 @@ public static partial class NOFInfrastructureExtensions
         /// </summary>
         public INOFAppBuilder AddInfrastructureDefaults()
         {
-            builder.Services.TryAddSingleton<ICacheSerializer, JsonCacheSerializer>();
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
             builder.Services.TryAddSingleton<ICacheServiceFactory, CacheServiceFactory>();
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
@@ -30,7 +29,7 @@ public static partial class NOFInfrastructureExtensions
                 builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
             }
 
-            builder.Services.TryAddSingleton<IMessageSerializer, JsonMessageSerializer>();
+            builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IInboundPipelineExecutor, InboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.TryAddScoped<IDeferredCommandSender, DeferredCommandSender>();
@@ -114,4 +113,3 @@ public static partial class NOFInfrastructureExtensions
             => builder.AddInitializationStep(new ApplicationInitializationStep(func));
     }
 }
-

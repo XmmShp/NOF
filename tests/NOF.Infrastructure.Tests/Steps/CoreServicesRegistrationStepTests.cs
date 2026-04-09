@@ -64,7 +64,7 @@ public class InfrastructureDefaultsTests
     {
         var services = new ServiceCollection();
         services.AddOptions();
-        services.AddSingleton<ICacheSerializer, JsonCacheSerializer>();
+        services.AddSingleton<IObjectSerializer, JsonObjectSerializer>();
         services.AddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
 
         services.AddCacheService<TestCacheService>();

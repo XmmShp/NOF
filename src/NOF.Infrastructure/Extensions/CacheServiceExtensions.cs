@@ -43,7 +43,7 @@ public static partial class NOFInfrastructureExtensions
         /// Registers a named <see cref="ICacheService"/> using a typed implementation.
         /// Uses keyed DI: the implementation, serializer, lock retry strategy, and options are all
         /// registered under <paramref name="name"/> as the service key.
-        /// Defaults to <see cref="JsonCacheSerializer"/> and <see cref="ExponentialBackoffCacheLockRetryStrategy"/>
+        /// Defaults to <see cref="JsonObjectSerializer"/> and <see cref="ExponentialBackoffCacheLockRetryStrategy"/>
         /// unless overridden via the returned <see cref="ICacheServiceBuilder"/>.
         /// </summary>
         /// <typeparam name="TImplementation">The <see cref="ICacheService"/> implementation type.</typeparam>
@@ -70,7 +70,7 @@ public static partial class NOFInfrastructureExtensions
             // Keyed cache service factory explicitly resolves keyed deps and named options
             services.AddKeyedScoped<ICacheService>(name, (sp, key) =>
             {
-                var serializer = sp.GetKeyedService<ICacheSerializer>(key) ?? sp.GetRequiredService<ICacheSerializer>();
+                var serializer = sp.GetKeyedService<IObjectSerializer>(key) ?? sp.GetRequiredService<IObjectSerializer>();
                 var lockRetryStrategy = sp.GetKeyedService<ICacheLockRetryStrategy>(key) ?? sp.GetRequiredService<ICacheLockRetryStrategy>();
                 var opts = sp.GetRequiredKeyedService<IOptions<CacheServiceOptions>>(key!);
                 return ActivatorUtilities.CreateInstance<TImplementation>(sp, serializer, lockRetryStrategy, opts);

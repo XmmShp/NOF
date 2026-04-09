@@ -8,12 +8,12 @@ public class RabbitMQCommandRider : ICommandRider
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IMessageSerializer _serializer;
+    private readonly IObjectSerializer _serializer;
 
     public RabbitMQCommandRider(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        IMessageSerializer serializer)
+        IObjectSerializer serializer)
     {
         _connectionManager = connectionManager;
         _options = options;
@@ -59,7 +59,7 @@ public class RabbitMQCommandRider : ICommandRider
             properties.Headers = headerDict;
         }
 
-        var messageString = _serializer.Serialize(command);
+        var messageString = _serializer.SerializeToString(command, commandType);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);
         var body = new ReadOnlyMemory<byte>(messageBytes);
 

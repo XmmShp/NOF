@@ -13,13 +13,13 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
 {
     private readonly IOutboxMessageRepository _repository;
     private readonly IExecutionContext _executionContext;
-    private readonly IMessageSerializer _messageSerializer;
+    private readonly IObjectSerializer _objectSerializer;
 
-    public DeferredCommandSender(IOutboxMessageRepository repository, IExecutionContext executionContext, IMessageSerializer messageSerializer)
+    public DeferredCommandSender(IOutboxMessageRepository repository, IExecutionContext executionContext, IObjectSerializer objectSerializer)
     {
         _repository = repository;
         _executionContext = executionContext;
-        _messageSerializer = messageSerializer;
+        _objectSerializer = objectSerializer;
     }
 
     public void Send(ICommand command)
@@ -38,7 +38,7 @@ public sealed class DeferredCommandSender : IDeferredCommandSender
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Command,
             PayloadType = typeName,
-            Payload = _messageSerializer.Serialize(command),
+            Payload = _objectSerializer.SerializeToString(command, command.GetType()),
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
             ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });

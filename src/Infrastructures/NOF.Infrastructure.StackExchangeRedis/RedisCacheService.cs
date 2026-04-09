@@ -11,14 +11,14 @@ namespace NOF.Infrastructure.StackExchangeRedis;
 public class RedisCacheService : IRedisCacheService
 {
     private readonly IDatabase _database;
-    private readonly ICacheSerializer _serializer;
+    private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
 
     public RedisCacheService(
         IConnectionMultiplexer connectionMultiplexer,
-        ICacheSerializer serializer,
+        IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options)
     {

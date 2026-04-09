@@ -22,7 +22,7 @@ public static partial class NOFInfrastructureExtensions
     extension(ICacheServiceBuilder builder)
     {
         /// <summary>Uses a pre-created serializer instance.</summary>
-        public ICacheServiceBuilder WithSerializer(ICacheSerializer serializer)
+        public ICacheServiceBuilder WithSerializer(IObjectSerializer serializer)
         {
             ArgumentNullException.ThrowIfNull(serializer);
             builder.Services.AddKeyedScoped(builder.Name, (_, _) => serializer);
@@ -30,7 +30,7 @@ public static partial class NOFInfrastructureExtensions
         }
 
         /// <summary>Uses a factory to create the serializer from DI.</summary>
-        public ICacheServiceBuilder WithSerializer(Func<IServiceProvider, ICacheSerializer> factory)
+        public ICacheServiceBuilder WithSerializer(Func<IServiceProvider, IObjectSerializer> factory)
         {
             ArgumentNullException.ThrowIfNull(factory);
             builder.Services.AddKeyedScoped(builder.Name, (sp, _) => factory(sp));
@@ -38,9 +38,9 @@ public static partial class NOFInfrastructureExtensions
         }
 
         /// <summary>Uses a DI-resolved serializer of type <typeparamref name="T"/>.</summary>
-        public ICacheServiceBuilder WithSerializer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, ICacheSerializer
+        public ICacheServiceBuilder WithSerializer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IObjectSerializer
         {
-            builder.Services.AddKeyedScoped<ICacheSerializer, T>(builder.Name);
+            builder.Services.AddKeyedScoped<IObjectSerializer, T>(builder.Name);
             return builder;
         }
 

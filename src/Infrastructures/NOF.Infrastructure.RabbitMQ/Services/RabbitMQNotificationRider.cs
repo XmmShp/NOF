@@ -8,12 +8,12 @@ public class RabbitMQNotificationRider : INotificationRider
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IMessageSerializer _serializer;
+    private readonly IObjectSerializer _serializer;
 
     public RabbitMQNotificationRider(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        IMessageSerializer serializer)
+        IObjectSerializer serializer)
     {
         _connectionManager = connectionManager;
         _options = options;
@@ -53,7 +53,7 @@ public class RabbitMQNotificationRider : INotificationRider
             properties.Headers = headerDict;
         }
 
-        var messageString = _serializer.Serialize(notification);
+        var messageString = _serializer.SerializeToString(notification, notificationType);
         var messageBytes = System.Text.Encoding.UTF8.GetBytes(messageString);
         var body = new ReadOnlyMemory<byte>(messageBytes);
 

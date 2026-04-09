@@ -14,7 +14,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
-    private readonly IMessageSerializer _messageSerializer;
+    private readonly IObjectSerializer _objectSerializer;
     private readonly ICommandRider _commandRider;
     private readonly INotificationRider _notificationRider;
 
@@ -22,12 +22,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         IServiceProvider serviceProvider,
         IOptions<OutboxOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
-        IMessageSerializer messageSerializer)
+        IObjectSerializer objectSerializer)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value;
         _logger = logger;
-        _messageSerializer = messageSerializer;
+        _objectSerializer = objectSerializer;
         _commandRider = serviceProvider.GetRequiredService<ICommandRider>();
         _notificationRider = serviceProvider.GetRequiredService<INotificationRider>();
     }
@@ -99,7 +99,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
-        var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
+        var payloadType = TypeRegistry.Resolve(message.PayloadType);
+        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var headers = string.IsNullOrWhiteSpace(message.Headers)
             ? new Dictionary<string, string?>()
@@ -160,7 +161,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        var payload = _messageSerializer.Deserialize(message.PayloadType, message.Payload);
+        var payloadType = TypeRegistry.Resolve(message.PayloadType);
+        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         var parent = message.ParentTracingInfo;
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",

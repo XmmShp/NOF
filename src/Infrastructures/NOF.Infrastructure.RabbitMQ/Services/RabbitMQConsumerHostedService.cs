@@ -13,7 +13,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
     private readonly IServiceProvider _rootServiceProvider;
-    private readonly IMessageSerializer _serializer;
+    private readonly IObjectSerializer _serializer;
     private readonly HandlerInfos? _handlerInfos;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly List<IChannel> _channels = [];
@@ -24,7 +24,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
         IServiceProvider rootServiceProvider,
-        IMessageSerializer serializer,
+        IObjectSerializer serializer,
         HandlerInfos? handlerInfos,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
@@ -194,7 +194,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 throw new InvalidOperationException("RabbitMQ message type was missing in BasicProperties.Type.");
             }
 
-            var message = _serializer.Deserialize(messageTypeName, payload);
+            var messageType = TypeRegistry.Resolve(messageTypeName);
+            var message = _serializer.Deserialize(payload, messageType);
 
             Dictionary<string, string?>? headers = null;
             if (args.BasicProperties.Headers is not null)
