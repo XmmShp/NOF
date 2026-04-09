@@ -6,11 +6,10 @@ using System.Reflection;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Permission authorization step checks [RequirePermission] / [AllowAnonymous].</summary>
 /// <summary>
 /// Handler middleware that enforces permission-based authorization.
-/// Checks <see cref="AllowAnonymousAttribute"/> and <see cref="RequirePermissionAttribute"/>
-/// on the message/handler types and short-circuits with an error response when unauthorized.
+/// Checks <see cref="RequirePermissionAttribute"/> on the message/handler types and
+/// short-circuits with an error response when unauthorized.
 /// </summary>
 public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<TenantInboundMiddleware>
 {
@@ -29,16 +28,6 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
     {
         var messageType = context.Message.GetType();
         var handlerType = context.HandlerType;
-
-        // Check if message or handler allows anonymous access
-        var allowAnonymousAttr = GetAttribute<AllowAnonymousAttribute>(messageType, handlerType);
-        if (allowAnonymousAttr is not null)
-        {
-            _logger.LogDebug("Handler {HandlerType} or message {MessageType} allows anonymous access",
-                context.HandlerType.FullName, messageType.FullName);
-            await next(cancellationToken);
-            return;
-        }
 
         // Check if message or handler has RequirePermissionAttribute
         var permissionAttr = GetAttribute<RequirePermissionAttribute>(messageType, handlerType);
@@ -82,4 +71,3 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
                ?? handlerType.GetCustomAttribute<T>(false);
     }
 }
-
