@@ -5,6 +5,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Security.Claims;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
@@ -26,20 +27,20 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
     }
 
     public Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService), ExecuteGenerateJwtTokenCoreAsync, cancellationToken);
+        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(GenerateJwtTokenAsync))!, typeof(JwtAuthorityService), ExecuteGenerateJwtTokenCoreAsync, cancellationToken);
 
     public Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken = default)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService), ExecuteValidateJwtRefreshTokenCoreAsync, cancellationToken);
+        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(ValidateJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteValidateJwtRefreshTokenCoreAsync, cancellationToken);
 
     public Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken = default)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService), ExecuteRevokeJwtRefreshTokenCoreAsync, cancellationToken);
+        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(RevokeJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteRevokeJwtRefreshTokenCoreAsync, cancellationToken);
 
     private async Task<TResult> ExecuteRpcAsync<TRequest, TResult>(
         TRequest request,
+        MethodInfo methodInfo,
         Type handlerType,
         Func<IServiceProvider, TRequest, CancellationToken, Task<TResult>> terminal,
         CancellationToken cancellationToken)
-        where TRequest : notnull
     {
         var outboundContext = new OutboundContext
         {
@@ -51,11 +52,16 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
 
         await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>
         {
-            await InboundHandlerInvoker.ExecuteHandlerAsync(
+            await InboundHandlerInvoker.ExecuteRpcAsync(
                 _serviceProvider,
                 request,
-                handlerType,
+                methodInfo,
                 _executionContext,
+                context =>
+                {
+                    // 添加 HandlerType 到 Metadatas
+                    context.Metadatas["HandlerType"] = handlerType;
+                },
                 async (sp, ct2) =>
                 {
                     result = await terminal(sp, request, ct2).ConfigureAwait(false);

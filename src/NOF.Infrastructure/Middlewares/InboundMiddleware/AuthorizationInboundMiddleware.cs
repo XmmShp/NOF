@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
-using System.Reflection;
 
 namespace NOF.Infrastructure;
 
@@ -26,11 +25,8 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        var messageType = context.Message.GetType();
-        var handlerType = context.HandlerType;
-
-        // Check if message or handler has RequirePermissionAttribute
-        var permissionAttr = GetAttribute<RequirePermissionAttribute>(messageType, handlerType);
+        // Check if message or handler has RequirePermissionAttribute from context.Attributes
+        var permissionAttr = context.Attributes.OfType<RequirePermissionAttribute>().FirstOrDefault();
 
         if (permissionAttr is null)
         {
@@ -38,11 +34,16 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
             return;
         }
 
+        // Get handler type and message type for logging
+        var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
+        var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName;
+
         // Check if user is authenticated
         if (!_userContext.IsAuthenticated)
         {
-            _logger.LogWarning("Unauthorized access attempt to {HandlerType}/{MessageType} by unauthenticated user",
-                context.HandlerType.FullName, messageType.FullName);
+            var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;
+            _logger.LogWarning("Unauthenticated access to {HandlerType}/{MessageType}",
+                handlerName, messageName);
 
             context.Response = Result.Fail("401", "Please login first");
             return;
@@ -52,22 +53,18 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
         if (!string.IsNullOrEmpty(permissionAttr.Permission) &&
             !_userContext.HasPermission(permissionAttr.Permission))
         {
+            var handlerName2 = context.Metadatas.TryGetValue("HandlerName", out var hn2) ? hn2 as string : handlerType?.FullName;
             _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
-                context.HandlerType.FullName, messageType.FullName, permissionAttr.Permission);
+                handlerName2, messageName, permissionAttr.Permission);
 
             context.Response = Result.Fail("403", "Insufficient permissions");
             return;
         }
 
+        var handlerName3 = context.Metadatas.TryGetValue("HandlerName", out var hn3) ? hn3 as string : handlerType?.FullName;
         _logger.LogDebug("Permission check passed for {HandlerType}/{MessageType} with permission {Permission}",
-            context.HandlerType.FullName, messageType.FullName, permissionAttr.Permission);
+            handlerName3, messageName, permissionAttr.Permission);
 
         await next(cancellationToken);
-    }
-
-    private static T? GetAttribute<T>(Type messageType, Type handlerType) where T : Attribute
-    {
-        return messageType.GetCustomAttribute<T>(false)
-               ?? handlerType.GetCustomAttribute<T>(false);
     }
 }

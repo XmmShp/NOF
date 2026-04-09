@@ -14,7 +14,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksProvider = new FakeJwksProvider([]);
-        var executionContext = new NOF.Contract.ExecutionContext();
+        var executionContext = new Contract.ExecutionContext();
         var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
 
         var nextCalled = false;
@@ -37,7 +37,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksProvider = new FakeJwksProvider([]);
-        var executionContext = new NOF.Contract.ExecutionContext
+        var executionContext = new Contract.ExecutionContext
         {
             [NOFContractConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
         };
@@ -72,7 +72,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             N = "abc",
             E = "AQAB"
         }]);
-        var executionContext = new NOF.Contract.ExecutionContext
+        var executionContext = new Contract.ExecutionContext
         {
             [NOFContractConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
         };
@@ -100,7 +100,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         return new JwtResourceServerInboundMiddleware(
             userContext,
             jwksProvider,
-            global::Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
+            Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
             {
                 HeaderName = NOFContractConstants.Transport.Headers.Authorization,
                 TokenType = "Bearer",
@@ -116,8 +116,9 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         return new InboundContext
         {
             Message = new object(),
-            HandlerType = typeof(object),
-            Services = new ServiceCollection().BuildServiceProvider()
+            Services = new ServiceCollection().BuildServiceProvider(),
+            Attributes = new List<Attribute>(),
+            Metadatas = new Dictionary<string, object?> { { "HandlerType", typeof(object) } }
         };
     }
 

@@ -10,9 +10,9 @@ namespace NOF.Contract;
 public sealed class OutboundContext
 {
     /// <summary>
-    /// The outbound message (command, notification, or request payload).
+    /// The outbound message (command, notification, or request payload). May be null for 0-parameter service methods.
     /// </summary>
-    public required object Message { get; init; }
+    public object? Message { get; init; }
 
     /// <summary>
     /// Service provider for resolving dependencies during pipeline execution.

@@ -1,4 +1,3 @@
-using NOF.Application;
 using System.Reflection;
 using Xunit;
 

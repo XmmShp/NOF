@@ -42,12 +42,21 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor ServiceMethodOverloadsNotSupported = new(
+        "NOF208",
+        "Service method overloading is not supported",
+        "Service interface '{1}' contains overloaded methods named '{0}'. Overloading is not supported; use unique method names.",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
         MissingRouteParamProperty,
         ClassMustHaveParameterlessCtor,
-        InvalidServiceMethodSignature
+        InvalidServiceMethodSignature,
+        ServiceMethodOverloadsNotSupported
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -103,13 +112,27 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         }
         var attrLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
 
-        foreach (var method in typeSymbol.GetMembers().OfType<IMethodSymbol>())
+        // 禁止同名重载：按名称分组，若某一名称出现多次则全部报错
+        var declaredMethods = typeSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(m => m.MethodKind == MethodKind.Ordinary && !m.IsImplicitlyDeclared)
+            .ToList();
+        foreach (var group in declaredMethods.GroupBy(m => m.Name, StringComparer.Ordinal))
         {
-            if (method.MethodKind != MethodKind.Ordinary || method.IsImplicitlyDeclared)
+            if (group.Count() > 1)
             {
-                continue;
+                foreach (var overloaded in group)
+                {
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(ServiceMethodOverloadsNotSupported,
+                                          overloaded.Locations.FirstOrDefault() ?? attrLocation,
+                                          overloaded.Name, typeSymbol.Name));
+                }
             }
+        }
 
+        foreach (var method in declaredMethods)
+        {
             var validRequestParameter = RpcServiceHelpers.TryGetRequestParameter(method, out var requestParameter);
             var validReturnType = RpcServiceHelpers.TryGetServiceReturnInfo(method, out _);
             if (!validRequestParameter || !validReturnType)

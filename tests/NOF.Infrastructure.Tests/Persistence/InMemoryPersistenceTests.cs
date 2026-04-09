@@ -6,12 +6,10 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
-using NOF.Infrastructure;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.SQLite;
 using NOF.Infrastructure.Memory;
@@ -430,7 +428,7 @@ public class SqliteInMemoryPersistenceTests
 
         if (outboxOptions is not null)
         {
-            builder.Services.ReplaceOrAddSingleton<IOptions<OutboxOptions>>(Options.Create(outboxOptions));
+            builder.Services.ReplaceOrAddSingleton(Options.Create(outboxOptions));
         }
 
         var provider = builder.Services.BuildServiceProvider(new ServiceProviderOptions

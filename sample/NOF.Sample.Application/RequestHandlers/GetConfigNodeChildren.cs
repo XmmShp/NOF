@@ -1,5 +1,4 @@
 using NOF.Contract;
-using NOF.Sample.Application.Entities;
 using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;

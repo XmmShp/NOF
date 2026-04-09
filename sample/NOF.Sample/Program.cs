@@ -1,4 +1,3 @@
-using ConfigurationCenter;
 using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;

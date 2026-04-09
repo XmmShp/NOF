@@ -149,10 +149,7 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
         foreach (var method in serviceMethods)
         {
             var requestParam = method.Parameters.FirstOrDefault(p => p.Type.ToDisplayString() != "System.Threading.CancellationToken");
-            if (requestParam is null)
-            {
-                continue;
-            }
+            var hasRequestParam = requestParam is not null;
 
             if (!TryGetServiceReturnInfo(method, out var returnInfo))
             {
@@ -164,7 +161,7 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
             var interfaceName = opName;
             if (!usedNames.Add(interfaceName))
             {
-                interfaceName = $"{opName}_{requestParam.Type.Name}";
+                interfaceName = hasRequestParam ? $"{opName}_{requestParam!.Type.Name}" : $"{opName}";
                 usedNames.Add(interfaceName);
             }
 
@@ -177,18 +174,44 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
                     : "global::NOF.Contract.Result",
                 _ => "global::NOF.Contract.Result"
             };
-            var requestType = requestParam.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            string? requestType = hasRequestParam
+                ? requestParam!.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                : null;
             var nestedInterfaceFqn = $"global::{(string.IsNullOrWhiteSpace(ns) ? classSymbol.Name : ns + "." + classSymbol.Name)}.{interfaceName}";
 
             sb.AppendLine($"    public interface {interfaceName}");
             sb.AppendLine("    {");
-            sb.AppendLine($"        {returnType} {method.Name}({requestType} request, global::System.Threading.CancellationToken cancellationToken = default);");
+            if (hasRequestParam)
+            {
+                sb.AppendLine($"        {returnType} {method.Name}({requestType} request, global::System.Threading.CancellationToken cancellationToken = default);");
+            }
+            else
+            {
+                sb.AppendLine($"        {returnType} {method.Name}(global::System.Threading.CancellationToken cancellationToken = default);");
+            }
             sb.AppendLine("    }");
+            sb.AppendLine();
+
+            var outerTypeFqn = method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            // 为每个操作缓存 MethodInfo（静态初始化一次）；分析器已禁止重载，按名称唯一绑定
+            sb.AppendLine($"    private static readonly global::System.Reflection.MethodInfo __mi_{interfaceName}_{method.Name} =");
+            sb.AppendLine($"        typeof({outerTypeFqn}).GetMethod(");
+            sb.AppendLine($"            nameof({method.Name}),");
+            sb.AppendLine($"            global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Instance)");
+            sb.AppendLine($"        ?? throw new global::System.InvalidOperationException(\"Failed to resolve method info.\");");
             sb.AppendLine();
 
             operationInterfaceTypes.Add((interfaceName, nestedInterfaceFqn));
 
-            sb.AppendLine($"    public async {returnType} {method.Name}({requestType} request{(hasCancellationToken ? ", global::System.Threading.CancellationToken cancellationToken = default" : string.Empty)})");
+            if (hasRequestParam)
+            {
+                sb.AppendLine($"    public async {returnType} {method.Name}({requestType} request{(hasCancellationToken ? ", global::System.Threading.CancellationToken cancellationToken = default" : string.Empty)})");
+            }
+            else
+            {
+                sb.AppendLine($"    public async {returnType} {method.Name}({(hasCancellationToken ? "global::System.Threading.CancellationToken cancellationToken = default" : string.Empty)})");
+            }
             sb.AppendLine("    {");
             sb.AppendLine($"        var isService = _serviceProvider.GetService<global::Microsoft.Extensions.DependencyInjection.IServiceProviderIsService>();");
             sb.AppendLine($"        if (isService is null || !isService.IsService(typeof({nestedInterfaceFqn})))");
@@ -201,23 +224,33 @@ public sealed class ServiceImplementationGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine("        var outboundContext = new global::NOF.Contract.OutboundContext");
             sb.AppendLine("        {");
-            sb.AppendLine("            Message = request,");
+            sb.AppendLine(hasRequestParam
+                ? "            Message = request,"
+                : "            Message = null,");
             sb.AppendLine("            Services = _serviceProvider");
             sb.AppendLine("        };");
             sb.AppendLine();
             sb.AppendLine($"        {innerReturnType} result = default!;");
             sb.AppendLine();
+            var outerInterfaceType = method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             sb.AppendLine("        await outboundPipeline.ExecuteAsync(outboundContext, async (ct) =>");
             sb.AppendLine("        {");
-            sb.AppendLine("            await global::NOF.Application.InboundHandlerInvoker.ExecuteHandlerAsync(");
+            sb.AppendLine("            await global::NOF.Application.InboundHandlerInvoker.ExecuteRpcAsync(");
             sb.AppendLine("                _serviceProvider,");
-            sb.AppendLine("                request,");
-            sb.AppendLine($"                typeof({nestedInterfaceFqn}),");
+            sb.AppendLine(hasRequestParam ? "                request," : "                null,");
+            sb.AppendLine($"                __mi_{interfaceName}_{method.Name},");
             sb.AppendLine("                outboundExecutionContext,");
+            sb.AppendLine("                context =>");
+            sb.AppendLine("                {");
+            sb.AppendLine($"                    context.Metadatas[\"HandlerType\"] = typeof({nestedInterfaceFqn});");
+            sb.AppendLine($"                    context.Metadatas[\"HandlerName\"] = typeof({nestedInterfaceFqn}).FullName;");
+            sb.AppendLine("                },");
             sb.AppendLine("                async (sp2, ct2) =>");
             sb.AppendLine("                {");
             sb.AppendLine($"                    var operation = sp2.GetRequiredService<{nestedInterfaceFqn}>();");
-            sb.AppendLine($"                    result = await operation.{method.Name}(request, {(hasCancellationToken ? "ct2" : "default")});");
+            sb.AppendLine(hasRequestParam
+                ? $"                    result = await operation.{method.Name}(request, {(hasCancellationToken ? "ct2" : "default")});"
+                : $"                    result = await operation.{method.Name}({(hasCancellationToken ? "ct2" : "default")});");
             sb.AppendLine("                },");
             sb.AppendLine("                ct).ConfigureAwait(false);");
             var cancellationTokenArg = hasCancellationToken ? "cancellationToken" : "default";

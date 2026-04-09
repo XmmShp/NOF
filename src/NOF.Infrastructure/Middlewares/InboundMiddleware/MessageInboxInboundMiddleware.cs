@@ -39,7 +39,8 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
             var messageExists = await _inboxMessageRepository.FindAsync(messageId, cancellationToken) is not null;
             if (messageExists)
             {
-                _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, context.Message.GetType().FullName);
+                var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName ?? "<null>";
+                _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, messageName);
 
                 await transaction.RollbackAsync(cancellationToken);
                 return;
@@ -56,9 +57,10 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
 
             await transaction.CommitAsync(cancellationToken);
 
+            var messageName2 = context.Metadatas.TryGetValue("MessageName", out var mn2) ? mn2 as string : context.Message?.GetType().FullName ?? "<null>";
             _logger.LogDebug(
                 "Inbox message {MessageId} for {MessageType} processed and committed successfully",
-                messageId, context.Message.GetType().FullName);
+                messageId, messageName2);
         }
         catch (Exception ex)
         {
@@ -68,14 +70,16 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
             }
             catch (Exception rollbackEx)
             {
+                var messageName3 = context.Metadatas.TryGetValue("MessageName", out var mn3) ? mn3 as string : context.Message?.GetType().FullName ?? "<null>";
                 _logger.LogError(rollbackEx,
                     "Failed to rollback transaction for inbox message processing of {MessageType}",
-                    context.Message.GetType().FullName);
+                    messageName3);
             }
 
+            var messageName4 = context.Metadatas.TryGetValue("MessageName", out var mn4) ? mn4 as string : context.Message?.GetType().FullName ?? "<null>";
             _logger.LogError(ex,
                 "Failed to process inbox message for {MessageType}. Transaction has been rolled back.",
-                context.Message.GetType().FullName);
+                messageName4);
 
             throw;
         }

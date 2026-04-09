@@ -1,5 +1,4 @@
 using Microsoft.IdentityModel.Tokens;
-using NOF.Contract;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -35,7 +34,7 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new NOF.Contract.ExecutionContext
+        var executionContext = new ExecutionContext
         {
             ["X-Tenant"] = "tenant-a",
             ["X-Trace"] = "trace-a"
@@ -86,7 +85,7 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new NOF.Contract.ExecutionContext
+        var executionContext = new ExecutionContext
         {
             ["Authorization"] = "Bearer upstream-token"
         };

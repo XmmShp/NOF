@@ -11,7 +11,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_SingleTenantMode_ShouldIgnoreIncomingTenantHeader()
     {
-        var executionContext = new NOF.Contract.ExecutionContext
+        var executionContext = new Contract.ExecutionContext
         {
             [NOFContractConstants.Transport.Headers.TenantId] = "tenant-a"
         };
@@ -32,7 +32,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_SharedDatabaseMode_ShouldUseIncomingTenantHeader()
     {
-        var executionContext = new NOF.Contract.ExecutionContext
+        var executionContext = new Contract.ExecutionContext
         {
             [NOFContractConstants.Transport.Headers.TenantId] = "tenant-a"
         };
@@ -54,8 +54,9 @@ public class TenantInboundMiddlewareTests
         return new InboundContext
         {
             Message = new object(),
-            HandlerType = typeof(object),
-            Services = new ServiceCollection().BuildServiceProvider()
+            Services = new ServiceCollection().BuildServiceProvider(),
+            Attributes = new List<Attribute>(),
+            Metadatas = new Dictionary<string, object?> { { "HandlerType", typeof(object) } }
         };
     }
 }

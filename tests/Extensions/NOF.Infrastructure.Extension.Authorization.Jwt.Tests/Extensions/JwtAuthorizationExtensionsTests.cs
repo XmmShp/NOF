@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting.Extension.Authorization.Jwt;

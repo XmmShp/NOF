@@ -10,14 +10,9 @@ namespace NOF.Application;
 public sealed class InboundContext
 {
     /// <summary>
-    /// Message instance.
+    /// Message instance. May be null for 0-parameter service methods.
     /// </summary>
-    public required object Message { get; init; }
-
-    /// <summary>
-    /// Handler type.
-    /// </summary>
-    public required Type HandlerType { get; init; }
+    public object? Message { get; init; }
 
     /// <summary>
     /// Service provider for resolving dependencies during pipeline execution.
@@ -28,4 +23,14 @@ public sealed class InboundContext
     /// Response result (only used for request handlers).
     /// </summary>
     public IResult? Response { get; set; }
+
+    /// <summary>
+    /// Attributes associated with the message and handler.
+    /// </summary>
+    public required List<Attribute> Attributes { get; init; }
+
+    /// <summary>
+    /// Metadata associated with the message and handler.
+    /// </summary>
+    public required IDictionary<string, object?> Metadatas { get; init; }
 }

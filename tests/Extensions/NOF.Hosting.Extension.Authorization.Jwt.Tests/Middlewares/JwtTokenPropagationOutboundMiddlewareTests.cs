@@ -12,7 +12,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithJwtPrincipal_ShouldWriteAuthorizationHeader()
     {
-        var executionContext = new NOF.Contract.ExecutionContext();
+        var executionContext = new Contract.ExecutionContext();
         var userContext = new FakeUserContext();
         userContext.SetUser(new JwtClaimsPrincipal(
             new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "jwt")),
@@ -40,7 +40,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithNonJwtPrincipal_ShouldNotWriteAuthorizationHeader()
     {
-        var executionContext = new NOF.Contract.ExecutionContext();
+        var executionContext = new Contract.ExecutionContext();
         var userContext = new FakeUserContext();
         userContext.SetUser(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom")));
 

@@ -1,10 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
-using System.IO;
 using System.Text.RegularExpressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.SQLite;

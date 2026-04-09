@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NOF.Domain;
 using NOF.Domain.SourceGenerator;
-using NOF.SourceGenerator.Tests;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;

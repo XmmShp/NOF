@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
 using NOF.Hosting;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.SQLite;

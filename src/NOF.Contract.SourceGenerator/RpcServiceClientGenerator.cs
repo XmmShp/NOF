@@ -213,7 +213,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         var hasRouteParams = routeParamProperties.Count > 0;
         var hasCancellationToken = method.Method.Parameters.Any(p => RpcServiceHelpers.IsCancellationToken(p.Type));
         var cancellationTokenArgument = hasCancellationToken ? "cancellationToken" : "global::System.Threading.CancellationToken.None";
-        var messageVarName = endpoint.RequestType != null ? "request" : "new object()";
+        var messageVarName = endpoint.RequestType != null ? "request" : "null";
 
         sb.AppendLine("        /// <inheritdoc />");
         if (endpoint.RequestType != null)

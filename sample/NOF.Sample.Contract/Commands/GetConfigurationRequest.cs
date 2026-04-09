@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 namespace NOF.Sample;
 
 public record GetConfigurationRequest

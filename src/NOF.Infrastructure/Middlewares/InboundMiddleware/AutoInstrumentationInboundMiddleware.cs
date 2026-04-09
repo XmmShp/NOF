@@ -32,15 +32,17 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware, I
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
+        var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
+        var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName;
+        var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.FullName),
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().FullName)
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, handlerName),
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, messageName)
         };
-
         _logger.LogDebug(
             "Executing handler {HandlerType} for message {MessageType}",
-            context.HandlerType.FullName, context.Message.GetType().FullName);
+            handlerName, messageName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -56,7 +58,7 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware, I
 
             _logger.LogDebug(
                 "Handler {HandlerType} completed successfully in {Duration}ms",
-                context.HandlerType.FullName, durationMs);
+                handlerType?.FullName, durationMs);
         }
         catch (Exception ex)
         {
@@ -68,10 +70,9 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware, I
 
             _logger.LogError(ex,
                 "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}",
-                context.HandlerType.FullName, durationMs, ex.Message);
+                handlerType?.FullName, durationMs, ex.Message);
 
             throw;
         }
     }
 }
-

@@ -27,8 +27,11 @@ public sealed class ExceptionInboundMiddleware : IInboundMiddleware
         }
         catch (DomainException ex)
         {
+            var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
+            var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;
+            var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName ?? "<null>";
             _logger.LogWarning(ex, "Domain exception occurred while handling {MessageType} with {HandlerType}: {Message}",
-                context.Message.GetType().FullName, context.HandlerType.FullName, ex.Message);
+                messageName, handlerName, ex.Message);
 
             // Convert domain exception to error response with specific error code and message
             var errorResult = Result.Fail(ex.ErrorCode, ex.Message);
@@ -38,8 +41,11 @@ public sealed class ExceptionInboundMiddleware : IInboundMiddleware
         }
         catch (Exception ex)
         {
+            var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj2) && handlerTypeObj2 is Type type2 ? type2 : null;
+            var handlerName2 = context.Metadatas.TryGetValue("HandlerName", out var hn2) ? hn2 as string : handlerType?.FullName;
+            var messageName2 = context.Metadatas.TryGetValue("MessageName", out var mn2) ? mn2 as string : context.Message?.GetType().FullName ?? "<null>";
             _logger.LogError(ex, "Exception occurred while handling {MessageType} with {HandlerType}: {Message}",
-                context.Message.GetType().FullName, context.HandlerType.FullName, ex.Message);
+                messageName2, handlerName2, ex.Message);
 
             // Convert exception to unified error response
             var errorResult = Result.Fail("500", "Internal server error");
@@ -49,4 +55,3 @@ public sealed class ExceptionInboundMiddleware : IInboundMiddleware
         }
     }
 }
-
