@@ -52,10 +52,7 @@ public static class NOFHostingAspNetCoreExtensions
 
         public INOFAppBuilder UseScalar()
         {
-            builder.Services.AddOpenApi(opt =>
-            {
-                opt.AddSchemaTransformer<OptionalSchemaTransformer>();
-            });
+            builder.Services.AddOpenApi();
             builder.AddInitializationStep(new ScalarInitializationStep());
             return builder;
         }

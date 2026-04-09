@@ -21,7 +21,6 @@ public static partial class NOFContractExtensions
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             TypeInfoResolver = NOFJsonSerializerContext.Default
         };
-        options.Converters.Add(new OptionalConverterFactory());
 
         if (JsonSerializer.IsReflectionEnabledByDefault)
         {
@@ -46,9 +45,6 @@ public static partial class NOFContractExtensions
             options.TypeInfoResolverChain.Add(defaultResolver);
         }
 
-        options.TypeInfoResolver = options.TypeInfoResolver
-            .WithAddedModifier(OptionalTypeInfoResolverModifier.Modifier);
-
         return options;
     });
 
@@ -58,8 +54,7 @@ public static partial class NOFContractExtensions
         /// Gets the shared <see cref="JsonSerializerOptions"/> instance used by the NOF framework.
         /// </summary>
         /// <remarks>
-        /// By default this includes <see cref="NOFJsonSerializerContext"/> for common primitive types,
-        /// <see cref="OptionalConverterFactory"/> and the <see cref="OptionalTypeInfoResolverModifier"/>.
+        /// By default this includes <see cref="NOFJsonSerializerContext"/> for common primitive types.
         /// Call <see cref="ConfigureNOFJsonSerializerOptions"/> before first access to customize
         /// (e.g. add source-generated contexts for your domain types, value object converters, etc.).
         /// The options are frozen by STJ on first use.

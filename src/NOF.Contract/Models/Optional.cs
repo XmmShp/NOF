@@ -1,15 +1,6 @@
-namespace NOF.Contract;
+using System.Text.Json.Serialization;
 
-/// <summary>
-/// Non-generic marker interface for <see cref="Optional{T}"/> that exposes <see cref="HasValue"/>
-/// without requiring knowledge of the type parameter. Used internally by
-/// <see cref="OptionalTypeInfoResolverModifier"/> to avoid reflection.
-/// </summary>
-public interface IOptionalMarker
-{
-    /// <summary>Gets a value indicating whether this instance contains a valid value.</summary>
-    bool HasValue { get; }
-}
+namespace NOF.Contract;
 
 /// <summary>
 /// Provides factory methods for creating <see cref="Optional{T}"/> instances.
@@ -42,8 +33,9 @@ public readonly struct NoneOptional;
 /// and enables explicit handling of missing values for value types.
 /// </summary>
 /// <typeparam name="T">The type of the optional value.</typeparam>
-public readonly struct Optional<T> : IOptionalMarker
+public readonly struct Optional<T>
 {
+    [JsonConstructor]
     internal Optional(T value, bool hasValue)
     {
         Value = value;
@@ -56,10 +48,7 @@ public readonly struct Optional<T> : IOptionalMarker
     /// <exception cref="InvalidOperationException">
     /// Thrown when <see cref="HasValue"/> is <c>false</c>, indicating no value is present.
     /// </exception>
-    public T Value
-        => HasValue
-            ? field
-            : throw new InvalidOperationException("Optional does not contain a value.");
+    public T Value { get; }
 
     /// <summary>
     /// Gets a value indicating whether this instance contains a valid value.

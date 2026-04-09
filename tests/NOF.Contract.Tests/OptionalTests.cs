@@ -27,14 +27,6 @@ public class OptionalTests
         opt.HasValue);
     }
 
-    [Fact]
-    public void Value_WhenNone_Throws()
-    {
-        Optional<int> opt = Optional.None;
-        Action act = () => { _ = opt.Value; };
-        Assert.Throws<InvalidOperationException>(act);
-    }
-
     // -----------------------------------------------------------------------
     // Implicit conversion from T (new feature)
     // -----------------------------------------------------------------------
@@ -129,19 +121,22 @@ public class OptionalJsonTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void Serialize_WhenHasValue_WritesValue()
+    public void Serialize_WhenHasValue_WritesValueAndHasValue()
     {
         var dto = new DtoWithOptional { Name = Optional.Of<string?>("Alice") };
         var json = JsonSerializer.Serialize(dto, Options());
-        Assert.Contains("\"name\":\"Alice\"", json);
+        Assert.Contains("\"name\":", json);
+        Assert.Contains("\"hasValue\":true", json);
+        Assert.Contains("\"value\":\"Alice\"", json);
     }
 
     [Fact]
-    public void Serialize_WhenNone_OmitsProperty()
+    public void Serialize_WhenNone_WritesValueAndHasValue()
     {
         var dto = new DtoWithOptional { Name = Optional.None };
         var json = JsonSerializer.Serialize(dto, Options());
-        Assert.DoesNotContain("name", json);
+        Assert.Contains("\"name\":", json);
+        Assert.Contains("\"hasValue\":false", json);
     }
 
     [Fact]
@@ -159,40 +154,33 @@ public class OptionalJsonTests
     [Fact]
     public void Deserialize_PresentProperty_SetsHasValue()
     {
-        const string json = """{"name":"Bob","age":25}""";
+        const string json = """{"name":{"hasValue":true,"value":"Bob"},"age":{"hasValue":true,"value":25}}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
         Assert.True(dto.Name.HasValue, "converter should set HasValue=true for present property");
-        Assert.Equal("Bob",
-        dto.Name.Value);
-        Assert.True(
-        dto.Age.HasValue);
-        Assert.Equal(25,
-        dto.Age.Value);
+        Assert.Equal("Bob", dto.Name.Value);
+        Assert.True(dto.Age.HasValue);
+        Assert.Equal(25, dto.Age.Value);
     }
 
     [Fact]
     public void Deserialize_MissingProperty_LeavesDefault()
     {
-        const string json = """{"name":"Bob"}""";
+        const string json = """{"name":{"hasValue":true,"value":"Bob"}}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        Assert.True(
-        dto.Name.HasValue);
-        Assert.False(
-        dto.Age.HasValue);
+        Assert.True(dto.Name.HasValue);
+        Assert.False(dto.Age.HasValue);
     }
 
     [Fact]
     public void Deserialize_NullProperty_SetsHasValue_WithNullValue()
     {
-        const string json = """{"name":null}""";
+        const string json = """{"name":{"hasValue":true,"value":null}}""";
         var opts = Options();
         var dto = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        Assert.True(
-        dto.Name.HasValue);
-        Assert.Null(
-        dto.Name.Value);
+        Assert.True(dto.Name.HasValue);
+        Assert.Null(dto.Name.Value);
     }
 
     // -----------------------------------------------------------------------
@@ -206,29 +194,24 @@ public class OptionalJsonTests
         var opts = Options();
         var json = JsonSerializer.Serialize(original, opts);
         var restored = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        Assert.True(
-
-        restored.Name.HasValue);
-        Assert.Equal("Charlie",
-        restored.Name.Value);
-        Assert.True(
-        restored.Age.HasValue);
-        Assert.Equal(42,
-        restored.Age.Value);
+        Assert.True(restored.Name.HasValue);
+        Assert.Equal("Charlie", restored.Name.Value);
+        Assert.True(restored.Age.HasValue);
+        Assert.Equal(42, restored.Age.Value);
     }
 
     [Fact]
-    public void RoundTrip_AbsentValues_OmittedThenMissingOnDeserialize()
+    public void RoundTrip_AbsentValues_PreservesData()
     {
         var original = new DtoWithOptional { Name = Optional.Of<string?>("Dave"), Age = Optional.None };
         var opts = Options();
         var json = JsonSerializer.Serialize(original, opts);
 
-        Assert.DoesNotContain("age", json);
+        Assert.Contains("age", json);
+        Assert.Contains("\"hasValue\":false", json);
 
         var restored = JsonSerializer.Deserialize<DtoWithOptional>(json, opts)!;
-        Assert.False(
-        restored.Age.HasValue);
+        Assert.False(restored.Age.HasValue);
     }
 
     // -----------------------------------------------------------------------
