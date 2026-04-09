@@ -117,7 +117,7 @@ internal static class RpcServiceHelpers
 
         var displayName = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.EndpointNameAttribute");
 
-        var description = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.EndpointDescriptionAttribute");
+        var description = TryGetCtorString(method.Method.GetAttributes(), "System.ComponentModel.DescriptionAttribute");
 
         var summary = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.SummaryAttribute");
 
@@ -201,4 +201,3 @@ internal readonly struct ServiceReturnInfo
     public ServiceReturnKind Kind { get; }
     public ITypeSymbol? ValueType { get; }
 }
-

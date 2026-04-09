@@ -50,7 +50,7 @@ public record CreateOrderRequest(string ProductName, int Quantity);
 
 - **`[RequirePermission]`** - declares required permissions for an endpoint
 - **`[AllowAnonymous]`** - marks an endpoint as publicly accessible
-- **`[EndpointName]`** / **`[EndpointDescription]`** - OpenAPI metadata
+- **`[EndpointName]`** / **`[Description]`** - OpenAPI metadata
 - **`[Summary]`** - adds summary documentation to generated endpoints
 
 ## Installation
@@ -62,5 +62,4 @@ dotnet add package NOF.Contract
 ## License
 
 Apache-2.0
-
 

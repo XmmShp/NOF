@@ -14,7 +14,7 @@ public interface IJwtAuthorityService : IRpcService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The generated token pair.</returns>
     [Summary("Issue JWT token pair")]
-    [EndpointDescription("Issues a JWT access token and refresh token for the requested principal.")]
+    [Description("Issues a JWT access token and refresh token for the requested principal.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Token)]
     Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default);
@@ -26,7 +26,7 @@ public interface IJwtAuthorityService : IRpcService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The validation result with token claims.</returns>
     [Summary("Introspect refresh token")]
-    [EndpointDescription("Validates a refresh token and returns its subject claims if it is still valid.")]
+    [Description("Validates a refresh token and returns its subject claims if it is still valid.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Introspect)]
     Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken = default);
@@ -38,7 +38,7 @@ public interface IJwtAuthorityService : IRpcService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The revocation result.</returns>
     [Summary("Revoke refresh token")]
-    [EndpointDescription("Revokes a refresh token so that subsequent validation attempts fail.")]
+    [Description("Revokes a refresh token so that subsequent validation attempts fail.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Revocation)]
     Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken = default);
