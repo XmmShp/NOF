@@ -26,7 +26,7 @@
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Hosting.Abstraction/NOF.Hosting.Abstraction.csproj" />
-    <Project Path="src/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
     <Project Path="src/NOF.Infrastructure/NOF.Infrastructure.csproj" />
     <Project Path="src/NOF.UI/NOF.UI.csproj" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
