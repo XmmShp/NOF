@@ -146,6 +146,10 @@ public class NOFTestHostTests
 
     private sealed class FakeCommandSender : ICommandSender
     {
+        public void DeferSend(ICommand command)
+        {
+        }
+
         public Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
@@ -154,6 +158,10 @@ public class NOFTestHostTests
 
     private sealed class FakeNotificationPublisher : INotificationPublisher
     {
+        public void DeferPublish(INotification notification)
+        {
+        }
+
         public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
@@ -209,4 +217,3 @@ public class NOFTestHostTests
         }
     }
 }
-

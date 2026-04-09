@@ -23,12 +23,12 @@ public record StartProcessingCommand(string TaskId) : ICommand;
 public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
 {
     private readonly IUnitOfWork _uow;
-    private readonly IDeferredNotificationPublisher _notificationPublisher;
+    private readonly INotificationPublisher _notificationPublisher;
     private readonly ILogger<StartProcessingCommandHandler> _logger;
 
     public StartProcessingCommandHandler(
         IUnitOfWork uow,
-        IDeferredNotificationPublisher notificationPublisher,
+        INotificationPublisher notificationPublisher,
         ILogger<StartProcessingCommandHandler> logger)
     {
         _uow = uow;
@@ -43,12 +43,12 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
         if (isSuccess)
         {
             _logger.LogInformation("Processing {Id} Succeeded", command.TaskId);
-            _notificationPublisher.Publish(new ProcessingSucceeded(command.TaskId));
+            _notificationPublisher.DeferPublish(new ProcessingSucceeded(command.TaskId));
         }
         else
         {
             _logger.LogError("Processing {Id} Failed", command.TaskId);
-            _notificationPublisher.Publish(new ProcessingFailed(command.TaskId, "An error occurred during processing."));
+            _notificationPublisher.DeferPublish(new ProcessingFailed(command.TaskId, "An error occurred during processing."));
         }
 
         await _uow.SaveChangesAsync(cancellationToken);
