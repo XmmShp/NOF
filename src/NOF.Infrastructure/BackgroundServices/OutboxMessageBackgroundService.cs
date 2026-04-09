@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
@@ -108,13 +109,13 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
         // Add additional headers
-        headers[NOFContractConstants.Transport.Headers.MessageId] = message.Id.ToString();
-        headers[NOFContractConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
-        headers[NOFContractConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
+        headers[NOFHostingConstants.Transport.Headers.MessageId] = message.Id.ToString();
+        headers[NOFHostingConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
+        headers[NOFHostingConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, payload.GetType().Name);
-        if (headers.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var tenantId))
+        if (headers.TryGetValue(NOFHostingConstants.Transport.Headers.TenantId, out var tenantId))
         {
             activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, tenantId);
         }

@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.Diagnostics;
 
 namespace NOF.Hosting;
@@ -20,14 +19,14 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
             ActivityKind.Producer);
 
         var currentActivity = Activity.Current;
-        _executionContext[NOFContractConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
-        _executionContext[NOFContractConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+        _executionContext[NOFHostingConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
+        _executionContext[NOFHostingConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
 
         try
         {
             await next(cancellationToken);
 
-            _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.MessageId, out var messageId);
+            _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.Message?.GetType().Name);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.TenantId, _executionContext.TenantId);

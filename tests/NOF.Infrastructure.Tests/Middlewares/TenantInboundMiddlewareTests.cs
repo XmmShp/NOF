@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Hosting;
 using Xunit;
 
@@ -14,7 +13,7 @@ public class TenantInboundMiddlewareTests
     {
         var executionContext = new NOF.Hosting.ExecutionContext
         {
-            [NOFContractConstants.Transport.Headers.TenantId] = "tenant-a"
+            [NOFHostingConstants.Transport.Headers.TenantId] = "tenant-a"
         };
         var middleware = new TenantInboundMiddleware(
             executionContext,
@@ -35,7 +34,7 @@ public class TenantInboundMiddlewareTests
     {
         var executionContext = new NOF.Hosting.ExecutionContext
         {
-            [NOFContractConstants.Transport.Headers.TenantId] = "tenant-a"
+            [NOFHostingConstants.Transport.Headers.TenantId] = "tenant-a"
         };
         var middleware = new TenantInboundMiddleware(
             executionContext,

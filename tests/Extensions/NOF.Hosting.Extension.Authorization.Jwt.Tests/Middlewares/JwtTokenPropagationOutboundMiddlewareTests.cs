@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
-using NOF.Contract;
 using NOF.Test;
 using System.Security.Claims;
 using Xunit;
@@ -35,7 +34,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
         called);
         Assert.Equal("Bearer jwt-token",
-        executionContext[NOFContractConstants.Transport.Headers.Authorization]);
+        executionContext[NOFHostingConstants.Transport.Headers.Authorization]);
     }
 
     [Fact]
@@ -54,7 +53,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
         Assert.False(
 
-        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization));
+        executionContext.ContainsKey(NOFHostingConstants.Transport.Headers.Authorization));
     }
 
     [Fact]

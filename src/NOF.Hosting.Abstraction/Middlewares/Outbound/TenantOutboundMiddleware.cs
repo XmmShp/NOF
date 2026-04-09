@@ -1,5 +1,3 @@
-using NOF.Contract;
-
 namespace NOF.Hosting;
 
 public sealed class TenantOutboundMiddleware : IOutboundMiddleware
@@ -13,7 +11,7 @@ public sealed class TenantOutboundMiddleware : IOutboundMiddleware
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        _executionContext[NOFContractConstants.Transport.Headers.TenantId] =
+        _executionContext[NOFHostingConstants.Transport.Headers.TenantId] =
             NOFHostingConstants.Tenant.NormalizeTenantId(_executionContext.TenantId);
 
         return next(cancellationToken);

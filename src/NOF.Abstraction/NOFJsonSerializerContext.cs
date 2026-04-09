@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace NOF.Contract;
+namespace NOF.Abstraction;
 
 /// <summary>
 /// Source-generated JSON serializer context for common types used by the NOF framework.

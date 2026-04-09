@@ -1,5 +1,3 @@
-using NOF.Contract;
-
 namespace NOF.Hosting;
 
 public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
@@ -13,9 +11,9 @@ public sealed class MessageIdOutboundMiddleware : IOutboundMiddleware
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
-        if (!_executionContext.ContainsKey(NOFContractConstants.Transport.Headers.MessageId))
+        if (!_executionContext.ContainsKey(NOFHostingConstants.Transport.Headers.MessageId))
         {
-            _executionContext[NOFContractConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString();
+            _executionContext[NOFHostingConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString();
         }
         return next(cancellationToken);
     }

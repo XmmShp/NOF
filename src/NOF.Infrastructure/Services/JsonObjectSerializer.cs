@@ -1,4 +1,4 @@
-using NOF.Contract;
+using NOF.Abstraction;
 using System.Text.Json;
 
 namespace NOF.Infrastructure;

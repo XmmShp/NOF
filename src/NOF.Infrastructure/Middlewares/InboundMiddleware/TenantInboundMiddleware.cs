@@ -22,7 +22,7 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware, IAfter<Excepti
     {
         var tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(_tenantOptions.SingleTenantId);
         if (_tenantOptions.Mode != TenantMode.SingleTenant
-            && _executionContext.TryGetValue(NOFContractConstants.Transport.Headers.TenantId, out var headerTenantId))
+            && _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
             tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(headerTenantId);
         }

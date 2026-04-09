@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
 using NOF.Abstraction;
-using NOF.Contract;
+using NOF.Hosting;
 using Xunit;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.Middlewares;
@@ -15,7 +15,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksProvider = new FakeJwksProvider([]);
-        var executionContext = new Hosting.ExecutionContext();
+        var executionContext = new NOF.Hosting.ExecutionContext();
         var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
 
         var nextCalled = false;
@@ -38,9 +38,9 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksProvider = new FakeJwksProvider([]);
-        var executionContext = new Hosting.ExecutionContext
+        var executionContext = new NOF.Hosting.ExecutionContext
         {
-            [NOFContractConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
+            [NOFHostingConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
         };
         var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
 
@@ -56,7 +56,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         Assert.Equal(1,
         jwksProvider.CallCount);
         Assert.True(
-        executionContext.ContainsKey(NOFContractConstants.Transport.Headers.Authorization));
+        executionContext.ContainsKey(NOFHostingConstants.Transport.Headers.Authorization));
         Assert.Equal(UserContext.Anonymous,
         userContext.User);
     }
@@ -73,9 +73,9 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             N = "abc",
             E = "AQAB"
         }]);
-        var executionContext = new Hosting.ExecutionContext
+        var executionContext = new NOF.Hosting.ExecutionContext
         {
-            [NOFContractConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
+            [NOFHostingConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
         };
         var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
 
@@ -96,14 +96,14 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     private static JwtResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
         IJwksProvider jwksProvider,
-        Hosting.IExecutionContext executionContext)
+        NOF.Hosting.IExecutionContext executionContext)
     {
         return new JwtResourceServerInboundMiddleware(
             userContext,
             jwksProvider,
             Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
             {
-                HeaderName = NOFContractConstants.Transport.Headers.Authorization,
+                HeaderName = NOFHostingConstants.Transport.Headers.Authorization,
                 TokenType = "Bearer",
                 JwksEndpoint = "https://auth.local/.well-known/jwks.json",
                 RequireHttpsMetadata = true
