@@ -22,7 +22,6 @@ public static partial class NOFContractExtensions
             TypeInfoResolver = NOFJsonSerializerContext.Default
         };
         options.Converters.Add(new OptionalConverterFactory());
-        options.Converters.Add(new PatchRequestConverterFactory());
 
         if (JsonSerializer.IsReflectionEnabledByDefault)
         {
@@ -60,8 +59,7 @@ public static partial class NOFContractExtensions
         /// </summary>
         /// <remarks>
         /// By default this includes <see cref="NOFJsonSerializerContext"/> for common primitive types,
-        /// <see cref="OptionalConverterFactory"/>, <see cref="PatchRequestConverterFactory"/>,
-        /// and the <see cref="OptionalTypeInfoResolverModifier"/>.
+        /// <see cref="OptionalConverterFactory"/> and the <see cref="OptionalTypeInfoResolverModifier"/>.
         /// Call <see cref="ConfigureNOFJsonSerializerOptions"/> before first access to customize
         /// (e.g. add source-generated contexts for your domain types, value object converters, etc.).
         /// The options are frozen by STJ on first use.
