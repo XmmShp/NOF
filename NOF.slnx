@@ -36,6 +36,7 @@
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
     <Project Path="src/Hostings/NOF.Hosting.BlazorWebAssembly/NOF.Hosting.BlazorWebAssembly.csproj" Id="2d5a6c2d-1d8b-4b67-8c7b-4f718c7d61a1" />
     <Project Path="src/Hostings/NOF.Hosting.Maui/NOF.Hosting.Maui.csproj" Id="b7c3d4e5-f6a7-4890-abcd-1234567890ef" />
+    <Project Path="src/Hostings/NOF.Hosting.Console/NOF.Hosting.Console.csproj" />
   </Folder>
   <Folder Name="/src/Extensions/">
     <Project Path="src/Extensions/NOF.Application.Extension.Redis/NOF.Application.Extension.Redis.csproj" />
