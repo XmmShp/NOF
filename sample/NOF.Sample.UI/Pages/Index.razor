@@ -13,17 +13,16 @@
                 <TitleTemplate>
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span>配置树</span>
-                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" Icon="plus" OnClick="() => ShowCreateNodeModal(null)">
+                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" Icon="plus"
+                                OnClick="() => ShowCreateNodeModal(null)">
                             添加根节点
                         </Button>
                     </div>
                 </TitleTemplate>
                 <ChildContent>
                     <div style="overflow-y: auto; flex: 1;">
-                        <ConfigTree OnSelectNode="OnNodeSelected"
-                                    OnAddChild="ShowCreateNodeModal"
-                                    OnDeleteNode="DeleteNode"
-                                    @ref="_tree" />
+                        <ConfigTree OnSelectNode="OnNodeSelected" OnAddChild="ShowCreateNodeModal"
+                                    OnDeleteNode="DeleteNode" @ref="_tree" />
                     </div>
                 </ChildContent>
             </Card>
@@ -40,14 +39,15 @@
                             <Row Gutter="16" Style="height: 100%;">
                                 <!-- 文件列表 (2栏) -->
                                 <AntDesign.Col Span="6" Style="height: 100%; border-right: 1px solid #f0f0f0;">
-                                    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div
+                                        style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                                         <Title Level="4" Style="margin: 0;">配置文件</Title>
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" Icon="plus" OnClick="ShowCreateFileModal">
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" Icon="plus"
+                                                OnClick="ShowCreateFileModal">
                                             添加
                                         </Button>
                                     </div>
-                                    <Menu Mode="@MenuMode.Inline"
-                                          SelectedKeys="@(new[] { _selectedFile ?? "" })"
+                                    <Menu Mode="@MenuMode.Inline" SelectedKeys="@(new[] { _selectedFile ?? "" })"
                                           OnMenuItemClicked="OnFileSelected">
                                         @if (_node?.ConfigFiles != null)
                                         {
@@ -79,13 +79,15 @@
                                         var file = _node?.ConfigFiles.FirstOrDefault(f => f.Name == _selectedFile);
                                         if (file != null)
                                         {
-                                            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                            <div
+                                                style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                                                 <Title Level="4" Style="margin: 0;">@file.Name</Title>
                                                 <Space>
                                                     @if (_node?.ActiveFileName != file.Name)
                                                     {
                                                         <SpaceItem>
-                                                            <Button Type="@ButtonType.Default" Size="@ButtonSize.Small" OnClick="() => SetActiveFile(file.Name)">
+                                                            <Button Type="@ButtonType.Default" Size="@ButtonSize.Small"
+                                                                    OnClick="() => SetActiveFile(file.Name)">
                                                                 设为激活
                                                             </Button>
                                                         </SpaceItem>
@@ -97,8 +99,7 @@
                                                     </SpaceItem>
                                                 </Space>
                                             </div>
-                                            <TextArea @bind-Value="@_fileContent"
-                                                      Rows="20"
+                                            <TextArea @bind-Value="@_fileContent" Rows="20"
                                                       Style="font-family: 'Courier New', monospace; flex: 1;"
                                                       OnBlur="SaveCurrentFile"></TextArea>
                                         }
@@ -117,7 +118,8 @@
                         <TitleTemplate>
                             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                 <span>配置预览</span>
-                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" Icon="reload" OnClick="LoadPreview">
+                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" Icon="reload"
+                                        OnClick="LoadPreview">
                                     刷新预览
                                 </Button>
                             </div>
@@ -130,7 +132,8 @@
                                 }
                                 else if (!string.IsNullOrEmpty(_previewContent))
                                 {
-                                    <pre style="background: #f5f5f5; padding: 16px; border-radius: 4px; margin: 0;">@_previewContent</pre>
+                                    <pre
+                                    style="background: #f5f5f5; padding: 16px; border-radius: 4px; margin: 0;">@_previewContent</pre>
                                 }
                                 else
                                 {
@@ -152,9 +155,7 @@
 </div>
 
 <!-- 创建节点对话框 -->
-<Modal Title="创建节点"
-       @bind-Visible="_createNodeModalVisible"
-       OnOk="CreateNode"
+<Modal Title="创建节点" @bind-Visible="_createNodeModalVisible" OnOk="CreateNode"
        OnCancel="() => _createNodeModalVisible = false">
     <Form Model="_createNodeModel">
         <FormItem Label="节点名称">
@@ -164,10 +165,7 @@
 </Modal>
 
 <!-- 创建文件对话框 -->
-<Modal Title="创建配置文件"
-       @bind-Visible="_fileModalVisible"
-       OnOk="SaveFile"
-       OnCancel="() => _fileModalVisible = false"
+<Modal Title="创建配置文件" @bind-Visible="_fileModalVisible" OnOk="SaveFile" OnCancel="() => _fileModalVisible = false"
        Width="600">
     <Form Model="_fileModel">
         <FormItem Label="文件名">
@@ -208,7 +206,10 @@
     {
         if (_selectedNode.HasValue)
         {
-            var result = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest(_selectedNode.Value));
+            var result = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest
+            {
+                Id = _selectedNode.Value
+            });
             var response = Message.UnwrapWithMessage(result);
             _node = response?.Node;
             StateHasChanged();
@@ -240,7 +241,12 @@
                 return;
             }
 
-            var result = await NOFService.AddOrUpdateConfigFileAsync(new AddOrUpdateConfigFileRequest(_selectedNode.Value, _selectedFile, _fileContent));
+            var result = await NOFService.AddOrUpdateConfigFileAsync(new AddOrUpdateConfigFileRequest
+            {
+                NodeId = _selectedNode.Value,
+                FileName = _selectedFile,
+                Content = _fileContent
+            });
             if (result.IsSuccess)
             {
                 Message.Success("保存成功");
@@ -263,11 +269,17 @@
 
         try
         {
-            var result = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest(_selectedNode.Value));
+            var result = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest
+            {
+                Id = _selectedNode.Value
+            });
             var node = Message.UnwrapWithMessage(result);
             if (node?.Node != null)
             {
-                var response = await NOFService.GetConfigurationAsync(new GetConfigurationRequest(node.Node.Name));
+                var response = await NOFService.GetConfigurationAsync(new GetConfigurationRequest
+                {
+                    AppName = node.Node.Name
+                });
 
                 if (response.IsSuccess)
                 {
@@ -314,7 +326,11 @@
             return;
         }
 
-        var result = await NOFService.CreateConfigNodeAsync(new CreateConfigNodeRequest(_createNodeModel.Name, _creatingChildFor));
+        var result = await NOFService.CreateConfigNodeAsync(new CreateConfigNodeRequest
+        {
+            Name = _createNodeModel.Name,
+            ParentId = _creatingChildFor
+        });
         if (result.IsSuccess)
         {
             Message.Success("节点创建成功");
@@ -332,7 +348,10 @@
 
     private async Task DeleteNode(long nodeId)
     {
-        var result = await NOFService.DeleteConfigNodeAsync(new DeleteConfigNodeRequest(nodeId));
+        var result = await NOFService.DeleteConfigNodeAsync(new DeleteConfigNodeRequest
+        {
+            Id = nodeId
+        });
         if (result.IsSuccess)
         {
             Message.Success("节点删除成功");
@@ -379,7 +398,12 @@
 
         if (_selectedNode.HasValue)
         {
-            var result = await NOFService.AddOrUpdateConfigFileAsync(new AddOrUpdateConfigFileRequest(_selectedNode.Value, _fileModel.Name, _fileModel.Content));
+            var result = await NOFService.AddOrUpdateConfigFileAsync(new AddOrUpdateConfigFileRequest
+            {
+                NodeId = _selectedNode.Value,
+                FileName = _fileModel.Name,
+                Content = _fileModel.Content
+            });
             if (result.IsSuccess)
             {
                 Message.Success("文件保存成功");
@@ -397,7 +421,11 @@
     {
         if (_selectedNode.HasValue)
         {
-            var result = await NOFService.RemoveConfigFileAsync(new RemoveConfigFileRequest(_selectedNode.Value, _selectedFile!));
+            var result = await NOFService.RemoveConfigFileAsync(new RemoveConfigFileRequest
+            {
+                NodeId = _selectedNode.Value,
+                FileName = _selectedFile!
+            });
             if (result.IsSuccess)
             {
                 Message.Success("文件删除成功");
@@ -419,7 +447,11 @@
     {
         if (_selectedNode.HasValue)
         {
-            var result = await NOFService.SetActiveFileAsync(new SetActiveFileRequest(_selectedNode.Value, fileName));
+            var result = await NOFService.SetActiveFileAsync(new SetActiveFileRequest
+            {
+                NodeId = _selectedNode.Value,
+                FileName = fileName
+            });
             if (result.IsSuccess)
             {
                 Message.Success("已设为激活文件");

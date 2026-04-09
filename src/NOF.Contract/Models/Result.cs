@@ -7,7 +7,22 @@ namespace NOF.Contract;
 /// Marker interface for result types that represent the outcome of an operation,
 /// either success or failure.
 /// </summary>
-public interface IResult;
+public interface IResult
+{
+    /// <summary>Indicates whether the operation succeeded.</summary>
+    bool IsSuccess { get; }
+
+    /// <summary>Error code when failed; empty when succeeded.</summary>
+    string ErrorCode { get; }
+
+    /// <summary>Human-readable message; empty when succeeded.</summary>
+    string Message { get; }
+
+    /// <summary>
+    /// Additional metadata to accompany the result. Optional and may be null.
+    /// </summary>
+    IDictionary<string, string>? Extra { get; }
+}
 
 /// <summary>
 /// Represents the result of an operation that does not return a value.
@@ -17,11 +32,12 @@ public interface IResult;
 public record Result : IResult
 {
     [JsonConstructor]
-    private Result(bool isSuccess, string? errorCode, string? message)
+    private Result(bool isSuccess, string? errorCode, string? message, IDictionary<string, string>? extra = null)
     {
         IsSuccess = isSuccess;
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
+        Extra = extra;
     }
 
     /// <summary>
@@ -41,6 +57,11 @@ public record Result : IResult
     /// </summary>
     public string Message { get; }
 
+    /// <summary>
+    /// Additional metadata to accompany the result. Optional and may be null.
+    /// </summary>
+    public IDictionary<string, string>? Extra { get; }
+
     #region Static Helpers
 
     /// <summary>
@@ -59,18 +80,18 @@ public record Result : IResult
     /// <param name="errorCode">The error code.</param>
     /// <param name="message">The descriptive error message.</param>
     /// <returns>A <see cref="FailResult"/> representing the failure.</returns>
-    public static FailResult Fail(string errorCode, string message)
+    public static FailResult Fail(string errorCode, string message, IDictionary<string, string>? extra = null)
     {
-        return new FailResult(errorCode, message);
+        return new FailResult(errorCode, message, extra);
     }
 
     /// <summary>
     /// Creates a successful <see cref="Result"/> with no associated value.
     /// </summary>
     /// <returns>A success result with <see cref="IsSuccess"/> set to <see langword="true"/>.</returns>
-    public static Result Success()
+    public static Result Success(IDictionary<string, string>? extra = null)
     {
-        return new Result(true, string.Empty, string.Empty);
+        return new Result(true, string.Empty, string.Empty, extra);
     }
 
     /// <summary>
@@ -79,9 +100,9 @@ public record Result : IResult
     /// <typeparam name="T">The type of the value to wrap.</typeparam>
     /// <param name="value">The value produced by the successful operation.</param>
     /// <returns>A success result containing <paramref name="value"/>.</returns>
-    public static Result<T> Success<T>(T value)
+    public static Result<T> Success<T>(T value, IDictionary<string, string>? extra = null)
     {
-        return new Result<T>(value);
+        return new Result<T>(true, string.Empty, string.Empty, value, extra);
     }
 
     /// <summary>
@@ -164,10 +185,11 @@ public record Result : IResult
 /// </summary>
 public record FailResult : IResult
 {
-    internal FailResult(string errorCode, string message)
+    internal FailResult(string errorCode, string message, IDictionary<string, string>? extra = null)
     {
-        ErrorCode = errorCode;
-        Message = message;
+        ErrorCode = errorCode ?? string.Empty;
+        Message = message ?? string.Empty;
+        Extra = extra;
     }
 
     /// <summary>
@@ -179,6 +201,16 @@ public record FailResult : IResult
     /// Gets the descriptive error message.
     /// </summary>
     public string Message { get; }
+
+    /// <summary>
+    /// Always false for failed result.
+    /// </summary>
+    public bool IsSuccess => false;
+
+    /// <summary>
+    /// Additional metadata to accompany the result. Optional and may be null.
+    /// </summary>
+    public IDictionary<string, string>? Extra { get; }
 }
 
 /// <summary>
@@ -189,21 +221,14 @@ public record FailResult : IResult
 /// <typeparam name="T">The type of the value returned on success.</typeparam>
 public record Result<T> : IResult
 {
-    internal Result(T value)
-    {
-        IsSuccess = true;
-        ErrorCode = string.Empty;
-        Message = string.Empty;
-        Value = value;
-    }
-
     [JsonConstructor]
-    private Result(bool isSuccess, string? errorCode, string? message, T? value)
+    internal Result(bool isSuccess, string? errorCode, string? message, T? value, IDictionary<string, string>? extra = null)
     {
         IsSuccess = isSuccess;
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
         Value = value;
+        Extra = extra;
     }
 
     /// <summary>
@@ -232,13 +257,18 @@ public record Result<T> : IResult
     public T? Value { get; }
 
     /// <summary>
+    /// Additional metadata to accompany the result. Optional and may be null.
+    /// </summary>
+    public IDictionary<string, string>? Extra { get; }
+
+    /// <summary>
     /// Defines an implicit conversion from <see cref="FailResult"/> to <see cref="Result{T}"/>.
     /// Enables seamless assignment of failure results to generic result types.
     /// </summary>
     /// <param name="result">The failure result to convert.</param>
     public static implicit operator Result<T>(FailResult result)
     {
-        return new Result<T>(false, result.ErrorCode, result.Message, default);
+        return new Result<T>(false, result.ErrorCode, result.Message, default, result.Extra);
     }
 
     /// <summary>

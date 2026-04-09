@@ -1,26 +1,45 @@
+using System.Diagnostics.CodeAnalysis;
 namespace NOF.Sample;
 
-public record GetConfigNodeChildrenRequest(long Id);
+public record GetConfigNodeChildrenRequest
+{
+    public long Id { get; set; }
+}
 
-public record GetConfigNodeChildrenResponse(long NodeId, List<long> ChildrenIds);
+public record GetConfigNodeChildrenResponse
+{
+    public long NodeId { get; set; }
+    public required List<long> ChildrenIds { get; set; }
+}
 
-public record GetConfigNodeByIdRequest(long Id);
+public record GetConfigNodeByIdRequest
+{
+    public long Id { get; set; }
+}
 
-public record GetConfigNodeByIdResponse(ConfigNodeDto Node);
+public record GetConfigNodeByIdResponse
+{
+    public required ConfigNodeDto Node { get; set; }
+}
 
-public record GetRootConfigNodesRequest;
+public record GetRootConfigNodesRequest { }
 
-public record GetRootConfigNodesResponse(List<ConfigNodeDto> Nodes);
+public record GetRootConfigNodesResponse
+{
+    public required List<ConfigNodeDto> Nodes { get; set; }
+}
 
-public record ConfigNodeDto(
-    long Id,
-    long? ParentId,
-    string Name,
-    string? ActiveFileName,
-    List<ConfigFileDto> ConfigFiles
-);
+public record ConfigNodeDto
+{
+    public long Id { get; set; }
+    public long? ParentId { get; set; }
+    public required string Name { get; set; }
+    public string? ActiveFileName { get; set; }
+    public required List<ConfigFileDto> ConfigFiles { get; set; }
+}
 
-public record ConfigFileDto(
-    string Name,
-    string Content
-);
+public record ConfigFileDto
+{
+    public required string Name { get; set; }
+    public required string Content { get; set; }
+}

@@ -1,18 +1,10 @@
 @inject IMessageService Message
 @inject INOFSampleService NOFService
 
-<Tree TItem="TreeNodeData"
-      DataSource="@_treeData"
-      TitleExpression="@(node => node.DataItem.Title)"
-      KeyExpression="@(node => node.DataItem.Key)"
-      IsLeafExpression="@(node => node.DataItem.IsLeaf)"
-      ChildrenExpression="@(node => node.DataItem.Children)"
-      OnNodeLoadDelayAsync="@OnNodeLoadAsync"
-      Draggable
-      OnDrop="@OnNodeDrop"
-      ShowLine
-      @bind-SelectedKeys="@_selectedKeys"
-      OnClick="@OnNodeClick">
+<Tree TItem="TreeNodeData" DataSource="@_treeData" TitleExpression="@(node => node.DataItem.Title)"
+      KeyExpression="@(node => node.DataItem.Key)" IsLeafExpression="@(node => node.DataItem.IsLeaf)"
+      ChildrenExpression="@(node => node.DataItem.Children)" OnNodeLoadDelayAsync="@OnNodeLoadAsync" Draggable
+      OnDrop="@OnNodeDrop" ShowLine @bind-SelectedKeys="@_selectedKeys" OnClick="@OnNodeClick">
     <TitleTemplate>
         <Dropdown>
             <Overlay>
@@ -72,7 +64,10 @@
     private async Task OnNodeLoadAsync(TreeEventArgs<TreeNodeData> args)
     {
         var nodeId = args.Node.DataItem.NodeId;
-        var result = await NOFService.GetConfigNodeChildrenAsync(new GetConfigNodeChildrenRequest(nodeId));
+        var result = await NOFService.GetConfigNodeChildrenAsync(new GetConfigNodeChildrenRequest
+        {
+            Id = nodeId
+        });
         var children = Message.UnwrapWithMessage(result);
 
         if (children == null || children.ChildrenIds.Count == 0)
@@ -84,7 +79,10 @@
         var childNodes = new List<TreeNodeData>();
         foreach (var childId in children.ChildrenIds)
         {
-            var childResult = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest(childId));
+            var childResult = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest
+            {
+                Id = childId
+            });
             var childNode = Message.UnwrapWithMessage(childResult)?.Node;
             if (childNode != null)
             {
@@ -145,13 +143,20 @@
         {
             // 放到目标节点的前面或后面（作为兄弟节点）
             // 获取目标节点的父节点
-            var getNodeResult = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest(dropNodeId));
+            var getNodeResult = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest
+            {
+                Id = dropNodeId
+            });
             var targetNode = Message.UnwrapWithMessage(getNodeResult)?.Node;
             newParentId = targetNode?.ParentId;
         }
 
         // 调用服务更新父节点
-        var result = await NOFService.UpdateConfigNodeParentAsync(new UpdateConfigNodeParentRequest(dragNodeId, newParentId));
+        var result = await NOFService.UpdateConfigNodeParentAsync(new UpdateConfigNodeParentRequest
+        {
+            NodeId = dragNodeId,
+            NewParentId = newParentId
+        });
         
         if (result.IsSuccess)
         {

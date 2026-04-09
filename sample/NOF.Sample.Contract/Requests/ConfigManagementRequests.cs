@@ -1,11 +1,31 @@
 namespace NOF.Sample;
 
-public record CreateConfigNodeRequest(string Name, long? ParentId);
+public record CreateConfigNodeRequest
+{
+    public required string Name { get; set; }
+    public long? ParentId { get; set; }
+}
 
-public record DeleteConfigNodeRequest(long Id);
+public record DeleteConfigNodeRequest
+{
+    public long Id { get; set; }
+}
 
-public record AddOrUpdateConfigFileRequest(long NodeId, string FileName, string Content);
+public record AddOrUpdateConfigFileRequest
+{
+    public long NodeId { get; set; }
+    public required string FileName { get; set; }
+    public required string Content { get; set; }
+}
 
-public record RemoveConfigFileRequest(long NodeId, string FileName);
+public record RemoveConfigFileRequest
+{
+    public long NodeId { get; set; }
+    public required string FileName { get; set; }
+}
 
-public record SetActiveFileRequest(long NodeId, string? FileName);
+public record SetActiveFileRequest
+{
+    public long NodeId { get; set; }
+    public string? FileName { get; set; }
+}

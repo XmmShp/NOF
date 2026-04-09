@@ -21,7 +21,10 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
 
         var response = nodes.Select(node => _mapper.Map<ConfigNode, ConfigNodeDto>(node)).ToList();
 
-        return new GetRootConfigNodesResponse(response);
+        return new GetRootConfigNodesResponse
+        {
+            Nodes = response
+        };
     }
 }
 

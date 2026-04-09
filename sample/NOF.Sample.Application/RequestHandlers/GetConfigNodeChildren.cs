@@ -23,7 +23,11 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
             return Result.Fail("404", "未找到子节点信息");
         }
 
-        return new GetConfigNodeChildrenResponse((long)children.NodeId, children.ChildrenIds);
+        return new GetConfigNodeChildrenResponse
+        {
+            NodeId = (long)children.NodeId,
+            ChildrenIds = children.ChildrenIds
+        };
     }
 }
 

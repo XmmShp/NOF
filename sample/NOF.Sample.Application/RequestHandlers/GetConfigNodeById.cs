@@ -27,7 +27,10 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
         var cachedValue = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
         if (cachedValue.HasValue)
         {
-            return new GetConfigNodeByIdResponse(cachedValue.Value);
+            return new GetConfigNodeByIdResponse
+            {
+                Node = cachedValue.Value
+            };
         }
 
         var node = await _configNodeRepository.GetNodeByIdAsync(nodeId, cancellationToken);
@@ -44,7 +47,10 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) },
             cancellationToken);
 
-        return new GetConfigNodeByIdResponse(dto);
+        return new GetConfigNodeByIdResponse
+        {
+            Node = dto
+        };
     }
 }
 

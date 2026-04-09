@@ -68,13 +68,16 @@ public sealed class JwtHttpClientTests
     [Fact]
     public async Task GenerateJwtTokenAsync_ShouldPostExpectedPayload_AndReturnResult()
     {
-        var expectedResponse = Result.Success(new GenerateJwtTokenResponse(new TokenPair
+        var expectedResponse = Result.Success(new GenerateJwtTokenResponse
         {
-            AccessToken = "access-token",
-            RefreshToken = "refresh-token",
-            AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(10),
-            RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(7)
-        }));
+            TokenPair = new TokenPair
+            {
+                AccessToken = "access-token",
+                RefreshToken = "refresh-token",
+                AccessTokenExpiresAt = DateTime.UtcNow.AddMinutes(10),
+                RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(7)
+            }
+        });
 
         var handler = new CaptureHttpMessageHandler((_, _) => CreateJsonResponse(expectedResponse));
         var httpClient = new HttpClient(handler)
@@ -89,14 +92,16 @@ public sealed class JwtHttpClientTests
         };
         var service = new HttpJwtAuthorityService(httpClient, pipeline, executionContext, new SimpleServiceProvider());
 
-        var request = new GenerateJwtTokenRequest(
-            UserId: "user-1",
-            TenantId: "tenant-a",
-            Audience: "orders-api",
-            AccessTokenExpiration: TimeSpan.FromMinutes(10),
-            RefreshTokenExpiration: TimeSpan.FromDays(7),
-            Permissions: ["orders.read"],
-            CustomClaims: new Dictionary<string, string> { ["role"] = "admin" });
+        var request = new GenerateJwtTokenRequest
+        {
+            UserId = "user-1",
+            TenantId = "tenant-a",
+            Audience = "orders-api",
+            AccessTokenExpiration = TimeSpan.FromMinutes(10),
+            RefreshTokenExpiration = TimeSpan.FromDays(7),
+            Permissions = ["orders.read"],
+            CustomClaims = new Dictionary<string, string> { ["role"] = "admin" }
+        };
 
         var result = await service.GenerateJwtTokenAsync(request);
         Assert.True(
@@ -116,15 +121,11 @@ public sealed class JwtHttpClientTests
         Assert.True(handler.LastRequest.Headers.ContainsKey("Authorization"));
 
         var payload = JsonSerializer.Deserialize<GenerateJwtTokenRequest>(handler.LastRequest.Body!, JsonSerializerOptions.NOF);
-        Assert.NotNull(
-        payload);
-        Assert.Equal("user-1",
-        payload!.UserId);
+        Assert.NotNull(payload);
+        Assert.Equal("user-1", payload!.UserId);
         Assert.Single(payload.Permissions);
         Assert.Equal("orders.read", payload.Permissions[0]);
-        Assert.NotNull(
-
-        pipeline.LastContext);
+        Assert.NotNull(pipeline.LastContext);
         Assert.IsType<GenerateJwtTokenRequest>(pipeline.LastContext!.Message);
         Assert.IsAssignableFrom<Result<GenerateJwtTokenResponse>>(pipeline.LastContext.Response);
     }

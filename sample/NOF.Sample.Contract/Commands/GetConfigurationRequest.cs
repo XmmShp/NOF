@@ -1,9 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
 namespace NOF.Sample;
 
-public record GetConfigurationRequest(string AppName);
+public record GetConfigurationRequest
+{
+    public required string AppName { get; set; }
+}
 
-public record GetConfigurationResponse(string Content);
-
-
-
-
+public record GetConfigurationResponse
+{
+    public required string Content { get; set; }
+}

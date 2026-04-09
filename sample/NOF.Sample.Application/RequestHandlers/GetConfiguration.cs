@@ -54,7 +54,10 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         var cachedResult = await _cache.GetAsync(appCacheKey, cancellationToken: cancellationToken);
         if (cachedResult.HasValue && cachedResult.Value.Version >= maxVersion)
         {
-            return new GetConfigurationResponse(cachedResult.Value.Content);
+            return new GetConfigurationResponse
+            {
+                Content = cachedResult.Value.Content
+            };
         }
 
 
@@ -70,7 +73,10 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) },
             cancellationToken);
 
-        return new GetConfigurationResponse(jsonString);
+        return new GetConfigurationResponse
+        {
+            Content = jsonString
+        };
     }
 
     private async Task<ConfigNodeDto?> GetNodeByNameAsync(ConfigNodeName name, CancellationToken cancellationToken)

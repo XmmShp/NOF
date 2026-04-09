@@ -129,7 +129,10 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
             RefreshTokenExpiresAt = now.Add(request.RefreshTokenExpiration)
         };
 
-        return Task.FromResult(Result.Success(new GenerateJwtTokenResponse(tokenPair)));
+        return Task.FromResult(Result.Success(new GenerateJwtTokenResponse
+        {
+            TokenPair = tokenPair
+        }));
     }
 
     private static async Task<Result<ValidateJwtRefreshTokenResponse>> ExecuteValidateJwtRefreshTokenCoreAsync(
@@ -169,7 +172,12 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
                 return Result.Fail("401", "Refresh token has been revoked.");
             }
 
-            return Result.Success(new ValidateJwtRefreshTokenResponse(tokenId, userId, tenantId));
+            return Result.Success(new ValidateJwtRefreshTokenResponse
+            {
+                TokenId = tokenId,
+                UserId = userId,
+                TenantId = tenantId
+            });
         }
         catch (Exception ex)
         {
