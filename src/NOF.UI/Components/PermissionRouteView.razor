@@ -6,8 +6,7 @@
 }
 else
 {
-    <AuthGuard Permission="@_requiredPermission.Permission"
-               AuthorizingContent="@AuthorizingContent"
+    <AuthGuard Permission="@_requiredPermission.Permission" AuthorizingContent="@AuthorizingContent"
                UnauthorizedContent="@UnauthorizedContent">
         <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
     </AuthGuard>

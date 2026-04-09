@@ -1,6 +1,6 @@
 namespace NOF.UI;
 
-public interface IBrowserStorage
+public interface ISessionStorage
 {
     ValueTask<string?> GetItemAsync(string key);
 
@@ -8,8 +8,3 @@ public interface IBrowserStorage
 
     ValueTask RemoveItemAsync(string key);
 }
-
-public interface ILocalStorage : IBrowserStorage;
-
-public interface ISessionStorage : IBrowserStorage;
-
