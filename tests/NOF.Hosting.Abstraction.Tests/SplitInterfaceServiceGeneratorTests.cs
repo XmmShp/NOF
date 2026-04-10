@@ -1,5 +1,5 @@
-using NOF.Application;
 using NOF.Annotation;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
 using NOF.Infrastructure.SourceGenerator;

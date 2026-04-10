@@ -13,8 +13,6 @@ namespace NOF.Application.SourceGenerator;
 [Generator]
 public sealed class SplitInterfaceGenerator : IIncrementalGenerator
 {
-    private const string SplitedInterfaceFqn = "NOF.Application.ISplitedInterface<TService>";
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var candidates = context.SyntaxProvider
@@ -27,21 +25,19 @@ public sealed class SplitInterfaceGenerator : IIncrementalGenerator
                         return null;
                     }
 
-                    return TryGetServiceInterface(classSymbol, out var _) ? classSymbol : null;
+                    return SplitInterfaceSymbolHelper.TryGetServiceInterface(classSymbol, out var _) ? classSymbol : null;
                 })
             .Where(static x => x is not null);
 
-        var candidatesWithCompilation = candidates.Combine(context.CompilationProvider);
-        context.RegisterSourceOutput(candidatesWithCompilation, static (spc, data) =>
+        context.RegisterSourceOutput(candidates, static (spc, symbol) =>
         {
-            var (symbol, compilation) = data;
-            GenerateForClass(spc, symbol!, compilation);
+            GenerateForClass(spc, symbol!);
         });
     }
 
-    private static void GenerateForClass(SourceProductionContext context, INamedTypeSymbol classSymbol, Compilation compilation)
+    private static void GenerateForClass(SourceProductionContext context, INamedTypeSymbol classSymbol)
     {
-        if (!TryGetServiceInterface(classSymbol, out var serviceInterface) || serviceInterface is null)
+        if (!SplitInterfaceSymbolHelper.TryGetServiceInterface(classSymbol, out var serviceInterface) || serviceInterface is null)
         {
             return;
         }
@@ -122,23 +118,6 @@ public sealed class SplitInterfaceGenerator : IIncrementalGenerator
         return string.Join(", ", parameters);
     }
 
-    private static bool TryGetServiceInterface(INamedTypeSymbol classSymbol, out INamedTypeSymbol? serviceInterface)
-    {
-        serviceInterface = null;
-
-        foreach (var implementedInterface in classSymbol.AllInterfaces)
-        {
-            if (implementedInterface.IsGenericType &&
-                implementedInterface.OriginalDefinition.ToDisplayString() == SplitedInterfaceFqn)
-            {
-                serviceInterface = implementedInterface.TypeArguments[0] as INamedTypeSymbol;
-                return serviceInterface is not null;
-            }
-        }
-
-        return false;
-    }
-
     private static string GetOperationName(string methodName)
         => methodName.EndsWith("Async", System.StringComparison.Ordinal)
             ? methodName.Substring(0, methodName.Length - 5)
@@ -148,8 +127,6 @@ public sealed class SplitInterfaceGenerator : IIncrementalGenerator
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class SplitInterfaceAnalyzer : DiagnosticAnalyzer
 {
-    private const string SplitedInterfaceFqn = "NOF.Application.ISplitedInterface<TService>";
-
     public static readonly DiagnosticDescriptor SplitInterfaceMustBePartial = new(
         "NOF300",
         "Split interface class must be partial",
@@ -173,7 +150,7 @@ public sealed class SplitInterfaceAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeNamedType(SymbolAnalysisContext context)
     {
         var type = (INamedTypeSymbol)context.Symbol;
-        if (type.TypeKind != TypeKind.Class || !TryGetServiceInterface(type, out _))
+        if (type.TypeKind != TypeKind.Class || !SplitInterfaceSymbolHelper.TryGetServiceInterface(type, out _))
         {
             return;
         }
@@ -187,22 +164,5 @@ public sealed class SplitInterfaceAnalyzer : DiagnosticAnalyzer
         {
             context.ReportDiagnostic(Diagnostic.Create(SplitInterfaceMustBePartial, location, type.Name));
         }
-    }
-
-    private static bool TryGetServiceInterface(INamedTypeSymbol classSymbol, out INamedTypeSymbol? serviceInterface)
-    {
-        serviceInterface = null;
-
-        foreach (var implementedInterface in classSymbol.AllInterfaces)
-        {
-            if (implementedInterface.IsGenericType &&
-                implementedInterface.OriginalDefinition.ToDisplayString() == SplitedInterfaceFqn)
-            {
-                serviceInterface = implementedInterface.TypeArguments[0] as INamedTypeSymbol;
-                return serviceInterface is not null;
-            }
-        }
-
-        return false;
     }
 }

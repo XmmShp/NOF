@@ -438,10 +438,6 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
         {
             var propType = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var defaultValue = prop.Type.IsValueType ? "" : " = default!;";
-            if (prop.Type.NullableAnnotation == NullableAnnotation.Annotated)
-            {
-                defaultValue = "";
-            }
 
             sb.AppendLine($"        public {propType} {prop.Name} {{ get; set; }}{defaultValue}");
         }

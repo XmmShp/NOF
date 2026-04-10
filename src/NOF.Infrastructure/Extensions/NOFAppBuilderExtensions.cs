@@ -2,8 +2,8 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using NOF.Application;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
 
