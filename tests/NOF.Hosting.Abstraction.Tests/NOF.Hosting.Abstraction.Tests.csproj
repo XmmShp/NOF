@@ -5,7 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>${NoWarn};NU1608;CS8620;</NoWarn>
-    <InterceptorsNamespaces>$(InterceptorsNamespaces);NOF.Infrastructure.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 
   <ItemGroup>

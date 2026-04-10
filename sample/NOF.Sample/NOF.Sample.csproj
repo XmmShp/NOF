@@ -6,7 +6,6 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
         <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
-        <InterceptorsNamespaces>$(InterceptorsNamespaces);NOF.Infrastructure.Generated</InterceptorsNamespaces>
     </PropertyGroup>
 
     <ItemGroup>

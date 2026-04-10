@@ -1,4 +1,5 @@
 using NOF.Application;
+using NOF.Annotation;
 using NOF.Contract;
 using NOF.Infrastructure;
 using NOF.Infrastructure.SourceGenerator;
@@ -11,25 +12,30 @@ public class SplitInterfaceServiceGeneratorTests
     private static readonly Type[] _refs =
     [
         typeof(ISplitedInterface<>),
+        typeof(AssemblyInitializeAttribute),
+        typeof(AutoInjectRegistry),
         typeof(IRpcService),
         typeof(Result),
         typeof(Result<>),
-        typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection),
-        typeof(NOFInfrastructureExtensions),
-        typeof(IInboundPipelineExecutor),
-        typeof(Hosting.IOutboundPipelineExecutor)
+        typeof(SplitInterfaceServiceAttribute<,>),
+        typeof(Hosting.IExecutionContext),
+        typeof(Hosting.IOutboundPipelineExecutor),
+        typeof(Hosting.OutboundContext),
+        typeof(InboundHandlerInvoker),
+        typeof(Microsoft.Extensions.DependencyInjection.IServiceProviderIsService)
     ];
 
     [Fact]
-    public void GeneratedCode_InterceptsAddSplitInterfaceService_AndRegistersGeneratedImplementation()
+    public void GeneratedCode_RegistersGeneratedImplementationViaAssemblyInitializer()
     {
         const string source = """
-            using Microsoft.Extensions.DependencyInjection;
             using NOF.Application;
             using NOF.Contract;
             using NOF.Infrastructure;
             using System.Threading;
             using System.Threading.Tasks;
+
+            [assembly: NOF.Infrastructure.SplitInterfaceService<App.IMyService, App.MyService>]
 
             namespace App
             {
@@ -55,24 +61,16 @@ public class SplitInterfaceServiceGeneratorTests
                     public Task<Result> PingAsync(PingRequest request, CancellationToken cancellationToken)
                         => Task.FromResult(Result.Success());
                 }
-
-                public static class Program
-                {
-                    public static void Configure(IServiceCollection services)
-                    {
-                        services.AddSplitInterfaceService<IMyService, MyService>();
-                    }
-                }
             }
             """;
 
-        var result = new SplitInterfaceServiceGenerator().GetResult(source, _refs);
+        var result = new SplitInterfaceServiceGenerator().GetResultPostGen(source, _refs);
         var generatedCode = string.Join("\n\n", result.GeneratedTrees.Select(tree => tree.GetRoot().ToFullString()));
 
-        Assert.Contains("InterceptsLocation", generatedCode);
-        Assert.Contains("AddSplitInterfaceService_App_IMyService_App_MyService", generatedCode);
-        Assert.Contains("ServiceCollectionDescriptorExtensions.Replace(", generatedCode);
-        Assert.Contains("ServiceDescriptor.Scoped<global::App.IMyService", generatedCode);
+        Assert.Contains("AssemblyInitializeAttribute<", generatedCode);
+        Assert.Contains("SplitInterfaceServiceAssemblyInitializer", generatedCode);
+        Assert.Contains("AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(", generatedCode);
+        Assert.Contains("Lifetime.Scoped", generatedCode);
         Assert.Contains(": global::App.IMyService", generatedCode);
     }
 
@@ -80,12 +78,13 @@ public class SplitInterfaceServiceGeneratorTests
     public void GeneratedCode_UsesOutboundThenInboundPattern()
     {
         const string source = """
-            using Microsoft.Extensions.DependencyInjection;
             using NOF.Application;
             using NOF.Contract;
             using NOF.Infrastructure;
             using System.Threading;
             using System.Threading.Tasks;
+
+            [assembly: NOF.Infrastructure.SplitInterfaceService<App.IMyService, App.MyService>]
 
             namespace App
             {
@@ -124,23 +123,16 @@ public class SplitInterfaceServiceGeneratorTests
                     public Task<Result<string>> EchoAsync(EchoRequest request, CancellationToken cancellationToken)
                         => Task.FromResult(Result.Success(request.Value));
                 }
-
-                public static class Program
-                {
-                    public static void Configure(IServiceCollection services)
-                    {
-                        services.AddSplitInterfaceService<IMyService, MyService>();
-                    }
-                }
             }
             """;
 
-        var result = new SplitInterfaceServiceGenerator().GetResult(source, _refs);
+        var result = new SplitInterfaceServiceGenerator().GetResultPostGen(source, _refs);
         var generatedCode = string.Join("\n\n", result.GeneratedTrees.Select(tree => tree.GetRoot().ToFullString()));
 
         Assert.Contains("_outboundPipeline.ExecuteAsync", generatedCode);
         Assert.Contains("InboundHandlerInvoker.ExecuteRpcAsync(", generatedCode);
         Assert.Contains("context.Metadatas[\"HandlerType\"] = handlerType;", generatedCode);
+        Assert.Contains("IServiceProviderIsService", generatedCode);
         Assert.Contains("PingAsync(", generatedCode);
         Assert.Contains("EchoAsync(", generatedCode);
     }

@@ -1,122 +1,55 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
 namespace NOF.Infrastructure.SourceGenerator;
 
 [Generator]
 public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
 {
-    private const string AddSplitInterfaceServiceMethodName = "AddSplitInterfaceService";
+    private const string SplitInterfaceServiceAttributeFqn = "NOF.Infrastructure.SplitInterfaceServiceAttribute<TService, TSplitedInterface>";
     private const string ISplitedInterfaceFqn = "NOF.Application.ISplitedInterface<TService>";
     private const string IRpcServiceFqn = "NOF.Contract.IRpcService";
 
-    private const string GeneratedNamespace = "NOF.Infrastructure.Generated";
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var invocations = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                static (node, _) => IsPotentialInvocation(node),
-                static (ctx, ct) => GetInvocation(ctx, ct))
-            .Where(static x => x is not null)
-            .Select(static (x, _) => x!);
+        var registrations = context.CompilationProvider
+            .Select(static (compilation, _) => CollectRegistrations(compilation));
 
-        context.RegisterSourceOutput(invocations.Collect(), static (spc, items) => Generate(spc, items));
+        context.RegisterSourceOutput(registrations, static (spc, data) => Generate(spc, data));
     }
 
-    private static bool IsPotentialInvocation(SyntaxNode node)
-        => node is InvocationExpressionSyntax
+    private static RegistrationCollection CollectRegistrations(Compilation compilation)
+    {
+        var registrations = new List<RegistrationInfo>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var attribute in compilation.Assembly.GetAttributes())
         {
-            Expression: MemberAccessExpressionSyntax
+            if (attribute.AttributeClass is not INamedTypeSymbol { IsGenericType: true } attributeClass
+                || attributeClass.OriginalDefinition.ToDisplayString() != SplitInterfaceServiceAttributeFqn
+                || attributeClass.TypeArguments.Length != 2
+                || attributeClass.TypeArguments[0] is not INamedTypeSymbol serviceType
+                || attributeClass.TypeArguments[1] is not INamedTypeSymbol splitedType
+                || !IsRpcServiceInterface(serviceType)
+                || !ImplementsISplitedInterfaceOfService(splitedType, serviceType))
             {
-                Name.Identifier.ValueText: AddSplitInterfaceServiceMethodName
+                continue;
             }
-        };
 
-    private static InvocationInfo? GetInvocation(GeneratorSyntaxContext context, CancellationToken cancellationToken)
-    {
-        if (context.Node is not InvocationExpressionSyntax
+            var key = serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            if (!seen.Add(key))
             {
-                Expression: MemberAccessExpressionSyntax
-                {
-                    Name: GenericNameSyntax genericName
-                }
-            } invocation)
-        {
-            return null;
+                continue;
+            }
+
+            registrations.Add(new RegistrationInfo(serviceType, splitedType));
         }
 
-        if (genericName.TypeArgumentList.Arguments.Count != 2)
-        {
-            return null;
-        }
-
-        if (context.SemanticModel.GetOperation(invocation, cancellationToken) is not IInvocationOperation op)
-        {
-            return null;
-        }
-
-        var targetMethod = op.TargetMethod.ReducedFrom ?? op.TargetMethod;
-        if (!IsAddSplitInterfaceServiceMethod(targetMethod))
-        {
-            return null;
-        }
-
-        if (context.SemanticModel.GetTypeInfo(genericName.TypeArgumentList.Arguments[0], cancellationToken).Type is not INamedTypeSymbol serviceType)
-        {
-            return null;
-        }
-
-        if (context.SemanticModel.GetTypeInfo(genericName.TypeArgumentList.Arguments[1], cancellationToken).Type is not INamedTypeSymbol splitedType)
-        {
-            return null;
-        }
-
-        if (!IsRpcServiceInterface(serviceType))
-        {
-            return null;
-        }
-
-        if (!ImplementsISplitedInterfaceOfService(splitedType, serviceType))
-        {
-            return null;
-        }
-
-#pragma warning disable RSEXPERIMENTAL002
-        var location = context.SemanticModel.GetInterceptableLocation(invocation);
-#pragma warning restore RSEXPERIMENTAL002
-        if (location is null)
-        {
-            return null;
-        }
-
-        return new InvocationInfo(location, splitedType, serviceType);
-    }
-
-    private static bool IsAddSplitInterfaceServiceMethod(IMethodSymbol method)
-    {
-        var definition = (method.ReducedFrom ?? method).OriginalDefinition;
-
-        if (definition.Name != AddSplitInterfaceServiceMethodName)
-        {
-            return false;
-        }
-
-        if (definition.TypeParameters.Length != 2)
-        {
-            return false;
-        }
-
-        return definition.ReturnType.ToDisplayString() == "Microsoft.Extensions.DependencyInjection.IServiceCollection";
+        return new RegistrationCollection(compilation.AssemblyName ?? "GeneratedAssembly", registrations);
     }
 
     private static bool IsRpcServiceInterface(INamedTypeSymbol serviceType)
@@ -158,28 +91,16 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static void Generate(SourceProductionContext context, ImmutableArray<InvocationInfo> invocations)
+    private static void Generate(SourceProductionContext context, RegistrationCollection data)
     {
-        if (invocations.IsDefaultOrEmpty)
+        if (data.Registrations.Count == 0)
         {
             return;
         }
 
-        var groups = invocations
-            .GroupBy(static x =>
-                (Splited: x.SplitedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                 Service: x.ServiceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)),
-                StringTupleComparer.Ordinal)
-            .Select(static g => new InvocationGroup(
-                g.First().SplitedType,
-                g.First().ServiceType,
-                g.Select(x => x.Location).ToImmutableArray()))
-            .ToList();
-
-        if (groups.Count == 0)
-        {
-            return;
-        }
+        var assemblyName = data.AssemblyName;
+        var sanitizedAssemblyName = SanitizeIdentifier(assemblyName.Replace(".", ""));
+        var initializerTypeName = $"__{sanitizedAssemblyName}SplitInterfaceServiceAssemblyInitializer";
 
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
@@ -187,66 +108,41 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         sb.AppendLine("#pragma warning disable CS1591");
         sb.AppendLine();
         sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine("using Microsoft.Extensions.DependencyInjection.Extensions;");
         sb.AppendLine();
-        sb.AppendLine("namespace System.Runtime.CompilerServices");
+        sb.AppendLine($"[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::{assemblyName}.{initializerTypeName}>]");
+        sb.AppendLine();
+        sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
-        sb.AppendLine("    [global::System.Diagnostics.Conditional(\"DEBUG\")]");
-        sb.AppendLine("    [global::System.AttributeUsage(global::System.AttributeTargets.Method, AllowMultiple = true)]");
-        sb.AppendLine("    file sealed class InterceptsLocationAttribute : global::System.Attribute");
+
+        foreach (var registration in data.Registrations)
+        {
+            EmitImplementationClass(sb, registration.SplitedType, registration.ServiceType);
+        }
+
+        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        public InterceptsLocationAttribute(int version, string data)");
+        sb.AppendLine("        private static int _initialized;");
+        sb.AppendLine();
+        sb.AppendLine("        public static void Initialize()");
         sb.AppendLine("        {");
-        sb.AppendLine("            _ = version;");
-        sb.AppendLine("            _ = data;");
+        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+
+        foreach (var registration in data.Registrations)
+        {
+            var serviceFqn = registration.ServiceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var implName = GetImplementationTypeName(registration.SplitedType, registration.ServiceType);
+            sb.AppendLine($"            global::NOF.Annotation.AutoInjectRegistry.Register(typeof({serviceFqn}), typeof({implName}), global::NOF.Annotation.Lifetime.Scoped, useFactory: false);");
+        }
+
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}");
-        sb.AppendLine();
-        sb.AppendLine($"namespace {GeneratedNamespace}");
-        sb.AppendLine("{");
 
-        // Emit implementation classes first (one per group)
-        foreach (var g in groups)
-        {
-            EmitImplementationClass(sb, g.SplitedType, g.ServiceType);
-        }
-
-        sb.AppendLine("    internal static class SplitInterfaceServiceInterceptors");
-        sb.AppendLine("    {");
-        foreach (var g in groups)
-        {
-            EmitAddSplitInterfaceInterceptor(sb, g.SplitedType, g.ServiceType, g.Locations);
-        }
-        sb.AppendLine("    }");
-        sb.AppendLine("}");
-
-        context.AddSource("SplitInterfaceServiceInterceptors.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
-    }
-
-    private static void EmitAddSplitInterfaceInterceptor(
-        StringBuilder sb,
-        INamedTypeSymbol splitedType,
-        INamedTypeSymbol serviceType,
-        ImmutableArray<InterceptableLocation> locations)
-    {
-        foreach (var loc in locations)
-        {
-            sb.AppendLine($"        [global::System.Runtime.CompilerServices.InterceptsLocation({loc.Version}, \"{EscapeString(loc.Data)}\")]");
-        }
-
-        var methodName = $"AddSplitInterfaceService_{SanitizeIdentifier(serviceType.ToDisplayString())}_{SanitizeIdentifier(splitedType.ToDisplayString())}";
-        sb.AppendLine($"        public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection {methodName}(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
-        sb.AppendLine("        {");
-
-        var implName = GetImplementationTypeName(splitedType, serviceType);
-        var serviceFqn = serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        sb.AppendLine("            global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.Replace(");
-        sb.AppendLine("                services,");
-        sb.AppendLine($"                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<{serviceFqn}, {implName}>());");
-        sb.AppendLine("            return services;");
-        sb.AppendLine("        }");
-        sb.AppendLine();
+        context.AddSource("SplitInterfaceServiceAssemblyInitializer.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private static void EmitImplementationClass(StringBuilder sb, INamedTypeSymbol splitedType, INamedTypeSymbol serviceType)
@@ -425,6 +321,11 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         var serviceFqn = serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         sb.AppendLine($"            var methodInfo = typeof({serviceFqn}).GetMethod(\"{EscapeString(methodName)}\", {paramTypeArray})!;");
         sb.AppendLine($"            var handlerType = typeof({handlerTypeFqn});");
+        sb.AppendLine("            var isService = _serviceProvider.GetService<global::Microsoft.Extensions.DependencyInjection.IServiceProviderIsService>();");
+        sb.AppendLine("            if (isService is null || !isService.IsService(handlerType))");
+        sb.AppendLine("            {");
+        sb.AppendLine("                throw new global::System.InvalidOperationException($\"RPC operation implementation is missing: {handlerType.FullName}.\");");
+        sb.AppendLine("            }");
         sb.AppendLine();
 
         if (requestParam is not null)
@@ -523,53 +424,27 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
     private static string EscapeString(string? value)
         => value is null ? string.Empty : value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-    private sealed class InvocationInfo
+    private sealed class RegistrationCollection
     {
-        public InvocationInfo(InterceptableLocation location, INamedTypeSymbol splitedType, INamedTypeSymbol serviceType)
+        public RegistrationCollection(string assemblyName, List<RegistrationInfo> registrations)
         {
-            Location = location;
-            SplitedType = splitedType;
-            ServiceType = serviceType;
+            AssemblyName = assemblyName;
+            Registrations = registrations;
         }
 
-        public InterceptableLocation Location { get; }
-        public INamedTypeSymbol SplitedType { get; }
-        public INamedTypeSymbol ServiceType { get; }
+        public string AssemblyName { get; }
+        public List<RegistrationInfo> Registrations { get; }
     }
 
-    private sealed class InvocationGroup
+    private sealed class RegistrationInfo
     {
-        public InvocationGroup(
-            INamedTypeSymbol splitedType,
-            INamedTypeSymbol serviceType,
-            ImmutableArray<InterceptableLocation> locations)
+        public RegistrationInfo(INamedTypeSymbol serviceType, INamedTypeSymbol splitedType)
         {
-            SplitedType = splitedType;
             ServiceType = serviceType;
-            Locations = locations;
+            SplitedType = splitedType;
         }
 
-        public INamedTypeSymbol SplitedType { get; }
         public INamedTypeSymbol ServiceType { get; }
-        public ImmutableArray<InterceptableLocation> Locations { get; }
-    }
-
-    private sealed class StringTupleComparer : IEqualityComparer<(string Splited, string Service)>
-    {
-        public static readonly StringTupleComparer Ordinal = new();
-
-        public bool Equals((string Splited, string Service) x, (string Splited, string Service) y)
-            => string.Equals(x.Splited, y.Splited, StringComparison.Ordinal)
-               && string.Equals(x.Service, y.Service, StringComparison.Ordinal);
-
-        public int GetHashCode((string Splited, string Service) obj)
-        {
-            unchecked
-            {
-                var h1 = obj.Splited is null ? 0 : StringComparer.Ordinal.GetHashCode(obj.Splited);
-                var h2 = obj.Service is null ? 0 : StringComparer.Ordinal.GetHashCode(obj.Service);
-                return (h1 * 397) ^ h2;
-            }
-        }
+        public INamedTypeSymbol SplitedType { get; }
     }
 }

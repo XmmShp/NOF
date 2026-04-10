@@ -16,6 +16,7 @@ using NOF.Sample.Repositories;
 [assembly: MapServiceToHttpEndpoints<INOFSampleService>]
 [assembly: MapServiceToHttpEndpoints<IJwtAuthorityService>]
 [assembly: MapServiceToHttpEndpoints<IJwksService>]
+[assembly: SplitInterfaceService<INOFSampleService, NOFSampleService>]
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
@@ -40,7 +41,6 @@ builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 
-builder.Services.AddSplitInterfaceService<INOFSampleService, NOFSampleService>();
 builder.Services.AddScoped<IConfigNodeChildrenRepository, ConfigNodeChildrenRepository>();
 
 builder.Services.AddAntDesign();

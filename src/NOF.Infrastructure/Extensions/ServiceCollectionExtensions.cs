@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
@@ -41,18 +40,5 @@ public static partial class NOFInfrastructureExtensions
             return services;
         }
 
-        /// <summary>
-        /// Marker method for split-interface RPC service registration.
-        /// The actual registrations are produced by the Infrastructure source generator
-        /// via interceptors, similar to how Hosting intercepts endpoint mapping calls.
-        /// </summary>
-        /// <typeparam name="TService">The RPC service interface</typeparam>
-        /// <typeparam name="TSplitedInterface">The split interface type implementing ISplitedInterface&lt;TService&gt;</typeparam>
-        public IServiceCollection AddSplitInterfaceService<TService, TSplitedInterface>()
-            where TService : class, IRpcService
-            where TSplitedInterface : class, ISplitedInterface<TService>
-        {
-            return services;
-        }
     }
 }
