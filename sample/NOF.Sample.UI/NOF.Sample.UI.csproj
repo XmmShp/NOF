@@ -17,7 +17,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\NOF.UI\NOF.UI.csproj" />
-		<ProjectReference Include="..\..\src\Extensions\NOF.Infrastructure.Extension.Authorization.Jwt\NOF.Infrastructure.Extension.Authorization.Jwt.csproj" />
+		<ProjectReference Include="..\..\src\Extensions\NOF.Contract.Extension.Authorization.Jwt\NOF.Contract.Extension.Authorization.Jwt.csproj" />
 		<ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
 	</ItemGroup>
 
