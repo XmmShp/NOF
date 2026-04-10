@@ -37,4 +37,16 @@ public static class NOFAbstractionConstants
         public static string NormalizeTenantId(string? tenantId)
             => string.IsNullOrWhiteSpace(tenantId) ? HostId : tenantId;
     }
+
+    public static class Transport
+    {
+        public static class Headers
+        {
+            public const string Authorization = "Authorization";
+            public const string TenantId = "NOF.TenantId";
+            public const string TraceId = "NOF.Message.TraceId";
+            public const string SpanId = "NOF.Message.SpanId";
+            public const string MessageId = "NOF.Message.MessageId";
+        }
+    }
 }

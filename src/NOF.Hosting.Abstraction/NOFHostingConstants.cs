@@ -3,6 +3,9 @@ using System.Diagnostics.Metrics;
 
 namespace NOF.Hosting;
 
+/// <summary>
+/// Hosting-related constants used across layers. Placed in Abstraction to avoid cross-layer dependencies.
+/// </summary>
 public static class NOFHostingConstants
 {
     public static class Outbound
@@ -20,24 +23,5 @@ public static class NOFHostingConstants
             public const string TenantId = "outbound.tenant_id";
         }
     }
-
-    public static class Tenant
-    {
-        public const string HostId = "";
-
-        public static string NormalizeTenantId(string? tenantId)
-            => string.IsNullOrWhiteSpace(tenantId) ? HostId : tenantId;
-    }
-
-    public static class Transport
-    {
-        public static class Headers
-        {
-            public const string Authorization = "Authorization";
-            public const string TenantId = "NOF.TenantId";
-            public const string TraceId = "NOF.Message.TraceId";
-            public const string SpanId = "NOF.Message.SpanId";
-            public const string MessageId = "NOF.Message.MessageId";
-        }
-    }
 }
+

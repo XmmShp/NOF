@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics;
 
@@ -20,15 +21,14 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware, IAfter<Excepti
     {
         var tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(_tenantOptions.SingleTenantId);
         if (_tenantOptions.Mode != TenantMode.SingleTenant
-            && _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.TenantId, out var headerTenantId))
+            && _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
             tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(headerTenantId);
         }
 
-        _executionContext.SetTenantId(tenantId);
+        _executionContext.TenantId = tenantId;
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
 
         await next(cancellationToken);
     }
 }
-

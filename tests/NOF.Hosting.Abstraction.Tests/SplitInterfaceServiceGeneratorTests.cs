@@ -18,7 +18,7 @@ public class SplitInterfaceServiceGeneratorTests
         typeof(Result),
         typeof(Result<>),
         typeof(SplitInterfaceServiceAttribute<,>),
-        typeof(Hosting.IExecutionContext),
+        typeof(IExecutionContext),
         typeof(Hosting.IOutboundPipelineExecutor),
         typeof(Hosting.OutboundContext),
         typeof(InboundHandlerInvoker),

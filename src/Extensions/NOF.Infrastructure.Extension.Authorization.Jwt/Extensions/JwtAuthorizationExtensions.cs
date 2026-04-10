@@ -4,7 +4,6 @@ using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
-using HttpJwksClient = NOF.Contract.Extension.Authorization.Jwt.HttpJwksService;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -48,10 +47,10 @@ public static partial class NOFJwtAuthorizationExtensions
 
             builder.AddJwtTokenPropagation();
 
-            builder.Services.AddHttpClient<HttpJwksClient>();
+            builder.Services.AddHttpClient<HttpJwksService>();
             if (builder.Services.All(sd => sd.ServiceType != typeof(IJwksService)))
             {
-                builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksClient>());
+                builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksService>());
             }
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, JwksProvider>();
 #pragma warning disable CS8620
@@ -123,4 +122,3 @@ public static partial class NOFJwtAuthorizationExtensions
     }
 
 }
-

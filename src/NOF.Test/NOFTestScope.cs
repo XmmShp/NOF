@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Hosting;
+using NOF.Infrastructure;
 using System.Security.Claims;
 
 namespace NOF.Test;
@@ -29,7 +29,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        ExecutionContext.SetTenantId(NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId));
+        ExecutionContext.TenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
         return this;
     }
 
@@ -37,7 +37,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     {
         if (traceId is not null && spanId is not null)
         {
-            ExecutionContext.SetTracingInfo(new TracingInfo(traceId, spanId));
+            ExecutionContext.TracingInfo = new TracingInfo(traceId, spanId);
         }
         return this;
     }

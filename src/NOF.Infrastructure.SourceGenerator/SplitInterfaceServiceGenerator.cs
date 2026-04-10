@@ -154,10 +154,10 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         sb.AppendLine($"    internal sealed class {implName} : {serviceFqn}");
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::NOF.Hosting.IOutboundPipelineExecutor _outboundPipeline;");
-        sb.AppendLine("        private readonly global::NOF.Hosting.IExecutionContext _executionContext;");
+        sb.AppendLine("        private readonly global::NOF.Application.IExecutionContext _executionContext;");
         sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
         sb.AppendLine();
-        sb.AppendLine($"        public {implName}(global::NOF.Hosting.IOutboundPipelineExecutor outboundPipeline, global::NOF.Hosting.IExecutionContext executionContext, global::System.IServiceProvider serviceProvider)");
+        sb.AppendLine($"        public {implName}(global::NOF.Hosting.IOutboundPipelineExecutor outboundPipeline, global::NOF.Application.IExecutionContext executionContext, global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(outboundPipeline);");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(executionContext);");

@@ -12,7 +12,6 @@ public static partial class NOFHostingExtensions
             builder.Services.TryAddSingleton<OutboundPipelineTypes>();
             builder.Services.TryAddSingleton<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();
-            builder.Services.TryAddScoped<IExecutionContext, ExecutionContext>();
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
             builder.Services.AddOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddOutboundMiddleware<TracingOutboundMiddleware>();

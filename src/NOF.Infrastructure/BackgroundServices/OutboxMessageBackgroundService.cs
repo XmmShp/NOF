@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Hosting;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -120,7 +119,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, payload.GetType().Name);
-        if (headers.TryGetValue(NOFHostingConstants.Transport.Headers.TenantId, out var tenantId))
+        if (headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var tenantId))
         {
             activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, tenantId);
         }

@@ -1,3 +1,5 @@
+using NOF.Abstraction;
+using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics;
 
@@ -20,15 +22,15 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware, IAfter<Tenant
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
         // Resolve trace/span IDs from headers
-        _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.TraceId, out var traceId);
-        _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.SpanId, out var spanId);
+        _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
+        _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         // Create Activity with resolved tracing context
         using var activity = CreateActivity(context, traceId, spanId);
 
         // Stop propagating inbound header-based tracing once Activity is created
-        _executionContext.Remove(NOFHostingConstants.Transport.Headers.TraceId);
-        _executionContext.Remove(NOFHostingConstants.Transport.Headers.SpanId);
+        _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.TraceId);
+        _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
         var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;

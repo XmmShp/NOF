@@ -1,11 +1,13 @@
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Hosting;
+using NOF.Infrastructure.Extension.Authorization.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using ExecutionContext = NOF.Application.ExecutionContext;
 
 namespace NOF.Contract.Extension.Authorization.Jwt.Tests.HttpClients;
 
@@ -36,14 +38,14 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new Hosting.ExecutionContext
+        var executionContext = new ExecutionContext
         {
             ["X-Tenant"] = "tenant-a",
             ["X-Trace"] = "trace-a"
         };
         var service = new HttpJwksService(httpClient, pipeline, executionContext, new SimpleServiceProvider());
 
-        var result = await service.GetJwksAsync();
+        var result = await service.GetJwksAsync(default);
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
         Assert.Single(result.Value!.Keys, k => k.Kid == "kid-1");
@@ -78,7 +80,7 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new Hosting.ExecutionContext
+        var executionContext = new ExecutionContext
         {
             ["Authorization"] = "Bearer upstream-token"
         };
@@ -95,7 +97,7 @@ public sealed class JwtHttpClientTests
             CustomClaims = new Dictionary<string, string> { ["role"] = "admin" }
         };
 
-        var result = await service.GenerateJwtTokenAsync(request);
+        var result = await service.GenerateJwtTokenAsync(request, default);
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
         Assert.Equal("access-token", result.Value!.TokenPair.AccessToken);
@@ -182,4 +184,3 @@ public sealed class JwtHttpClientTests
         }
     }
 }
-

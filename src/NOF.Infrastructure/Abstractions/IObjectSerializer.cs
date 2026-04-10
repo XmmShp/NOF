@@ -9,16 +9,19 @@ public interface IObjectSerializer
 
 public static class ObjectSerializerExtensions
 {
-    public static T? Deserialize<T>(this IObjectSerializer serializer, ReadOnlyMemory<byte> data)
+    extension(IObjectSerializer serializer)
     {
-        ArgumentNullException.ThrowIfNull(serializer);
-
-        if (data.IsEmpty)
+        public T? Deserialize<T>(ReadOnlyMemory<byte> data)
         {
-            return default;
-        }
+            ArgumentNullException.ThrowIfNull(serializer);
 
-        var obj = serializer.Deserialize(data, typeof(T));
-        return obj is null ? default : (T)obj;
+            if (data.IsEmpty)
+            {
+                return default;
+            }
+
+            var obj = serializer.Deserialize(data, typeof(T));
+            return obj is null ? default : (T)obj;
+        }
     }
 }

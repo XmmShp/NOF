@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using NOF.Contract.Extension.Authorization.Jwt;
+using NOF.Hosting.Extension.Authorization.Jwt;
 using NOF.Hosting.Maui;
 using NOF.Sample.Maui.Services;
 
@@ -21,7 +21,7 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddAntDesign();
         builder.Services.AddScoped<INOFSampleService, HttpNOFSampleService>();
-        builder.Services.AddScoped<IJwtAuthorityService, HttpJwtAuthorityService>();
+        builder.AddJwtTokenPropagation();
         builder.Services.AddScoped(_ => new HttpClient
         {
             BaseAddress = new Uri(builder.Configuration["SampleApiBaseAddress"] ?? "https://localhost:5001/")

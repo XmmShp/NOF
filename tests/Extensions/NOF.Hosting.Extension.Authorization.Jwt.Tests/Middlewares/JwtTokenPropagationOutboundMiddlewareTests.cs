@@ -12,7 +12,6 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithJwtPrincipal_ShouldWriteAuthorizationHeader()
     {
-        var executionContext = new ExecutionContext();
         var userContext = new FakeUserContext();
         userContext.SetUser(new JwtClaimsPrincipal(
             new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "jwt")),
@@ -20,8 +19,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
         var middleware = new JwtTokenPropagationOutboundMiddleware(
             userContext,
-            Options.Create(new JwtTokenPropagationOptions()),
-            executionContext);
+            Options.Create(new JwtTokenPropagationOptions()));
 
         var called = false;
         var outboundContext = CreateOutboundContext();
@@ -30,30 +28,26 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             called = true;
             return ValueTask.CompletedTask;
         }, default);
-        Assert.True(
-
-        called);
+        Assert.True(called);
         Assert.Equal("Bearer jwt-token",
-        executionContext[NOFHostingConstants.Transport.Headers.Authorization]);
+        outboundContext.Headers[NOFAbstractionConstants.Transport.Headers.Authorization]);
     }
 
     [Fact]
     public async Task InvokeAsync_WithNonJwtPrincipal_ShouldNotWriteAuthorizationHeader()
     {
-        var executionContext = new ExecutionContext();
         var userContext = new FakeUserContext();
         userContext.SetUser(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom")));
 
         var middleware = new JwtTokenPropagationOutboundMiddleware(
             userContext,
-            Options.Create(new JwtTokenPropagationOptions()),
-            executionContext);
+            Options.Create(new JwtTokenPropagationOptions()));
 
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
         Assert.False(
 
-        executionContext.ContainsKey(NOFHostingConstants.Transport.Headers.Authorization));
+        outboundContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
     }
 
     [Fact]

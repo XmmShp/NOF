@@ -1,3 +1,4 @@
+using NOF.Application;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -29,4 +30,3 @@ public sealed class ExecutionContextHeadersOutboundMiddleware : IOutboundMiddlew
         return next(cancellationToken);
     }
 }
-

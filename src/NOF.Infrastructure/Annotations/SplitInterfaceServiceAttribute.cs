@@ -4,8 +4,8 @@ namespace NOF.Infrastructure;
 /// Declares a split-interface RPC service registration on the entry assembly.
 /// The Infrastructure source generator consumes this attribute and emits:
 /// 1. the composed RPC service implementation,
-/// 2. request handler registrations into <see cref="NOF.Application.RequestHandlerRegistry"/>,
-/// 3. the service registration into <see cref="NOF.Annotation.AutoInjectRegistry"/>.
+/// 2. request handler registrations into <see cref="Application.RequestHandlerRegistry"/>,
+/// 3. the service registration into <see cref="Annotation.AutoInjectRegistry"/>.
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
 public sealed class SplitInterfaceServiceAttribute<TService, TSplitedInterface> : Attribute

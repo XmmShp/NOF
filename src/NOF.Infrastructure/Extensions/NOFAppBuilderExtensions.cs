@@ -32,6 +32,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IInboundPipelineExecutor, InboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
+            builder.Services.TryAddScoped<IExecutionContext, NOF.Application.ExecutionContext>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();

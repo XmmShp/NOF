@@ -115,6 +115,39 @@ public class RpcServiceClientGeneratorTests
         Assert.Contains("body[\"Email\"] = request.Email", code);
         Assert.DoesNotContain("body[\"Id\"]", code);
     }
+
+    [Fact]
+    public void MethodWithoutRequestParam_ShouldNotGenerateMessageVariable()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Hosting;
+                              using System.Threading;
+                              using System.Threading.Tasks;
+
+                              namespace MyApp
+                              {
+                                  public record MyData(string Value);
+
+                                  public partial interface IMyService : IRpcService
+                                  {
+                                      [HttpEndpoint(HttpVerb.Get, "/api/data")]
+                                      Task<Result<MyData>> GetDataAsync(CancellationToken cancellationToken = default);
+                                  }
+
+                                  [HttpServiceClient<IMyService>]
+                                  public partial class MyServiceClient;
+                              }
+                              """;
+
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
+        Assert.Single(runResult.GeneratedTrees);
+
+        var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+        Assert.DoesNotContain("var message = null", code);
+        Assert.Contains("Message = null,", code);
+        Assert.Contains("GetDataAsync", code);
+    }
 }
 
 

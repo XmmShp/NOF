@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using System.IdentityModel.Tokens.Jwt;

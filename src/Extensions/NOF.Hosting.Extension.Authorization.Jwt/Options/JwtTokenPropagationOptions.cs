@@ -1,3 +1,5 @@
+using NOF.Abstraction;
+
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
 /// <summary>
@@ -9,7 +11,7 @@ public class JwtTokenPropagationOptions
     /// Gets or sets the header name used to propagate the authorization token.
     /// Default is "Authorization".
     /// </summary>
-    public string HeaderName { get; set; } = NOFHostingConstants.Transport.Headers.Authorization;
+    public string HeaderName { get; set; } = NOFAbstractionConstants.Transport.Headers.Authorization;
 
     /// <summary>
     /// Gets or sets the token type prefix (e.g., "Bearer").

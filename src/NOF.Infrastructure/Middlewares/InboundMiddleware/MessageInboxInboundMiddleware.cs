@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
@@ -34,7 +35,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
 
         try
         {
-            _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.MessageId, out var messageIdStr);
+            _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
             var messageExists = await _inboxMessageRepository.FindAsync(messageId, cancellationToken) is not null;
             if (messageExists)
@@ -53,7 +54,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
             _inboxMessageRepository.Add(inboxMessage);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _executionContext.Remove(NOFHostingConstants.Transport.Headers.MessageId);
+            _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.MessageId);
 
             await next(cancellationToken);
 
