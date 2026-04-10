@@ -15,7 +15,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksProvider = new FakeJwksProvider([]);
-        var executionContext = new NOF.Hosting.ExecutionContext();
+        var executionContext = new Hosting.ExecutionContext();
         var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
 
         var nextCalled = false;
@@ -38,7 +38,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksProvider = new FakeJwksProvider([]);
-        var executionContext = new NOF.Hosting.ExecutionContext
+        var executionContext = new Hosting.ExecutionContext
         {
             [NOFHostingConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
         };
@@ -73,7 +73,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             N = "abc",
             E = "AQAB"
         }]);
-        var executionContext = new NOF.Hosting.ExecutionContext
+        var executionContext = new Hosting.ExecutionContext
         {
             [NOFHostingConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
         };
@@ -96,7 +96,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     private static JwtResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
         IJwksProvider jwksProvider,
-        NOF.Hosting.IExecutionContext executionContext)
+        IExecutionContext executionContext)
     {
         return new JwtResourceServerInboundMiddleware(
             userContext,

@@ -1,5 +1,7 @@
 namespace NOF.Application;
 
+public delegate object MapFunc(object source, IMapper mapper);
+
 /// <summary>
 /// Maps an object of one type to another.
 /// All mappings must be explicitly registered — no built-in or implicit mappings are provided.

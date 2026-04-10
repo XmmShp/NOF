@@ -11,7 +11,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_SingleTenantMode_ShouldIgnoreIncomingTenantHeader()
     {
-        var executionContext = new NOF.Hosting.ExecutionContext
+        var executionContext = new Hosting.ExecutionContext
         {
             [NOFHostingConstants.Transport.Headers.TenantId] = "tenant-a"
         };
@@ -32,7 +32,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_SharedDatabaseMode_ShouldUseIncomingTenantHeader()
     {
-        var executionContext = new NOF.Hosting.ExecutionContext
+        var executionContext = new Hosting.ExecutionContext
         {
             [NOFHostingConstants.Transport.Headers.TenantId] = "tenant-a"
         };
