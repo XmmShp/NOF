@@ -55,10 +55,12 @@
     <Project Path="src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/NOF.Abstraction.Tests/NOF.Abstraction.Tests.csproj" />
     <Project Path="tests/NOF.Contract.Tests/NOF.Contract.Tests.csproj" Id="a4d4d1a7-24e1-4c7e-a368-8db0063b737a" />
     <Project Path="tests/NOF.Application.Tests/NOF.Application.Tests.csproj" />
     <Project Path="tests/NOF.Domain.Tests/NOF.Domain.Tests.csproj" />
     <Project Path="tests/NOF.Hosting.Abstraction.Tests/NOF.Hosting.Abstraction.Tests.csproj" />
+    <Project Path="tests/NOF.Hosting.AspNetCore.Tests/NOF.Hosting.AspNetCore.Tests.csproj" />
     <Project Path="tests/NOF.Infrastructure.Tests/NOF.Infrastructure.Tests.csproj" />
     <Project Path="tests/NOF.Test.Tests/NOF.Test.Tests.csproj" />
   </Folder>

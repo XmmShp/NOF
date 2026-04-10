@@ -1,5 +1,7 @@
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
+using NOF.Contract;
+using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Infrastructure.Extension.Authorization.Jwt;
 using System.Net;
@@ -7,9 +9,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Xunit;
-using ExecutionContext = NOF.Application.ExecutionContext;
 
-namespace NOF.Contract.Extension.Authorization.Jwt.Tests.HttpClients;
+namespace NOF.Hosting.Extension.Authorization.Jwt.Tests.HttpClients;
 
 public sealed class JwtHttpClientTests
 {
@@ -38,12 +39,7 @@ public sealed class JwtHttpClientTests
         };
 
         var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new ExecutionContext
-        {
-            ["X-Tenant"] = "tenant-a",
-            ["X-Trace"] = "trace-a"
-        };
-        var service = new HttpJwksService(httpClient, pipeline, executionContext, new SimpleServiceProvider());
+        var service = new HttpJwksService(httpClient, pipeline, new SimpleServiceProvider());
 
         var result = await service.GetJwksAsync(default);
         Assert.True(result.IsSuccess);
@@ -79,12 +75,11 @@ public sealed class JwtHttpClientTests
             BaseAddress = new Uri("https://auth.local")
         };
 
-        var pipeline = new CapturingOutboundPipelineExecutor();
-        var executionContext = new ExecutionContext
+        var pipeline = new CapturingOutboundPipelineExecutor(new Dictionary<string, string?>
         {
             ["Authorization"] = "Bearer upstream-token"
-        };
-        var service = new HttpJwtAuthorityService(httpClient, pipeline, executionContext, new SimpleServiceProvider());
+        });
+        var service = new HttpJwtAuthorityService(httpClient, pipeline, new SimpleServiceProvider());
 
         var request = new GenerateJwtTokenRequest
         {
@@ -116,15 +111,6 @@ public sealed class JwtHttpClientTests
         Assert.IsType<Result<GenerateJwtTokenResponse>>(pipeline.LastContext.Response, exactMatch: true);
     }
 
-    [Fact]
-    public void JwtAuthorizationEndpoints_ShouldMatchWellKnownRoutes()
-    {
-        Assert.Equal("/.well-known/jwks.json", JwtAuthorizationEndpoints.Jwks);
-        Assert.Equal("/connect/token", JwtAuthorizationEndpoints.Token);
-        Assert.Equal("/connect/introspect", JwtAuthorizationEndpoints.Introspect);
-        Assert.Equal("/connect/revocation", JwtAuthorizationEndpoints.Revocation);
-    }
-
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)
     {
         return new HttpResponseMessage(HttpStatusCode.OK)
@@ -138,10 +124,31 @@ public sealed class JwtHttpClientTests
 
     private sealed class CapturingOutboundPipelineExecutor : IOutboundPipelineExecutor
     {
+        private readonly IReadOnlyDictionary<string, string?> _headers;
+
+        public CapturingOutboundPipelineExecutor()
+            : this(new Dictionary<string, string?>
+            {
+                ["X-Tenant"] = "tenant-a",
+                ["X-Trace"] = "trace-a"
+            })
+        {
+        }
+
+        public CapturingOutboundPipelineExecutor(IReadOnlyDictionary<string, string?> headers)
+        {
+            _headers = headers;
+        }
+
         public OutboundContext? LastContext { get; private set; }
 
         public async ValueTask ExecuteAsync(OutboundContext context, OutboundDelegate dispatch, CancellationToken cancellationToken)
         {
+            foreach (var (key, value) in _headers)
+            {
+                context.Headers[key] = value;
+            }
+
             LastContext = context;
             await dispatch(cancellationToken);
         }

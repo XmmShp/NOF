@@ -18,18 +18,15 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Moq" />  </ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http" />
+  </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SQLite\NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.Memory\NOF.Infrastructure.Memory.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
+    <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore.SourceGenerator\NOF.Hosting.AspNetCore.SourceGenerator.csproj" />
     <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Abstraction\NOF.Abstraction.csproj" />
   </ItemGroup>
 
   <ItemGroup>

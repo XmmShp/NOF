@@ -20,9 +20,8 @@
     </PackageReference>  </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\NOF.Abstraction\NOF.Abstraction.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract.SourceGenerator\NOF.Contract.SourceGenerator.csproj" />
   </ItemGroup>
 

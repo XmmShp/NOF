@@ -12,24 +12,18 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Moq" />  </ItemGroup>
+  </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SQLite\NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.Memory\NOF.Infrastructure.Memory.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
-    <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Abstraction\NOF.Abstraction.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Abstraction.SourceGenerator\NOF.Abstraction.SourceGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>
