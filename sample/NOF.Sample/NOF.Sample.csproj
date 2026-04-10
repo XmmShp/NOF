@@ -6,7 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
         <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
-        <InterceptorsNamespaces>$(InterceptorsNamespaces);NOF.Hosting.AspNetCore.Generated;NOF.Infrastructure.Generated</InterceptorsNamespaces>
+        <InterceptorsNamespaces>$(InterceptorsNamespaces);NOF.Infrastructure.Generated</InterceptorsNamespaces>
     </PropertyGroup>
 
     <ItemGroup>

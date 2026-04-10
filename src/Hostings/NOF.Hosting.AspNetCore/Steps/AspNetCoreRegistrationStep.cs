@@ -36,6 +36,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
             ));
 
         builder.AddInitializationStep(new HealthCheckInitializationStep());
+        builder.AddInitializationStep(new RpcServiceEndpointInitializationStep());
 
         return ValueTask.CompletedTask;
     }
@@ -56,5 +57,17 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
             return Task.CompletedTask;
         }
     }
-}
 
+    private class RpcServiceEndpointInitializationStep : IEndpointInitializationStep
+    {
+        public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+        {
+            if (app is IEndpointRouteBuilder endpointRouteBuilder)
+            {
+                RpcServiceEndpointRegistry.MapAll(endpointRouteBuilder);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+}

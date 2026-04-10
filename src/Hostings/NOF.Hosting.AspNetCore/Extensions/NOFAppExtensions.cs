@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Abstraction;
-using NOF.Contract;
 using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
@@ -59,12 +57,4 @@ public static class NOFHostingAspNetCoreExtensions
         }
     }
 
-    extension(WebApplication app)
-    {
-        public WebApplication MapServiceToHttpEndpoints<TService>(string prefix = "")
-            where TService : IRpcService
-        {
-            return app;
-        }
-    }
 }

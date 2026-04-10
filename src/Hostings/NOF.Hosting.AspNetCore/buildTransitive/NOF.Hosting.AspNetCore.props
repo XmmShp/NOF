@@ -1,5 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <InterceptorsNamespaces>$(InterceptorsNamespaces);NOF.Hosting.AspNetCore.Generated</InterceptorsNamespaces>
-  </PropertyGroup>
-</Project>

@@ -13,6 +13,10 @@ using NOF.Sample.Application;
 using NOF.Sample.Application.Repositories;
 using NOF.Sample.Repositories;
 
+[assembly: MapServiceToHttpEndpoints<INOFSampleService>]
+[assembly: MapServiceToHttpEndpoints<IJwtAuthorityService>]
+[assembly: MapServiceToHttpEndpoints<IJwksService>]
+
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
@@ -70,9 +74,5 @@ app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(
         typeof(NOF.Sample.UI.Components.Routes).Assembly,
         typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
-
-app.MapServiceToHttpEndpoints<INOFSampleService>();
-app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
-app.MapServiceToHttpEndpoints<IJwksService>();
 
 await app.RunAsync();

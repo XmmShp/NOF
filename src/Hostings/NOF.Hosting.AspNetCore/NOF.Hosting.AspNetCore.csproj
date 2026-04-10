@@ -24,7 +24,6 @@
 		<ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
 
 		<None Include="..\NOF.Hosting.AspNetCore.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Hosting.AspNetCore.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-		<None Include="buildTransitive\NOF.Hosting.AspNetCore.props" Pack="true" PackagePath="buildTransitive/NOF.Hosting.AspNetCore.props" Visible="false" />
 	</ItemGroup>
 
 </Project>
