@@ -40,10 +40,12 @@ public sealed class CommandSender : ICommandSender
     public void DeferSend(ICommand command)
     {
         var currentActivity = Activity.Current;
-        var headers = new Dictionary<string, string?>();
-        foreach (var (k, v) in _executionContext)
+        // Persist the ambient execution context snapshot only; do not run outbound pipeline here.
+        // Snapshot happens implicitly via ExecutionContextHeadersOutboundMiddleware at send time.
+        var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in _executionContext)
         {
-            headers[k] = v;
+            headers[kvp.Key] = kvp.Value;
         }
 
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
@@ -70,7 +72,7 @@ public sealed class CommandSender : ICommandSender
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, _executionContext, ct);
+            await _rider.SendAsync(command, context.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 }

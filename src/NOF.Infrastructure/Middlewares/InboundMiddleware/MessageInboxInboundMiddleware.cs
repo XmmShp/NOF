@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 
@@ -41,6 +42,8 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
                 var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName ?? "<null>";
                 _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, messageName);
 
+                // Short-circuit with an explicit failure result so upstream callers can handle gracefully.
+                context.Response = Result.Fail("409", "Duplicate message detected by inbox deduplication.");
                 await transaction.RollbackAsync(cancellationToken);
                 return;
             }

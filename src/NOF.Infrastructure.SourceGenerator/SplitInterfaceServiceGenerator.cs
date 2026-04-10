@@ -168,78 +168,82 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
 
-        // helper: request + result
-        sb.AppendLine("        private async global::System.Threading.Tasks.Task<TResult> ExecuteRpcAsync<TRequest, TResult>(");
+        // helper set 1: request + Result
+        sb.AppendLine("        private async global::System.Threading.Tasks.Task<global::NOF.Contract.Result> ExecuteRpcAsync_Request_Result<TRequest>(");
         sb.AppendLine("            TRequest request,");
         sb.AppendLine("            global::System.Reflection.MethodInfo methodInfo,");
         sb.AppendLine("            global::System.Type handlerType,");
-        sb.AppendLine("            global::System.Func<global::System.IServiceProvider, TRequest, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<TResult>> terminal,");
+        sb.AppendLine("            global::System.Func<global::System.IServiceProvider, TRequest, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<global::NOF.Contract.Result>> terminal,");
         sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.OutboundContext");
-        sb.AppendLine("            {");
-        sb.AppendLine("                Message = request,");
-        sb.AppendLine("                Services = _serviceProvider");
-        sb.AppendLine("            };");
-        sb.AppendLine();
-        sb.AppendLine("            TResult? result = default;");
-        sb.AppendLine();
+        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.OutboundContext { Message = request, Services = _serviceProvider };");
         sb.AppendLine("            await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>");
         sb.AppendLine("            {");
         sb.AppendLine("                await global::NOF.Infrastructure.InboundHandlerInvoker.ExecuteRpcAsync(");
-        sb.AppendLine("                    _serviceProvider,");
-        sb.AppendLine("                    request,");
-        sb.AppendLine("                    methodInfo,");
-        sb.AppendLine("                    _executionContext,");
-        sb.AppendLine("                    context =>");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        context.Metadatas[\"HandlerType\"] = handlerType;");
-        sb.AppendLine("                    },");
-        sb.AppendLine("                    async (sp, ct2) =>");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        result = await terminal(sp, request, ct2).ConfigureAwait(false);");
-        sb.AppendLine("                    },");
+        sb.AppendLine("                    _serviceProvider, request, methodInfo, outboundContext.Headers,");
+        sb.AppendLine("                    context => { context.Metadatas[\"HandlerType\"] = handlerType; },");
+        sb.AppendLine("                    async (sp, ct2) => { outboundContext.Response = await terminal(sp, request, ct2).ConfigureAwait(false); },");
         sb.AppendLine("                    ct).ConfigureAwait(false);");
         sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");
-        sb.AppendLine();
-        sb.AppendLine("            return result!;");
+        sb.AppendLine("            return global::NOF.Contract.Result.From((global::NOF.Contract.IResult)outboundContext.Response!);");
         sb.AppendLine("        }");
         sb.AppendLine();
-
-        // helper: no request
-        sb.AppendLine("        private async global::System.Threading.Tasks.Task<TResult> ExecuteRpcAsync<TResult>(");
+        // helper set 2: request + Result<T>
+        sb.AppendLine("        private async global::System.Threading.Tasks.Task<global::NOF.Contract.Result<TValue>> ExecuteRpcAsync_Request_ResultOfT<TRequest, TValue>(");
+        sb.AppendLine("            TRequest request,");
         sb.AppendLine("            global::System.Reflection.MethodInfo methodInfo,");
         sb.AppendLine("            global::System.Type handlerType,");
-        sb.AppendLine("            global::System.Func<global::System.IServiceProvider, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<TResult>> terminal,");
+        sb.AppendLine("            global::System.Func<global::System.IServiceProvider, TRequest, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<global::NOF.Contract.Result<TValue>>> terminal,");
         sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.OutboundContext");
-        sb.AppendLine("            {");
-        sb.AppendLine("                Message = null,");
-        sb.AppendLine("                Services = _serviceProvider");
-        sb.AppendLine("            };");
-        sb.AppendLine();
-        sb.AppendLine("            TResult? result = default;");
-        sb.AppendLine();
+        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.OutboundContext { Message = request, Services = _serviceProvider };");
         sb.AppendLine("            await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>");
         sb.AppendLine("            {");
         sb.AppendLine("                await global::NOF.Infrastructure.InboundHandlerInvoker.ExecuteRpcAsync(");
-        sb.AppendLine("                    _serviceProvider,");
-        sb.AppendLine("                    null,");
-        sb.AppendLine("                    methodInfo,");
-        sb.AppendLine("                    _executionContext,");
-        sb.AppendLine("                    context =>");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        context.Metadatas[\"HandlerType\"] = handlerType;");
-        sb.AppendLine("                    },");
-        sb.AppendLine("                    async (sp, ct2) =>");
-        sb.AppendLine("                    {");
-        sb.AppendLine("                        result = await terminal(sp, ct2).ConfigureAwait(false);");
-        sb.AppendLine("                    },");
+        sb.AppendLine("                    _serviceProvider, request, methodInfo, outboundContext.Headers,");
+        sb.AppendLine("                    context => { context.Metadatas[\"HandlerType\"] = handlerType; },");
+        sb.AppendLine("                    async (sp, ct2) => { outboundContext.Response = await terminal(sp, request, ct2).ConfigureAwait(false); },");
         sb.AppendLine("                    ct).ConfigureAwait(false);");
         sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("            return global::NOF.Contract.Result.From<TValue>((global::NOF.Contract.IResult)outboundContext.Response!);");
+        sb.AppendLine("        }");
         sb.AppendLine();
-        sb.AppendLine("            return result!;");
+        // helper set 3: no request + Result
+        sb.AppendLine("        private async global::System.Threading.Tasks.Task<global::NOF.Contract.Result> ExecuteRpcAsync_Result(");
+        sb.AppendLine("            global::System.Reflection.MethodInfo methodInfo,");
+        sb.AppendLine("            global::System.Type handlerType,");
+        sb.AppendLine("            global::System.Func<global::System.IServiceProvider, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<global::NOF.Contract.Result>> terminal,");
+        sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.OutboundContext { Message = null, Services = _serviceProvider };");
+        sb.AppendLine("            await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>");
+        sb.AppendLine("            {");
+        sb.AppendLine("                await global::NOF.Infrastructure.InboundHandlerInvoker.ExecuteRpcAsync(");
+        sb.AppendLine("                    _serviceProvider, null, methodInfo, outboundContext.Headers,");
+        sb.AppendLine("                    context => { context.Metadatas[\"HandlerType\"] = handlerType; },");
+        sb.AppendLine("                    async (sp, ct2) => { outboundContext.Response = await terminal(sp, ct2).ConfigureAwait(false); },");
+        sb.AppendLine("                    ct).ConfigureAwait(false);");
+        sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("            return global::NOF.Contract.Result.From((global::NOF.Contract.IResult)outboundContext.Response!);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        // helper set 4: no request + Result<T>
+        sb.AppendLine("        private async global::System.Threading.Tasks.Task<global::NOF.Contract.Result<TValue>> ExecuteRpcAsync_ResultOfT<TValue>(");
+        sb.AppendLine("            global::System.Reflection.MethodInfo methodInfo,");
+        sb.AppendLine("            global::System.Type handlerType,");
+        sb.AppendLine("            global::System.Func<global::System.IServiceProvider, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<global::NOF.Contract.Result<TValue>>> terminal,");
+        sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.OutboundContext { Message = null, Services = _serviceProvider };");
+        sb.AppendLine("            await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>");
+        sb.AppendLine("            {");
+        sb.AppendLine("                await global::NOF.Infrastructure.InboundHandlerInvoker.ExecuteRpcAsync(");
+        sb.AppendLine("                    _serviceProvider, null, methodInfo, outboundContext.Headers,");
+        sb.AppendLine("                    context => { context.Metadatas[\"HandlerType\"] = handlerType; },");
+        sb.AppendLine("                    async (sp, ct2) => { outboundContext.Response = await terminal(sp, ct2).ConfigureAwait(false); },");
+        sb.AppendLine("                    ct).ConfigureAwait(false);");
+        sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("            return global::NOF.Contract.Result.From<TValue>((global::NOF.Contract.IResult)outboundContext.Response!);");
         sb.AppendLine("        }");
         sb.AppendLine();
 
@@ -328,64 +332,128 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         sb.AppendLine("            }");
         sb.AppendLine();
 
+        var isGenericResult = resultType is INamedTypeSymbol { IsGenericType: true } named && named.OriginalDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::NOF.Contract.Result<T>";
         if (requestParam is not null)
         {
             var requestType = requestParam.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var requestName = requestParam.Name;
 
-            sb.AppendLine($"            return ExecuteRpcAsync<{requestType}, {resultTypeFqn}>(");
-            sb.AppendLine($"                {requestName},");
-            sb.AppendLine("                methodInfo,");
-            sb.AppendLine("                handlerType,");
-            sb.AppendLine("                (sp, request, ct) =>");
-            sb.AppendLine("                {");
-            sb.AppendLine($"                    var handler = sp.GetRequiredService<{handlerTypeFqn}>();");
-
-            var callArgs = new List<string>();
-            foreach (var p in method.Parameters)
+            if (isGenericResult)
             {
-                if (p.Equals(requestParam, SymbolEqualityComparer.Default))
+                var valueTypeFqn = ((INamedTypeSymbol)resultType).TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"            return ExecuteRpcAsync_Request_ResultOfT<{requestType}, {valueTypeFqn}>(");
+                sb.AppendLine($"                {requestName},");
+                sb.AppendLine("                methodInfo,");
+                sb.AppendLine("                handlerType,");
+                sb.AppendLine("                (sp, request, ct) =>");
+                sb.AppendLine("                {");
+                sb.AppendLine($"                    var handler = sp.GetRequiredService<{handlerTypeFqn}>();");
+
+                var callArgs = new List<string>();
+                foreach (var p in method.Parameters)
                 {
-                    callArgs.Add("request");
+                    if (p.Equals(requestParam, SymbolEqualityComparer.Default))
+                    {
+                        callArgs.Add("request");
+                    }
+                    else if (p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Threading.CancellationToken")
+                    {
+                        callArgs.Add("ct");
+                    }
+                    else
+                    {
+                        // Additional parameters are captured from the outer scope.
+                        callArgs.Add(p.Name);
+                    }
                 }
-                else if (p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Threading.CancellationToken")
-                {
-                    callArgs.Add("ct");
-                }
-                else
-                {
-                    // Additional parameters are captured from the outer scope.
-                    callArgs.Add(p.Name);
-                }
+                sb.AppendLine($"                    return handler.{methodName}({string.Join(", ", callArgs)});");
+                sb.AppendLine("                },");
+                sb.AppendLine($"                {cancellationTokenArg});");
             }
-            sb.AppendLine($"                    return handler.{methodName}({string.Join(", ", callArgs)});");
-            sb.AppendLine("                },");
-            sb.AppendLine($"                {cancellationTokenArg});");
+            else
+            {
+                sb.AppendLine($"            return ExecuteRpcAsync_Request_Result<{requestType}>(");
+                sb.AppendLine($"                {requestName},");
+                sb.AppendLine("                methodInfo,");
+                sb.AppendLine("                handlerType,");
+                sb.AppendLine("                (sp, request, ct) =>");
+                sb.AppendLine("                {");
+                sb.AppendLine($"                    var handler = sp.GetRequiredService<{handlerTypeFqn}>();");
+
+                var callArgs = new List<string>();
+                foreach (var p in method.Parameters)
+                {
+                    if (p.Equals(requestParam, SymbolEqualityComparer.Default))
+                    {
+                        callArgs.Add("request");
+                    }
+                    else if (p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Threading.CancellationToken")
+                    {
+                        callArgs.Add("ct");
+                    }
+                    else
+                    {
+                        callArgs.Add(p.Name);
+                    }
+                }
+                sb.AppendLine($"                    return handler.{methodName}({string.Join(", ", callArgs)});");
+                sb.AppendLine("                },");
+                sb.AppendLine($"                {cancellationTokenArg});");
+            }
         }
         else
         {
-            sb.AppendLine($"            return ExecuteRpcAsync<{resultTypeFqn}>(");
-            sb.AppendLine("                methodInfo,");
-            sb.AppendLine("                handlerType,");
-            sb.AppendLine("                (sp, ct) =>");
-            sb.AppendLine("                {");
-            sb.AppendLine($"                    var handler = sp.GetRequiredService<{handlerTypeFqn}>();");
-
-            var callArgs = new List<string>();
-            foreach (var p in method.Parameters)
+            if (isGenericResult)
             {
-                if (p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Threading.CancellationToken")
+                var valueTypeFqn = ((INamedTypeSymbol)resultType).TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"            return ExecuteRpcAsync_ResultOfT<{valueTypeFqn}>(");
+                sb.AppendLine("                methodInfo,");
+                sb.AppendLine("                handlerType,");
+                sb.AppendLine("                (sp, ct) =>");
+                sb.AppendLine("                {");
+                sb.AppendLine($"                    var handler = sp.GetRequiredService<{handlerTypeFqn}>();");
+
+                var callArgs = new List<string>();
+                foreach (var p in method.Parameters)
                 {
-                    callArgs.Add("ct");
+                    if (p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Threading.CancellationToken")
+                    {
+                        callArgs.Add("ct");
+                    }
+                    else
+                    {
+                        callArgs.Add(p.Name);
+                    }
                 }
-                else
-                {
-                    callArgs.Add(p.Name);
-                }
+                sb.AppendLine($"                    return handler.{methodName}({string.Join(", ", callArgs)});");
+                sb.AppendLine("                },");
+                sb.AppendLine($"                {cancellationTokenArg});");
             }
-            sb.AppendLine($"                    return handler.{methodName}({string.Join(", ", callArgs)});");
-            sb.AppendLine("                },");
-            sb.AppendLine($"                {cancellationTokenArg});");
+            else
+            {
+                sb.AppendLine($"            return ExecuteRpcAsync_Result(");
+                sb.AppendLine("                methodInfo,");
+                sb.AppendLine("                handlerType,");
+                sb.AppendLine("                (sp, ct) =>");
+                sb.AppendLine("                {");
+                sb.AppendLine($"                    var handler = sp.GetRequiredService<{handlerTypeFqn}>();");
+
+                var callArgs = new List<string>();
+                foreach (var p in method.Parameters)
+                {
+                    if (p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Threading.CancellationToken")
+                    {
+                        callArgs.Add("ct");
+                    }
+                    else
+                    {
+                        callArgs.Add(p.Name);
+                    }
+                }
+                sb.AppendLine($"                    return handler.{methodName}({string.Join(", ", callArgs)});");
+                sb.AppendLine("                },");
+                sb.AppendLine($"                {cancellationTokenArg});");
+            }
         }
 
         sb.AppendLine("        }");

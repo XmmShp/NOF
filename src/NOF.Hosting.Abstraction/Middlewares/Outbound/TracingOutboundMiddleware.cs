@@ -4,13 +4,6 @@ namespace NOF.Hosting;
 
 public sealed class TracingOutboundMiddleware : IOutboundMiddleware
 {
-    private readonly IExecutionContext _executionContext;
-
-    public TracingOutboundMiddleware(IExecutionContext executionContext)
-    {
-        _executionContext = executionContext;
-    }
-
     public async ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
     {
         var messageTypeFullName = context.Message?.GetType().FullName ?? "<null>";
@@ -19,17 +12,18 @@ public sealed class TracingOutboundMiddleware : IOutboundMiddleware
             ActivityKind.Producer);
 
         var currentActivity = Activity.Current;
-        _executionContext[NOFHostingConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
-        _executionContext[NOFHostingConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+        context.Headers[NOFHostingConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
+        context.Headers[NOFHostingConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
 
         try
         {
             await next(cancellationToken);
 
-            _executionContext.TryGetValue(NOFHostingConstants.Transport.Headers.MessageId, out var messageId);
+            context.Headers.TryGetValue(NOFHostingConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.Message?.GetType().Name);
-            activity?.SetTag(NOFHostingConstants.Outbound.Tags.TenantId, _executionContext.TenantId);
+            context.Headers.TryGetValue(NOFHostingConstants.Transport.Headers.TenantId, out var tenantId);
+            activity?.SetTag(NOFHostingConstants.Outbound.Tags.TenantId, tenantId);
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (Exception ex)

@@ -20,8 +20,13 @@ public sealed class OutboundContext
     public required IServiceProvider Services { get; init; }
 
     /// <summary>
+    /// 独立于执行上下文的出站头集合。中间件可将需要跨进程/跨协议传播的键值写入此处。
+    /// 这些值不会反向污染当前的 <see cref="IExecutionContext"/>。
+    /// </summary>
+    public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// 响应结果，可能由 Rider 或短路的中间件设置。
     /// </summary>
     public IResult? Response { get; set; }
 }
-

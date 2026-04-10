@@ -40,6 +40,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddHostedService<OutboxMessageBackgroundService>();
             builder.Services.AddOptions<OutboxOptions>();
 
+            builder.Services.AddOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
             builder.Services.AddInboundMiddleware<ExceptionInboundMiddleware>();
             builder.Services.AddInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddInboundMiddleware<AuthorizationInboundMiddleware>();

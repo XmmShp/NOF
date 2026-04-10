@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
@@ -17,8 +18,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly OutboxOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
-    private readonly ICommandRider _commandRider;
-    private readonly INotificationRider _notificationRider;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
@@ -30,8 +29,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         _options = options.Value;
         _logger = logger;
         _objectSerializer = objectSerializer;
-        _commandRider = serviceProvider.GetRequiredService<ICommandRider>();
-        _notificationRider = serviceProvider.GetRequiredService<INotificationRider>();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -64,6 +61,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+        var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
+        var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
 
         try
         {
@@ -76,7 +75,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
 
             _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
-            await ProcessMessagesBatch(pendingMessages, repository, _commandRider, _notificationRider, cancellationToken);
+            await ProcessMessagesBatch(scope.ServiceProvider, pendingMessages, repository, commandSender, notificationPublisher, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -85,10 +84,11 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     }
 
     private async Task ProcessSingleMessageAsync(
+        IServiceProvider scopedServiceProvider,
         NOFOutboxMessage message,
         IOutboxMessageRepository repository,
-        ICommandRider commandRider,
-        INotificationRider notificationRider,
+        ICommandSender commandSender,
+        INotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)
     {
         if (message.RetryCount >= _options.MaxRetryCount)
@@ -108,10 +108,15 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             ? new Dictionary<string, string?>()
             : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
 
-        // Add additional headers
-        headers[NOFHostingConstants.Transport.Headers.MessageId] = message.Id.ToString();
-        headers[NOFHostingConstants.Transport.Headers.SpanId] = activity?.SpanId.ToString();
-        headers[NOFHostingConstants.Transport.Headers.TraceId] = activity?.TraceId.ToString();
+        // Restore the ambient execution context for downstream components that rely on it.
+        // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
+        // and restore it when actually dispatching the outbox message.
+        var executionContext = scopedServiceProvider.GetRequiredService<IExecutionContext>();
+        executionContext.Clear();
+        foreach (var kvp in headers)
+        {
+            executionContext[kvp.Key] = kvp.Value;
+        }
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, payload.GetType().Name);
@@ -124,14 +129,14 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             if (payload is ICommand command)
             {
-                await commandRider.SendAsync(command, headers, cancellationToken);
-                _logger.LogDebug("Sent command {MessageId} of type {Type} (retry {Retry})",
+                await commandSender.SendAsync(command, cancellationToken);
+                _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
                     message.Id, command.GetType().Name, message.RetryCount);
             }
             else if (payload is INotification notification)
             {
-                await notificationRider.PublishAsync(notification, headers, cancellationToken);
-                _logger.LogDebug("Published notification {MessageId} of type {Type} (retry {Retry})",
+                await notificationPublisher.PublishAsync(notification, cancellationToken);
+                _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
                     message.Id, notification.GetType().Name, message.RetryCount);
             }
             else
@@ -173,10 +178,11 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     }
 
     private async Task ProcessMessagesBatch(
+        IServiceProvider scopedServiceProvider,
         IReadOnlyCollection<NOFOutboxMessage> pendingMessages,
         IOutboxMessageRepository repository,
-        ICommandRider commandRider,
-        INotificationRider notificationRider,
+        ICommandSender commandSender,
+        INotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)
     {
         var succeededIds = new List<Guid>(pendingMessages.Count);
@@ -186,7 +192,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleMessageAsync(message, repository, commandRider, notificationRider, cancellationToken);
+                await ProcessSingleMessageAsync(scopedServiceProvider, message, repository, commandSender, notificationPublisher, cancellationToken);
                 succeededIds.Add(message.Id);
             }
             catch (Exception ex)

@@ -341,11 +341,11 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
 
         if (returnKind == ServiceReturnKind.TaskOfResult)
         {
-            sb.AppendLine("            return (global::NOF.Contract.Result)result!;");
+            sb.AppendLine("            return global::NOF.Contract.Result.From((global::NOF.Contract.IResult)result!);");
         }
         else if (returnKind == ServiceReturnKind.TaskOfResultOfT)
         {
-            sb.AppendLine($"            return (global::NOF.Contract.Result<{returnValueType}>)result!;");
+            sb.AppendLine($"            return global::NOF.Contract.Result.From<{returnValueType}>((global::NOF.Contract.IResult)result!);");
         }
         else
         {
@@ -435,4 +435,3 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
     private static bool IsBodyMethod(HttpVerb verb)
         => verb == HttpVerb.Post || verb == HttpVerb.Put || verb == HttpVerb.Patch;
 }
-

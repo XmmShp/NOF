@@ -1,47 +1,19 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
-using NOF.Abstraction;
 
 namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
 /// Outbound middleware step that populates <see cref="OutboundContext.Headers"/> from HTTP request headers.
 /// Runs before <see cref="TracingOutboundMiddleware"/> so that internal headers (tracing, tenant, etc.)
-/// written by later middleware take precedence over raw HTTP headers.
-/// <para>
-/// A configurable blacklist of wildcard patterns prevents external HTTP callers from forging
-/// internal headers (e.g., <c>NOF.*</c>). These headers are only trusted when set by
-/// internal service-to-service calls via the message bus.
-/// </para>
-/// </summary>
-/// <summary>
-/// Configuration options for <see cref="HttpHeaderOutboundMiddleware"/>.
-/// </summary>
-public class HttpHeaderOutboundMiddlewareOptions
-{
-    /// <summary>
-    /// Wildcard patterns for headers that should be blocked from external HTTP requests.
-    /// Supports <c>*</c> wildcards (e.g., <c>NOF.*</c>, <c>X-Internal-*</c>).
-    /// Matching is case-insensitive.
-    /// </summary>
-    public List<string> BlacklistedPatterns { get; set; } = ["NOF.*"];
-}
-
-/// <summary>
-/// Copies HTTP request headers into <see cref="OutboundContext.Headers"/>,
-/// filtering out blacklisted headers (matched by wildcard patterns) to prevent request forgery.
+/// written by later middleware can take precedence over raw HTTP headers.
 /// </summary>
 public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware, IBefore<TracingOutboundMiddleware>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly HttpHeaderOutboundMiddlewareOptions _options;
-    private readonly IExecutionContext _executionContext;
 
-    public HttpHeaderOutboundMiddleware(IHttpContextAccessor httpContextAccessor, IOptions<HttpHeaderOutboundMiddlewareOptions> options, IExecutionContext executionContext)
+    public HttpHeaderOutboundMiddleware(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
-        _options = options.Value;
-        _executionContext = executionContext;
     }
 
     public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
@@ -51,31 +23,14 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware, IBefore<
         {
             foreach (var header in httpContext.Request.Headers)
             {
-                if (IsBlacklisted(header.Key))
+                // Caller-provided headers take precedence (do not overwrite existing outbound headers).
+                if (!context.Headers.ContainsKey(header.Key))
                 {
-                    continue;
-                }
-
-                // Caller-provided headers take precedence
-                if (!_executionContext.ContainsKey(header.Key))
-                {
-                    _executionContext[header.Key] = header.Value.ToString();
+                    context.Headers[header.Key] = header.Value.ToString();
                 }
             }
         }
 
         return next(cancellationToken);
-    }
-
-    private bool IsBlacklisted(string headerName)
-    {
-        foreach (var pattern in _options.BlacklistedPatterns)
-        {
-            if (headerName.MatchWildcard(pattern, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 }
