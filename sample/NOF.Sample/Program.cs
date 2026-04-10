@@ -36,6 +36,7 @@ builder.AddEFCore<ConfigurationDbContext>()
     .AutoMigrate()
     .UsePostgreSQL();
 
+builder.Services.AddSplitInterfaceService<INOFSampleService, NOFSampleService>();
 builder.Services.AddScoped<IConfigNodeChildrenRepository, ConfigNodeChildrenRepository>();
 
 builder.Services.AddAntDesign();
