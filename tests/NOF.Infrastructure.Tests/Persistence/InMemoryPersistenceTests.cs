@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Abstraction;
-using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure.EntityFrameworkCore;

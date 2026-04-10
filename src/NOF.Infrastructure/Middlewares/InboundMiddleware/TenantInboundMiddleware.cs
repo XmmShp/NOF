@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Options;
-using NOF.Application;
 using NOF.Abstraction;
-using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace NOF.Application;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Handler execution pipeline delegate.

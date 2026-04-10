@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using NOF.Application;
 using NOF.Abstraction;
-using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 

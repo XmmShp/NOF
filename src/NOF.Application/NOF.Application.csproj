@@ -26,13 +26,8 @@
     <ProjectReference Include="..\NOF.Abstraction\NOF.Abstraction.csproj" />
     <ProjectReference Include="..\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\NOF.Domain\NOF.Domain.csproj" />
-    <ProjectReference Include="..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
 
     <None Include="..\NOF.Application.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Application.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Services\UserContext.cs" />
   </ItemGroup>
 
 </Project>

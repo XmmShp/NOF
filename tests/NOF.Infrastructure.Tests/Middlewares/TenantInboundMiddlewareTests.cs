@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using NOF.Application;
 using NOF.Hosting;
 using Xunit;
 

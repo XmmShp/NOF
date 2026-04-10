@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\NOF.Infrastructure.EntityFrameworkCore.SQLite\NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj" />

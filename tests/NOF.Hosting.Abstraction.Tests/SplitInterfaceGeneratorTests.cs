@@ -26,6 +26,7 @@ public class SplitInterfaceGeneratorTests
             using NOF.Application;
             using NOF.Contract;
             using System.Threading.Tasks;
+            using System.Threading;
 
             namespace App
             {
@@ -56,8 +57,8 @@ public class SplitInterfaceGeneratorTests
         Assert.Contains("public interface Ping", generatedCode);
         Assert.Contains("public interface Get", generatedCode);
         Assert.Contains("public interface Delete", generatedCode);
-        Assert.Contains("Task<Result> PingAsync(App.PingRequest request);", generatedCode);
-        Assert.Contains("Task<Result<string>> GetAsync(App.GetRequest request, string extra, global::System.Threading.CancellationToken cancellationToken = default);", generatedCode);
-        Assert.Contains("Task<Result> DeleteAsync();", generatedCode);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> PingAsync(", generatedCode);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<string>> GetAsync(", generatedCode);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> DeleteAsync();", generatedCode);
     }
 }

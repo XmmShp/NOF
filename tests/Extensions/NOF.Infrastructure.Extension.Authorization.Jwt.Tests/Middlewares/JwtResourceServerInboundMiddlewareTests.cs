@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Application;
 using NOF.Abstraction;
 using NOF.Hosting;
 using Xunit;

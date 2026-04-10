@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
 using System.Security.Claims;

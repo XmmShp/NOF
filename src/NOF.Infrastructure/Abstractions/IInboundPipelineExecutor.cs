@@ -1,4 +1,4 @@
-namespace NOF.Application;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Executes the inbound handler middleware pipeline.

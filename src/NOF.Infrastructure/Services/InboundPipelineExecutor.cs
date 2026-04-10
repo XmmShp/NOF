@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -21,7 +20,6 @@ public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
 
     public ValueTask ExecuteAsync(InboundContext context, InboundDelegate inbound, CancellationToken cancellationToken)
     {
-        // Resolve all middleware from DI in the order determined by the dependency graph
         var pipeline = inbound;
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {

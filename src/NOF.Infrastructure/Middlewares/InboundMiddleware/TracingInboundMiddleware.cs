@@ -1,4 +1,3 @@
-using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics;
 
