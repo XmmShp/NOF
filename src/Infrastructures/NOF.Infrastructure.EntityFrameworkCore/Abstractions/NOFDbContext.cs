@@ -3,11 +3,11 @@ using NOF.Application;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-public abstract class NOFDbContext : DbContext
+public class NOFDbContext : DbContext
 {
     private readonly NOFTenantDbContextOptionsExtension _tenantOptions;
 
-    protected NOFDbContext(DbContextOptions options) : base(options)
+    public NOFDbContext(DbContextOptions options) : base(options)
     {
         _tenantOptions = options.FindExtension<NOFTenantDbContextOptionsExtension>() ?? new NOFTenantDbContextOptionsExtension();
     }

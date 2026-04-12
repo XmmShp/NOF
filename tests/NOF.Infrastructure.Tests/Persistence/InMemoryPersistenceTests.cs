@@ -20,6 +20,72 @@ namespace NOF.Infrastructure.Tests.Persistence;
 public class SqliteInMemoryPersistenceTests
 {
     [Fact]
+    public async Task AddEFCore_NonGeneric_ShouldRegisterDefaultNOFDbContext()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<HandlerInfos>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        builder.AddMemoryInfrastructure();
+        builder.AddEFCore()
+            .UseSingleTenant()
+            .AutoMigrate()
+            .UseSqliteInMemory($"nof-tests-{Guid.NewGuid():N}");
+
+        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        repository.Add(new NOFTenant { Id = "tenant-efcore-default", Name = "Tenant EFCore Default" });
+        await unitOfWork.SaveChangesAsync();
+
+        var tenant = await repository.FindAsync("tenant-efcore-default");
+        Assert.NotNull(tenant);
+        Assert.Equal("Tenant EFCore Default", tenant.Name);
+    }
+
+    [Fact]
+    public async Task AddMemoryInfrastructure_NonGeneric_ShouldRegisterDefaultDbContext()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<HandlerInfos>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        builder.AddMemoryInfrastructure();
+
+        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        repository.Add(new NOFTenant { Id = "tenant-default", Name = "Tenant Default" });
+        await unitOfWork.SaveChangesAsync();
+
+        var tenant = await repository.FindAsync("tenant-default");
+        Assert.NotNull(tenant);
+        Assert.Equal("Tenant Default", tenant.Name);
+    }
+
+    [Fact]
     public async Task Transaction_Rollback_ShouldRestorePreviousState()
     {
         using var services = CreateServiceProvider();
@@ -414,17 +480,7 @@ public class SqliteInMemoryPersistenceTests
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
-        builder.AddMemoryInfrastructure();
-
-        var selector = builder.AddEFCore<TestDbContext>();
-        selector = tenantMode switch
-        {
-            TenantMode.SharedDatabase => selector.UseSharedDatabaseTenancy(),
-            TenantMode.DatabasePerTenant => selector.UseDatabasePerTenant(),
-            _ => selector.UseSingleTenant()
-        };
-
-        selector.UseSqliteInMemory($"nof-tests-{Guid.NewGuid():N}");
+        builder.AddMemoryInfrastructure<TestDbContext>(tenantMode, $"nof-tests-{Guid.NewGuid():N}");
 
         if (outboxOptions is not null)
         {

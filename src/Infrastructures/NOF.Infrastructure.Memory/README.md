@@ -9,6 +9,7 @@ Provides `NOF.Infrastructure.Memory` in-memory implementations used as developme
 - `MemoryCacheService`
 - In-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - `EventPublisher` (in-process event dispatch)
+- Optional zero-configuration SQLite in-memory persistence setup for EF Core
 
 These implementations are process-local and non-durable, and should not be used as production infrastructure.
 
@@ -21,6 +22,14 @@ To use in-memory infrastructure, add this package and register it explicitly:
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddMemoryInfrastructure();
+```
+
+`AddMemoryInfrastructure()` now auto-registers `NOFDbContext` for zero-configuration setup.
+
+If your app uses EF Core and you want an all-in-one in-memory setup (including SQLite provider, tenancy mode and auto-migration), use:
+
+```csharp
+builder.AddMemoryInfrastructure<AppDbContext>();
 ```
 
 ## Dependencies

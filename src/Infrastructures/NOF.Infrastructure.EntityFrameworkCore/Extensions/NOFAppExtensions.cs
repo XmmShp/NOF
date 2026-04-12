@@ -12,6 +12,9 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {
+        public EFCoreSelector AddEFCore()
+            => builder.AddEFCore<NOFDbContext>();
+
         public EFCoreSelector AddEFCore<TDbContext>()
             where TDbContext : NOFDbContext
         {
@@ -32,7 +35,10 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
                 var executionContext = sp.GetRequiredService<IExecutionContext>();
                 return factory.CreateDbContext(executionContext.TenantId);
             });
-            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
+            if (typeof(TDbContext) != typeof(NOFDbContext))
+            {
+                builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<TDbContext>());
+            }
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<TDbContext>());
             #endregion
 

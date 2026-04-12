@@ -122,9 +122,26 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
                 return;
             }
 
-            dbContext.Database.Migrate();
+            var hasMigrations = dbContext.Database.GetMigrations().Any();
+            var schemaInitialized = false;
+            if (hasMigrations)
+            {
+                dbContext.Database.Migrate();
+                schemaInitialized = true;
+            }
+            else
+            {
+                if (IsSqliteInMemory(dbContext))
+                {
+                    dbContext.Database.EnsureCreated();
+                    schemaInitialized = true;
+                }
+            }
             MigratedContexts.TryAdd(key, 0);
-            _logger.LogDebug("Migrated database for {ContextType}", contextType);
+            if (schemaInitialized)
+            {
+                _logger.LogDebug("Initialized database schema for {ContextType}", contextType);
+            }
         }
         finally
         {
@@ -137,5 +154,22 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         var provider = dbContext.Database.ProviderName ?? "unknown";
         var connectionString = dbContext.Database.GetConnectionString() ?? string.Empty;
         return $"{typeof(TDbContext).AssemblyQualifiedName}|{provider}|{connectionString}";
+    }
+
+    private static bool IsSqliteInMemory(TDbContext dbContext)
+    {
+        var provider = dbContext.Database.ProviderName ?? string.Empty;
+        if (!provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var connectionString = dbContext.Database.GetConnectionString();
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return false;
+        }
+
+        return connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase);
     }
 }

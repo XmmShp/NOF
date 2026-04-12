@@ -10,20 +10,18 @@ public static class NOFInfrastructureMemoryExtensions
     {
         public INOFAppBuilder AddMemoryInfrastructure()
         {
+            return builder.AddMemoryInfrastructure<NOFDbContext>();
+        }
+
+        public INOFAppBuilder AddMemoryInfrastructure<TDbContext>(TenantMode tenantMode = TenantMode.SingleTenant, string databaseName = "nof-sqlite-memory")
+            where TDbContext : NOFDbContext
+        {
             builder.Services.ReplaceOrAddCacheService<MemoryCacheService>();
 
             builder.Services.ReplaceOrAddScoped<IEventPublisher, EventPublisher>();
 
             builder.Services.ReplaceOrAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.ReplaceOrAddSingleton<INotificationRider, MemoryNotificationRider>();
-
-            return builder;
-        }
-
-        public INOFAppBuilder AddMemoryInfrastructureWithSqlite<TDbContext>(TenantMode tenantMode = TenantMode.SingleTenant, string databaseName = "nof-sqlite-memory")
-            where TDbContext : NOFDbContext
-        {
-            builder.AddMemoryInfrastructure();
 
             var selector = builder.AddEFCore<TDbContext>();
             selector = tenantMode switch
@@ -33,8 +31,15 @@ public static class NOFInfrastructureMemoryExtensions
                 _ => selector.UseSingleTenant()
             };
 
-            selector.UseSqliteInMemory(databaseName);
+            selector
+                .AutoMigrate()
+                .UseSqliteInMemory(databaseName);
             return builder;
         }
+
+        [Obsolete("Use AddMemoryInfrastructure<TDbContext>() instead. This method will be removed in a future version.")]
+        public INOFAppBuilder AddMemoryInfrastructureWithSqlite<TDbContext>(TenantMode tenantMode = TenantMode.SingleTenant, string databaseName = "nof-sqlite-memory")
+            where TDbContext : NOFDbContext
+            => builder.AddMemoryInfrastructure<TDbContext>(tenantMode, databaseName);
     }
 }
