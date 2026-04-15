@@ -39,7 +39,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
         var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName;
 
         // Check if user is authenticated
-        if (!_userContext.IsAuthenticated)
+        if (!_userContext.User.IsAuthenticated)
         {
             var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;
             _logger.LogWarning("Unauthenticated access to {HandlerType}/{MessageType}",
@@ -51,7 +51,7 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
 
         // Check if user has required permission
         if (!string.IsNullOrEmpty(permissionAttr.Permission) &&
-            !_userContext.HasPermission(permissionAttr.Permission))
+            !_userContext.User.HasPermission(permissionAttr.Permission))
         {
             var handlerName2 = context.Metadatas.TryGetValue("HandlerName", out var hn2) ? hn2 as string : handlerType?.FullName;
             _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Test;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Xunit;
 
@@ -13,9 +14,9 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     public async Task InvokeAsync_WithJwtPrincipal_ShouldWriteAuthorizationHeader()
     {
         var userContext = new FakeUserContext();
-        userContext.SetUser(new JwtClaimsPrincipal(
+        userContext.User = new JwtClaimsPrincipal(
             new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "jwt")),
-            token: "jwt-token"));
+            token: "jwt-token");
 
         var middleware = new JwtTokenPropagationOutboundMiddleware(
             userContext,
@@ -37,7 +38,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     public async Task InvokeAsync_WithNonJwtPrincipal_ShouldNotWriteAuthorizationHeader()
     {
         var userContext = new FakeUserContext();
-        userContext.SetUser(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom")));
+        userContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom"));
 
         var middleware = new JwtTokenPropagationOutboundMiddleware(
             userContext,
@@ -81,23 +82,22 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
     private sealed class FakeUserContext : IUserContext
     {
-        public ClaimsPrincipal User { get; private set; } = new();
+        private static readonly ClaimsPrincipal _anonymous = new();
+        private ClaimsPrincipal _user = _anonymous;
+
+        [AllowNull]
+        public ClaimsPrincipal User
+        {
+            get => _user;
+            set
+            {
+                StateChanging?.Invoke();
+                _user = value ?? _anonymous;
+                StateChanged?.Invoke();
+            }
+        }
+
         public event Action? StateChanging;
         public event Action? StateChanged;
-
-        public void SetUser(ClaimsPrincipal user)
-        {
-            StateChanging?.Invoke();
-            User = user;
-            StateChanged?.Invoke();
-        }
-
-        public void UnsetUser()
-        {
-            StateChanging?.Invoke();
-            User = new ClaimsPrincipal();
-            StateChanged?.Invoke();
-        }
     }
 }
-

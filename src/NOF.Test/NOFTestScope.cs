@@ -44,13 +44,13 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetUser(ClaimsPrincipal user)
     {
-        UserContext.SetUser(user);
+        UserContext.User = user;
         return this;
     }
 
     public NOFTestScope SetAnonymousUser()
     {
-        UserContext.UnsetUser();
+        UserContext.User = null;
         return this;
     }
 
