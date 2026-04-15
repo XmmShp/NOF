@@ -6,11 +6,11 @@ namespace NOF.Domain;
 public abstract class AggregateRoot : IAggregateRoot
 {
     /// <inheritdoc />
-    public virtual ICollection<IEvent> Events { get; } = [];
+    public virtual ICollection<object> Events { get; } = [];
 
     /// <summary>Adds a domain event to the aggregate.</summary>
     /// <param name="event">The domain event to add.</param>
-    protected virtual void AddEvent(IEvent @event)
+    protected virtual void AddEvent(object @event)
     {
         Events.Add(@event);
     }

@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.Contract;
-using NOF.Domain;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -44,38 +43,6 @@ public class HandlerRegistrationGeneratorTests
     }
 
     [Fact]
-    public void GeneratedCode_EventHandler_RegistersBothConcreteAndInterfaceFactory()
-    {
-        const string source = """
-            using NOF.Application;
-            using NOF.Domain;
-            namespace App
-            {
-                public record MyEvent : IEvent;
-                public class MyEventHandler : IEventHandler<MyEvent>
-                {
-                    public System.Threading.Tasks.Task HandleAsync(MyEvent @event, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
-                }
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
-            typeof(IServiceCollection),
-            typeof(IEventHandler<>),
-            typeof(IEvent),
-            typeof(EventHandlerInfo)
-        );
-
-        var result = new HandlerRegistrationGenerator().GetResult(comp);
-        var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
-        Assert.Contains("global::NOF.Application.HandlerRegistry.Register(new global::NOF.Application.EventHandlerInfo(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
-        Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
-
-    }
-
-    [Fact]
     public void GeneratedCode_NotificationHandler_RegistersBothConcreteAndInterfaceFactory()
     {
         const string source = """
@@ -106,6 +73,3 @@ public class HandlerRegistrationGeneratorTests
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }
-
-
-

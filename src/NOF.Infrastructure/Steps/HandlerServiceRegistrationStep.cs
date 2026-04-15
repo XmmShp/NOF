@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Hosting;
 
@@ -13,6 +14,7 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         var infos = builder.Services.GetOrAddSingleton<HandlerInfos>();
+        var eventInfos = builder.Services.GetOrAddSingleton<EventHandlerInfos>();
         foreach (var registration in HandlerRegistry.GetRegistrations())
         {
             infos.Add(registration);
@@ -24,7 +26,7 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
-        foreach (var info in infos.Events)
+        foreach (var info in eventInfos.Events)
         {
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
@@ -38,4 +40,3 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
         return ValueTask.CompletedTask;
     }
 }
-

@@ -8,11 +8,9 @@ namespace NOF.Application;
 public sealed class HandlerInfos
 {
     public HashSet<CommandHandlerInfo> Commands { get; } = [];
-    public HashSet<EventHandlerInfo> Events { get; } = [];
     public HashSet<NotificationHandlerInfo> Notifications { get; } = [];
 
     private readonly Dictionary<Type, List<Type>> _commandByMessage = new();
-    private readonly Dictionary<Type, List<Type>> _eventByMessage = new();
     private readonly Dictionary<Type, List<Type>> _notificationByMessage = new();
 
     /// <summary>
@@ -32,18 +30,6 @@ public sealed class HandlerInfos
                 if (!commandHandlers.Contains(command.HandlerType))
                 {
                     commandHandlers.Add(command.HandlerType);
-                }
-                break;
-            case EventHandlerInfo @event:
-                Events.Add(@event);
-                if (!_eventByMessage.TryGetValue(@event.EventType, out var eventHandlers))
-                {
-                    eventHandlers = [];
-                    _eventByMessage[@event.EventType] = eventHandlers;
-                }
-                if (!eventHandlers.Contains(@event.HandlerType))
-                {
-                    eventHandlers.Add(@event.HandlerType);
                 }
                 break;
             case NotificationHandlerInfo notification:
@@ -76,9 +62,6 @@ public sealed class HandlerInfos
 
     public IReadOnlyList<Type> GetCommandHandlers(Type commandType)
         => _commandByMessage.TryGetValue(commandType, out var list) ? list : Array.Empty<Type>();
-
-    public IReadOnlyList<Type> GetEventHandlers(Type eventType)
-        => _eventByMessage.TryGetValue(eventType, out var list) ? list : Array.Empty<Type>();
 
     public IReadOnlyList<Type> GetNotificationHandlers(Type notificationType)
         => _notificationByMessage.TryGetValue(notificationType, out var list) ? list : Array.Empty<Type>();

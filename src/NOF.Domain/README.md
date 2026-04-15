@@ -4,7 +4,7 @@ Domain layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Provides the foundational building blocks for domain-driven design: entities, aggregate roots, repositories, domain events, and domain-specific annotations with source generation support.
+Provides the foundational building blocks for domain-driven design: entities, aggregate roots, repositories, aggregate event collection, and domain-specific annotations with source generation support.
 
 ## Key Abstractions
 
@@ -23,6 +23,8 @@ public class Order : AggregateRoot
     }
 }
 ```
+
+`AggregateRoot.Events` now stores NOF scoped in-memory events declared in `NOF.Abstraction`. Domain models can still raise events, but the event mechanism itself is no longer domain-specific.
 
 ### Repository
 
@@ -59,8 +61,8 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 - Optional `New()` factory via `[NewableValueObject]` (for snowflake IDs on `IValueObject<long>`)
 
 The interface provides:
-- **`static virtual void Validate(T value)`** â€?override to add custom validation (default is no-op)
-- **`object IValueObject.GetUnderlyingValue()`** â€?default implementation forwarding to `T GetUnderlyingValue()`
+- **`static virtual void Validate(T value)`** ï¿½?override to add custom validation (default is no-op)
+- **`object IValueObject.GetUnderlyingValue()`** ï¿½?default implementation forwarding to `T GetUnderlyingValue()`
 
 ```csharp
 [NewableValueObject]
@@ -82,7 +84,7 @@ long raw = (long)id;                 // Explicit cast to primitive
 long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
 ```
 
-The `IValueObject` / `IValueObject<T>` interfaces enable the source generator's `ValueObject â†?primitive` conversion at compile time. See [design/value-object.md](/docs/design/value-object.md) for the full design rationale.
+The `IValueObject` / `IValueObject<T>` interfaces enable the source generator's `ValueObject ï¿½?primitive` conversion at compile time. See [design/value-object.md](/docs/design/value-object.md) for the full design rationale.
 
 ## Installation
 
@@ -93,4 +95,3 @@ dotnet add package NOF.Domain
 ## License
 
 Apache-2.0
-

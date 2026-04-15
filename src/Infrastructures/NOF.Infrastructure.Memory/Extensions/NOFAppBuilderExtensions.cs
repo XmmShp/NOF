@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using NOF.Hosting;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.SQLite;

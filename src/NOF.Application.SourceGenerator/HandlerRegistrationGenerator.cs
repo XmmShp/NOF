@@ -9,8 +9,8 @@ using System.Text;
 namespace NOF.Application.SourceGenerator;
 
 /// <summary>
-/// Source generator: detects handler classes implementing ICommandHandler, IEventHandler,
-/// INotificationHandler in the current project and generates assembly initializer metadata.
+/// Source generator: detects handler classes implementing ICommandHandler
+/// and INotificationHandler in the current project and generates assembly initializer metadata.
 /// </summary>
 [Generator]
 public class HandlerRegistrationGenerator : IIncrementalGenerator
@@ -57,11 +57,10 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             }
 
             var source = GenerateHandlerAssemblyInitializer(data.AssemblyName, data.Types);
-            if (string.IsNullOrWhiteSpace(source))
+            if (!string.IsNullOrWhiteSpace(source))
             {
-                return;
+                spc.AddSource("HandlerAssemblyInitializer.g.cs", SourceText.From(source, Encoding.UTF8));
             }
-            spc.AddSource("HandlerAssemblyInitializer.g.cs", SourceText.From(source, Encoding.UTF8));
         });
     }
 
@@ -90,7 +89,6 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             }
             var display = iface.OriginalDefinition.ToDisplayString();
             if (display == "NOF.Application.ICommandHandler<TCommand>" ||
-                display == "NOF.Application.IEventHandler<TEvent>" ||
                 display == "NOF.Application.INotificationHandler<TNotification>")
             {
                 return true;
@@ -101,17 +99,24 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
 
     private static string GenerateHandlerAssemblyInitializer(string assemblyName, ImmutableArray<INamedTypeSymbol> handlerClasses)
     {
-        var sanitizedName = assemblyName.Replace(".", "");
-        var initializerTypeName = $"__{sanitizedName}HandlerAssemblyInitializer";
+        var registrations = new List<string>();
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
 
-        var registrations = new List<string>();
         foreach (var handlerClass in handlerClasses)
         {
             CollectHandlerRegistrations(registrations, handlerClass, typeFormat);
         }
 
+        return GenerateAssemblyInitializerSource(
+            assemblyName,
+            $"__{assemblyName.Replace(".", "")}HandlerAssemblyInitializer",
+            "global::NOF.Application.HandlerRegistry.Register",
+            registrations);
+    }
+
+    private static string GenerateAssemblyInitializerSource(string assemblyName, string initializerTypeName, string registerMethod, List<string> registrations)
+    {
         if (registrations.Count == 0)
         {
             return string.Empty;
@@ -139,7 +144,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
-            sb.AppendLine($"            global::NOF.Application.HandlerRegistry.Register({registration});");
+            sb.AppendLine($"            {registerMethod}({registration});");
         }
 
         sb.AppendLine("        }");
@@ -169,11 +174,6 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
             {
                 var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
                 registrations.Add($"new global::NOF.Application.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-            }
-            else if (display == "NOF.Application.IEventHandler<TEvent>")
-            {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                registrations.Add($"new global::NOF.Application.EventHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
             }
             else if (display == "NOF.Application.INotificationHandler<TNotification>")
             {

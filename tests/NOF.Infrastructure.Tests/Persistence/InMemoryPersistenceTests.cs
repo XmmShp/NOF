@@ -515,16 +515,16 @@ public class SqliteInMemoryPersistenceTests
 
     private sealed class TestEventPublisher : IEventPublisher
     {
-        public List<IEvent> Events { get; } = [];
+        public List<object> Events { get; } = [];
 
-        public Task PublishAsync(IEvent @event, CancellationToken cancellationToken = default)
+        public Task PublishAsync(object payload, Type runtimeType, CancellationToken cancellationToken)
         {
-            Events.Add(@event);
+            Events.Add(payload);
             return Task.CompletedTask;
         }
     }
 
-    private sealed record TestEvent(string Name) : IEvent;
+    private sealed record TestEvent(string Name);
 
     private sealed class TestOrder : AggregateRoot, ICloneable
     {
@@ -535,7 +535,7 @@ public class SqliteInMemoryPersistenceTests
         public static TestOrder Create(long id, string number)
             => new() { Id = id, Number = number };
 
-        public void Raise(IEvent @event)
+        public void Raise(object @event)
             => AddEvent(@event);
 
         public object Clone()

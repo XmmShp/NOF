@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -9,7 +10,7 @@ namespace NOF.Application.SourceGenerator;
 /// <summary>
 /// Analyzer that enforces:
 /// 1. A handler class can only implement one handler interface (ICommandHandler, IEventHandler, INotificationHandler).
-/// 2. A message class can only implement one message interface (ICommand, IEvent, INotification).
+/// 2. A message class can only implement one message interface (ICommand, INotification).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class HandlerMessageAnalyzer : DiagnosticAnalyzer
@@ -17,14 +18,13 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
     private static readonly string[] _handlerInterfaceNames =
     [
         "NOF.Application.ICommandHandler<TCommand>",
-        "NOF.Application.IEventHandler<TEvent>",
+        "NOF.Abstraction.IEventHandler<TEvent>",
         "NOF.Application.INotificationHandler<TNotification>"
     ];
 
     private static readonly string[] _messageInterfaceNames =
     [
         "NOF.Contract.ICommand",
-        "NOF.Contract.IEvent",
         "NOF.Contract.INotification"
     ];
 
@@ -68,7 +68,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
 
     private static void CheckHandlerInterfaces(SymbolAnalysisContext context, INamedTypeSymbol symbol)
     {
-        var matched = new List<string>();
+        var matched = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var iface in symbol.AllInterfaces)
         {
@@ -94,7 +94,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
                 MultipleHandlerInterfacesRule,
                 symbol.Locations.FirstOrDefault(),
                 symbol.Name,
-                string.Join(", ", matched));
+                string.Join(", ", matched.OrderBy(static value => value, StringComparer.Ordinal)));
             context.ReportDiagnostic(diagnostic);
         }
     }

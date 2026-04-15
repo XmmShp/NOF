@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 
@@ -31,7 +32,7 @@ internal class EFCoreUnitOfWork : IUnitOfWork
 
             foreach (var domainEvent in domainEvents)
             {
-                await _publisher.PublishAsync(domainEvent, cancellationToken);
+                await _publisher.PublishAsync(domainEvent, domainEvent.GetType(), cancellationToken);
             }
             var result = await _dbContext.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);

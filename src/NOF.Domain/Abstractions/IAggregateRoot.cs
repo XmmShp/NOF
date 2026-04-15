@@ -6,5 +6,5 @@ namespace NOF.Domain;
 public interface IAggregateRoot
 {
     /// <summary>Gets the collection of uncommitted domain events.</summary>
-    ICollection<IEvent> Events { get; }
+    ICollection<object> Events { get; }
 }
