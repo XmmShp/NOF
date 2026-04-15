@@ -10,9 +10,6 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
-using NOF.Infrastructure.EntityFrameworkCore;
-using NOF.Infrastructure.EntityFrameworkCore.SQLite;
-using NOF.Infrastructure.Memory;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Persistence;

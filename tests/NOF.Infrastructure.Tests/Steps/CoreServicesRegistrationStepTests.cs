@@ -12,7 +12,6 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
-using NOF.Infrastructure.Memory;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Steps;
@@ -20,7 +19,7 @@ namespace NOF.Infrastructure.Tests.Steps;
 public class InfrastructureDefaultsTests
 {
     [Fact]
-    public void AddInfrastructureDefaults_ShouldNotRegisterPersistenceServicesByDefault()
+    public void AddInfrastructureDefaults_ShouldRegisterDefaultMemoryPersistenceServices()
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -30,7 +29,9 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        Assert.Null(scope.ServiceProvider.GetService<IOutboxMessageRepository>());
+        Assert.NotNull(scope.ServiceProvider.GetService<IOutboxMessageRepository>());
+        Assert.NotNull(scope.ServiceProvider.GetService<Microsoft.EntityFrameworkCore.DbContext>());
+        Assert.IsType<MemoryCacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
     }
 
     [Fact]
@@ -44,8 +45,14 @@ public class InfrastructureDefaultsTests
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(OutboxMessageBackgroundService));
-        Assert.Single(builder.Services, service =>
-            service.ServiceType == typeof(IHostedService));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IHostedService) &&
+            service.ImplementationType == typeof(InboxCleanupBackgroundService));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IHostedService) &&
+            service.ImplementationType == typeof(OutboxCleanupBackgroundService));
+        Assert.Equal(3, builder.Services.Count(service =>
+            service.ServiceType == typeof(IHostedService)));
         Assert.NotNull(
 
         provider.GetRequiredService<IOptions<OutboxOptions>>());

@@ -3,7 +3,6 @@ using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
-using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 using NOF.Infrastructure.Extension.Authorization.Jwt;
 using NOF.Infrastructure.RabbitMQ;

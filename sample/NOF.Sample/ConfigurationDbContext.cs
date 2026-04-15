@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Infrastructure;
 using NOF.Sample.Application.Entities;
 
 namespace NOF.Sample;

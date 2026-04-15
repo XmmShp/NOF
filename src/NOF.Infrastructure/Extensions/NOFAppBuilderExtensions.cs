@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -55,6 +56,12 @@ public static partial class NOFInfrastructureExtensions
                 .TryAddRegistrationStep<HandlerServiceRegistrationStep>()
                 .TryAddInitializationStep<IdGeneratorInitializationStep>()
                 .TryAddInitializationStep<MapperInitializationStep>();
+
+            if (!builder.Services.Any(sd => sd.ServiceType == typeof(DbContext))
+                && !builder.Services.Any(sd => sd.ServiceType == typeof(IDbContextConfigurator)))
+            {
+                builder.AddMemoryInfrastructure();
+            }
 
             return builder;
         }
