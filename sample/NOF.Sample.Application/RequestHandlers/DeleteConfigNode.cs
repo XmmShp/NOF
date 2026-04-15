@@ -25,8 +25,9 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         _uow = uow;
     }
 
-    public async Task<Result> DeleteConfigNodeAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
+    public async Task<Result> DeleteConfigNodeAsync(DeleteConfigNodeRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var id = ConfigNodeId.Of(request.Id);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
         if (node is null)
@@ -52,7 +53,6 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         return Result.Success();
     }
 }
-
 
 
 

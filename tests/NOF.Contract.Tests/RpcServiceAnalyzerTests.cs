@@ -112,6 +112,49 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
+    public async Task ServiceMethod_WithoutRequestParameter_ReportsNOF207()
+    {
+        const string source = """
+            using NOF.Contract;
+            using System.Threading.Tasks;
+
+            namespace App;
+
+            
+            public partial interface IMyService : IRpcService
+            {
+                Task<Result> DoAsync();
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Single(diagnostics, d => d.Id == "NOF207");
+    }
+
+    [Fact]
+    public async Task ServiceMethod_WithCancellationToken_ReportsNOF207()
+    {
+        const string source = """
+            using NOF.Contract;
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            namespace App;
+
+            public record Query(string Value);
+
+            
+            public partial interface IMyService : IRpcService
+            {
+                Task<Result> DoAsync(Query request, CancellationToken cancellationToken = default);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Single(diagnostics, d => d.Id == "NOF207");
+    }
+
+    [Fact]
     public async Task ServiceMethod_WithSyncReturn_ReportsNOF207()
     {
         const string source = """
@@ -159,7 +202,6 @@ public class RpcServiceAnalyzerTests
     {
         const string source = """
             using NOF.Contract;
-            using System.Threading;
             using System.Threading.Tasks;
 
             namespace App;
@@ -169,7 +211,7 @@ public class RpcServiceAnalyzerTests
             
             public partial interface IMyService : IRpcService
             {
-                Task<Result<string>> DoAsync(Query request, CancellationToken cancellationToken = default);
+                Task<Result<string>> DoAsync(Query request);
             }
             """;
 
@@ -177,5 +219,4 @@ public class RpcServiceAnalyzerTests
         Assert.DoesNotContain(diagnostics, d => d.Id == "NOF207");
     }
 }
-
 

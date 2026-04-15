@@ -1,11 +1,15 @@
+using NOF.Annotation;
+
 namespace NOF.Contract;
 
 /// <summary>
 /// Marks a service method (or legacy request type) to be exposed as an HTTP endpoint.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
-public sealed class HttpEndpointAttribute : Attribute
+public sealed class HttpEndpointAttribute : MetadataAttribute
 {
+    public const string MetadataKey = "nof.contract.http.endpoint";
+
     /// <summary>
     /// HTTP method
     /// </summary>
@@ -22,6 +26,7 @@ public sealed class HttpEndpointAttribute : Attribute
     /// <param name="method">HTTP method</param>
     /// <param name="route">Route template</param>
     public HttpEndpointAttribute(HttpVerb method, string? route = null)
+        : base(MetadataKey, route ?? string.Empty)
     {
         Method = method;
         Route = route;

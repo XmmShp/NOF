@@ -15,8 +15,9 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         _mapper = mapper;
     }
 
-    public async Task<Result<GetRootConfigNodesResponse>> GetRootConfigNodesAsync(GetRootConfigNodesRequest request, CancellationToken cancellationToken)
+    public async Task<Result<GetRootConfigNodesResponse>> GetRootConfigNodesAsync(GetRootConfigNodesRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var nodes = await _configNodeRepository.GetRootNodesAsync(cancellationToken);
 
         var response = nodes.Select(node => _mapper.Map<ConfigNode, ConfigNodeDto>(node)).ToList();
@@ -27,7 +28,6 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         };
     }
 }
-
 
 
 

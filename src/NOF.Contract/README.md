@@ -4,7 +4,7 @@ Contract layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Defines the messaging contracts and shared models that form the public API surface of your application. This package contains request/command/notification interfaces, the `Result<T>` type, and HTTP endpoint attributes with source generation support.
+Defines the messaging contracts and shared models that form the public API surface of your application. This package contains request/command/notification interfaces, the `Result<T>` type, and metadata-backed HTTP endpoint annotations with source generation support.
 
 ## Key Abstractions
 
@@ -34,23 +34,32 @@ return Result.Success(orderDto);
 return Result.Fail("404", "Order not found");
 ```
 
-### `[HttpEndpoint]`
+### RPC Contracts
 
-Marks a request type for automatic HTTP endpoint generation via source generator.
+RPC service methods use a strict single-request signature and do not accept `CancellationToken` on the contract surface.
 
 ```csharp
-[HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
 public record GetOrderRequest(Guid Id);
-
-[HttpEndpoint(HttpVerb.Post, "/api/orders")]
 public record CreateOrderRequest(string ProductName, int Quantity);
+
+public partial interface IOrderService : IRpcService
+{
+    [Summary("Get order")]
+    [HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
+    Task<Result<OrderDto>> GetAsync(GetOrderRequest request);
+
+    [Summary("Create order")]
+    [HttpEndpoint(HttpVerb.Post, "/api/orders")]
+    Task<Result<OrderDto>> CreateAsync(CreateOrderRequest request);
+}
 ```
 
 ### Other Annotations
 
+- **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
 - **`[RequirePermission]`** - declares required permissions for an endpoint
-- **`[EndpointName]`** / **`[Description]`** - OpenAPI metadata
 - **`[Summary]`** - adds summary documentation to generated endpoints
+- These NOF-specific attributes are all metadata-backed and converge on `MetadataAttribute`
 
 ## Installation
 

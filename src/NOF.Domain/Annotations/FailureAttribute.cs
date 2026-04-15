@@ -1,10 +1,12 @@
+using NOF.Annotation;
+
 namespace NOF.Domain;
 
 /// <summary>
 /// Attribute for defining failure entries that are auto-generated as static instances by the source generator.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public class FailureAttribute : Attribute
+public sealed class FailureAttribute : AttributeForSourceGenerator
 {
     /// <summary>
     /// The failure name (used as the static field name).

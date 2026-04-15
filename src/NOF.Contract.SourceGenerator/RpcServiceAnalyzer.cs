@@ -37,7 +37,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor InvalidServiceMethodSignature = new(
         "NOF207",
         "Invalid service method signature",
-        "Method '{0}' on service interface '{1}' must have 0 or 1 request parameters (plus optional CancellationToken) and return Task<Result> or Task<Result<T>>",
+        "Method '{0}' on service interface '{1}' must have exactly 1 request parameter, must not declare CancellationToken, and must return Task<Result> or Task<Result<T>>",
         "RpcService",
         DiagnosticSeverity.Error,
         true);

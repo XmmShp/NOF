@@ -7,8 +7,7 @@ namespace NOF.Infrastructure;
 
 /// <summary>
 /// Handler middleware that enforces permission-based authorization.
-/// Checks <see cref="RequirePermissionAttribute"/> on the message/handler types and
-/// short-circuits with an error response when unauthorized.
+/// Checks <see cref="RequirePermissionAttribute"/> on the message/handler types and short-circuits with an error response when unauthorized.
 /// </summary>
 public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<TenantInboundMiddleware>
 {
@@ -25,7 +24,6 @@ public sealed class AuthorizationInboundMiddleware : IInboundMiddleware, IAfter<
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        // Check if message or handler has RequirePermissionAttribute from context.Attributes
         var permissionAttr = context.Attributes.OfType<RequirePermissionAttribute>().FirstOrDefault();
 
         if (permissionAttr is null)

@@ -49,7 +49,6 @@ public class RpcServiceEndpointMapperTests
 
         const string mainSource = """
             using NOF.Contract;
-            using System.Threading;
             using System.Threading.Tasks;
             
             [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<Lib.ILibService>]
@@ -63,7 +62,7 @@ public class RpcServiceEndpointMapperTests
                 public partial interface IAppService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Post, "/api/user")]
-                    Task<Result> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default);
+                    Task<Result> CreateUserAsync(CreateUserRequest request);
                 }
             }
             """;
@@ -86,7 +85,7 @@ public class RpcServiceEndpointMapperTests
         Assert.Contains("Lib.ILibService service", code);
         Assert.Contains("App.IAppService service", code);
         Assert.Contains("GetUserAsync(request)", code);
-        Assert.Contains("CreateUserAsync(request, cancellationToken)", code);
+        Assert.Contains("CreateUserAsync(request)", code);
     }
 
     [Fact]

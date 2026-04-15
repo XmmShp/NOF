@@ -22,8 +22,9 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         _uow = uow;
     }
 
-    public async Task<Result> UpdateConfigNodeParentAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
+    public async Task<Result> UpdateConfigNodeParentAsync(UpdateConfigNodeParentRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(nodeId, cancellationToken);
 

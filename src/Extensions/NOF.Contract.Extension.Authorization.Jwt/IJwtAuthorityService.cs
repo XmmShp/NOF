@@ -11,35 +11,32 @@ public interface IJwtAuthorityService : IRpcService
     /// Generates a new JWT access token and refresh token pair.
     /// </summary>
     /// <param name="request">The token generation request.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The generated token pair.</returns>
     [Summary("Issue JWT token pair")]
     [Description("Issues a JWT access token and refresh token for the requested principal.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Token)]
-    Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default);
+    Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request);
 
     /// <summary>
     /// Validates a refresh token and returns its claims.
     /// </summary>
     /// <param name="request">The refresh token validation request.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The validation result with token claims.</returns>
     [Summary("Introspect refresh token")]
     [Description("Validates a refresh token and returns its subject claims if it is still valid.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Introspect)]
-    Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken = default);
+    Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request);
 
     /// <summary>
     /// Revokes a refresh token.
     /// </summary>
     /// <param name="request">The token revocation request.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The revocation result.</returns>
     [Summary("Revoke refresh token")]
     [Description("Revokes a refresh token so that subsequent validation attempts fail.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Revocation)]
-    Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken = default);
+    Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request);
 }

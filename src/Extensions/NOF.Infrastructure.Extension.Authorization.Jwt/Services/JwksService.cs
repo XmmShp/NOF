@@ -20,8 +20,9 @@ public class JwksService : IJwksService
     }
 
     /// <inheritdoc />
-    public Task<Result<JwksDocument>> GetJwksAsync(CancellationToken cancellationToken = default)
+    public Task<Result<JwksDocument>> GetJwksAsync(GetJwksRequest request)
     {
+        _ = request;
         var allKeys = _signingKeyService.AllKeys;
 
         var jwks = allKeys.Select(managedKey =>

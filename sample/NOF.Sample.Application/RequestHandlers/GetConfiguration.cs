@@ -20,8 +20,9 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         _mapper = mapper;
     }
 
-    public async Task<Result<GetConfigurationResponse>> GetConfigurationAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
+    public async Task<Result<GetConfigurationResponse>> GetConfigurationAsync(GetConfigurationRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);
 
@@ -196,7 +197,6 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         }
     }
 }
-
 
 
 

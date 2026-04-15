@@ -12,8 +12,9 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
         _childrenRepository = childrenRepository;
     }
 
-    public async Task<Result<GetConfigNodeChildrenResponse>> GetConfigNodeChildrenAsync(GetConfigNodeChildrenRequest request, CancellationToken cancellationToken)
+    public async Task<Result<GetConfigNodeChildrenResponse>> GetConfigNodeChildrenAsync(GetConfigNodeChildrenRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var nodeId = ConfigNodeId.Of(request.Id);
         var children = await _childrenRepository.GetChildrenAsync(nodeId, cancellationToken);
 
@@ -29,7 +30,6 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
         };
     }
 }
-
 
 
 

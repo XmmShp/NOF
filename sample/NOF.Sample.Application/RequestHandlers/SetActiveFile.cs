@@ -19,8 +19,9 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         _uow = uow;
     }
 
-    public async Task<Result> SetActiveFileAsync(SetActiveFileRequest request, CancellationToken cancellationToken)
+    public async Task<Result> SetActiveFileAsync(SetActiveFileRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
 
@@ -46,7 +47,6 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         return Result.Success();
     }
 }
-
 
 
 

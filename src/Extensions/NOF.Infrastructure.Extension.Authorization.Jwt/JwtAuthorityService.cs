@@ -28,14 +28,14 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
         _serviceProvider = serviceProvider;
     }
 
-    public Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken = default)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(GenerateJwtTokenAsync))!, typeof(JwtAuthorityService), ExecuteGenerateJwtTokenCoreAsync, cancellationToken);
+    public Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request)
+        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(GenerateJwtTokenAsync))!, typeof(JwtAuthorityService), ExecuteGenerateJwtTokenCoreAsync, CancellationToken.None);
 
-    public Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken = default)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(ValidateJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteValidateJwtRefreshTokenCoreAsync, cancellationToken);
+    public Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request)
+        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(ValidateJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteValidateJwtRefreshTokenCoreAsync, CancellationToken.None);
 
-    public Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken = default)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(RevokeJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteRevokeJwtRefreshTokenCoreAsync, cancellationToken);
+    public Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request)
+        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(RevokeJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteRevokeJwtRefreshTokenCoreAsync, CancellationToken.None);
 
     private async Task<TResult> ExecuteRpcAsync<TRequest, TResult>(
         TRequest request,

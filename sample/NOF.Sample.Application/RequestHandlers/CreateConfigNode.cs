@@ -22,8 +22,9 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
         _uow = uow;
     }
 
-    public async Task<Result> CreateConfigNodeAsync(CreateConfigNodeRequest request, CancellationToken cancellationToken)
+    public async Task<Result> CreateConfigNodeAsync(CreateConfigNodeRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var name = ConfigNodeName.Of(request.Name);
         var parentId = request.ParentId.HasValue ? ConfigNodeId.Of(request.ParentId.Value) : (ConfigNodeId?)null;
 
@@ -47,7 +48,6 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
         return Result.Success();
     }
 }
-
 
 
 

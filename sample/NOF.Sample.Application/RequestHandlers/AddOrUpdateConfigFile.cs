@@ -19,8 +19,9 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
         _uow = uow;
     }
 
-    public async Task<Result> AddOrUpdateConfigFileAsync(AddOrUpdateConfigFileRequest request, CancellationToken cancellationToken)
+    public async Task<Result> AddOrUpdateConfigFileAsync(AddOrUpdateConfigFileRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
 
@@ -48,7 +49,6 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
         return Result.Success();
     }
 }
-
 
 
 

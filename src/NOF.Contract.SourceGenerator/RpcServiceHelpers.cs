@@ -10,6 +10,7 @@ namespace NOF.Contract.SourceGenerator;
 internal static class RpcServiceHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
+    public const string SummaryAttributeFqn = "NOF.Contract.SummaryAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
 
     public static bool HasHttpEndpointAttribute(IMethodSymbol symbol)
@@ -82,15 +83,9 @@ internal static class RpcServiceHelpers
 
     public static bool TryGetRequestParameter(IMethodSymbol method, out IParameterSymbol? parameter)
     {
-        var candidates = method.Parameters.Where(p => !IsCancellationToken(p.Type)).ToList();
-        if (candidates.Count == 0)
+        if (method.Parameters.Length == 1 && !IsCancellationToken(method.Parameters[0].Type))
         {
-            parameter = null;
-            return true;
-        }
-        if (candidates.Count == 1)
-        {
-            parameter = candidates[0];
+            parameter = method.Parameters[0];
             return true;
         }
 
@@ -138,7 +133,8 @@ internal static class RpcServiceHelpers
 
     public static EndpointInfo ExtractEndpointInfo(ServiceMethodInfo method)
     {
-        var methodAttr = method.Method.GetAttributes()
+        var attributes = method.Method.GetAttributes();
+        var methodAttr = attributes
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == HttpEndpointAttributeFqn);
 
         var httpMethod = methodAttr is null
@@ -154,13 +150,13 @@ internal static class RpcServiceHelpers
         route = route?.TrimEnd('/');
         route ??= method.OperationName;
 
-        var displayName = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.EndpointNameAttribute");
+        var displayName = TryGetCtorString(attributes, "NOF.Contract.EndpointNameAttribute");
 
-        var description = TryGetCtorString(method.Method.GetAttributes(), "System.ComponentModel.DescriptionAttribute");
+        var description = TryGetCtorString(attributes, "System.ComponentModel.DescriptionAttribute");
 
-        var summary = TryGetCtorString(method.Method.GetAttributes(), "NOF.Contract.SummaryAttribute");
+        var summary = TryGetCtorString(attributes, SummaryAttributeFqn);
 
-        var tags = method.Method.GetAttributes()
+        var tags = attributes
             .Where(a => a.AttributeClass?.ToDisplayString() == "System.ComponentModel.CategoryAttribute")
             .Select(a => a.ConstructorArguments.FirstOrDefault().Value as string)
             .Where(v => v != null)
@@ -185,6 +181,7 @@ internal static class RpcServiceHelpers
         => attributes
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == attributeFqn)
             ?.ConstructorArguments.FirstOrDefault().Value as string;
+
 }
 
 internal sealed class ServiceMethodInfo

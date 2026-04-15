@@ -41,7 +41,7 @@ public sealed class JwtHttpClientTests
         var pipeline = new CapturingOutboundPipelineExecutor();
         var service = new HttpJwksService(httpClient, pipeline, new SimpleServiceProvider());
 
-        var result = await service.GetJwksAsync(default);
+        var result = await service.GetJwksAsync(new GetJwksRequest());
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
         Assert.Single(result.Value!.Keys, k => k.Kid == "kid-1");
@@ -92,7 +92,7 @@ public sealed class JwtHttpClientTests
             CustomClaims = new Dictionary<string, string> { ["role"] = "admin" }
         };
 
-        var result = await service.GenerateJwtTokenAsync(request, default);
+        var result = await service.GenerateJwtTokenAsync(request);
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
         Assert.Equal("access-token", result.Value!.TokenPair.AccessToken);

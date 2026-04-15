@@ -38,7 +38,7 @@ public sealed class JwksProvider(IServiceScopeFactory serviceScopeFactory, IServ
 
             using var scope = serviceScopeFactory.CreateScope();
             var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
-            var result = await jwksService.GetJwksAsync(cancellationToken);
+            var result = await jwksService.GetJwksAsync(new GetJwksRequest());
 
             if (result.IsSuccess && result.Value?.Keys is { Length: > 0 } jwkKeys)
             {

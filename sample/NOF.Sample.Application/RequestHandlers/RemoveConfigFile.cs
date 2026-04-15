@@ -19,8 +19,9 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
         _uow = uow;
     }
 
-    public async Task<Result> RemoveConfigFileAsync(RemoveConfigFileRequest request, CancellationToken cancellationToken)
+    public async Task<Result> RemoveConfigFileAsync(RemoveConfigFileRequest request)
     {
+        var cancellationToken = CancellationToken.None;
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _configNodeRepository.FindAsync(id, cancellationToken);
 
@@ -46,7 +47,6 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
         return Result.Success();
     }
 }
-
 
 
 

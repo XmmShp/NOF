@@ -33,7 +33,7 @@ public class RpcServiceClientGeneratorTests
                                   public partial interface IMyService : IRpcService
                                   {
                                       [HttpEndpoint(HttpVerb.Post, "/api/users")]
-                                      Task<Result> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default);
+                                      Task<Result> CreateUserAsync(CreateUserRequest request);
                                   }
 
                                   [HttpServiceClient<IMyService>]
@@ -119,22 +119,22 @@ public class RpcServiceClientGeneratorTests
     }
 
     [Fact]
-    public void MethodWithoutRequestParam_ShouldNotGenerateMessageVariable()
+    public void GetMethod_WithSingleRequestParam_ShouldGenerateMessageVariable()
     {
         const string source = """
                               using NOF.Contract;
                               using NOF.Hosting;
-                              using System.Threading;
                               using System.Threading.Tasks;
 
                               namespace MyApp
                               {
                                   public record MyData(string Value);
+                                  public record GetDataRequest(string Key);
 
                                   public partial interface IMyService : IRpcService
                                   {
                                       [HttpEndpoint(HttpVerb.Get, "/api/data")]
-                                      Task<Result<MyData>> GetDataAsync(CancellationToken cancellationToken = default);
+                                      Task<Result<MyData>> GetDataAsync(GetDataRequest request);
                                   }
 
                                   [HttpServiceClient<IMyService>]
@@ -146,9 +146,7 @@ public class RpcServiceClientGeneratorTests
         Assert.Single(runResult.GeneratedTrees);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
-        Assert.DoesNotContain("var message = null", code);
-        Assert.Contains("Message = null,", code);
+        Assert.Contains("Message = request,", code);
         Assert.Contains("GetDataAsync", code);
     }
 }
-
