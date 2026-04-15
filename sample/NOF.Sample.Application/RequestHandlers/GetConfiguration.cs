@@ -20,10 +20,9 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         _mapper = mapper;
     }
 
-    public async Task<Result<GetConfigurationResponse>> GetConfigurationAsync(GetConfigurationRequest request)
+    public override async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
     {
-        var cancellationToken = CancellationToken.None;
-        var appNameStr = request.AppName;
+                var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);
 
         // 1. Find App Node

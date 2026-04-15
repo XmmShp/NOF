@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Infrastructure;
@@ -22,7 +21,7 @@ public sealed class InboundContext
     /// <summary>
     /// Response result (only used for request handlers).
     /// </summary>
-    public IResult? Response { get; set; }
+    public object? Response { get; set; }
 
     /// <summary>
     /// Attributes associated with the message and handler.

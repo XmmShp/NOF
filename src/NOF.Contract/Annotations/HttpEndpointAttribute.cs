@@ -3,12 +3,14 @@ using NOF.Annotation;
 namespace NOF.Contract;
 
 /// <summary>
-/// Marks a service method (or legacy request type) to be exposed as an HTTP endpoint.
+/// Marks a service method to be exposed as an HTTP endpoint.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class HttpEndpointAttribute : MetadataAttribute
 {
-    public const string MetadataKey = "nof.contract.http.endpoint";
+    public const string MetadataKey = "api.http.endpoint";
+    private const string MetadataKeyPrefix = "api.http.";
+    private const string MetadataKeySuffix = ".endpoint";
 
     /// <summary>
     /// HTTP method
@@ -26,10 +28,30 @@ public sealed class HttpEndpointAttribute : MetadataAttribute
     /// <param name="method">HTTP method</param>
     /// <param name="route">Route template</param>
     public HttpEndpointAttribute(HttpVerb method, string? route = null)
-        : base(MetadataKey, route ?? string.Empty)
+        : base(CreateMetadataKey(method), route ?? string.Empty)
     {
         Method = method;
         Route = route;
+    }
+
+    public static string CreateMetadataKey(HttpVerb method)
+    {
+        return $"{MetadataKeyPrefix}{method.ToString().ToLowerInvariant()}{MetadataKeySuffix}";
+    }
+
+    public static bool TryParseMetadataKey(string? metadataKey, out HttpVerb method)
+    {
+        method = default;
+
+        if (string.IsNullOrEmpty(metadataKey)
+            || !metadataKey.StartsWith(MetadataKeyPrefix, StringComparison.OrdinalIgnoreCase)
+            || !metadataKey.EndsWith(MetadataKeySuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var methodText = metadataKey[MetadataKeyPrefix.Length..^MetadataKeySuffix.Length];
+        return Enum.TryParse(methodText, ignoreCase: true, out method);
     }
 }
 

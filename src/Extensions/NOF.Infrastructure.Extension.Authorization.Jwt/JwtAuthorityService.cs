@@ -5,73 +5,26 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
-using NOF.Hosting;
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
 using System.Security.Claims;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-public sealed class JwtAuthorityService : IJwtAuthorityService
-{
-    private readonly IOutboundPipelineExecutor _outboundPipeline;
-    private readonly IExecutionContext _executionContext;
-    private readonly IServiceProvider _serviceProvider;
+public sealed partial class JwtAuthorityService : RpcServer<IJwtAuthorityService>;
 
-    public JwtAuthorityService(
-        IOutboundPipelineExecutor outboundPipeline,
-        IExecutionContext executionContext,
-        IServiceProvider serviceProvider)
+public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtToken
+{
+    public override Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken)
     {
-        _outboundPipeline = outboundPipeline;
-        _executionContext = executionContext;
-        _serviceProvider = serviceProvider;
+        _ = cancellationToken;
+        return ExecuteGenerateJwtTokenCoreAsync(ServiceProvider, request, cancellationToken);
     }
 
-    public Task<Result<GenerateJwtTokenResponse>> GenerateJwtTokenAsync(GenerateJwtTokenRequest request)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(GenerateJwtTokenAsync))!, typeof(JwtAuthorityService), ExecuteGenerateJwtTokenCoreAsync, CancellationToken.None);
+    private IServiceProvider ServiceProvider { get; }
 
-    public Task<Result<ValidateJwtRefreshTokenResponse>> ValidateJwtRefreshTokenAsync(ValidateJwtRefreshTokenRequest request)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(ValidateJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteValidateJwtRefreshTokenCoreAsync, CancellationToken.None);
-
-    public Task<Result> RevokeJwtRefreshTokenAsync(RevokeJwtRefreshTokenRequest request)
-        => ExecuteRpcAsync(request, typeof(JwtAuthorityService).GetMethod(nameof(RevokeJwtRefreshTokenAsync))!, typeof(JwtAuthorityService), ExecuteRevokeJwtRefreshTokenCoreAsync, CancellationToken.None);
-
-    private async Task<TResult> ExecuteRpcAsync<TRequest, TResult>(
-        TRequest request,
-        MethodInfo methodInfo,
-        Type handlerType,
-        Func<IServiceProvider, TRequest, CancellationToken, Task<TResult>> terminal,
-        CancellationToken cancellationToken)
+    public GenerateJwtTokenHandler(IServiceProvider serviceProvider)
     {
-        var outboundContext = new OutboundContext
-        {
-            Message = request,
-            Services = _serviceProvider
-        };
-
-        TResult? result = default;
-
-        await _outboundPipeline.ExecuteAsync(outboundContext, async ct =>
-        {
-            await InboundHandlerInvoker.ExecuteRpcAsync(
-                _serviceProvider,
-                request,
-                methodInfo,
-                _executionContext,
-                context =>
-                {
-                    // 添加 HandlerType 到 Metadatas
-                    context.Metadatas["HandlerType"] = handlerType;
-                },
-                async (sp, ct2) =>
-                {
-                    result = await terminal(sp, request, ct2).ConfigureAwait(false);
-                },
-                ct).ConfigureAwait(false);
-        }, cancellationToken).ConfigureAwait(false);
-
-        return result!;
+        ServiceProvider = serviceProvider;
     }
 
     private static Task<Result<GenerateJwtTokenResponse>> ExecuteGenerateJwtTokenCoreAsync(
@@ -142,6 +95,19 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
             TokenPair = tokenPair
         }));
     }
+}
+
+public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.ValidateJwtRefreshToken
+{
+    private IServiceProvider ServiceProvider { get; }
+
+    public ValidateJwtRefreshTokenHandler(IServiceProvider serviceProvider)
+    {
+        ServiceProvider = serviceProvider;
+    }
+
+    public override Task<Result<ValidateJwtRefreshTokenResponse>> HandleAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken)
+        => ExecuteValidateJwtRefreshTokenCoreAsync(ServiceProvider, request, cancellationToken);
 
     private static async Task<Result<ValidateJwtRefreshTokenResponse>> ExecuteValidateJwtRefreshTokenCoreAsync(
         IServiceProvider serviceProvider,
@@ -192,6 +158,19 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
             return Result.Fail("401", ex.Message);
         }
     }
+}
+
+public sealed class RevokeJwtRefreshTokenHandler : JwtAuthorityService.RevokeJwtRefreshToken
+{
+    private IServiceProvider ServiceProvider { get; }
+
+    public RevokeJwtRefreshTokenHandler(IServiceProvider serviceProvider)
+    {
+        ServiceProvider = serviceProvider;
+    }
+
+    public override Task<Result> HandleAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken)
+        => ExecuteRevokeJwtRefreshTokenCoreAsync(ServiceProvider, request, cancellationToken);
 
     private static async Task<Result> ExecuteRevokeJwtRefreshTokenCoreAsync(
         IServiceProvider serviceProvider,

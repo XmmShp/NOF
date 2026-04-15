@@ -7,7 +7,7 @@ using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>
-/// Caches JWKS signing keys locally and refreshes them through <see cref="IJwksService"/>.
+/// Caches JWKS signing keys locally and refreshes them through <see cref="HttpJwksService"/>.
 /// </summary>
 public sealed class JwksProvider(IServiceScopeFactory serviceScopeFactory, IServiceProvider serviceProvider) : IJwksProvider, IDisposable
 {
@@ -37,7 +37,7 @@ public sealed class JwksProvider(IServiceScopeFactory serviceScopeFactory, IServ
             }
 
             using var scope = serviceScopeFactory.CreateScope();
-            var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
+            var jwksService = scope.ServiceProvider.GetRequiredService<HttpJwksService>();
             var result = await jwksService.GetJwksAsync(new GetJwksRequest());
 
             if (result.IsSuccess && result.Value?.Keys is { Length: > 0 } jwkKeys)

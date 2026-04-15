@@ -181,9 +181,7 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var operationName = method.Name.EndsWith("Async", StringComparison.Ordinal)
-                ? method.Name.Substring(0, method.Name.Length - 5)
-                : method.Name;
+            var operationName = method.Name;
 
             methods.Add(new ServiceMethodInfo
             {
@@ -274,11 +272,8 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
             }
         }
 
-        lambdaParams.Add($"[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] {serviceType} service");
-        if (ep.ServiceHasCancellationToken)
-        {
-            lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
-        }
+        lambdaParams.Add("[global::Microsoft.AspNetCore.Mvc.FromServicesAttribute] global::System.IServiceProvider services");
+        lambdaParams.Add("global::System.Threading.CancellationToken cancellationToken");
         var lambdaParamStr = string.Join(", ", lambdaParams);
 
         sb.Append($"            app.{mapMethod}({routeExpression},");
@@ -355,30 +350,9 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
 
 
 
-        var serviceCall = "";
-        if (requestType != null)
-        {
-            serviceCall = ep.ServiceHasCancellationToken
-                ? $"service.{ep.ServiceMethodName}(request, cancellationToken)"
-                : $"service.{ep.ServiceMethodName}(request)";
-        }
-        else
-        {
-            serviceCall = ep.ServiceHasCancellationToken
-                ? $"service.{ep.ServiceMethodName}(cancellationToken)"
-                : $"service.{ep.ServiceMethodName}()";
-        }
+        sb.AppendLine($"                    var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(services, \"{EscapeString(ep.ServiceMethodName)}\", request, cancellationToken);");
 
-        var serviceInvocation = ep.ReturnInfo.Kind switch
-        {
-            ServiceReturnKind.TaskOfResult => $"await {serviceCall}",
-            ServiceReturnKind.TaskOfResultOfT => $"await {serviceCall}",
-            _ => throw new InvalidOperationException("Unsupported service return kind.")
-        };
-
-        sb.AppendLine($"                    var result = {serviceInvocation};");
-
-        EmitEndpointResponse(sb, ep.ReturnInfo.Kind, "result!", "                    ");
+        EmitEndpointResponse(sb, "result!", "                    ");
 
         sb.Append("                })");
 
@@ -446,7 +420,7 @@ public class RpcServiceEndpointMapperGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void EmitEndpointResponse(StringBuilder sb, ServiceReturnKind returnKind, string invocation, string indent = "                    ")
+    private static void EmitEndpointResponse(StringBuilder sb, string invocation, string indent = "                    ")
     {
         sb.AppendLine($"{indent}return global::Microsoft.AspNetCore.Http.TypedResults.Ok({invocation});");
     }

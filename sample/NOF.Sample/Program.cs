@@ -15,7 +15,6 @@ using NOF.Sample.Repositories;
 [assembly: MapServiceToHttpEndpoints<INOFSampleService>]
 [assembly: MapServiceToHttpEndpoints<IJwtAuthorityService>]
 [assembly: MapServiceToHttpEndpoints<IJwksService>]
-[assembly: SplitInterfaceService<INOFSampleService, NOFSampleService>]
 
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 

@@ -15,5 +15,5 @@ public interface IJwksService : IRpcService
     [Description("Returns the JSON Web Key Set used by the authority to sign JWT access and refresh tokens.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Get, JwtAuthorizationEndpoints.Jwks)]
-    Task<Result<JwksDocument>> GetJwksAsync(GetJwksRequest request);
+    Result<JwksDocument> GetJwks(GetJwksRequest request);
 }

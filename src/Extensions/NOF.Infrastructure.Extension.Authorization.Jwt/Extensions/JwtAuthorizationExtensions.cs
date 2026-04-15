@@ -48,10 +48,6 @@ public static partial class NOFJwtAuthorizationExtensions
             builder.AddJwtTokenPropagation();
 
             builder.Services.AddHttpClient<HttpJwksService>();
-            if (builder.Services.All(sd => sd.ServiceType != typeof(IJwksService)))
-            {
-                builder.Services.AddScoped<IJwksService>(sp => sp.GetRequiredService<HttpJwksService>());
-            }
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, JwksProvider>();
 #pragma warning disable CS8620
             builder.Services.AddHandlerInfo(new NotificationHandlerInfo(typeof(RefreshJwksOnKeyRotation), typeof(JwtKeyRotationNotification)));
@@ -70,7 +66,7 @@ public static partial class NOFJwtAuthorizationExtensions
         /// <returns>The NOF application builder for chaining.</returns>
         public JwtAuthoritySelector AddJwtAuthority(Action<JwtAuthorityOptions>? configureOptions = null)
         {
-            builder.Services.ReplaceOrAddScoped<IJwtAuthorityService, JwtAuthorityService>();
+            builder.Services.ReplaceOrAddScoped<JwtAuthorityService, JwtAuthorityService>();
 
             if (configureOptions is not null)
             {
@@ -86,7 +82,7 @@ public static partial class NOFJwtAuthorizationExtensions
             builder.Services.ReplaceOrAddSingleton<ISigningKeyService, SigningKeyService>();
 
             // JWKS service
-            builder.Services.ReplaceOrAddSingleton<IJwksService, JwksService>();
+            builder.Services.ReplaceOrAddScoped<JwksService, JwksService>();
 
             // Key rotation background service
             builder.Services.AddHostedService<JwtKeyRotationBackgroundService>();

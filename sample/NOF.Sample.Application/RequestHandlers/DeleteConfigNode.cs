@@ -22,10 +22,9 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         _cache = cache;
     }
 
-    public async Task<Result> DeleteConfigNodeAsync(DeleteConfigNodeRequest request)
+    public override async Task<Result> HandleAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
     {
-        var cancellationToken = CancellationToken.None;
-        var id = ConfigNodeId.Of(request.Id);
+                var id = ConfigNodeId.Of(request.Id);
         var node = await _dbContext.Set<ConfigNode>().FindAsync([id], cancellationToken);
         if (node is null)
         {

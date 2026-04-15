@@ -20,9 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\NOF.Contract.Extension.Authorization.Jwt\NOF.Contract.Extension.Authorization.Jwt.csproj" />
     <ProjectReference Include="..\NOF.Hosting.Extension.Authorization.Jwt\NOF.Hosting.Extension.Authorization.Jwt.csproj" />
+    <ProjectReference Include="..\..\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

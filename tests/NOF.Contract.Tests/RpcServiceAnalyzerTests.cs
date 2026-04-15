@@ -155,7 +155,7 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
-    public async Task ServiceMethod_WithSyncReturn_ReportsNOF207()
+    public async Task ServiceMethod_WithSyncReturnAndSingleRequest_NoNOF207()
     {
         const string source = """
             using NOF.Contract;
@@ -172,7 +172,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.Single(diagnostics, d => d.Id == "NOF207");
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF207");
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
-    public async Task ServiceMethod_WithTaskAndSingleRequest_NoNOF207()
+    public async Task ServiceMethod_WithTaskAndSingleRequest_ReportsNOF207()
     {
         const string source = """
             using NOF.Contract;
@@ -216,7 +216,6 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF207");
+        Assert.Single(diagnostics, d => d.Id == "NOF207");
     }
 }
-

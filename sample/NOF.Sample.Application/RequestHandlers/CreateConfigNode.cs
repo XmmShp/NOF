@@ -19,10 +19,9 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
         _cache = cache;
     }
 
-    public async Task<Result> CreateConfigNodeAsync(CreateConfigNodeRequest request)
+    public override async Task<Result> HandleAsync(CreateConfigNodeRequest request, CancellationToken cancellationToken)
     {
-        var cancellationToken = CancellationToken.None;
-        var name = ConfigNodeName.Of(request.Name);
+                var name = ConfigNodeName.Of(request.Name);
         var parentId = request.ParentId.HasValue ? ConfigNodeId.Of(request.ParentId.Value) : (ConfigNodeId?)null;
 
         if (await _dbContext.Set<ConfigNode>().ExistsByNameAsync(name, cancellationToken))

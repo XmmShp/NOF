@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Hosting;
@@ -27,5 +26,5 @@ public sealed class OutboundContext
     /// <summary>
     /// Pipeline response, potentially set by the HTTP client or by a short-circuiting middleware.
     /// </summary>
-    public IResult? Response { get; set; }
+    public object? Response { get; set; }
 }

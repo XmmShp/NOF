@@ -29,7 +29,6 @@ public class RpcServiceEndpointMapperTests
     {
         const string libSource = """
             using NOF.Contract;
-            using System.Threading.Tasks;
 
             namespace Lib
             {
@@ -39,7 +38,7 @@ public class RpcServiceEndpointMapperTests
                 public partial interface ILibService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Get, "/api/user")]
-                    Task<Result<string>> GetUserAsync(GetUserRequest request);
+                    Result<string> GetUser(GetUserRequest request);
                 }
             }
             """;
@@ -49,7 +48,6 @@ public class RpcServiceEndpointMapperTests
 
         const string mainSource = """
             using NOF.Contract;
-            using System.Threading.Tasks;
             
             [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<Lib.ILibService>]
             [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<App.IAppService>(Prefix = "/v1")]
@@ -62,7 +60,7 @@ public class RpcServiceEndpointMapperTests
                 public partial interface IAppService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Post, "/api/user")]
-                    Task<Result> CreateUserAsync(CreateUserRequest request);
+                    Result CreateUser(CreateUserRequest request);
                 }
             }
             """;
@@ -82,10 +80,9 @@ public class RpcServiceEndpointMapperTests
         Assert.Contains("RpcServiceEndpointRegistry.Register(__AppRpcServiceEndpointMappings.Map_1);", code);
         Assert.Contains("app.MapGet(BuildRoute(\"\", \"/api/user\")", code);
         Assert.Contains("app.MapPost(BuildRoute(\"/v1\", \"/api/user\")", code);
-        Assert.Contains("Lib.ILibService service", code);
-        Assert.Contains("App.IAppService service", code);
-        Assert.Contains("GetUserAsync(request)", code);
-        Assert.Contains("CreateUserAsync(request)", code);
+        Assert.Contains("global::System.IServiceProvider services", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::Lib.ILibService>(services, \"GetUser\", request, cancellationToken)", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IAppService>(services, \"CreateUser\", request, cancellationToken)", code);
     }
 
     [Fact]
@@ -93,7 +90,6 @@ public class RpcServiceEndpointMapperTests
     {
         const string source = """
             using NOF.Contract;
-            using System.Threading.Tasks;
             
             [assembly: System.CLSCompliant(true)]
 
@@ -105,7 +101,7 @@ public class RpcServiceEndpointMapperTests
                 public partial interface IItemService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                    Task<Result> CreateAsync(CreateItemRequest request);
+                    Result Create(CreateItemRequest request);
                 }
             }
             """;
@@ -120,7 +116,6 @@ public class RpcServiceEndpointMapperTests
     {
         const string source = """
             using NOF.Contract;
-            using System.Threading.Tasks;
             
             [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<App.IMyService>]
 
@@ -131,7 +126,7 @@ public class RpcServiceEndpointMapperTests
                 
                 public partial interface IMyService : IRpcService
                 {
-                    Task<Result> InternalAsync(InternalRequest request);
+                    Result Internal(InternalRequest request);
                 }
             }
             """;
@@ -150,7 +145,6 @@ public class RpcServiceEndpointMapperTests
     {
         const string source = """
             using NOF.Contract;
-            using System.Threading.Tasks;
             
             [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<App.IMyService>]
 
@@ -166,7 +160,7 @@ public class RpcServiceEndpointMapperTests
                 public partial interface IMyService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
-                    Task<Result> UpdateItemAsync(UpdateItemRequest request);
+                    Result UpdateItem(UpdateItemRequest request);
                 }
             }
             """;
@@ -181,6 +175,6 @@ public class RpcServiceEndpointMapperTests
         Assert.Contains("UpdateItemRequest(id)", code);
         Assert.Contains("Value = __body__.Value", code);
         Assert.Contains("Priority = __body__.Priority", code);
-        Assert.Contains("UpdateItemAsync(request)", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IMyService>(services, \"UpdateItem\", request, cancellationToken)", code);
     }
 }

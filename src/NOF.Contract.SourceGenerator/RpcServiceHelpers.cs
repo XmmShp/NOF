@@ -95,28 +95,30 @@ internal static class RpcServiceHelpers
 
     public static bool TryGetServiceReturnInfo(IMethodSymbol method, out ServiceReturnInfo returnInfo)
     {
-        if (method.ReturnType is INamedTypeSymbol { IsGenericType: true } generic &&
-            generic.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<TResult>")
+        if (method.ReturnsVoid)
         {
-            var taskArgument = generic.TypeArguments[0];
-            var taskArgumentDisplay = taskArgument.ToDisplayString();
-
-            if (taskArgumentDisplay == "NOF.Contract.Result")
-            {
-                returnInfo = new ServiceReturnInfo(ServiceReturnKind.TaskOfResult, null);
-                return true;
-            }
-
-            if (taskArgument is INamedTypeSymbol { IsGenericType: true } genericResult &&
-                genericResult.OriginalDefinition.ToDisplayString() == "NOF.Contract.Result<T>")
-            {
-                returnInfo = new ServiceReturnInfo(ServiceReturnKind.TaskOfResultOfT, genericResult.TypeArguments[0]);
-                return true;
-            }
+            returnInfo = default;
+            return false;
         }
 
-        returnInfo = default;
-        return false;
+        var returnType = method.ReturnType;
+        if (returnType.ToDisplayString() is "System.Threading.Tasks.Task"
+            or "System.Threading.Tasks.ValueTask")
+        {
+            returnInfo = default;
+            return false;
+        }
+
+        if (returnType is INamedTypeSymbol { IsGenericType: true } namedType
+            && (namedType.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<T>"
+                || namedType.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.ValueTask<T>"))
+        {
+            returnInfo = default;
+            return false;
+        }
+
+        returnInfo = new ServiceReturnInfo(returnType);
+        return true;
     }
 
     public static string GetFullNamespace(INamespaceSymbol ns)
@@ -188,14 +190,14 @@ internal sealed class ServiceMethodInfo
 {
     public IMethodSymbol Method { get; set; } = null!;
     public INamedTypeSymbol? RequestType { get; set; }
-    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.TaskOfResult, null);
+    public ServiceReturnInfo ReturnInfo { get; set; } = new(null!);
     public string OperationName { get; set; } = string.Empty;
 }
 
 internal class EndpointInfo
 {
     public INamedTypeSymbol? RequestType { get; set; }
-    public ServiceReturnInfo ReturnInfo { get; set; } = new(ServiceReturnKind.TaskOfResult, null);
+    public ServiceReturnInfo ReturnInfo { get; set; } = new(null!);
     public HttpVerb Method { get; set; }
     public string Route { get; set; } = string.Empty;
     public string OperationName { get; set; } = string.Empty;
@@ -205,22 +207,14 @@ internal class EndpointInfo
     public string[] Tags { get; set; } = [];
 }
 
-internal enum ServiceReturnKind
-{
-    TaskOfResult,
-    TaskOfResultOfT
-}
-
 internal readonly struct ServiceReturnInfo
 {
-    public ServiceReturnInfo(ServiceReturnKind kind, ITypeSymbol? valueType)
+    public ServiceReturnInfo(ITypeSymbol valueType)
     {
-        Kind = kind;
         ValueType = valueType;
     }
 
-    public ServiceReturnKind Kind { get; }
-    public ITypeSymbol? ValueType { get; }
+    public ITypeSymbol ValueType { get; }
 }
 
 internal enum HttpVerb

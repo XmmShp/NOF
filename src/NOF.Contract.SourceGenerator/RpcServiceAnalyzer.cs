@@ -37,7 +37,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor InvalidServiceMethodSignature = new(
         "NOF207",
         "Invalid service method signature",
-        "Method '{0}' on service interface '{1}' must have exactly 1 request parameter, must not declare CancellationToken, and must return Task<Result> or Task<Result<T>>",
+        "Method '{0}' on service interface '{1}' must have exactly 1 request parameter, must not declare CancellationToken, must not end with Async, and must return a non-Task value",
         "RpcService",
         DiagnosticSeverity.Error,
         true);
@@ -135,7 +135,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         {
             var validRequestParameter = RpcServiceHelpers.TryGetRequestParameter(method, out var requestParameter);
             var validReturnType = RpcServiceHelpers.TryGetServiceReturnInfo(method, out _);
-            if (!validRequestParameter || !validReturnType)
+            var validMethodName = !method.Name.EndsWith("Async", StringComparison.Ordinal);
+            if (!validRequestParameter || !validReturnType || !validMethodName)
             {
                 context.ReportDiagnostic(
                     Diagnostic.Create(InvalidServiceMethodSignature, method.Locations.FirstOrDefault() ?? attrLocation, method.Name, typeSymbol.Name));

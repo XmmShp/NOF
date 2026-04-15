@@ -1,4 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
 using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
@@ -10,19 +12,22 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// Returns all active keys (current + retired) so clients can validate tokens
 /// signed by any key that has not yet been evicted.
 /// </summary>
-public class JwksService : IJwksService
+public partial class JwksService : RpcServer<IJwksService>;
+
+public sealed class GetJwksHandler : JwksService.GetJwks
 {
     private readonly ISigningKeyService _signingKeyService;
 
-    public JwksService(ISigningKeyService signingKeyService)
+    public GetJwksHandler(ISigningKeyService signingKeyService)
     {
         _signingKeyService = signingKeyService;
     }
 
     /// <inheritdoc />
-    public Task<Result<JwksDocument>> GetJwksAsync(GetJwksRequest request)
+    public override Task<Result<JwksDocument>> HandleAsync(GetJwksRequest request, CancellationToken cancellationToken)
     {
         _ = request;
+        _ = cancellationToken;
         var allKeys = _signingKeyService.AllKeys;
 
         var jwks = allKeys.Select(managedKey =>

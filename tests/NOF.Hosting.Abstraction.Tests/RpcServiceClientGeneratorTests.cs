@@ -23,9 +23,6 @@ public class RpcServiceClientGeneratorTests
         const string source = """
                               using NOF.Contract;
                               using NOF.Hosting;
-                              using System.Threading;
-                              using System.Threading.Tasks;
-
                               namespace MyApp
                               {
                                   public record CreateUserRequest(string Name);
@@ -33,7 +30,7 @@ public class RpcServiceClientGeneratorTests
                                   public partial interface IMyService : IRpcService
                                   {
                                       [HttpEndpoint(HttpVerb.Post, "/api/users")]
-                                      Task<Result> CreateUserAsync(CreateUserRequest request);
+                                      Result CreateUser(CreateUserRequest request);
                                   }
 
                                   [HttpServiceClient<IMyService>]
@@ -45,7 +42,7 @@ public class RpcServiceClientGeneratorTests
         Assert.Single(runResult.GeneratedTrees);
 
         var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
-        Assert.Contains("public partial class MyServiceClient : global::MyApp.IMyService", code);
+        Assert.DoesNotContain(": global::MyApp.IMyService", code);
         Assert.Contains("CreateUserAsync", code);
         Assert.Contains("HttpMethod.Post", code);
         Assert.DoesNotContain("global::NOF.Application.IExecutionContext", code);
@@ -58,15 +55,13 @@ public class RpcServiceClientGeneratorTests
         const string source = """
                               using NOF.Contract;
                               using NOF.Hosting;
-                              using System.Threading.Tasks;
-
                               namespace MyApp
                               {
                                   public record InternalRequest(string Data);
 
                                   public partial interface IMyService : IRpcService
                                   {
-                                      Task<Result> InternalAsync(InternalRequest request);
+                                      Result Internal(InternalRequest request);
                                   }
 
                                   [HttpServiceClient<IMyService>]
@@ -86,8 +81,6 @@ public class RpcServiceClientGeneratorTests
         const string source = """
                               using NOF.Contract;
                               using NOF.Hosting;
-                              using System.Threading.Tasks;
-
                               namespace MyApp
                               {
                                   public class UpdateUserRequest
@@ -100,7 +93,7 @@ public class RpcServiceClientGeneratorTests
                                   public partial interface IMyService : IRpcService
                                   {
                                       [HttpEndpoint(HttpVerb.Put, "/api/users/{id}")]
-                                      Task<Result> UpdateUserAsync(UpdateUserRequest request);
+                                      Result UpdateUser(UpdateUserRequest request);
                                   }
 
                                   [HttpServiceClient<IMyService>]
@@ -124,8 +117,6 @@ public class RpcServiceClientGeneratorTests
         const string source = """
                               using NOF.Contract;
                               using NOF.Hosting;
-                              using System.Threading.Tasks;
-
                               namespace MyApp
                               {
                                   public record MyData(string Value);
@@ -134,7 +125,7 @@ public class RpcServiceClientGeneratorTests
                                   public partial interface IMyService : IRpcService
                                   {
                                       [HttpEndpoint(HttpVerb.Get, "/api/data")]
-                                      Task<Result<MyData>> GetDataAsync(GetDataRequest request);
+                                      Result<MyData> GetData(GetDataRequest request);
                                   }
 
                                   [HttpServiceClient<IMyService>]

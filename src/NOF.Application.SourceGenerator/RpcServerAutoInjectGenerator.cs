@@ -9,7 +9,7 @@ using System.Text;
 namespace NOF.Application.SourceGenerator;
 
 [Generator]
-public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
+public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -25,7 +25,7 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
                         return [];
                     }
 
-                    var registrations = CollectRegistrations(classDeclaration, classSymbol, ctx.SemanticModel);
+                    var registrations = CollectRegistrations(classSymbol);
                     return registrations.Count == 0 ? [] : [.. registrations];
                 })
             .Where(static registrations => !registrations.IsDefaultOrEmpty);
@@ -41,7 +41,7 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
 
                 foreach (var registration in registrationGroups.SelectMany(x => x))
                 {
-                    if (!seen.Add(registration.ServiceType + "|" + registration.ImplementationType))
+                    if (!seen.Add(registration.Kind + "|" + registration.ServiceType + "|" + registration.ImplementationType))
                     {
                         continue;
                     }
@@ -60,79 +60,41 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
             }
 
             var source = GenerateInitializer(data.AssemblyName, data.Registrations);
-            spc.AddSource("SplitInterfaceAutoInjectAssemblyInitializer.g.cs", SourceText.From(source, Encoding.UTF8));
+            spc.AddSource("RpcServerAutoInjectAssemblyInitializer.g.cs", SourceText.From(source, Encoding.UTF8));
         });
     }
 
-    private static List<RegistrationInfo> CollectRegistrations(
-        ClassDeclarationSyntax classDeclaration,
-        INamedTypeSymbol classSymbol,
-        SemanticModel semanticModel)
+    private static List<RegistrationInfo> CollectRegistrations(INamedTypeSymbol classSymbol)
     {
         var registrations = new List<RegistrationInfo>();
         var implementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        if (classDeclaration.BaseList is null)
+        if (RpcServerSymbolHelper.TryGetServiceInterface(classSymbol, out var serviceInterface) && serviceInterface is not null)
         {
-            return registrations;
+            registrations.Add(new RegistrationInfo(
+                RegistrationKind.Server,
+                implementationType,
+                implementationType,
+                serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
         }
 
-        foreach (var baseType in classDeclaration.BaseList.Types)
+        if (RpcServerSymbolHelper.TryGetRpcHandlerBase(classSymbol, out var handlerBaseType, out _)
+            && handlerBaseType is not null)
         {
-            if (!TryGetSplitOperationInterface(baseType.Type, semanticModel, out var serviceType))
-            {
-                continue;
-            }
-
-            registrations.Add(new RegistrationInfo(serviceType, implementationType));
+            registrations.Add(new RegistrationInfo(
+                RegistrationKind.Handler,
+                handlerBaseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                implementationType,
+                null));
         }
 
         return registrations;
     }
 
-    private static bool TryGetSplitOperationInterface(
-        TypeSyntax typeSyntax,
-        SemanticModel semanticModel,
-        out string serviceType)
-    {
-        serviceType = string.Empty;
-
-        if (typeSyntax is not QualifiedNameSyntax qualifiedName)
-        {
-            return false;
-        }
-
-        var operationName = qualifiedName.Right.Identifier.ValueText;
-        if (string.IsNullOrWhiteSpace(operationName))
-        {
-            return false;
-        }
-
-        var containingType = ResolveContainingType(qualifiedName.Left, semanticModel);
-        if (containingType is null || !SplitInterfaceSymbolHelper.ImplementsSplitedInterface(containingType))
-        {
-            return false;
-        }
-
-        serviceType = $"{containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}.{operationName}";
-        return true;
-    }
-
-    private static INamedTypeSymbol? ResolveContainingType(NameSyntax nameSyntax, SemanticModel semanticModel)
-    {
-        var symbol = semanticModel.GetSymbolInfo(nameSyntax).Symbol;
-        if (symbol is INamedTypeSymbol namedType)
-        {
-            return namedType;
-        }
-
-        return semanticModel.GetTypeInfo(nameSyntax).Type as INamedTypeSymbol;
-    }
-
     private static string GenerateInitializer(string assemblyName, ImmutableArray<RegistrationInfo> registrations)
     {
         var sanitizedName = assemblyName.Replace(".", "");
-        var initializerTypeName = $"__{sanitizedName}SplitInterfaceAutoInjectAssemblyInitializer";
+        var initializerTypeName = $"__{sanitizedName}RpcServerAutoInjectAssemblyInitializer";
 
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
@@ -156,6 +118,13 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
+            if (registration.Kind == RegistrationKind.Server)
+            {
+                sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Scoped, false));");
+                sb.AppendLine($"            global::NOF.Application.RpcServerRegistry.Register(typeof({registration.ServiceContractType}), typeof({registration.ImplementationType}));");
+                continue;
+            }
+
             sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Transient, false));");
         }
 
@@ -179,13 +148,23 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
 
     private sealed class RegistrationInfo
     {
-        public RegistrationInfo(string serviceType, string implementationType)
+        public RegistrationInfo(RegistrationKind kind, string serviceType, string implementationType, string? serviceContractType)
         {
+            Kind = kind;
             ServiceType = serviceType;
             ImplementationType = implementationType;
+            ServiceContractType = serviceContractType;
         }
 
+        public RegistrationKind Kind { get; }
         public string ServiceType { get; }
         public string ImplementationType { get; }
+        public string? ServiceContractType { get; }
     }
+}
+
+internal enum RegistrationKind
+{
+    Server,
+    Handler
 }

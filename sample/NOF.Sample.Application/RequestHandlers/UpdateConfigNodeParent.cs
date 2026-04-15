@@ -19,10 +19,9 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         _cache = cache;
     }
 
-    public async Task<Result> UpdateConfigNodeParentAsync(UpdateConfigNodeParentRequest request)
+    public override async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
     {
-        var cancellationToken = CancellationToken.None;
-        var nodeId = ConfigNodeId.Of(request.NodeId);
+                var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>().FindAsync([nodeId], cancellationToken);
 
         if (node is null)
