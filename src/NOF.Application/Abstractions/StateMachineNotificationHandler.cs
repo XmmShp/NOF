@@ -1,4 +1,5 @@
 using NOF.Contract;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -17,23 +18,23 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     where TNotification : class, INotification
 {
     private readonly IStateMachineContextStore _store;
-    private readonly IUnitOfWork _uow;
+    private readonly DbContext _dbContext;
     private readonly IServiceProvider _serviceProvider;
     private readonly IStateMachineRegistry _stateMachineRegistry;
 
     /// <summary>Initializes a new instance.</summary>
     /// <param name="store">The state machine context store.</param>
-    /// <param name="uow">The unit of work.</param>
+    /// <param name="dbContext">The current persistence context.</param>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="stateMachineRegistry">The state machine registry.</param>
     protected StateMachineNotificationHandler(
         IStateMachineContextStore store,
-        IUnitOfWork uow,
+        DbContext dbContext,
         IServiceProvider serviceProvider,
         IStateMachineRegistry stateMachineRegistry)
     {
         _store = store;
-        _uow = uow;
+        _dbContext = dbContext;
         _serviceProvider = serviceProvider;
         _stateMachineRegistry = stateMachineRegistry;
     }
@@ -84,6 +85,6 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
             }
         }
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

@@ -44,10 +44,9 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-efcore-default", Name = "Tenant EFCore Default" });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var tenant = await db.FindAsync<NOFTenant>(["tenant-efcore-default"]);
         Assert.NotNull(tenant);
@@ -75,10 +74,9 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-default", Name = "Tenant Default" });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var tenant = await db.FindAsync<NOFTenant>(["tenant-default"]);
         Assert.NotNull(tenant);
@@ -94,11 +92,10 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using var transaction = await transactionManager.BeginTransactionAsync();
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-1", Name = "Tenant 1" });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
         await transaction.RollbackAsync();
 
         using var verifyScope = services.CreateScope();
@@ -117,15 +114,14 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using var outer = await transactionManager.BeginTransactionAsync();
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "outer", Name = "Outer" });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         await using var inner = await transactionManager.BeginTransactionAsync();
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "inner", Name = "Inner" });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
         await inner.RollbackAsync();
         await outer.CommitAsync();
 
@@ -145,12 +141,11 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using (await transactionManager.BeginTransactionAsync())
         {
             db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
-            await unitOfWork.SaveChangesAsync();
+            await db.SaveChangesAsync();
         }
 
         using var verifyScope = services.CreateScope();
@@ -186,14 +181,13 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var order = TestOrder.Create(1, "order-1");
         order.Raise(new TestEvent("created"));
         db.Set<TestOrder>().Add(order);
         await db.FindAsync<TestOrder>([1L]);
 
-        var changeCount = await unitOfWork.SaveChangesAsync();
+        var changeCount = await db.SaveChangesAsync();
         Assert.Equal(1, changeCount);
         Assert.Empty(order.Events);
     }
@@ -206,12 +200,11 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         db.Set<TestOrder>().Add(TestOrder.Create(1, "order-1"));
 
-        await unitOfWork.SaveChangesAsync();
-        var second = await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
+        var second = await db.SaveChangesAsync();
         Assert.Equal(0, second);
     }
 
@@ -223,15 +216,14 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var message = new NOFInboxMessage(Guid.NewGuid());
 
         db.Set<NOFInboxMessage>().Add(message);
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
         Assert.NotNull(await db.FindAsync<NOFInboxMessage>([message.Id]));
 
         db.Set<NOFInboxMessage>().Remove(message);
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
         Assert.Null(await db.FindAsync<NOFInboxMessage>([message.Id]));
     }
 
@@ -243,7 +235,7 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var id = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
@@ -255,7 +247,7 @@ public class SqliteInMemoryPersistenceTests
             MessageType = OutboxMessageType.Command,
             CreatedAt = DateTime.UtcNow.AddMinutes(-1)
         });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
         Assert.Single(claimed);
@@ -283,7 +275,7 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var id1 = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
@@ -304,9 +296,8 @@ public class SqliteInMemoryPersistenceTests
             Headers = "{}",
             MessageType = OutboxMessageType.Command
         });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
-        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var exhausted = await db.FindAsync<NOFOutboxMessage>([id1]);
         Assert.NotNull(exhausted);
         exhausted.RetryCount = 2;
@@ -316,7 +307,7 @@ public class SqliteInMemoryPersistenceTests
         claimedUntilFuture.ClaimedBy = "test-claim-id";
         claimedUntilFuture.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
 
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
         Assert.Empty(claimed);
@@ -330,7 +321,7 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var id = Guid.NewGuid();
         repository.Add(new NOFOutboxMessage
@@ -341,7 +332,7 @@ public class SqliteInMemoryPersistenceTests
             Headers = "{}",
             MessageType = OutboxMessageType.Notification
         });
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
         if (claimed.Count == 0)
@@ -371,9 +362,8 @@ public class SqliteInMemoryPersistenceTests
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             hostExecutionContext.TenantId = NOFAbstractionConstants.Tenant.HostId;
             var hostDb = hostScope.ServiceProvider.GetRequiredService<DbContext>();
-            var hostUow = hostScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             hostDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
-            await hostUow.SaveChangesAsync();
+            await hostDb.SaveChangesAsync();
         }
 
         using (var tenantScope = services.CreateScope())
@@ -381,9 +371,8 @@ public class SqliteInMemoryPersistenceTests
             var tenantExecutionContext = tenantScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             tenantExecutionContext.TenantId = "tenant-a";
             var tenantDb = tenantScope.ServiceProvider.GetRequiredService<DbContext>();
-            var tenantUow = tenantScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             tenantDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
-            await tenantUow.SaveChangesAsync();
+            await tenantDb.SaveChangesAsync();
             Assert.Equal(2,
             (await tenantDb.FindAsync<NOFStateMachineContext>(["corr", "def"]))!.State);
         }
@@ -406,15 +395,14 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         db.Set<TestOrder>().Add(TestOrder.Create(7, "before"));
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var tracked = await db.Set<TestOrder>().SingleAsync(order => order.Id == 7);
         tracked.Raise(new TestEvent("tracked-query"));
 
-        var changeCount = await unitOfWork.SaveChangesAsync();
+        var changeCount = await db.SaveChangesAsync();
 
         Assert.Equal(0, changeCount);
     }
@@ -427,16 +415,15 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
         db.Set<TestOrder>().Add(TestOrder.Create(8, "before"));
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var detached = await db.Set<TestOrder>().AsNoTracking().SingleAsync(order => order.Id == 8);
         detached.Raise(new TestEvent("detached-query"));
 
-        var changeCount = await unitOfWork.SaveChangesAsync();
+        var changeCount = await db.SaveChangesAsync();
         var stored = await db.FindAsync<TestOrder>([8L]);
 
         Assert.Equal(0, changeCount);
@@ -452,10 +439,9 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         db.Set<TestOrder>().Add(TestOrder.Create(9, "n"));
-        await unitOfWork.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var rows = db.Set<TestOrder>().FromSqlRaw("select * from TestOrder").ToList();
         Assert.NotEmpty(rows);

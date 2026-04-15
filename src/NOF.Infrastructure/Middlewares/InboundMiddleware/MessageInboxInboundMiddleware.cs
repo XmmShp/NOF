@@ -16,15 +16,13 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
 {
     private readonly ITransactionManager _transactionManager;
     private readonly DbContext _dbContext;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;
 
-    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, DbContext dbContext, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
+    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, DbContext dbContext, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
     {
         _transactionManager = transactionManager;
         _dbContext = dbContext;
-        _unitOfWork = unitOfWork;
         _logger = logger;
         _executionContext = executionContext;
     }
@@ -55,7 +53,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
 
             _dbContext.Set<NOFInboxMessage>().Add(inboxMessage);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
             _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.MessageId);
 
             await next(cancellationToken);

@@ -10,16 +10,13 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 {
     private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IUnitOfWork _uow;
 
     public UpdateConfigNodeParent(
         DbContext dbContext,
-        ICacheService cache,
-        IUnitOfWork uow)
+        ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _uow = uow;
     }
 
     public async Task<Result> UpdateConfigNodeParentAsync(UpdateConfigNodeParentRequest request)
@@ -54,7 +51,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         }
 
         node.UpdateParent(newParentId);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(nodeId), cancellationToken);

@@ -10,16 +10,13 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
 {
     private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IUnitOfWork _uow;
 
     public CreateConfigNode(
         DbContext dbContext,
-        ICacheService cache,
-        IUnitOfWork uow)
+        ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _uow = uow;
     }
 
     public async Task<Result> CreateConfigNodeAsync(CreateConfigNodeRequest request)
@@ -35,7 +32,7 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
 
         var node = ConfigNode.Create(name, parentId);
         _dbContext.Set<ConfigNode>().Add(node);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
         await _cache.RemoveAsync(new ConfigNodeByNameCacheKey(name), cancellationToken);
@@ -48,5 +45,4 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
         return Result.Success();
     }
 }
-
 

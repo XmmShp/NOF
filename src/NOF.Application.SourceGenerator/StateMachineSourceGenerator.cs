@@ -199,10 +199,10 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
                 sb.AppendLine("    {");
                 sb.AppendLine($"        public {handlerClassName}(");
                 sb.AppendLine("            global::NOF.Application.IStateMachineContextStore store,");
-                sb.AppendLine("            global::NOF.Application.IUnitOfWork uow,");
+                sb.AppendLine("            global::Microsoft.EntityFrameworkCore.DbContext dbContext,");
                 sb.AppendLine("            global::System.IServiceProvider serviceProvider,");
                 sb.AppendLine("            global::NOF.Application.IStateMachineRegistry stateMachineRegistry)");
-                sb.AppendLine("            : base(store, uow, serviceProvider, stateMachineRegistry) { }");
+                sb.AppendLine("            : base(store, dbContext, serviceProvider, stateMachineRegistry) { }");
                 sb.AppendLine("    }");
                 sb.AppendLine();
 

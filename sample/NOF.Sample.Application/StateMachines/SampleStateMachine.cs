@@ -22,16 +22,16 @@ public record StartProcessingCommand(string TaskId) : ICommand;
 
 public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
 {
-    private readonly IUnitOfWork _uow;
+    private readonly Microsoft.EntityFrameworkCore.DbContext _dbContext;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly ILogger<StartProcessingCommandHandler> _logger;
 
     public StartProcessingCommandHandler(
-        IUnitOfWork uow,
+        Microsoft.EntityFrameworkCore.DbContext dbContext,
         INotificationPublisher notificationPublisher,
         ILogger<StartProcessingCommandHandler> logger)
     {
-        _uow = uow;
+        _dbContext = dbContext;
         _notificationPublisher = notificationPublisher;
         _logger = logger;
     }
@@ -51,7 +51,7 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
             _notificationPublisher.DeferPublish(new ProcessingFailed(command.TaskId, "An error occurred during processing."));
         }
 
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
 

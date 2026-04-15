@@ -10,13 +10,11 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 {
     private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IUnitOfWork _uow;
 
-    public RemoveConfigFile(DbContext dbContext, ICacheService cache, IUnitOfWork uow)
+    public RemoveConfigFile(DbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _uow = uow;
     }
 
     public async Task<Result> RemoveConfigFileAsync(RemoveConfigFileRequest request)
@@ -32,7 +30,7 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 
         var fileName = ConfigFileName.Of(request.FileName);
         node.RemoveConfigFile(fileName);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
@@ -47,5 +45,4 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
         return Result.Success();
     }
 }
-
 

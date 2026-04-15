@@ -11,18 +11,15 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
     private readonly DbContext _dbContext;
     private readonly IConfigNodeChildrenRepository _childrenRepository;
     private readonly ICacheService _cache;
-    private readonly IUnitOfWork _uow;
 
     public DeleteConfigNode(
         DbContext dbContext,
         IConfigNodeChildrenRepository childrenRepository,
-        ICacheService cache,
-        IUnitOfWork uow)
+        ICacheService cache)
     {
         _dbContext = dbContext;
         _childrenRepository = childrenRepository;
         _cache = cache;
-        _uow = uow;
     }
 
     public async Task<Result> DeleteConfigNodeAsync(DeleteConfigNodeRequest request)
@@ -44,7 +41,7 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 
         node.MarkAsDeleted();
         _dbContext.Set<ConfigNode>().Remove(node);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
@@ -53,5 +50,4 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         return Result.Success();
     }
 }
-
 

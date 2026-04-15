@@ -10,13 +10,11 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
 {
     private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IUnitOfWork _uow;
 
-    public AddOrUpdateConfigFile(DbContext dbContext, ICacheService cache, IUnitOfWork uow)
+    public AddOrUpdateConfigFile(DbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _uow = uow;
     }
 
     public async Task<Result> AddOrUpdateConfigFileAsync(AddOrUpdateConfigFileRequest request)
@@ -34,7 +32,7 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
         var content = ConfigContent.Of(request.Content);
 
         node.AddOrUpdateConfigFile(fileName, content);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
@@ -49,5 +47,4 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
         return Result.Success();
     }
 }
-
 

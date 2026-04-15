@@ -10,13 +10,11 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
 {
     private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IUnitOfWork _uow;
 
-    public SetActiveFile(DbContext dbContext, ICacheService cache, IUnitOfWork uow)
+    public SetActiveFile(DbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _uow = uow;
     }
 
     public async Task<Result> SetActiveFileAsync(SetActiveFileRequest request)
@@ -32,7 +30,7 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
 
         var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);
         node.SetActiveFileName(fileName);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
@@ -47,5 +45,4 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         return Result.Success();
     }
 }
-
 
