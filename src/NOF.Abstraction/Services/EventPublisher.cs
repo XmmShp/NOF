@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Abstraction;
@@ -47,7 +46,12 @@ public sealed class EventPublisher : IEventPublisher
 
         foreach (var handlerType in _eventHandlerInfos.GetHandlerTypes(runtimeType))
         {
-            var handler = (IEventHandlerInvoker)_serviceProvider.GetRequiredService(handlerType);
+            var handler = _serviceProvider.GetService(handlerType) as IEventHandler;
+            if (handler is null)
+            {
+                throw new InvalidOperationException($"Event handler type '{handlerType}' is not registered in the current scope.");
+            }
+
             await handler.HandleAsync(payload, cancellationToken).ConfigureAwait(false);
         }
     }

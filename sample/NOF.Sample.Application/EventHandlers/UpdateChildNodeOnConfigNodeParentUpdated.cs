@@ -7,7 +7,7 @@ namespace NOF.Sample.Application.EventHandlers;
 /// <summary>
 /// 节点父节点更新时同步更新子节点列表
 /// </summary>
-public class UpdateChildNodeOnConfigNodeParentUpdated : NOF.Abstraction.EventHandler<ConfigNodeParentUpdatedEvent>
+public class UpdateChildNodeOnConfigNodeParentUpdated : IEventHandler<ConfigNodeParentUpdatedEvent>
 {
     private readonly IConfigNodeChildrenRepository _childrenRepository;
 
@@ -16,8 +16,8 @@ public class UpdateChildNodeOnConfigNodeParentUpdated : NOF.Abstraction.EventHan
         _childrenRepository = childrenRepository;
     }
 
-    public override async Task HandleAsync(ConfigNodeParentUpdatedEvent payload, CancellationToken cancellationToken)
+    public async Task HandleAsync(ConfigNodeParentUpdatedEvent @event, CancellationToken cancellationToken)
     {
-        await _childrenRepository.UpdateChildNodeParentAsync(payload.NodeId, payload.OldParentId, payload.NewParentId, cancellationToken);
+        await _childrenRepository.UpdateChildNodeParentAsync(@event.NodeId, @event.OldParentId, @event.NewParentId, cancellationToken);
     }
 }

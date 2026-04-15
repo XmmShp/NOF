@@ -7,7 +7,7 @@ namespace NOF.Sample.Application.EventHandlers;
 /// <summary>
 /// 节点删除时从父节点的子节点列表中移除
 /// </summary>
-public class RemoveChildNodeOnConfigNodeDeleted : Abstraction.EventHandler<ConfigNodeDeletedEvent>
+public class RemoveChildNodeOnConfigNodeDeleted : IEventHandler<ConfigNodeDeletedEvent>
 {
     private readonly IConfigNodeChildrenRepository _childrenRepository;
 
@@ -16,8 +16,8 @@ public class RemoveChildNodeOnConfigNodeDeleted : Abstraction.EventHandler<Confi
         _childrenRepository = childrenRepository;
     }
 
-    public override async Task HandleAsync(ConfigNodeDeletedEvent payload, CancellationToken cancellationToken)
+    public async Task HandleAsync(ConfigNodeDeletedEvent @event, CancellationToken cancellationToken)
     {
-        await _childrenRepository.RemoveChildNodeAsync(payload.Id, payload.ParentId, cancellationToken);
+        await _childrenRepository.RemoveChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
     }
 }

@@ -9,7 +9,7 @@ using System.Text;
 namespace NOF.Abstraction.SourceGenerator;
 
 /// <summary>
-/// Source generator: detects handler classes inheriting EventHandler<T> in the current project
+/// Source generator: detects handler classes implementing IEventHandler in the current project
 /// and generates assembly initializer metadata for the event handler registry.
 /// </summary>
 [Generator]
@@ -28,7 +28,7 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
                     }
 
                     var symbol = ctx.SemanticModel.GetDeclaredSymbol(cds) as INamedTypeSymbol;
-                    if (symbol is { IsAbstract: false, IsGenericType: false } && TryGetEventPayloadType(symbol, out _))
+                    if (symbol is { IsAbstract: false, IsGenericType: false } && IsEventHandlerType(symbol))
                     {
                         return symbol;
                     }
@@ -61,21 +61,19 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
         });
     }
 
-    private static bool TryGetEventPayloadType(INamedTypeSymbol symbol, out ITypeSymbol? payloadType)
+    private static bool IsEventHandlerType(INamedTypeSymbol symbol)
     {
-        payloadType = null;
-        var current = symbol;
-        while (current.BaseType is not null)
+        foreach (var iface in symbol.AllInterfaces)
         {
-            var baseType = current.BaseType;
-            if (baseType.IsGenericType &&
-                baseType.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.EventHandler<TPayload>")
+            if (!iface.IsGenericType)
             {
-                payloadType = baseType.TypeArguments[0];
-                return true;
+                continue;
             }
 
-            current = baseType;
+            if (iface.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.IEventHandler<TEvent>")
+            {
+                return true;
+            }
         }
 
         return false;
@@ -94,14 +92,17 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
 
         foreach (var handlerClass in handlerClasses)
         {
-            if (!TryGetEventPayloadType(handlerClass, out var payloadType) || payloadType is null)
-            {
-                continue;
-            }
-
             var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
-            var payloadTypeName = payloadType.ToDisplayString(typeFormat);
-            registrations.Add($"new global::NOF.Abstraction.EventHandlerRegistration(typeof({handlerTypeName}), typeof({payloadTypeName}))");
+            foreach (var iface in handlerClass.AllInterfaces)
+            {
+                if (!iface.IsGenericType || iface.OriginalDefinition.ToDisplayString() != "NOF.Abstraction.IEventHandler<TEvent>")
+                {
+                    continue;
+                }
+
+                var eventTypeName = iface.TypeArguments[0].ToDisplayString(typeFormat);
+                registrations.Add($"new global::NOF.Abstraction.EventHandlerRegistration(typeof({handlerTypeName}), typeof({eventTypeName}))");
+            }
         }
 
         if (registrations.Count == 0)
