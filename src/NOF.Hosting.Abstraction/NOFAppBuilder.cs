@@ -106,8 +106,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
             await task.ExecuteAsync(this).ConfigureAwait(false);
         }
 
-        ConfigureContainer(new NOFServiceProviderFactory());
-
         var app = await BuildApplicationAsync();
 
         var startGraph = new DependencyGraph(ApplicationConfigs);

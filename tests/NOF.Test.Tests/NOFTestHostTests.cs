@@ -76,46 +76,6 @@ public class NOFTestHostTests
     }
 
     [Fact]
-    public async Task GetRequiredService_ShouldInitializeSingletonOnlyOnce()
-    {
-        var builder = NOFTestAppBuilder.Create();
-        builder.Services.AddSingleton<SingletonInitializable>();
-
-        await using var host = await builder.BuildTestHostAsync();
-
-        var first = host.GetRequiredService<SingletonInitializable>();
-        var second = host.GetRequiredService<SingletonInitializable>();
-
-        Assert.Same(first, second);
-        Assert.Equal(1,
-        first.InitializeCount);
-    }
-
-    [Fact]
-    public async Task GetRequiredService_ShouldInitializeScopedServiceOncePerScope()
-    {
-        var builder = NOFTestAppBuilder.Create();
-        builder.Services.AddScoped<ScopedInitializable>();
-
-        await using var host = await builder.BuildTestHostAsync();
-
-        using var firstScope = host.CreateScope();
-        var firstA = firstScope.GetRequiredService<ScopedInitializable>();
-        var firstB = firstScope.GetRequiredService<ScopedInitializable>();
-
-        using var secondScope = host.CreateScope();
-        var second = secondScope.GetRequiredService<ScopedInitializable>();
-
-        Assert.Same(firstA, firstB);
-        Assert.Equal(1,
-        firstA.InitializeCount);
-        Assert.Equal(1,
-        second.InitializeCount);
-        Assert.NotEqual(firstA.ScopeInstanceId,
-        second.ScopeInstanceId);
-    }
-
-    [Fact]
     public async Task CreateScope_ShouldResolveLazyServiceFromHostingDefaults()
     {
         LazyProbe.Reset();
@@ -166,38 +126,6 @@ public class NOFTestHostTests
         public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
-        }
-    }
-
-    private sealed class SingletonInitializable : IInitializable
-    {
-        private bool _isInitialized;
-
-        public bool IsInitialized => _isInitialized;
-
-        public int InitializeCount { get; private set; }
-
-        public void Initialize()
-        {
-            InitializeCount++;
-            _isInitialized = true;
-        }
-    }
-
-    private sealed class ScopedInitializable : IInitializable
-    {
-        private bool _isInitialized;
-
-        public bool IsInitialized => _isInitialized;
-
-        public Guid ScopeInstanceId { get; } = Guid.NewGuid();
-
-        public int InitializeCount { get; private set; }
-
-        public void Initialize()
-        {
-            InitializeCount++;
-            _isInitialized = true;
         }
     }
 

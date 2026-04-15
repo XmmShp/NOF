@@ -6,17 +6,7 @@ Cross-cutting abstractions package for the [NOF Framework](https://github.com/Xm
 
 Provides shared contracts and annotations intended for use across layers:
 
-- `IInitializable`
-- `IDaemonService`
 - `[AutoInject]`
-- `[AssemblyPrefix]`
-
-## Runtime Behavior
-
-When host applications are built through `NOFAppBuilder`, NOF wraps the service provider with `NOFServiceProvider`.
-
-- Services implementing `IInitializable` are initialized on first resolution.
-- Services registered as `IDaemonService` are eagerly resolved whenever a NOF service provider is created.
 
 ## Installation
 
