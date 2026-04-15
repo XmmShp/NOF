@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using NOF.SourceGenerator.Shared;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -46,7 +45,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 {
                     set.Add(t);
                 }
-                var assemblyName = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
+                var assemblyName = compilation.AssemblyName ?? "Unknown";
                 return (AssemblyName: assemblyName, Types: set.ToImmutableArray());
             });
 

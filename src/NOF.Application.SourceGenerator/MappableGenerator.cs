@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using NOF.SourceGenerator.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -74,7 +73,7 @@ public class MappableGenerator : IIncrementalGenerator
             .Select(static (data, _) =>
             {
                 var (compilation, decls) = data;
-                var asm = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
+                var asm = compilation.AssemblyName ?? "Unknown";
                 return (AssemblyName: asm, Compilation: compilation, Declarations: decls);
             });
 

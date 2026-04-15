@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using NOF.SourceGenerator.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -49,7 +48,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
                 {
                     set.Add(t);
                 }
-                var assemblyName = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
+                var assemblyName = compilation.AssemblyName ?? "Unknown";
                 return (AssemblyName: assemblyName, Types: set.ToImmutableArray());
             });
 

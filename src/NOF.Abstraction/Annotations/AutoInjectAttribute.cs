@@ -17,7 +17,7 @@ public enum Lifetime
 /// Attribute for marking service classes that should be auto-registered in the DI container.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
-public class AutoInjectAttribute : Attribute
+public sealed class AutoInjectAttribute : AttributeForSourceGenerator
 {
     /// <summary>
     /// The service lifetime that defines the scope of the service instance.

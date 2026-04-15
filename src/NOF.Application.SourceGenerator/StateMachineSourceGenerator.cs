@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using NOF.SourceGenerator.Shared;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -70,7 +69,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
             .Select(static (data, _) =>
             {
                 var (compilation, definitions) = data;
-                var assemblyName = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
+                var assemblyName = compilation.AssemblyName ?? "Unknown";
                 return (AssemblyName: assemblyName, Definitions: definitions);
             });
 

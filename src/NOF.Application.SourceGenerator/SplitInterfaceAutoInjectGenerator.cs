@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using NOF.SourceGenerator.Shared;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -36,7 +35,7 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
             .Select((data, _) =>
             {
                 var (compilation, registrationGroups) = data;
-                var assemblyName = AssemblyPrefixHelper.GetAssemblyPrefix(compilation);
+                var assemblyName = compilation.AssemblyName ?? "Unknown";
                 var registrations = new List<RegistrationInfo>();
                 var seen = new HashSet<string>(System.StringComparer.Ordinal);
 

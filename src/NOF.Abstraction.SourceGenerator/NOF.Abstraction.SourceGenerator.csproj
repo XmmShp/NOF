@@ -20,8 +20,4 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\Common\NOF.SourceGenerator.Shared\AssemblyPrefixHelper.cs" Link="Shared\AssemblyPrefixHelper.cs" />
-  </ItemGroup>
-
 </Project>
