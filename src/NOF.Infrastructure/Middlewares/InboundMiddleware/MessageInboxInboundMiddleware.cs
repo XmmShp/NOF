@@ -14,14 +14,12 @@ namespace NOF.Infrastructure;
 /// </summary>
 public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
 {
-    private readonly ITransactionManager _transactionManager;
     private readonly DbContext _dbContext;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;
 
-    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, DbContext dbContext, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
+    public MessageInboxInboundMiddleware(DbContext dbContext, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
     {
-        _transactionManager = transactionManager;
         _dbContext = dbContext;
         _logger = logger;
         _executionContext = executionContext;
@@ -29,12 +27,18 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
 
     public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
     {
-        await using var transaction = await _transactionManager.BeginTransactionAsync(cancellationToken: cancellationToken);
+        _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageIdStr);
+        if (!Guid.TryParse(messageIdStr, out var messageId))
+        {
+            // No message id => no inbox dedup. Don't create a transaction or write inbox entry.
+            await next(cancellationToken);
+            return;
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageIdStr);
-            var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
             var messageExists = await _dbContext.FindAsync<NOFInboxMessage>(
                 keyValues: [messageId],
                 cancellationToken: cancellationToken) is not null;

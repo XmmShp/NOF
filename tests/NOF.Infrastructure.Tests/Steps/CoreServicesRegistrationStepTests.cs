@@ -30,7 +30,6 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        Assert.Null(scope.ServiceProvider.GetService<ITransactionManager>());
         Assert.Null(scope.ServiceProvider.GetService<IOutboxMessageRepository>());
     }
 
@@ -54,7 +53,6 @@ public class InfrastructureDefaultsTests
         provider.GetRequiredService<IOptions<TenantOptions>>().Value.Mode);
         Assert.IsType<EventPublisher>(provider.GetRequiredService<IEventPublisher>());
 
-        Assert.DoesNotContain(builder.Services, service => service.ServiceType == typeof(ITransactionManager));
     }
 
     [Fact]

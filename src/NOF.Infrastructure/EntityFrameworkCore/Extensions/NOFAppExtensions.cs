@@ -22,7 +22,6 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             #region Common Services
             builder.Services.ReplaceOrAddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
             builder.Services.ReplaceOrAddScoped<IStateMachineContextStore, EFCoreStateMachineContextStore>();
-            builder.Services.ReplaceOrAddScoped<ITransactionManager, EFCoreTransactionManager>();
             #endregion
 
             #region DbContext Services

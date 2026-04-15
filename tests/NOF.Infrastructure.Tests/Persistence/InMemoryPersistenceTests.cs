@@ -91,9 +91,8 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
 
-        await using var transaction = await transactionManager.BeginTransactionAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-1", Name = "Tenant 1" });
         await db.SaveChangesAsync();
         await transaction.RollbackAsync();
@@ -113,16 +112,16 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
 
-        await using var outer = await transactionManager.BeginTransactionAsync();
+        await using var outer = await db.Database.BeginTransactionAsync();
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "outer", Name = "Outer" });
         await db.SaveChangesAsync();
 
-        await using var inner = await transactionManager.BeginTransactionAsync();
+        // Use savepoint for nested rollback semantics.
+        await outer.CreateSavepointAsync("sp_inner");
         db.Set<NOFTenant>().Add(new NOFTenant { Id = "inner", Name = "Inner" });
         await db.SaveChangesAsync();
-        await inner.RollbackAsync();
+        await outer.RollbackToSavepointAsync("sp_inner");
         await outer.CommitAsync();
 
         using var verifyScope = services.CreateScope();
@@ -140,9 +139,8 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
 
-        await using (await transactionManager.BeginTransactionAsync())
+        await using (await db.Database.BeginTransactionAsync())
         {
             db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
             await db.SaveChangesAsync();
@@ -159,18 +157,11 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
-
-        await using var outer = await transactionManager.BeginTransactionAsync();
-        await using var inner = await transactionManager.BeginTransactionAsync();
-
-        Func<Task> act = () => outer.CommitAsync();
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(act);
-        Assert.Contains("LIFO order", ex.Message);
-
-        await inner.RollbackAsync();
-        await outer.RollbackAsync();
+        // NOF no longer provides a nested-transaction manager abstraction; nested ordering is an EF/provider concern.
+        // Keep a minimal assertion that EF transaction commit works.
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
+        await using var tx = await db.Database.BeginTransactionAsync();
+        await tx.CommitAsync();
     }
 
     [Fact]
