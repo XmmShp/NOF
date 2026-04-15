@@ -8,7 +8,7 @@ The runtime model is:
 
 1. Source generators emit assembly-level initializers (`[assembly: AssemblyInitializeAttribute<...>]`).
 2. Initializers write metadata into static registries:
-- `AutoInjectRegistry`
+- `Registry.AutoInjectRegistrations`
 - `RequestHandlerRegistry`
 - `HandlerRegistry`
 3. At startup, `builder.AddApplicationPart(assembly)` executes those initializers.

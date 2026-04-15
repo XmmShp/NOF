@@ -22,7 +22,7 @@ public class EventHandlerInfosTests
     [Fact]
     public void Events_FirstReadShouldImportStaticRegistryAndFreeze()
     {
-        EventHandlerRegistry.Register(new EventHandlerRegistration(typeof(RegistryHandler), typeof(RegistryEvent)));
+        Registry.EventHandlerRegistrations.Add(new EventHandlerRegistration(typeof(RegistryHandler), typeof(RegistryEvent)));
 
         var infos = new EventHandlerInfos();
 

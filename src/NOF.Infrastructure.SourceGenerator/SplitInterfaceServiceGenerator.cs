@@ -135,7 +135,7 @@ public sealed class SplitInterfaceServiceGenerator : IIncrementalGenerator
         {
             var serviceFqn = registration.ServiceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var implName = GetImplementationTypeName(registration.SplitedType, registration.ServiceType);
-            sb.AppendLine($"            global::NOF.Annotation.AutoInjectRegistry.Register(typeof({serviceFqn}), typeof({implName}), global::NOF.Annotation.Lifetime.Scoped, useFactory: false);");
+            sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({serviceFqn}), typeof({implName}), global::NOF.Annotation.Lifetime.Scoped, false));");
         }
 
         sb.AppendLine("        }");

@@ -7,7 +7,7 @@ namespace NOF.Sample.Application.EventHandlers;
 /// <summary>
 /// 节点创建时添加到子节点列表
 /// </summary>
-public class AddChildNodeOnConfigNodeCreated : IEventHandler<ConfigNodeCreatedEvent>
+public class AddChildNodeOnConfigNodeCreated : NOF.Abstraction.EventHandler<ConfigNodeCreatedEvent>
 {
     private readonly IConfigNodeChildrenRepository _childrenRepository;
 
@@ -16,8 +16,8 @@ public class AddChildNodeOnConfigNodeCreated : IEventHandler<ConfigNodeCreatedEv
         _childrenRepository = childrenRepository;
     }
 
-    public async Task HandleAsync(ConfigNodeCreatedEvent @event, CancellationToken cancellationToken)
+    public override async Task HandleAsync(ConfigNodeCreatedEvent payload, CancellationToken cancellationToken)
     {
-        await _childrenRepository.AddChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
+        await _childrenRepository.AddChildNodeAsync(payload.Id, payload.ParentId, cancellationToken);
     }
 }

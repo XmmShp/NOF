@@ -9,7 +9,7 @@ namespace NOF.Application.SourceGenerator;
 
 /// <summary>
 /// Analyzer that enforces:
-/// 1. A handler class can only implement one handler interface (ICommandHandler, IEventHandler, INotificationHandler).
+/// 1. A handler class can only implement one handler kind (ICommandHandler, EventHandler&lt;T&gt;, INotificationHandler).
 /// 2. A message class can only implement one message interface (ICommand, INotification).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -18,7 +18,6 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
     private static readonly string[] _handlerInterfaceNames =
     [
         "NOF.Application.ICommandHandler<TCommand>",
-        "NOF.Abstraction.IEventHandler<TEvent>",
         "NOF.Application.INotificationHandler<TNotification>"
     ];
 
@@ -70,6 +69,11 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
     {
         var matched = new HashSet<string>(StringComparer.Ordinal);
 
+        if (DerivesFromEventHandler(symbol))
+        {
+            matched.Add("EventHandler");
+        }
+
         foreach (var iface in symbol.AllInterfaces)
         {
             if (!iface.IsGenericType)
@@ -97,6 +101,23 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
                 string.Join(", ", matched.OrderBy(static value => value, StringComparer.Ordinal)));
             context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    private static bool DerivesFromEventHandler(INamedTypeSymbol symbol)
+    {
+        var current = symbol.BaseType;
+        while (current is not null)
+        {
+            if (current.IsGenericType &&
+                current.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.EventHandler<TPayload>")
+            {
+                return true;
+            }
+
+            current = current.BaseType;
+        }
+
+        return false;
     }
 
     private static void CheckMessageInterfaces(SymbolAnalysisContext context, INamedTypeSymbol symbol)

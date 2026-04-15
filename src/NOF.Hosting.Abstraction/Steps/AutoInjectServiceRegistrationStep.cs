@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Annotation;
 
 namespace NOF.Hosting;
@@ -10,7 +11,8 @@ public sealed class AutoInjectServiceRegistrationStep : IServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        foreach (var registration in AutoInjectRegistry.GetRegistrations())
+        var infos = builder.Services.GetOrAddSingleton<AutoInjectInfos>();
+        foreach (var registration in infos.Registrations)
         {
             var lifetime = ToServiceLifetime(registration.Lifetime);
             if (registration.UseFactory)
@@ -42,4 +44,3 @@ public sealed class AutoInjectServiceRegistrationStep : IServiceRegistrationStep
         };
     }
 }
-

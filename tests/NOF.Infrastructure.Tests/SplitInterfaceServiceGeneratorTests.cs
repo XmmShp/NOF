@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
@@ -13,7 +14,8 @@ public class SplitInterfaceServiceGeneratorTests
     [
         typeof(ISplitedInterface<>),
         typeof(AssemblyInitializeAttribute),
-        typeof(AutoInjectRegistry),
+        typeof(Registry),
+        typeof(AutoInjectServiceRegistration),
         typeof(IRpcService),
         typeof(Result),
         typeof(Result<>),
@@ -69,7 +71,7 @@ public class SplitInterfaceServiceGeneratorTests
 
         Assert.Contains("AssemblyInitializeAttribute<", generatedCode);
         Assert.Contains("SplitInterfaceServiceAssemblyInitializer", generatedCode);
-        Assert.Contains("AutoInjectRegistry.Register(typeof(global::App.IMyService), typeof(", generatedCode);
+        Assert.Contains("Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IMyService), typeof(", generatedCode);
         Assert.Contains("Lifetime.Scoped", generatedCode);
         Assert.Contains(": global::App.IMyService", generatedCode);
     }

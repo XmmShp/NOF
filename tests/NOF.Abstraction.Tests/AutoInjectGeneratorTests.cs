@@ -79,8 +79,8 @@ public class AutoInjectGeneratorTests
 
         var generatedCode = trees.Single().GetRoot().ToFullString();
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]", generatedCode);
-        Assert.Contains("global::NOF.Annotation.AutoInjectRegistry.Register", generatedCode);
-        Assert.Contains("typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, useFactory: false", generatedCode);
+        Assert.Contains("global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add", generatedCode);
+        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, false)", generatedCode);
     }
 
     [Fact]
@@ -128,11 +128,9 @@ public class AutoInjectGeneratorTests
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, useFactory: false", generatedCode);
-        Assert.Contains("typeof(global::App.IFoo)", generatedCode);
-        Assert.Contains("typeof(global::App.IBar)", generatedCode);
-        Assert.Contains("useFactory: true", generatedCode);
+        Assert.Contains("Registry.AutoInjectRegistrations.Add", generatedCode);
+        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, false)", generatedCode);
+        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IFoo), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, true)", generatedCode);
+        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, true)", generatedCode);
     }
 }
-
-

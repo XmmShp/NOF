@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using NOF.Abstraction;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
@@ -44,7 +45,8 @@ public class SplitInterfaceAutoInjectGeneratorTests
             typeof(IRpcService),
             typeof(Result),
             typeof(Result<>),
-            typeof(AutoInjectRegistry),
+            typeof(Registry),
+            typeof(AutoInjectServiceRegistration),
             typeof(AssemblyInitializeAttribute));
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create([
@@ -58,7 +60,7 @@ public class SplitInterfaceAutoInjectGeneratorTests
         var generatedCode = string.Join("\n\n", driver.GetRunResult().GeneratedTrees.Select(tree => tree.GetRoot().ToFullString()));
 
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppSplitInterfaceAutoInjectAssemblyInitializer>", generatedCode);
-        Assert.Contains("AutoInjectRegistry.Register(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler), global::NOF.Annotation.Lifetime.Transient, useFactory: false);", generatedCode);
+        Assert.Contains("Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler), global::NOF.Annotation.Lifetime.Transient, false));", generatedCode);
     }
 
     [Fact]
@@ -95,7 +97,8 @@ public class SplitInterfaceAutoInjectGeneratorTests
             typeof(IRpcService),
             typeof(Result),
             typeof(Result<>),
-            typeof(AutoInjectRegistry),
+            typeof(Registry),
+            typeof(AutoInjectServiceRegistration),
             typeof(AssemblyInitializeAttribute));
 
         var result = new SplitInterfaceAutoInjectGenerator().GetResult(compilation);

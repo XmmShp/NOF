@@ -8,7 +8,7 @@ namespace NOF.Abstraction;
 /// </summary>
 public sealed class EventHandlerInfos
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly HashSet<EventHandlerRegistration> _events = [];
     private readonly Dictionary<Type, List<Type>> _eventByMessage = new();
     private bool _isFrozen;
@@ -45,7 +45,7 @@ public sealed class EventHandlerInfos
         }
     }
 
-    public IReadOnlyList<Type> GetHandlerTypes(Type runtimeType)
+    public IReadOnlyList<Type> GetHandlerTypes([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
     {
         ArgumentNullException.ThrowIfNull(runtimeType);
         EnsureInitialized();
@@ -85,7 +85,7 @@ public sealed class EventHandlerInfos
                 return;
             }
 
-            foreach (var registration in EventHandlerRegistry.GetRegistrations())
+            foreach (var registration in Registry.EventHandlerRegistrations)
             {
                 AddCore(registration);
             }
@@ -117,9 +117,7 @@ public sealed class EventHandlerInfos
         }
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "Runtime event dispatch inspects base types and interfaces by design.")]
-    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Runtime event dispatch inspects base types and interfaces by design.")]
-    private static IEnumerable<Type> EnumerateDispatchTypes(Type runtimeType)
+    private static IEnumerable<Type> EnumerateDispatchTypes([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
     {
         if (runtimeType == typeof(object))
         {
@@ -140,8 +138,7 @@ public sealed class EventHandlerInfos
         yield return typeof(object);
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "Runtime event dispatch inspects implemented interfaces by design.")]
-    private static IEnumerable<Type> EnumerateInterfacesMostSpecificFirst(Type runtimeType)
+    private static IEnumerable<Type> EnumerateInterfacesMostSpecificFirst([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
     {
         var interfaces = runtimeType.GetInterfaces();
         return interfaces

@@ -156,7 +156,7 @@ public sealed class SplitInterfaceAutoInjectGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
-            sb.AppendLine($"            global::NOF.Annotation.AutoInjectRegistry.Register(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Transient, useFactory: false);");
+            sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Transient, false));");
         }
 
         sb.AppendLine("        }");

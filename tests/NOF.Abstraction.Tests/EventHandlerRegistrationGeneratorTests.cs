@@ -17,23 +17,23 @@ public class EventHandlerRegistrationGeneratorTests
             namespace App
             {
                 public record MyEvent;
-                public class MyEventHandler : IEventHandler<MyEvent>
+                public class MyEventHandler : EventHandler<MyEvent>
                 {
-                    public System.Threading.Tasks.Task HandleAsync(MyEvent @event, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyEvent payload, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(IEventHandler<>),
+            typeof(EventHandler<>),
             typeof(EventHandlerRegistration));
 
         var result = new EventHandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppEventHandlerAssemblyInitializer>]", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.EventHandlerRegistry.Register(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
+        Assert.Contains("global::NOF.Abstraction.Registry.EventHandlerRegistrations.Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }
