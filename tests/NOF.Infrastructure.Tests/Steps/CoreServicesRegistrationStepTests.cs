@@ -33,7 +33,6 @@ public class InfrastructureDefaultsTests
         Assert.Null(scope.ServiceProvider.GetService<IUnitOfWork>());
         Assert.Null(scope.ServiceProvider.GetService<ITransactionManager>());
         Assert.Null(scope.ServiceProvider.GetService<IOutboxMessageRepository>());
-        Assert.Null(scope.ServiceProvider.GetService<IRepository<NOFTenant, string>>());
     }
 
     [Fact]

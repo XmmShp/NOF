@@ -1,27 +1,17 @@
-using NOF.Domain;
-
 namespace NOF.Infrastructure;
 
 /// <summary>
 /// Outbox message repository interface.
 /// Supports transactional adds that participate in the current persistence context,
-/// plus atomic operations used by background delivery workflows outside <see cref="Application.IUnitOfWork"/>.
+/// plus atomic operations used by background delivery workflows.
 /// </summary>
-public interface IOutboxMessageRepository : IRepository<NOFOutboxMessage, Guid>
+public interface IOutboxMessageRepository
 {
-    /// <summary>
-    /// Atomically claims pending messages for delivery, preventing duplicate processing across instances.
-    /// Returned messages are marked as in-progress and cannot be claimed by other instances.
-    /// </summary>
+    void Add(NOFOutboxMessage message);
+
     IAsyncEnumerable<NOFOutboxMessage> AtomicClaimPendingMessagesAsync(int batchSize = 100, TimeSpan? claimTimeout = null, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Atomically marks messages as sent without going through <see cref="Application.IUnitOfWork"/>.
-    /// </summary>
     ValueTask AtomicMarkAsSentAsync(IEnumerable<Guid> messageIds, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Atomically records a delivery failure for a message without going through <see cref="Application.IUnitOfWork"/>.
-    /// </summary>
     ValueTask AtomicRecordDeliveryFailureAsync(Guid messageId, string errorMessage, CancellationToken cancellationToken = default);
 }

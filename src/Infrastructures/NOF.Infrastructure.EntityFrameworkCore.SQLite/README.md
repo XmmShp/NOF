@@ -20,7 +20,7 @@ builder.AddEFCore<AppDbContext>()
 
 ## Dependencies
 
-- [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore)
+- `NOF.Infrastructure` (contains the EF Core integration)
 - [`Microsoft.EntityFrameworkCore.Sqlite`](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.Sqlite)
 
 ## Installation

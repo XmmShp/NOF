@@ -5,13 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <IsAotCompatible>true</IsAotCompatible>
+    <!-- EFCore is not AOT-compatible today; keep AOT claims off for NOF.Infrastructure once integrated. -->
+    <IsAotCompatible>false</IsAotCompatible>
 
     <PackageId>NOF.Infrastructure</PackageId>
     <Description>Unified infrastructure package for the NOF Framework — abstractions, core pipeline, OpenTelemetry integration, and service wiring.</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
@@ -26,6 +29,11 @@
     <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
 
     <None Include="..\NOF.Infrastructure.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Infrastructure.SourceGenerator.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+
+    <None Include="..\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.dll"
           Pack="true"
           PackagePath="analyzers/dotnet/cs"
           Visible="false" />

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutboxMessage>, IOutboxMessageRepository
+internal sealed class EFCoreOutboxMessageRepository : IOutboxMessageRepository
 {
     private readonly NOFDbContext _dbContext;
     private readonly OutboxOptions _options;
@@ -13,19 +13,20 @@ internal sealed class EFCoreOutboxMessageRepository : EFCoreRepository<NOFOutbox
     public EFCoreOutboxMessageRepository(
         NOFDbContext dbContext,
         IOptions<OutboxOptions> options,
-        ILogger<EFCoreOutboxMessageRepository> logger) : base(dbContext)
+        ILogger<EFCoreOutboxMessageRepository> logger)
     {
         _dbContext = dbContext;
         _options = options.Value;
         _logger = logger;
     }
 
-    public override void Add(NOFOutboxMessage aggregateRoot)
+    public void Add(NOFOutboxMessage message)
     {
-        aggregateRoot.Status = OutboxMessageStatus.Pending;
-        aggregateRoot.ClaimedBy = null;
-        aggregateRoot.ClaimExpiresAt = null;
-        base.Add(aggregateRoot);
+        ArgumentNullException.ThrowIfNull(message);
+        message.Status = OutboxMessageStatus.Pending;
+        message.ClaimedBy = null;
+        message.ClaimExpiresAt = null;
+        _dbContext.Set<NOFOutboxMessage>().Add(message);
     }
 
     /// <summary>

@@ -43,13 +43,13 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        repository.Add(new NOFTenant { Id = "tenant-efcore-default", Name = "Tenant EFCore Default" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-efcore-default", Name = "Tenant EFCore Default" });
         await unitOfWork.SaveChangesAsync();
 
-        var tenant = await repository.FindAsync("tenant-efcore-default");
+        var tenant = await db.FindAsync<NOFTenant>(["tenant-efcore-default"]);
         Assert.NotNull(tenant);
         Assert.Equal("Tenant EFCore Default", tenant.Name);
     }
@@ -74,13 +74,13 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        repository.Add(new NOFTenant { Id = "tenant-default", Name = "Tenant Default" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-default", Name = "Tenant Default" });
         await unitOfWork.SaveChangesAsync();
 
-        var tenant = await repository.FindAsync("tenant-default");
+        var tenant = await db.FindAsync<NOFTenant>(["tenant-default"]);
         Assert.NotNull(tenant);
         Assert.Equal("Tenant Default", tenant.Name);
     }
@@ -92,19 +92,19 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using var transaction = await transactionManager.BeginTransactionAsync();
-        repository.Add(new NOFTenant { Id = "tenant-1", Name = "Tenant 1" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-1", Name = "Tenant 1" });
         await unitOfWork.SaveChangesAsync();
         await transaction.RollbackAsync();
 
         using var verifyScope = services.CreateScope();
         verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
-        var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
-        var tenant = await verifyRepo.FindAsync("tenant-1");
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DbContext>();
+        var tenant = await verifyDb.FindAsync<NOFTenant>(["tenant-1"]);
         Assert.Null(tenant);
     }
 
@@ -115,25 +115,25 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using var outer = await transactionManager.BeginTransactionAsync();
-        repository.Add(new NOFTenant { Id = "outer", Name = "Outer" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = "outer", Name = "Outer" });
         await unitOfWork.SaveChangesAsync();
 
         await using var inner = await transactionManager.BeginTransactionAsync();
-        repository.Add(new NOFTenant { Id = "inner", Name = "Inner" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = "inner", Name = "Inner" });
         await unitOfWork.SaveChangesAsync();
         await inner.RollbackAsync();
         await outer.CommitAsync();
 
         using var verifyScope = services.CreateScope();
         verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
-        var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
-        Assert.NotNull(await verifyRepo.FindAsync("outer"));
-        Assert.Null(await verifyRepo.FindAsync("inner"));
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DbContext>();
+        Assert.NotNull(await verifyDb.FindAsync<NOFTenant>(["outer"]));
+        Assert.Null(await verifyDb.FindAsync<NOFTenant>(["inner"]));
     }
 
     [Fact]
@@ -143,20 +143,20 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var transactionManager = scope.ServiceProvider.GetRequiredService<ITransactionManager>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         await using (await transactionManager.BeginTransactionAsync())
         {
-            repository.Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
+            db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
             await unitOfWork.SaveChangesAsync();
         }
 
         using var verifyScope = services.CreateScope();
         verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
-        var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IRepository<NOFTenant, string>>();
-        Assert.Null(await verifyRepo.FindAsync("tenant-dispose"));
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DbContext>();
+        Assert.Null(await verifyDb.FindAsync<NOFTenant>(["tenant-dispose"]));
     }
 
     [Fact]
@@ -185,13 +185,13 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var order = TestOrder.Create(1, "order-1");
         order.Raise(new TestEvent("created"));
-        repository.Add(order);
-        await repository.FindAsync(1L);
+        db.Set<TestOrder>().Add(order);
+        await db.FindAsync<TestOrder>([1L]);
 
         var changeCount = await unitOfWork.SaveChangesAsync();
         Assert.Equal(1, changeCount);
@@ -205,10 +205,10 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        repository.Add(TestOrder.Create(1, "order-1"));
+        db.Set<TestOrder>().Add(TestOrder.Create(1, "order-1"));
 
         await unitOfWork.SaveChangesAsync();
         var second = await unitOfWork.SaveChangesAsync();
@@ -222,17 +222,17 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<NOFInboxMessage, Guid>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var message = new NOFInboxMessage(Guid.NewGuid());
 
-        repository.Add(message);
+        db.Set<NOFInboxMessage>().Add(message);
         await unitOfWork.SaveChangesAsync();
-        Assert.NotNull(await repository.FindAsync(message.Id));
+        Assert.NotNull(await db.FindAsync<NOFInboxMessage>([message.Id]));
 
-        repository.Remove(message);
+        db.Set<NOFInboxMessage>().Remove(message);
         await unitOfWork.SaveChangesAsync();
-        Assert.Null(await repository.FindAsync(message.Id));
+        Assert.Null(await db.FindAsync<NOFInboxMessage>([message.Id]));
     }
 
     [Fact]
@@ -267,8 +267,8 @@ public class SqliteInMemoryPersistenceTests
         using (var verify = services.CreateScope())
         {
             verify.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
-            var verifyRepo = verify.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-            var stored = await verifyRepo.FindAsync(id);
+            var verifyDb = verify.ServiceProvider.GetRequiredService<DbContext>();
+            var stored = await verifyDb.FindAsync<NOFOutboxMessage>([id]);
             Assert.NotNull(stored);
             Assert.Equal(OutboxMessageStatus.Sent, stored.Status);
             Assert.NotNull(stored.SentAt);
@@ -306,11 +306,12 @@ public class SqliteInMemoryPersistenceTests
         });
         await unitOfWork.SaveChangesAsync();
 
-        var exhausted = await repository.FindAsync(id1);
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var exhausted = await db.FindAsync<NOFOutboxMessage>([id1]);
         Assert.NotNull(exhausted);
         exhausted.RetryCount = 2;
 
-        var claimedUntilFuture = await repository.FindAsync(id2);
+        var claimedUntilFuture = await db.FindAsync<NOFOutboxMessage>([id2]);
         Assert.NotNull(claimedUntilFuture);
         claimedUntilFuture.ClaimedBy = "test-claim-id";
         claimedUntilFuture.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
@@ -353,8 +354,8 @@ public class SqliteInMemoryPersistenceTests
         using (var verify = services.CreateScope())
         {
             verify.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
-            var verifyRepo = verify.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
-            var stored = await verifyRepo.FindAsync(id);
+            var verifyDb = verify.ServiceProvider.GetRequiredService<DbContext>();
+            var stored = await verifyDb.FindAsync<NOFOutboxMessage>([id]);
             Assert.NotNull(stored);
             Assert.Equal(OutboxMessageStatus.Failed, stored.Status);
             Assert.Equal("boom", stored.ErrorMessage);
@@ -369,9 +370,9 @@ public class SqliteInMemoryPersistenceTests
         {
             var hostExecutionContext = hostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             hostExecutionContext.TenantId = NOFAbstractionConstants.Tenant.HostId;
-            var hostRepository = hostScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
+            var hostDb = hostScope.ServiceProvider.GetRequiredService<DbContext>();
             var hostUow = hostScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            hostRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
+            hostDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
             await hostUow.SaveChangesAsync();
         }
 
@@ -379,38 +380,38 @@ public class SqliteInMemoryPersistenceTests
         {
             var tenantExecutionContext = tenantScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             tenantExecutionContext.TenantId = "tenant-a";
-            var tenantRepository = tenantScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
+            var tenantDb = tenantScope.ServiceProvider.GetRequiredService<DbContext>();
             var tenantUow = tenantScope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            tenantRepository.Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
+            tenantDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
             await tenantUow.SaveChangesAsync();
             Assert.Equal(2,
-            (await tenantRepository.FindAsync("corr", "def"))!.State);
+            (await tenantDb.FindAsync<NOFStateMachineContext>(["corr", "def"]))!.State);
         }
 
         using (var verifyHostScope = services.CreateScope())
         {
             var verifyHostExecutionContext = verifyHostScope.ServiceProvider.GetRequiredService<IExecutionContext>();
             verifyHostExecutionContext.TenantId = NOFAbstractionConstants.Tenant.HostId;
-            var verifyHostRepository = verifyHostScope.ServiceProvider.GetRequiredService<IRepository<NOFStateMachineContext, string, string>>();
+            var verifyHostDb = verifyHostScope.ServiceProvider.GetRequiredService<DbContext>();
             Assert.Equal(1,
-            (await verifyHostRepository.FindAsync("corr", "def"))!.State);
+            (await verifyHostDb.FindAsync<NOFStateMachineContext>(["corr", "def"]))!.State);
         }
     }
 
     [Fact]
-    public async Task Repository_ShouldProvideQueryableTrackingAccess()
+    public async Task DbContext_ShouldProvideQueryableTrackingAccess()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        repository.Add(TestOrder.Create(7, "before"));
+        db.Set<TestOrder>().Add(TestOrder.Create(7, "before"));
         await unitOfWork.SaveChangesAsync();
 
-        var tracked = repository.Single(order => order.Id == 7);
+        var tracked = await db.Set<TestOrder>().SingleAsync(order => order.Id == 7);
         tracked.Raise(new TestEvent("tracked-query"));
 
         var changeCount = await unitOfWork.SaveChangesAsync();
@@ -419,24 +420,24 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
-    public async Task Repository_AsNoTracking_ShouldReturnDetachedReadModel()
+    public async Task DbContext_AsNoTracking_ShouldReturnDetachedReadModel()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var publisher = scope.ServiceProvider.GetRequiredService<TestEventPublisher>();
 
-        repository.Add(TestOrder.Create(8, "before"));
+        db.Set<TestOrder>().Add(TestOrder.Create(8, "before"));
         await unitOfWork.SaveChangesAsync();
 
-        var detached = repository.AsNoTracking().Single(order => order.Id == 8);
+        var detached = await db.Set<TestOrder>().AsNoTracking().SingleAsync(order => order.Id == 8);
         detached.Raise(new TestEvent("detached-query"));
 
         var changeCount = await unitOfWork.SaveChangesAsync();
-        var stored = await repository.FindAsync(8L);
+        var stored = await db.FindAsync<TestOrder>([8L]);
 
         Assert.Equal(0, changeCount);
         Assert.Equal("before", stored!.Number);
@@ -444,28 +445,28 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
-    public async Task Repository_RawSql_ShouldWorkForSqliteProvider()
+    public async Task DbContext_RawSql_ShouldWorkForSqliteProvider()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
+        var db = scope.ServiceProvider.GetRequiredService<DbContext>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        repository.Add(TestOrder.Create(9, "n"));
+        db.Set<TestOrder>().Add(TestOrder.Create(9, "n"));
         await unitOfWork.SaveChangesAsync();
 
-        var rows = repository.FromSqlRaw("select * from TestOrder").ToList();
+        var rows = db.Set<TestOrder>().FromSqlRaw("select * from TestOrder").ToList();
         Assert.NotEmpty(rows);
 
-        await repository.ExecuteSqlAsync($"delete from TestOrder where Id = {9L}");
+        await db.Database.ExecuteSqlInterpolatedAsync($"delete from TestOrder where Id = {9L}");
         // Query in a fresh scope to avoid first-level cache.
         using (var verify = services.CreateScope())
         {
             verify.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
-            var verifyRepo = verify.ServiceProvider.GetRequiredService<IRepository<TestOrder, long>>();
-            Assert.Null(await verifyRepo.FindAsync(9L));
+            var verifyDb = verify.ServiceProvider.GetRequiredService<DbContext>();
+            Assert.Null(await verifyDb.FindAsync<TestOrder>([9L]));
         }
     }
 

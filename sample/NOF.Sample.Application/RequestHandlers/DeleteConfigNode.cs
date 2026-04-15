@@ -1,6 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Domain;
 using NOF.Sample.Application.CacheKeys;
 using NOF.Sample.Application.Repositories;
 
@@ -8,18 +8,18 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 {
-    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly DbContext _dbContext;
     private readonly IConfigNodeChildrenRepository _childrenRepository;
     private readonly ICacheService _cache;
     private readonly IUnitOfWork _uow;
 
     public DeleteConfigNode(
-        IRepository<ConfigNode, ConfigNodeId> configNodeRepository,
+        DbContext dbContext,
         IConfigNodeChildrenRepository childrenRepository,
         ICacheService cache,
         IUnitOfWork uow)
     {
-        _configNodeRepository = configNodeRepository;
+        _dbContext = dbContext;
         _childrenRepository = childrenRepository;
         _cache = cache;
         _uow = uow;
@@ -29,7 +29,7 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
     {
         var cancellationToken = CancellationToken.None;
         var id = ConfigNodeId.Of(request.Id);
-        var node = await _configNodeRepository.FindAsync(id, cancellationToken);
+        var node = await _dbContext.Set<ConfigNode>().FindAsync([id], cancellationToken);
         if (node is null)
         {
             return Result.Fail("404", "Node not found.");
@@ -43,7 +43,7 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         }
 
         node.MarkAsDeleted();
-        _configNodeRepository.Remove(node);
+        _dbContext.Set<ConfigNode>().Remove(node);
         await _uow.SaveChangesAsync(cancellationToken);
 
         // 写后删：清除相关缓存
@@ -53,6 +53,5 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         return Result.Success();
     }
 }
-
 
 

@@ -1,8 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Domain;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -15,15 +15,15 @@ namespace NOF.Infrastructure;
 public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
 {
     private readonly ITransactionManager _transactionManager;
-    private readonly IRepository<NOFInboxMessage, Guid> _inboxMessageRepository;
+    private readonly DbContext _dbContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;
 
-    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, IRepository<NOFInboxMessage, Guid> inboxMessageRepository, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
+    public MessageInboxInboundMiddleware(ITransactionManager transactionManager, DbContext dbContext, IUnitOfWork unitOfWork, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
     {
         _transactionManager = transactionManager;
-        _inboxMessageRepository = inboxMessageRepository;
+        _dbContext = dbContext;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _executionContext = executionContext;
@@ -37,7 +37,9 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
         {
             _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageIdStr);
             var messageId = Guid.TryParse(messageIdStr, out var parsed) ? parsed : Guid.NewGuid();
-            var messageExists = await _inboxMessageRepository.FindAsync(messageId, cancellationToken) is not null;
+            var messageExists = await _dbContext.FindAsync<NOFInboxMessage>(
+                keyValues: [messageId],
+                cancellationToken: cancellationToken) is not null;
             if (messageExists)
             {
                 var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName ?? "<null>";
@@ -51,7 +53,7 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
 
             var inboxMessage = new NOFInboxMessage(messageId);
 
-            _inboxMessageRepository.Add(inboxMessage);
+            _dbContext.Set<NOFInboxMessage>().Add(inboxMessage);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.MessageId);

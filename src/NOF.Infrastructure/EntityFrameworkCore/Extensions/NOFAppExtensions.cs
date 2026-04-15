@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
+using NOF.Infrastructure;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
@@ -19,11 +20,8 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
             where TDbContext : NOFDbContext
         {
             #region Common Services
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<>), typeof(EFCoreRepository<>)));
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<,>), typeof(EFCoreRepository<,>)));
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<,,>), typeof(EFCoreRepository<,,>)));
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped(typeof(IRepository<,,,>), typeof(EFCoreRepository<,,,>)));
             builder.Services.ReplaceOrAddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
+            builder.Services.ReplaceOrAddScoped<IStateMachineContextStore, EFCoreStateMachineContextStore>();
             builder.Services.ReplaceOrAddScoped<IUnitOfWork, EFCoreUnitOfWork>();
             builder.Services.ReplaceOrAddScoped<ITransactionManager, EFCoreTransactionManager>();
             #endregion

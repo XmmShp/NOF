@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" />
-    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SQLite\NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.Memory\NOF.Infrastructure.Memory.csproj" />
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />

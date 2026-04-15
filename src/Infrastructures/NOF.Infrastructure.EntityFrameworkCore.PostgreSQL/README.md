@@ -20,7 +20,7 @@ builder.AddEFCore<AppDbContext>()
 
 ## Dependencies
 
-- [`NOF.Infrastructure.EntityFrameworkCore`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore)
+- `NOF.Infrastructure` (contains the EF Core integration)
 - [`Npgsql.EntityFrameworkCore.PostgreSQL`](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL)
 
 ## Installation
@@ -32,4 +32,3 @@ dotnet add package NOF.Infrastructure.EntityFrameworkCore.PostgreSQL
 ## License
 
 Apache-2.0
-

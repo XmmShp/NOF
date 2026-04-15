@@ -5,7 +5,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Inbox message entity used for tracking reliably processed messages.
 /// </summary>
-public class NOFInboxMessage : AggregateRoot, ICloneable
+public class NOFInboxMessage : AggregateRoot
 {
     /// <summary>
     /// The unique message identifier.
@@ -21,10 +21,4 @@ public class NOFInboxMessage : AggregateRoot, ICloneable
     {
         Id = id;
     }
-
-    public object Clone()
-        => new NOFInboxMessage(Id)
-        {
-            CreatedAt = CreatedAt
-        };
 }

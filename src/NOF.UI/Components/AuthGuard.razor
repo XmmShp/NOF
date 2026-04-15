@@ -43,7 +43,7 @@ else
 
     private Task<bool> IsAuthorizedAsync()
     {
-        if (!UserContext.IsAuthenticated)
+        if (!UserContext.User.IsAuthenticated)
         {
             return Task.FromResult(false);
         }
@@ -53,7 +53,7 @@ else
             return Task.FromResult(true);
         }
 
-        return Task.FromResult(UserContext.HasPermission(Permission));
+        return Task.FromResult(UserContext.User.HasPermission(Permission));
     }
 
     private void HandleAuthorizationStateChanged()
@@ -70,4 +70,3 @@ else
         UserContext.StateChanged -= HandleAuthorizationStateChanged;
     }
 }
-

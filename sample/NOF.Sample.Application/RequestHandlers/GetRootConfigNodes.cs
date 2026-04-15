@@ -1,24 +1,24 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Domain;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
 {
-    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly DbContext _dbContext;
     private readonly IMapper _mapper;
 
-    public GetRootConfigNodes(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, IMapper mapper)
+    public GetRootConfigNodes(DbContext dbContext, IMapper mapper)
     {
-        _configNodeRepository = configNodeRepository;
+        _dbContext = dbContext;
         _mapper = mapper;
     }
 
     public async Task<Result<GetRootConfigNodesResponse>> GetRootConfigNodesAsync(GetRootConfigNodesRequest request)
     {
         var cancellationToken = CancellationToken.None;
-        var nodes = await _configNodeRepository.GetRootNodesAsync(cancellationToken);
+        var nodes = await _dbContext.Set<ConfigNode>().GetRootNodesAsync(cancellationToken);
 
         var response = nodes.Select(node => _mapper.Map<ConfigNode, ConfigNodeDto>(node)).ToList();
 
@@ -28,7 +28,6 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         };
     }
 }
-
 
 
 

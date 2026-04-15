@@ -7,7 +7,6 @@
 
     <!-- AOT Compatibility -->
     <IsAotCompatible>true</IsAotCompatible>
-    <VerifyReferenceAotCompatibility>true</VerifyReferenceAotCompatibility>
     
     <!-- NuGet Package Settings -->
     <IsPackable>true</IsPackable>

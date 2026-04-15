@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using NOF.Application;
+using NOF.Infrastructure;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 

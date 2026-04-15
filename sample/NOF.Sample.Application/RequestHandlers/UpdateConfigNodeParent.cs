@@ -1,23 +1,23 @@
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Domain;
 using NOF.Sample.Application.CacheKeys;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 {
-    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
     private readonly IUnitOfWork _uow;
 
     public UpdateConfigNodeParent(
-        IRepository<ConfigNode, ConfigNodeId> configNodeRepository,
+        DbContext dbContext,
         ICacheService cache,
         IUnitOfWork uow)
     {
-        _configNodeRepository = configNodeRepository;
+        _dbContext = dbContext;
         _cache = cache;
         _uow = uow;
     }
@@ -26,7 +26,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
     {
         var cancellationToken = CancellationToken.None;
         var nodeId = ConfigNodeId.Of(request.NodeId);
-        var node = await _configNodeRepository.FindAsync(nodeId, cancellationToken);
+        var node = await _dbContext.Set<ConfigNode>().FindAsync([nodeId], cancellationToken);
 
         if (node is null)
         {
@@ -40,7 +40,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         // Check whether the target parent exists (unless moving to root).
         if (newParentId.HasValue)
         {
-            var parentNode = await _configNodeRepository.FindAsync(newParentId.Value, cancellationToken);
+            var parentNode = await _dbContext.Set<ConfigNode>().FindAsync([newParentId.Value], cancellationToken);
             if (parentNode is null)
             {
                 return Result.Fail("404", "Target parent node not found.");
@@ -70,7 +70,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 
     private async Task<bool> IsDescendant(ConfigNodeId ancestorId, ConfigNodeId nodeId, CancellationToken cancellationToken)
     {
-        var current = await _configNodeRepository.FindAsync(nodeId, cancellationToken);
+        var current = await _dbContext.Set<ConfigNode>().FindAsync([nodeId], cancellationToken);
 
         while (current?.ParentId != null)
         {
@@ -78,7 +78,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
             {
                 return true;
             }
-            current = await _configNodeRepository.FindAsync(current.ParentId.Value, cancellationToken);
+            current = await _dbContext.Set<ConfigNode>().FindAsync([current.ParentId.Value], cancellationToken);
         }
 
         return false;

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
+using NOF.Infrastructure;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 

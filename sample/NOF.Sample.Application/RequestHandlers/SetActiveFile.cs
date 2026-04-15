@@ -1,20 +1,20 @@
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Domain;
 using NOF.Sample.Application.CacheKeys;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class SetActiveFile : NOFSampleService.SetActiveFile
 {
-    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
     private readonly IUnitOfWork _uow;
 
-    public SetActiveFile(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, ICacheService cache, IUnitOfWork uow)
+    public SetActiveFile(DbContext dbContext, ICacheService cache, IUnitOfWork uow)
     {
-        _configNodeRepository = configNodeRepository;
+        _dbContext = dbContext;
         _cache = cache;
         _uow = uow;
     }
@@ -23,7 +23,7 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
     {
         var cancellationToken = CancellationToken.None;
         var id = ConfigNodeId.Of(request.NodeId);
-        var node = await _configNodeRepository.FindAsync(id, cancellationToken);
+        var node = await _dbContext.Set<ConfigNode>().FindAsync([id], cancellationToken);
 
         if (node is null)
         {
@@ -47,6 +47,5 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         return Result.Success();
     }
 }
-
 
 

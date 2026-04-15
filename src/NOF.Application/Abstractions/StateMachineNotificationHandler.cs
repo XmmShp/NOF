@@ -1,5 +1,4 @@
 using NOF.Contract;
-using NOF.Domain;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -17,23 +16,23 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     where TState : struct, Enum
     where TNotification : class, INotification
 {
-    private readonly IRepository<NOFStateMachineContext, string, string> _repository;
+    private readonly IStateMachineContextStore _store;
     private readonly IUnitOfWork _uow;
     private readonly IServiceProvider _serviceProvider;
     private readonly IStateMachineRegistry _stateMachineRegistry;
 
     /// <summary>Initializes a new instance.</summary>
-    /// <param name="repository">The state machine context repository.</param>
+    /// <param name="store">The state machine context store.</param>
     /// <param name="uow">The unit of work.</param>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="stateMachineRegistry">The state machine registry.</param>
     protected StateMachineNotificationHandler(
-        IRepository<NOFStateMachineContext, string, string> repository,
+        IStateMachineContextStore store,
         IUnitOfWork uow,
         IServiceProvider serviceProvider,
         IStateMachineRegistry stateMachineRegistry)
     {
-        _repository = repository;
+        _store = store;
         _uow = uow;
         _serviceProvider = serviceProvider;
         _stateMachineRegistry = stateMachineRegistry;
@@ -66,7 +65,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
         var definitionTypeName = typeof(TStateMachineDefinition).FullName;
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionTypeName);
 
-        var existing = await _repository.FindAsync(correlationId, definitionTypeName, cancellationToken);
+        var existing = await _store.FindAsync(correlationId, definitionTypeName, cancellationToken);
 
         if (existing is not null)
         {
@@ -78,7 +77,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
             var initialState = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
             if (initialState.HasValue)
             {
-                _repository.Add(NOFStateMachineContext.Create(
+                _store.Add(NOFStateMachineContext.Create(
                     correlationId: correlationId,
                     definitionTypeName: definitionTypeName,
                     state: initialState.Value));

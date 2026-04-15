@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Domain;
 using NOF.Sample.Application.CacheKeys;
 using System.Text.Json.Nodes;
 
@@ -9,13 +9,13 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetConfiguration : NOFSampleService.GetConfiguration
 {
-    private readonly IRepository<ConfigNode, ConfigNodeId> _configNodeRepository;
+    private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
     private readonly IMapper _mapper;
 
-    public GetConfiguration(IRepository<ConfigNode, ConfigNodeId> configNodeRepository, ICacheService cache, IMapper mapper)
+    public GetConfiguration(DbContext dbContext, ICacheService cache, IMapper mapper)
     {
-        _configNodeRepository = configNodeRepository;
+        _dbContext = dbContext;
         _cache = cache;
         _mapper = mapper;
     }
@@ -89,7 +89,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
             return cachedValue.Value;
         }
 
-        var node = await _configNodeRepository.GetNodeByNameAsync(name, cancellationToken);
+        var node = await _dbContext.Set<ConfigNode>().GetNodeByNameAsync(name, cancellationToken);
         if (node is null)
         {
             return null;
@@ -114,7 +114,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
             return cachedValue.Value;
         }
 
-        var node = await _configNodeRepository.GetNodeByIdAsync(id, cancellationToken);
+        var node = await _dbContext.Set<ConfigNode>().GetNodeByIdAsync(id, cancellationToken);
         if (node is null)
         {
             return null;
@@ -197,7 +197,6 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         }
     }
 }
-
 
 
 
