@@ -17,16 +17,16 @@ public class EventHandlerRegistrationGeneratorTests
             namespace App
             {
                 public record MyEvent;
-                public class MyEventHandler : IEventHandler<MyEvent>
+                public class MyEventHandler : InMemoryEventHandler<MyEvent>
                 {
-                    public System.Threading.Tasks.Task HandleAsync(MyEvent @event, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyEvent @event, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(IEventHandler<>),
+            typeof(InMemoryEventHandler<>),
             typeof(EventHandlerRegistration));
 
         var result = new EventHandlerRegistrationGenerator().GetResult(comp);

@@ -46,7 +46,7 @@ public sealed class EventPublisher : IEventPublisher
 
         foreach (var handlerType in _eventHandlerInfos.GetHandlerTypes(runtimeType))
         {
-            var handler = _serviceProvider.GetService(handlerType) as IEventHandler;
+            var handler = _serviceProvider.GetService(handlerType) as InMemoryEventHandler;
             if (handler is null)
             {
                 throw new InvalidOperationException($"Event handler type '{handlerType}' is not registered in the current scope.");

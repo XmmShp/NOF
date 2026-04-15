@@ -9,8 +9,8 @@ using System.Text;
 namespace NOF.Application.SourceGenerator;
 
 /// <summary>
-/// Source generator: detects handler classes implementing ICommandHandler
-/// and INotificationHandler in the current project and generates assembly initializer metadata.
+/// Source generator: detects handler classes inheriting CommandHandler
+/// and NotificationHandler in the current project and generates assembly initializer metadata.
 /// </summary>
 [Generator]
 public class HandlerRegistrationGenerator : IIncrementalGenerator
@@ -81,20 +81,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
 
     private static bool IsHandlerType(INamedTypeSymbol symbol)
     {
-        foreach (var iface in symbol.AllInterfaces)
-        {
-            if (!iface.IsGenericType)
-            {
-                continue;
-            }
-            var display = iface.OriginalDefinition.ToDisplayString();
-            if (display == "NOF.Application.ICommandHandler<TCommand>" ||
-                display == "NOF.Application.INotificationHandler<TNotification>")
-            {
-                return true;
-            }
-        }
-        return false;
+        return TryGetHandledMessageType(symbol, "NOF.Application.CommandHandler<TCommand>", out _)
+            || TryGetHandledMessageType(symbol, "NOF.Application.NotificationHandler<TNotification>", out _);
     }
 
     private static string GenerateHandlerAssemblyInitializer(string assemblyName, ImmutableArray<INamedTypeSymbol> handlerClasses)
@@ -161,25 +149,36 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
     {
         var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
 
-        foreach (var iface in handlerClass.AllInterfaces)
+        if (TryGetHandledMessageType(handlerClass, "NOF.Application.CommandHandler<TCommand>", out var commandType))
         {
-            if (!iface.IsGenericType)
-            {
-                continue;
-            }
-
-            var display = iface.OriginalDefinition.ToDisplayString();
-
-            if (display == "NOF.Application.ICommandHandler<TCommand>")
-            {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                registrations.Add($"new global::NOF.Application.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-            }
-            else if (display == "NOF.Application.INotificationHandler<TNotification>")
-            {
-                var messageType = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                registrations.Add($"new global::NOF.Application.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
-            }
+            var messageType = commandType!.ToDisplayString(typeFormat);
+            registrations.Add($"new global::NOF.Application.CommandHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
         }
+
+        if (TryGetHandledMessageType(handlerClass, "NOF.Application.NotificationHandler<TNotification>", out var notificationType))
+        {
+            var messageType = notificationType!.ToDisplayString(typeFormat);
+            registrations.Add($"new global::NOF.Application.NotificationHandlerInfo(typeof({handlerTypeName}), typeof({messageType}))");
+        }
+    }
+
+    private static bool TryGetHandledMessageType(INamedTypeSymbol symbol, string handlerBaseType, out ITypeSymbol? messageType)
+    {
+        messageType = null;
+
+        var current = symbol.BaseType;
+        while (current is not null)
+        {
+            if (current.IsGenericType
+                && current.OriginalDefinition.ToDisplayString() == handlerBaseType)
+            {
+                messageType = current.TypeArguments[0];
+                return true;
+            }
+
+            current = current.BaseType;
+        }
+
+        return false;
     }
 }

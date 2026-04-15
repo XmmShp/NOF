@@ -9,7 +9,7 @@ namespace NOF.Application.SourceGenerator;
 
 /// <summary>
 /// Analyzer that enforces:
-/// 1. A handler class can only implement one handler interface kind (ICommandHandler, IEventHandler, INotificationHandler).
+/// 1. A handler class can only inherit one handler base kind (CommandHandler, InMemoryEventHandler, NotificationHandler).
 /// 2. A message class can only implement one message interface (ICommand, INotification).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -17,9 +17,9 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
 {
     private static readonly string[] _handlerInterfaceNames =
     [
-        "NOF.Application.ICommandHandler<TCommand>",
-        "NOF.Abstraction.IEventHandler<TEvent>",
-        "NOF.Application.INotificationHandler<TNotification>"
+        "NOF.Application.CommandHandler<TCommand>",
+        "NOF.Abstraction.InMemoryEventHandler<TEvent>",
+        "NOF.Application.NotificationHandler<TNotification>"
     ];
 
     private static readonly string[] _messageInterfaceNames =
@@ -30,8 +30,8 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
 
     public static readonly DiagnosticDescriptor MultipleHandlerInterfacesRule = new(
         id: "NOF001",
-        title: "Handler implements multiple handler interfaces",
-        messageFormat: "Handler '{0}' implements multiple handler interfaces: {1}. A handler class must implement exactly one handler interface.",
+        title: "Handler inherits multiple handler bases",
+        messageFormat: "Handler '{0}' inherits multiple handler bases: {1}. A handler class must inherit exactly one handler base.",
         category: "NOF.Application",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -69,23 +69,23 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
     private static void CheckHandlerInterfaces(SymbolAnalysisContext context, INamedTypeSymbol symbol)
     {
         var matched = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var iface in symbol.AllInterfaces)
+        var current = symbol.BaseType;
+        while (current is not null)
         {
-            if (!iface.IsGenericType)
+            if (current.IsGenericType)
             {
-                continue;
-            }
-
-            var display = iface.OriginalDefinition.ToDisplayString();
-            foreach (var name in _handlerInterfaceNames)
-            {
-                if (display == name)
+                var display = current.OriginalDefinition.ToDisplayString();
+                foreach (var name in _handlerInterfaceNames)
                 {
-                    matched.Add(FriendlyHandlerName(name));
-                    break;
+                    if (display == name)
+                    {
+                        matched.Add(FriendlyHandlerName(name));
+                        break;
+                    }
                 }
             }
+
+            current = current.BaseType;
         }
 
         if (matched.Count > 1)
@@ -132,7 +132,7 @@ public class HandlerMessageAnalyzer : DiagnosticAnalyzer
 
     private static string FriendlyHandlerName(string fullName)
     {
-        // "NOF.Application.ICommandHandler<TCommand>" → "ICommandHandler"
+        // "NOF.Application.CommandHandler<TCommand>" → "CommandHandler"
         var start = fullName.LastIndexOf('.') + 1;
         var end = fullName.IndexOf('<');
         return end > start ? fullName.Substring(start, end - start) : fullName.Substring(start);

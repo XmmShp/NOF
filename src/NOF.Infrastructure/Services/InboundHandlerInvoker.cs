@@ -105,7 +105,7 @@ public static class InboundHandlerInvoker
             },
             async (sp, ct) =>
             {
-                var handler = (ICommandHandler)sp.GetRequiredService(handlerType);
+                var handler = (CommandHandler)sp.GetRequiredService(handlerType);
                 await handler.HandleAsync(command, ct);
             },
             cancellationToken).ConfigureAwait(false);
@@ -128,7 +128,7 @@ public static class InboundHandlerInvoker
             },
             async (sp, ct) =>
             {
-                var handler = (INotificationHandler)sp.GetRequiredService(handlerType);
+                var handler = (NotificationHandler)sp.GetRequiredService(handlerType);
                 await handler.HandleAsync(notification, ct);
             },
             cancellationToken).ConfigureAwait(false);

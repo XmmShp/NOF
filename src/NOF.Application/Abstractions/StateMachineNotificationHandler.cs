@@ -12,7 +12,7 @@ namespace NOF.Application;
 /// <typeparam name="TState">The state enum type.</typeparam>
 /// <typeparam name="TNotification">The notification type.</typeparam>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public abstract class StateMachineNotificationHandler<TStateMachineDefinition, TState, TNotification> : INotificationHandler<TNotification>
+public abstract class StateMachineNotificationHandler<TStateMachineDefinition, TState, TNotification> : NotificationHandler<TNotification>
     where TStateMachineDefinition : IStateMachineDefinition<TState>, new()
     where TState : struct, Enum
     where TNotification : class, INotification
@@ -49,7 +49,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     }
 
     /// <inheritdoc />
-    public async Task HandleAsync(TNotification notification, CancellationToken cancellationToken)
+    public override async Task HandleAsync(TNotification notification, CancellationToken cancellationToken)
     {
         var bp = _stateMachineRegistry.GetBlueprint(
             typeof(TStateMachineDefinition),

@@ -19,16 +19,16 @@ public class HandlerRegistrationGeneratorTests
             namespace App
             {
                 public record MyCommand : ICommand;
-                public class MyCommandHandler : ICommandHandler<MyCommand>
+                public class MyCommandHandler : CommandHandler<MyCommand>
                 {
-                    public System.Threading.Tasks.Task HandleAsync(MyCommand command, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyCommand command, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(ICommandHandler<>),
+            typeof(CommandHandler<>),
             typeof(ICommand),
             typeof(CommandHandlerInfo)
         );
@@ -51,16 +51,16 @@ public class HandlerRegistrationGeneratorTests
             namespace App
             {
                 public record MyNotification : INotification;
-                public class MyNotificationHandler : INotificationHandler<MyNotification>
+                public class MyNotificationHandler : NotificationHandler<MyNotification>
                 {
-                    public System.Threading.Tasks.Task HandleAsync(MyNotification notification, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyNotification notification, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(INotificationHandler<>),
+            typeof(NotificationHandler<>),
             typeof(INotification),
             typeof(NotificationHandlerInfo)
         );

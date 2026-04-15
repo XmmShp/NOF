@@ -9,7 +9,7 @@ using System.Text;
 namespace NOF.Abstraction.SourceGenerator;
 
 /// <summary>
-/// Source generator: detects handler classes implementing IEventHandler in the current project
+/// Source generator: detects handler classes inheriting InMemoryEventHandler in the current project
 /// and generates assembly initializer metadata for the event handler registry.
 /// </summary>
 [Generator]
@@ -63,17 +63,16 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
 
     private static bool IsEventHandlerType(INamedTypeSymbol symbol)
     {
-        foreach (var iface in symbol.AllInterfaces)
+        var current = symbol.BaseType;
+        while (current is not null)
         {
-            if (!iface.IsGenericType)
-            {
-                continue;
-            }
-
-            if (iface.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.IEventHandler<TEvent>")
+            if (current.IsGenericType
+                && current.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.InMemoryEventHandler<TEvent>")
             {
                 return true;
             }
+
+            current = current.BaseType;
         }
 
         return false;
@@ -93,15 +92,17 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
         foreach (var handlerClass in handlerClasses)
         {
             var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
-            foreach (var iface in handlerClass.AllInterfaces)
+            var current = handlerClass.BaseType;
+            while (current is not null)
             {
-                if (!iface.IsGenericType || iface.OriginalDefinition.ToDisplayString() != "NOF.Abstraction.IEventHandler<TEvent>")
+                if (current.IsGenericType && current.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.InMemoryEventHandler<TEvent>")
                 {
-                    continue;
+                    var eventTypeName = current.TypeArguments[0].ToDisplayString(typeFormat);
+                    registrations.Add($"new global::NOF.Abstraction.EventHandlerRegistration(typeof({handlerTypeName}), typeof({eventTypeName}))");
+                    break;
                 }
 
-                var eventTypeName = iface.TypeArguments[0].ToDisplayString(typeFormat);
-                registrations.Add($"new global::NOF.Abstraction.EventHandlerRegistration(typeof({handlerTypeName}), typeof({eventTypeName}))");
+                current = current.BaseType;
             }
         }
 

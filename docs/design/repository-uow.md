@@ -84,7 +84,7 @@ public interface IUnitOfWork
 
 **`SaveChangesAsync()`** — in a single transaction:
 1. Collects domain events from all tracked `IAggregateRoot` entities
-2. Dispatches events to `IEventHandler<T>` handlers
+2. Dispatches events to `InMemoryEventHandler<T>` handlers
 3. Writes outbox messages (if any deferred notifications/commands were queued)
 4. Persists all changes to the database
 5. Commits the transaction

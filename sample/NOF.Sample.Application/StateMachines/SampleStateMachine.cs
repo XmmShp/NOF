@@ -20,7 +20,7 @@ public record ProcessingSucceeded(string TaskId) : INotification;
 public record ProcessingFailed(string TaskId, string Reason) : INotification;
 public record StartProcessingCommand(string TaskId) : ICommand;
 
-public class StartProcessingCommandHandler : ICommandHandler<StartProcessingCommand>
+public class StartProcessingCommandHandler : CommandHandler<StartProcessingCommand>
 {
     private readonly Microsoft.EntityFrameworkCore.DbContext _dbContext;
     private readonly INotificationPublisher _notificationPublisher;
@@ -36,7 +36,7 @@ public class StartProcessingCommandHandler : ICommandHandler<StartProcessingComm
         _logger = logger;
     }
 
-    public async Task HandleAsync(StartProcessingCommand command, CancellationToken cancellationToken)
+    public override async Task HandleAsync(StartProcessingCommand command, CancellationToken cancellationToken)
     {
         await Task.Delay(1000, cancellationToken);
         var isSuccess = Random.Shared.Next(2) == 0;
