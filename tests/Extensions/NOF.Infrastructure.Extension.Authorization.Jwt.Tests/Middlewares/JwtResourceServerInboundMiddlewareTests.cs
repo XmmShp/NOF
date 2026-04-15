@@ -24,13 +24,10 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             nextCalled = true;
             return ValueTask.CompletedTask;
         }, default);
-        Assert.True(
-
-        nextCalled);
-        Assert.Equal(0,
-        jwksProvider.CallCount);
-        Assert.Equal(UserContext.Anonymous,
-        userContext.User);
+        Assert.True(nextCalled);
+        Assert.Equal(0, jwksProvider.CallCount);
+        Assert.NotNull(userContext.User);
+        Assert.False(userContext.User.IsAuthenticated);
     }
 
     [Fact]
@@ -50,15 +47,11 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             nextCalled = true;
             return ValueTask.CompletedTask;
         }, default);
-        Assert.True(
-
-        nextCalled);
-        Assert.Equal(1,
-        jwksProvider.CallCount);
-        Assert.True(
-        executionContext.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
-        Assert.Equal(UserContext.Anonymous,
-        userContext.User);
+        Assert.True(nextCalled);
+        Assert.Equal(1, jwksProvider.CallCount);
+        Assert.True(executionContext.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
+        Assert.NotNull(userContext.User);
+        Assert.False(userContext.User.IsAuthenticated);
     }
 
     [Fact]
@@ -87,10 +80,9 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         }, default);
 
         Assert.Null(await Record.ExceptionAsync(act));
-        Assert.True(
-        nextCalled);
-        Assert.Equal(UserContext.Anonymous,
-        userContext.User);
+        Assert.True(nextCalled);
+        Assert.NotNull(userContext.User);
+        Assert.False(userContext.User.IsAuthenticated);
     }
 
     private static JwtResourceServerInboundMiddleware CreateMiddleware(

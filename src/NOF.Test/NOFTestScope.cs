@@ -70,7 +70,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         {
             foreach (var permission in permissions)
             {
-                claims.Add(new Claim(NOFAbstractionConstants.Claims.Permission, permission));
+                claims.Add(new Claim(ClaimTypes.Permission, permission));
             }
         }
 

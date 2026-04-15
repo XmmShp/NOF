@@ -89,12 +89,12 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
         var accessClaims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, request.UserId),
-            new(NOFAbstractionConstants.Claims.TenantId, request.TenantId)
+            new(ClaimTypes.TenantId, request.TenantId)
         };
 
         if (request.Permissions is { Length: > 0 })
         {
-            accessClaims.AddRange(request.Permissions.Select(permission => new Claim(NOFAbstractionConstants.Claims.Permission, permission)));
+            accessClaims.AddRange(request.Permissions.Select(permission => new Claim(ClaimTypes.Permission, permission)));
         }
 
         if (request.CustomClaims is not null)
@@ -118,7 +118,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
         {
             new Claim(ClaimTypes.JwtId, refreshTokenId),
             new Claim(ClaimTypes.NameIdentifier, request.UserId),
-            new Claim(NOFAbstractionConstants.Claims.TenantId, request.TenantId)
+            new Claim(ClaimTypes.TenantId, request.TenantId)
         };
 
         var refreshToken = tokenHandler.WriteToken(new JwtSecurityToken(
@@ -168,7 +168,7 @@ public sealed class JwtAuthorityService : IJwtAuthorityService
             var principal = tokenHandler.ValidateToken(request.RefreshToken, validationParameters, out _);
             var tokenId = principal.FindFirst(ClaimTypes.JwtId)?.Value;
             var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var tenantId = principal.FindFirst(NOFAbstractionConstants.Claims.TenantId)?.Value;
+            var tenantId = principal.FindFirst(ClaimTypes.TenantId)?.Value;
 
             if (string.IsNullOrWhiteSpace(tokenId) || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(tenantId))
             {
