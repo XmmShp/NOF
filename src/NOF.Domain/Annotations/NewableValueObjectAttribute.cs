@@ -1,5 +1,3 @@
-using NOF.Annotation;
-
 namespace NOF.Domain;
 
 /// <summary>
@@ -12,4 +10,4 @@ namespace NOF.Domain;
 /// primitive type will produce a compile-time error (NOF012).
 /// </remarks>
 [AttributeUsage(AttributeTargets.Struct)]
-public sealed class NewableValueObjectAttribute : AttributeForSourceGenerator;
+public sealed class NewableValueObjectAttribute : Attribute;
