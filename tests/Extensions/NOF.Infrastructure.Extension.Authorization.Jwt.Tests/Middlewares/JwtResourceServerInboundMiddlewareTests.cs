@@ -114,7 +114,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             HandlerType = typeof(object),
             MethodInfo = typeof(object).GetMethod(nameof(ToString))!,
             ServiceType = typeof(object),
-            OperationName = nameof(ToString)
+            MethodName = nameof(ToString)
         };
     }
 

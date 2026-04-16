@@ -16,7 +16,7 @@ public sealed class CommandExecutionContextHeadersOutboundMiddleware : ICommandO
         _executionContext = executionContext;
     }
 
-    public ValueTask InvokeAsync(CommandOutboundContext context, CommandOutboundDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         foreach (var (k, v) in _executionContext)
         {
@@ -39,7 +39,7 @@ public sealed class NotificationExecutionContextHeadersOutboundMiddleware : INot
         _executionContext = executionContext;
     }
 
-    public ValueTask InvokeAsync(NotificationOutboundContext context, NotificationOutboundDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(NotificationOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         foreach (var (k, v) in _executionContext)
         {
@@ -62,7 +62,7 @@ public sealed class RequestExecutionContextHeadersOutboundMiddleware : IRequestO
         _executionContext = executionContext;
     }
 
-    public ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         foreach (var (k, v) in _executionContext)
         {

@@ -144,7 +144,7 @@ public sealed class JwtHttpClientTests
 
         public async ValueTask ExecuteAsync(
             RequestOutboundContext context,
-            RequestOutboundDelegate dispatch,
+            HandlerDelegate dispatch,
             CancellationToken cancellationToken)
         {
             foreach (var (key, value) in _headers)

@@ -78,7 +78,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             Message = new object(),
             Services = new ServiceCollection().BuildServiceProvider(),
             ServiceType = typeof(object),
-            OperationName = nameof(CreateOutboundContext)
+            MethodName = nameof(CreateOutboundContext)
         };
     }
 

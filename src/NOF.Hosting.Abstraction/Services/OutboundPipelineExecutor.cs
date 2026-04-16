@@ -12,7 +12,7 @@ public sealed class CommandOutboundPipelineExecutor : ICommandOutboundPipelineEx
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(CommandOutboundContext context, CommandOutboundDelegate dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(CommandOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
@@ -37,7 +37,7 @@ public sealed class NotificationOutboundPipelineExecutor : INotificationOutbound
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(NotificationOutboundContext context, NotificationOutboundDelegate dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(NotificationOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
@@ -62,7 +62,7 @@ public sealed class RequestOutboundPipelineExecutor : IRequestOutboundPipelineEx
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(RequestOutboundContext context, RequestOutboundDelegate dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(RequestOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 

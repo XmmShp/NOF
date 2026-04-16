@@ -1,13 +1,18 @@
+using NOF.Hosting;
+
 namespace NOF.Infrastructure;
 
-public interface IInboundPipelineExecutor<TContext>
-    where TContext : MessageInboundContext
+public interface ICommandInboundPipelineExecutor
 {
-    ValueTask ExecuteAsync(TContext context, InboundDelegate<TContext> inbound, CancellationToken cancellationToken);
+    ValueTask ExecuteAsync(CommandInboundContext context, HandlerDelegate inbound, CancellationToken cancellationToken);
 }
 
-public interface ICommandInboundPipelineExecutor : IInboundPipelineExecutor<CommandInboundContext>;
+public interface INotificationInboundPipelineExecutor
+{
+    ValueTask ExecuteAsync(NotificationInboundContext context, HandlerDelegate inbound, CancellationToken cancellationToken);
+}
 
-public interface INotificationInboundPipelineExecutor : IInboundPipelineExecutor<NotificationInboundContext>;
-
-public interface IRequestInboundPipelineExecutor : IInboundPipelineExecutor<RequestInboundContext>;
+public interface IRequestInboundPipelineExecutor
+{
+    ValueTask ExecuteAsync(RequestInboundContext context, HandlerDelegate inbound, CancellationToken cancellationToken);
+}

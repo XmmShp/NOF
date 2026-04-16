@@ -16,7 +16,7 @@ public class TenantInboundMiddlewareTests
         {
             [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenant-a"
         };
-        var middleware = new TenantInboundMiddleware(
+        var middleware = new CommandTenantInboundMiddleware(
             executionContext,
             Options.Create(new TenantOptions
             {
@@ -37,7 +37,7 @@ public class TenantInboundMiddlewareTests
         {
             [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenant-a"
         };
-        var middleware = new TenantInboundMiddleware(
+        var middleware = new CommandTenantInboundMiddleware(
             executionContext,
             Options.Create(new TenantOptions
             {
@@ -53,6 +53,7 @@ public class TenantInboundMiddlewareTests
         return new CommandInboundContext
         {
             Message = new object(),
+            MessageType = typeof(object),
             Services = new ServiceCollection().BuildServiceProvider(),
             Attributes = new List<Attribute>(),
             HandlerType = typeof(object)

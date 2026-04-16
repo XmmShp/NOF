@@ -8,7 +8,7 @@ public static class InboundHandlerInvoker
 {
     public static async Task ExecuteRpcAsync(
         IServiceProvider rootServiceProvider,
-        object? message,
+        object message,
         MethodInfo methodInfo,
         Type handlerType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
@@ -33,7 +33,7 @@ public static class InboundHandlerInvoker
             HandlerType = handlerType,
             MethodInfo = methodInfo,
             ServiceType = serviceType,
-            OperationName = methodInfo.Name
+            MethodName = methodInfo.Name
         };
 
         var pipeline = scope.ServiceProvider.GetRequiredService<IRequestInboundPipelineExecutor>();
@@ -57,6 +57,7 @@ public static class InboundHandlerInvoker
         var context = new CommandInboundContext
         {
             Message = command,
+            MessageType = command.GetType(),
             Services = scope.ServiceProvider,
             Attributes = GetAttributes(command),
             HandlerType = handlerType
@@ -87,6 +88,7 @@ public static class InboundHandlerInvoker
         var context = new NotificationInboundContext
         {
             Message = notification,
+            MessageType = notification.GetType(),
             Services = scope.ServiceProvider,
             Attributes = GetAttributes(notification),
             HandlerType = handlerType

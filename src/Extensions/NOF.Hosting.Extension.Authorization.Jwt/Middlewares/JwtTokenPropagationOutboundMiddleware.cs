@@ -18,7 +18,7 @@ public sealed class JwtTokenPropagationOutboundMiddleware : RequestOutboundMiddl
         _options = options.Value;
     }
 
-    public override ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken)
+    public override ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         if (_userContext.User is JwtClaimsPrincipal { Token: { Length: > 0 } token })
         {

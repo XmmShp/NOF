@@ -39,7 +39,7 @@ public static class RpcServerInvoker
             Message = request,
             Services = rootServiceProvider,
             ServiceType = typeof(TRpcService),
-            OperationName = operationName
+            MethodName = operationName
         };
 
         await outboundPipeline.ExecuteAsync(outboundContext, async ct =>

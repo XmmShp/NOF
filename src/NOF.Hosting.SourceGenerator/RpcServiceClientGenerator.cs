@@ -239,7 +239,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
         sb.AppendLine("                Services = _serviceProvider,");
         sb.AppendLine($"                ServiceType = typeof(global::{method.Method.ContainingType!.ToDisplayString()}),");
-        sb.AppendLine($"                OperationName = \"{method.OperationName}\"");
+        sb.AppendLine($"                MethodName = \"{method.OperationName}\"");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine($"            {responseType}? result = default;");

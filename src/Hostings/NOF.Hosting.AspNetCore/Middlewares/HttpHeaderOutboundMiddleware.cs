@@ -15,7 +15,7 @@ public sealed class HttpHeaderOutboundMiddleware : RequestOutboundMiddleware, IB
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public override ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken)
+    public override ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is not null)

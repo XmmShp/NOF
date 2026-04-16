@@ -5,9 +5,9 @@ namespace NOF.Hosting;
 
 public sealed class CommandTracingOutboundMiddleware : ICommandOutboundMiddleware
 {
-    public async ValueTask InvokeAsync(CommandOutboundContext context, CommandOutboundDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageTypeFullName = context.MessageName ?? "<null>";
+        var messageTypeFullName = context.MessageType.FullName ?? context.MessageType.Name;
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
             ActivityKind.Producer);
@@ -22,7 +22,7 @@ public sealed class CommandTracingOutboundMiddleware : ICommandOutboundMiddlewar
 
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
-            activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.Message?.GetType().Name);
+            activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.MessageType.Name);
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var tenantId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.TenantId, tenantId);
             activity?.SetStatus(ActivityStatusCode.Ok);
@@ -37,9 +37,9 @@ public sealed class CommandTracingOutboundMiddleware : ICommandOutboundMiddlewar
 
 public sealed class NotificationTracingOutboundMiddleware : INotificationOutboundMiddleware
 {
-    public async ValueTask InvokeAsync(NotificationOutboundContext context, NotificationOutboundDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(NotificationOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageTypeFullName = context.MessageName ?? "<null>";
+        var messageTypeFullName = context.MessageType.FullName ?? context.MessageType.Name;
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
             ActivityKind.Producer);
@@ -54,7 +54,7 @@ public sealed class NotificationTracingOutboundMiddleware : INotificationOutboun
 
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
-            activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.Message?.GetType().Name);
+            activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.MessageType.Name);
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var tenantId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.TenantId, tenantId);
             activity?.SetStatus(ActivityStatusCode.Ok);
@@ -69,11 +69,11 @@ public sealed class NotificationTracingOutboundMiddleware : INotificationOutboun
 
 public sealed class RequestTracingOutboundMiddleware : IRequestOutboundMiddleware
 {
-    public async ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageTypeFullName = context.MessageName ?? "<null>";
+        var rpcMethod = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
-            $"Outbound: {messageTypeFullName}",
+            $"Outbound: {rpcMethod}",
             ActivityKind.Producer);
 
         var currentActivity = Activity.Current;
@@ -86,7 +86,7 @@ public sealed class RequestTracingOutboundMiddleware : IRequestOutboundMiddlewar
 
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
-            activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, context.Message?.GetType().Name);
+            activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageType, rpcMethod);
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var tenantId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.TenantId, tenantId);
             activity?.SetStatus(ActivityStatusCode.Ok);

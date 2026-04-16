@@ -48,23 +48,23 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddNotificationOutboundMiddleware<NotificationExecutionContextHeadersOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<RequestExecutionContextHeadersOutboundMiddleware>();
 
-            builder.Services.AddCommandInboundMiddleware<ExceptionInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<ExceptionInboundMiddleware>();
-            builder.Services.AddRequestInboundMiddleware<ExceptionInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<TenantInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<TenantInboundMiddleware>();
-            builder.Services.AddRequestInboundMiddleware<TenantInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<AuthorizationInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<AuthorizationInboundMiddleware>();
-            builder.Services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<TracingInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<TracingInboundMiddleware>();
-            builder.Services.AddRequestInboundMiddleware<TracingInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<AutoInstrumentationInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<AutoInstrumentationInboundMiddleware>();
-            builder.Services.AddRequestInboundMiddleware<AutoInstrumentationInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<MessageInboxInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<MessageInboxInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<CommandExceptionInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<NotificationExceptionInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<RequestExceptionInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<CommandTenantInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<NotificationTenantInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<RequestTenantInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<CommandAuthorizationInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<NotificationAuthorizationInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<RequestAuthorizationInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<CommandTracingInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<NotificationTracingInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<RequestTracingInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<CommandAutoInstrumentationInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<NotificationAutoInstrumentationInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<RequestAutoInstrumentationInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<CommandMessageInboxInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<NotificationMessageInboxInboundMiddleware>();
 
             builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()

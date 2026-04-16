@@ -6,35 +6,31 @@ namespace NOF.Hosting;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class CommandOutboundContext
 {
-    public object? Message { get; init; }
+    public required object Message { get; init; }
+
+    public required Type MessageType { get; init; }
 
     public required IServiceProvider Services { get; init; }
 
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
-    public object? Response { get; set; }
-
-    public string? MessageName => Message?.GetType().FullName;
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class NotificationOutboundContext
 {
-    public object? Message { get; init; }
+    public required object Message { get; init; }
+
+    public required Type MessageType { get; init; }
 
     public required IServiceProvider Services { get; init; }
 
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
-    public object? Response { get; set; }
-
-    public string? MessageName => Message?.GetType().FullName;
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class RequestOutboundContext
 {
-    public object? Message { get; init; }
+    public required object Message { get; init; }
 
     public required IServiceProvider Services { get; init; }
 
@@ -42,11 +38,9 @@ public sealed class RequestOutboundContext
 
     public object? Response { get; set; }
 
-    public string? MessageName => Message?.GetType().FullName;
-
     public required Type ServiceType { get; init; }
 
-    public required string OperationName { get; init; }
+    public required string MethodName { get; init; }
 }
 
 public sealed class CommandOutboundPipelineTypes
