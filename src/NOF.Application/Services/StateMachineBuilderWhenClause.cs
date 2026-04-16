@@ -1,10 +1,8 @@
-using NOF.Contract;
-
 namespace NOF.Application;
 
 internal class StateMachineBuilderWhenClause<TState, TNotification> : IStateMachineBuilderWhenClause<TState, TNotification>
     where TState : struct, Enum
-    where TNotification : class, INotification
+    where TNotification : class
 {
     private readonly Action<TState> _setTargetState;
     private readonly Action<Func<TNotification, IServiceProvider, CancellationToken, Task>> _addAction;

@@ -29,8 +29,8 @@ Wraps the built `IHost` and provides convenient helpers for application tests:
 
 - `CreateScope()`
 - `GetRequiredService<T>()`
-- `SendAsync(ICommand)`
-- `PublishAsync(INotification)`
+- `SendAsync<TCommand>(TCommand)`
+- `PublishAsync<TNotification>(TNotification)`
 
 ### `NOFTestScope`
 

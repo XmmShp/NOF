@@ -1,4 +1,3 @@
-using NOF.Contract;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 
@@ -15,7 +14,7 @@ namespace NOF.Application;
 public abstract class StateMachineNotificationHandler<TStateMachineDefinition, TState, TNotification> : NotificationHandler<TNotification>
     where TStateMachineDefinition : IStateMachineDefinition<TState>, new()
     where TState : struct, Enum
-    where TNotification : class, INotification
+    where TNotification : class
 {
     private readonly IStateMachineContextStore _store;
     private readonly DbContext _dbContext;

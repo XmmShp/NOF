@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Infrastructure;
 using Xunit;
 
@@ -101,17 +100,17 @@ public class NOFTestHostTests
         LazyProbe.CreatedCount);
     }
 
-    private sealed record TestCommand(string Value) : ICommand;
+    private sealed record TestCommand(string Value);
 
-    private sealed record TestNotification(string Value) : INotification;
+    private sealed record TestNotification(string Value);
 
     private sealed class FakeCommandSender : ICommandSender
     {
-        public void DeferSend(ICommand command)
+        public void DeferSend(object command)
         {
         }
 
-        public Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
+        public Task SendAsync(object command, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }
@@ -119,11 +118,11 @@ public class NOFTestHostTests
 
     private sealed class FakeNotificationPublisher : INotificationPublisher
     {
-        public void DeferPublish(INotification notification)
+        public void DeferPublish(object notification)
         {
         }
 
-        public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
+        public Task PublishAsync(object notification, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

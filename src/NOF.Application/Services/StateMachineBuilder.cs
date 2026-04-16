@@ -1,19 +1,17 @@
-using NOF.Contract;
-
 namespace NOF.Application;
 
 internal sealed class BuildableStateMachineBuilder<TState> : IStateMachineBuilder<TState>, IBuildableStateMachineBuilder
     where TState : struct, Enum
 {
     #region Internal Helpers
-    internal delegate Task Operation(INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken);
+    internal delegate Task Operation(object notification, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 
     internal class StateMachineOperation
     {
         public TState? TargetState;
         public List<Operation> Operations { get; } = [];
 
-        public async Task<TState> ExecuteAsync(TState currentState, INotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        public async Task<TState> ExecuteAsync(TState currentState, object notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
             foreach (var op in Operations)
             {
@@ -62,7 +60,7 @@ internal sealed class BuildableStateMachineBuilder<TState> : IStateMachineBuilde
     private readonly BuilderBlueprint _blueprint = new();
 
     public IStateMachineBuilderWhenClause<TState, TNotification> StartWhen<TNotification>(TState initialState)
-        where TNotification : class, INotification
+        where TNotification : class
     {
         var notificationType = typeof(TNotification);
         if (_blueprint.StartOperations.ContainsKey(notificationType))
@@ -122,7 +120,7 @@ internal sealed class BuildableStateMachineBuilder<TState> : IStateMachineBuilde
     }
 
     public IStateMachineBuilder<TState> Correlate<TNotification>(Func<TNotification, string> correlationIdSelector)
-        where TNotification : class, INotification
+        where TNotification : class
     {
         var notificationType = typeof(TNotification);
         if (_blueprint.CorrelationIdSelectors.ContainsKey(notificationType))

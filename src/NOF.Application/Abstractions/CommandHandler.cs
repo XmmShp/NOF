@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -15,7 +14,7 @@ public abstract class MessageHandler;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public abstract class CommandHandler : MessageHandler
 {
-    public abstract Task HandleAsync(ICommand command, CancellationToken cancellationToken);
+    public abstract Task HandleAsync(object command, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -23,10 +22,9 @@ public abstract class CommandHandler : MessageHandler
 /// </summary>
 /// <typeparam name="TCommand">The command type.</typeparam>
 public abstract class CommandHandler<TCommand> : CommandHandler
-    where TCommand : class, ICommand
 {
     /// <inheritdoc />
-    public sealed override Task HandleAsync(ICommand command, CancellationToken cancellationToken)
+    public sealed override Task HandleAsync(object command, CancellationToken cancellationToken)
         => HandleAsync((TCommand)command, cancellationToken);
 
     /// <summary>Handles the command.</summary>

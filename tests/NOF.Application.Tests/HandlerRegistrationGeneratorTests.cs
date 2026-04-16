@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
-using NOF.Contract;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -15,10 +14,9 @@ public class HandlerRegistrationGeneratorTests
     {
         const string source = """
             using NOF.Application;
-            using NOF.Contract;
             namespace App
             {
-                public record MyCommand : ICommand;
+                public record MyCommand;
                 public class MyCommandHandler : CommandHandler<MyCommand>
                 {
                     public override System.Threading.Tasks.Task HandleAsync(MyCommand command, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
@@ -29,7 +27,6 @@ public class HandlerRegistrationGeneratorTests
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
             typeof(CommandHandler<>),
-            typeof(ICommand),
             typeof(CommandHandlerInfo)
         );
 
@@ -47,10 +44,9 @@ public class HandlerRegistrationGeneratorTests
     {
         const string source = """
             using NOF.Application;
-            using NOF.Contract;
             namespace App
             {
-                public record MyNotification : INotification;
+                public record MyNotification;
                 public class MyNotificationHandler : NotificationHandler<MyNotification>
                 {
                     public override System.Threading.Tasks.Task HandleAsync(MyNotification notification, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
@@ -61,7 +57,6 @@ public class HandlerRegistrationGeneratorTests
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
             typeof(NotificationHandler<>),
-            typeof(INotification),
             typeof(NotificationHandlerInfo)
         );
 

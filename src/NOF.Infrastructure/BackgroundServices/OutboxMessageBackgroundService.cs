@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Contract;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -126,23 +125,23 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         try
         {
-            if (payload is ICommand command)
+            switch (message.MessageType)
             {
-                await commandSender.SendAsync(command, cancellationToken);
-                _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
-                    message.Id, command.GetType().Name, message.RetryCount);
-            }
-            else if (payload is INotification notification)
-            {
-                await notificationPublisher.PublishAsync(notification, cancellationToken);
-                _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
-                    message.Id, notification.GetType().Name, message.RetryCount);
-            }
-            else
-            {
-                await repository.AtomicRecordDeliveryFailureAsync(message.Id, "Unsupported message type", cancellationToken);
-                _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
-                    message.Id, payload.GetType().FullName ?? "null");
+                case OutboxMessageType.Command:
+                    await commandSender.SendAsync(payload, cancellationToken);
+                    _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
+                        message.Id, payload.GetType().Name, message.RetryCount);
+                    break;
+                case OutboxMessageType.Notification:
+                    await notificationPublisher.PublishAsync(payload, cancellationToken);
+                    _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
+                        message.Id, payload.GetType().Name, message.RetryCount);
+                    break;
+                default:
+                    await repository.AtomicRecordDeliveryFailureAsync(message.Id, "Unsupported message type", cancellationToken);
+                    _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
+                        message.Id, payload.GetType().FullName ?? "null");
+                    break;
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

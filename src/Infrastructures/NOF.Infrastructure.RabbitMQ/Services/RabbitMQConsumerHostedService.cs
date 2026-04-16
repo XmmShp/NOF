@@ -2,7 +2,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Contract;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -209,29 +208,24 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 }
             }
 
-            if (message is ICommand command)
+            if (_notificationHandlerTypes.TryGetValue(queueName, out var notificationHandlerType))
             {
-                var commandType = command.GetType();
+                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
+                    _rootServiceProvider,
+                    message!,
+                    notificationHandlerType,
+                    headers,
+                    CancellationToken.None);
+            }
+            else
+            {
+                var commandType = messageType;
                 var handlerType = _handlerInfos?.GetCommandHandlers(commandType).FirstOrDefault()
                     ?? throw new InvalidOperationException($"Cannot route command '{commandType.Name}'. No matching handler registered.");
                 await InboundHandlerInvoker.ExecuteCommandAsync(
                     _rootServiceProvider,
                     handlerType,
-                    command,
-                    headers,
-                    CancellationToken.None);
-            }
-            else if (message is INotification notification)
-            {
-                if (!_notificationHandlerTypes.TryGetValue(queueName, out var handlerType))
-                {
-                    throw new InvalidOperationException($"Cannot resolve notification handler type for queue '{queueName}'.");
-                }
-
-                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
-                    _rootServiceProvider,
-                    notification,
-                    handlerType,
+                    message!,
                     headers,
                     CancellationToken.None);
             }

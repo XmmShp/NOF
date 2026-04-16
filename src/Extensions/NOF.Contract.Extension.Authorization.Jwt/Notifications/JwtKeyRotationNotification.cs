@@ -4,4 +4,4 @@ namespace NOF.Contract.Extension.Authorization.Jwt;
 /// Notification published when signing keys should be rotated.
 /// Subscribers should trigger a background refresh of their cached JWKS upon receiving this notification.
 /// </summary>
-public record JwtKeyRotationNotification : INotification;
+public record JwtKeyRotationNotification;

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Contract;
 using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
@@ -20,14 +19,15 @@ public class RabbitMQCommandRider : ICommandRider
         _serializer = serializer;
     }
 
-    public async Task SendAsync(ICommand command,
+    public async Task SendAsync(object command,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(command);
         await PublishToRabbitMQAsync(command, headers, cancellationToken);
     }
 
-    private async Task PublishToRabbitMQAsync(ICommand command, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
+    private async Task PublishToRabbitMQAsync(object command, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 

@@ -184,7 +184,7 @@ chore(ci): upgrade to .NET 10 SDK
 
 ```
 NOF.Domain              ← Domain entities, aggregate roots, events, [AutoInject]
-NOF.Contract            ← IRequest, ICommand, INotification, Result<T>, [HttpEndpoint]
+NOF.Contract            ← Contract DTOs, Result<T>, [HttpEndpoint]
 NOF.Application         ← Handlers, state machines, caching, unit of work
 NOF.Infrastructure ← INOFAppBuilder, IStep pipeline, OpenTelemetry
 NOF.Hosting.AspNetCore  ← ASP.NET Core host, endpoint mapping, middleware
@@ -195,7 +195,7 @@ NOF.Extensions.*        ← JWT authorization, optional features
 ### Key Patterns
 
 - **Step Pipeline**: `IServiceRegistrationStep` and `IApplicationInitializationStep` with dependency ordering via `IAfter<T>` / `IBefore<T>`.
-- **CQRS Messaging**: `IRequest` / `ICommand` / `INotification` with corresponding handlers.
+- **CQRS Messaging**: command/notification dispatch with corresponding handlers.
 - **Source Generators**: compile-time code generation for endpoint mapping, DI registration, failure definitions.
 - **Transactional Outbox**: reliable messaging via EF Core inbox/outbox.
 

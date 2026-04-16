@@ -1,6 +1,5 @@
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 using System.Text.Json;
@@ -37,8 +36,9 @@ public sealed class NotificationPublisher : INotificationPublisher
         _objectSerializer = objectSerializer;
     }
 
-    public void DeferPublish(INotification notification)
+    public void DeferPublish(object notification)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         var currentActivity = Activity.Current;
         // Persist the ambient execution context snapshot only; do not run outbound pipeline here.
         // Snapshot happens implicitly via ExecutionContextHeadersOutboundMiddleware at publish time.
@@ -62,8 +62,9 @@ public sealed class NotificationPublisher : INotificationPublisher
         });
     }
 
-    public async Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(object notification, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         var context = new OutboundContext
         {
             Message = notification,

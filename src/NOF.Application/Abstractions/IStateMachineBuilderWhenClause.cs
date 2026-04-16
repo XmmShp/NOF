@@ -1,10 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Contract;
 
 namespace NOF.Application;
 
 public interface IStateMachineBuilderWhenClause<in TState, out TNotification>
-    where TNotification : class, INotification
+    where TNotification : class
     where TState : struct, Enum
 {
     IStateMachineBuilderWhenClause<TState, TNotification> ExecuteAsync(Func<TNotification, IServiceProvider, CancellationToken, Task> actionFunc);
@@ -14,7 +13,7 @@ public interface IStateMachineBuilderWhenClause<in TState, out TNotification>
 public static partial class NOFApplicationExtensions
 {
     extension<TState, TNotification>(IStateMachineBuilderWhenClause<TState, TNotification> clause)
-        where TNotification : class, INotification
+        where TNotification : class
         where TState : struct, Enum
     {
         /// <summary>Executes a synchronous action when the state machine transition is triggered.</summary>
@@ -29,23 +28,21 @@ public static partial class NOFApplicationExtensions
 
         /// <summary>Sends a command asynchronously when the transition is triggered.</summary>
         public IStateMachineBuilderWhenClause<TState, TNotification> SendCommandAsync<TCommand>(Func<TNotification, TCommand> commandFactory)
-            where TCommand : class, ICommand
         {
             return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
             {
                 var commandSender = sp.GetRequiredService<ICommandSender>();
-                await commandSender.SendAsync(commandFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
+                await commandSender.SendAsync(commandFactory(notification)!, cancellationToken: cancellationToken).ConfigureAwait(false);
             });
         }
 
         /// <summary>Publishes a notification asynchronously when the transition is triggered.</summary>
         public IStateMachineBuilderWhenClause<TState, TNotification> PublishNotificationAsync<TAnotherNotification>(Func<TNotification, TAnotherNotification> notificationFactory)
-            where TAnotherNotification : class, INotification
         {
             return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
             {
                 var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
-                await notificationPublisher.PublishAsync(notificationFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
+                await notificationPublisher.PublishAsync(notificationFactory(notification)!, cancellationToken: cancellationToken).ConfigureAwait(false);
             });
         }
     }

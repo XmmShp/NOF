@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Infrastructure;
 using System.Security.Claims;
 
@@ -77,14 +76,14 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return SetUser(new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType)));
     }
 
-    public Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
+    public Task SendAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
     {
-        return GetRequiredService<ICommandSender>().SendAsync(command, cancellationToken);
+        return GetRequiredService<ICommandSender>().SendAsync(command!, cancellationToken);
     }
 
-    public Task PublishAsync(INotification notification, CancellationToken cancellationToken = default)
+    public Task PublishAsync<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
     {
-        return GetRequiredService<INotificationPublisher>().PublishAsync(notification, cancellationToken);
+        return GetRequiredService<INotificationPublisher>().PublishAsync(notification!, cancellationToken);
     }
 
     public void Dispose()

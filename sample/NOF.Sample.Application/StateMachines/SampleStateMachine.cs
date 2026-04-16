@@ -13,12 +13,12 @@ public enum SampleState
     Stopped
 }
 
-public record TaskStarted(string TaskId) : INotification;
-public record TaskContinued(string TaskId) : INotification;
+public record TaskStarted(string TaskId);
+public record TaskContinued(string TaskId);
 
-public record ProcessingSucceeded(string TaskId) : INotification;
-public record ProcessingFailed(string TaskId, string Reason) : INotification;
-public record StartProcessingCommand(string TaskId) : ICommand;
+public record ProcessingSucceeded(string TaskId);
+public record ProcessingFailed(string TaskId, string Reason);
+public record StartProcessingCommand(string TaskId);
 
 public class StartProcessingCommandHandler : CommandHandler<StartProcessingCommand>
 {

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
-using NOF.Contract;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
@@ -91,10 +90,11 @@ public static class InboundHandlerInvoker
     public static async Task ExecuteCommandAsync(
         IServiceProvider rootServiceProvider,
         Type handlerType,
-        ICommand command,
+        object command,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         await ExecuteHandlerAsync(
             rootServiceProvider,
             command,
@@ -113,11 +113,12 @@ public static class InboundHandlerInvoker
 
     public static async Task ExecuteNotificationToHandlerAsync(
         IServiceProvider rootServiceProvider,
-        INotification notification,
+        object notification,
         Type handlerType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(notification);
         await ExecuteHandlerAsync(
             rootServiceProvider,
             notification,

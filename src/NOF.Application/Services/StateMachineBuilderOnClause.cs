@@ -1,5 +1,3 @@
-using NOF.Contract;
-
 namespace NOF.Application;
 
 internal class StateMachineBuilderOnClause<TState> : IStateMachineBuilderOnClause<TState>
@@ -15,7 +13,7 @@ internal class StateMachineBuilderOnClause<TState> : IStateMachineBuilderOnClaus
     }
 
     public IStateMachineBuilderWhenClause<TState, TNotification> When<TNotification>()
-        where TNotification : class, INotification
+        where TNotification : class
     {
         var (setTargetState, addAction) = _factory(typeof(TNotification));
         return new StateMachineBuilderWhenClause<TState, TNotification>(setTargetState,

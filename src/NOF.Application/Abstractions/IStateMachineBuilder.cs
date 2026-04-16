@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -22,7 +21,7 @@ public interface IStateMachineBuilder<TState> : IStateMachineBuilder
     /// <param name="initialState">The initial state to transition to upon receiving the notification.</param>
     /// <returns>A clause to further configure actions and transitions.</returns>
     IStateMachineBuilderWhenClause<TState, TNotification> StartWhen<TNotification>(TState initialState)
-        where TNotification : class, INotification;
+        where TNotification : class;
 
     /// <summary>
     /// Begins configuration for rules that trigger when the state machine is in a specific state.
@@ -41,7 +40,7 @@ public interface IStateMachineBuilder<TState> : IStateMachineBuilder
     /// </param>
     /// <returns>The same builder instance, allowing for fluent configuration chaining.</returns>
     IStateMachineBuilder<TState> Correlate<TNotification>(Func<TNotification, string> correlationIdSelector)
-        where TNotification : class, INotification;
+        where TNotification : class;
 }
 
 internal interface IBuildableStateMachineBuilder

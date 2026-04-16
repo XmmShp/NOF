@@ -1,10 +1,8 @@
-using NOF.Contract;
-
 namespace NOF.Infrastructure;
 
 public interface INotificationRider
 {
-    Task PublishAsync(INotification notification,
+    Task PublishAsync(object notification,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default);
 }

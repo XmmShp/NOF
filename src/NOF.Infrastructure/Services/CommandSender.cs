@@ -1,6 +1,5 @@
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 using System.Text.Json;
@@ -37,8 +36,9 @@ public sealed class CommandSender : ICommandSender
         _objectSerializer = objectSerializer;
     }
 
-    public void DeferSend(ICommand command)
+    public void DeferSend(object command)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var currentActivity = Activity.Current;
         // Persist the ambient execution context snapshot only; do not run outbound pipeline here.
         // Snapshot happens implicitly via ExecutionContextHeadersOutboundMiddleware at send time.
@@ -62,8 +62,9 @@ public sealed class CommandSender : ICommandSender
         });
     }
 
-    public async Task SendAsync(ICommand command, CancellationToken cancellationToken = default)
+    public async Task SendAsync(object command, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(command);
         var context = new OutboundContext
         {
             Message = command,

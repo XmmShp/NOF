@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -22,7 +21,7 @@ public abstract class StateMachineBlueprint
     public IReadOnlySet<Type> ObservedNotificationTypes => ObservedTypes.AsReadOnly();
 
     public string? GetCorrelationId<TNotification>(TNotification notification)
-        where TNotification : class, INotification
+        where TNotification : class
     {
         return CorrelationIdSelectors.TryGetValue(typeof(TNotification), out var selector)
             ? selector(notification)
@@ -31,10 +30,9 @@ public abstract class StateMachineBlueprint
 
     /// <returns>The initial state value, or <c>null</c> if no startup rule matched.</returns>
     public abstract Task<int?> StartAsync<TNotification>(TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        where TNotification : class, INotification;
+        where TNotification : class;
 
     /// <returns>The new state value after the transition.</returns>
     public abstract Task<int> TransferAsync<TNotification>(int currentState, TNotification notification, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        where TNotification : class, INotification;
+        where TNotification : class;
 }
-
