@@ -3,31 +3,49 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-/// <summary>
-/// Default implementation of <see cref="IInboundPipelineExecutor"/>.
-/// Middleware instances are resolved from DI (scoped, like ASP.NET Core's <c>IMiddleware</c>).
-/// Middleware ordering is determined at startup by dependency sorting in <see cref="InboundPipelineTypes"/>.
-/// </summary>
-public sealed class InboundPipelineExecutor : IInboundPipelineExecutor
+public abstract class MessageInboundPipelineExecutor<TContext, TMiddlewareContract> : IInboundPipelineExecutor<TContext>
+    where TContext : MessageInboundContext
+    where TMiddlewareContract : class, IMessageInboundMiddleware<TContext>
 {
-    private readonly InboundPipelineTypes _middlewareTypes;
+    private readonly MessagePipelineTypes<TMiddlewareContract> _middlewareTypes;
 
-    public InboundPipelineExecutor(InboundPipelineTypes middlewareTypes)
+    protected MessageInboundPipelineExecutor(MessagePipelineTypes<TMiddlewareContract> middlewareTypes)
     {
         _middlewareTypes = middlewareTypes;
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(InboundContext context, InboundDelegate inbound, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(TContext context, InboundDelegate<TContext> inbound, CancellationToken cancellationToken)
     {
         var pipeline = inbound;
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (IInboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (TMiddlewareContract)context.Services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
-            pipeline = ct => middleware.InvokeAsync(context, ct2 => next(ct2), ct);
+            pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }
 
         return pipeline(cancellationToken);
+    }
+}
+
+public sealed class CommandInboundPipelineExecutor : MessageInboundPipelineExecutor<CommandInboundContext, ICommandInboundMiddleware>, ICommandInboundPipelineExecutor
+{
+    public CommandInboundPipelineExecutor(CommandInboundPipelineTypes middlewareTypes) : base(middlewareTypes)
+    {
+    }
+}
+
+public sealed class NotificationInboundPipelineExecutor : MessageInboundPipelineExecutor<NotificationInboundContext, INotificationInboundMiddleware>, INotificationInboundPipelineExecutor
+{
+    public NotificationInboundPipelineExecutor(NotificationInboundPipelineTypes middlewareTypes) : base(middlewareTypes)
+    {
+    }
+}
+
+public sealed class RequestInboundPipelineExecutor : MessageInboundPipelineExecutor<RequestInboundContext, IRequestInboundMiddleware>, IRequestInboundPipelineExecutor
+{
+    public RequestInboundPipelineExecutor(RequestInboundPipelineTypes middlewareTypes) : base(middlewareTypes)
+    {
     }
 }

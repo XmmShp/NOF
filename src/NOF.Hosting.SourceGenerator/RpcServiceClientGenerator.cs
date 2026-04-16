@@ -79,11 +79,11 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine($"    public partial class {targetClass.Name}");
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
-        sb.AppendLine("        private readonly global::NOF.Hosting.IOutboundPipelineExecutor _outboundPipeline;");
+        sb.AppendLine("        private readonly global::NOF.Hosting.IRequestOutboundPipelineExecutor _outboundPipeline;");
         sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
         sb.AppendLine("        private static readonly global::System.Text.Json.JsonSerializerOptions _jsonOptions = global::System.Text.Json.JsonSerializerOptions.NOF;");
         sb.AppendLine();
-        sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient, global::NOF.Hosting.IOutboundPipelineExecutor outboundPipeline, global::System.IServiceProvider serviceProvider)");
+        sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient, global::NOF.Hosting.IRequestOutboundPipelineExecutor outboundPipeline, global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(httpClient);");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(outboundPipeline);");
@@ -213,7 +213,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
         sb.AppendLine("        {");
 
-        sb.AppendLine("            var context = new global::NOF.Hosting.OutboundContext");
+        sb.AppendLine("            var context = new global::NOF.Hosting.RequestOutboundContext");
         sb.AppendLine("            {");
         if (hasRequestParam)
         {
@@ -223,7 +223,9 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         {
             sb.AppendLine("                Message = null,");
         }
-        sb.AppendLine("                Services = _serviceProvider");
+        sb.AppendLine("                Services = _serviceProvider,");
+        sb.AppendLine($"                ServiceType = typeof(global::{method.Method.ContainingType!.ToDisplayString()}),");
+        sb.AppendLine($"                OperationName = \"{method.OperationName}\"");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine($"            {responseType}? result = default;");

@@ -4,9 +4,6 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-/// <summary>
-/// Executes one RPC operation through the outbound and inbound pipelines.
-/// </summary>
 public static class RpcServerInvoker
 {
     public static async Task<object?> InvokeAsync<TRpcService>(
@@ -36,11 +33,13 @@ public static class RpcServerInvoker
         var methodInfo = typeof(TRpcService).GetMethod(operationName)
             ?? throw new InvalidOperationException($"RPC contract method '{typeof(TRpcService).FullName}.{operationName}' was not found.");
 
-        var outboundPipeline = rootServiceProvider.GetRequiredService<IOutboundPipelineExecutor>();
-        var outboundContext = new OutboundContext
+        var outboundPipeline = rootServiceProvider.GetRequiredService<IRequestOutboundPipelineExecutor>();
+        var outboundContext = new RequestOutboundContext
         {
             Message = request,
-            Services = rootServiceProvider
+            Services = rootServiceProvider,
+            ServiceType = typeof(TRpcService),
+            OperationName = operationName
         };
 
         await outboundPipeline.ExecuteAsync(outboundContext, async ct =>
@@ -49,8 +48,8 @@ public static class RpcServerInvoker
                 rootServiceProvider,
                 request,
                 methodInfo,
+                handlerType,
                 outboundContext.Headers,
-                context => context.Metadatas["HandlerType"] = handlerType,
                 async (sp, innerCt) =>
                 {
                     var handler = (RpcHandler)sp.GetRequiredService(handlerType);

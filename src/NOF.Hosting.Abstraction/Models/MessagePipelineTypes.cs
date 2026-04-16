@@ -2,7 +2,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
 
-public sealed class OutboundPipelineTypes
+/// <summary>
+/// Ordered middleware types for one concrete pipeline.
+/// Types can be added in arbitrary order and are frozen into dependency order on first execution.
+/// </summary>
+public class MessagePipelineTypes<TMiddlewareContract>
+    where TMiddlewareContract : class
 {
     private readonly List<DependencyNode> _nodes = [];
     private readonly List<Type> _orderedTypes = [];
@@ -13,11 +18,11 @@ public sealed class OutboundPipelineTypes
     public Type this[int index] => _orderedTypes[index];
 
     public void Add<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-        where TMiddleware : class, IOutboundMiddleware
+        where TMiddleware : class, TMiddlewareContract
     {
         if (_isFrozen)
         {
-            throw new InvalidOperationException("Outbound pipeline has been frozen and can no longer be modified.");
+            throw new InvalidOperationException("Pipeline has been frozen and can no longer be modified.");
         }
 
         var middlewareType = typeof(TMiddleware);
@@ -27,23 +32,6 @@ public sealed class OutboundPipelineTypes
         }
 
         _nodes.Add(new DependencyNode(middlewareType, DependencyNode.CollectRelatedTypes<TMiddleware>()));
-    }
-
-    public void Add([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] Type middlewareType)
-    {
-        ArgumentNullException.ThrowIfNull(middlewareType);
-
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("Outbound pipeline has been frozen and can no longer be modified.");
-        }
-
-        if (_nodes.Any(n => ReferenceEquals(n.ExtraInfo, middlewareType)))
-        {
-            return;
-        }
-
-        _nodes.Add(new DependencyNode(middlewareType, DependencyNode.CollectRelatedTypes(middlewareType)));
     }
 
     public void Freeze()

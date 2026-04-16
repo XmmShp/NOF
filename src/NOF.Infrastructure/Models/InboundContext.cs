@@ -1,35 +1,45 @@
 using System.ComponentModel;
+using System.Reflection;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-/// <summary>
-/// Handler execution context.
-/// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class InboundContext
+public abstract class MessageInboundContext
 {
-    /// <summary>
-    /// Message instance. May be null for 0-parameter service methods.
-    /// </summary>
     public object? Message { get; init; }
 
-    /// <summary>
-    /// Service provider for resolving dependencies during pipeline execution.
-    /// </summary>
     public required IServiceProvider Services { get; init; }
 
-    /// <summary>
-    /// Response result (only used for request handlers).
-    /// </summary>
     public object? Response { get; set; }
 
-    /// <summary>
-    /// Attributes associated with the message and handler.
-    /// </summary>
     public required List<Attribute> Attributes { get; init; }
 
-    /// <summary>
-    /// Metadata associated with the message and handler.
-    /// </summary>
-    public required IDictionary<string, object?> Metadatas { get; init; }
+    public required Type HandlerType { get; init; }
+
+    public string? HandlerName => HandlerType.FullName;
+
+    public string? MessageName => Message?.GetType().FullName;
 }
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public sealed class CommandInboundContext : MessageInboundContext;
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public sealed class NotificationInboundContext : MessageInboundContext;
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public sealed class RequestInboundContext : MessageInboundContext
+{
+    public required MethodInfo MethodInfo { get; init; }
+
+    public required Type ServiceType { get; init; }
+
+    public required string OperationName { get; init; }
+}
+
+public sealed class CommandInboundPipelineTypes : MessagePipelineTypes<ICommandInboundMiddleware>;
+
+public sealed class NotificationInboundPipelineTypes : MessagePipelineTypes<INotificationInboundMiddleware>;
+
+public sealed class RequestInboundPipelineTypes : MessagePipelineTypes<IRequestInboundMiddleware>;

@@ -7,12 +7,7 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Inbox message processing step deduplication via inbox pattern.</summary>
-/// <summary>
-/// Inbox middleware
-/// Responsible for recording inbox messages in transactions to ensure reliable message processing
-/// </summary>
-public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
+public sealed class MessageInboxInboundMiddleware : CommandAndNotificationInboundMiddleware, IAfter<AutoInstrumentationInboundMiddleware>
 {
     private readonly DbContext _dbContext;
     private readonly ILogger<MessageInboxInboundMiddleware> _logger;
@@ -25,12 +20,11 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
         _executionContext = executionContext;
     }
 
-    public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
+    protected override async ValueTask InvokeAsyncCore(MessageInboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
         _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageIdStr);
         if (!Guid.TryParse(messageIdStr, out var messageId))
         {
-            // No message id => no inbox dedup. Don't create a transaction or write inbox entry.
             await next(cancellationToken);
             return;
         }
@@ -44,30 +38,21 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
                 cancellationToken: cancellationToken) is not null;
             if (messageExists)
             {
-                var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName ?? "<null>";
+                var messageName = context.MessageName ?? "<null>";
                 _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, messageName);
-
-                // Short-circuit with an explicit failure result so upstream callers can handle gracefully.
                 context.Response = Result.Fail("409", "Duplicate message detected by inbox deduplication.");
                 await transaction.RollbackAsync(cancellationToken);
                 return;
             }
 
-            var inboxMessage = new NOFInboxMessage(messageId);
-
-            _dbContext.Set<NOFInboxMessage>().Add(inboxMessage);
-
+            _dbContext.Set<NOFInboxMessage>().Add(new NOFInboxMessage(messageId));
             await _dbContext.SaveChangesAsync(cancellationToken);
             _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.MessageId);
 
             await next(cancellationToken);
-
             await transaction.CommitAsync(cancellationToken);
 
-            var messageName2 = context.Metadatas.TryGetValue("MessageName", out var mn2) ? mn2 as string : context.Message?.GetType().FullName ?? "<null>";
-            _logger.LogDebug(
-                "Inbox message {MessageId} for {MessageType} processed and committed successfully",
-                messageId, messageName2);
+            _logger.LogDebug("Inbox message {MessageId} for {MessageType} processed and committed successfully", messageId, context.MessageName ?? "<null>");
         }
         catch (Exception ex)
         {
@@ -77,17 +62,10 @@ public sealed class MessageInboxInboundMiddleware : IInboundMiddleware, IAfter<A
             }
             catch (Exception rollbackEx)
             {
-                var messageName3 = context.Metadatas.TryGetValue("MessageName", out var mn3) ? mn3 as string : context.Message?.GetType().FullName ?? "<null>";
-                _logger.LogError(rollbackEx,
-                    "Failed to rollback transaction for inbox message processing of {MessageType}",
-                    messageName3);
+                _logger.LogError(rollbackEx, "Failed to rollback transaction for inbox message processing of {MessageType}", context.MessageName ?? "<null>");
             }
 
-            var messageName4 = context.Metadatas.TryGetValue("MessageName", out var mn4) ? mn4 as string : context.Message?.GetType().FullName ?? "<null>";
-            _logger.LogError(ex,
-                "Failed to process inbox message for {MessageType}. Transaction has been rolled back.",
-                messageName4);
-
+            _logger.LogError(ex, "Failed to process inbox message for {MessageType}. Transaction has been rolled back.", context.MessageName ?? "<null>");
             throw;
         }
     }

@@ -9,12 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-/// <summary>Resolves the current user from a JWT before tenant resolution runs.</summary>
-/// <summary>
-/// Inbound middleware that extracts and validates a JWT from inbound headers,
-/// then populates the current user context.
-/// </summary>
-public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware,
+public sealed class JwtResourceServerInboundMiddleware : RequestInboundMiddleware,
     IAfter<ExceptionInboundMiddleware>,
     IBefore<TenantInboundMiddleware>
 {
@@ -40,10 +35,9 @@ public sealed class JwtResourceServerInboundMiddleware : IInboundMiddleware,
         _executionContext = executionContext;
     }
 
-    public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
+    public override async ValueTask InvokeAsync(RequestInboundContext context, InboundDelegate<RequestInboundContext> next, CancellationToken cancellationToken)
     {
-        if (!_executionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) ||
-            string.IsNullOrEmpty(authHeader))
+        if (!_executionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
         {
             await next(cancellationToken);
             return;

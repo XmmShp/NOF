@@ -6,85 +6,38 @@ namespace NOF.Infrastructure;
 
 public static class InboundHandlerInvoker
 {
-    private static async Task ExecuteHandlerAsync(
-        IServiceProvider rootServiceProvider,
-        object? message,
-        IEnumerable<KeyValuePair<string, string?>>? headers,
-        Action<InboundContext> contextCallback,
-        Func<IServiceProvider, CancellationToken, ValueTask> terminal,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(rootServiceProvider);
-        ArgumentNullException.ThrowIfNull(contextCallback);
-        ArgumentNullException.ThrowIfNull(terminal);
-
-        await using var scope = rootServiceProvider.CreateAsyncScope();
-        var pipeline = rootServiceProvider.GetRequiredService<IInboundPipelineExecutor>();
-        var executionContext = scope.ServiceProvider.GetRequiredService<IExecutionContext>();
-
-        if (headers is not null)
-        {
-            foreach (var (headerKey, value) in headers)
-            {
-                executionContext[headerKey] = value;
-            }
-        }
-
-        var attributes = new List<Attribute>();
-
-        if (message is not null)
-        {
-            attributes.AddRange(message.GetType().GetCustomAttributes(true).Cast<Attribute>());
-        }
-
-        var metadatas = new Dictionary<string, object?>();
-
-        if (message is not null)
-        {
-            metadatas["MessageName"] = message.GetType().FullName;
-        }
-
-        var context = new InboundContext
-        {
-            Message = message,
-            Services = scope.ServiceProvider,
-            Attributes = attributes,
-            Metadatas = metadatas
-        };
-
-        contextCallback(context);
-
-        await pipeline.ExecuteAsync(
-            context,
-            ct => terminal(scope.ServiceProvider, ct),
-            cancellationToken).ConfigureAwait(false);
-    }
-
     public static async Task ExecuteRpcAsync(
         IServiceProvider rootServiceProvider,
         object? message,
         MethodInfo methodInfo,
+        Type handlerType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
-        Action<InboundContext> contextCallback,
         Func<IServiceProvider, CancellationToken, ValueTask> terminal,
         CancellationToken cancellationToken)
     {
-        await ExecuteHandlerAsync(
-            rootServiceProvider,
-            message,
-            headers,
-            context =>
-            {
-                context.Metadatas["MethodInfo"] = methodInfo;
-                context.Metadatas["MethodName"] = methodInfo.DeclaringType is null
-                    ? methodInfo.Name
-                    : $"{methodInfo.DeclaringType.FullName}.{methodInfo.Name}";
-                context.Metadatas["ServiceName"] = methodInfo.DeclaringType?.FullName;
-                context.Attributes.AddRange(methodInfo.GetCustomAttributes(true).Cast<Attribute>());
-                contextCallback(context);
-            },
-            terminal,
-            cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(rootServiceProvider);
+        ArgumentNullException.ThrowIfNull(methodInfo);
+        ArgumentNullException.ThrowIfNull(handlerType);
+        ArgumentNullException.ThrowIfNull(terminal);
+
+        await using var scope = rootServiceProvider.CreateAsyncScope();
+        ApplyHeaders(scope.ServiceProvider, headers);
+
+        var attributes = GetAttributes(message, methodInfo);
+        var serviceType = methodInfo.DeclaringType ?? throw new InvalidOperationException("RPC method must have a declaring type.");
+        var context = new RequestInboundContext
+        {
+            Message = message,
+            Services = scope.ServiceProvider,
+            Attributes = attributes,
+            HandlerType = handlerType,
+            MethodInfo = methodInfo,
+            ServiceType = serviceType,
+            OperationName = methodInfo.Name
+        };
+
+        var pipeline = scope.ServiceProvider.GetRequiredService<IRequestInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(context, ct => terminal(scope.ServiceProvider, ct), cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task ExecuteCommandAsync(
@@ -94,21 +47,27 @@ public static class InboundHandlerInvoker
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(rootServiceProvider);
+        ArgumentNullException.ThrowIfNull(handlerType);
         ArgumentNullException.ThrowIfNull(command);
-        await ExecuteHandlerAsync(
-            rootServiceProvider,
-            command,
-            headers,
-            context =>
-            {
-                context.Metadatas["HandlerType"] = handlerType;
-            },
-            async (sp, ct) =>
-            {
-                var handler = (CommandHandler)sp.GetRequiredService(handlerType);
-                await handler.HandleAsync(command, ct);
-            },
-            cancellationToken).ConfigureAwait(false);
+
+        await using var scope = rootServiceProvider.CreateAsyncScope();
+        ApplyHeaders(scope.ServiceProvider, headers);
+
+        var context = new CommandInboundContext
+        {
+            Message = command,
+            Services = scope.ServiceProvider,
+            Attributes = GetAttributes(command),
+            HandlerType = handlerType
+        };
+
+        var pipeline = scope.ServiceProvider.GetRequiredService<ICommandInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(context, async ct =>
+        {
+            var handler = (CommandHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+            await handler.HandleAsync(command, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task ExecuteNotificationToHandlerAsync(
@@ -118,20 +77,56 @@ public static class InboundHandlerInvoker
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(rootServiceProvider);
+        ArgumentNullException.ThrowIfNull(handlerType);
         ArgumentNullException.ThrowIfNull(notification);
-        await ExecuteHandlerAsync(
-            rootServiceProvider,
-            notification,
-            headers,
-            context =>
-            {
-                context.Metadatas["HandlerType"] = handlerType;
-            },
-            async (sp, ct) =>
-            {
-                var handler = (NotificationHandler)sp.GetRequiredService(handlerType);
-                await handler.HandleAsync(notification, ct);
-            },
-            cancellationToken).ConfigureAwait(false);
+
+        await using var scope = rootServiceProvider.CreateAsyncScope();
+        ApplyHeaders(scope.ServiceProvider, headers);
+
+        var context = new NotificationInboundContext
+        {
+            Message = notification,
+            Services = scope.ServiceProvider,
+            Attributes = GetAttributes(notification),
+            HandlerType = handlerType
+        };
+
+        var pipeline = scope.ServiceProvider.GetRequiredService<INotificationInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(context, async ct =>
+        {
+            var handler = (NotificationHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+            await handler.HandleAsync(notification, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void ApplyHeaders(IServiceProvider services, IEnumerable<KeyValuePair<string, string?>>? headers)
+    {
+        var executionContext = services.GetRequiredService<IExecutionContext>();
+        if (headers is null)
+        {
+            return;
+        }
+
+        foreach (var (headerKey, value) in headers)
+        {
+            executionContext[headerKey] = value;
+        }
+    }
+
+    private static List<Attribute> GetAttributes(object? message, MethodInfo? methodInfo = null)
+    {
+        var attributes = new List<Attribute>();
+        if (message is not null)
+        {
+            attributes.AddRange(message.GetType().GetCustomAttributes(true).Cast<Attribute>());
+        }
+
+        if (methodInfo is not null)
+        {
+            attributes.AddRange(methodInfo.GetCustomAttributes(true).Cast<Attribute>());
+        }
+
+        return attributes;
     }
 }

@@ -5,12 +5,7 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Activity tracing step resolves trace/span IDs from headers and creates distributed tracing Activity per handler execution.</summary>
-/// <summary>
-/// Inbound middleware that resolves tracing information from transport headers
-/// and creates a distributed tracing <see cref="Activity"/> for each handler execution.
-/// </summary>
-public sealed class TracingInboundMiddleware : IInboundMiddleware, IAfter<TenantInboundMiddleware>
+public sealed class TracingInboundMiddleware : AllMessagesInboundMiddleware, IAfter<TenantInboundMiddleware>
 {
     private readonly IExecutionContext _executionContext;
 
@@ -19,34 +14,26 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware, IAfter<Tenant
         _executionContext = executionContext;
     }
 
-    public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
+    protected override async ValueTask InvokeAsyncCore(MessageInboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
-        // Resolve trace/span IDs from headers
         _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
-        // Create Activity with resolved tracing context
         using var activity = CreateActivity(context, traceId, spanId);
 
-        // Stop propagating inbound header-based tracing once Activity is created
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.SpanId);
 
-        var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
-        var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;
-        var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName;
-        var methodName = context.Metadatas.TryGetValue("MethodName", out var mdn) ? mdn as string : null;
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, handlerName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, messageName);
-        if (methodName is not null)
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageName);
+        if (context is RequestInboundContext requestContext)
         {
-            activity?.SetTag("rpc.method", methodName);
+            activity?.SetTag("rpc.method", $"{requestContext.ServiceType.FullName}.{requestContext.OperationName}");
         }
 
         try
         {
             await next(cancellationToken);
-
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (Exception ex)
@@ -60,16 +47,15 @@ public sealed class TracingInboundMiddleware : IInboundMiddleware, IAfter<Tenant
         }
     }
 
-    private static Activity? CreateActivity(InboundContext context, string? traceId, string? spanId)
+    private static Activity? CreateActivity(MessageInboundContext context, string? traceId, string? spanId)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
             : null;
-        var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
-        var handlerName2 = context.Metadatas.TryGetValue("HandlerName", out var hn2) ? hn2 as string : handlerType?.FullName ?? "UnknownHandler";
-        var messageName2 = context.Metadatas.TryGetValue("MessageName", out var mn2) ? mn2 as string : context.Message?.GetType().FullName ?? "<null>";
+        var handlerName = context.HandlerName ?? "UnknownHandler";
+        var messageName = context.MessageName ?? "<null>";
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
-            $"{handlerName2}.Handle: {messageName2}",
+            $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
             parent);
     }

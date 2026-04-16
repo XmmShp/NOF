@@ -2,31 +2,51 @@ using System.ComponentModel;
 
 namespace NOF.Hosting;
 
-/// <summary>
-/// Outbound pipeline delegate。
-/// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public delegate ValueTask OutboundDelegate(CancellationToken cancellationToken);
+public delegate ValueTask OutboundDelegate<TContext>(CancellationToken cancellationToken);
 
-/// <summary>
-/// 出站中间件接口，与 <see cref="NOF.Application.IInboundMiddleware"/> 对称，用于处理出站消息的横切逻辑。
-/// </summary>
-public interface IOutboundMiddleware
+public interface IMessageOutboundMiddleware<TContext>
+    where TContext : MessageOutboundContext
 {
-    /// <summary>
-    /// 执行出站中间件逻辑。
-    /// </summary>
-    ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken);
+    ValueTask InvokeAsync(TContext context, OutboundDelegate<TContext> next, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// 执行出站中间件管道。
-/// </summary>
-public interface IOutboundPipelineExecutor
+public interface IOutboundPipelineExecutor<TContext>
+    where TContext : MessageOutboundContext
 {
-    /// <summary>
-    /// 使用给定的终端分发委托执行出站管道。
-    /// </summary>
-    ValueTask ExecuteAsync(OutboundContext context, OutboundDelegate dispatch, CancellationToken cancellationToken);
+    ValueTask ExecuteAsync(TContext context, OutboundDelegate<TContext> dispatch, CancellationToken cancellationToken);
 }
 
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface ICommandOutboundMiddleware : IMessageOutboundMiddleware<CommandOutboundContext>;
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface INotificationOutboundMiddleware : IMessageOutboundMiddleware<NotificationOutboundContext>;
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IRequestOutboundMiddleware : IMessageOutboundMiddleware<RequestOutboundContext>;
+
+public interface ICommandOutboundPipelineExecutor : IOutboundPipelineExecutor<CommandOutboundContext>;
+
+public interface INotificationOutboundPipelineExecutor : IOutboundPipelineExecutor<NotificationOutboundContext>;
+
+public interface IRequestOutboundPipelineExecutor : IOutboundPipelineExecutor<RequestOutboundContext>;
+
+public abstract class AllMessagesOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
+{
+    public ValueTask InvokeAsync(CommandOutboundContext context, OutboundDelegate<CommandOutboundContext> next, CancellationToken cancellationToken)
+        => InvokeAsyncCore(context, ct => next(ct), cancellationToken);
+
+    public ValueTask InvokeAsync(NotificationOutboundContext context, OutboundDelegate<NotificationOutboundContext> next, CancellationToken cancellationToken)
+        => InvokeAsyncCore(context, ct => next(ct), cancellationToken);
+
+    public ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken)
+        => InvokeAsyncCore(context, ct => next(ct), cancellationToken);
+
+    protected abstract ValueTask InvokeAsyncCore(MessageOutboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken);
+}
+
+public abstract class RequestOutboundMiddleware : IRequestOutboundMiddleware
+{
+    public abstract ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken);
+}

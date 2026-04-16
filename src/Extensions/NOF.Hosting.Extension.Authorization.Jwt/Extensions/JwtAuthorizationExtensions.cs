@@ -1,17 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Hosting;
 
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
-/// <summary>
-/// Extension methods for enabling JWT-based outbound authorization propagation.
-/// </summary>
 public static partial class NOFJwtAuthorizationExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        /// <summary>
-        /// Adds JWT authorization support for outbound pipeline propagation.
-        /// </summary>
         public INOFAppBuilder AddJwtTokenPropagation(Action<JwtTokenPropagationOptions>? configureOptions = null)
         {
             if (configureOptions is not null)
@@ -23,10 +18,8 @@ public static partial class NOFJwtAuthorizationExtensions
                 builder.Services.AddOptions<JwtTokenPropagationOptions>();
             }
 
-            builder.Services.AddOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
-
+            builder.Services.AddRequestOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
             return builder;
         }
     }
 }
-

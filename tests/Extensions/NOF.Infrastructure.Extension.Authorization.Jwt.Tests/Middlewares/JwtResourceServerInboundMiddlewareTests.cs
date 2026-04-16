@@ -104,14 +104,17 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             executionContext);
     }
 
-    private static InboundContext CreateInboundContext()
+    private static RequestInboundContext CreateInboundContext()
     {
-        return new InboundContext
+        return new RequestInboundContext
         {
             Message = new object(),
             Services = new ServiceCollection().BuildServiceProvider(),
             Attributes = new List<Attribute>(),
-            Metadatas = new Dictionary<string, object?> { { "HandlerType", typeof(object) } }
+            HandlerType = typeof(object),
+            MethodInfo = typeof(object).GetMethod(nameof(ToString))!,
+            ServiceType = typeof(object),
+            OperationName = nameof(ToString)
         };
     }
 

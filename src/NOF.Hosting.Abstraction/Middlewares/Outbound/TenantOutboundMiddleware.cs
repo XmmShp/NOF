@@ -2,9 +2,9 @@ using NOF.Abstraction;
 
 namespace NOF.Hosting;
 
-public sealed class TenantOutboundMiddleware : IOutboundMiddleware
+public sealed class TenantOutboundMiddleware : AllMessagesOutboundMiddleware
 {
-    public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
+    protected override ValueTask InvokeAsyncCore(MessageOutboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
         context.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] =
             NOFAbstractionConstants.Tenant.NormalizeTenantId(context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var tenantId) ? tenantId : null);

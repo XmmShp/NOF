@@ -9,13 +9,23 @@ public static partial class NOFHostingExtensions
     {
         public INOFAppBuilder AddHostingDefaults()
         {
-            builder.Services.TryAddSingleton<OutboundPipelineTypes>();
-            builder.Services.TryAddSingleton<IOutboundPipelineExecutor, OutboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<CommandOutboundPipelineTypes>();
+            builder.Services.TryAddSingleton<NotificationOutboundPipelineTypes>();
+            builder.Services.TryAddSingleton<RequestOutboundPipelineTypes>();
+            builder.Services.TryAddSingleton<ICommandOutboundPipelineExecutor, CommandOutboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<INotificationOutboundPipelineExecutor, NotificationOutboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
-            builder.Services.AddOutboundMiddleware<MessageIdOutboundMiddleware>();
-            builder.Services.AddOutboundMiddleware<TracingOutboundMiddleware>();
-            builder.Services.AddOutboundMiddleware<TenantOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<TenantOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<TenantOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<TenantOutboundMiddleware>();
             return builder;
         }
     }

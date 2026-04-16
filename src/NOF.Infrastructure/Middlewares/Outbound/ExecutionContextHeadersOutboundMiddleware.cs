@@ -4,10 +4,10 @@ using NOF.Hosting;
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Copies the current <see cref="IExecutionContext"/> key-values into <see cref="OutboundContext.Headers"/>
+/// Copies the current <see cref="IExecutionContext"/> key-values into outbound headers
 /// so outbound operations can propagate tenant/tracing/auth without mutating the ambient execution context.
 /// </summary>
-public sealed class ExecutionContextHeadersOutboundMiddleware : IOutboundMiddleware, IBefore<MessageIdOutboundMiddleware>
+public sealed class ExecutionContextHeadersOutboundMiddleware : AllMessagesOutboundMiddleware, IBefore<MessageIdOutboundMiddleware>
 {
     private readonly IExecutionContext _executionContext;
 
@@ -16,11 +16,10 @@ public sealed class ExecutionContextHeadersOutboundMiddleware : IOutboundMiddlew
         _executionContext = executionContext;
     }
 
-    public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
+    protected override ValueTask InvokeAsyncCore(MessageOutboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
         foreach (var (k, v) in _executionContext)
         {
-            // OutboundContext.Headers may already contain caller-provided values (e.g., outbox messages).
             if (!context.Headers.ContainsKey(k))
             {
                 context.Headers[k] = v;

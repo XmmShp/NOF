@@ -215,15 +215,27 @@ public static partial class NOFHostingExtensions
             });
         }
 
-        /// <summary>
-        /// Registers an outbound middleware type and appends it to <see cref="OutboundPipelineTypes"/>.
-        /// The final execution order is resolved when the pipeline freezes.
-        /// </summary>
-        public IServiceCollection AddOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-            where TMiddleware : class, IOutboundMiddleware
+        public IServiceCollection AddCommandOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, ICommandOutboundMiddleware
         {
             services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<OutboundPipelineTypes>().Add<TMiddleware>();
+            services.GetOrAddSingleton<CommandOutboundPipelineTypes>().Add<TMiddleware>();
+            return services;
+        }
+
+        public IServiceCollection AddNotificationOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, INotificationOutboundMiddleware
+        {
+            services.TryAddScoped<TMiddleware>();
+            services.GetOrAddSingleton<NotificationOutboundPipelineTypes>().Add<TMiddleware>();
+            return services;
+        }
+
+        public IServiceCollection AddRequestOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, IRequestOutboundMiddleware
+        {
+            services.TryAddScoped<TMiddleware>();
+            services.GetOrAddSingleton<RequestOutboundPipelineTypes>().Add<TMiddleware>();
             return services;
         }
     }

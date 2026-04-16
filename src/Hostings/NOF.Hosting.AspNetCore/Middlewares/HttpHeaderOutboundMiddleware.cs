@@ -3,11 +3,10 @@ using Microsoft.AspNetCore.Http;
 namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
-/// Outbound middleware step that populates <see cref="OutboundContext.Headers"/> from HTTP request headers.
-/// Runs before <see cref="TracingOutboundMiddleware"/> so that internal headers (tracing, tenant, etc.)
-/// written by later middleware can take precedence over raw HTTP headers.
+/// Request outbound middleware that populates outbound headers from the current HTTP request.
+/// Runs before <see cref="TracingOutboundMiddleware"/> so later middleware can override framework headers.
 /// </summary>
-public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware, IBefore<TracingOutboundMiddleware>
+public sealed class HttpHeaderOutboundMiddleware : RequestOutboundMiddleware, IBefore<TracingOutboundMiddleware>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -16,14 +15,13 @@ public sealed class HttpHeaderOutboundMiddleware : IOutboundMiddleware, IBefore<
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
+    public override ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken)
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is not null)
         {
             foreach (var header in httpContext.Request.Headers)
             {
-                // Caller-provided headers take precedence (do not overwrite existing outbound headers).
                 if (!context.Headers.ContainsKey(header.Key))
                 {
                     context.Headers[header.Key] = header.Value.ToString();

@@ -28,15 +28,27 @@ public static partial class NOFInfrastructureExtensions
             return services;
         }
 
-        /// <summary>
-        /// Registers an inbound middleware type and appends it to <see cref="InboundPipelineTypes"/>.
-        /// The final execution order is resolved when the pipeline freezes.
-        /// </summary>
-        public IServiceCollection AddInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-            where TMiddleware : class, IInboundMiddleware
+        public IServiceCollection AddCommandInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, ICommandInboundMiddleware
         {
             services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<InboundPipelineTypes>().Add<TMiddleware>();
+            services.GetOrAddSingleton<CommandInboundPipelineTypes>().Add<TMiddleware>();
+            return services;
+        }
+
+        public IServiceCollection AddNotificationInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, INotificationInboundMiddleware
+        {
+            services.TryAddScoped<TMiddleware>();
+            services.GetOrAddSingleton<NotificationInboundPipelineTypes>().Add<TMiddleware>();
+            return services;
+        }
+
+        public IServiceCollection AddRequestInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+            where TMiddleware : class, IRequestInboundMiddleware
+        {
+            services.TryAddScoped<TMiddleware>();
+            services.GetOrAddSingleton<RequestInboundPipelineTypes>().Add<TMiddleware>();
             return services;
         }
 

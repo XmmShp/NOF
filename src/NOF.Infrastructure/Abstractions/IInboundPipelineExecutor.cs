@@ -1,14 +1,13 @@
 namespace NOF.Infrastructure;
 
-/// <summary>
-/// Executes the inbound handler middleware pipeline.
-/// The caller constructs the <see cref="InboundContext"/> and provides
-/// the terminal handler delegate.
-/// </summary>
-public interface IInboundPipelineExecutor
+public interface IInboundPipelineExecutor<TContext>
+    where TContext : MessageInboundContext
 {
-    /// <summary>
-    /// Runs the handler pipeline with the given terminal handler delegate.
-    /// </summary>
-    ValueTask ExecuteAsync(InboundContext context, InboundDelegate inbound, CancellationToken cancellationToken);
+    ValueTask ExecuteAsync(TContext context, InboundDelegate<TContext> inbound, CancellationToken cancellationToken);
 }
+
+public interface ICommandInboundPipelineExecutor : IInboundPipelineExecutor<CommandInboundContext>;
+
+public interface INotificationInboundPipelineExecutor : IInboundPipelineExecutor<NotificationInboundContext>;
+
+public interface IRequestInboundPipelineExecutor : IInboundPipelineExecutor<RequestInboundContext>;

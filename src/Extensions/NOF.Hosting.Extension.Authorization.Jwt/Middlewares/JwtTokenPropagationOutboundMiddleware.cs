@@ -3,12 +3,8 @@ using NOF.Abstraction;
 
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
-/// <summary>Propagates JWT tokens to outbound messages.</summary>
-/// <summary>
-/// Outbound middleware that propagates the current user's JWT token
-/// into outbound message headers for inter-service calls.
-/// </summary>
-public sealed class JwtTokenPropagationOutboundMiddleware : IOutboundMiddleware,
+/// <summary>Propagates JWT tokens to outbound RPC requests.</summary>
+public sealed class JwtTokenPropagationOutboundMiddleware : RequestOutboundMiddleware,
     IAfter<MessageIdOutboundMiddleware>
 {
     private readonly IUserContext _userContext;
@@ -22,7 +18,7 @@ public sealed class JwtTokenPropagationOutboundMiddleware : IOutboundMiddleware,
         _options = options.Value;
     }
 
-    public ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
+    public override ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken)
     {
         if (_userContext.User is JwtClaimsPrincipal { Token: { Length: > 0 } token })
         {

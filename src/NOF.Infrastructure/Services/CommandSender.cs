@@ -7,14 +7,10 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
-/// <summary>
-/// Command sender implementation.
-/// Runs the outbound pipeline to populate headers, then dispatches via the rider.
-/// </summary>
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
-    private readonly IOutboundPipelineExecutor _outboundPipeline;
+    private readonly ICommandOutboundPipelineExecutor _outboundPipeline;
     private readonly IExecutionContext _executionContext;
     private readonly IServiceProvider _serviceProvider;
     private readonly IOutboxMessageRepository _outboxRepository;
@@ -22,7 +18,7 @@ public sealed class CommandSender : ICommandSender
 
     public CommandSender(
         ICommandRider rider,
-        IOutboundPipelineExecutor outboundPipeline,
+        ICommandOutboundPipelineExecutor outboundPipeline,
         IExecutionContext executionContext,
         IServiceProvider serviceProvider,
         IOutboxMessageRepository outboxRepository,
@@ -40,8 +36,6 @@ public sealed class CommandSender : ICommandSender
     {
         ArgumentNullException.ThrowIfNull(command);
         var currentActivity = Activity.Current;
-        // Persist the ambient execution context snapshot only; do not run outbound pipeline here.
-        // Snapshot happens implicitly via ExecutionContextHeadersOutboundMiddleware at send time.
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (var kvp in _executionContext)
         {
@@ -65,7 +59,7 @@ public sealed class CommandSender : ICommandSender
     public async Task SendAsync(object command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var context = new OutboundContext
+        var context = new CommandOutboundContext
         {
             Message = command,
             Services = _serviceProvider

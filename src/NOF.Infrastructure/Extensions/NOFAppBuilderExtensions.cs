@@ -14,10 +14,6 @@ public static partial class NOFInfrastructureExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        /// <summary>
-        /// Applies the built-in NOF infrastructure defaults (service registration steps and initialization steps).
-        /// Each default step is added only when a step of the same type is not already present.
-        /// </summary>
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
@@ -31,7 +27,12 @@ public static partial class NOFInfrastructureExtensions
             }
 
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
-            builder.Services.TryAddSingleton<IInboundPipelineExecutor, InboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<CommandInboundPipelineTypes>();
+            builder.Services.TryAddSingleton<NotificationInboundPipelineTypes>();
+            builder.Services.TryAddSingleton<RequestInboundPipelineTypes>();
+            builder.Services.TryAddSingleton<ICommandInboundPipelineExecutor, CommandInboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<INotificationInboundPipelineExecutor, NotificationInboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<IRequestInboundPipelineExecutor, RequestInboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.TryAddSingleton<EventHandlerInfos>();
             builder.Services.TryAddScoped<IExecutionContext, NOF.Application.ExecutionContext>();
@@ -43,13 +44,27 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddHostedService<OutboxMessageBackgroundService>();
             builder.Services.AddOptions<OutboxOptions>();
 
-            builder.Services.AddOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
-            builder.Services.AddInboundMiddleware<ExceptionInboundMiddleware>();
-            builder.Services.AddInboundMiddleware<TenantInboundMiddleware>();
-            builder.Services.AddInboundMiddleware<AuthorizationInboundMiddleware>();
-            builder.Services.AddInboundMiddleware<TracingInboundMiddleware>();
-            builder.Services.AddInboundMiddleware<AutoInstrumentationInboundMiddleware>();
-            builder.Services.AddInboundMiddleware<MessageInboxInboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
+
+            builder.Services.AddCommandInboundMiddleware<ExceptionInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<ExceptionInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<ExceptionInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<TenantInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<TenantInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<TenantInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<TracingInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<TracingInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<TracingInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<AutoInstrumentationInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<AutoInstrumentationInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<AutoInstrumentationInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<MessageInboxInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<MessageInboxInboundMiddleware>();
 
             builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
@@ -66,9 +81,6 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        /// <summary>
-        /// Uses classic single-tenant mode (default).
-        /// </summary>
         public INOFAppBuilder UseSingleTenant(string? tenantId = null)
         {
             builder.Services.Configure<TenantOptions>(options =>
@@ -79,9 +91,6 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        /// <summary>
-        /// Uses shared-database multi-tenant mode with a TenantId discriminator column.
-        /// </summary>
         public INOFAppBuilder UseSharedDatabaseTenancy()
         {
             builder.Services.Configure<TenantOptions>(options =>
@@ -91,9 +100,6 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        /// <summary>
-        /// Uses database-per-tenant mode on the same DB instance.
-        /// </summary>
         public INOFAppBuilder UseDatabasePerTenant(string? tenantDatabaseNameFormat = null)
         {
             builder.Services.Configure<TenantOptions>(options =>
@@ -107,15 +113,9 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        /// <summary>
-        /// Adds a service configuration delegate that will be executed during the service registration phase.
-        /// </summary>
         public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
 
-        /// <summary>
-        /// Adds an application configuration delegate that will be executed after the host is built but before it starts.
-        /// </summary>
         public INOFAppBuilder AddInitializationStep(Func<IHostApplicationBuilder, IHost, Task> func)
             => builder.AddInitializationStep(new ApplicationInitializationStep(func));
     }

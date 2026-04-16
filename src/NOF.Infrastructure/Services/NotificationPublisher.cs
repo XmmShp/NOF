@@ -7,14 +7,10 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
-/// <summary>
-/// Notification publisher implementation.
-/// Runs the outbound pipeline (which handles tracing, headers, etc.) then dispatches via the rider.
-/// </summary>
 public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
-    private readonly IOutboundPipelineExecutor _outboundPipeline;
+    private readonly INotificationOutboundPipelineExecutor _outboundPipeline;
     private readonly IExecutionContext _executionContext;
     private readonly IServiceProvider _serviceProvider;
     private readonly IOutboxMessageRepository _outboxRepository;
@@ -22,7 +18,7 @@ public sealed class NotificationPublisher : INotificationPublisher
 
     public NotificationPublisher(
         INotificationRider rider,
-        IOutboundPipelineExecutor outboundPipeline,
+        INotificationOutboundPipelineExecutor outboundPipeline,
         IExecutionContext executionContext,
         IServiceProvider serviceProvider,
         IOutboxMessageRepository outboxRepository,
@@ -40,8 +36,6 @@ public sealed class NotificationPublisher : INotificationPublisher
     {
         ArgumentNullException.ThrowIfNull(notification);
         var currentActivity = Activity.Current;
-        // Persist the ambient execution context snapshot only; do not run outbound pipeline here.
-        // Snapshot happens implicitly via ExecutionContextHeadersOutboundMiddleware at publish time.
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (var kvp in _executionContext)
         {
@@ -65,7 +59,7 @@ public sealed class NotificationPublisher : INotificationPublisher
     public async Task PublishAsync(object notification, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
-        var context = new OutboundContext
+        var context = new NotificationOutboundContext
         {
             Message = notification,
             Services = _serviceProvider

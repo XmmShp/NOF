@@ -5,11 +5,7 @@ using System.Diagnostics.Metrics;
 
 namespace NOF.Infrastructure;
 
-/// <summary>Auto instrumentation step records execution metrics and logging.</summary>
-/// <summary>
-/// Auto-instrumentation middleware that automatically records handler execution logs, metrics, and performance data.
-/// </summary>
-public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware, IAfter<TracingInboundMiddleware>
+public sealed class AutoInstrumentationInboundMiddleware : AllMessagesInboundMiddleware, IAfter<TracingInboundMiddleware>
 {
     private static readonly Counter<long> _executionCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionCounter,
@@ -29,19 +25,14 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware, I
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
+    protected override async ValueTask InvokeAsyncCore(MessageInboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
-        var handlerType = context.Metadatas.TryGetValue("HandlerType", out var handlerTypeObj) && handlerTypeObj is Type type ? type : null;
-        var messageName = context.Metadatas.TryGetValue("MessageName", out var mn) ? mn as string : context.Message?.GetType().FullName;
-        var handlerName = context.Metadatas.TryGetValue("HandlerName", out var hn) ? hn as string : handlerType?.FullName;
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, handlerName),
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, messageName)
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName),
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageName)
         };
-        _logger.LogDebug(
-            "Executing handler {HandlerType} for message {MessageType}",
-            handlerName, messageName);
+        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerName, context.MessageName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -51,26 +42,17 @@ public sealed class AutoInstrumentationInboundMiddleware : IInboundMiddleware, I
 
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
-
             _executionCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-
-            _logger.LogDebug(
-                "Handler {HandlerType} completed successfully in {Duration}ms",
-                handlerType?.FullName, durationMs);
+            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerName, durationMs);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
-
             _errorCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-
-            _logger.LogError(ex,
-                "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}",
-                handlerType?.FullName, durationMs, ex.Message);
-
+            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerName, durationMs, ex.Message);
             throw;
         }
     }

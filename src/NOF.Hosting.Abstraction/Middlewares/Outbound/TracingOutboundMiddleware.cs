@@ -3,11 +3,11 @@ using System.Diagnostics;
 
 namespace NOF.Hosting;
 
-public sealed class TracingOutboundMiddleware : IOutboundMiddleware
+public sealed class TracingOutboundMiddleware : AllMessagesOutboundMiddleware
 {
-    public async ValueTask InvokeAsync(OutboundContext context, OutboundDelegate next, CancellationToken cancellationToken)
+    protected override async ValueTask InvokeAsyncCore(MessageOutboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
-        var messageTypeFullName = context.Message?.GetType().FullName ?? "<null>";
+        var messageTypeFullName = context.MessageName ?? "<null>";
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
             ActivityKind.Producer);

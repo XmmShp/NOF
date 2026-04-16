@@ -26,7 +26,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         var builder = new NOFWebApplicationBuilder(args);
         builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
-        builder.Services.AddOutboundMiddleware<HttpHeaderOutboundMiddleware>();
+        builder.Services.AddRequestOutboundMiddleware<HttpHeaderOutboundMiddleware>();
         if (useDefaults)
         {
             builder.UseDefaultSettings();
@@ -34,34 +34,25 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         return builder;
     }
 
-    /// <inheritdoc />
     protected override Task<WebApplication> BuildApplicationAsync()
     {
         return Task.FromResult(WebApplicationBuilder.Build());
     }
 
-    /// <inheritdoc />
     public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
     {
         ((IHostApplicationBuilder)WebApplicationBuilder).ConfigureContainer(factory, configure);
     }
 
-    /// <inheritdoc />
     public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
 
-    /// <inheritdoc />
     public override IConfigurationManager Configuration => WebApplicationBuilder.Configuration;
 
-    /// <inheritdoc />
     public override IHostEnvironment Environment => WebApplicationBuilder.Environment;
 
-    /// <inheritdoc />
     public override ILoggingBuilder Logging => WebApplicationBuilder.Logging;
 
-    /// <inheritdoc />
-    public override IMetricsBuilder Metrics => WebApplicationBuilder.Metrics;
+    public override IMetricsBuilder Metrics => ((IHostApplicationBuilder)WebApplicationBuilder).Metrics;
 
-    /// <inheritdoc />
     public override IServiceCollection Services => WebApplicationBuilder.Services;
 }
-

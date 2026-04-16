@@ -36,10 +36,11 @@ public sealed class JwtAuthorizationExtensionsTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
         Assert.NotNull(
-
-        scope.GetRequiredService<IJwtAuthorityService>());
+        scope.GetRequiredService<JwtAuthorityService>());
         Assert.NotNull(
-        scope.GetRequiredService<IJwksService>());
+        scope.GetRequiredService<JwksService>());
+        Assert.NotNull(
+        scope.GetRequiredService<ISigningKeyService>());
         Assert.Equal("https://issuer.local",
         scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value.Issuer);
     }
@@ -70,7 +71,6 @@ public sealed class JwtAuthorizationExtensionsTests
         propagationOptions.TokenType);
         Assert.NotNull(
         scope.GetRequiredService<IJwksProvider>());
-        Assert.IsType<HttpJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.IsType<HttpJwksService>(scope.GetRequiredService<HttpJwksService>());
     }
 }
-

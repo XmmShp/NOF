@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-public sealed class TenantInboundMiddleware : IInboundMiddleware, IAfter<ExceptionInboundMiddleware>
+public sealed class TenantInboundMiddleware : AllMessagesInboundMiddleware, IAfter<ExceptionInboundMiddleware>
 {
     private readonly IExecutionContext _executionContext;
     private readonly TenantOptions _tenantOptions;
@@ -17,7 +17,7 @@ public sealed class TenantInboundMiddleware : IInboundMiddleware, IAfter<Excepti
         _tenantOptions = tenantOptions.Value;
     }
 
-    public async ValueTask InvokeAsync(InboundContext context, InboundDelegate next, CancellationToken cancellationToken)
+    protected override async ValueTask InvokeAsyncCore(MessageInboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken)
     {
         var tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(_tenantOptions.SingleTenantId);
         if (_tenantOptions.Mode != TenantMode.SingleTenant
