@@ -11,7 +11,7 @@ public static class RpcServerInvoker
         string operationName,
         object request,
         CancellationToken cancellationToken)
-        where TRpcService : class, NOF.Contract.IRpcService
+        where TRpcService : class, Contract.IRpcService
     {
         ArgumentNullException.ThrowIfNull(rootServiceProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);

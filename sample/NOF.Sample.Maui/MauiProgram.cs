@@ -19,7 +19,7 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddAntDesign();
-        builder.Services.AddScoped<global::NOF.Sample.UI.Services.HttpNOFSampleService>();
+        builder.Services.AddScoped<UI.Services.HttpNOFSampleService>();
         builder.AddJwtTokenPropagation();
         builder.Services.AddScoped(_ => new HttpClient
         {

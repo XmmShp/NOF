@@ -35,11 +35,10 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IRequestInboundPipelineExecutor, RequestInboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.TryAddSingleton<EventHandlerInfos>();
-            builder.Services.TryAddScoped<IExecutionContext, NOF.Application.ExecutionContext>();
+            builder.Services.TryAddScoped<IExecutionContext, Application.ExecutionContext>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IScopedDaemonService, EventPublisherAmbientDaemonService>());
             builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
             builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.AddHostedService<OutboxMessageBackgroundService>();

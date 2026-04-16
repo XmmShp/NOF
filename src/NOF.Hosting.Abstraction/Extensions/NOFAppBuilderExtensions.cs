@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Abstraction;
 
@@ -9,6 +10,7 @@ public static partial class NOFHostingExtensions
     {
         public INOFAppBuilder AddHostingDefaults()
         {
+            builder.Services.TryAddSingleton<EventHandlerInfos>();
             builder.Services.TryAddSingleton<CommandOutboundPipelineTypes>();
             builder.Services.TryAddSingleton<NotificationOutboundPipelineTypes>();
             builder.Services.TryAddSingleton<RequestOutboundPipelineTypes>();
@@ -16,6 +18,8 @@ public static partial class NOFHostingExtensions
             builder.Services.TryAddSingleton<INotificationOutboundPipelineExecutor, NotificationOutboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();
+            builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, EventPublisherAmbientDaemonService>());
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
             builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();

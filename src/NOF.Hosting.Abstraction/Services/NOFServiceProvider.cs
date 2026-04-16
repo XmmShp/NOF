@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 
 namespace NOF.Hosting;
 
@@ -33,7 +34,6 @@ public sealed class NOFServiceProvider : IServiceProvider, IServiceScopeFactory,
         _innerScopeFactory = innerProvider.GetRequiredService<IServiceScopeFactory>();
         _innerDisposable = innerProvider as IDisposable;
         _innerAsyncDisposable = innerProvider as IAsyncDisposable;
-        MaterializeDaemons<IDaemonService>();
     }
 
     public object? GetService(Type serviceType)
@@ -63,12 +63,6 @@ public sealed class NOFServiceProvider : IServiceProvider, IServiceScopeFactory,
     public void Dispose()
     {
         _innerDisposable?.Dispose();
-    }
-
-    private void MaterializeDaemons<TDaemon>()
-    {
-        var daemons = _innerProvider.GetServices<TDaemon>();
-        _ = daemons.ToArray();
     }
 }
 
@@ -111,7 +105,7 @@ public sealed class NOFServiceScope : IServiceScope, IAsyncDisposable
         {
             _innerProvider = innerProvider;
             _innerScopeFactory = innerProvider.GetRequiredService<IServiceScopeFactory>();
-            var daemons = innerProvider.GetServices<IScopedDaemonService>();
+            var daemons = innerProvider.GetServices<IDaemonService>();
             _ = daemons.ToArray();
         }
 

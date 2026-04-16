@@ -1,9 +1,8 @@
 using NOF.Abstraction;
-using NOF.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
-public sealed class EventPublisherAmbientDaemonService : IScopedDaemonService, IDisposable
+public sealed class EventPublisherAmbientDaemonService : IDaemonService, IDisposable
 {
     private readonly IDisposable _scope;
 
@@ -17,4 +16,3 @@ public sealed class EventPublisherAmbientDaemonService : IScopedDaemonService, I
         _scope.Dispose();
     }
 }
-
