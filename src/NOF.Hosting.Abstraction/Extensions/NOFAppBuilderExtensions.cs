@@ -18,7 +18,7 @@ public static partial class NOFHostingExtensions
             builder.Services.TryAddSingleton<INotificationOutboundPipelineExecutor, NotificationOutboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();
-            builder.Services.TryAddScoped<IEventPublisher, EventPublisher>();
+            builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, EventPublisherAmbientDaemonService>());
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
             builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();

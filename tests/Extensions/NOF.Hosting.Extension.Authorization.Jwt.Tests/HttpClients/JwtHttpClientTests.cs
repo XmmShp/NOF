@@ -122,7 +122,7 @@ public sealed class JwtHttpClientTests
         };
     }
 
-    private sealed class CapturingOutboundPipelineExecutor : IOutboundPipelineExecutor
+    private sealed class CapturingOutboundPipelineExecutor : IRequestOutboundPipelineExecutor
     {
         private readonly IReadOnlyDictionary<string, string?> _headers;
 
@@ -140,9 +140,12 @@ public sealed class JwtHttpClientTests
             _headers = headers;
         }
 
-        public OutboundContext? LastContext { get; private set; }
+        public RequestOutboundContext? LastContext { get; private set; }
 
-        public async ValueTask ExecuteAsync(OutboundContext context, OutboundDelegate dispatch, CancellationToken cancellationToken)
+        public async ValueTask ExecuteAsync(
+            RequestOutboundContext context,
+            OutboundDelegate<RequestOutboundContext> dispatch,
+            CancellationToken cancellationToken)
         {
             foreach (var (key, value) in _headers)
             {

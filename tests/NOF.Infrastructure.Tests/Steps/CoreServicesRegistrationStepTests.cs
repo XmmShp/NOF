@@ -58,7 +58,7 @@ public class InfrastructureDefaultsTests
         provider.GetRequiredService<IOptions<OutboxOptions>>());
         Assert.Equal(TenantMode.SingleTenant,
         provider.GetRequiredService<IOptions<TenantOptions>>().Value.Mode);
-        Assert.IsType<EventPublisher>(provider.GetRequiredService<IEventPublisher>());
+        Assert.IsType<InMemoryEventPublisher>(provider.GetRequiredService<IEventPublisher>());
 
     }
 

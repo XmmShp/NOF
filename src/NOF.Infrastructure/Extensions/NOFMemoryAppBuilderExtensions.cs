@@ -17,7 +17,7 @@ public static class NOFInfrastructureMemoryExtensions
         {
             builder.Services.ReplaceOrAddCacheService<MemoryCacheService>();
 
-            builder.Services.ReplaceOrAddScoped<IEventPublisher, EventPublisher>();
+            builder.Services.ReplaceOrAddScoped<IEventPublisher, InMemoryEventPublisher>();
 
             builder.Services.ReplaceOrAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.ReplaceOrAddSingleton<INotificationRider, MemoryNotificationRider>();

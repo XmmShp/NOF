@@ -71,12 +71,14 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         options.TokenType);
     }
 
-    private static OutboundContext CreateOutboundContext()
+    private static RequestOutboundContext CreateOutboundContext()
     {
-        return new OutboundContext
+        return new RequestOutboundContext
         {
             Message = new object(),
-            Services = new ServiceCollection().BuildServiceProvider()
+            Services = new ServiceCollection().BuildServiceProvider(),
+            ServiceType = typeof(object),
+            OperationName = nameof(CreateOutboundContext)
         };
     }
 
