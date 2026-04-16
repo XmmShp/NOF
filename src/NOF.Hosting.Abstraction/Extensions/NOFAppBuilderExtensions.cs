@@ -21,15 +21,15 @@ public static partial class NOFHostingExtensions
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, EventPublisherAmbientDaemonService>());
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
-            builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<MessageIdOutboundMiddleware>();
-            builder.Services.AddCommandOutboundMiddleware<TracingOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<TracingOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<TracingOutboundMiddleware>();
-            builder.Services.AddCommandOutboundMiddleware<TenantOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<TenantOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<TenantOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<CommandMessageIdOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<NotificationMessageIdOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<RequestMessageIdOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<CommandTracingOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<NotificationTracingOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<RequestTracingOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<CommandTenantOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<NotificationTenantOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<RequestTenantOutboundMiddleware>();
             return builder;
         }
     }

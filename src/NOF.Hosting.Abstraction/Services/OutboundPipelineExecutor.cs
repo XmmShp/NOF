@@ -2,25 +2,23 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF.Hosting;
 
-public abstract class MessageOutboundPipelineExecutor<TContext, TMiddlewareContract> : IOutboundPipelineExecutor<TContext>
-    where TContext : MessageOutboundContext
-    where TMiddlewareContract : class, IMessageOutboundMiddleware<TContext>
+public sealed class CommandOutboundPipelineExecutor : ICommandOutboundPipelineExecutor
 {
-    private readonly MessagePipelineTypes<TMiddlewareContract> _middlewareTypes;
+    private readonly CommandOutboundPipelineTypes _middlewareTypes;
 
-    protected MessageOutboundPipelineExecutor(MessagePipelineTypes<TMiddlewareContract> middlewareTypes)
+    public CommandOutboundPipelineExecutor(CommandOutboundPipelineTypes middlewareTypes)
     {
         _middlewareTypes = middlewareTypes;
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(TContext context, OutboundDelegate<TContext> dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(CommandOutboundContext context, CommandOutboundDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (TMiddlewareContract)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (ICommandOutboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }
@@ -29,23 +27,52 @@ public abstract class MessageOutboundPipelineExecutor<TContext, TMiddlewareContr
     }
 }
 
-public sealed class CommandOutboundPipelineExecutor : MessageOutboundPipelineExecutor<CommandOutboundContext, ICommandOutboundMiddleware>, ICommandOutboundPipelineExecutor
+public sealed class NotificationOutboundPipelineExecutor : INotificationOutboundPipelineExecutor
 {
-    public CommandOutboundPipelineExecutor(CommandOutboundPipelineTypes middlewareTypes) : base(middlewareTypes)
+    private readonly NotificationOutboundPipelineTypes _middlewareTypes;
+
+    public NotificationOutboundPipelineExecutor(NotificationOutboundPipelineTypes middlewareTypes)
     {
+        _middlewareTypes = middlewareTypes;
+        _middlewareTypes.Freeze();
+    }
+
+    public ValueTask ExecuteAsync(NotificationOutboundContext context, NotificationOutboundDelegate dispatch, CancellationToken cancellationToken)
+    {
+        var pipeline = dispatch;
+
+        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
+        {
+            var middleware = (INotificationOutboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var next = pipeline;
+            pipeline = ct => middleware.InvokeAsync(context, next, ct);
+        }
+
+        return pipeline(cancellationToken);
     }
 }
 
-public sealed class NotificationOutboundPipelineExecutor : MessageOutboundPipelineExecutor<NotificationOutboundContext, INotificationOutboundMiddleware>, INotificationOutboundPipelineExecutor
+public sealed class RequestOutboundPipelineExecutor : IRequestOutboundPipelineExecutor
 {
-    public NotificationOutboundPipelineExecutor(NotificationOutboundPipelineTypes middlewareTypes) : base(middlewareTypes)
-    {
-    }
-}
+    private readonly RequestOutboundPipelineTypes _middlewareTypes;
 
-public sealed class RequestOutboundPipelineExecutor : MessageOutboundPipelineExecutor<RequestOutboundContext, IRequestOutboundMiddleware>, IRequestOutboundPipelineExecutor
-{
-    public RequestOutboundPipelineExecutor(RequestOutboundPipelineTypes middlewareTypes) : base(middlewareTypes)
+    public RequestOutboundPipelineExecutor(RequestOutboundPipelineTypes middlewareTypes)
     {
+        _middlewareTypes = middlewareTypes;
+        _middlewareTypes.Freeze();
+    }
+
+    public ValueTask ExecuteAsync(RequestOutboundContext context, RequestOutboundDelegate dispatch, CancellationToken cancellationToken)
+    {
+        var pipeline = dispatch;
+
+        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
+        {
+            var middleware = (IRequestOutboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var next = pipeline;
+            pipeline = ct => middleware.InvokeAsync(context, next, ct);
+        }
+
+        return pipeline(cancellationToken);
     }
 }

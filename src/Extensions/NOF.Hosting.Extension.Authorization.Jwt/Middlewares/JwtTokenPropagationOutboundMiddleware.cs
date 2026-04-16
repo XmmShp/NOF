@@ -5,7 +5,7 @@ namespace NOF.Hosting.Extension.Authorization.Jwt;
 
 /// <summary>Propagates JWT tokens to outbound RPC requests.</summary>
 public sealed class JwtTokenPropagationOutboundMiddleware : RequestOutboundMiddleware,
-    IAfter<MessageIdOutboundMiddleware>
+    IAfter<RequestMessageIdOutboundMiddleware>
 {
     private readonly IUserContext _userContext;
     private readonly JwtTokenPropagationOptions _options;
@@ -18,7 +18,7 @@ public sealed class JwtTokenPropagationOutboundMiddleware : RequestOutboundMiddl
         _options = options.Value;
     }
 
-    public override ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken)
+    public override ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken)
     {
         if (_userContext.User is JwtClaimsPrincipal { Token: { Length: > 0 } token })
         {

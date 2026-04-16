@@ -3,50 +3,46 @@ using System.ComponentModel;
 namespace NOF.Hosting;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public delegate ValueTask OutboundDelegate<TContext>(CancellationToken cancellationToken);
+public delegate ValueTask CommandOutboundDelegate(CancellationToken cancellationToken);
 
-public interface IMessageOutboundMiddleware<TContext>
-    where TContext : MessageOutboundContext
+[EditorBrowsable(EditorBrowsableState.Never)]
+public delegate ValueTask NotificationOutboundDelegate(CancellationToken cancellationToken);
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public delegate ValueTask RequestOutboundDelegate(CancellationToken cancellationToken);
+
+public interface ICommandOutboundMiddleware
 {
-    ValueTask InvokeAsync(TContext context, OutboundDelegate<TContext> next, CancellationToken cancellationToken);
+    ValueTask InvokeAsync(CommandOutboundContext context, CommandOutboundDelegate next, CancellationToken cancellationToken);
 }
 
-public interface IOutboundPipelineExecutor<TContext>
-    where TContext : MessageOutboundContext
+public interface INotificationOutboundMiddleware
 {
-    ValueTask ExecuteAsync(TContext context, OutboundDelegate<TContext> dispatch, CancellationToken cancellationToken);
+    ValueTask InvokeAsync(NotificationOutboundContext context, NotificationOutboundDelegate next, CancellationToken cancellationToken);
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface ICommandOutboundMiddleware : IMessageOutboundMiddleware<CommandOutboundContext>;
-
-[EditorBrowsable(EditorBrowsableState.Never)]
-public interface INotificationOutboundMiddleware : IMessageOutboundMiddleware<NotificationOutboundContext>;
-
-[EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRequestOutboundMiddleware : IMessageOutboundMiddleware<RequestOutboundContext>;
-
-public interface ICommandOutboundPipelineExecutor : IOutboundPipelineExecutor<CommandOutboundContext>;
-
-public interface INotificationOutboundPipelineExecutor : IOutboundPipelineExecutor<NotificationOutboundContext>;
-
-public interface IRequestOutboundPipelineExecutor : IOutboundPipelineExecutor<RequestOutboundContext>;
-
-public abstract class AllMessagesOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
+public interface IRequestOutboundMiddleware
 {
-    public ValueTask InvokeAsync(CommandOutboundContext context, OutboundDelegate<CommandOutboundContext> next, CancellationToken cancellationToken)
-        => InvokeAsyncCore(context, ct => next(ct), cancellationToken);
+    ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken);
+}
 
-    public ValueTask InvokeAsync(NotificationOutboundContext context, OutboundDelegate<NotificationOutboundContext> next, CancellationToken cancellationToken)
-        => InvokeAsyncCore(context, ct => next(ct), cancellationToken);
+public interface ICommandOutboundPipelineExecutor
+{
+    ValueTask ExecuteAsync(CommandOutboundContext context, CommandOutboundDelegate dispatch, CancellationToken cancellationToken);
+}
 
-    public ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken)
-        => InvokeAsyncCore(context, ct => next(ct), cancellationToken);
+public interface INotificationOutboundPipelineExecutor
+{
+    ValueTask ExecuteAsync(NotificationOutboundContext context, NotificationOutboundDelegate dispatch, CancellationToken cancellationToken);
+}
 
-    protected abstract ValueTask InvokeAsyncCore(MessageOutboundContext context, Func<CancellationToken, ValueTask> next, CancellationToken cancellationToken);
+public interface IRequestOutboundPipelineExecutor
+{
+    ValueTask ExecuteAsync(RequestOutboundContext context, RequestOutboundDelegate dispatch, CancellationToken cancellationToken);
 }
 
 public abstract class RequestOutboundMiddleware : IRequestOutboundMiddleware
 {
-    public abstract ValueTask InvokeAsync(RequestOutboundContext context, OutboundDelegate<RequestOutboundContext> next, CancellationToken cancellationToken);
+    public abstract ValueTask InvokeAsync(RequestOutboundContext context, RequestOutboundDelegate next, CancellationToken cancellationToken);
 }
