@@ -8,8 +8,6 @@ public sealed class CommandOutboundContext
 {
     public required object Message { get; init; }
 
-    public required Type MessageType { get; init; }
-
     public required IServiceProvider Services { get; init; }
 
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -19,8 +17,6 @@ public sealed class CommandOutboundContext
 public sealed class NotificationOutboundContext
 {
     public required object Message { get; init; }
-
-    public required Type MessageType { get; init; }
 
     public required IServiceProvider Services { get; init; }
 

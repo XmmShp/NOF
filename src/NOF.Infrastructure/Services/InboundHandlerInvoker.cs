@@ -23,15 +23,12 @@ public static class InboundHandlerInvoker
         await using var scope = rootServiceProvider.CreateAsyncScope();
         ApplyHeaders(scope.ServiceProvider, headers);
 
-        var attributes = GetAttributes(message, methodInfo);
         var serviceType = methodInfo.DeclaringType ?? throw new InvalidOperationException("RPC method must have a declaring type.");
         var context = new RequestInboundContext
         {
             Message = message,
             Services = scope.ServiceProvider,
-            Attributes = attributes,
             HandlerType = handlerType,
-            MethodInfo = methodInfo,
             ServiceType = serviceType,
             MethodName = methodInfo.Name
         };
@@ -57,9 +54,7 @@ public static class InboundHandlerInvoker
         var context = new CommandInboundContext
         {
             Message = command,
-            MessageType = command.GetType(),
             Services = scope.ServiceProvider,
-            Attributes = GetAttributes(command),
             HandlerType = handlerType
         };
 
@@ -88,9 +83,7 @@ public static class InboundHandlerInvoker
         var context = new NotificationInboundContext
         {
             Message = notification,
-            MessageType = notification.GetType(),
             Services = scope.ServiceProvider,
-            Attributes = GetAttributes(notification),
             HandlerType = handlerType
         };
 
@@ -116,19 +109,4 @@ public static class InboundHandlerInvoker
         }
     }
 
-    private static List<Attribute> GetAttributes(object? message, MethodInfo? methodInfo = null)
-    {
-        var attributes = new List<Attribute>();
-        if (message is not null)
-        {
-            attributes.AddRange(message.GetType().GetCustomAttributes(true).Cast<Attribute>());
-        }
-
-        if (methodInfo is not null)
-        {
-            attributes.AddRange(methodInfo.GetCustomAttributes(true).Cast<Attribute>());
-        }
-
-        return attributes;
-    }
 }

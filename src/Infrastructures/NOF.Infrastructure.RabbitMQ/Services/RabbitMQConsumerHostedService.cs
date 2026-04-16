@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Application;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -75,7 +76,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         foreach (var group in notificationGroups)
         {
             var handlerType = group.Key;
-            var queueName = handlerType.FullName ?? handlerType.Name;
+            var queueName = handlerType.DisplayName;
             var notificationTypes = group
                 .Select(info => info.NotificationType)
                 .Distinct()
@@ -247,7 +248,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     }
 
     private static string GetMessageExchangeName(Type messageType)
-        => messageType.FullName ?? messageType.Name;
+        => messageType.DisplayName;
 
     public void Dispose()
     {

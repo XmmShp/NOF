@@ -54,8 +54,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddCommandInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<TenantInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<AuthorizationInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<AuthorizationInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
             builder.Services.AddCommandInboundMiddleware<TracingInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<TracingInboundMiddleware>();

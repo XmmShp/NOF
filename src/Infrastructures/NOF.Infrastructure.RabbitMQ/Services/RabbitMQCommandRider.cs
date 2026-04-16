@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
@@ -33,7 +34,7 @@ public class RabbitMQCommandRider : ICommandRider
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 
-        var exchangeName = commandType.FullName ?? commandType.Name;
+        var exchangeName = commandType.DisplayName;
         var routingKey = exchangeName;
 
         await channel.ExchangeDeclareAsync(

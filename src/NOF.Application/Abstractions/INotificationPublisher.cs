@@ -1,5 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using NOF.Abstraction;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
 

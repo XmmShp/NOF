@@ -66,7 +66,6 @@ public sealed class NotificationPublisher : INotificationPublisher
         var context = new NotificationOutboundContext
         {
             Message = notification,
-            MessageType = notification.GetType(),
             Services = _serviceProvider
         };
 

@@ -1,7 +1,6 @@
 using NOF.Hosting;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 
 namespace NOF.Infrastructure;
 
@@ -10,17 +9,9 @@ public sealed class CommandInboundContext
 {
     public required object Message { get; init; }
 
-    public required Type MessageType { get; init; }
-
     public required IServiceProvider Services { get; init; }
 
-    public object? Response { get; set; }
-
-    public required List<Attribute> Attributes { get; init; }
-
     public required Type HandlerType { get; init; }
-
-    public string? HandlerName => HandlerType.FullName;
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
@@ -28,17 +19,9 @@ public sealed class NotificationInboundContext
 {
     public required object Message { get; init; }
 
-    public required Type MessageType { get; init; }
-
     public required IServiceProvider Services { get; init; }
 
-    public object? Response { get; set; }
-
-    public required List<Attribute> Attributes { get; init; }
-
     public required Type HandlerType { get; init; }
-
-    public string? HandlerName => HandlerType.FullName;
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
@@ -50,13 +33,7 @@ public sealed class RequestInboundContext
 
     public object? Response { get; set; }
 
-    public required List<Attribute> Attributes { get; init; }
-
     public required Type HandlerType { get; init; }
-
-    public string? HandlerName => HandlerType.FullName;
-
-    public required MethodInfo MethodInfo { get; init; }
 
     public required Type ServiceType { get; init; }
 

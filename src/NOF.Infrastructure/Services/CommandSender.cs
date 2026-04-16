@@ -66,7 +66,6 @@ public sealed class CommandSender : ICommandSender
         var context = new CommandOutboundContext
         {
             Message = command,
-            MessageType = command.GetType(),
             Services = _serviceProvider
         };
 

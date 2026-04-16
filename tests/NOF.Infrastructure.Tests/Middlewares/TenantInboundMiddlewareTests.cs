@@ -53,9 +53,7 @@ public class TenantInboundMiddlewareTests
         return new CommandInboundContext
         {
             Message = new object(),
-            MessageType = typeof(object),
             Services = new ServiceCollection().BuildServiceProvider(),
-            Attributes = new List<Attribute>(),
             HandlerType = typeof(object)
         };
     }

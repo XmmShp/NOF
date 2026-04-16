@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using NOF.Abstraction;
 using NOF.Hosting;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -31,13 +32,13 @@ public sealed class AutoInstrumentationInboundMiddleware :
 
     public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+        var messageName = context.Message.GetType().DisplayName;
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName),
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName),
             new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, messageName)
         };
-        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerName, messageName);
+        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerType.DisplayName, messageName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -49,7 +50,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
             _executionCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerName, durationMs);
+            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerType.DisplayName, durationMs);
         }
         catch (Exception ex)
         {
@@ -57,20 +58,20 @@ public sealed class AutoInstrumentationInboundMiddleware :
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
             _errorCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerName, durationMs, ex.Message);
+            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerType.DisplayName, durationMs, ex.Message);
             throw;
         }
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+        var messageName = context.Message.GetType().DisplayName;
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName),
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName),
             new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, messageName)
         };
-        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerName, messageName);
+        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerType.DisplayName, messageName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -82,7 +83,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
             _executionCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerName, durationMs);
+            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerType.DisplayName, durationMs);
         }
         catch (Exception ex)
         {
@@ -90,20 +91,20 @@ public sealed class AutoInstrumentationInboundMiddleware :
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
             _errorCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerName, durationMs, ex.Message);
+            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerType.DisplayName, durationMs, ex.Message);
             throw;
         }
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageName = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";
+        var messageName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
         var tags = new KeyValuePair<string, object?>[]
         {
-            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName),
+            new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName),
             new(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, messageName)
         };
-        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerName, messageName);
+        _logger.LogDebug("Executing handler {HandlerType} for message {MessageType}", context.HandlerType.DisplayName, messageName);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -115,7 +116,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
             _executionCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerName, durationMs);
+            _logger.LogDebug("Handler {HandlerType} completed successfully in {Duration}ms", context.HandlerType.DisplayName, durationMs);
         }
         catch (Exception ex)
         {
@@ -123,7 +124,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
             _errorCounter.Add(1, tags);
             _executionDuration.Record(durationMs, tags);
-            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerName, durationMs, ex.Message);
+            _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerType.DisplayName, durationMs, ex.Message);
             throw;
         }
     }

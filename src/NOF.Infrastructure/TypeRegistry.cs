@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure;
@@ -26,5 +27,5 @@ public static class TypeRegistry
     }
 
     public static string Resolve(Type type)
-        => type.FullName ?? type.Name;
+        => type.DisplayName;
 }

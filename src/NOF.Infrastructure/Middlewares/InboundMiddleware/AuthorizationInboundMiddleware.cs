@@ -2,12 +2,11 @@ using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
+using System.Reflection;
 
 namespace NOF.Infrastructure;
 
 public sealed class AuthorizationInboundMiddleware :
-    ICommandInboundMiddleware,
-    INotificationInboundMiddleware,
     IRequestInboundMiddleware,
     IAfter<TenantInboundMiddleware>
 {
@@ -22,81 +21,17 @@ public sealed class AuthorizationInboundMiddleware :
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
-    {
-        var permissionAttr = context.Attributes.OfType<RequirePermissionAttribute>().FirstOrDefault();
-        if (permissionAttr is null)
-        {
-            await next(cancellationToken);
-            return;
-        }
-
-        var handlerName = context.HandlerName;
-        var messageName = context.MessageType.FullName ?? context.MessageType.Name;
-
-        if (!_userContext.User.IsAuthenticated)
-        {
-            _logger.LogWarning("Unauthenticated access to {HandlerType}/{MessageType}", handlerName, messageName);
-            context.Response = Result.Fail("401", "Please login first");
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(permissionAttr.Permission) && !_userContext.User.HasPermission(permissionAttr.Permission))
-        {
-            _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
-                handlerName, messageName, permissionAttr.Permission);
-            context.Response = Result.Fail("403", "Insufficient permissions");
-            return;
-        }
-
-        _logger.LogDebug("Permission check passed for {HandlerType}/{MessageType} with permission {Permission}",
-            handlerName, messageName, permissionAttr.Permission);
-        await next(cancellationToken);
-    }
-
-    public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
-    {
-        var permissionAttr = context.Attributes.OfType<RequirePermissionAttribute>().FirstOrDefault();
-        if (permissionAttr is null)
-        {
-            await next(cancellationToken);
-            return;
-        }
-
-        var handlerName = context.HandlerName;
-        var messageName = context.MessageType.FullName ?? context.MessageType.Name;
-
-        if (!_userContext.User.IsAuthenticated)
-        {
-            _logger.LogWarning("Unauthenticated access to {HandlerType}/{MessageType}", handlerName, messageName);
-            context.Response = Result.Fail("401", "Please login first");
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(permissionAttr.Permission) && !_userContext.User.HasPermission(permissionAttr.Permission))
-        {
-            _logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
-                handlerName, messageName, permissionAttr.Permission);
-            context.Response = Result.Fail("403", "Insufficient permissions");
-            return;
-        }
-
-        _logger.LogDebug("Permission check passed for {HandlerType}/{MessageType} with permission {Permission}",
-            handlerName, messageName, permissionAttr.Permission);
-        await next(cancellationToken);
-    }
-
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var permissionAttr = context.Attributes.OfType<RequirePermissionAttribute>().FirstOrDefault();
+        var permissionAttr = GetPermissionAttribute(context.ServiceType, context.MethodName, context.Message.GetType());
         if (permissionAttr is null)
         {
             await next(cancellationToken);
             return;
         }
 
-        var handlerName = context.HandlerName;
-        var requestName = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";
+        var handlerName = context.HandlerType.DisplayName;
+        var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
 
         if (!_userContext.User.IsAuthenticated)
         {
@@ -116,5 +51,20 @@ public sealed class AuthorizationInboundMiddleware :
         _logger.LogDebug("Permission check passed for {HandlerType}/{MessageType} with permission {Permission}",
             handlerName, requestName, permissionAttr.Permission);
         await next(cancellationToken);
+    }
+
+    private static RequirePermissionAttribute? GetPermissionAttribute(Type serviceType, string methodName, Type requestType)
+    {
+        // Prefer request type attribute (works for both IRpcService method request DTOs and messages).
+        var typeAttribute = requestType.GetCustomAttributes(true).OfType<RequirePermissionAttribute>().FirstOrDefault();
+        if (typeAttribute is not null)
+        {
+            return typeAttribute;
+        }
+
+        // Then fall back to service method attribute.
+        var method = serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+            .FirstOrDefault(m => string.Equals(m.Name, methodName, StringComparison.Ordinal));
+        return method?.GetCustomAttributes(true).OfType<RequirePermissionAttribute>().FirstOrDefault();
     }
 }

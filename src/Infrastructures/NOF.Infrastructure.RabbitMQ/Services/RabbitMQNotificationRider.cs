@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
@@ -49,7 +50,7 @@ public class RabbitMQNotificationRider : INotificationRider
 
         foreach (var notificationType in notificationTypes)
         {
-            var exchangeName = notificationType.FullName ?? notificationType.Name;
+            var exchangeName = notificationType.DisplayName;
 
             await channel.ExchangeDeclareAsync(
                 exchange: exchangeName,

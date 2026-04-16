@@ -28,8 +28,8 @@ public sealed class TracingInboundMiddleware :
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.SpanId);
 
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageType.FullName ?? context.MessageType.Name);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().DisplayName);
 
         try
         {
@@ -52,8 +52,8 @@ public sealed class TracingInboundMiddleware :
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
             : null;
-        var handlerName = context.HandlerName ?? "UnknownHandler";
-        var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+        var handlerName = context.HandlerType.DisplayName;
+        var messageName = context.Message.GetType().DisplayName;
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
@@ -70,8 +70,8 @@ public sealed class TracingInboundMiddleware :
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.SpanId);
 
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageType.FullName ?? context.MessageType.Name);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().DisplayName);
 
         try
         {
@@ -94,8 +94,8 @@ public sealed class TracingInboundMiddleware :
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
             : null;
-        var handlerName = context.HandlerName ?? "UnknownHandler";
-        var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+        var handlerName = context.HandlerType.DisplayName;
+        var messageName = context.Message.GetType().DisplayName;
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
@@ -112,9 +112,9 @@ public sealed class TracingInboundMiddleware :
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.Remove(NOFAbstractionConstants.Transport.Headers.SpanId);
 
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}");
-        activity?.SetTag("rpc.method", $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}");
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, $"{context.ServiceType.DisplayName}.{context.MethodName}");
+        activity?.SetTag("rpc.method", $"{context.ServiceType.DisplayName}.{context.MethodName}");
 
         try
         {
@@ -137,8 +137,8 @@ public sealed class TracingInboundMiddleware :
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
             : null;
-        var handlerName = context.HandlerName ?? "UnknownHandler";
-        var requestName = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";
+        var handlerName = context.HandlerType.DisplayName;
+        var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {requestName}",
             ActivityKind.Consumer,

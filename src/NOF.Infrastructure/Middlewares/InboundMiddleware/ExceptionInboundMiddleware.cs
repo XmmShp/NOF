@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
@@ -22,19 +23,17 @@ public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INot
         }
         catch (DomainException ex)
         {
-            var handlerName = context.HandlerName;
-            var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+            var handlerName = context.HandlerType.DisplayName;
+            var messageName = context.Message.GetType().DisplayName;
             _logger.LogWarning(ex, "Domain exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 messageName, handlerName, ex.Message);
-            context.Response = Result.Fail(ex.ErrorCode, ex.Message);
         }
         catch (Exception ex)
         {
-            var handlerName = context.HandlerName;
-            var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+            var handlerName = context.HandlerType.DisplayName;
+            var messageName = context.Message.GetType().DisplayName;
             _logger.LogError(ex, "Exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 messageName, handlerName, ex.Message);
-            context.Response = Result.Fail("500", "Internal server error");
         }
     }
 
@@ -46,19 +45,17 @@ public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INot
         }
         catch (DomainException ex)
         {
-            var handlerName = context.HandlerName;
-            var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+            var handlerName = context.HandlerType.DisplayName;
+            var messageName = context.Message.GetType().DisplayName;
             _logger.LogWarning(ex, "Domain exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 messageName, handlerName, ex.Message);
-            context.Response = Result.Fail(ex.ErrorCode, ex.Message);
         }
         catch (Exception ex)
         {
-            var handlerName = context.HandlerName;
-            var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+            var handlerName = context.HandlerType.DisplayName;
+            var messageName = context.Message.GetType().DisplayName;
             _logger.LogError(ex, "Exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 messageName, handlerName, ex.Message);
-            context.Response = Result.Fail("500", "Internal server error");
         }
     }
 
@@ -70,16 +67,16 @@ public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INot
         }
         catch (DomainException ex)
         {
-            var handlerName = context.HandlerName;
-            var requestName = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";
+            var handlerName = context.HandlerType.DisplayName;
+            var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
             _logger.LogWarning(ex, "Domain exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 requestName, handlerName, ex.Message);
             context.Response = Result.Fail(ex.ErrorCode, ex.Message);
         }
         catch (Exception ex)
         {
-            var handlerName = context.HandlerName;
-            var requestName = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";
+            var handlerName = context.HandlerType.DisplayName;
+            var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
             _logger.LogError(ex, "Exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 requestName, handlerName, ex.Message);
             context.Response = Result.Fail("500", "Internal server error");

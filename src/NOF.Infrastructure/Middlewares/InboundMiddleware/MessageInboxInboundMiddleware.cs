@@ -41,9 +41,8 @@ public sealed class MessageInboxInboundMiddleware :
                 cancellationToken: cancellationToken) is not null;
             if (messageExists)
             {
-                var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+                var messageName = context.Message.GetType().DisplayName;
                 _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, messageName);
-                context.Response = Result.Fail("409", "Duplicate message detected by inbox deduplication.");
                 await transaction.RollbackAsync(cancellationToken);
                 return;
             }
@@ -55,7 +54,7 @@ public sealed class MessageInboxInboundMiddleware :
             await next(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            _logger.LogDebug("Inbox message {MessageId} for {MessageType} processed and committed successfully", messageId, context.MessageType.FullName ?? context.MessageType.Name);
+            _logger.LogDebug("Inbox message {MessageId} for {MessageType} processed and committed successfully", messageId, context.Message.GetType().DisplayName);
         }
         catch (Exception ex)
         {
@@ -65,10 +64,10 @@ public sealed class MessageInboxInboundMiddleware :
             }
             catch (Exception rollbackEx)
             {
-                _logger.LogError(rollbackEx, "Failed to rollback transaction for inbox message processing of {MessageType}", context.MessageType.FullName ?? context.MessageType.Name);
+                _logger.LogError(rollbackEx, "Failed to rollback transaction for inbox message processing of {MessageType}", context.Message.GetType().DisplayName);
             }
 
-            _logger.LogError(ex, "Failed to process inbox message for {MessageType}. Transaction has been rolled back.", context.MessageType.FullName ?? context.MessageType.Name);
+            _logger.LogError(ex, "Failed to process inbox message for {MessageType}. Transaction has been rolled back.", context.Message.GetType().DisplayName);
             throw;
         }
     }
@@ -91,9 +90,8 @@ public sealed class MessageInboxInboundMiddleware :
                 cancellationToken: cancellationToken) is not null;
             if (messageExists)
             {
-                var messageName = context.MessageType.FullName ?? context.MessageType.Name;
+                var messageName = context.Message.GetType().DisplayName;
                 _logger.LogDebug("Inbox message {MessageId} for {MessageType} already exists, skipping processing", messageId, messageName);
-                context.Response = Result.Fail("409", "Duplicate message detected by inbox deduplication.");
                 await transaction.RollbackAsync(cancellationToken);
                 return;
             }
@@ -105,7 +103,7 @@ public sealed class MessageInboxInboundMiddleware :
             await next(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            _logger.LogDebug("Inbox message {MessageId} for {MessageType} processed and committed successfully", messageId, context.MessageType.FullName ?? context.MessageType.Name);
+            _logger.LogDebug("Inbox message {MessageId} for {MessageType} processed and committed successfully", messageId, context.Message.GetType().DisplayName);
         }
         catch (Exception ex)
         {
@@ -115,10 +113,10 @@ public sealed class MessageInboxInboundMiddleware :
             }
             catch (Exception rollbackEx)
             {
-                _logger.LogError(rollbackEx, "Failed to rollback transaction for inbox message processing of {MessageType}", context.MessageType.FullName ?? context.MessageType.Name);
+                _logger.LogError(rollbackEx, "Failed to rollback transaction for inbox message processing of {MessageType}", context.Message.GetType().DisplayName);
             }
 
-            _logger.LogError(ex, "Failed to process inbox message for {MessageType}. Transaction has been rolled back.", context.MessageType.FullName ?? context.MessageType.Name);
+            _logger.LogError(ex, "Failed to process inbox message for {MessageType}. Transaction has been rolled back.", context.Message.GetType().DisplayName);
             throw;
         }
     }
