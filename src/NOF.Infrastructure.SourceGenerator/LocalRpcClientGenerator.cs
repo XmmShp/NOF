@@ -23,7 +23,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
                         return null;
                     }
 
-                    return TryGetRpcClientInterfaceFromLocalRpcClientInterface(classSymbol, out var _, out var _) ? classSymbol : null;
+                    return TryGetRpcClientInterfaceFromLocalRpcClientAttribute(classSymbol, out var _, out var _) ? classSymbol : null;
                 })
             .Where(static symbol => symbol is not null);
 
@@ -46,7 +46,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 
     private static void GenerateForTargetClass(SourceProductionContext context, INamedTypeSymbol targetClass)
     {
-        if (!TryGetRpcClientInterfaceFromLocalRpcClientInterface(targetClass, out var clientInterface, out var serviceInterface)
+        if (!TryGetRpcClientInterfaceFromLocalRpcClientAttribute(targetClass, out var clientInterface, out var serviceInterface)
             || clientInterface is null
             || serviceInterface is null)
         {
@@ -121,24 +121,18 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static bool TryGetRpcClientInterfaceFromLocalRpcClientInterface(
+    private static bool TryGetRpcClientInterfaceFromLocalRpcClientAttribute(
         INamedTypeSymbol classSymbol,
         out INamedTypeSymbol? clientInterface,
         out INamedTypeSymbol? serviceInterface)
     {
-        clientInterface = null;
         serviceInterface = null;
-        var marker = classSymbol.AllInterfaces
-            .OfType<INamedTypeSymbol>()
-            .FirstOrDefault(i => i.IsGenericType
-                                 && i.OriginalDefinition.ToDisplayString() == RpcClientHelpers.LocalRpcClientInterfaceFqn);
-        if (marker?.TypeArguments.Length != 1)
+        if (!RpcClientHelpers.TryGetRpcClientFromLocalRpcClientAttribute(classSymbol, out clientInterface)
+            || clientInterface is null)
         {
             return false;
         }
 
-        clientInterface = marker.TypeArguments[0] as INamedTypeSymbol;
-        return clientInterface is not null
-               && RpcClientHelpers.TryGetRpcServiceFromClientInterface(clientInterface, out serviceInterface);
+        return RpcClientHelpers.TryGetRpcServiceFromClientInterface(clientInterface, out serviceInterface);
     }
 }

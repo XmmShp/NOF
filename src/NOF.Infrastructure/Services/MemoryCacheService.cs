@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using System.Collections.Concurrent;
@@ -12,31 +13,45 @@ namespace NOF.Infrastructure;
 /// </summary>
 public sealed class MemoryCacheService : ICacheService, IDisposable
 {
-    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
+    private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
+    private static readonly Timer _expirationTimer = new(RemoveExpiredEntries, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
-    private readonly Timer _expirationTimer;
     private readonly CacheServiceOptions _options;
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
+    private readonly IExecutionContext _executionContext;
+    private readonly TenantOptions _tenantOptions;
 
-    public MemoryCacheService(IObjectSerializer serializer, ICacheLockRetryStrategy lockRetryStrategy, IOptions<CacheServiceOptions> options)
+    public MemoryCacheService(
+        IObjectSerializer serializer,
+        ICacheLockRetryStrategy lockRetryStrategy,
+        IOptions<CacheServiceOptions> options,
+        IExecutionContext executionContext,
+        IOptions<TenantOptions> tenantOptions)
     {
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(executionContext);
+        ArgumentNullException.ThrowIfNull(tenantOptions);
 
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
         _options = options.Value;
-        _expirationTimer = new Timer(RemoveExpiredEntries, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        _executionContext = executionContext;
+        _tenantOptions = tenantOptions.Value;
     }
 
     private string ApplyKeyPrefix(string key)
     {
-        return string.IsNullOrEmpty(_options.KeyPrefix) ? key : _options.KeyPrefix + key;
+        var tenantPrefix = _tenantOptions.Mode == TenantMode.SingleTenant
+            ? string.Empty
+            : $"{_executionContext.TenantId}:";
+        var keyPrefix = _options.KeyPrefix ?? string.Empty;
+        return tenantPrefix + keyPrefix + key;
     }
 
-    private void RemoveExpiredEntries(object? state)
+    private static void RemoveExpiredEntries(object? state)
     {
         var now = DateTimeOffset.UtcNow;
 
@@ -457,14 +472,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        _expirationTimer.Dispose();
-        _cache.Clear();
-
-        foreach (var (_, semaphore) in _localLocks)
-        {
-            semaphore.Dispose();
-        }
-        _localLocks.Clear();
+        GC.SuppressFinalize(this);
     }
 
     private sealed class CacheEntry
@@ -593,7 +601,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
                     try
                     {
                         // Renew lock only if we still own it using CAS pattern
-                        while (_cache._cache.TryGetValue(Key, out var oldEntry))
+                        while (MemoryCacheService._cache.TryGetValue(Key, out var oldEntry))
                         {
                             var storedLockId = Encoding.UTF8.GetString(oldEntry.Data.Span);
                             if (storedLockId != _lockId)
@@ -602,7 +610,7 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
                             }
 
                             var newEntry = oldEntry.WithNewExpiration(DateTimeOffset.UtcNow.Add(_expiration));
-                            if (_cache._cache.TryUpdate(Key, newEntry, oldEntry))
+                            if (MemoryCacheService._cache.TryUpdate(Key, newEntry, oldEntry))
                             {
                                 break; // Successfully renewed
                             }
@@ -645,12 +653,12 @@ public sealed class MemoryCacheService : ICacheService, IDisposable
             }
             _renewalCts?.Dispose();
 
-            if (_cache._cache.TryGetValue(Key, out var entry))
+            if (MemoryCacheService._cache.TryGetValue(Key, out var entry))
             {
                 var storedLockId = Encoding.UTF8.GetString(entry.Data.Span);
                 if (storedLockId == _lockId)
                 {
-                    _cache._cache.TryRemove(Key, out _);
+                    MemoryCacheService._cache.TryRemove(Key, out _);
                     return true;
                 }
             }

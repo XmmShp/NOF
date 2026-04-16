@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
-using NOF.Domain;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -20,10 +19,6 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
         public EFCoreSelector AddEFCore<TDbContext>()
             where TDbContext : NOFDbContext
         {
-            #region Common Services
-            builder.Services.ReplaceOrAddScoped<IOutboxMessageRepository, EFCoreOutboxMessageRepository>();
-            #endregion
-
             #region DbContext Services
             builder.Services.ReplaceOrAddScoped(sp =>
             {

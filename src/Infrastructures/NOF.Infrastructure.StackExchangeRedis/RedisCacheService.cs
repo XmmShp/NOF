@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.Extension.Redis;
 using NOF.Contract;
@@ -14,28 +15,40 @@ public class RedisCacheService : IRedisCacheService
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
+    private readonly IExecutionContext _executionContext;
+    private readonly TenantOptions _tenantOptions;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
 
     public RedisCacheService(
         IConnectionMultiplexer connectionMultiplexer,
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
-        IOptions<CacheServiceOptions> options)
+        IOptions<CacheServiceOptions> options,
+        IExecutionContext executionContext,
+        IOptions<TenantOptions> tenantOptions)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(executionContext);
+        ArgumentNullException.ThrowIfNull(tenantOptions);
 
         _database = connectionMultiplexer.GetDatabase();
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
         _options = options.Value;
+        _executionContext = executionContext;
+        _tenantOptions = tenantOptions.Value;
     }
 
     private string ApplyKeyPrefix(string key)
     {
-        return string.IsNullOrEmpty(_options.KeyPrefix) ? key : _options.KeyPrefix + key;
+        var tenantPrefix = _tenantOptions.Mode == TenantMode.SingleTenant
+            ? string.Empty
+            : $"{_executionContext.TenantId}:";
+        var keyPrefix = _options.KeyPrefix ?? string.Empty;
+        return tenantPrefix + keyPrefix + key;
     }
 
     /// <inheritdoc />

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -58,13 +59,13 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
         var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
         var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
 
         try
         {
-            var pendingMessages = await repository.AtomicClaimPendingMessagesAsync(_options.BatchSize, _options.ClaimTimeout, cancellationToken)
+            var pendingMessages = await AtomicClaimPendingMessagesAsync(dbContext, _options.BatchSize, _options.ClaimTimeout, cancellationToken)
                 .ToListAsync(cancellationToken);
 
             if (pendingMessages.Count == 0)
@@ -73,7 +74,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
 
             _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
-            await ProcessMessagesBatch(scope.ServiceProvider, pendingMessages, repository, commandSender, notificationPublisher, cancellationToken);
+            await ProcessMessagesBatch(scope.ServiceProvider, dbContext, pendingMessages, commandSender, notificationPublisher, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -83,15 +84,15 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private async Task ProcessSingleMessageAsync(
         IServiceProvider scopedServiceProvider,
+        DbContext dbContext,
         NOFOutboxMessage message,
-        IOutboxMessageRepository repository,
         ICommandSender commandSender,
         INotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)
     {
         if (message.RetryCount >= _options.MaxRetryCount)
         {
-            await repository.AtomicRecordDeliveryFailureAsync(message.Id, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
+            await AtomicRecordDeliveryFailureAsync(dbContext, message.Id, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
             _logger.LogWarning("Message {MessageId} exceeded max retry count ({MaxRetry}), marked as failed",
                 message.Id, _options.MaxRetryCount);
             return;
@@ -139,7 +140,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;
                 default:
-                    await repository.AtomicRecordDeliveryFailureAsync(message.Id, "Unsupported message type", cancellationToken);
+                    await AtomicRecordDeliveryFailureAsync(dbContext, message.Id, "Unsupported message type", cancellationToken);
                     _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
                         message.Id, payload.GetType().FullName ?? "null");
                     break;
@@ -157,7 +158,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             _logger.LogWarning(ex, "Failed to deliver message {MessageId} (retry {Retry})", message.Id,
                 message.RetryCount);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            await repository.AtomicRecordDeliveryFailureAsync(message.Id, ex.Message, cancellationToken);
+            await AtomicRecordDeliveryFailureAsync(dbContext, message.Id, ex.Message, cancellationToken);
             throw; // ensure not added to success list
         }
 
@@ -194,8 +195,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private async Task ProcessMessagesBatch(
         IServiceProvider scopedServiceProvider,
+        DbContext dbContext,
         IReadOnlyCollection<NOFOutboxMessage> pendingMessages,
-        IOutboxMessageRepository repository,
         ICommandSender commandSender,
         INotificationPublisher notificationPublisher,
         CancellationToken cancellationToken)
@@ -207,7 +208,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleMessageAsync(scopedServiceProvider, message, repository, commandSender, notificationPublisher, cancellationToken);
+                await ProcessSingleMessageAsync(scopedServiceProvider, dbContext, message, commandSender, notificationPublisher, cancellationToken);
                 succeededIds.Add(message.Id);
             }
             catch (Exception ex)
@@ -221,7 +222,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await repository.AtomicMarkAsSentAsync(succeededIds, cancellationToken);
+                await AtomicMarkAsSentAsync(dbContext, succeededIds, cancellationToken);
                 _logger.LogInformation(
                     "Outbox batch processed: {Succeeded} sent, {Failed} failed",
                     succeededIds.Count, failedCount);
@@ -231,5 +232,139 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
             }
         }
+    }
+
+    private async IAsyncEnumerable<NOFOutboxMessage> AtomicClaimPendingMessagesAsync(
+        DbContext dbContext,
+        int batchSize = 100,
+        TimeSpan? claimTimeout = null,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (batchSize <= 0)
+        {
+            batchSize = _options.BatchSize;
+        }
+
+        var timeout = claimTimeout ?? _options.ClaimTimeout;
+        var lockId = Guid.NewGuid().ToString();
+        var now = DateTime.UtcNow;
+        var expiresAt = now.Add(timeout);
+
+        var rowsUpdated = await dbContext.Set<NOFOutboxMessage>()
+            .Where(m => m.Status == OutboxMessageStatus.Pending &&
+                        m.RetryCount < _options.MaxRetryCount &&
+                        (m.ClaimedBy == null || m.ClaimExpiresAt == null || m.ClaimExpiresAt <= now))
+            .OrderBy(m => m.CreatedAt)
+            .Take(batchSize)
+            .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
+                    .SetProperty(m => m.ClaimedBy, lockId)
+                    .SetProperty(m => m.ClaimExpiresAt, expiresAt),
+                cancellationToken);
+
+        if (rowsUpdated == 0)
+        {
+            yield break;
+        }
+
+        var claimedMessagesFromDb = await dbContext.Set<NOFOutboxMessage>()
+            .AsNoTracking()
+            .Where(m => m.ClaimedBy == lockId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var msgFromDb in claimedMessagesFromDb)
+        {
+            var trackedEntry = dbContext.ChangeTracker.Entries<NOFOutboxMessage>()
+                .FirstOrDefault(e => e.Entity.Id == msgFromDb.Id);
+
+            if (trackedEntry != null)
+            {
+                await trackedEntry.ReloadAsync(cancellationToken);
+                yield return trackedEntry.Entity;
+            }
+            else
+            {
+                dbContext.Attach(msgFromDb);
+                yield return msgFromDb;
+            }
+        }
+    }
+
+    private static async ValueTask AtomicMarkAsSentAsync(
+        DbContext dbContext,
+        IEnumerable<Guid> messageIds,
+        CancellationToken cancellationToken = default)
+    {
+        var sentAt = DateTime.UtcNow;
+
+        await dbContext.Set<NOFOutboxMessage>()
+            .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
+                .SetProperty(m => m.SentAt, sentAt)
+                .SetProperty(m => m.ClaimedBy, (string?)null)
+                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
+                cancellationToken);
+    }
+
+    private async ValueTask AtomicRecordDeliveryFailureAsync(
+        DbContext dbContext,
+        Guid messageId,
+        string errorMessage,
+        CancellationToken cancellationToken = default)
+    {
+        var failedAt = DateTime.UtcNow;
+        var rowsUpdated = await dbContext.Set<NOFOutboxMessage>()
+            .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(m => m.ErrorMessage, errorMessage)
+                .SetProperty(m => m.FailedAt, failedAt),
+                cancellationToken);
+
+        if (rowsUpdated == 0)
+        {
+            _logger.LogDebug("Message {MessageId} already processed or not in pending state", messageId);
+            return;
+        }
+
+        NOFOutboxMessage? message;
+        var trackedEntry = dbContext.ChangeTracker.Entries<NOFOutboxMessage>().FirstOrDefault(e => e.Entity.Id == messageId);
+        if (trackedEntry != null)
+        {
+            await trackedEntry.ReloadAsync(cancellationToken);
+            message = trackedEntry.Entity;
+        }
+        else
+        {
+            message = await dbContext.Set<NOFOutboxMessage>()
+                .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+        }
+
+        if (message == null)
+        {
+            return;
+        }
+
+        if (message.RetryCount >= _options.MaxRetryCount)
+        {
+            message.Status = OutboxMessageStatus.Failed;
+            message.ClaimedBy = null;
+            message.ClaimExpiresAt = null;
+            _logger.LogWarning(
+                "Message {MessageId} marked as permanently failed after {RetryCount} retries. Error: {Error}",
+                messageId, message.RetryCount, errorMessage);
+        }
+        else
+        {
+            message.Status = OutboxMessageStatus.Pending;
+            message.ClaimedBy = null;
+            message.ClaimExpiresAt = null;
+
+            _logger.LogWarning(
+                "Message {MessageId} scheduled for retry #{RetryCount}. Error: {Error}",
+                messageId, message.RetryCount, errorMessage);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

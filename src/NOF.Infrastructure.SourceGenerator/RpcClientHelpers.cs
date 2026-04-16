@@ -8,7 +8,7 @@ internal static class RpcClientHelpers
 {
     public const string RpcClientInterfaceFqn = "NOF.Contract.IRpcClient";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
-    public const string LocalRpcClientInterfaceFqn = "NOF.Infrastructure.ILocalRpcClient<TRpcClient>";
+    public const string LocalRpcClientAttributeFqn = "NOF.Infrastructure.LocalRpcClientAttribute<TRpcClient>";
 
     public static bool IsRpcClientInterface(INamedTypeSymbol symbol)
         => symbol.TypeKind == TypeKind.Interface
@@ -41,6 +41,21 @@ internal static class RpcClientHelpers
 
         serviceInterface = clientInterface.ContainingAssembly.GetTypeByMetadataName(metadataName);
         return serviceInterface is not null && IsRpcServiceInterface(serviceInterface);
+    }
+
+    public static bool TryGetRpcClientFromLocalRpcClientAttribute(INamedTypeSymbol classSymbol, out INamedTypeSymbol? clientInterface)
+    {
+        clientInterface = null;
+        var attribute = classSymbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.IsGenericType == true
+                                 && a.AttributeClass.OriginalDefinition.ToDisplayString() == LocalRpcClientAttributeFqn);
+        if (attribute?.AttributeClass?.TypeArguments.Length != 1)
+        {
+            return false;
+        }
+
+        clientInterface = attribute.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
+        return clientInterface is not null;
     }
 
     public static string GetFullNamespace(INamespaceSymbol ns)

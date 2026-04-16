@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
 using NOF.Hosting;
-using NOF.Hosting.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
@@ -13,7 +12,7 @@ public class RpcServiceClientGeneratorTests
     [
         typeof(HttpEndpointAttribute),
         typeof(IRpcClient),
-        typeof(IHttpRpcClient<>),
+        typeof(HttpRpcClientAttribute<>),
         typeof(IRpcService),
         typeof(HttpVerb),
         typeof(Empty),
@@ -42,7 +41,8 @@ public class RpcServiceClientGeneratorTests
 
                                   public partial interface IMyServiceClient : IRpcClient;
 
-                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
                               }
                               """;
 
@@ -72,7 +72,8 @@ public class RpcServiceClientGeneratorTests
 
                                   public partial interface IMyServiceClient : IRpcClient;
 
-                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
                               }
                               """;
 
@@ -105,7 +106,8 @@ public class RpcServiceClientGeneratorTests
 
                                   public partial interface IMyServiceClient : IRpcClient;
 
-                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
                               }
                               """;
 
@@ -138,7 +140,8 @@ public class RpcServiceClientGeneratorTests
 
                                   public partial interface IMyServiceClient : IRpcClient;
 
-                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
                               }
                               """;
 
@@ -167,7 +170,8 @@ public class RpcServiceClientGeneratorTests
 
                                   public partial interface IMyServiceClient : IRpcClient;
 
-                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
                               }
                               """;
 

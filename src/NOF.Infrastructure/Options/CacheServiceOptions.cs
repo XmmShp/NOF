@@ -4,9 +4,7 @@ using NOF.Application;
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Per-name value configuration for a named <see cref="ICacheService"/> registration.
-/// Serializer and lock retry strategy are registered as keyed DI services via
-/// <c>WithSerializer</c> / <c>WithLockRetryStrategy</c> on <see cref="ICacheServiceBuilder"/>.
+/// Value configuration for the current <see cref="ICacheService"/> registration.
 /// </summary>
 public class CacheServiceOptions
 {

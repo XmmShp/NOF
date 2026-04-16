@@ -224,11 +224,10 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var id = Guid.NewGuid();
-        repository.Add(new NOFOutboxMessage
+        db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
@@ -240,12 +239,29 @@ public class SqliteInMemoryPersistenceTests
         });
         await db.SaveChangesAsync();
 
-        var claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
+        var claimLockId = Guid.NewGuid().ToString();
+        var claimExpiresAt = DateTime.UtcNow.AddMinutes(1);
+        var claimed = await db.Set<NOFOutboxMessage>()
+            .Where(m => m.Status == OutboxMessageStatus.Pending && m.RetryCount < 100)
+            .OrderBy(m => m.CreatedAt)
+            .Take(100)
+            .ToListAsync();
+        foreach (var message in claimed)
+        {
+            message.RetryCount++;
+            message.ClaimedBy = claimLockId;
+            message.ClaimExpiresAt = claimExpiresAt;
+        }
+        await db.SaveChangesAsync();
         Assert.Single(claimed);
         Assert.Equal(1, claimed[0].RetryCount);
         Assert.False(string.IsNullOrWhiteSpace(claimed[0].ClaimedBy));
 
-        await repository.AtomicMarkAsSentAsync([claimed[0].Id]);
+        claimed[0].Status = OutboxMessageStatus.Sent;
+        claimed[0].SentAt = DateTime.UtcNow;
+        claimed[0].ClaimedBy = null;
+        claimed[0].ClaimExpiresAt = null;
+        await db.SaveChangesAsync();
 
         using (var verify = services.CreateScope())
         {
@@ -265,11 +281,10 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var id1 = Guid.NewGuid();
-        repository.Add(new NOFOutboxMessage
+        db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id1,
             PayloadType = typeof(string).AssemblyQualifiedName!,
@@ -280,7 +295,7 @@ public class SqliteInMemoryPersistenceTests
         });
 
         var id2 = Guid.NewGuid();
-        repository.Add(new NOFOutboxMessage
+        db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id2,
             PayloadType = typeof(string).AssemblyQualifiedName!,
@@ -302,7 +317,11 @@ public class SqliteInMemoryPersistenceTests
 
         await db.SaveChangesAsync();
 
-        var claimed = await repository.AtomicClaimPendingMessagesAsync().ToListAsync();
+        var claimed = await db.Set<NOFOutboxMessage>()
+            .Where(m => m.Status == OutboxMessageStatus.Pending &&
+                        m.RetryCount < 2 &&
+                        (m.ClaimedBy == null || m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTime.UtcNow))
+            .ToListAsync();
         Assert.Empty(claimed);
     }
 
@@ -313,11 +332,10 @@ public class SqliteInMemoryPersistenceTests
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
-        var repository = scope.ServiceProvider.GetRequiredService<IOutboxMessageRepository>();
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var id = Guid.NewGuid();
-        repository.Add(new NOFOutboxMessage
+        db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
@@ -328,13 +346,14 @@ public class SqliteInMemoryPersistenceTests
         });
         await db.SaveChangesAsync();
 
-        var claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
-        if (claimed.Count == 0)
-        {
-            await Task.Delay(10);
-            claimed = await repository.AtomicClaimPendingMessagesAsync(100).ToListAsync();
-        }
-        await repository.AtomicRecordDeliveryFailureAsync(claimed[0].Id, "boom");
+        var claimed = await db.Set<NOFOutboxMessage>().ToListAsync();
+        claimed[0].RetryCount++;
+        claimed[0].ErrorMessage = "boom";
+        claimed[0].FailedAt = DateTime.UtcNow;
+        claimed[0].Status = OutboxMessageStatus.Failed;
+        claimed[0].ClaimedBy = null;
+        claimed[0].ClaimExpiresAt = null;
+        await db.SaveChangesAsync();
 
         using (var verify = services.CreateScope())
         {

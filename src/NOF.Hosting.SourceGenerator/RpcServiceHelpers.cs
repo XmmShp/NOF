@@ -13,7 +13,7 @@ internal static class RpcServiceHelpers
     public const string SummaryAttributeFqn = "NOF.Contract.SummaryAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
     public const string RpcClientInterfaceFqn = "NOF.Contract.IRpcClient";
-    public const string HttpRpcClientInterfaceFqn = "NOF.Hosting.IHttpRpcClient<TRpcClient>";
+    public const string HttpRpcClientAttributeFqn = "NOF.Hosting.HttpRpcClientAttribute<TRpcClient>";
     public const string ResultFqn = "NOF.Contract.Result";
     public const string GenericResultFqn = "NOF.Contract.Result<T>";
     public const string EmptyFqn = "NOF.Contract.Empty";
@@ -76,6 +76,21 @@ internal static class RpcServiceHelpers
         => symbol.TypeKind == TypeKind.Interface
            && (symbol.ToDisplayString() == RpcClientInterfaceFqn
                || symbol.AllInterfaces.Any(i => i.ToDisplayString() == RpcClientInterfaceFqn));
+
+    public static bool TryGetRpcClientFromHttpRpcClientAttribute(INamedTypeSymbol classSymbol, out INamedTypeSymbol? clientInterface)
+    {
+        clientInterface = null;
+        var attribute = classSymbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.IsGenericType == true
+                                 && a.AttributeClass.OriginalDefinition.ToDisplayString() == HttpRpcClientAttributeFqn);
+        if (attribute?.AttributeClass?.TypeArguments.Length != 1)
+        {
+            return false;
+        }
+
+        clientInterface = attribute.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
+        return clientInterface is not null;
+    }
 
     public static bool TryGetRpcServiceFromClientInterface(INamedTypeSymbol clientInterface, out INamedTypeSymbol? serviceInterface)
     {

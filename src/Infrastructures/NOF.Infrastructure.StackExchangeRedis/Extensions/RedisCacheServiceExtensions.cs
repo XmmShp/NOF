@@ -15,11 +15,10 @@ public static class NOFInfrastructureExtensions
         /// <summary>
         /// Replaces the default in-memory cache with a Redis-based cache service using StackExchange.Redis.
         /// </summary>
-        /// <param name="name">The name of the cache instance.</param>
         /// <param name="connectionName">The name of the connection string in configuration (e.g., "Redis").</param>
         /// <param name="configureOptions">Optional action to configure the cache service options.</param>
         /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
-        public INOFAppBuilder AddRedisCache(string? name = null, string connectionName = "redis", Action<CacheServiceOptions>? configureOptions = null)
+        public INOFAppBuilder AddRedisCache(string connectionName = "redis", Action<CacheServiceOptions>? configureOptions = null)
         {
             builder.Services.ReplaceOrAddSingleton<IConnectionMultiplexer>(sp =>
             {
@@ -30,12 +29,8 @@ public static class NOFInfrastructureExtensions
                 return ConnectionMultiplexer.Connect(connectionString);
             });
 
-            var cacheName = name ?? ICacheServiceFactory.DefaultName;
-            builder.Services.ReplaceOrAddCacheService<RedisCacheService>(cacheName, configureOptions);
-            builder.Services.AddKeyedScoped(cacheName, (sp, key) =>
-                (IRedisCacheService)sp.GetRequiredKeyedService<ICacheService>(key));
-            builder.Services.ReplaceOrAddScoped(sp =>
-                sp.GetRequiredKeyedService<IRedisCacheService>(ICacheServiceFactory.DefaultName));
+            builder.Services.ReplaceOrAddCacheService<RedisCacheService>(configureOptions);
+            builder.Services.ReplaceOrAddScoped<IRedisCacheService>(sp => sp.GetRequiredService<RedisCacheService>());
 
             return builder;
         }

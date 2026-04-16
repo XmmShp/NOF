@@ -24,7 +24,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
                         return null;
                     }
 
-                    return TryGetRpcClientInterfaceFromHttpRpcClientInterface(classSymbol, out var _, out var _) ? classSymbol : null;
+                    return TryGetRpcClientInterfaceFromHttpRpcClientAttribute(classSymbol, out var _, out var _) ? classSymbol : null;
                 })
             .Where(static m => m is not null);
 
@@ -48,7 +48,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
 
     private static void GenerateForTargetClass(SourceProductionContext context, INamedTypeSymbol targetClass)
     {
-        if (!TryGetRpcClientInterfaceFromHttpRpcClientInterface(targetClass, out var clientInterface, out var iface)
+        if (!TryGetRpcClientInterfaceFromHttpRpcClientAttribute(targetClass, out var clientInterface, out var iface)
             || clientInterface is null
             || iface is null)
         {
@@ -115,25 +115,19 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         context.AddSource($"{targetClass.ToDisplayString().Replace('.', '_')}.HttpServiceClient.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
-    private static bool TryGetRpcClientInterfaceFromHttpRpcClientInterface(
+    private static bool TryGetRpcClientInterfaceFromHttpRpcClientAttribute(
         INamedTypeSymbol classSymbol,
         out INamedTypeSymbol? clientInterface,
         out INamedTypeSymbol? serviceInterface)
     {
-        clientInterface = null;
         serviceInterface = null;
-        var marker = classSymbol.AllInterfaces
-            .OfType<INamedTypeSymbol>()
-            .FirstOrDefault(i => i.IsGenericType
-                                 && i.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.HttpRpcClientInterfaceFqn);
-        if (marker?.TypeArguments.Length != 1)
+        if (!RpcServiceHelpers.TryGetRpcClientFromHttpRpcClientAttribute(classSymbol, out clientInterface)
+            || clientInterface is null)
         {
             return false;
         }
 
-        clientInterface = marker.TypeArguments[0] as INamedTypeSymbol;
-        return clientInterface is not null
-               && RpcServiceHelpers.TryGetRpcServiceFromClientInterface(clientInterface, out serviceInterface);
+        return RpcServiceHelpers.TryGetRpcServiceFromClientInterface(clientInterface, out serviceInterface);
     }
 
     private static List<ServiceMethodInfo> GetServiceMethods(INamedTypeSymbol iface)

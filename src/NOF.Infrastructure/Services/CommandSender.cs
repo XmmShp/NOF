@@ -1,6 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Hosting;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -13,7 +13,7 @@ public sealed class CommandSender : ICommandSender
     private readonly ICommandOutboundPipelineExecutor _outboundPipeline;
     private readonly IExecutionContext _executionContext;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IOutboxMessageRepository _outboxRepository;
+    private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
 
     public CommandSender(
@@ -21,14 +21,14 @@ public sealed class CommandSender : ICommandSender
         ICommandOutboundPipelineExecutor outboundPipeline,
         IExecutionContext executionContext,
         IServiceProvider serviceProvider,
-        IOutboxMessageRepository outboxRepository,
+        DbContext dbContext,
         IObjectSerializer objectSerializer)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
         _executionContext = executionContext;
         _serviceProvider = serviceProvider;
-        _outboxRepository = outboxRepository;
+        _dbContext = dbContext;
         _objectSerializer = objectSerializer;
     }
 
@@ -47,7 +47,7 @@ public sealed class CommandSender : ICommandSender
         var payloadTypeName = TypeRegistry.Register(command.GetType());
         var dispatchTypeNames = JsonSerializer.Serialize(new[] { TypeRegistry.Register(commandType) });
 
-        _outboxRepository.Add(new NOFOutboxMessage
+        _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Command,

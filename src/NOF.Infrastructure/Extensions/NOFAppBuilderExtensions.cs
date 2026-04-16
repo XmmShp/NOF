@@ -17,7 +17,11 @@ public static partial class NOFInfrastructureExtensions
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
-            builder.Services.TryAddSingleton<ICacheServiceFactory, CacheServiceFactory>();
+            builder.Services.GetOrAddSingleton<MapperInfos>();
+            builder.Services.GetOrAddSingleton<CommandHandlerInfos>();
+            builder.Services.GetOrAddSingleton<NotificationHandlerInfos>();
+            builder.Services.GetOrAddSingleton<RequestHandlerInfos>();
+            builder.Services.GetOrAddSingleton<RpcServerInfos>();
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
 
             if (builder.Services.FirstOrDefault(sd => sd.ServiceType == typeof(IIdGenerator)) is null)
@@ -38,13 +42,11 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<INotificationInboundPipelineExecutor, NotificationInboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IRequestInboundPipelineExecutor, RequestInboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
-            builder.Services.TryAddSingleton<EventHandlerInfos>();
+            builder.Services.GetOrAddSingleton<EventHandlerInfos>();
             builder.Services.TryAddScoped<IExecutionContext, Application.ExecutionContext>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
-            builder.Services.AddScoped(sp => sp.GetRequiredKeyedService<ICacheService>(ICacheServiceFactory.DefaultName));
-            builder.Services.AddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.AddHostedService<OutboxMessageBackgroundService>();
             builder.Services.AddOptions<OutboxOptions>();
 

@@ -10,8 +10,8 @@ public static partial class NOFHostingExtensions
     {
         public INOFAppBuilder AddHostingDefaults()
         {
-            builder.Services.TryAddSingleton<EventHandlerInfos>();
-            builder.Services.TryAddSingleton<RequestOutboundPipelineTypes>();
+            builder.Services.GetOrAddSingleton<EventHandlerInfos>();
+            builder.Services.GetOrAddSingleton<RequestOutboundPipelineTypes>();
             builder.Services.TryAddSingleton<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();

@@ -29,7 +29,6 @@ public class InfrastructureDefaultsTests
 
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
-        Assert.NotNull(scope.ServiceProvider.GetService<IOutboxMessageRepository>());
         Assert.NotNull(scope.ServiceProvider.GetService<Microsoft.EntityFrameworkCore.DbContext>());
         Assert.IsType<MemoryCacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
     }
@@ -63,7 +62,7 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void TryAddCacheService_ShouldNotOverrideExistingNamedRegistration()
+    public void TryAddCacheService_ShouldNotOverrideExistingRegistration()
     {
         var services = new ServiceCollection();
         services.AddOptions();
@@ -74,7 +73,7 @@ public class InfrastructureDefaultsTests
         services.TryAddCacheService<MemoryCacheService>();
 
         var descriptors = services
-            .Where(service => service.ServiceType == typeof(ICacheService) && Equals(service.ServiceKey, ICacheServiceFactory.DefaultName))
+            .Where(service => service.ServiceType == typeof(ICacheService))
             .ToList();
 
         Assert.Single(descriptors);

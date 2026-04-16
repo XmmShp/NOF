@@ -6,4 +6,5 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// <summary>
 /// Generated HTTP client for IJwksService via HttpServiceClient source generator.
 /// </summary>
-public partial class HttpJwksService : IHttpRpcClient<IJwksServiceClient>;
+[HttpRpcClient<IJwksServiceClient>]
+public partial class HttpJwksService;

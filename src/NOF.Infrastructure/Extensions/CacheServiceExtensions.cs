@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
@@ -40,61 +40,42 @@ public static partial class NOFInfrastructureExtensions
             => services.AddHostedService((sp, ct) => { startAction(sp, ct); return Task.CompletedTask; });
 
         /// <summary>
-        /// Registers a named <see cref="ICacheService"/> using a typed implementation.
-        /// Uses keyed DI: the implementation, serializer, lock retry strategy, and options are all
-        /// registered under <paramref name="name"/> as the service key.
-        /// Defaults to <see cref="JsonObjectSerializer"/> and <see cref="ExponentialBackoffCacheLockRetryStrategy"/>
-        /// unless overridden via the returned <see cref="ICacheServiceBuilder"/>.
+        /// Registers the current <see cref="ICacheService"/> using a typed implementation.
+        /// Defaults to <see cref="JsonObjectSerializer"/> and <see cref="ExponentialBackoffCacheLockRetryStrategy"/>.
         /// </summary>
         /// <typeparam name="TImplementation">The <see cref="ICacheService"/> implementation type.</typeparam>
-        /// <param name="name">The logical name / service key for this registration.</param>
-        /// <param name="configure">Optional action to configure <see cref="CacheServiceOptions"/> for this name.</param>
-        /// <returns>An <see cref="ICacheServiceBuilder"/> for further configuration.</returns>
-        public ICacheServiceBuilder AddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
-            string name = ICacheServiceFactory.DefaultName,
+        /// <param name="configure">Optional action to configure <see cref="CacheServiceOptions"/>.</param>
+        public IServiceCollection AddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
             Action<CacheServiceOptions>? configure = null)
             where TImplementation : class, ICacheService
         {
-            ArgumentNullException.ThrowIfNull(name);
-
-            // Named options for value config (KeyPrefix, DefaultEntryOptions, etc.)
-            services.AddOptions<CacheServiceOptions>(name);
+            services.AddOptions<CacheServiceOptions>();
             if (configure is not null)
             {
-                services.Configure(name, configure);
+                services.Configure(configure);
             }
 
-            services.AddKeyedScoped(name, (sp, key) =>
-                Options.Create(sp.GetRequiredService<IOptionsMonitor<CacheServiceOptions>>().Get((string)key!)));
-
-            // Keyed cache service factory explicitly resolves keyed deps and named options
-            services.AddKeyedScoped<ICacheService>(name, (sp, key) =>
+            services.ReplaceOrAddScoped<TImplementation>(sp =>
             {
-                var serializer = sp.GetKeyedService<IObjectSerializer>(key) ?? sp.GetRequiredService<IObjectSerializer>();
-                var lockRetryStrategy = sp.GetKeyedService<ICacheLockRetryStrategy>(key) ?? sp.GetRequiredService<ICacheLockRetryStrategy>();
-                var opts = sp.GetRequiredKeyedService<IOptions<CacheServiceOptions>>(key!);
+                var serializer = sp.GetRequiredService<IObjectSerializer>();
+                var lockRetryStrategy = sp.GetRequiredService<ICacheLockRetryStrategy>();
+                var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheServiceOptions>>();
                 return ActivatorUtilities.CreateInstance<TImplementation>(sp, serializer, lockRetryStrategy, opts);
             });
+            services.ReplaceOrAddScoped<ICacheService>(sp => sp.GetRequiredService<TImplementation>());
+            services.ReplaceOrAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
 
-            services.AddKeyedScoped<IDistributedCache>(name, (sp, key) =>
-                sp.GetRequiredKeyedService<ICacheService>(key!));
-
-            return new CacheServiceBuilder(name, services);
+            return services;
         }
 
-        public ICacheServiceBuilder ReplaceOrAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
-            string name = ICacheServiceFactory.DefaultName,
+        public IServiceCollection ReplaceOrAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
             Action<CacheServiceOptions>? configure = null)
             where TImplementation : class, ICacheService
         {
-            ArgumentNullException.ThrowIfNull(name);
-
             var descriptorsToRemove = services
                 .Where(service =>
-                    Equals(service.ServiceKey, name) &&
-                    (service.ServiceType == typeof(ICacheService) ||
-                     service.ServiceType == typeof(IDistributedCache) ||
-                     service.ServiceType == typeof(IOptions<CacheServiceOptions>)))
+                    service.ServiceType == typeof(IDistributedCache) ||
+                    typeof(ICacheService).IsAssignableFrom(service.ServiceType))
                 .ToArray();
 
             foreach (var descriptor in descriptorsToRemove)
@@ -102,26 +83,21 @@ public static partial class NOFInfrastructureExtensions
                 services.Remove(descriptor);
             }
 
-            return services.AddCacheService<TImplementation>(name, configure);
+            return services.AddCacheService<TImplementation>(configure);
         }
 
-        public ICacheServiceBuilder TryAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
-            string name = ICacheServiceFactory.DefaultName,
+        public IServiceCollection TryAddCacheService<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
             Action<CacheServiceOptions>? configure = null)
             where TImplementation : class, ICacheService
         {
-            ArgumentNullException.ThrowIfNull(name);
-
-            var hasRegistration = services.Any(service =>
-                service.ServiceType == typeof(ICacheService) &&
-                Equals(service.ServiceKey, name));
+            var hasRegistration = services.Any(service => service.ServiceType == typeof(ICacheService));
 
             if (!hasRegistration)
             {
-                return services.AddCacheService<TImplementation>(name, configure);
+                return services.AddCacheService<TImplementation>(configure);
             }
 
-            return new CacheServiceBuilder(name, services);
+            return services;
         }
     }
 }
