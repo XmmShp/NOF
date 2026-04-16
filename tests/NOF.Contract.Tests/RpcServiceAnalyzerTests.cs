@@ -14,6 +14,7 @@ public class RpcServiceAnalyzerTests
     private static readonly Type[] _refs =
     [
         typeof(HttpEndpointAttribute),
+        typeof(Empty),
         typeof(IRpcService),
         typeof(HttpVerb),
         typeof(Result),
@@ -173,6 +174,67 @@ public class RpcServiceAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
         Assert.DoesNotContain(diagnostics, d => d.Id == "NOF207");
+    }
+
+    [Fact]
+    public async Task ServiceMethod_WithCustomReturnAndSingleRequest_NoSignatureDiagnostics()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record Query(string Value);
+            public record MyResponse(string Value);
+
+            public partial interface IMyService : IRpcService
+            {
+                MyResponse Get(Query request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.DoesNotContain(diagnostics, d => d.Id is "NOF207" or "NOF209");
+    }
+
+    [Fact]
+    public async Task ServiceMethod_WithResultOfEmptyReturn_NoSignatureDiagnostics()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record Query(string Value);
+
+            public partial interface IMyService : IRpcService
+            {
+                Result<Empty> Execute(Query request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.DoesNotContain(diagnostics, d => d.Id is "NOF207" or "NOF209");
+    }
+
+    [Fact]
+    public async Task ServiceMethod_WithVoidReturn_ReportsNOF209()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record Query(string Value);
+
+            public partial interface IMyService : IRpcService
+            {
+                void Execute(Query request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Contains(diagnostics, d => d.Id == "NOF209");
     }
 
     [Fact]

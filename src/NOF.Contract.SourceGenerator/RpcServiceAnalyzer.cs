@@ -50,13 +50,22 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor VoidReturnNotSupported = new(
+        "NOF209",
+        "Void return is not supported",
+        "Method '{0}' on service interface '{1}' must not return void. Return a concrete response type instead, such as Empty when no payload is needed.",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
         MissingRouteParamProperty,
         ClassMustHaveParameterlessCtor,
         InvalidServiceMethodSignature,
-        ServiceMethodOverloadsNotSupported
+        ServiceMethodOverloadsNotSupported,
+        VoidReturnNotSupported
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -133,6 +142,13 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
 
         foreach (var method in declaredMethods)
         {
+            if (method.ReturnsVoid)
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(VoidReturnNotSupported, method.Locations.FirstOrDefault() ?? attrLocation, method.Name, typeSymbol.Name));
+                continue;
+            }
+
             var validRequestParameter = RpcServiceHelpers.TryGetRequestParameter(method, out var requestParameter);
             var validReturnType = RpcServiceHelpers.TryGetServiceReturnInfo(method, out _);
             var validMethodName = !method.Name.EndsWith("Async", StringComparison.Ordinal);
