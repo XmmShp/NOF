@@ -14,7 +14,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly IOptions<RabbitMQOptions> _options;
     private readonly IServiceProvider _rootServiceProvider;
     private readonly IObjectSerializer _serializer;
-    private readonly HandlerInfos? _handlerInfos;
+    private readonly CommandHandlerInfos? _commandHandlerInfos;
+    private readonly NotificationHandlerInfos? _notificationHandlerInfos;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly List<IChannel> _channels = [];
     private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
@@ -25,14 +26,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         IOptions<RabbitMQOptions> options,
         IServiceProvider rootServiceProvider,
         IObjectSerializer serializer,
-        HandlerInfos? handlerInfos,
+        CommandHandlerInfos? commandHandlerInfos,
+        NotificationHandlerInfos? notificationHandlerInfos,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
         _options = options;
         _rootServiceProvider = rootServiceProvider;
         _serializer = serializer;
-        _handlerInfos = handlerInfos;
+        _commandHandlerInfos = commandHandlerInfos;
+        _notificationHandlerInfos = notificationHandlerInfos;
         _logger = logger;
     }
 
@@ -57,19 +60,19 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
     private async Task RegisterConsumersFromHandlerInfosAsync(CancellationToken cancellationToken)
     {
-        if (_handlerInfos is null)
+        if (_commandHandlerInfos is null && _notificationHandlerInfos is null)
         {
             return;
         }
 
-        var commandTypes = _handlerInfos.Commands
+        var commandTypes = (_commandHandlerInfos?.Registrations ?? [])
             .Select(info => info.CommandType)
             .Distinct()
             .ToArray();
 
         await SetupCommandConsumersAsync(commandTypes, cancellationToken);
 
-        var notificationGroups = _handlerInfos.Notifications
+        var notificationGroups = (_notificationHandlerInfos?.Registrations ?? [])
             .GroupBy(info => info.HandlerType)
             .ToArray();
 
@@ -221,7 +224,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             else
             {
                 var commandType = messageType;
-                var handlerType = _handlerInfos?.GetCommandHandlers(commandType).FirstOrDefault()
+                var handlerType = _commandHandlerInfos?.GetHandlers(commandType).FirstOrDefault()
                     ?? throw new InvalidOperationException($"Cannot route command '{commandType.Name}'. No matching handler registered.");
                 await InboundHandlerInvoker.ExecuteCommandAsync(
                     _rootServiceProvider,

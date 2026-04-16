@@ -13,16 +13,30 @@ public static partial class NOFInfrastructureExtensions
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Adds one or more <see cref="HandlerInfo"/> entries to the <see cref="HandlerInfos"/> singleton.
-        /// Each entry is dispatched to the appropriate typed set via pattern matching.
+        /// Adds one or more command handler entries to the <see cref="CommandHandlerInfos"/> singleton.
         /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
         /// </summary>
-        public IServiceCollection AddHandlerInfo(params HandlerInfo[] infos)
+        public IServiceCollection AddHandlerRegistration(params CommandHandlerRegistration[] registrations)
         {
-            var set = services.GetOrAddSingleton<HandlerInfos>();
-            foreach (var info in infos)
+            var set = services.GetOrAddSingleton<CommandHandlerInfos>();
+            foreach (var registration in registrations)
             {
-                set.Add(info);
+                set.Add(registration);
+            }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds one or more notification handler entries to the <see cref="NotificationHandlerInfos"/> singleton.
+        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
+        /// </summary>
+        public IServiceCollection AddHandlerRegistration(params NotificationHandlerRegistration[] registrations)
+        {
+            var set = services.GetOrAddSingleton<NotificationHandlerInfos>();
+            foreach (var registration in registrations)
+            {
+                set.Add(registration);
             }
 
             return services;

@@ -11,12 +11,12 @@ public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceReg
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        foreach (var registration in RequestHandlerRegistry.GetRegistrations())
+        var infos = builder.Services.GetOrAddSingleton<RequestHandlerInfos>();
+        foreach (var registration in infos.Registrations)
         {
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.ServiceType, registration.ImplementationType));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.Key, registration.Value));
         }
 
         return ValueTask.CompletedTask;
     }
 }
-

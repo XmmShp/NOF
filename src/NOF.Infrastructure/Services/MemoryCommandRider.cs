@@ -20,8 +20,8 @@ public sealed class MemoryCommandRider : ICommandRider
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(commandType);
-        var handlerInfos = _rootServiceProvider.GetService<HandlerInfos>();
-        var handlerType = handlerInfos?.GetCommandHandlers(commandType).FirstOrDefault()
+        var handlerInfos = _rootServiceProvider.GetService<CommandHandlerInfos>();
+        var handlerType = handlerInfos?.GetHandlers(commandType).FirstOrDefault()
             ?? throw new InvalidOperationException(
                 $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
         await InboundHandlerInvoker.ExecuteCommandAsync(

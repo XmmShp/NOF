@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.Contract;
@@ -19,7 +20,8 @@ public class MappableGeneratorTests
     [
         typeof(MappableAttribute),
         typeof(IMapper),
-        typeof(MapperRegistry),
+        typeof(MapperRegistration),
+        typeof(Registry),
         typeof(Contract.Optional<>),
         typeof(Result),
         typeof(IValueObject<>),
@@ -64,7 +66,7 @@ public class MappableGeneratorTests
         Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("MapperRegistry.Register<", code);
+        Assert.Contains("Registry.MapperRegistrations.Add(global::NOF.Application.MapperRegistration.Of<", code);
         Assert.Contains("MapperAssemblyInitializer", code);
         Assert.Contains("Id = src.Id", code);
         Assert.Contains("Name = src.Name", code);
@@ -115,8 +117,8 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>", code);
-        Assert.Contains("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>", code);
+        Assert.Contains("typeof(global::Test.Order), typeof(global::Test.OrderDto)", code);
+        Assert.Contains("typeof(global::Test.OrderDto), typeof(global::Test.Order)", code);
     }
 
     // -----------------------------------------------------------------------
@@ -211,7 +213,7 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>", code);
+        Assert.Contains("typeof(global::Test.Order), typeof(global::Test.OrderDto)", code);
     }
 
     // -----------------------------------------------------------------------
@@ -242,8 +244,8 @@ public class MappableGeneratorTests
         Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("MapperRegistry.Register<global::Test.A, global::Test.B>", code);
-        Assert.Contains("MapperRegistry.Register<global::Test.A, global::Test.C>", code);
+        Assert.Contains("typeof(global::Test.A), typeof(global::Test.B)", code);
+        Assert.Contains("typeof(global::Test.A), typeof(global::Test.C)", code);
         // One method
         Assert.Contains("MapperAssemblyInitializer", code);
     }
@@ -1000,10 +1002,10 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Forward: OrderName 閳?string (unwrap)
-        Assert.Contains("MapperRegistry.Register<global::Test.Order, global::Test.OrderDto>", code);
+        Assert.Contains("typeof(global::Test.Order), typeof(global::Test.OrderDto)", code);
         Assert.Contains("(string)src.Name)", code);
         // Reverse: string 閳?OrderName (wrap)
-        Assert.Contains("MapperRegistry.Register<global::Test.OrderDto, global::Test.Order>", code);
+        Assert.Contains("typeof(global::Test.OrderDto), typeof(global::Test.Order)", code);
         Assert.Contains("OrderName.Of(src.Name)", code);
     }
 
@@ -1258,4 +1260,3 @@ public class MappableGeneratorTests
         Assert.DoesNotContain(".Select(", code);
     }
 }
-

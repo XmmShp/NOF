@@ -3,7 +3,7 @@ namespace NOF.Application;
 /// <summary>
 /// Declares a mapping from <typeparamref name="TSource"/> to <typeparamref name="TDestination"/>.
 /// Place on a <c>partial static class</c>. The source generator will produce an assembly initializer
-/// that registers all declared mappings into the global <see cref="MapperRegistry"/>.
+/// that registers all declared mappings into the global registry.
 /// <para>
 /// Multiple <c>[Mappable]</c> attributes can be placed on the same class, and the class
 /// can be split across multiple files (partial). The generator merges them into one method.

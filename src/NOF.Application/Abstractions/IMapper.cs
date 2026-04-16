@@ -13,44 +13,6 @@ public delegate object MapFunc(object source, IMapper mapper);
 /// </summary>
 public interface IMapper
 {
-    #region Generic registration
-
-    /// <summary>
-    /// Registers a mapping delegate. Replaces any existing delegate for this key.
-    /// </summary>
-    IMapper Add<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null);
-
-    /// <summary>
-    /// Registers a mapping delegate that also receives an <see cref="IMapper"/> for nested mappings.
-    /// </summary>
-    IMapper Add<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null);
-
-    /// <summary>
-    /// Adds the delegate only if no delegate has been registered for this key yet.
-    /// Returns <see langword="true"/> if the delegate was added.
-    /// </summary>
-    bool TryAdd<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null);
-
-    /// <inheritdoc cref="TryAdd{TSource, TDestination}(Func{TSource, TDestination}, string?)"/>
-    bool TryAdd<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null);
-
-    #endregion
-
-    #region Non-generic registration
-
-    /// <summary>
-    /// Registers a non-generic mapping delegate. Replaces any existing delegate for this key.
-    /// </summary>
-    IMapper Add(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null);
-
-    /// <summary>
-    /// Adds the delegate only if no delegate has been registered for this key yet.
-    /// Returns <see langword="true"/> if the delegate was added.
-    /// </summary>
-    bool TryAdd(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null);
-
-    #endregion
-
     #region Generic mapping
 
     /// <summary>

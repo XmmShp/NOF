@@ -13,14 +13,11 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var infos = builder.Services.GetOrAddSingleton<HandlerInfos>();
+        var commandInfos = builder.Services.GetOrAddSingleton<CommandHandlerInfos>();
+        var notificationInfos = builder.Services.GetOrAddSingleton<NotificationHandlerInfos>();
         var eventInfos = builder.Services.GetOrAddSingleton<EventHandlerInfos>();
-        foreach (var registration in HandlerRegistry.GetRegistrations())
-        {
-            infos.Add(registration);
-        }
 
-        foreach (var info in infos.Commands)
+        foreach (var info in commandInfos.Registrations)
         {
             TypeRegistry.Register(info.CommandType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
@@ -31,7 +28,7 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
-        foreach (var info in infos.Notifications)
+        foreach (var info in notificationInfos.Registrations)
         {
             TypeRegistry.Register(info.NotificationType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));

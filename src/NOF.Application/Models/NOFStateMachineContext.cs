@@ -6,7 +6,7 @@ namespace NOF.Application;
 /// State machine context entity containing the correlation and current state.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class NOFStateMachineContext : ICloneable
+public sealed class NOFStateMachineContext
 {
     /// <summary>
     /// The correlation ID that identifies the state machine instance.
@@ -38,12 +38,4 @@ public sealed class NOFStateMachineContext : ICloneable
             State = state
         };
     }
-
-    public object Clone()
-        => new NOFStateMachineContext
-        {
-            CorrelationId = CorrelationId,
-            DefinitionTypeName = DefinitionTypeName,
-            State = State
-        };
 }

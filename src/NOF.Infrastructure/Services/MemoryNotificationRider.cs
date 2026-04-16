@@ -20,11 +20,11 @@ public sealed class MemoryNotificationRider : INotificationRider
         ArgumentNullException.ThrowIfNull(notification);
         ArgumentNullException.ThrowIfNull(notificationTypes);
         await using var scope = _rootServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope();
-        var infos = scope.ServiceProvider.GetRequiredService<HandlerInfos>();
+        var infos = scope.ServiceProvider.GetRequiredService<NotificationHandlerInfos>();
         var seenHandlerTypes = new HashSet<Type>();
         foreach (var notificationType in notificationTypes)
         {
-            foreach (var handlerType in infos.GetNotificationHandlers(notificationType))
+            foreach (var handlerType in infos.GetHandlers(notificationType))
             {
                 if (!seenHandlerTypes.Add(handlerType))
                 {

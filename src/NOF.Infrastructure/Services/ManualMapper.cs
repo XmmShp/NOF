@@ -20,76 +20,13 @@ public sealed class ManualMapper : IMapper
     /// <summary>
     /// Creates a new <see cref="ManualMapper"/> seeded with mappings from the global registry.
     /// </summary>
-    public ManualMapper()
+    public ManualMapper(MapperInfos mapperInfos)
     {
-        foreach (var kvp in MapperRegistry.GetRegistrationsSnapshot())
+        foreach (var kvp in mapperInfos.Mappings)
         {
             _mappings[kvp.Key] = kvp.Value;
         }
     }
-
-    #region Generic registration
-
-    /// <inheritdoc />
-    public IMapper Add<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(mappingFunc);
-        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
-        _mappings[key] = (src, _) => mappingFunc((TSource)src)!;
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IMapper Add<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(mappingFunc);
-        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
-        _mappings[key] = (src, mapper) => mappingFunc((TSource)src, mapper)!;
-        return this;
-    }
-
-    /// <inheritdoc />
-    public bool TryAdd<TSource, TDestination>(Func<TSource, TDestination> mappingFunc, string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(mappingFunc);
-        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
-        return _mappings.TryAdd(key, (src, _) => mappingFunc((TSource)src)!);
-    }
-
-    /// <inheritdoc />
-    public bool TryAdd<TSource, TDestination>(Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(mappingFunc);
-        var key = new MapKey(typeof(TSource), typeof(TDestination), name);
-        return _mappings.TryAdd(key, (src, mapper) => mappingFunc((TSource)src, mapper)!);
-    }
-
-    #endregion
-
-    #region Non-generic registration
-
-    /// <inheritdoc />
-    public IMapper Add(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(sourceType);
-        ArgumentNullException.ThrowIfNull(destinationType);
-        ArgumentNullException.ThrowIfNull(mappingFunc);
-        var key = new MapKey(sourceType, destinationType, name);
-        _mappings[key] = mappingFunc;
-        return this;
-    }
-
-    /// <inheritdoc />
-    public bool TryAdd(Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(sourceType);
-        ArgumentNullException.ThrowIfNull(destinationType);
-        ArgumentNullException.ThrowIfNull(mappingFunc);
-        var key = new MapKey(sourceType, destinationType, name);
-        return _mappings.TryAdd(key, mappingFunc);
-    }
-
-    #endregion
 
     #region Generic mapping
 

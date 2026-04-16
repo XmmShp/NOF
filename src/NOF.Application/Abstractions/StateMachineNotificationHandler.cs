@@ -16,23 +16,19 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     where TState : struct, Enum
     where TNotification : class
 {
-    private readonly IStateMachineContextStore _store;
     private readonly DbContext _dbContext;
     private readonly IServiceProvider _serviceProvider;
     private readonly IStateMachineRegistry _stateMachineRegistry;
 
     /// <summary>Initializes a new instance.</summary>
-    /// <param name="store">The state machine context store.</param>
     /// <param name="dbContext">The current persistence context.</param>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="stateMachineRegistry">The state machine registry.</param>
     protected StateMachineNotificationHandler(
-        IStateMachineContextStore store,
         DbContext dbContext,
         IServiceProvider serviceProvider,
         IStateMachineRegistry stateMachineRegistry)
     {
-        _store = store;
         _dbContext = dbContext;
         _serviceProvider = serviceProvider;
         _stateMachineRegistry = stateMachineRegistry;
@@ -65,7 +61,9 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
         var definitionTypeName = typeof(TStateMachineDefinition).FullName;
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionTypeName);
 
-        var existing = await _store.FindAsync(correlationId, definitionTypeName, cancellationToken);
+        var existing = await _dbContext.FindAsync<NOFStateMachineContext>(
+            keyValues: [correlationId, definitionTypeName],
+            cancellationToken: cancellationToken);
 
         if (existing is not null)
         {
@@ -77,7 +75,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
             var initialState = await bp.StartAsync(notification, _serviceProvider, cancellationToken);
             if (initialState.HasValue)
             {
-                _store.Add(NOFStateMachineContext.Create(
+                _dbContext.Set<NOFStateMachineContext>().Add(NOFStateMachineContext.Create(
                     correlationId: correlationId,
                     definitionTypeName: definitionTypeName,
                     state: initialState.Value));
