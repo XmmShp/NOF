@@ -5,11 +5,15 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandTracingInboundMiddleware : ICommandInboundMiddleware, IAfter<CommandTenantInboundMiddleware>
+public sealed class TracingInboundMiddleware :
+    ICommandInboundMiddleware,
+    INotificationInboundMiddleware,
+    IRequestInboundMiddleware,
+    IAfter<TenantInboundMiddleware>
 {
     private readonly IExecutionContext _executionContext;
 
-    public CommandTracingInboundMiddleware(IExecutionContext executionContext)
+    public TracingInboundMiddleware(IExecutionContext executionContext)
     {
         _executionContext = executionContext;
     }
@@ -55,16 +59,6 @@ public sealed class CommandTracingInboundMiddleware : ICommandInboundMiddleware,
             ActivityKind.Consumer,
             parent);
     }
-}
-
-public sealed class NotificationTracingInboundMiddleware : INotificationInboundMiddleware, IAfter<NotificationTenantInboundMiddleware>
-{
-    private readonly IExecutionContext _executionContext;
-
-    public NotificationTracingInboundMiddleware(IExecutionContext executionContext)
-    {
-        _executionContext = executionContext;
-    }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
@@ -106,16 +100,6 @@ public sealed class NotificationTracingInboundMiddleware : INotificationInboundM
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
             parent);
-    }
-}
-
-public sealed class RequestTracingInboundMiddleware : IRequestInboundMiddleware, IAfter<RequestTenantInboundMiddleware>
-{
-    private readonly IExecutionContext _executionContext;
-
-    public RequestTracingInboundMiddleware(IExecutionContext executionContext)
-    {
-        _executionContext = executionContext;
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)

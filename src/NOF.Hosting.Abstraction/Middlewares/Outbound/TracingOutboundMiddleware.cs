@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace NOF.Hosting;
 
-public sealed class CommandTracingOutboundMiddleware : ICommandOutboundMiddleware
+public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
 {
     public async ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
@@ -33,10 +33,7 @@ public sealed class CommandTracingOutboundMiddleware : ICommandOutboundMiddlewar
             throw;
         }
     }
-}
 
-public sealed class NotificationTracingOutboundMiddleware : INotificationOutboundMiddleware
-{
     public async ValueTask InvokeAsync(NotificationOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var messageTypeFullName = context.MessageType.FullName ?? context.MessageType.Name;
@@ -65,10 +62,7 @@ public sealed class NotificationTracingOutboundMiddleware : INotificationOutboun
             throw;
         }
     }
-}
 
-public sealed class RequestTracingOutboundMiddleware : IRequestOutboundMiddleware
-{
     public async ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var rpcMethod = $"{context.ServiceType.FullName ?? context.ServiceType.Name}.{context.MethodName}";

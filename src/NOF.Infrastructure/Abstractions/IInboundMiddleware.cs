@@ -18,8 +18,3 @@ public interface IRequestInboundMiddleware
 {
     ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken);
 }
-
-public abstract class RequestInboundMiddleware : IRequestInboundMiddleware
-{
-    public abstract ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken);
-}

@@ -7,13 +7,16 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandMessageInboxInboundMiddleware : ICommandInboundMiddleware, IAfter<CommandAutoInstrumentationInboundMiddleware>
+public sealed class MessageInboxInboundMiddleware :
+    ICommandInboundMiddleware,
+    INotificationInboundMiddleware,
+    IAfter<AutoInstrumentationInboundMiddleware>
 {
     private readonly DbContext _dbContext;
-    private readonly ILogger<CommandMessageInboxInboundMiddleware> _logger;
+    private readonly ILogger<MessageInboxInboundMiddleware> _logger;
     private readonly IExecutionContext _executionContext;
 
-    public CommandMessageInboxInboundMiddleware(DbContext dbContext, ILogger<CommandMessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
+    public MessageInboxInboundMiddleware(DbContext dbContext, ILogger<MessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
     {
         _dbContext = dbContext;
         _logger = logger;
@@ -68,20 +71,6 @@ public sealed class CommandMessageInboxInboundMiddleware : ICommandInboundMiddle
             _logger.LogError(ex, "Failed to process inbox message for {MessageType}. Transaction has been rolled back.", context.MessageType.FullName ?? context.MessageType.Name);
             throw;
         }
-    }
-}
-
-public sealed class NotificationMessageInboxInboundMiddleware : INotificationInboundMiddleware, IAfter<NotificationAutoInstrumentationInboundMiddleware>
-{
-    private readonly DbContext _dbContext;
-    private readonly ILogger<NotificationMessageInboxInboundMiddleware> _logger;
-    private readonly IExecutionContext _executionContext;
-
-    public NotificationMessageInboxInboundMiddleware(DbContext dbContext, ILogger<NotificationMessageInboxInboundMiddleware> logger, IExecutionContext executionContext)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-        _executionContext = executionContext;
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)

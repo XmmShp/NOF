@@ -16,7 +16,7 @@ public class TenantInboundMiddlewareTests
         {
             [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenant-a"
         };
-        var middleware = new CommandTenantInboundMiddleware(
+        var middleware = new TenantInboundMiddleware(
             executionContext,
             Options.Create(new TenantOptions
             {
@@ -37,7 +37,7 @@ public class TenantInboundMiddlewareTests
         {
             [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenant-a"
         };
-        var middleware = new CommandTenantInboundMiddleware(
+        var middleware = new TenantInboundMiddleware(
             executionContext,
             Options.Create(new TenantOptions
             {

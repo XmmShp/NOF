@@ -5,14 +5,18 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandAuthorizationInboundMiddleware : ICommandInboundMiddleware, IAfter<CommandTenantInboundMiddleware>
+public sealed class AuthorizationInboundMiddleware :
+    ICommandInboundMiddleware,
+    INotificationInboundMiddleware,
+    IRequestInboundMiddleware,
+    IAfter<TenantInboundMiddleware>
 {
     private readonly IUserContext _userContext;
-    private readonly ILogger<CommandAuthorizationInboundMiddleware> _logger;
+    private readonly ILogger<AuthorizationInboundMiddleware> _logger;
 
-    public CommandAuthorizationInboundMiddleware(
+    public AuthorizationInboundMiddleware(
         IUserContext userContext,
-        ILogger<CommandAuthorizationInboundMiddleware> logger)
+        ILogger<AuthorizationInboundMiddleware> logger)
     {
         _userContext = userContext;
         _logger = logger;
@@ -49,20 +53,6 @@ public sealed class CommandAuthorizationInboundMiddleware : ICommandInboundMiddl
             handlerName, messageName, permissionAttr.Permission);
         await next(cancellationToken);
     }
-}
-
-public sealed class NotificationAuthorizationInboundMiddleware : INotificationInboundMiddleware, IAfter<NotificationTenantInboundMiddleware>
-{
-    private readonly IUserContext _userContext;
-    private readonly ILogger<NotificationAuthorizationInboundMiddleware> _logger;
-
-    public NotificationAuthorizationInboundMiddleware(
-        IUserContext userContext,
-        ILogger<NotificationAuthorizationInboundMiddleware> logger)
-    {
-        _userContext = userContext;
-        _logger = logger;
-    }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
@@ -94,20 +84,6 @@ public sealed class NotificationAuthorizationInboundMiddleware : INotificationIn
         _logger.LogDebug("Permission check passed for {HandlerType}/{MessageType} with permission {Permission}",
             handlerName, messageName, permissionAttr.Permission);
         await next(cancellationToken);
-    }
-}
-
-public sealed class RequestAuthorizationInboundMiddleware : IRequestInboundMiddleware, IAfter<RequestTenantInboundMiddleware>
-{
-    private readonly IUserContext _userContext;
-    private readonly ILogger<RequestAuthorizationInboundMiddleware> _logger;
-
-    public RequestAuthorizationInboundMiddleware(
-        IUserContext userContext,
-        ILogger<RequestAuthorizationInboundMiddleware> logger)
-    {
-        _userContext = userContext;
-        _logger = logger;
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)

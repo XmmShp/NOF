@@ -5,7 +5,11 @@ using System.Diagnostics.Metrics;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandAutoInstrumentationInboundMiddleware : ICommandInboundMiddleware, IAfter<CommandTracingInboundMiddleware>
+public sealed class AutoInstrumentationInboundMiddleware :
+    ICommandInboundMiddleware,
+    INotificationInboundMiddleware,
+    IRequestInboundMiddleware,
+    IAfter<TracingInboundMiddleware>
 {
     private static readonly Counter<long> _executionCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionCounter,
@@ -18,9 +22,9 @@ public sealed class CommandAutoInstrumentationInboundMiddleware : ICommandInboun
         NOFInfrastructureConstants.InboundPipeline.Metrics.ErrorCounter,
         description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
 
-    private readonly ILogger<CommandAutoInstrumentationInboundMiddleware> _logger;
+    private readonly ILogger<AutoInstrumentationInboundMiddleware> _logger;
 
-    public CommandAutoInstrumentationInboundMiddleware(ILogger<CommandAutoInstrumentationInboundMiddleware> logger)
+    public AutoInstrumentationInboundMiddleware(ILogger<AutoInstrumentationInboundMiddleware> logger)
     {
         _logger = logger;
     }
@@ -57,27 +61,6 @@ public sealed class CommandAutoInstrumentationInboundMiddleware : ICommandInboun
             throw;
         }
     }
-}
-
-public sealed class NotificationAutoInstrumentationInboundMiddleware : INotificationInboundMiddleware, IAfter<NotificationTracingInboundMiddleware>
-{
-    private static readonly Counter<long> _executionCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
-        NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionCounter,
-        description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionCounter);
-    private static readonly Histogram<double> _executionDuration = NOFInfrastructureConstants.InboundPipeline.Meter.CreateHistogram<double>(
-        NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionDuration,
-        unit: NOFInfrastructureConstants.InboundPipeline.MetricUnits.Milliseconds,
-        description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionDuration);
-    private static readonly Counter<long> _errorCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
-        NOFInfrastructureConstants.InboundPipeline.Metrics.ErrorCounter,
-        description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
-
-    private readonly ILogger<NotificationAutoInstrumentationInboundMiddleware> _logger;
-
-    public NotificationAutoInstrumentationInboundMiddleware(ILogger<NotificationAutoInstrumentationInboundMiddleware> logger)
-    {
-        _logger = logger;
-    }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
@@ -110,27 +93,6 @@ public sealed class NotificationAutoInstrumentationInboundMiddleware : INotifica
             _logger.LogError(ex, "Handler {HandlerType} failed after {Duration}ms: {ErrorMessage}", context.HandlerName, durationMs, ex.Message);
             throw;
         }
-    }
-}
-
-public sealed class RequestAutoInstrumentationInboundMiddleware : IRequestInboundMiddleware, IAfter<RequestTracingInboundMiddleware>
-{
-    private static readonly Counter<long> _executionCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
-        NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionCounter,
-        description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionCounter);
-    private static readonly Histogram<double> _executionDuration = NOFInfrastructureConstants.InboundPipeline.Meter.CreateHistogram<double>(
-        NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionDuration,
-        unit: NOFInfrastructureConstants.InboundPipeline.MetricUnits.Milliseconds,
-        description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionDuration);
-    private static readonly Counter<long> _errorCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
-        NOFInfrastructureConstants.InboundPipeline.Metrics.ErrorCounter,
-        description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
-
-    private readonly ILogger<RequestAutoInstrumentationInboundMiddleware> _logger;
-
-    public RequestAutoInstrumentationInboundMiddleware(ILogger<RequestAutoInstrumentationInboundMiddleware> logger)
-    {
-        _logger = logger;
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)

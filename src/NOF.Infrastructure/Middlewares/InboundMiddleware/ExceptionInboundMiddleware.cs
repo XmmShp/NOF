@@ -5,11 +5,11 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandExceptionInboundMiddleware : ICommandInboundMiddleware
+public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INotificationInboundMiddleware, IRequestInboundMiddleware
 {
-    private readonly ILogger<CommandExceptionInboundMiddleware> _logger;
+    private readonly ILogger<InboundExceptionMiddleware> _logger;
 
-    public CommandExceptionInboundMiddleware(ILogger<CommandExceptionInboundMiddleware> logger)
+    public InboundExceptionMiddleware(ILogger<InboundExceptionMiddleware> logger)
     {
         _logger = logger;
     }
@@ -37,16 +37,6 @@ public sealed class CommandExceptionInboundMiddleware : ICommandInboundMiddlewar
             context.Response = Result.Fail("500", "Internal server error");
         }
     }
-}
-
-public sealed class NotificationExceptionInboundMiddleware : INotificationInboundMiddleware
-{
-    private readonly ILogger<NotificationExceptionInboundMiddleware> _logger;
-
-    public NotificationExceptionInboundMiddleware(ILogger<NotificationExceptionInboundMiddleware> logger)
-    {
-        _logger = logger;
-    }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
@@ -70,16 +60,6 @@ public sealed class NotificationExceptionInboundMiddleware : INotificationInboun
                 messageName, handlerName, ex.Message);
             context.Response = Result.Fail("500", "Internal server error");
         }
-    }
-}
-
-public sealed class RequestExceptionInboundMiddleware : IRequestInboundMiddleware
-{
-    private readonly ILogger<RequestExceptionInboundMiddleware> _logger;
-
-    public RequestExceptionInboundMiddleware(ILogger<RequestExceptionInboundMiddleware> logger)
-    {
-        _logger = logger;
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)

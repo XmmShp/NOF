@@ -9,9 +9,9 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-public sealed class JwtResourceServerInboundMiddleware : RequestInboundMiddleware,
-    IAfter<RequestExceptionInboundMiddleware>,
-    IBefore<RequestTenantInboundMiddleware>
+public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddleware,
+    IAfter<InboundExceptionMiddleware>,
+    IBefore<TenantInboundMiddleware>
 {
     private readonly IUserContext _userContext;
     private readonly IJwksProvider _jwksProvider;
@@ -35,7 +35,7 @@ public sealed class JwtResourceServerInboundMiddleware : RequestInboundMiddlewar
         _executionContext = executionContext;
     }
 
-    public override async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         if (!_executionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
         {
