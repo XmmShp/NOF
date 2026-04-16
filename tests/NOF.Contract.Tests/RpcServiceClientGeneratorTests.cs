@@ -10,6 +10,7 @@ public class RpcServiceClientGeneratorTests
     [
         typeof(Empty),
         typeof(HttpEndpointAttribute),
+        typeof(IRpcClient),
         typeof(IRpcService),
         typeof(Result),
         typeof(Result<>)
@@ -39,7 +40,7 @@ public class RpcServiceClientGeneratorTests
         var runResult = new RpcServiceClientGenerator().GetResult(source, _refs);
         var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("public interface IMyServiceClient", code);
+        Assert.Contains("public interface IMyServiceClient : global::NOF.Contract.IRpcClient", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> PingAsync", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<global::App.Pong>> GetAsync", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> ArchiveAsync", code);

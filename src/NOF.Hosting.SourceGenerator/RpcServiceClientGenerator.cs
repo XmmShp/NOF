@@ -16,7 +16,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
     {
         var classProvider = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => node is ClassDeclarationSyntax { AttributeLists.Count: > 0 },
+                predicate: static (node, _) => node is ClassDeclarationSyntax,
                 transform: static (ctx, _) =>
                 {
                     if (ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is not INamedTypeSymbol classSymbol)
@@ -24,7 +24,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
                         return null;
                     }
 
-                    return TryGetServiceInterfaceFromHttpClientAttribute(classSymbol, out var _) ? classSymbol : null;
+                    return TryGetRpcClientInterfaceFromHttpRpcClientInterface(classSymbol, out var _, out var _) ? classSymbol : null;
                 })
             .Where(static m => m is not null);
 
@@ -48,7 +48,9 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
 
     private static void GenerateForTargetClass(SourceProductionContext context, INamedTypeSymbol targetClass)
     {
-        if (!TryGetServiceInterfaceFromHttpClientAttribute(targetClass, out var iface) || iface is null)
+        if (!TryGetRpcClientInterfaceFromHttpRpcClientInterface(targetClass, out var clientInterface, out var iface)
+            || clientInterface is null
+            || iface is null)
         {
             return;
         }
@@ -76,13 +78,14 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {targetNamespace}");
         sb.AppendLine("{");
 
-        var clientInterfaceName = RpcServiceHelpers.GetClientInterfaceName(iface.Name);
-        var clientInterfaceNamespace = RpcServiceHelpers.GetFullNamespace(iface.ContainingNamespace);
+        var clientInterfaceName = clientInterface.Name;
+        var clientInterfaceNamespace = RpcServiceHelpers.GetFullNamespace(clientInterface.ContainingNamespace);
         var fullyQualifiedClientInterfaceName = string.IsNullOrWhiteSpace(clientInterfaceNamespace)
             ? clientInterfaceName
             : $"{clientInterfaceNamespace}.{clientInterfaceName}";
 
-        sb.AppendLine($"    public partial class {targetClass.Name} : global::{fullyQualifiedClientInterfaceName}");
+        // No accessibility modifier here; the user-authored partial declaration decides visibility.
+        sb.AppendLine($"    partial class {targetClass.Name} : global::{fullyQualifiedClientInterfaceName}");
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
         sb.AppendLine("        private readonly global::NOF.Hosting.IRequestOutboundPipelineExecutor _outboundPipeline;");
@@ -112,20 +115,25 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         context.AddSource($"{targetClass.ToDisplayString().Replace('.', '_')}.HttpServiceClient.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
-    private static bool TryGetServiceInterfaceFromHttpClientAttribute(INamedTypeSymbol classSymbol, out INamedTypeSymbol? serviceInterface)
+    private static bool TryGetRpcClientInterfaceFromHttpRpcClientInterface(
+        INamedTypeSymbol classSymbol,
+        out INamedTypeSymbol? clientInterface,
+        out INamedTypeSymbol? serviceInterface)
     {
+        clientInterface = null;
         serviceInterface = null;
-        var attr = classSymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass is { IsGenericType: true } ac &&
-                                 ac.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.HttpServiceClientAttributeFqn);
-
-        if (attr?.AttributeClass?.TypeArguments.Length != 1)
+        var marker = classSymbol.AllInterfaces
+            .OfType<INamedTypeSymbol>()
+            .FirstOrDefault(i => i.IsGenericType
+                                 && i.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.HttpRpcClientInterfaceFqn);
+        if (marker?.TypeArguments.Length != 1)
         {
             return false;
         }
 
-        serviceInterface = attr.AttributeClass.TypeArguments[0] as INamedTypeSymbol;
-        return serviceInterface is not null;
+        clientInterface = marker.TypeArguments[0] as INamedTypeSymbol;
+        return clientInterface is not null
+               && RpcServiceHelpers.TryGetRpcServiceFromClientInterface(clientInterface, out serviceInterface);
     }
 
     private static List<ServiceMethodInfo> GetServiceMethods(INamedTypeSymbol iface)

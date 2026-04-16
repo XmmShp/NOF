@@ -6,5 +6,4 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// <summary>
 /// Generated HTTP client for IJwtAuthorityService via HttpServiceClient source generator.
 /// </summary>
-[HttpServiceClient<IJwtAuthorityService>]
-public partial class HttpJwtAuthorityService;
+public partial class HttpJwtAuthorityService : IHttpRpcClient<IJwtAuthorityServiceClient>;

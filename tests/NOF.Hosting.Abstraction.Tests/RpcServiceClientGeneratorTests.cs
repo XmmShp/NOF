@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
-using NOF.Contract.SourceGenerator;
 using NOF.Hosting;
 using NOF.Hosting.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
@@ -13,7 +12,8 @@ public class RpcServiceClientGeneratorTests
     private static readonly Type[] _extraRefs =
     [
         typeof(HttpEndpointAttribute),
-        typeof(HttpServiceClientAttribute<>),
+        typeof(IRpcClient),
+        typeof(IHttpRpcClient<>),
         typeof(IRpcService),
         typeof(HttpVerb),
         typeof(Empty),
@@ -40,8 +40,9 @@ public class RpcServiceClientGeneratorTests
                                       Result CreateUser(CreateUserRequest request);
                                   }
 
-                                  [HttpServiceClient<IMyService>]
-                                  public partial class MyServiceClient;
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
                               }
                               """;
 
@@ -69,8 +70,9 @@ public class RpcServiceClientGeneratorTests
                                       Result Internal(InternalRequest request);
                                   }
 
-                                  [HttpServiceClient<IMyService>]
-                                  public partial class MyServiceClient;
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
                               }
                               """;
 
@@ -101,8 +103,9 @@ public class RpcServiceClientGeneratorTests
                                       Result UpdateUser(UpdateUserRequest request);
                                   }
 
-                                  [HttpServiceClient<IMyService>]
-                                  public partial class MyServiceClient;
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
                               }
                               """;
 
@@ -133,8 +136,9 @@ public class RpcServiceClientGeneratorTests
                                       Result<MyData> GetData(GetDataRequest request);
                                   }
 
-                                  [HttpServiceClient<IMyService>]
-                                  public partial class MyServiceClient;
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
                               }
                               """;
 
@@ -161,8 +165,9 @@ public class RpcServiceClientGeneratorTests
                                       MyData GetData(GetDataRequest request);
                                   }
 
-                                  [HttpServiceClient<IMyService>]
-                                  public partial class MyServiceClient;
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  public partial class MyServiceClient : IHttpRpcClient<IMyServiceClient>;
                               }
                               """;
 
@@ -177,9 +182,7 @@ public class RpcServiceClientGeneratorTests
     {
         var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
-        var driver = CSharpGeneratorDriver.Create(
-            new NOF.Contract.SourceGenerator.RpcServiceClientGenerator(),
-            new NOF.Hosting.SourceGenerator.RpcServiceClientGenerator());
+        var driver = CSharpGeneratorDriver.Create(new NOF.Hosting.SourceGenerator.RpcServiceClientGenerator());
 
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
 
@@ -194,5 +197,5 @@ public class RpcServiceClientGeneratorTests
     private static string GetGeneratedHttpClientCode(Microsoft.CodeAnalysis.GeneratorDriverRunResult runResult)
         => runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())
-            .Single(code => code.Contains("public partial class MyServiceClient"));
+            .Single(code => code.Contains("partial class MyServiceClient"));
 }

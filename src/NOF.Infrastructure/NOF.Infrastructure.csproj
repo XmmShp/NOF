@@ -33,7 +33,12 @@
     <ProjectReference Include="..\NOF.Abstraction\NOF.Abstraction.csproj" />
     <ProjectReference Include="..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
     <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 
+    <None Include="..\NOF.Infrastructure.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Infrastructure.SourceGenerator.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
     <None Include="..\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.dll"
           Pack="true"
           PackagePath="analyzers/dotnet/cs"

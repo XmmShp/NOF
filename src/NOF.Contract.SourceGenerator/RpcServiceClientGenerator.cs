@@ -80,7 +80,7 @@ public sealed class RpcServiceClientGenerator : IIncrementalGenerator
             sb.AppendLine("{");
         }
 
-        sb.AppendLine($"    public interface {clientName}");
+        sb.AppendLine($"    public interface {clientName} : global::NOF.Contract.IRpcClient");
         sb.AppendLine("    {");
 
         foreach (var method in methods)
