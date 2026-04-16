@@ -14,12 +14,13 @@ public sealed class MemoryCommandRider : ICommandRider
     }
 
     public async Task SendAsync(object command,
+        Type commandType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(commandType);
         var handlerInfos = _rootServiceProvider.GetService<HandlerInfos>();
-        var commandType = command.GetType();
         var handlerType = handlerInfos?.GetCommandHandlers(commandType).FirstOrDefault()
             ?? throw new InvalidOperationException(
                 $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");

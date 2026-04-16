@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
@@ -19,7 +19,7 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 
     public override async Task<Result> HandleAsync(RemoveConfigFileRequest request, CancellationToken cancellationToken)
     {
-                var id = ConfigNodeId.Of(request.NodeId);
+        var id = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>().FindAsync([id], cancellationToken);
 
         if (node is null)

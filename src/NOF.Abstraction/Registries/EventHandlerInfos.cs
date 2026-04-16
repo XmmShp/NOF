@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace NOF.Abstraction;
 
 /// <summary>
@@ -45,30 +43,11 @@ public sealed class EventHandlerInfos
         }
     }
 
-    public IReadOnlyList<Type> GetHandlerTypes([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
+    public IReadOnlyList<Type> GetHandlerTypes(Type eventType)
     {
-        ArgumentNullException.ThrowIfNull(runtimeType);
+        ArgumentNullException.ThrowIfNull(eventType);
         EnsureInitialized();
-
-        var result = new List<Type>();
-        var seenHandlerTypes = new HashSet<Type>();
-        foreach (var dispatchType in EnumerateDispatchTypes(runtimeType))
-        {
-            if (!_eventByMessage.TryGetValue(dispatchType, out var handlers))
-            {
-                continue;
-            }
-
-            foreach (var handlerType in handlers)
-            {
-                if (seenHandlerTypes.Add(handlerType))
-                {
-                    result.Add(handlerType);
-                }
-            }
-        }
-
-        return result;
+        return _eventByMessage.TryGetValue(eventType, out var handlers) ? handlers : Array.Empty<Type>();
     }
 
     private void EnsureInitialized()
@@ -115,34 +94,5 @@ public sealed class EventHandlerInfos
         {
             throw new InvalidOperationException("EventHandlerInfos is frozen after its first read.");
         }
-    }
-
-    private static IEnumerable<Type> EnumerateDispatchTypes([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
-    {
-        if (runtimeType == typeof(object))
-        {
-            yield return typeof(object);
-            yield break;
-        }
-
-        for (var current = runtimeType; current is not null && current != typeof(object); current = current.BaseType)
-        {
-            yield return current;
-        }
-
-        foreach (var interfaceType in EnumerateInterfacesMostSpecificFirst(runtimeType))
-        {
-            yield return interfaceType;
-        }
-
-        yield return typeof(object);
-    }
-
-    private static IEnumerable<Type> EnumerateInterfacesMostSpecificFirst([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
-    {
-        var interfaces = runtimeType.GetInterfaces();
-        return interfaces
-            .OrderBy(interfaceType => interfaces.Count(other => other != interfaceType && interfaceType.IsAssignableFrom(other)))
-            .ThenBy(interfaceType => interfaceType.FullName, StringComparer.Ordinal);
     }
 }

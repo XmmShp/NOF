@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
-using NOF.Hosting;
 using NOF.Contract;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 

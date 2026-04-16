@@ -13,21 +13,31 @@ public sealed class MemoryNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(object notification,
+        Type[] notificationTypes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
+        ArgumentNullException.ThrowIfNull(notificationTypes);
         await using var scope = _rootServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope();
         var infos = scope.ServiceProvider.GetRequiredService<HandlerInfos>();
-        var handlerTypes = infos.GetNotificationHandlers(notification.GetType());
-        foreach (var handlerType in handlerTypes)
+        var seenHandlerTypes = new HashSet<Type>();
+        foreach (var notificationType in notificationTypes)
         {
-            await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
-                _rootServiceProvider,
-                notification,
-                handlerType,
-                headers,
-                cancellationToken).ConfigureAwait(false);
+            foreach (var handlerType in infos.GetNotificationHandlers(notificationType))
+            {
+                if (!seenHandlerTypes.Add(handlerType))
+                {
+                    continue;
+                }
+
+                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
+                    _rootServiceProvider,
+                    notification,
+                    handlerType,
+                    headers,
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ namespace NOF.Abstraction.Tests;
 public class EventHandlerInfosTests
 {
     [Fact]
-    public void GetHandlerTypes_ShouldPreferMostSpecificAndDeDupeHandlers()
+    public void GetHandlerTypes_ShouldReturnOnlyLiteralRegistrations()
     {
         var infos = new EventHandlerInfos();
         infos.Add(new EventHandlerRegistration(typeof(MultiHandler), typeof(object)));
@@ -14,9 +14,9 @@ public class EventHandlerInfosTests
 
         var handlers = infos.GetHandlerTypes(typeof(MyEvent));
 
-        Assert.Contains(typeof(InterfaceHandler), handlers);
         Assert.Contains(typeof(MultiHandler), handlers);
         Assert.Single(handlers, static handler => handler == typeof(MultiHandler));
+        Assert.DoesNotContain(typeof(InterfaceHandler), handlers);
     }
 
     [Fact]

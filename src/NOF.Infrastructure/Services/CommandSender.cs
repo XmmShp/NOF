@@ -32,9 +32,10 @@ public sealed class CommandSender : ICommandSender
         _objectSerializer = objectSerializer;
     }
 
-    public void DeferSend(object command)
+    public void DeferSend(object command, Type commandType)
     {
         ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(commandType);
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (var kvp in _executionContext)
@@ -43,22 +44,25 @@ public sealed class CommandSender : ICommandSender
         }
 
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
-        var typeName = TypeRegistry.Register(command.GetType());
+        var payloadTypeName = TypeRegistry.Register(command.GetType());
+        var dispatchTypeNames = JsonSerializer.Serialize(new[] { TypeRegistry.Register(commandType) });
 
         _outboxRepository.Add(new NOFOutboxMessage
         {
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Command,
-            PayloadType = typeName,
+            PayloadType = payloadTypeName,
+            DispatchTypes = dispatchTypeNames,
             Payload = _objectSerializer.Serialize(command).ToArray(),
             Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
             ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });
     }
 
-    public async Task SendAsync(object command, CancellationToken cancellationToken = default)
+    public async Task SendAsync(object command, Type commandType, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(commandType);
         var context = new CommandOutboundContext
         {
             Message = command,
@@ -67,7 +71,7 @@ public sealed class CommandSender : ICommandSender
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, context.Headers, ct).ConfigureAwait(false);
+            await _rider.SendAsync(command, commandType, context.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 }

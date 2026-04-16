@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
@@ -21,7 +21,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 
     public override async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
     {
-                var nodeId = ConfigNodeId.Of(request.NodeId);
+        var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>().FindAsync([nodeId], cancellationToken);
 
         if (node is null)

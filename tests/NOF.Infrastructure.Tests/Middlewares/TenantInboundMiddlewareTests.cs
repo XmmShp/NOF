@@ -48,14 +48,14 @@ public class TenantInboundMiddlewareTests
         Assert.Equal("tenant-a", executionContext.TenantId);
     }
 
-    private static InboundContext CreateContext()
+    private static CommandInboundContext CreateContext()
     {
-        return new InboundContext
+        return new CommandInboundContext
         {
             Message = new object(),
             Services = new ServiceCollection().BuildServiceProvider(),
             Attributes = new List<Attribute>(),
-            Metadatas = new Dictionary<string, object?> { { "HandlerType", typeof(object) } }
+            HandlerType = typeof(object)
         };
     }
 }

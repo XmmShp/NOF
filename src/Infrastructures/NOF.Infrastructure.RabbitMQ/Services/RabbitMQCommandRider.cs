@@ -20,18 +20,19 @@ public class RabbitMQCommandRider : ICommandRider
     }
 
     public async Task SendAsync(object command,
+        Type commandType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        await PublishToRabbitMQAsync(command, headers, cancellationToken);
+        ArgumentNullException.ThrowIfNull(commandType);
+        await PublishToRabbitMQAsync(command, commandType, headers, cancellationToken);
     }
 
-    private async Task PublishToRabbitMQAsync(object command, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
+    private async Task PublishToRabbitMQAsync(object command, Type commandType, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 
-        var commandType = command.GetType();
         var exchangeName = commandType.FullName ?? commandType.Name;
         var routingKey = exchangeName;
 

@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
@@ -21,7 +21,7 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
 
     public override async Task<Result<GetConfigNodeByIdResponse>> HandleAsync(GetConfigNodeByIdRequest request, CancellationToken cancellationToken)
     {
-                var nodeId = ConfigNodeId.Of(request.Id);
+        var nodeId = ConfigNodeId.Of(request.Id);
         var cacheKey = new ConfigNodeByIdCacheKey(nodeId);
 
         var cachedValue = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);

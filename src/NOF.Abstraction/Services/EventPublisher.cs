@@ -7,13 +7,24 @@ namespace NOF.Abstraction;
 /// </summary>
 public interface IEventPublisher
 {
-    Task PublishAsync(object payload, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType, CancellationToken cancellationToken);
+    Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken);
 }
 
 public static class EventPublisherExtensions
 {
     extension(IEventPublisher publisher)
     {
+        public Task PublishAsync(
+            object payload,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(publisher);
+            ArgumentNullException.ThrowIfNull(payload);
+            ArgumentNullException.ThrowIfNull(runtimeType);
+            return publisher.PublishAsync(payload, DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(runtimeType), cancellationToken);
+        }
+
         public Task PublishAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TPayload>(
         TPayload payload,
         CancellationToken cancellationToken = default)
@@ -39,20 +50,23 @@ public sealed class EventPublisher : IEventPublisher
         _eventHandlerInfos = eventHandlerInfos;
     }
 
-    public async Task PublishAsync(object payload, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType, CancellationToken cancellationToken)
+    public async Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(payload);
-        ArgumentNullException.ThrowIfNull(runtimeType);
+        ArgumentNullException.ThrowIfNull(eventTypes);
 
-        foreach (var handlerType in _eventHandlerInfos.GetHandlerTypes(runtimeType))
+        foreach (var eventType in eventTypes)
         {
-            var handler = _serviceProvider.GetService(handlerType) as InMemoryEventHandler;
-            if (handler is null)
+            foreach (var handlerType in _eventHandlerInfos.GetHandlerTypes(eventType))
             {
-                throw new InvalidOperationException($"Event handler type '{handlerType}' is not registered in the current scope.");
-            }
+                var handler = _serviceProvider.GetService(handlerType) as InMemoryEventHandler;
+                if (handler is null)
+                {
+                    throw new InvalidOperationException($"Event handler type '{handlerType}' is not registered in the current scope.");
+                }
 
-            await handler.HandleAsync(payload, cancellationToken).ConfigureAwait(false);
+                await handler.HandleAsync(payload, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 }

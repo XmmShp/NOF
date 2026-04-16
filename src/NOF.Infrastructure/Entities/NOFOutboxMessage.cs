@@ -15,6 +15,7 @@ public class NOFOutboxMessage : AggregateRoot
 
     public OutboxMessageType MessageType { get; set; }
     public string PayloadType { get; set; } = null!;
+    public string DispatchTypes { get; set; } = null!;
     public byte[] Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
     public DateTime? SentAt { get; set; }

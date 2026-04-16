@@ -64,54 +64,5 @@ public sealed class HandlerInfos
         => _commandByMessage.TryGetValue(commandType, out var list) ? list : Array.Empty<Type>();
 
     public IReadOnlyList<Type> GetNotificationHandlers(Type notificationType)
-    {
-        var result = new List<Type>();
-        var seenHandlerTypes = new HashSet<Type>();
-        foreach (var dispatchType in EnumerateDispatchTypes(notificationType))
-        {
-            if (!_notificationByMessage.TryGetValue(dispatchType, out var handlers))
-            {
-                continue;
-            }
-
-            foreach (var handlerType in handlers)
-            {
-                if (seenHandlerTypes.Add(handlerType))
-                {
-                    result.Add(handlerType);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private static IEnumerable<Type> EnumerateDispatchTypes(Type runtimeType)
-    {
-        if (runtimeType == typeof(object))
-        {
-            yield return typeof(object);
-            yield break;
-        }
-
-        for (var current = runtimeType; current is not null && current != typeof(object); current = current.BaseType)
-        {
-            yield return current;
-        }
-
-        foreach (var interfaceType in EnumerateInterfacesMostSpecificFirst(runtimeType))
-        {
-            yield return interfaceType;
-        }
-
-        yield return typeof(object);
-    }
-
-    private static IEnumerable<Type> EnumerateInterfacesMostSpecificFirst(Type runtimeType)
-    {
-        var interfaces = runtimeType.GetInterfaces();
-        return interfaces
-            .OrderBy(interfaceType => interfaces.Count(other => other != interfaceType && interfaceType.IsAssignableFrom(other)))
-            .ThenBy(interfaceType => interfaceType.FullName, StringComparer.Ordinal);
-    }
+        => _notificationByMessage.TryGetValue(notificationType, out var list) ? list : Array.Empty<Type>();
 }

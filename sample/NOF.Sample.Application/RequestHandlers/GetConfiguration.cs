@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
@@ -22,7 +22,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
 
     public override async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
     {
-                var appNameStr = request.AppName;
+        var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);
 
         // 1. Find App Node

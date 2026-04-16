@@ -230,6 +230,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
+            DispatchTypes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command,
@@ -270,6 +271,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id1,
             PayloadType = typeof(string).AssemblyQualifiedName!,
+            DispatchTypes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("a"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command
@@ -280,6 +282,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id2,
             PayloadType = typeof(string).AssemblyQualifiedName!,
+            DispatchTypes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("b"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command
@@ -316,6 +319,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
+            DispatchTypes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Notification
@@ -492,7 +496,7 @@ public class SqliteInMemoryPersistenceTests
     {
         public List<object> Events { get; } = [];
 
-        public Task PublishAsync(object payload, Type runtimeType, CancellationToken cancellationToken)
+        public Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken)
         {
             Events.Add(payload);
             return Task.CompletedTask;

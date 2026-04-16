@@ -100,6 +100,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
         var payloadType = TypeRegistry.Resolve(message.PayloadType);
+        var dispatchTypes = ResolveDispatchTypes(message);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var headers = string.IsNullOrWhiteSpace(message.Headers)
@@ -128,12 +129,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             switch (message.MessageType)
             {
                 case OutboxMessageType.Command:
-                    await commandSender.SendAsync(payload, cancellationToken);
+                    await commandSender.SendAsync(payload, dispatchTypes[0], cancellationToken);
                     _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;
                 case OutboxMessageType.Notification:
-                    await notificationPublisher.PublishAsync(payload, cancellationToken);
+                    await notificationPublisher.PublishAsync(payload, dispatchTypes, cancellationToken);
                     _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;
@@ -173,6 +174,22 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
             ActivityKind.Producer,
             parent);
+    }
+
+    private static Type[] ResolveDispatchTypes(NOFOutboxMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(message.DispatchTypes))
+        {
+            return [TypeRegistry.Resolve(message.PayloadType)];
+        }
+
+        var typeNames = JsonSerializer.Deserialize<string[]>(message.DispatchTypes);
+        if (typeNames is null || typeNames.Length == 0)
+        {
+            return [TypeRegistry.Resolve(message.PayloadType)];
+        }
+
+        return [.. typeNames.Select(TypeRegistry.Resolve)];
     }
 
     private async Task ProcessMessagesBatch(

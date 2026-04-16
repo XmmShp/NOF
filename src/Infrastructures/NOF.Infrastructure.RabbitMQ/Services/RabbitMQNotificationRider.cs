@@ -20,21 +20,13 @@ public class RabbitMQNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(object notification,
+        Type[] notificationTypes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
+        ArgumentNullException.ThrowIfNull(notificationTypes);
         await using var channel = await _connectionManager.CreateChannelAsync();
-
-        var notificationType = notification.GetType();
-        var exchangeName = notificationType.FullName ?? notificationType.Name;
-
-        await channel.ExchangeDeclareAsync(
-            exchange: exchangeName,
-            type: "fanout",
-            durable: _options.Value.Durable,
-            autoDelete: _options.Value.AutoDelete,
-            cancellationToken: cancellationToken);
 
         var properties = new BasicProperties
         {
@@ -55,12 +47,24 @@ public class RabbitMQNotificationRider : INotificationRider
 
         var body = _serializer.Serialize(notification);
 
-        await channel.BasicPublishAsync(
-            exchange: exchangeName,
-            routingKey: string.Empty,
-            basicProperties: properties,
-            body: body,
-            mandatory: false,
-            cancellationToken: cancellationToken);
+        foreach (var notificationType in notificationTypes)
+        {
+            var exchangeName = notificationType.FullName ?? notificationType.Name;
+
+            await channel.ExchangeDeclareAsync(
+                exchange: exchangeName,
+                type: "fanout",
+                durable: _options.Value.Durable,
+                autoDelete: _options.Value.AutoDelete,
+                cancellationToken: cancellationToken);
+
+            await channel.BasicPublishAsync(
+                exchange: exchangeName,
+                routingKey: string.Empty,
+                basicProperties: properties,
+                body: body,
+                mandatory: false,
+                cancellationToken: cancellationToken);
+        }
     }
 }

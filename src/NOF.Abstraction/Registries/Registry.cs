@@ -1,5 +1,5 @@
-using System.Collections.Concurrent;
 using NOF.Annotation;
+using System.Collections.Concurrent;
 
 namespace NOF.Abstraction;
 
