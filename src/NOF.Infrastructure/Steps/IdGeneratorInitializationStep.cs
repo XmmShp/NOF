@@ -11,11 +11,10 @@ namespace NOF.Infrastructure;
 /// </summary>
 public sealed class IdGeneratorInitializationStep : IApplicationInitializationStep
 {
-    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+    public Task ExecuteAsync(IHost app)
     {
         var generator = app.Services.GetRequiredService<IIdGenerator>();
         IdGenerator.SetCurrent(generator);
         return Task.CompletedTask;
     }
 }
-

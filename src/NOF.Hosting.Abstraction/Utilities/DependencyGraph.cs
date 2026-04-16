@@ -5,12 +5,13 @@ namespace NOF.Hosting;
 /// based on explicit dependencies declared via the <see cref="IAfter{TDependency}"/> and <see cref="IBefore{TDependency}"/> interfaces.
 /// This ensures nodes are executed in a valid order where dependencies run before their dependents.
 /// </summary>
-public sealed class DependencyGraph
+public sealed class DependencyGraph<T>
 {
     private readonly HashSet<DependencyNode> _nodes;
     private IReadOnlyList<DependencyNode>? _orderedNodes;
 
     private readonly Dictionary<Type, HashSet<DependencyNode>> _typeNodeMap;
+    private readonly Type _focusType = typeof(T);
 
     public DependencyGraph(IEnumerable<DependencyNode> nodes)
     {
@@ -33,8 +34,13 @@ public sealed class DependencyGraph
 
     private void IndexNode(DependencyNode node)
     {
-        foreach (var relatedType in node.AllInterfaces)
+        foreach (var relatedType in node.AllAssignableTypes)
         {
+            if (!_focusType.IsAssignableFrom(relatedType))
+            {
+                continue;
+            }
+
             if (!_typeNodeMap.TryGetValue(relatedType, out var nodes))
             {
                 nodes = [];
@@ -56,7 +62,7 @@ public sealed class DependencyGraph
 
         foreach (var node in _nodes)
         {
-            foreach (var iface in node.AllInterfaces)
+            foreach (var iface in node.AllAssignableTypes)
             {
                 if (!iface.IsGenericType)
                 {

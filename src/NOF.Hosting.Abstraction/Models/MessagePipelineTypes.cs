@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -31,7 +32,7 @@ public class MessagePipelineTypes<TMiddlewareContract>
             return;
         }
 
-        _nodes.Add(new DependencyNode(middlewareType, DependencyNode.CollectRelatedTypes<TMiddleware>()));
+        _nodes.Add(new DependencyNode(middlewareType, typeof(TMiddleware).GetAllAssignableTypes()));
     }
 
     public void Freeze()
@@ -41,7 +42,7 @@ public class MessagePipelineTypes<TMiddlewareContract>
             return;
         }
 
-        var graph = new DependencyGraph(_nodes);
+        var graph = new DependencyGraph<TMiddlewareContract>(_nodes);
         var ordered = graph.GetExecutionOrder().Select(node => (Type)node.ExtraInfo).ToList();
 
         _orderedTypes.Clear();

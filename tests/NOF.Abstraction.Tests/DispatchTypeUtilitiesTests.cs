@@ -5,9 +5,9 @@ namespace NOF.Abstraction.Tests;
 public sealed class DispatchTypeUtilitiesTests
 {
     [Fact]
-    public void GetSelfAndBaseTypesAndInterfaces_ShouldIncludeSelfBaseTypesAndInterfaces()
+    public void GetAllAssignableTypes_ShouldIncludeSelfBaseTypesAndInterfaces()
     {
-        var types = DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(typeof(DerivedMessage));
+        var types = typeof(DerivedMessage).GetAllAssignableTypes();
 
         Assert.Equal(typeof(DerivedMessage), types[0]);
         Assert.Contains(typeof(BaseMessage), types);

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using NOF.Test;
 using System.Security.Claims;

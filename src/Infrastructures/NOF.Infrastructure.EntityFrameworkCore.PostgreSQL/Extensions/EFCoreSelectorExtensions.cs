@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Hosting;
-using NOF.Infrastructure;
 
 namespace NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 

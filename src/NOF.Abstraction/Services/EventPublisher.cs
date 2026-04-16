@@ -33,7 +33,7 @@ public static class EventPublisher
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
     {
         ArgumentNullException.ThrowIfNull(runtimeType);
-        PublishEvent(payload, DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(runtimeType));
+        PublishEvent(payload, runtimeType.GetAllAssignableTypes());
     }
 
     public static void PublishEvent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TPayload>(TPayload payload)

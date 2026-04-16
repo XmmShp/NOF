@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
-using NOF.Infrastructure;
 using Npgsql;
 using System.Text.RegularExpressions;
 

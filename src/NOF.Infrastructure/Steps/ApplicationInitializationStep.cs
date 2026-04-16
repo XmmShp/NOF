@@ -5,16 +5,15 @@ namespace NOF.Infrastructure;
 
 public class ApplicationInitializationStep : IApplicationInitializationStep
 {
-    private readonly Func<IHostApplicationBuilder, IHost, Task> _configurator;
+    private readonly Func<IHost, Task> _configurator;
 
-    public ApplicationInitializationStep(Func<IHostApplicationBuilder, IHost, Task> configurator)
+    public ApplicationInitializationStep(Func<IHost, Task> configurator)
     {
         _configurator = configurator;
     }
 
-    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+    public Task ExecuteAsync(IHost app)
     {
-        return _configurator(context, app);
+        return _configurator(app);
     }
 }
-

@@ -22,7 +22,7 @@ public static class EventPublisherExtensions
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(payload);
             ArgumentNullException.ThrowIfNull(runtimeType);
-            return publisher.PublishAsync(payload, DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(runtimeType), cancellationToken);
+            return publisher.PublishAsync(payload, runtimeType.GetAllAssignableTypes(), cancellationToken);
         }
 
         public Task PublishAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TPayload>(

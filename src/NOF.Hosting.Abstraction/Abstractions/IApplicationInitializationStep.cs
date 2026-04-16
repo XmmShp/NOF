@@ -7,5 +7,5 @@ namespace NOF.Hosting;
 /// </summary>
 public interface IApplicationInitializationStep
 {
-    Task ExecuteAsync(IHostApplicationBuilder context, IHost app);
+    Task ExecuteAsync(IHost app);
 }

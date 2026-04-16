@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NOF.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -56,7 +57,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ArgumentNullException.ThrowIfNull(allInterfaces);
 
         var interfaces = allInterfaces.Length == 0
-            ? DependencyNode.CollectRelatedTypes<TStep>()
+            ? typeof(TStep).GetAllAssignableTypes()
             : allInterfaces;
         ServiceConfigs.Add(new DependencyNode(registrationStep, interfaces));
         return this;
@@ -76,7 +77,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ArgumentNullException.ThrowIfNull(allInterfaces);
 
         var interfaces = allInterfaces.Length == 0
-            ? DependencyNode.CollectRelatedTypes<TStep>()
+            ? typeof(TStep).GetAllAssignableTypes()
             : allInterfaces;
         ApplicationConfigs.Add(new DependencyNode(initializationStep, interfaces));
         return this;
@@ -100,7 +101,7 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         ConfigureContainer(new NOFServiceProviderFactory());
         AddRegistrationStep(new AutoInjectServiceRegistrationStep());
         this.AddHostingDefaults();
-        var regGraph = new DependencyGraph(ServiceConfigs);
+        var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
         foreach (var node in regGraph.GetExecutionOrder())
         {
             var task = (IServiceRegistrationStep)node.ExtraInfo;
@@ -109,11 +110,11 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
         var app = await BuildApplicationAsync();
 
-        var startGraph = new DependencyGraph(ApplicationConfigs);
+        var startGraph = new DependencyGraph<IApplicationInitializationStep>(ApplicationConfigs);
         foreach (var node in startGraph.GetExecutionOrder())
         {
             var task = (IApplicationInitializationStep)node.ExtraInfo;
-            await task.ExecuteAsync(this, app).ConfigureAwait(false);
+            await task.ExecuteAsync(app).ConfigureAwait(false);
         }
 
         return app;

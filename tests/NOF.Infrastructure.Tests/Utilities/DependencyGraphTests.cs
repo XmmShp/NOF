@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using NOF.Hosting;
 using Xunit;
 
@@ -24,7 +25,7 @@ public class DependencyGraphTests
     [Fact]
     public void Constructor_WithEmptyConfigurators_ShouldCreateEmptyGraph()
     {
-        var graph = new DependencyGraph([]);
+        var graph = new DependencyGraph<object>([]);
         Assert.Empty(graph.GetExecutionOrder());
     }
 
@@ -33,9 +34,9 @@ public class DependencyGraphTests
     {
         var taskA = new StepA();
         var taskB = new StepB();
-        var graph = new DependencyGraph([
-            new(taskB, DependencyNode.CollectRelatedTypes<StepB>()),
-            new(taskA, DependencyNode.CollectRelatedTypes<StepA>())
+        var graph = new DependencyGraph<object>([
+            new(taskB, typeof(StepB).GetAllAssignableTypes()),
+            new(taskA, typeof(StepA).GetAllAssignableTypes())
         ]);
 
         var executionOrder = graph.GetExecutionOrder().Select(n => n.ExtraInfo).ToList();
@@ -45,9 +46,9 @@ public class DependencyGraphTests
     [Fact]
     public void GetExecutionOrder_WithCircularDependency_ShouldThrowInvalidOperationException()
     {
-        var graph = new DependencyGraph([
-            new(new CircularStepA(), DependencyNode.CollectRelatedTypes<CircularStepA>()),
-            new(new CircularStepB(), DependencyNode.CollectRelatedTypes<CircularStepB>())
+        var graph = new DependencyGraph<object>([
+            new(new CircularStepA(), typeof(CircularStepA).GetAllAssignableTypes()),
+            new(new CircularStepB(), typeof(CircularStepB).GetAllAssignableTypes())
         ]);
 
         var ex = Assert.Throws<InvalidOperationException>(() => graph.GetExecutionOrder());
@@ -59,13 +60,14 @@ public class DependencyGraphTests
     {
         var taskA = new StepA();
         var taskWithMissingDep = new StepWithMissingDependency();
-        var graph = new DependencyGraph([
-            new(taskWithMissingDep, DependencyNode.CollectRelatedTypes<StepWithMissingDependency>()),
-            new(taskA, DependencyNode.CollectRelatedTypes<StepA>())
+        var graph = new DependencyGraph<object>([
+            new(taskWithMissingDep, typeof(StepWithMissingDependency).GetAllAssignableTypes()),
+            new(taskA, typeof(StepA).GetAllAssignableTypes())
         ]);
 
         var executionOrder = graph.GetExecutionOrder().Select(n => n.ExtraInfo).ToList();
         Assert.Contains(taskA, executionOrder);
         Assert.Contains(taskWithMissingDep, executionOrder);
     }
+
 }

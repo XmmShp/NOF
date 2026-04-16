@@ -8,7 +8,7 @@ namespace NOF.Hosting.AspNetCore;
 
 public class CorsInitializationStep : ISecurityInitializationStep
 {
-    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+    public Task ExecuteAsync(IHost app)
     {
         if (app is IApplicationBuilder actualApp)
         {
@@ -28,4 +28,3 @@ public class CorsInitializationStep : ISecurityInitializationStep
         return Task.CompletedTask;
     }
 }
-

@@ -11,11 +11,10 @@ namespace NOF.Infrastructure;
 /// </summary>
 public sealed class MapperInitializationStep : IApplicationInitializationStep
 {
-    public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+    public Task ExecuteAsync(IHost app)
     {
         var mapper = app.Services.GetRequiredService<IMapper>();
         Mapper.SetCurrent(mapper);
         return Task.CompletedTask;
     }
 }
-

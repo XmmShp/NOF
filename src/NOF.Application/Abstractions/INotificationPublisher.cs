@@ -30,7 +30,7 @@ public static class NotificationPublisherExtensions
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
             ArgumentNullException.ThrowIfNull(runtimeType);
-            return publisher.PublishAsync(notification, DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(runtimeType), cancellationToken);
+            return publisher.PublishAsync(notification, runtimeType.GetAllAssignableTypes(), cancellationToken);
         }
 
         public void DeferPublish<TNotification>(TNotification notification)
@@ -47,7 +47,7 @@ public static class NotificationPublisherExtensions
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
             ArgumentNullException.ThrowIfNull(runtimeType);
-            publisher.DeferPublish(notification, DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(runtimeType));
+            publisher.DeferPublish(notification, runtimeType.GetAllAssignableTypes());
         }
 
         public Task PublishAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification, CancellationToken cancellationToken = default)

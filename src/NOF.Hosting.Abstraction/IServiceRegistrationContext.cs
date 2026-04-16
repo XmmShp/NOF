@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using NOF.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -20,7 +21,7 @@ public static partial class NOFHostingExtensions
     {
         public IServiceRegistrationContext AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
             where TStep : IApplicationInitializationStep
-            => context.AddInitializationStep(initializationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
+            => context.AddInitializationStep(initializationStep, [.. typeof(TStep).GetAllAssignableTypes()]);
 
         public IServiceRegistrationContext RemoveInitializationStep<T>() where T : IApplicationInitializationStep
             => context.RemoveInitializationStep(t => t is T);
@@ -49,7 +50,7 @@ public static partial class NOFHostingExtensions
 
         public IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
             where TStep : IApplicationInitializationStep
-            => context.TryAddInitializationStep(initializationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
+            => context.TryAddInitializationStep(initializationStep, [.. typeof(TStep).GetAllAssignableTypes()]);
 
         public IServiceRegistrationContext TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] T>() where T : IApplicationInitializationStep, new()
             => context.TryAddInitializationStep(new T());

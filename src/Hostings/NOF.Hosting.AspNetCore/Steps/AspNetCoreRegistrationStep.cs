@@ -41,7 +41,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
 
     private class HealthCheckInitializationStep : IBusinessLogicInitializationStep
     {
-        public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+        public Task ExecuteAsync(IHost app)
         {
             if (app is IEndpointRouteBuilder rt)
             {
@@ -58,7 +58,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
 
     private class RpcServiceEndpointInitializationStep : IEndpointInitializationStep
     {
-        public Task ExecuteAsync(IHostApplicationBuilder context, IHost app)
+        public Task ExecuteAsync(IHost app)
         {
             if (app is IEndpointRouteBuilder endpointRouteBuilder)
             {

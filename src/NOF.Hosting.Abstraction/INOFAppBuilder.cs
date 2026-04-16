@@ -1,4 +1,5 @@
 using NOF.Annotation;
+using NOF.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -35,7 +36,7 @@ public static partial class NOFHostingExtensions
 
         public INOFAppBuilder AddRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep registrationStep)
             where TStep : IServiceRegistrationStep
-            => builder.AddRegistrationStep(registrationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
+            => builder.AddRegistrationStep(registrationStep, [.. typeof(TStep).GetAllAssignableTypes()]);
 
         public INOFAppBuilder RemoveRegistrationStep<T>() where T : IServiceRegistrationStep
             => builder.RemoveRegistrationStep(t => t is T);
@@ -64,14 +65,14 @@ public static partial class NOFHostingExtensions
 
         public INOFAppBuilder TryAddRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep registrationStep)
             where TStep : IServiceRegistrationStep
-            => builder.TryAddRegistrationStep(registrationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
+            => builder.TryAddRegistrationStep(registrationStep, [.. typeof(TStep).GetAllAssignableTypes()]);
 
         public INOFAppBuilder TryAddRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] T>() where T : IServiceRegistrationStep, new()
             => builder.TryAddRegistrationStep(new T());
 
         public INOFAppBuilder AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep)
             where TStep : IApplicationInitializationStep
-            => builder.AddInitializationStep(initializationStep, [.. DependencyNode.CollectRelatedTypes<TStep>()]);
+            => builder.AddInitializationStep(initializationStep, [.. typeof(TStep).GetAllAssignableTypes()]);
 
         public INOFAppBuilder RemoveInitializationStep<T>() where T : IApplicationInitializationStep
             => builder.RemoveInitializationStep(t => t is T);
