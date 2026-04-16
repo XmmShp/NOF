@@ -1,4 +1,3 @@
-using NOF.Domain;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -7,7 +6,7 @@ namespace NOF.Application;
 /// State machine context entity containing the correlation and current state.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class NOFStateMachineContext : AggregateRoot, ICloneable
+public sealed class NOFStateMachineContext : ICloneable
 {
     /// <summary>
     /// The correlation ID that identifies the state machine instance.

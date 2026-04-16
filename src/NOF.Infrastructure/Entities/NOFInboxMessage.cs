@@ -1,11 +1,9 @@
-using NOF.Domain;
-
 namespace NOF.Infrastructure;
 
 /// <summary>
 /// Inbox message entity used for tracking reliably processed messages.
 /// </summary>
-public class NOFInboxMessage : AggregateRoot
+public class NOFInboxMessage
 {
     /// <summary>
     /// The unique message identifier.

@@ -106,6 +106,8 @@ public class NOFDbContext : DbContext
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
+
+
     private void ApplyTenantRules()
     {
         if (CurrentTenantMode != TenantMode.SharedDatabase)

@@ -1,8 +1,9 @@
+using NOF.Abstraction;
 using NOF.Domain;
 
 namespace NOF.Sample;
 
-public class ConfigNode : AggregateRoot
+public class ConfigNode
 {
     public ConfigNodeId Id { get; init; }
     public ConfigNodeId? ParentId { get; private set; }
@@ -22,14 +23,14 @@ public class ConfigNode : AggregateRoot
             ParentId = parentId
         };
 
-        node.AddEvent(new ConfigNodeCreatedEvent(node.Id, node.Name, node.ParentId));
+        new ConfigNodeCreatedEvent(node.Id, node.Name, node.ParentId).PublishAsEvent();
         return node;
     }
 
     public void SetActiveFileName(ConfigFileName? fileName)
     {
         ActiveFileName = fileName;
-        AddEvent(new ConfigNodeUpdatedEvent(Id, Name, ParentId));
+        new ConfigNodeUpdatedEvent(Id, Name, ParentId).PublishAsEvent();
     }
 
     public void AddOrUpdateConfigFile(ConfigFileName name, ConfigContent content)
@@ -44,7 +45,7 @@ public class ConfigNode : AggregateRoot
             ConfigFiles.Mut.Add(new ConfigFile(name, content));
         }
 
-        AddEvent(new ConfigNodeUpdatedEvent(Id, Name, ParentId));
+        new ConfigNodeUpdatedEvent(Id, Name, ParentId).PublishAsEvent();
     }
 
     public void RemoveConfigFile(ConfigFileName name)
@@ -57,13 +58,13 @@ public class ConfigNode : AggregateRoot
             {
                 ActiveFileName = null;
             }
-            AddEvent(new ConfigNodeUpdatedEvent(Id, Name, ParentId));
+            new ConfigNodeUpdatedEvent(Id, Name, ParentId).PublishAsEvent();
         }
     }
 
     public void MarkAsDeleted()
     {
-        AddEvent(new ConfigNodeDeletedEvent(Id, ParentId));
+        new ConfigNodeDeletedEvent(Id, ParentId).PublishAsEvent();
     }
 
     public void UpdateParent(ConfigNodeId? newParentId)
@@ -76,7 +77,6 @@ public class ConfigNode : AggregateRoot
         }
 
         ParentId = newParentId;
-        AddEvent(new ConfigNodeParentUpdatedEvent(Id, oldParentId, newParentId));
+        new ConfigNodeParentUpdatedEvent(Id, oldParentId, newParentId).PublishAsEvent();
     }
 }
-

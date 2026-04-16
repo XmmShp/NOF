@@ -1,11 +1,9 @@
-using NOF.Domain;
-
 namespace NOF.Infrastructure;
 
 /// <summary>
 /// Tenant aggregate root.
 /// </summary>
-public class NOFTenant : AggregateRoot
+public class NOFTenant
 {
     /// <summary>
     /// The tenant identifier.

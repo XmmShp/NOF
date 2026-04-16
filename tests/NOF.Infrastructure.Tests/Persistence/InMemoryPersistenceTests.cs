@@ -32,7 +32,7 @@ public class SqliteInMemoryPersistenceTests
             .AutoMigrate()
             .UseSqliteInMemory($"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        using var services = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
             ValidateScopes = true
@@ -62,7 +62,7 @@ public class SqliteInMemoryPersistenceTests
         builder.AddInfrastructureDefaults();
         builder.AddMemoryInfrastructure();
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        using var services = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
             ValidateScopes = true
@@ -177,7 +177,7 @@ public class SqliteInMemoryPersistenceTests
 
         var changeCount = await db.SaveChangesAsync();
         Assert.Equal(1, changeCount);
-        Assert.Empty(order.Events);
+        Assert.Single(scope.ServiceProvider.GetRequiredService<TestEventPublisher>().Events);
     }
 
     [Fact]
@@ -397,6 +397,7 @@ public class SqliteInMemoryPersistenceTests
         var changeCount = await db.SaveChangesAsync();
 
         Assert.Equal(0, changeCount);
+        Assert.Single(scope.ServiceProvider.GetRequiredService<TestEventPublisher>().Events);
     }
 
     [Fact]
@@ -420,7 +421,7 @@ public class SqliteInMemoryPersistenceTests
 
         Assert.Equal(0, changeCount);
         Assert.Equal("before", stored!.Number);
-        Assert.Empty(publisher.Events);
+        Assert.Single(publisher.Events);
     }
 
     [Fact]
@@ -448,25 +449,25 @@ public class SqliteInMemoryPersistenceTests
         }
     }
 
-    private static ServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.SingleTenant)
+    private static NOFServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.SingleTenant)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
         builder.Services.AddSingleton<TestEventPublisher>();
-        builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
         builder.Services.AddSingleton<HandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
         builder.AddMemoryInfrastructure<TestDbContext>(tenantMode, $"nof-tests-{Guid.NewGuid():N}");
+        builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
 
         if (outboxOptions is not null)
         {
             builder.Services.ReplaceOrAddSingleton(Options.Create(outboxOptions));
         }
 
-        var provider = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        var provider = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
             ValidateScopes = true
@@ -478,7 +479,7 @@ public class SqliteInMemoryPersistenceTests
         return provider;
     }
 
-    private static void EnsureCreated(ServiceProvider provider, string tenantId)
+    private static void EnsureCreated(IServiceProvider provider, string tenantId)
     {
         using var scope = provider.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = tenantId;
@@ -505,7 +506,7 @@ public class SqliteInMemoryPersistenceTests
 
     private sealed record TestEvent(string Name);
 
-    private sealed class TestOrder : AggregateRoot, ICloneable
+    private sealed class TestOrder : ICloneable
     {
         public long Id { get; init; }
 
@@ -515,7 +516,7 @@ public class SqliteInMemoryPersistenceTests
             => new() { Id = id, Number = number };
 
         public void Raise(object @event)
-            => AddEvent(@event);
+            => @event.PublishAsEvent();
 
         public object Clone()
             => Create(Id, Number);

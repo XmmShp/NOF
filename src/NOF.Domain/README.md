@@ -4,14 +4,14 @@ Domain layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Provides the foundational building blocks for domain-driven design: entities, aggregate roots, repositories, aggregate event collection, and domain-specific annotations with source generation support.
+Provides the foundational building blocks for domain-driven design: entities, repositories, in-memory event publishing, and domain-specific annotations with source generation support.
 
 ## Key Abstractions
 
-### Entities & Aggregate Roots
+### Entities & Events
 
 ```csharp
-public class Order : AggregateRoot
+public class Order
 {
     public Guid Id { get; private set; }
     public OrderStatus Status { get; private set; }
@@ -19,17 +19,17 @@ public class Order : AggregateRoot
     public void Confirm()
     {
         Status = OrderStatus.Confirmed;
-        AddEvent(new OrderConfirmedEvent(Id));
+        new OrderConfirmedEvent(Id).PublishAsEvent();
     }
 }
 ```
 
-`AggregateRoot.Events` now stores NOF scoped in-memory events declared in `NOF.Abstraction`. Domain models can still raise events, but the event mechanism itself is no longer domain-specific.
+Domain models no longer need to inherit from `AggregateRoot`. Events are published via the ambient `IEventPublisher` (AsyncLocal-backed) exposed through `NOF.Abstraction`.
 
 ### Repository
 
 ```csharp
-public interface IRepository<TAggregateRoot> where TAggregateRoot : class, IAggregateRoot
+public interface IRepository<TAggregateRoot> where TAggregateRoot : class
 {
     ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken = default);
     void Add(TAggregateRoot entity);

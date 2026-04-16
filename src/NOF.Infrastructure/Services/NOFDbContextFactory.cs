@@ -67,7 +67,6 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         _dbContextConfigurator.Configure(optionsBuilder, tenantId, _tenantOptions.Mode);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
-        optionsBuilder.AddInterceptors(ActivatorUtilities.CreateInstance<DomainEventsSaveChangesInterceptor>(_serviceProvider));
 
         var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);
 

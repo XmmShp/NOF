@@ -1,4 +1,3 @@
-using NOF.Domain;
 using System.ComponentModel;
 
 namespace NOF.Infrastructure;
@@ -7,7 +6,7 @@ namespace NOF.Infrastructure;
 /// Outbox message entity used for adding messages in transactional context and reading by background services.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public class NOFOutboxMessage : AggregateRoot
+public class NOFOutboxMessage
 {
     public Guid Id { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

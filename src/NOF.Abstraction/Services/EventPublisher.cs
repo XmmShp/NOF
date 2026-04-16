@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 
 namespace NOF.Abstraction;
 
@@ -41,6 +42,8 @@ public static class EventPublisherExtensions
 /// </summary>
 public sealed class EventPublisher : IEventPublisher
 {
+    private static readonly AsyncLocal<IEventPublisher?> _currentPublisher = new();
+
     private readonly IServiceProvider _serviceProvider;
     private readonly EventHandlerInfos _eventHandlerInfos;
 
@@ -48,6 +51,39 @@ public sealed class EventPublisher : IEventPublisher
     {
         _serviceProvider = serviceProvider;
         _eventHandlerInfos = eventHandlerInfos;
+    }
+
+    public static IDisposable PushCurrent(IEventPublisher publisher)
+    {
+        ArgumentNullException.ThrowIfNull(publisher);
+
+        var previous = _currentPublisher.Value;
+        _currentPublisher.Value = publisher;
+        return new AmbientPublisherScope(previous);
+    }
+
+    public static void PublishEvent(object payload, Type[] eventTypes)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(eventTypes);
+
+        var publisher = _currentPublisher.Value
+            ?? throw new InvalidOperationException("No ambient IEventPublisher is available for the current async flow.");
+        publisher.PublishAsync(payload, eventTypes, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+
+    public static void PublishEvent(
+        object payload,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeType);
+        PublishEvent(payload, DispatchTypeUtilities.GetSelfAndBaseTypesAndInterfaces(runtimeType));
+    }
+
+    public static void PublishEvent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TPayload>(TPayload payload)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        PublishEvent(payload, typeof(TPayload));
     }
 
     public async Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken)
@@ -67,6 +103,28 @@ public sealed class EventPublisher : IEventPublisher
 
                 await handler.HandleAsync(payload, cancellationToken).ConfigureAwait(false);
             }
+        }
+    }
+
+    private sealed class AmbientPublisherScope : IDisposable
+    {
+        private readonly IEventPublisher? _previousPublisher;
+        private bool _disposed;
+
+        public AmbientPublisherScope(IEventPublisher? previousPublisher)
+        {
+            _previousPublisher = previousPublisher;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _currentPublisher.Value = _previousPublisher;
+            _disposed = true;
         }
     }
 }
