@@ -215,22 +215,6 @@ public static partial class NOFHostingExtensions
             });
         }
 
-        public IServiceCollection AddCommandOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-            where TMiddleware : class, ICommandOutboundMiddleware
-        {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<CommandOutboundPipelineTypes>().Add<TMiddleware>();
-            return services;
-        }
-
-        public IServiceCollection AddNotificationOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-            where TMiddleware : class, INotificationOutboundMiddleware
-        {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<NotificationOutboundPipelineTypes>().Add<TMiddleware>();
-            return services;
-        }
-
         public IServiceCollection AddRequestOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, IRequestOutboundMiddleware
         {

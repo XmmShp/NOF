@@ -4,8 +4,7 @@ using NOF.Abstraction;
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
 /// <summary>Propagates JWT tokens to outbound RPC requests.</summary>
-public sealed class JwtTokenPropagationOutboundMiddleware : IRequestOutboundMiddleware,
-    IAfter<MessageIdOutboundMiddleware>
+public sealed class JwtTokenPropagationOutboundMiddleware : IRequestOutboundMiddleware
 {
     private readonly IUserContext _userContext;
     private readonly JwtTokenPropagationOptions _options;

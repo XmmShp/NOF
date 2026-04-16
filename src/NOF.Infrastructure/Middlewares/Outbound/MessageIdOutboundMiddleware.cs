@@ -1,8 +1,10 @@
 using NOF.Abstraction;
+using NOF.Hosting;
 
-namespace NOF.Hosting;
+namespace NOF.Infrastructure;
 
-public sealed class MessageIdOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
+public sealed class MessageIdOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware
+    , IRequestOutboundMiddleware
 {
     public ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {

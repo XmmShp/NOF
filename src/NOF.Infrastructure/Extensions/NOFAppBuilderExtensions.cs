@@ -27,9 +27,13 @@ public static partial class NOFInfrastructureExtensions
             }
 
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
+            builder.Services.TryAddSingleton<CommandOutboundPipelineTypes>();
+            builder.Services.TryAddSingleton<NotificationOutboundPipelineTypes>();
             builder.Services.TryAddSingleton<CommandInboundPipelineTypes>();
             builder.Services.TryAddSingleton<NotificationInboundPipelineTypes>();
             builder.Services.TryAddSingleton<RequestInboundPipelineTypes>();
+            builder.Services.TryAddSingleton<ICommandOutboundPipelineExecutor, CommandOutboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<INotificationOutboundPipelineExecutor, NotificationOutboundPipelineExecutor>();
             builder.Services.TryAddSingleton<ICommandInboundPipelineExecutor, CommandInboundPipelineExecutor>();
             builder.Services.TryAddSingleton<INotificationInboundPipelineExecutor, NotificationInboundPipelineExecutor>();
             builder.Services.TryAddSingleton<IRequestInboundPipelineExecutor, RequestInboundPipelineExecutor>();
@@ -47,6 +51,12 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddCommandOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<MessageIdOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<TracingOutboundMiddleware>();
 
             builder.Services.AddCommandInboundMiddleware<InboundExceptionMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<InboundExceptionMiddleware>();

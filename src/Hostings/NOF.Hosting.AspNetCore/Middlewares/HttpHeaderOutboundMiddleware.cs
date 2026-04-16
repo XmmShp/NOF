@@ -4,9 +4,8 @@ namespace NOF.Hosting.AspNetCore;
 
 /// <summary>
 /// Request outbound middleware that populates outbound headers from the current HTTP request.
-/// Runs before <see cref="TracingOutboundMiddleware"/> so later middleware can override framework headers.
 /// </summary>
-public sealed class HttpHeaderOutboundMiddleware : IRequestOutboundMiddleware, IBefore<TracingOutboundMiddleware>
+public sealed class HttpHeaderOutboundMiddleware : IRequestOutboundMiddleware
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 

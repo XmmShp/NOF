@@ -1,7 +1,8 @@
 using NOF.Abstraction;
+using NOF.Hosting;
 using System.Diagnostics;
 
-namespace NOF.Hosting;
+namespace NOF.Infrastructure;
 
 public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
 {
