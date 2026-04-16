@@ -22,8 +22,8 @@ public static class RpcServerInvoker
             throw new InvalidOperationException($"RPC server is not registered for '{typeof(TRpcService).FullName}'.");
         }
 
-        var server = rootServiceProvider.GetRequiredService(serverType) as IRpcServer
-            ?? throw new InvalidOperationException($"Resolved RPC server '{serverType.FullName}' does not implement IRpcServer.");
+        var server = rootServiceProvider.GetRequiredService(serverType) as RpcServer
+            ?? throw new InvalidOperationException($"Resolved RPC server '{serverType.FullName}' does not inherit RpcServer.");
 
         if (!server.TryGetHandlerType(operationName, out var handlerType))
         {

@@ -3,16 +3,10 @@ using System.ComponentModel;
 namespace NOF.Application;
 
 /// <summary>
-/// Base type for message handlers. Not intended for direct use.
-/// </summary>
-[EditorBrowsable(EditorBrowsableState.Never)]
-public abstract class MessageHandler;
-
-/// <summary>
 /// Non-generic base type for command handlers. Not intended for direct use.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public abstract class CommandHandler : MessageHandler
+public abstract class CommandHandler
 {
     public abstract Task HandleAsync(object command, CancellationToken cancellationToken);
 }

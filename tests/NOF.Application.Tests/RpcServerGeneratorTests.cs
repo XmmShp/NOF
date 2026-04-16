@@ -29,11 +29,14 @@ public class RpcServerGeneratorTests
             {
                 public record PingRequest(string Value);
                 public record GetRequest(int Id);
+                public record ArchiveRequest(int Id);
+                public record MyDto(string Value);
 
                 public partial interface IMyService : IRpcService
                 {
                     Result Ping(PingRequest request);
-                    Result<string> Get(GetRequest request);
+                    MyDto Get(GetRequest request);
+                    Empty Archive(ArchiveRequest request);
                 }
 
                 public partial class MyService : RpcServer<IMyService>;
@@ -44,14 +47,17 @@ public class RpcServerGeneratorTests
             typeof(RpcServer<>),
             typeof(RpcHandler<,>),
             typeof(AutoInjectAttribute),
+            typeof(Empty),
             typeof(IRpcService),
             typeof(Result));
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         Assert.Contains("protected override global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Type> GetHandlerMappings()", generatedCode);
         Assert.Contains("public abstract class Ping : global::NOF.Application.RpcHandler<global::App.PingRequest, global::NOF.Contract.Result>", generatedCode);
-        Assert.Contains("public abstract class Get : global::NOF.Application.RpcHandler<global::App.GetRequest, global::NOF.Contract.Result<string>>", generatedCode);
+        Assert.Contains("public abstract class Get : global::NOF.Application.RpcHandler<global::App.GetRequest, global::NOF.Contract.Result<global::App.MyDto>>", generatedCode);
+        Assert.Contains("public abstract class Archive : global::NOF.Application.RpcHandler<global::App.ArchiveRequest, global::NOF.Contract.Result>", generatedCode);
         Assert.Contains("[\"Ping\"] = typeof(Ping)", generatedCode);
         Assert.Contains("[\"Get\"] = typeof(Get)", generatedCode);
+        Assert.Contains("[\"Archive\"] = typeof(Archive)", generatedCode);
     }
 }

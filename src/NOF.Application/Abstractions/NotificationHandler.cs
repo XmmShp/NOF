@@ -6,7 +6,7 @@ namespace NOF.Application;
 /// Non-generic base type for notification handlers. Not intended for direct use.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public abstract class NotificationHandler : MessageHandler
+public abstract class NotificationHandler
 {
     public abstract Task HandleAsync(object notification, CancellationToken cancellationToken);
 }

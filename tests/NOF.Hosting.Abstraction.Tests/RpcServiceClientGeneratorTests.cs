@@ -1,6 +1,9 @@
+using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
+using NOF.Contract.SourceGenerator;
 using NOF.Hosting;
 using NOF.Hosting.SourceGenerator;
+using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -13,8 +16,12 @@ public class RpcServiceClientGeneratorTests
         typeof(HttpServiceClientAttribute<>),
         typeof(IRpcService),
         typeof(HttpVerb),
+        typeof(Empty),
         typeof(Result),
-        typeof(Result<>)
+        typeof(Result<>),
+        typeof(System.Text.Json.JsonSerializerOptions),
+        typeof(System.Net.Http.Json.JsonContent),
+        typeof(System.Net.Http.Json.HttpContentJsonExtensions)
     ];
 
     [Fact]
@@ -38,11 +45,9 @@ public class RpcServiceClientGeneratorTests
                               }
                               """;
 
-        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        Assert.Single(runResult.GeneratedTrees);
-
-        var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
-        Assert.DoesNotContain(": global::MyApp.IMyService", code);
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
+        Assert.Contains(": global::MyApp.IMyServiceClient", code);
         Assert.Contains("CreateUserAsync", code);
         Assert.Contains("HttpMethod.Post", code);
         Assert.DoesNotContain("global::NOF.Application.IExecutionContext", code);
@@ -69,8 +74,8 @@ public class RpcServiceClientGeneratorTests
                               }
                               """;
 
-        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
         Assert.Contains("HttpMethod.Post", code);
         Assert.Contains("var endpoint = \"Internal\";", code);
     }
@@ -101,8 +106,8 @@ public class RpcServiceClientGeneratorTests
                               }
                               """;
 
-        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
 
         Assert.Contains("global::System.Uri.EscapeDataString(request.Id.ToString()!)", code);
         Assert.Contains("Dictionary<string, object?>", code);
@@ -133,11 +138,61 @@ public class RpcServiceClientGeneratorTests
                               }
                               """;
 
-        var runResult = new RpcServiceClientGenerator().GetResult(source, _extraRefs);
-        Assert.Single(runResult.GeneratedTrees);
-
-        var code = runResult.GeneratedTrees[0].GetRoot().ToFullString();
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
         Assert.Contains("Message = request,", code);
         Assert.Contains("GetDataAsync", code);
     }
+
+    [Fact]
+    public void BareReturnType_IsNormalizedToResultOfT()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Hosting;
+                              namespace MyApp
+                              {
+                                  public record MyData(string Value);
+                                  public record GetDataRequest(string Key);
+
+                                  public partial interface IMyService : IRpcService
+                                  {
+                                      [HttpEndpoint(HttpVerb.Get, "/api/data")]
+                                      MyData GetData(GetDataRequest request);
+                                  }
+
+                                  [HttpServiceClient<IMyService>]
+                                  public partial class MyServiceClient;
+                              }
+                              """;
+
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
+
+        Assert.Contains("Task<global::NOF.Contract.Result<global::MyApp.MyData>> GetDataAsync", code);
+        Assert.Contains("ReadFromJsonAsync<global::NOF.Contract.Result<global::MyApp.MyData>>", code);
+    }
+
+    private static Microsoft.CodeAnalysis.GeneratorDriverRunResult RunGenerators(string source)
+    {
+        var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
+        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
+        var driver = CSharpGeneratorDriver.Create(
+            new NOF.Contract.SourceGenerator.RpcServiceClientGenerator(),
+            new NOF.Hosting.SourceGenerator.RpcServiceClientGenerator());
+
+        driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
+
+        var diagnostics = outputCompilation.GetDiagnostics()
+            .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .ToList();
+        Assert.Empty(diagnostics);
+
+        return driver.GetRunResult();
+    }
+
+    private static string GetGeneratedHttpClientCode(Microsoft.CodeAnalysis.GeneratorDriverRunResult runResult)
+        => runResult.GeneratedTrees
+            .Select(tree => tree.GetRoot().ToFullString())
+            .Single(code => code.Contains("public partial class MyServiceClient"));
 }

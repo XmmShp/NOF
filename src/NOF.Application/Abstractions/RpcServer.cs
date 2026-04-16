@@ -6,9 +6,11 @@ namespace NOF.Application;
 /// <summary>
 /// Base type for source-generated RPC server containers.
 /// </summary>
-public abstract class RpcServer : IRpcServer
+public abstract class RpcServer
 {
-    /// <inheritdoc />
+    /// <summary>
+    /// Gets the RPC contract type handled by this server.
+    /// </summary>
     public abstract Type ServiceType { get; }
 
     /// <summary>
@@ -16,7 +18,9 @@ public abstract class RpcServer : IRpcServer
     /// </summary>
     protected abstract IReadOnlyDictionary<string, Type> GetHandlerMappings();
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Tries to resolve the split handler base type for one operation.
+    /// </summary>
     public bool TryGetHandlerType(string operationName, out Type handlerType)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);

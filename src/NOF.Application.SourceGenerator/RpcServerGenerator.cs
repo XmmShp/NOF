@@ -95,7 +95,7 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var responseType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var responseType = GetNormalizedResponseType(method.ReturnType);
             var requestTypeName = requestType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             sb.AppendLine($"    public abstract class {method.Name} : global::NOF.Application.RpcHandler<{requestTypeName}, {responseType}>");
@@ -112,6 +112,23 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
         }
 
         context.AddSource($"{classSymbol.ToDisplayString().Replace('.', '_')}.RpcServer.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+    }
+
+    private static string GetNormalizedResponseType(ITypeSymbol returnType)
+    {
+        var returnTypeDisplay = returnType.ToDisplayString();
+        if (returnTypeDisplay is "NOF.Contract.Empty" or "NOF.Contract.Result")
+        {
+            return "global::NOF.Contract.Result";
+        }
+
+        if (returnType is INamedTypeSymbol { IsGenericType: true } namedType
+            && namedType.OriginalDefinition.ToDisplayString() == "NOF.Contract.Result<T>")
+        {
+            return returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        return $"global::NOF.Contract.Result<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
     }
 
 }

@@ -76,7 +76,13 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {targetNamespace}");
         sb.AppendLine("{");
 
-        sb.AppendLine($"    public partial class {targetClass.Name}");
+        var clientInterfaceName = RpcServiceHelpers.GetClientInterfaceName(iface.Name);
+        var clientInterfaceNamespace = RpcServiceHelpers.GetFullNamespace(iface.ContainingNamespace);
+        var fullyQualifiedClientInterfaceName = string.IsNullOrWhiteSpace(clientInterfaceNamespace)
+            ? clientInterfaceName
+            : $"{clientInterfaceNamespace}.{clientInterfaceName}";
+
+        sb.AppendLine($"    public partial class {targetClass.Name} : global::{fullyQualifiedClientInterfaceName}");
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
         sb.AppendLine("        private readonly global::NOF.Hosting.IRequestOutboundPipelineExecutor _outboundPipeline;");
@@ -169,8 +175,8 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
 
     private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint)
     {
-        var responseType = endpoint.ReturnInfo.ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var returnType = $"global::System.Threading.Tasks.Task<{responseType}>";
+        var responseType = endpoint.ReturnInfo.NormalizedResultTypeDisplay;
+        var returnType = endpoint.ReturnInfo.ClientTaskReturnTypeDisplay;
         var methodName = method.Method.Name + "Async";
         var httpMethod = GetHttpMethod(endpoint.Method);
         var isBodyMethod = IsBodyMethod(endpoint.Method);
