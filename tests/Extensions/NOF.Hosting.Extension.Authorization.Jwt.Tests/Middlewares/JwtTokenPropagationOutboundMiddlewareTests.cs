@@ -14,9 +14,8 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     public async Task InvokeAsync_WithJwtPrincipal_ShouldWriteAuthorizationHeader()
     {
         var userContext = new FakeUserContext();
-        userContext.User = new JwtClaimsPrincipal(
-            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "jwt")),
-            token: "jwt-token");
+        var token = CreateUnsignedToken();
+        userContext.User = JwtClaimsPrincipal.FromToken(token);
 
         var middleware = new JwtTokenPropagationOutboundMiddleware(
             userContext,
@@ -30,8 +29,22 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
         Assert.True(called);
-        Assert.Equal("Bearer jwt-token",
+        Assert.Equal("Bearer " + token,
         outboundContext.Headers[NOFAbstractionConstants.Transport.Headers.Authorization]);
+    }
+
+    private static string CreateUnsignedToken()
+    {
+        // Untrusted token used only to populate JwtClaimsPrincipal without validation.
+        var header = Base64UrlEncode("""{"alg":"none","typ":"JWT"}""");
+        var payload = Base64UrlEncode("""{"sub":"user-1"}""");
+        return header + "." + payload + ".";
+    }
+
+    private static string Base64UrlEncode(string value)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(value);
+        return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
     [Fact]

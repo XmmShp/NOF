@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Application;
+using System.Security.Cryptography;
 using Xunit;
 using ExecutionContext = NOF.Application.ExecutionContext;
 
@@ -14,9 +15,9 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     public async Task InvokeAsync_WhenAuthorizationHeaderMissing_ShouldContinueWithoutValidation()
     {
         var userContext = new UserContext();
-        var jwksProvider = new FakeJwksProvider([]);
+        var jwksService = CreateCachedJwksService([]);
         var executionContext = new ExecutionContext();
-        var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
+        var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
         await middleware.InvokeAsync(CreateInboundContext(), _ =>
@@ -25,7 +26,6 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
         Assert.True(nextCalled);
-        Assert.Equal(0, jwksProvider.CallCount);
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
     }
@@ -34,12 +34,12 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     public async Task InvokeAsync_WhenKeysUnavailable_ShouldContinueAndKeepHeader()
     {
         var userContext = new UserContext();
-        var jwksProvider = new FakeJwksProvider([]);
+        var jwksService = CreateCachedJwksService([]);
         var executionContext = new ExecutionContext
         {
             [NOFAbstractionConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
         };
-        var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
+        var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
         await middleware.InvokeAsync(CreateInboundContext(), _ =>
@@ -48,7 +48,6 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
         Assert.True(nextCalled);
-        Assert.Equal(1, jwksProvider.CallCount);
         Assert.True(executionContext.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
@@ -58,19 +57,19 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     public async Task InvokeAsync_WhenTokenInvalid_ShouldContinueWithoutThrowing()
     {
         var userContext = new UserContext();
-        var jwksProvider = new FakeJwksProvider([new JsonWebKey
+        using var rsa = RSA.Create(2048);
+        var key = new ManagedSigningKey
         {
             Kid = "kid-1",
-            Kty = "RSA",
-            Use = "sig",
-            N = "abc",
-            E = "AQAB"
-        }]);
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        var jwksService = CreateCachedJwksService([key]);
         var executionContext = new ExecutionContext
         {
             [NOFAbstractionConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
         };
-        var middleware = CreateMiddleware(userContext, jwksProvider, executionContext);
+        var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
         var act = async () => await middleware.InvokeAsync(CreateInboundContext(), _ =>
@@ -87,12 +86,12 @@ public sealed class JwtResourceServerInboundMiddlewareTests
 
     private static JwtResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        IJwksProvider jwksProvider,
+        CachedJwksService jwksService,
         IExecutionContext executionContext)
     {
         return new JwtResourceServerInboundMiddleware(
             userContext,
-            jwksProvider,
+            jwksService,
             Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
             {
                 HeaderName = NOFAbstractionConstants.Transport.Headers.Authorization,
@@ -102,6 +101,13 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             }),
             NullLogger<JwtResourceServerInboundMiddleware>.Instance,
             executionContext);
+    }
+
+    private static CachedJwksService CreateCachedJwksService(IReadOnlyList<ManagedSigningKey> keys)
+    {
+        var signingKeyService = new FakeSigningKeyService(keys);
+        var rootProvider = new FakeServiceProvider(typeof(ISigningKeyService), signingKeyService);
+        return new CachedJwksService(new FakeServiceScopeFactory(rootProvider), rootProvider);
     }
 
     private static RequestInboundContext CreateInboundContext()
@@ -116,19 +122,33 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         };
     }
 
-    private sealed class FakeJwksProvider(IReadOnlyCollection<SecurityKey> keys) : IJwksProvider
+    private sealed class FakeSigningKeyService(IReadOnlyList<ManagedSigningKey> keys) : ISigningKeyService
     {
-        public int CallCount { get; private set; }
+        public ManagedSigningKey CurrentSigningKey => keys.FirstOrDefault() ?? throw new InvalidOperationException("No signing keys configured.");
 
-        public Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
+        public IReadOnlyList<ManagedSigningKey> AllKeys => keys;
+
+        public void RotateKey()
         {
-            CallCount++;
-            return Task.FromResult((IReadOnlyList<SecurityKey>)keys.ToList());
         }
+    }
 
-        public Task<IReadOnlyList<SecurityKey>> RefreshAsync(CancellationToken cancellationToken = default)
+    private sealed class FakeServiceProvider(Type serviceType, object? service) : IServiceProvider
+    {
+        public object? GetService(Type requestedType) => requestedType == serviceType ? service : null;
+    }
+
+    private sealed class FakeServiceScopeFactory(IServiceProvider serviceProvider) : IServiceScopeFactory
+    {
+        public IServiceScope CreateScope() => new FakeServiceScope(serviceProvider);
+    }
+
+    private sealed class FakeServiceScope(IServiceProvider serviceProvider) : IServiceScope
+    {
+        public IServiceProvider ServiceProvider => serviceProvider;
+
+        public void Dispose()
         {
-            return GetSecurityKeysAsync(cancellationToken);
         }
     }
 }

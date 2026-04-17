@@ -1,15 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Contract.Extension.Authorization.Jwt;
 using System.Security.Cryptography;
-using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>
-/// Caches JWKS signing keys locally and refreshes them through <see cref="HttpJwksService"/>.
+/// Maintains a local cache of JWKS keys and refreshes them from the configured authority when needed.
 /// </summary>
-public sealed class JwksProvider(IServiceScopeFactory serviceScopeFactory, IServiceProvider serviceProvider) : IJwksProvider, IDisposable
+public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, IServiceProvider serviceProvider) : IDisposable
 {
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly ISigningKeyService? _signingKeyService = serviceProvider.GetService<ISigningKeyService>();
@@ -37,10 +35,10 @@ public sealed class JwksProvider(IServiceScopeFactory serviceScopeFactory, IServ
             }
 
             using var scope = serviceScopeFactory.CreateScope();
-            var jwksService = scope.ServiceProvider.GetRequiredService<IJwksServiceClient>();
-            var result = await jwksService.GetJwksAsync(new GetJwksRequest());
+            var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
+            var document = await jwksService.GetJwksAsync(cancellationToken);
 
-            if (result.IsSuccess && result.Value?.Keys is { Length: > 0 } jwkKeys)
+            if (document.Keys is { Length: > 0 } jwkKeys)
             {
                 _cachedKeys = ToSecurityKeys(jwkKeys);
             }
@@ -105,3 +103,4 @@ public sealed class JwksProvider(IServiceScopeFactory serviceScopeFactory, IServ
         _refreshLock.Dispose();
     }
 }
+

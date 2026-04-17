@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using NOF.Hosting.Maui;
+using NOF.Sample.Maui.Services;
 
 namespace NOF.Sample.Maui;
 
@@ -19,7 +20,8 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddAntDesign();
-        builder.Services.AddScoped<UI.Services.HttpNOFSampleService>();
+        builder.Services.AddScoped<MauiHttpNOFSampleService>();
+        builder.Services.AddScoped<INOFSampleServiceClient>(sp => sp.GetRequiredService<MauiHttpNOFSampleService>());
         builder.AddJwtTokenPropagation();
         builder.Services.AddScoped(_ => new HttpClient
         {

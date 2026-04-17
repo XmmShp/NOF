@@ -1,4 +1,3 @@
-using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
@@ -13,47 +12,6 @@ namespace NOF.Hosting.Extension.Authorization.Jwt.Tests.HttpClients;
 
 public sealed class JwtHttpClientTests
 {
-    [Fact]
-    public async Task GetJwksAsync_ShouldUseConfiguredEndpoint_PropagateHeaders_AndSetPipelineResponse()
-    {
-        var expected = Result.Success(new JwksDocument
-        {
-            Keys =
-            [
-                new JsonWebKey
-                {
-                    Kid = "kid-1",
-                    Kty = "RSA",
-                    Use = "sig",
-                    N = "abc",
-                    E = "AQAB"
-                }
-            ]
-        });
-
-        var handler = new CaptureHttpMessageHandler((_, _) => CreateJsonResponse(expected));
-        var httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://auth.local")
-        };
-
-        var pipeline = new CapturingOutboundPipelineExecutor();
-        var service = new HttpJwksService(httpClient, pipeline, new SimpleServiceProvider());
-
-        var result = await service.GetJwksAsync(new GetJwksRequest());
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.Single(result.Value!.Keys, k => k.Kid == "kid-1");
-        Assert.NotNull(handler.LastRequest);
-        Assert.Equal(HttpMethod.Get, handler.LastRequest!.Method);
-        Assert.Equal(JwtAuthorizationEndpoints.Jwks, handler.LastRequest.PathAndQuery);
-        Assert.True(handler.LastRequest.Headers.ContainsKey("X-Tenant"));
-        Assert.Single(handler.LastRequest.Headers["X-Tenant"]);
-        Assert.Equal("tenanta", handler.LastRequest.Headers["X-Tenant"][0]);
-        Assert.NotNull(pipeline.LastContext);
-        Assert.IsAssignableFrom<Result<JwksDocument>>(pipeline.LastContext!.Response);
-    }
-
     [Fact]
     public async Task GenerateJwtTokenAsync_ShouldPostExpectedPayload_AndReturnResult()
     {
@@ -97,7 +55,7 @@ public sealed class JwtHttpClientTests
         Assert.Equal("access-token", result.Value!.TokenPair.AccessToken);
         Assert.NotNull(handler.LastRequest);
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
-        Assert.Equal(JwtAuthorizationEndpoints.Token, handler.LastRequest.PathAndQuery);
+        Assert.Equal("/connect/token", handler.LastRequest.PathAndQuery);
         Assert.True(handler.LastRequest.Headers.ContainsKey("Authorization"));
 
         var payload = JsonSerializer.Deserialize<GenerateJwtTokenRequest>(handler.LastRequest.Body!, JsonSerializerOptions.NOF);
@@ -119,41 +77,6 @@ public sealed class JwtHttpClientTests
                 Encoding.UTF8,
                 new MediaTypeHeaderValue("application/json"))
         };
-    }
-
-    private sealed class CapturingOutboundPipelineExecutor : IRequestOutboundPipelineExecutor
-    {
-        private readonly IReadOnlyDictionary<string, string?> _headers;
-
-        public CapturingOutboundPipelineExecutor()
-            : this(new Dictionary<string, string?>
-            {
-                ["X-Tenant"] = "tenanta",
-                ["X-Trace"] = "trace-a"
-            })
-        {
-        }
-
-        public CapturingOutboundPipelineExecutor(IReadOnlyDictionary<string, string?> headers)
-        {
-            _headers = headers;
-        }
-
-        public RequestOutboundContext? LastContext { get; private set; }
-
-        public async ValueTask ExecuteAsync(
-            RequestOutboundContext context,
-            HandlerDelegate dispatch,
-            CancellationToken cancellationToken)
-        {
-            foreach (var (key, value) in _headers)
-            {
-                context.Headers[key] = value;
-            }
-
-            LastContext = context;
-            await dispatch(cancellationToken);
-        }
     }
 
     private sealed class CaptureHttpMessageHandler(
@@ -183,6 +106,32 @@ public sealed class JwtHttpClientTests
         public required string PathAndQuery { get; init; }
         public required Dictionary<string, string[]> Headers { get; init; }
         public string? Body { get; init; }
+    }
+
+    private sealed class CapturingOutboundPipelineExecutor : IRequestOutboundPipelineExecutor
+    {
+        private readonly IReadOnlyDictionary<string, string?> _headers;
+
+        public CapturingOutboundPipelineExecutor(IReadOnlyDictionary<string, string?> headers)
+        {
+            _headers = headers;
+        }
+
+        public RequestOutboundContext? LastContext { get; private set; }
+
+        public async ValueTask ExecuteAsync(
+            RequestOutboundContext context,
+            HandlerDelegate dispatch,
+            CancellationToken cancellationToken)
+        {
+            foreach (var (key, value) in _headers)
+            {
+                context.Headers[key] = value;
+            }
+
+            LastContext = context;
+            await dispatch(cancellationToken);
+        }
     }
 
     private sealed class SimpleServiceProvider : IServiceProvider

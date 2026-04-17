@@ -1,5 +1,5 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Abstraction;
-using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.EventHandlers;
 
@@ -8,15 +8,34 @@ namespace NOF.Sample.Application.EventHandlers;
 /// </summary>
 public class UpdateChildNodeOnConfigNodeParentUpdated : InMemoryEventHandler<ConfigNodeParentUpdatedEvent>
 {
-    private readonly IConfigNodeChildrenRepository _childrenRepository;
+    private readonly DbContext _dbContext;
 
-    public UpdateChildNodeOnConfigNodeParentUpdated(IConfigNodeChildrenRepository childrenRepository)
+    public UpdateChildNodeOnConfigNodeParentUpdated(DbContext dbContext)
     {
-        _childrenRepository = childrenRepository;
+        _dbContext = dbContext;
     }
 
     public override async Task HandleAsync(ConfigNodeParentUpdatedEvent @event, CancellationToken cancellationToken)
     {
-        await _childrenRepository.UpdateChildNodeParentAsync(@event.NodeId, @event.OldParentId, @event.NewParentId, cancellationToken);
+        if (@event.OldParentId.HasValue)
+        {
+            var oldParentChildren = await _dbContext.Set<Entities.ConfigNodeChildren>()
+                .FirstOrDefaultAsync(c => c.NodeId == @event.OldParentId.Value, cancellationToken);
+            oldParentChildren?.RemoveChild(@event.NodeId);
+        }
+
+        if (@event.NewParentId.HasValue)
+        {
+            var newParentChildren = await _dbContext.Set<Entities.ConfigNodeChildren>()
+                .FirstOrDefaultAsync(c => c.NodeId == @event.NewParentId.Value, cancellationToken);
+
+            if (newParentChildren is null)
+            {
+                newParentChildren = Entities.ConfigNodeChildren.Create(@event.NewParentId.Value);
+                _dbContext.Set<Entities.ConfigNodeChildren>().Add(newParentChildren);
+            }
+
+            newParentChildren.AddChild(@event.NodeId);
+        }
     }
 }

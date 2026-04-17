@@ -2,23 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
-using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
 {
     private readonly DbContext _dbContext;
-    private readonly IConfigNodeChildrenRepository _childrenRepository;
     private readonly ICacheService _cache;
 
     public DeleteConfigNode(
         DbContext dbContext,
-        IConfigNodeChildrenRepository childrenRepository,
         ICacheService cache)
     {
         _dbContext = dbContext;
-        _childrenRepository = childrenRepository;
         _cache = cache;
     }
 
@@ -32,7 +28,10 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         }
 
         // 检查是否有子节点
-        var hasChildren = await _childrenRepository.HasChildrenAsync(id, cancellationToken);
+        var children = await _dbContext.Set<Entities.ConfigNodeChildren>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.NodeId == id, cancellationToken);
+        var hasChildren = children?.HasChildren() ?? false;
         if (hasChildren)
         {
             return Result.Fail("400", "Cannot delete node with children.");

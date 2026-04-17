@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
@@ -12,12 +13,18 @@ public sealed class JwtClaimsPrincipal : ClaimsPrincipal
     /// </summary>
     public string Token { get; }
 
-    /// <summary>
-    /// Creates a JWT claims principal from an existing principal and the raw token.
-    /// </summary>
-    public JwtClaimsPrincipal(ClaimsPrincipal principal, string token)
-        : base(principal)
+    private JwtClaimsPrincipal(ClaimsIdentity identity, string token)
+        : base(identity)
     {
         Token = token;
+    }
+
+    public static JwtClaimsPrincipal FromToken(string token)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        var identity = new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
+        return new JwtClaimsPrincipal(identity, token);
     }
 }

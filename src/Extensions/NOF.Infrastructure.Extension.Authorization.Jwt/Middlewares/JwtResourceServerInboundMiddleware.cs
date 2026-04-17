@@ -14,7 +14,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
     IBefore<TenantInboundMiddleware>
 {
     private readonly IUserContext _userContext;
-    private readonly IJwksProvider _jwksProvider;
+    private readonly CachedJwksService _jwksService;
     private readonly JwtResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<JwtResourceServerInboundMiddleware> _logger;
@@ -22,13 +22,13 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
     public JwtResourceServerInboundMiddleware(
         IUserContext userContext,
-        IJwksProvider jwksProvider,
+        CachedJwksService jwksService,
         IOptions<JwtResourceServerOptions> jwtOptions,
         ILogger<JwtResourceServerInboundMiddleware> logger,
         IExecutionContext executionContext)
     {
         _userContext = userContext;
-        _jwksProvider = jwksProvider;
+        _jwksService = jwksService;
         _jwtOptions = jwtOptions.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
         _logger = logger;
@@ -56,7 +56,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
         try
         {
-            var keys = await _jwksProvider.GetSecurityKeysAsync(cancellationToken);
+            var keys = await _jwksService.GetSecurityKeysAsync(cancellationToken);
             if (keys.Count == 0)
             {
                 _logger.LogDebug("No JWKS keys available for JWT validation");
@@ -75,8 +75,8 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
                 ClockSkew = TimeSpan.FromSeconds(30)
             };
 
-            var principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
-            _userContext.User = new JwtClaimsPrincipal(principal, token);
+            _ = _tokenHandler.ValidateToken(token, validationParameters, out _);
+            _userContext.User = JwtClaimsPrincipal.FromToken(token);
             _executionContext.Remove(_jwtOptions.HeaderName);
         }
         catch (SecurityTokenExpiredException)

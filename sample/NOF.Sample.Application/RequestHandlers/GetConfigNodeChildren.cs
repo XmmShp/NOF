@@ -1,21 +1,24 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Contract;
-using NOF.Sample.Application.Repositories;
+using NOF.Sample.Application.Entities;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
 {
-    private readonly IConfigNodeChildrenRepository _childrenRepository;
+    private readonly DbContext _dbContext;
 
-    public GetConfigNodeChildren(IConfigNodeChildrenRepository childrenRepository)
+    public GetConfigNodeChildren(DbContext dbContext)
     {
-        _childrenRepository = childrenRepository;
+        _dbContext = dbContext;
     }
 
     public override async Task<Result<GetConfigNodeChildrenResponse>> HandleAsync(GetConfigNodeChildrenRequest request, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.Id);
-        var children = await _childrenRepository.GetChildrenAsync(nodeId, cancellationToken);
+        var children = await _dbContext.Set<ConfigNodeChildren>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.NodeId == nodeId, cancellationToken);
 
         if (children is null)
         {
@@ -29,7 +32,6 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
         };
     }
 }
-
 
 
 

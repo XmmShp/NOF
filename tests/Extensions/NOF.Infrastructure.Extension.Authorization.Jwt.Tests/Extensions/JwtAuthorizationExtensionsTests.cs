@@ -16,30 +16,25 @@ public sealed class JwtAuthorizationExtensionsTests
     }
 
     [Fact]
-    public void AddJwksRequestHandler_ShouldReturnSameSelector()
-    {
-        var builder = NOFTestAppBuilder.Create();
-        var selector = new JwtAuthoritySelector(builder);
-
-        var chained = selector.AddJwksRequestHandler();
-
-        Assert.Same(builder, chained.Builder);
-    }
-
-    [Fact]
     public async Task AddJwtAuthority_WithIssuerOverload_ShouldRegisterAuthorityServices()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddJwtAuthority("https://issuer.local");
+        builder.AddJwtAuthority(options =>
+        {
+            options.Issuer = "https://issuer.local";
+        });
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
         Assert.NotNull(
         scope.GetRequiredService<JwtAuthorityService>());
         Assert.NotNull(
-        scope.GetRequiredService<JwksService>());
+        scope.GetRequiredService<IJwksService>());
         Assert.NotNull(
         scope.GetRequiredService<ISigningKeyService>());
+        Assert.NotNull(
+        scope.GetRequiredService<CachedJwksService>());
+        Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
         Assert.Equal("https://issuer.local",
         scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value.Issuer);
     }
@@ -69,7 +64,8 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.Equal("Token",
         propagationOptions.TokenType);
         Assert.NotNull(
-        scope.GetRequiredService<IJwksProvider>());
+        scope.GetRequiredService<CachedJwksService>());
         Assert.IsType<HttpJwksService>(scope.GetRequiredService<HttpJwksService>());
+        Assert.IsType<HttpJwksService>(scope.GetRequiredService<IJwksService>());
     }
 }

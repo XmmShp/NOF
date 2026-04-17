@@ -15,7 +15,7 @@ public interface IJwtAuthorityService : IRpcService
     [Summary("Issue JWT token pair")]
     [Description("Issues a JWT access token and refresh token for the requested principal.")]
     [Category("JWT Authority")]
-    [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Token)]
+    [HttpEndpoint(HttpVerb.Post, "connect/token")]
     Result<GenerateJwtTokenResponse> GenerateJwtToken(GenerateJwtTokenRequest request);
 
     /// <summary>
@@ -26,7 +26,7 @@ public interface IJwtAuthorityService : IRpcService
     [Summary("Introspect refresh token")]
     [Description("Validates a refresh token and returns its subject claims if it is still valid.")]
     [Category("JWT Authority")]
-    [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Introspect)]
+    [HttpEndpoint(HttpVerb.Post, "connect/introspect")]
     Result<ValidateJwtRefreshTokenResponse> ValidateJwtRefreshToken(ValidateJwtRefreshTokenRequest request);
 
     /// <summary>
@@ -37,6 +37,6 @@ public interface IJwtAuthorityService : IRpcService
     [Summary("Revoke refresh token")]
     [Description("Revokes a refresh token so that subsequent validation attempts fail.")]
     [Category("JWT Authority")]
-    [HttpEndpoint(HttpVerb.Post, JwtAuthorizationEndpoints.Revocation)]
+    [HttpEndpoint(HttpVerb.Post, "connect/revocation")]
     Result RevokeJwtRefreshToken(RevokeJwtRefreshTokenRequest request);
 }

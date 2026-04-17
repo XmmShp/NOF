@@ -1,4 +1,7 @@
+using NOF.Hosting;
+
 namespace NOF.Sample.UI.Services;
 
-[Hosting.HttpRpcClient<INOFSampleServiceClient>]
+[HttpRpcClient<INOFSampleServiceClient>]
 public partial class HttpNOFSampleService;
+

@@ -112,10 +112,13 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();
 
-            builder.UseDbContext<NOFDbContext>()
+            if (builder.Services.FirstOrDefault(d => d.ServiceType == typeof(INOFDbContextFactory)) is null)
+            {
+                builder.UseDbContext<NOFDbContext>()
                 .WithConnectionString("Data Source=nof-sqlite-memory-{tenantId};Mode=Memory;Cache=Shared")
                 .WithTenantMode(TenantMode.DatabasePerTenant)
                 .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
+            }
             #endregion
 
             return builder;

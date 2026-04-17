@@ -1,5 +1,5 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Abstraction;
-using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.EventHandlers;
 
@@ -8,15 +8,28 @@ namespace NOF.Sample.Application.EventHandlers;
 /// </summary>
 public class RemoveChildNodeOnConfigNodeDeleted : InMemoryEventHandler<ConfigNodeDeletedEvent>
 {
-    private readonly IConfigNodeChildrenRepository _childrenRepository;
+    private readonly DbContext _dbContext;
 
-    public RemoveChildNodeOnConfigNodeDeleted(IConfigNodeChildrenRepository childrenRepository)
+    public RemoveChildNodeOnConfigNodeDeleted(DbContext dbContext)
     {
-        _childrenRepository = childrenRepository;
+        _dbContext = dbContext;
     }
 
     public override async Task HandleAsync(ConfigNodeDeletedEvent @event, CancellationToken cancellationToken)
     {
-        await _childrenRepository.RemoveChildNodeAsync(@event.Id, @event.ParentId, cancellationToken);
+        if (@event.ParentId.HasValue)
+        {
+            var parentChildren = await _dbContext.Set<Entities.ConfigNodeChildren>()
+                .FirstOrDefaultAsync(c => c.NodeId == @event.ParentId.Value, cancellationToken);
+            parentChildren?.RemoveChild(@event.Id);
+        }
+
+        var nodeChildren = await _dbContext.Set<Entities.ConfigNodeChildren>()
+            .FirstOrDefaultAsync(c => c.NodeId == @event.Id, cancellationToken);
+
+        if (nodeChildren is not null)
+        {
+            _dbContext.Set<Entities.ConfigNodeChildren>().Remove(nodeChildren);
+        }
     }
 }

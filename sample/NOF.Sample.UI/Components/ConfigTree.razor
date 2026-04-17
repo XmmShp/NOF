@@ -1,5 +1,5 @@
 @inject IMessageService Message
-@inject HttpNOFSampleService NOFService
+@inject INOFSampleServiceClient NOFService
 
 <Tree TItem="TreeNodeData" DataSource="@_treeData" TitleExpression="@(node => node.DataItem.Title)"
       KeyExpression="@(node => node.DataItem.Key)" IsLeafExpression="@(node => node.DataItem.IsLeaf)"
