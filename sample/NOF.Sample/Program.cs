@@ -34,8 +34,9 @@ builder.AddJwtResourceServer(o =>
 
 builder.AddRabbitMQ();
 
+builder.UseSharedDatabaseTenancy();
+
 builder.AddEFCore<ConfigurationDbContext>()
-    .UseSharedDatabaseTenancy()
     .AutoMigrate()
     .UsePostgreSQL();
 

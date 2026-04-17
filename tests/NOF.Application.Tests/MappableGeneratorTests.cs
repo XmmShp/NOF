@@ -117,8 +117,8 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("typeof(global::Test.Order), typeof(global::Test.OrderDto)", code);
-        Assert.Contains("typeof(global::Test.OrderDto), typeof(global::Test.Order)", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.Order, global::Test.OrderDto>", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.OrderDto, global::Test.Order>", code);
     }
 
     // -----------------------------------------------------------------------
@@ -213,7 +213,7 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("typeof(global::Test.Order), typeof(global::Test.OrderDto)", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.Order, global::Test.OrderDto>", code);
     }
 
     // -----------------------------------------------------------------------
@@ -244,8 +244,8 @@ public class MappableGeneratorTests
         Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("typeof(global::Test.A), typeof(global::Test.B)", code);
-        Assert.Contains("typeof(global::Test.A), typeof(global::Test.C)", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.A, global::Test.B>", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.A, global::Test.C>", code);
         // One method
         Assert.Contains("MapperAssemblyInitializer", code);
     }
@@ -1002,10 +1002,10 @@ public class MappableGeneratorTests
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
         // Forward: OrderName 閳?string (unwrap)
-        Assert.Contains("typeof(global::Test.Order), typeof(global::Test.OrderDto)", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.Order, global::Test.OrderDto>", code);
         Assert.Contains("(string)src.Name)", code);
         // Reverse: string 閳?OrderName (wrap)
-        Assert.Contains("typeof(global::Test.OrderDto), typeof(global::Test.Order)", code);
+        Assert.Contains("MapperRegistration.Of<global::Test.OrderDto, global::Test.Order>", code);
         Assert.Contains("OrderName.Of(src.Name)", code);
     }
 

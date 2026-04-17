@@ -22,15 +22,14 @@ public static class NOFInfrastructureMemoryExtensions
             builder.Services.ReplaceOrAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.ReplaceOrAddSingleton<INotificationRider, MemoryNotificationRider>();
 
-            var selector = builder.AddEFCore<TDbContext>();
-            selector = tenantMode switch
+            _ = tenantMode switch
             {
-                TenantMode.SharedDatabase => selector.UseSharedDatabaseTenancy(),
-                TenantMode.DatabasePerTenant => selector.UseDatabasePerTenant(),
-                _ => selector.UseSingleTenant()
+                TenantMode.SharedDatabase => builder.UseSharedDatabaseTenancy(),
+                TenantMode.DatabasePerTenant => builder.UseDatabasePerTenant(),
+                _ => builder.UseSingleTenant()
             };
 
-            selector
+            builder.AddEFCore<TDbContext>()
                 .AutoMigrate()
                 .UseSqliteInMemory(databaseName);
             return builder;

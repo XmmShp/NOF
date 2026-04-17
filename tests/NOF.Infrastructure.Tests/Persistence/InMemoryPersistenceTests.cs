@@ -28,8 +28,8 @@ public class SqliteInMemoryPersistenceTests
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
         builder.AddMemoryInfrastructure();
+        builder.UseSingleTenant();
         builder.AddEFCore()
-            .UseSingleTenant()
             .AutoMigrate()
             .UseSqliteInMemory($"nof-tests-{Guid.NewGuid():N}");
 

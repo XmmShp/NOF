@@ -29,9 +29,4 @@ public class CacheServiceOptions
     /// The renewal interval is calculated as: expiration * factor. Default is 0.5.
     /// </summary>
     public double LockRenewalIntervalFactor { get; set; } = 0.5;
-
-    /// <summary>
-    /// Gets or sets additional custom properties for implementation-specific configurations.
-    /// </summary>
-    public IDictionary<string, object?> Properties { get; set; } = new Dictionary<string, object?>();
 }

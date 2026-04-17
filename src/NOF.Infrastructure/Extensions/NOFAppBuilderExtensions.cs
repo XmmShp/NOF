@@ -91,6 +91,10 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
+        /// <summary>
+        /// Configures application-wide single-tenant mode.
+        /// The configured tenant id is used by both storage and cache isolation.
+        /// </summary>
         public INOFAppBuilder UseSingleTenant(string? tenantId = null)
         {
             builder.Services.Configure<TenantOptions>(options =>
@@ -101,6 +105,9 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
+        /// <summary>
+        /// Configures application-wide multi-tenant mode with shared storage and tenant-aware cache isolation.
+        /// </summary>
         public INOFAppBuilder UseSharedDatabaseTenancy()
         {
             builder.Services.Configure<TenantOptions>(options =>
@@ -110,6 +117,9 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
+        /// <summary>
+        /// Configures application-wide multi-tenant mode with database-per-tenant storage and tenant-aware cache isolation.
+        /// </summary>
         public INOFAppBuilder UseDatabasePerTenant(string? tenantDatabaseNameFormat = null)
         {
             builder.Services.Configure<TenantOptions>(options =>
