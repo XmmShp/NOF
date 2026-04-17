@@ -12,9 +12,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly InboundMessageDispatcher _dispatcher;
     private readonly CommandHandlerInfos? _commandHandlerInfos;
     private readonly NotificationHandlerInfos? _notificationHandlerInfos;
+    private readonly InboxMessageStore _inboxMessageStore;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly List<IChannel> _channels = [];
     private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
@@ -23,16 +23,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     public RabbitMQConsumerHostedService(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        InboundMessageDispatcher dispatcher,
         CommandHandlerInfos? commandHandlerInfos,
         NotificationHandlerInfos? notificationHandlerInfos,
+        InboxMessageStore inboxMessageStore,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _dispatcher = dispatcher;
         _commandHandlerInfos = commandHandlerInfos;
         _notificationHandlerInfos = notificationHandlerInfos;
+        _inboxMessageStore = inboxMessageStore;
         _logger = logger;
     }
 
@@ -208,19 +208,35 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
             if (_notificationHandlerTypes.TryGetValue(queueName, out var notificationHandlerType))
             {
-                await _dispatcher.DispatchNotificationToHandlerAsync(
+                var messageId = ResolveMessageId(headers);
+                await _inboxMessageStore.EnqueueAsync(
+                    messageId,
+                    InboxMessageType.Notification,
                     payload,
                     messageTypeName,
-                    notificationHandlerType,
+                    TypeRegistry.Register(notificationHandlerType),
                     headers,
                     CancellationToken.None);
             }
             else
             {
-                await _dispatcher.DispatchCommandAsync(
+                if (_commandHandlerInfos is null)
+                {
+                    throw new InvalidOperationException("Command handler infos are not available.");
+                }
+
+                var commandType = TypeRegistry.Resolve(queueName);
+                var handlerType = _commandHandlerInfos.GetHandlers(commandType).FirstOrDefault()
+                    ?? throw new InvalidOperationException(
+                        $"Cannot route command '{commandType.Name}'. No matching handler registered.");
+
+                var messageId = ResolveMessageId(headers);
+                await _inboxMessageStore.EnqueueAsync(
+                    messageId,
+                    InboxMessageType.Command,
                     payload,
                     messageTypeName,
-                    queueName,
+                    TypeRegistry.Register(handlerType),
                     headers,
                     CancellationToken.None);
             }
@@ -243,6 +259,18 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
     private static string GetMessageExchangeName(Type messageType)
         => messageType.DisplayName;
+
+    private static Guid ResolveMessageId(Dictionary<string, string?>? headers)
+    {
+        if (headers is not null
+            && headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var value)
+            && Guid.TryParse(value, out var messageId))
+        {
+            return messageId;
+        }
+
+        return Guid.NewGuid();
+    }
 
     public void Dispose()
     {

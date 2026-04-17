@@ -20,6 +20,7 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
         foreach (var info in commandInfos.Registrations)
         {
             TypeRegistry.Register(info.CommandType);
+            TypeRegistry.Register(info.HandlerType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
@@ -31,6 +32,7 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
         foreach (var info in notificationInfos.Registrations)
         {
             TypeRegistry.Register(info.NotificationType);
+            TypeRegistry.Register(info.HandlerType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace NOF.Infrastructure;
 
@@ -12,14 +13,15 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<InboxCleanupBackgroundService> _logger;
-    private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(1);
-    private readonly TimeSpan _retentionPeriod = TimeSpan.FromDays(7);
+    private readonly TransactionalMessageProcessorOptions _options;
 
     public InboxCleanupBackgroundService(
         IServiceProvider serviceProvider,
+        IOptions<TransactionalMessageOptions> options,
         ILogger<InboxCleanupBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
+        _options = options.Value.Inbox;
         _logger = logger;
     }
 
@@ -27,13 +29,13 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     {
         _logger.LogInformation(
             "Inbox cleanup service started. Cleanup interval: {Interval}, Retention period: {Retention}",
-            _cleanupInterval, _retentionPeriod);
+            _options.CleanupInterval, _options.RetentionPeriod);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(_cleanupInterval, stoppingToken);
+                await Task.Delay(_options.CleanupInterval, stoppingToken);
                 await CleanupInboxAsync(stoppingToken);
             }
             catch (OperationCanceledException)
@@ -53,9 +55,10 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
-        var olderThan = DateTime.UtcNow - _retentionPeriod;
+        var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.NOFInboxMessages
-            .Where(m => m.CreatedAt < olderThan)
+            .Where(m => m.Status == InboxMessageStatus.Processed)
+            .Where(m => m.ProcessedAt != null && m.ProcessedAt < olderThan)
             .ExecuteDeleteAsync(cancellationToken);
 
         if (deletedCount > 0)

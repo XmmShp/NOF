@@ -11,7 +11,7 @@ public static class TypeRegistry
     {
         ArgumentNullException.ThrowIfNull(type);
 
-        var typeName = Resolve(type);
+        var typeName = type.DisplayName;
 
         _types.TryAdd(typeName, type);
         return typeName;
@@ -25,7 +25,4 @@ public static class TypeRegistry
             ? type
             : throw new InvalidOperationException($"type '{typeName}' is not registered.");
     }
-
-    public static string Resolve(Type type)
-        => type.DisplayName;
 }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 namespace NOF.Infrastructure;
 
 /// <summary>
@@ -11,14 +12,15 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<OutboxCleanupBackgroundService> _logger;
-    private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(1);
-    private readonly TimeSpan _retentionPeriod = TimeSpan.FromDays(7);
+    private readonly TransactionalMessageProcessorOptions _options;
 
     public OutboxCleanupBackgroundService(
         IServiceProvider serviceProvider,
+        IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxCleanupBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
+        _options = options.Value.Outbox;
         _logger = logger;
     }
 
@@ -26,13 +28,13 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     {
         _logger.LogInformation(
             "Outbox cleanup service started. Cleanup interval: {Interval}, Retention period: {Retention}",
-            _cleanupInterval, _retentionPeriod);
+            _options.CleanupInterval, _options.RetentionPeriod);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(_cleanupInterval, stoppingToken);
+                await Task.Delay(_options.CleanupInterval, stoppingToken);
                 await CleanupOutboxAsync(stoppingToken);
             }
             catch (OperationCanceledException)
@@ -52,7 +54,7 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
-        var olderThan = DateTime.UtcNow - _retentionPeriod;
+        var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Sent)
             .Where(m => m.SentAt != null && m.SentAt < olderThan)

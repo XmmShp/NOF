@@ -14,18 +14,18 @@ namespace NOF.Infrastructure;
 public sealed class OutboxMessageBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly OutboxOptions _options;
+    private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
-        IOptions<OutboxOptions> options,
+        IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer)
     {
         _serviceProvider = serviceProvider;
-        _options = options.Value;
+        _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
     }

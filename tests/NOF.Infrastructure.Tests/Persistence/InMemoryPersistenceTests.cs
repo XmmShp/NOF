@@ -256,15 +256,23 @@ public class SqliteInMemoryPersistenceTests
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
-        var message = new NOFInboxMessage(Guid.NewGuid());
+        var message = new NOFInboxMessage
+        {
+            Id = Guid.NewGuid(),
+            HandlerType = typeof(SqliteInMemoryPersistenceTests).AssemblyQualifiedName!,
+            PayloadType = typeof(string).AssemblyQualifiedName!,
+            Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
+            Headers = "{}",
+            MessageType = InboxMessageType.Command
+        };
 
         db.Set<NOFInboxMessage>().Add(message);
         await db.SaveChangesAsync();
-        Assert.NotNull(await db.FindAsync<NOFInboxMessage>([message.Id]));
+        Assert.NotNull(await db.FindAsync<NOFInboxMessage>([message.Id, message.HandlerType]));
 
         db.Set<NOFInboxMessage>().Remove(message);
         await db.SaveChangesAsync();
-        Assert.Null(await db.FindAsync<NOFInboxMessage>([message.Id]));
+        Assert.Null(await db.FindAsync<NOFInboxMessage>([message.Id, message.HandlerType]));
     }
 
     [Fact]
@@ -327,7 +335,10 @@ public class SqliteInMemoryPersistenceTests
     [Fact]
     public async Task OutboxRepository_ShouldNotClaimExpiredOrExhaustedMessagesBeyondRules()
     {
-        using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) });
+        using var services = CreateServiceProvider(new TransactionalMessageOptions
+        {
+            Outbox = new TransactionalMessageProcessorOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) }
+        });
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -378,7 +389,10 @@ public class SqliteInMemoryPersistenceTests
     [Fact]
     public async Task OutboxRepository_ShouldMarkMessageAsFailed_WhenRetryCountReachesLimit()
     {
-        using var services = CreateServiceProvider(new OutboxOptions { MaxRetryCount = 1, ClaimTimeout = TimeSpan.FromMinutes(1) });
+        using var services = CreateServiceProvider(new TransactionalMessageOptions
+        {
+            Outbox = new TransactionalMessageProcessorOptions { MaxRetryCount = 1, ClaimTimeout = TimeSpan.FromMinutes(1) }
+        });
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -545,7 +559,7 @@ public class SqliteInMemoryPersistenceTests
             .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
     }
 
-    private static NOFServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.DatabasePerTenant)
+    private static NOFServiceProvider CreateServiceProvider(TransactionalMessageOptions? transactionalMessageOptions = null, TenantMode tenantMode = TenantMode.DatabasePerTenant)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -562,9 +576,13 @@ public class SqliteInMemoryPersistenceTests
             $"nof-tests-{Guid.NewGuid():N}");
         builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
 
-        if (outboxOptions is not null)
+        if (transactionalMessageOptions is not null)
         {
-            builder.Services.ReplaceOrAddSingleton(Options.Create(outboxOptions));
+            builder.Services.Configure<TransactionalMessageOptions>(options =>
+            {
+                options.Inbox = transactionalMessageOptions.Inbox;
+                options.Outbox = transactionalMessageOptions.Outbox;
+            });
         }
 
         var provider = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions

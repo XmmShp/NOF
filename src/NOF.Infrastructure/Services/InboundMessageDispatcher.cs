@@ -38,6 +38,25 @@ public sealed class InboundMessageDispatcher
             ?? throw new InvalidOperationException(
                 $"Cannot route command '{commandType.Name}'. No matching handler registered.");
 
+        await DispatchCommandToHandlerAsync(
+            payload,
+            payloadTypeName,
+            handlerType,
+            headers,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task DispatchCommandToHandlerAsync(
+        ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        Type handlerType,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        CancellationToken cancellationToken = default)
+    {
+        var payloadType = TypeRegistry.Resolve(payloadTypeName);
+        var command = _serializer.Deserialize(payload, payloadType)
+            ?? throw new InvalidOperationException($"Failed to deserialize command payload as '{payloadTypeName}'.");
+
         await using var scope = _rootServiceProvider.CreateAsyncScope();
         ApplyHeaders(scope.ServiceProvider, headers);
 

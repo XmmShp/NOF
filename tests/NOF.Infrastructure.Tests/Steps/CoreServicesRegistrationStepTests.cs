@@ -45,19 +45,21 @@ public class InfrastructureDefaultsTests
             service.ImplementationType == typeof(OutboxMessageBackgroundService));
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
+            service.ImplementationType == typeof(InboxMessageBackgroundService));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(InboxCleanupBackgroundService));
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(OutboxCleanupBackgroundService));
-        Assert.Equal(3, builder.Services.Count(service =>
+        Assert.Equal(4, builder.Services.Count(service =>
             service.ServiceType == typeof(IHostedService)));
         Assert.NotNull(
 
-        provider.GetRequiredService<IOptions<OutboxOptions>>());
+        provider.GetRequiredService<IOptions<TransactionalMessageOptions>>());
         Assert.Equal(TenantMode.DatabasePerTenant,
         provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value.TenantMode);
         Assert.IsType<InMemoryEventPublisher>(provider.GetRequiredService<IEventPublisher>());
-
     }
 
     [Fact]

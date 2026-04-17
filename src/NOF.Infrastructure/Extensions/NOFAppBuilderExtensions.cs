@@ -27,6 +27,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
             builder.Services.TryAddSingleton<InboundMessageDispatcher>();
+            builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Services.TryAddScoped(sp => (IDistributedCache)sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
@@ -37,11 +38,12 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddOptions<CacheServiceOptions>();
             builder.Services.AddOptions<SnowflakeIdGeneratorOptions>();
             builder.Services.AddOptions<DbContextConfigurationOptions>();
-            builder.Services.AddOptions<OutboxOptions>();
+            builder.Services.AddOptions<TransactionalMessageOptions>();
             #endregion
 
             #region Background Services
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, OutboxMessageBackgroundService>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, InboxMessageBackgroundService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, InboxCleanupBackgroundService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, OutboxCleanupBackgroundService>());
             #endregion
@@ -94,8 +96,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddCommandInboundMiddleware<AutoInstrumentationInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<AutoInstrumentationInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<AutoInstrumentationInboundMiddleware>();
-            builder.Services.AddCommandInboundMiddleware<MessageInboxInboundMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<MessageInboxInboundMiddleware>();
             #endregion
 
             #region Registration & Initialization Steps

@@ -40,8 +40,16 @@ public class NOFDbContext : DbContext
         modelBuilder.Entity<NOFInboxMessage>(entity =>
         {
             entity.ToTable(nameof(NOFInboxMessage));
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.CreatedAt);
+            entity.HasKey(e => new { e.Id, e.HandlerType });
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
+            entity.HasIndex(e => e.ClaimedBy);
+            entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
+            entity.Property(e => e.HandlerType).HasMaxLength(512).IsRequired();
+            entity.Property(e => e.Payload).IsRequired();
+            entity.Property(e => e.Headers).IsRequired();
+            entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
+            entity.Property(e => e.ClaimedBy).HasMaxLength(256);
         });
 
         modelBuilder.Entity<NOFOutboxMessage>(entity =>
