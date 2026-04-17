@@ -22,5 +22,5 @@ public sealed class SummaryAttribute : MetadataAttribute
     /// <summary>
     /// The summary text
     /// </summary>
-    public string Summary => Value;
+    public string Summary => Value ?? string.Empty;
 }

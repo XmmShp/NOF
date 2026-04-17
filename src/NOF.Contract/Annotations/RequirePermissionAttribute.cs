@@ -11,16 +11,19 @@ public sealed class RequirePermissionAttribute : MetadataAttribute
     public const string MetadataKey = "api.permission";
 
     /// <summary>
-    /// Required permission, if null then only authentication is required
+    /// Required permission value.
+    /// Empty string means authentication is required but no specific permission is required.
     /// </summary>
-    public string? Permission => Value;
+    public string Permission => Value ?? string.Empty;
 
     /// <summary>
     /// Constructor
     /// </summary>
-    /// <param name="permission">Required permission, if null then only authentication is required</param>
-    public RequirePermissionAttribute(string? permission = null)
-        : base(MetadataKey, permission ?? string.Empty)
+    /// <param name="permission">
+    /// Required permission value. Use empty string to require authentication only.
+    /// </param>
+    public RequirePermissionAttribute(string permission = "")
+        : base(MetadataKey, permission)
     {
     }
 }

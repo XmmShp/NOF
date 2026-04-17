@@ -15,10 +15,12 @@ public sealed class AutoInstrumentationInboundMiddleware :
     private static readonly Counter<long> _executionCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionCounter,
         description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionCounter);
+
     private static readonly Histogram<double> _executionDuration = NOFInfrastructureConstants.InboundPipeline.Meter.CreateHistogram<double>(
         NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionDuration,
         unit: NOFInfrastructureConstants.InboundPipeline.MetricUnits.Milliseconds,
         description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionDuration);
+
     private static readonly Counter<long> _errorCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureConstants.InboundPipeline.Metrics.ErrorCounter,
         description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ErrorCounter);
