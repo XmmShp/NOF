@@ -24,7 +24,7 @@ var postgres = builder.AddPostgres("postgres", postgresUserName, postgresPasswor
     .PublishAsConnectionString();
 postgresUserName.WithParentRelationship(postgres);
 postgresPassword.WithParentRelationship(postgres);
-var database = postgres.AddDatabase("db");
+var database = postgres.AddDatabase("db2");
 
 var sample = builder.AddProject<NOF_Sample>("NOF-Sample")
     .WithReference(rabbitMq, "rabbitmq")

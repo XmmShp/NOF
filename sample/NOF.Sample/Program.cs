@@ -33,7 +33,10 @@ builder.AddJwtResourceServer(o =>
     o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
 });
 
-builder.AddRabbitMQ();
+builder.AddRabbitMQ(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+});
 
 builder.UseDbContext<ConfigurationDbContext>()
     .WithTenantMode(TenantMode.DatabasePerTenant)

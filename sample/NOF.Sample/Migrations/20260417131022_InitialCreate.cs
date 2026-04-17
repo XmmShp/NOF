@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NOF.Sample.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -20,8 +20,7 @@ namespace NOF.Sample.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false),
                     ParentId = table.Column<long>(type: "bigint", nullable: true),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    ActiveFileName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    TenantId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
+                    ActiveFileName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -33,8 +32,7 @@ namespace NOF.Sample.Migrations
                 columns: table => new
                 {
                     NodeId = table.Column<long>(type: "bigint", nullable: false),
-                    ChildrenIds = table.Column<List<long>>(type: "bigint[]", nullable: false),
-                    TenantId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false)
+                    ChildrenIds = table.Column<List<long>>(type: "bigint[]", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -46,11 +44,23 @@ namespace NOF.Sample.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    HandlerType = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RetryCount = table.Column<int>(type: "integer", nullable: false),
+                    MessageType = table.Column<int>(type: "integer", nullable: false),
+                    PayloadType = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    Payload = table.Column<byte[]>(type: "bytea", nullable: false),
+                    Headers = table.Column<string>(type: "text", nullable: false),
+                    ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FailedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ErrorMessage = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    ClaimedBy = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ClaimExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_NOFInboxMessage", x => x.Id);
+                    table.PrimaryKey("PK_NOFInboxMessage", x => new { x.Id, x.HandlerType });
                 });
 
             migrationBuilder.CreateTable(
@@ -62,6 +72,7 @@ namespace NOF.Sample.Migrations
                     RetryCount = table.Column<int>(type: "integer", nullable: false),
                     MessageType = table.Column<int>(type: "integer", nullable: false),
                     PayloadType = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    DispatchTypes = table.Column<string>(type: "text", nullable: false),
                     Payload = table.Column<byte[]>(type: "bytea", nullable: false),
                     Headers = table.Column<string>(type: "text", nullable: false),
                     SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -136,28 +147,23 @@ namespace NOF.Sample.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ConfigNode_Name",
                 table: "ConfigNode",
-                column: "Name");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ConfigNode_TenantId",
-                table: "ConfigNode",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ConfigNode_TenantId_Name",
-                table: "ConfigNode",
-                columns: new[] { "TenantId", "Name" },
+                column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ConfigNodeChildren_TenantId",
-                table: "ConfigNodeChildren",
-                column: "TenantId");
+                name: "IX_NOFInboxMessage_ClaimedBy",
+                table: "NOFInboxMessage",
+                column: "ClaimedBy");
 
             migrationBuilder.CreateIndex(
-                name: "IX_NOFInboxMessage_CreatedAt",
+                name: "IX_NOFInboxMessage_Status_ClaimExpiresAt",
                 table: "NOFInboxMessage",
-                column: "CreatedAt");
+                columns: new[] { "Status", "ClaimExpiresAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NOFInboxMessage_Status_CreatedAt",
+                table: "NOFInboxMessage",
+                columns: new[] { "Status", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_NOFOutboxMessage_ClaimedBy",

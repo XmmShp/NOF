@@ -8,16 +8,6 @@ public static partial class NOFInfrastructureRabbitMQExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        public INOFAppBuilder AddRabbitMQ(string? connectionStringName = null)
-            => AddRabbitMQ(builder, options =>
-            {
-                var connectionString = builder.Configuration.GetConnectionString(connectionStringName ?? "rabbitmq");
-                if (!string.IsNullOrEmpty(connectionString))
-                {
-                    options.ConnectionString = connectionString;
-                }
-            });
-
         public INOFAppBuilder AddRabbitMQ(Action<RabbitMQOptions> configureOptions)
         {
             builder.Services.Configure(configureOptions);
