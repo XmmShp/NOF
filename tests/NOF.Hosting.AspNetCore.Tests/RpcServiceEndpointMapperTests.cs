@@ -18,7 +18,8 @@ public class RpcHttpEndpointRegistryGeneratorTests
         typeof(Result),
         typeof(Result<>),
         typeof(AssemblyInitializeAttribute),
-        typeof(Hosting.AspNetCore.RpcHttpEndpointHandlerRegistry),
+        typeof(Hosting.AspNetCore.RpcHttpEndpointHandlerRegistration),
+        typeof(Hosting.AspNetCore.RpcHttpEndpointHandlerInfos),
         typeof(Hosting.AspNetCore.NOFHostingAspNetCoreExtensions),
         typeof(Microsoft.AspNetCore.Mvc.FromBodyAttribute),
         typeof(Microsoft.AspNetCore.Mvc.FromServicesAttribute),
@@ -72,7 +73,7 @@ public class RpcHttpEndpointRegistryGeneratorTests
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcHttpEndpointAssemblyInitializer>", code);
-        Assert.Contains("RpcHttpEndpointHandlerRegistry.Register(typeof(global::App.IAppService), \"CreateUser\"", code);
+        Assert.Contains("Registry.RpcHttpEndpointHandlerRegistrations.Add(new global::NOF.Hosting.AspNetCore.RpcHttpEndpointHandlerRegistration(typeof(global::App.IAppService), \"CreateUser\"", code);
         Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IAppService>(services, \"CreateUser\", request, cancellationToken)", code);
     }
 

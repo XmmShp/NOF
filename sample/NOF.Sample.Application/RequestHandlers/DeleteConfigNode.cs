@@ -25,7 +25,7 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
     public override async Task<Result> HandleAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.Id);
-        var node = await _dbContext.Set<ConfigNode>().FindAsync([id], cancellationToken);
+        var node = await _dbContext.FindAsync<ConfigNode>([id], cancellationToken);
         if (node is null)
         {
             return Result.Fail("404", "Node not found.");
@@ -49,4 +49,3 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         return Result.Success();
     }
 }
-

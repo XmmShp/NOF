@@ -11,7 +11,6 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
         <ProjectReference Include="..\..\src\Extensions\NOF.Contract.Extension.Authorization.Jwt\NOF.Contract.Extension.Authorization.Jwt.csproj" />
-        <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL\NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" />
         <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.RabbitMQ\NOF.Infrastructure.RabbitMQ.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />
@@ -23,7 +22,6 @@
         <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore.SourceGenerator\NOF.Hosting.AspNetCore.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\src\NOF.Abstraction.SourceGenerator\NOF.Abstraction.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\src\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-        <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\src\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\NOF.Sample.Wasm\NOF.Sample.Wasm.csproj" />
     </ItemGroup>
@@ -33,5 +31,6 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     </ItemGroup>
 </Project>

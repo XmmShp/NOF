@@ -20,7 +20,7 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
     public override async Task<Result> HandleAsync(SetActiveFileRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
-        var node = await _dbContext.Set<ConfigNode>().FindAsync([id], cancellationToken);
+        var node = await _dbContext.FindAsync<ConfigNode>([id], cancellationToken);
 
         if (node is null)
         {
@@ -44,4 +44,3 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         return Result.Success();
     }
 }
-

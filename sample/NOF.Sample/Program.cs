@@ -36,10 +36,10 @@ builder.AddJwtResourceServer(o =>
 builder.AddRabbitMQ();
 
 builder.UseDbContext<ConfigurationDbContext>()
-    .WithTenantMode(TenantMode.SharedDatabase)
-    .WithConnectionString(builder.Configuration.GetConnectionString("sqlite")
-        ?? "Data Source=nof-sample-{tenantId}.db")
-    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found in configuration."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IConfigNodeChildrenRepository, ConfigNodeChildrenRepository>();
 

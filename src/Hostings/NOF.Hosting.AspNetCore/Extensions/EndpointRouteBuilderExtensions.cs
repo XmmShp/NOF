@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
@@ -24,6 +25,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             // Ensure registry entries generated for this assembly are applied before mapping.
             InitializeAssembly(typeof(TRpcServer).Assembly);
 
+            var infos = app.ServiceProvider.GetRequiredService<RpcHttpEndpointHandlerInfos>();
             var serviceType = TRpcServer.ServiceType;
             foreach (var method in serviceType.GetMethods())
             {
@@ -32,8 +34,8 @@ public static partial class NOFHostingAspNetCoreExtensions
                     continue;
                 }
 
-                var operationName = GetOperationName(method.Name);
-                if (!RpcHttpEndpointHandlerRegistry.TryGet(serviceType, operationName, out var entry))
+                var operationName = method.Name;
+                if (!infos.TryGet(serviceType, operationName, out var entry))
                 {
                     throw new InvalidOperationException(
                         $"HTTP endpoint handler is not registered for '{serviceType.FullName}.{operationName}'. " +
@@ -75,9 +77,6 @@ public static partial class NOFHostingAspNetCoreExtensions
             attribute.InitializeMethod();
         }
     }
-
-    private static string GetOperationName(string methodName)
-        => methodName.EndsWith("Async", StringComparison.Ordinal) ? methodName[..^5] : methodName;
 
     private static IEnumerable<(HttpVerb Verb, string Route)> GetHttpEndpoints(MethodInfo method, string defaultRoute)
     {

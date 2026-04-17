@@ -22,7 +22,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
     public override async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.NodeId);
-        var node = await _dbContext.Set<ConfigNode>().FindAsync([nodeId], cancellationToken);
+        var node = await _dbContext.FindAsync<ConfigNode>([nodeId], cancellationToken);
 
         if (node is null)
         {
@@ -36,7 +36,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         // Check whether the target parent exists (unless moving to root).
         if (newParentId.HasValue)
         {
-            var parentNode = await _dbContext.Set<ConfigNode>().FindAsync([newParentId.Value], cancellationToken);
+            var parentNode = await _dbContext.FindAsync<ConfigNode>([newParentId.Value], cancellationToken);
             if (parentNode is null)
             {
                 return Result.Fail("404", "Target parent node not found.");
@@ -66,7 +66,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 
     private async Task<bool> IsDescendant(ConfigNodeId ancestorId, ConfigNodeId nodeId, CancellationToken cancellationToken)
     {
-        var current = await _dbContext.Set<ConfigNode>().FindAsync([nodeId], cancellationToken);
+        var current = await _dbContext.FindAsync<ConfigNode>([nodeId], cancellationToken);
 
         while (current?.ParentId != null)
         {
@@ -74,7 +74,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
             {
                 return true;
             }
-            current = await _dbContext.Set<ConfigNode>().FindAsync([current.ParentId.Value], cancellationToken);
+            current = await _dbContext.FindAsync<ConfigNode>([current.ParentId.Value], cancellationToken);
         }
 
         return false;
