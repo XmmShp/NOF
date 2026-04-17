@@ -38,7 +38,7 @@ public static class NOFInfrastructureEntityFrameworkCoreExtensions
                 sp,
                 sp.GetRequiredService<IExecutionContext>(),
                 sp.GetRequiredService<IOptions<TenantOptions>>(),
-                sp.GetRequiredService<IDbContextConfigurator>(),
+                sp.GetRequiredService<DbContextOptionsConfiguration>(),
                 sp.GetRequiredService<IOptions<DbContextFactoryOptions>>(),
                 sp.GetRequiredService<ILogger<NOFDbContextFactory<TDbContext>>>()));
 

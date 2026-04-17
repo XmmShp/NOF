@@ -41,11 +41,11 @@ public sealed class TenantInboundMiddleware :
 
     private void ApplyTenant()
     {
-        var tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(_tenantOptions.SingleTenantId);
+        var tenantId = TenantId.Normalize(_tenantOptions.SingleTenantId);
         if (_tenantOptions.Mode != TenantMode.SingleTenant
             && _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId))
         {
-            tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(headerTenantId);
+            tenantId = TenantId.Normalize(headerTenantId);
         }
 
         _executionContext.TenantId = tenantId;

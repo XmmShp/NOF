@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +10,7 @@ namespace NOF.Infrastructure;
 /// </summary>
 internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
-    public string TenantId { get; set; } = string.Empty;
+    public string TenantId { get; set; } = NOFAbstractionConstants.Tenant.HostId;
     public TenantMode TenantMode { get; set; } = TenantMode.SingleTenant;
 
     public void ApplyServices(IServiceCollection services)

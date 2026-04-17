@@ -46,7 +46,7 @@ public class RedisCacheService : IRedisCacheService
     {
         var tenantPrefix = _tenantOptions.Mode == TenantMode.SingleTenant
             ? string.Empty
-            : $"{_executionContext.TenantId}:";
+            : $"{TenantId.Normalize(_executionContext.TenantId)}:";
         var keyPrefix = _options.KeyPrefix ?? string.Empty;
         return tenantPrefix + keyPrefix + key;
     }

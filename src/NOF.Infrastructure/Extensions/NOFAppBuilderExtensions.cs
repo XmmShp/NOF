@@ -83,7 +83,7 @@ public static partial class NOFInfrastructureExtensions
                 .TryAddInitializationStep<MapperInitializationStep>();
 
             if (!builder.Services.Any(sd => sd.ServiceType == typeof(DbContext))
-                && !builder.Services.Any(sd => sd.ServiceType == typeof(IDbContextConfigurator)))
+                && !builder.Services.Any(sd => sd.ServiceType == typeof(DbContextOptionsConfiguration)))
             {
                 builder.AddMemoryInfrastructure();
             }
@@ -100,7 +100,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.Configure<TenantOptions>(options =>
             {
                 options.Mode = TenantMode.SingleTenant;
-                options.SingleTenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
+                options.SingleTenantId = TenantId.Normalize(tenantId);
             });
             return builder;
         }

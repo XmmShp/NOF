@@ -28,7 +28,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        ExecutionContext.TenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
+        ExecutionContext.TenantId = TenantId.Normalize(tenantId);
         return this;
     }
 

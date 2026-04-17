@@ -8,7 +8,7 @@ public class NOFTenant
     /// <summary>
     /// The tenant identifier.
     /// </summary>
-    public string Id { get; set; } = string.Empty;
+    public required TenantId Id { get; set; }
 
     /// <summary>
     /// The tenant name.

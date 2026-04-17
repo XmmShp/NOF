@@ -30,22 +30,15 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
 
-        scope.SetTenant("tenant-a")
+        scope.SetTenant("tenanta")
             .SetTracing("trace-1", "span-1")
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
-        Assert.Equal("tenant-a",
-
-        scope.ExecutionContext.TenantId);
-        Assert.NotNull(
-        scope.ExecutionContext.TracingInfo);
-        Assert.Equal("trace-1",
-        scope.ExecutionContext.TracingInfo!.TraceId);
-        Assert.Equal("span-1",
-        scope.ExecutionContext.TracingInfo!.SpanId);
-        Assert.Equal("user-1",
-        scope.UserContext.User.Id);
-        Assert.Equal("Alice",
-        scope.UserContext.User.Name);
+        Assert.Equal("tenanta", scope.ExecutionContext.TenantId);
+        Assert.NotNull(scope.ExecutionContext.TracingInfo);
+        Assert.Equal("trace-1", scope.ExecutionContext.TracingInfo!.TraceId);
+        Assert.Equal("span-1", scope.ExecutionContext.TracingInfo!.SpanId);
+        Assert.Equal("user-1", scope.UserContext.User.Id);
+        Assert.Equal("Alice", scope.UserContext.User.Name);
         Assert.Contains("orders.read", scope.UserContext.User.Permissions);
         Assert.Contains("orders.write", scope.UserContext.User.Permissions);
     }
@@ -85,19 +78,13 @@ public class NOFTestHostTests
         using var scope = host.CreateScope();
 
         var lazy = scope.GetRequiredService<Lazy<LazyProbe>>();
-        Assert.False(
-        lazy.IsValueCreated);
-        Assert.Equal(0,
-        LazyProbe.CreatedCount);
+        Assert.False(lazy.IsValueCreated);
+        Assert.Equal(0, LazyProbe.CreatedCount);
 
         var probe = lazy.Value;
-        Assert.NotNull(
-
-        probe);
-        Assert.True(
-        lazy.IsValueCreated);
-        Assert.Equal(1,
-        LazyProbe.CreatedCount);
+        Assert.NotNull(probe);
+        Assert.True(lazy.IsValueCreated);
+        Assert.Equal(1, LazyProbe.CreatedCount);
     }
 
     private sealed record TestCommand(string Value);

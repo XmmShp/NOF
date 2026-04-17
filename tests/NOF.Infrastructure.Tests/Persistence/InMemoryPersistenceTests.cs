@@ -43,12 +43,62 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-efcore-default", Name = "Tenant EFCore Default" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenantefcoredefault"), Name = "Tenant EFCore Default" });
         await db.SaveChangesAsync();
 
-        var tenant = await db.FindAsync<NOFTenant>(["tenant-efcore-default"]);
+        var tenant = await db.FindAsync<NOFTenant>([TenantId.Of("tenantefcoredefault")]);
         Assert.NotNull(tenant);
         Assert.Equal("Tenant EFCore Default", tenant.Name);
+    }
+
+    [Fact]
+    public void UseSqlite_ShouldResolveTenantIdPlaceholderFromConnectionString()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"nof-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+
+        try
+        {
+            var builder = new TestServiceRegistrationContext();
+            builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+            builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+            builder.Services.AddSingleton<CommandHandlerInfos>();
+            builder.Services.AddSingleton<NotificationHandlerInfos>();
+            builder.Configuration.AddInMemoryCollection([
+                new KeyValuePair<string, string?>("ConnectionStrings:sqlite", $"Data Source={Path.Combine(tempDirectory, "nof-{TenantId}.db")}")
+            ]);
+
+            builder.AddHostingDefaults();
+            builder.AddInfrastructureDefaults();
+            builder.UseDatabasePerTenant();
+            builder.AddEFCore<TestDbContext>()
+                .UseSqlite("sqlite");
+
+            using var services = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            });
+
+            using var tenantAScope = services.CreateScope();
+            tenantAScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = "tenanta";
+            var tenantADb = tenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+            using var tenantBScope = services.CreateScope();
+            tenantBScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = "tenantb";
+            var tenantBDb = tenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+            var tenantAConnectionString = tenantADb.Database.GetConnectionString();
+            var tenantBConnectionString = tenantBDb.Database.GetConnectionString();
+
+            Assert.Contains("nof-tenanta.db", tenantAConnectionString, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("nof-tenantb.db", tenantBConnectionString, StringComparison.OrdinalIgnoreCase);
+            Assert.NotEqual(tenantAConnectionString, tenantBConnectionString);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
     }
 
     [Fact]
@@ -74,10 +124,10 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-default", Name = "Tenant Default" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenantdefault"), Name = "Tenant Default" });
         await db.SaveChangesAsync();
 
-        var tenant = await db.FindAsync<NOFTenant>(["tenant-default"]);
+        var tenant = await db.FindAsync<NOFTenant>([TenantId.Of("tenantdefault")]);
         Assert.NotNull(tenant);
         Assert.Equal("Tenant Default", tenant.Name);
     }
@@ -92,14 +142,14 @@ public class SqliteInMemoryPersistenceTests
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         await using var transaction = await db.Database.BeginTransactionAsync();
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-1", Name = "Tenant 1" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenant1"), Name = "Tenant 1" });
         await db.SaveChangesAsync();
         await transaction.RollbackAsync();
 
         using var verifyScope = services.CreateScope();
         verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DbContext>();
-        var tenant = await verifyDb.FindAsync<NOFTenant>(["tenant-1"]);
+        var tenant = await verifyDb.FindAsync<NOFTenant>([TenantId.Of("tenant1")]);
         Assert.Null(tenant);
     }
 
@@ -113,12 +163,12 @@ public class SqliteInMemoryPersistenceTests
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         await using var outer = await db.Database.BeginTransactionAsync();
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = "outer", Name = "Outer" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("outer"), Name = "Outer" });
         await db.SaveChangesAsync();
 
         // Use savepoint for nested rollback semantics.
         await outer.CreateSavepointAsync("sp_inner");
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = "inner", Name = "Inner" });
+        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("inner"), Name = "Inner" });
         await db.SaveChangesAsync();
         await outer.RollbackToSavepointAsync("sp_inner");
         await outer.CommitAsync();
@@ -126,8 +176,8 @@ public class SqliteInMemoryPersistenceTests
         using var verifyScope = services.CreateScope();
         verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DbContext>();
-        Assert.NotNull(await verifyDb.FindAsync<NOFTenant>(["outer"]));
-        Assert.Null(await verifyDb.FindAsync<NOFTenant>(["inner"]));
+        Assert.NotNull(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("outer")]));
+        Assert.Null(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("inner")]));
     }
 
     [Fact]
@@ -141,14 +191,14 @@ public class SqliteInMemoryPersistenceTests
 
         await using (await db.Database.BeginTransactionAsync())
         {
-            db.Set<NOFTenant>().Add(new NOFTenant { Id = "tenant-dispose", Name = "Dispose" });
+            db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenantdispose"), Name = "Dispose" });
             await db.SaveChangesAsync();
         }
 
         using var verifyScope = services.CreateScope();
         verifyScope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DbContext>();
-        Assert.Null(await verifyDb.FindAsync<NOFTenant>(["tenant-dispose"]));
+        Assert.Null(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("tenantdispose")]));
     }
 
     [Fact]
@@ -382,7 +432,7 @@ public class SqliteInMemoryPersistenceTests
         using (var tenantScope = services.CreateScope())
         {
             var tenantExecutionContext = tenantScope.ServiceProvider.GetRequiredService<IExecutionContext>();
-            tenantExecutionContext.TenantId = "tenant-a";
+            tenantExecutionContext.TenantId = "tenanta";
             var tenantDb = tenantScope.ServiceProvider.GetRequiredService<DbContext>();
             tenantDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
             await tenantDb.SaveChangesAsync();
@@ -496,7 +546,7 @@ public class SqliteInMemoryPersistenceTests
         });
 
         EnsureCreated(provider, NOFAbstractionConstants.Tenant.HostId);
-        EnsureCreated(provider, "tenant-a");
+        EnsureCreated(provider, "tenanta");
 
         return provider;
     }

@@ -50,7 +50,7 @@ public sealed class JwtHttpClientTests
         Assert.Equal(JwtAuthorizationEndpoints.Jwks, handler.LastRequest.PathAndQuery);
         Assert.True(handler.LastRequest.Headers.ContainsKey("X-Tenant"));
         Assert.Single(handler.LastRequest.Headers["X-Tenant"]);
-        Assert.Equal("tenant-a", handler.LastRequest.Headers["X-Tenant"][0]);
+        Assert.Equal("tenanta", handler.LastRequest.Headers["X-Tenant"][0]);
         Assert.NotNull(pipeline.LastContext);
         Assert.IsAssignableFrom<Result<JwksDocument>>(pipeline.LastContext!.Response);
     }
@@ -84,7 +84,7 @@ public sealed class JwtHttpClientTests
         var request = new GenerateJwtTokenRequest
         {
             UserId = "user-1",
-            TenantId = "tenant-a",
+            TenantId = "tenanta",
             Audience = "orders-api",
             AccessTokenExpiration = TimeSpan.FromMinutes(10),
             RefreshTokenExpiration = TimeSpan.FromDays(7),
@@ -129,7 +129,7 @@ public sealed class JwtHttpClientTests
         public CapturingOutboundPipelineExecutor()
             : this(new Dictionary<string, string?>
             {
-                ["X-Tenant"] = "tenant-a",
+                ["X-Tenant"] = "tenanta",
                 ["X-Trace"] = "trace-a"
             })
         {

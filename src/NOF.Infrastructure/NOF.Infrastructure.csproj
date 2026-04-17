@@ -33,6 +33,7 @@
     <ProjectReference Include="..\NOF.Abstraction\NOF.Abstraction.csproj" />
     <ProjectReference Include="..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
     <ProjectReference Include="..\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\NOF.Domain.SourceGenerator\NOF.Domain.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 
     <None Include="..\NOF.Infrastructure.SourceGenerator\bin\$(Configuration)\netstandard2.0\NOF.Infrastructure.SourceGenerator.dll"

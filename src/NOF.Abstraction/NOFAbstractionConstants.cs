@@ -13,7 +13,7 @@ public static class NOFAbstractionConstants
         /// <summary>
         /// The host tenant ID.
         /// </summary>
-        public const string HostId = "";
+        public const string HostId = "host";
 
         /// <summary>
         /// Normalizes a tenant ID.

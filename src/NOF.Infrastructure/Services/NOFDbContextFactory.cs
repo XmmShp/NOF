@@ -29,7 +29,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
     private readonly IServiceProvider _serviceProvider;
     private readonly IExecutionContext _executionContext;
     private readonly TenantOptions _tenantOptions;
-    private readonly IDbContextConfigurator _dbContextConfigurator;
+    private readonly DbContextOptionsConfiguration _dbContextOptionsConfiguration;
     private readonly DbContextFactoryOptions _options;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
@@ -37,14 +37,14 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         IServiceProvider serviceProvider,
         IExecutionContext executionContext,
         IOptions<TenantOptions> tenantOptions,
-        IDbContextConfigurator dbContextConfigurator,
+        DbContextOptionsConfiguration dbContextOptionsConfiguration,
         IOptions<DbContextFactoryOptions> options,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
         _executionContext = executionContext;
         _tenantOptions = tenantOptions.Value;
-        _dbContextConfigurator = dbContextConfigurator;
+        _dbContextOptionsConfiguration = dbContextOptionsConfiguration;
         _options = options.Value;
         _logger = logger;
     }
@@ -54,7 +54,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     public TDbContext CreateDbContext(string tenantId)
     {
-        tenantId = NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId);
+        tenantId = TenantId.Normalize(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
 
         var extension = new NOFTenantDbContextOptionsExtension
@@ -64,7 +64,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
-        _dbContextConfigurator.Configure(optionsBuilder, tenantId, _tenantOptions.Mode);
+        _dbContextOptionsConfiguration.Configure(_serviceProvider, optionsBuilder, tenantId, _tenantOptions.Mode);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 

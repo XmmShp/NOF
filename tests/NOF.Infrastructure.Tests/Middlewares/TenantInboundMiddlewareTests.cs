@@ -14,7 +14,7 @@ public class TenantInboundMiddlewareTests
     {
         var executionContext = new ExecutionContext
         {
-            [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenant-a"
+            [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenanta"
         };
         var middleware = new TenantInboundMiddleware(
             executionContext,
@@ -35,7 +35,7 @@ public class TenantInboundMiddlewareTests
     {
         var executionContext = new ExecutionContext
         {
-            [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenant-a"
+            [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenanta"
         };
         var middleware = new TenantInboundMiddleware(
             executionContext,
@@ -45,7 +45,7 @@ public class TenantInboundMiddlewareTests
             }));
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);
-        Assert.Equal("tenant-a", executionContext.TenantId);
+        Assert.Equal("tenanta", executionContext.TenantId);
     }
 
     private static CommandInboundContext CreateContext()
