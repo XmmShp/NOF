@@ -2,8 +2,9 @@ namespace NOF.Infrastructure;
 
 public interface INotificationRider
 {
-    Task PublishAsync(object notification,
-        Type[] notificationTypes,
+    Task PublishAsync(ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        IReadOnlyCollection<string> notificationTypeNames,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default);
 }

@@ -71,7 +71,10 @@ public sealed class CommandSender : ICommandSender
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.SendAsync(command, commandType, context.Headers, ct).ConfigureAwait(false);
+            var payload = _objectSerializer.Serialize(command, command.GetType());
+            var payloadTypeName = TypeRegistry.Register(command.GetType());
+            var commandTypeName = TypeRegistry.Register(commandType);
+            await _rider.SendAsync(payload, payloadTypeName, commandTypeName, context.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 }

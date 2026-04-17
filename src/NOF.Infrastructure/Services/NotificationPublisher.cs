@@ -71,7 +71,10 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
-            await _rider.PublishAsync(notification, notificationTypes, context.Headers, ct).ConfigureAwait(false);
+            var payload = _objectSerializer.Serialize(notification, notification.GetType());
+            var payloadTypeName = TypeRegistry.Register(notification.GetType());
+            var notificationTypeNames = notificationTypes.Select(TypeRegistry.Register).ToArray();
+            await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, context.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 }

@@ -11,7 +11,7 @@ namespace NOF.Infrastructure;
 internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
     public string TenantId { get; set; } = NOFAbstractionConstants.Tenant.HostId;
-    public TenantMode TenantMode { get; set; } = TenantMode.SingleTenant;
+    public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;
 
     public void ApplyServices(IServiceCollection services)
     {

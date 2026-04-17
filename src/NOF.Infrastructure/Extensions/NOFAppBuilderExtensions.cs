@@ -26,15 +26,16 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+            builder.Services.TryAddSingleton<InboundMessageDispatcher>();
             builder.Services.TryAddScoped(sp => (IDistributedCache)sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
+            builder.Services.TryAddScoped<ICacheService, CacheService>();
             #endregion
 
             #region Options
             builder.Services.AddOptions<CacheServiceOptions>();
             builder.Services.AddOptions<SnowflakeIdGeneratorOptions>();
-            builder.Services.AddOptions<TenantOptions>();
             builder.Services.AddOptions<DbContextConfigurationOptions>();
             builder.Services.AddOptions<OutboxOptions>();
             #endregion
@@ -106,13 +107,14 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Default Persistence
-            builder.Services.TryAddScoped<ICacheService, MemoryCacheService>();
+            builder.Services.TryAddScoped<ICacheServiceRider, MemoryCacheServiceRider>();
             builder.Services.TryAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();
 
             builder.UseDbContext<NOFDbContext>()
                 .WithConnectionString("Data Source=nof-sqlite-memory-{tenantId};Mode=Memory;Cache=Shared")
+                .WithTenantMode(TenantMode.DatabasePerTenant)
                 .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString))
                 .AutoMigrate();
             #endregion
@@ -129,48 +131,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
 
             return new EFCoreSelector(builder);
-        }
-
-        /// <summary>
-        /// Configures application-wide single-tenant mode.
-        /// The configured tenant id is used by both storage and cache isolation.
-        /// </summary>
-        public INOFAppBuilder UseSingleTenant(string? tenantId = null)
-        {
-            builder.Services.Configure<TenantOptions>(options =>
-            {
-                options.Mode = TenantMode.SingleTenant;
-                options.SingleTenantId = TenantId.Normalize(tenantId);
-            });
-            return builder;
-        }
-
-        /// <summary>
-        /// Configures application-wide multi-tenant mode with shared storage and tenant-aware cache isolation.
-        /// </summary>
-        public INOFAppBuilder UseSharedDatabaseTenancy()
-        {
-            builder.Services.Configure<TenantOptions>(options =>
-            {
-                options.Mode = TenantMode.SharedDatabase;
-            });
-            return builder;
-        }
-
-        /// <summary>
-        /// Configures application-wide multi-tenant mode with database-per-tenant storage and tenant-aware cache isolation.
-        /// </summary>
-        public INOFAppBuilder UseDatabasePerTenant(string? tenantDatabaseNameFormat = null)
-        {
-            builder.Services.Configure<TenantOptions>(options =>
-            {
-                options.Mode = TenantMode.DatabasePerTenant;
-                if (!string.IsNullOrWhiteSpace(tenantDatabaseNameFormat))
-                {
-                    options.TenantDatabaseNameFormat = tenantDatabaseNameFormat;
-                }
-            });
-            return builder;
         }
 
         public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Application;
 using Xunit;
@@ -10,39 +9,23 @@ namespace NOF.Infrastructure.Tests.Middlewares;
 public class TenantInboundMiddlewareTests
 {
     [Fact]
-    public async Task InvokeAsync_SingleTenantMode_ShouldIgnoreIncomingTenantHeader()
+    public async Task InvokeAsync_WithoutIncomingTenantHeader_ShouldUseHostTenant()
     {
-        var executionContext = new ExecutionContext
-        {
-            [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenanta"
-        };
-        var middleware = new TenantInboundMiddleware(
-            executionContext,
-            Options.Create(new TenantOptions
-            {
-                Mode = TenantMode.SingleTenant,
-                SingleTenantId = "host"
-            }));
+        var executionContext = new ExecutionContext();
+        var middleware = new TenantInboundMiddleware(executionContext);
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);
-        Assert.Equal("host",
-
-        executionContext.TenantId);
+        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, executionContext.TenantId);
     }
 
     [Fact]
-    public async Task InvokeAsync_SharedDatabaseMode_ShouldUseIncomingTenantHeader()
+    public async Task InvokeAsync_WithIncomingTenantHeader_ShouldUseIncomingTenantHeader()
     {
         var executionContext = new ExecutionContext
         {
             [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenanta"
         };
-        var middleware = new TenantInboundMiddleware(
-            executionContext,
-            Options.Create(new TenantOptions
-            {
-                Mode = TenantMode.SharedDatabase
-            }));
+        var middleware = new TenantInboundMiddleware(executionContext);
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);
         Assert.Equal("tenanta", executionContext.TenantId);

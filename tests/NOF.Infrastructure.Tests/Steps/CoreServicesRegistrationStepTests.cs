@@ -28,7 +28,8 @@ public class InfrastructureDefaultsTests
         using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         Assert.NotNull(scope.ServiceProvider.GetService<Microsoft.EntityFrameworkCore.DbContext>());
-        Assert.IsType<MemoryCacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
+        Assert.IsType<CacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
+        Assert.IsType<MemoryCacheServiceRider>(scope.ServiceProvider.GetRequiredService<ICacheServiceRider>());
     }
 
     [Fact]
@@ -53,8 +54,8 @@ public class InfrastructureDefaultsTests
         Assert.NotNull(
 
         provider.GetRequiredService<IOptions<OutboxOptions>>());
-        Assert.Equal(TenantMode.SingleTenant,
-        provider.GetRequiredService<IOptions<TenantOptions>>().Value.Mode);
+        Assert.Equal(TenantMode.DatabasePerTenant,
+        provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value.TenantMode);
         Assert.IsType<InMemoryEventPublisher>(provider.GetRequiredService<IEventPublisher>());
 
     }
@@ -74,33 +75,26 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void UseSharedDatabaseTenancy_ShouldSwitchTenantMode()
+    public void UseDbContext_WithTenantMode_ShouldSwitchTenantMode()
     {
         var builder = new TestServiceRegistrationContext();
         builder.AddInfrastructureDefaults();
-        builder.UseSharedDatabaseTenancy();
+        builder.UseDbContext<NOFDbContext>().WithTenantMode(TenantMode.SharedDatabase);
 
         using var provider = builder.Services.BuildServiceProvider();
-        var options = provider.GetRequiredService<IOptions<TenantOptions>>().Value;
-        Assert.Equal(TenantMode.SharedDatabase,
-
-        options.Mode);
+        var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
+        Assert.Equal(TenantMode.SharedDatabase, options.TenantMode);
     }
 
     [Fact]
-    public void UseDatabasePerTenant_ShouldSwitchTenantMode_AndApplyFormat()
+    public void AddInfrastructureDefaults_ShouldUseDatabasePerTenantByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         builder.AddInfrastructureDefaults();
-        builder.UseDatabasePerTenant("{database}__{tenantId}");
 
         using var provider = builder.Services.BuildServiceProvider();
-        var options = provider.GetRequiredService<IOptions<TenantOptions>>().Value;
-        Assert.Equal(TenantMode.DatabasePerTenant,
-
-        options.Mode);
-        Assert.Equal("{database}__{tenantId}",
-        options.TenantDatabaseNameFormat);
+        var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
+        Assert.Equal(TenantMode.DatabasePerTenant, options.TenantMode);
     }
 
     private sealed class TestServiceRegistrationContext : INOFAppBuilder

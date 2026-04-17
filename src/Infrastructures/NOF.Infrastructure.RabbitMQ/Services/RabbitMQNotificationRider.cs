@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Abstraction;
 using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
@@ -8,32 +7,28 @@ public class RabbitMQNotificationRider : INotificationRider
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IObjectSerializer _serializer;
 
     public RabbitMQNotificationRider(
         RabbitMQConnectionManager connectionManager,
-        IOptions<RabbitMQOptions> options,
-        IObjectSerializer serializer)
+        IOptions<RabbitMQOptions> options)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _serializer = serializer;
     }
 
-    public async Task PublishAsync(object notification,
-        Type[] notificationTypes,
+    public async Task PublishAsync(ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        IReadOnlyCollection<string> notificationTypeNames,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(notification);
-        ArgumentNullException.ThrowIfNull(notificationTypes);
         await using var channel = await _connectionManager.CreateChannelAsync();
 
         var properties = new BasicProperties
         {
             Persistent = _options.Value.Durable,
             ContentType = "application/octet-stream",
-            Type = notification.GetType().FullName
+            Type = payloadTypeName
         };
 
         if (headers is not null)
@@ -46,11 +41,9 @@ public class RabbitMQNotificationRider : INotificationRider
             properties.Headers = headerDict;
         }
 
-        var body = _serializer.Serialize(notification);
-
-        foreach (var notificationType in notificationTypes)
+        foreach (var notificationTypeName in notificationTypeNames)
         {
-            var exchangeName = notificationType.DisplayName;
+            var exchangeName = notificationTypeName;
 
             await channel.ExchangeDeclareAsync(
                 exchange: exchangeName,
@@ -63,7 +56,7 @@ public class RabbitMQNotificationRider : INotificationRider
                 exchange: exchangeName,
                 routingKey: string.Empty,
                 basicProperties: properties,
-                body: body,
+                body: payload,
                 mandatory: false,
                 cancellationToken: cancellationToken);
         }

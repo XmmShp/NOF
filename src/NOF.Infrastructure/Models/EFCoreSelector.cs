@@ -22,6 +22,15 @@ public readonly struct EFCoreSelector
         return this;
     }
 
+    public EFCoreSelector WithTenantMode(TenantMode tenantMode)
+    {
+        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
+        {
+            options.TenantMode = tenantMode;
+        });
+        return this;
+    }
+
     public EFCoreSelector WithConnectionString(string connectionStringTemplate)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionStringTemplate);

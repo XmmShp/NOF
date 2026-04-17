@@ -1,43 +1,18 @@
-using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
-
 namespace NOF.Infrastructure;
 
 public sealed class MemoryNotificationRider : INotificationRider
 {
-    private readonly IServiceProvider _rootServiceProvider;
+    private readonly InboundMessageDispatcher _dispatcher;
 
-    public MemoryNotificationRider(IServiceProvider rootServiceProvider)
+    public MemoryNotificationRider(InboundMessageDispatcher dispatcher)
     {
-        _rootServiceProvider = rootServiceProvider;
+        _dispatcher = dispatcher;
     }
 
-    public async Task PublishAsync(object notification,
-        Type[] notificationTypes,
+    public Task PublishAsync(ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        IReadOnlyCollection<string> notificationTypeNames,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(notification);
-        ArgumentNullException.ThrowIfNull(notificationTypes);
-        await using var scope = _rootServiceProvider.GetRequiredService<IServiceScopeFactory>().CreateAsyncScope();
-        var infos = scope.ServiceProvider.GetRequiredService<NotificationHandlerInfos>();
-        var seenHandlerTypes = new HashSet<Type>();
-        foreach (var notificationType in notificationTypes)
-        {
-            foreach (var handlerType in infos.GetHandlers(notificationType))
-            {
-                if (!seenHandlerTypes.Add(handlerType))
-                {
-                    continue;
-                }
-
-                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
-                    _rootServiceProvider,
-                    notification,
-                    handlerType,
-                    headers,
-                    cancellationToken).ConfigureAwait(false);
-            }
-        }
-    }
+        => _dispatcher.DispatchNotificationAsync(payload, payloadTypeName, notificationTypeNames, headers, cancellationToken);
 }

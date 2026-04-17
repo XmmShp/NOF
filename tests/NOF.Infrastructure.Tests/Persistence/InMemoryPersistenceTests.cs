@@ -27,8 +27,11 @@ public class SqliteInMemoryPersistenceTests
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
-        builder.UseSingleTenant();
-        ConfigureSqliteInMemory(builder.UseDbContext<NOFDbContext>().AutoMigrate(), $"nof-tests-{Guid.NewGuid():N}");
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant)
+                .AutoMigrate(),
+            $"nof-tests-{Guid.NewGuid():N}");
 
         using var services = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions
         {
@@ -67,8 +70,8 @@ public class SqliteInMemoryPersistenceTests
 
             builder.AddHostingDefaults();
             builder.AddInfrastructureDefaults();
-            builder.UseDatabasePerTenant();
             builder.UseDbContext<TestDbContext>()
+            .WithTenantMode(TenantMode.DatabasePerTenant)
                 .WithConnectionString(builder.Configuration.GetConnectionString("sqlite")
                     ?? throw new InvalidOperationException("Connection string 'sqlite' not found in configuration."))
                 .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
@@ -518,6 +521,24 @@ public class SqliteInMemoryPersistenceTests
         }
     }
 
+    [Fact]
+    public async Task Creating_HostTenant_Record_ShouldThrow()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        db.Set<NOFTenant>().Add(new NOFTenant
+        {
+            Id = TenantId.Host,
+            Name = "Host"
+        });
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+        Assert.Contains(NOFAbstractionConstants.Tenant.HostId, ex.Message, StringComparison.Ordinal);
+    }
+
     private static EFCoreSelector ConfigureSqliteInMemory(EFCoreSelector selector, string databaseName)
     {
         return selector
@@ -525,7 +546,7 @@ public class SqliteInMemoryPersistenceTests
             .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
     }
 
-    private static NOFServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.SingleTenant)
+    private static NOFServiceProvider CreateServiceProvider(OutboxOptions? outboxOptions = null, TenantMode tenantMode = TenantMode.DatabasePerTenant)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -536,14 +557,11 @@ public class SqliteInMemoryPersistenceTests
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
-        _ = tenantMode switch
-        {
-            TenantMode.SharedDatabase => builder.UseSharedDatabaseTenancy(),
-            TenantMode.DatabasePerTenant => builder.UseDatabasePerTenant(),
-            _ => builder.UseSingleTenant()
-        };
-
-        ConfigureSqliteInMemory(builder.UseDbContext<TestDbContext>().AutoMigrate(), $"nof-tests-{Guid.NewGuid():N}");
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<TestDbContext>()
+                .WithTenantMode(tenantMode)
+                .AutoMigrate(),
+            $"nof-tests-{Guid.NewGuid():N}");
         builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
 
         if (outboxOptions is not null)

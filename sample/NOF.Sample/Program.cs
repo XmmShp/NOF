@@ -39,10 +39,8 @@ builder.AddJwtResourceServer(o =>
 
 builder.AddRabbitMQ();
 
-builder.UseSharedDatabaseTenancy();
-
 builder.UseDbContext<ConfigurationDbContext>()
-    .AutoMigrate()
+    .WithTenantMode(TenantMode.SharedDatabase)
     .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
         ?? throw new InvalidOperationException("Connection string 'postgres' not found in configuration."))
     .WithOptions((optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString));

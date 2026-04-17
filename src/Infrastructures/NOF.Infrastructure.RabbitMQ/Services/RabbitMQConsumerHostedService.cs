@@ -12,8 +12,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IServiceProvider _rootServiceProvider;
-    private readonly IObjectSerializer _serializer;
+    private readonly InboundMessageDispatcher _dispatcher;
     private readonly CommandHandlerInfos? _commandHandlerInfos;
     private readonly NotificationHandlerInfos? _notificationHandlerInfos;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
@@ -24,16 +23,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     public RabbitMQConsumerHostedService(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        IServiceProvider rootServiceProvider,
-        IObjectSerializer serializer,
+        InboundMessageDispatcher dispatcher,
         CommandHandlerInfos? commandHandlerInfos,
         NotificationHandlerInfos? notificationHandlerInfos,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _rootServiceProvider = rootServiceProvider;
-        _serializer = serializer;
+        _dispatcher = dispatcher;
         _commandHandlerInfos = commandHandlerInfos;
         _notificationHandlerInfos = notificationHandlerInfos;
         _logger = logger;
@@ -196,9 +193,6 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 throw new InvalidOperationException("RabbitMQ message type was missing in BasicProperties.Type.");
             }
 
-            var messageType = TypeRegistry.Resolve(messageTypeName);
-            var message = _serializer.Deserialize(payload, messageType);
-
             Dictionary<string, string?>? headers = null;
             if (args.BasicProperties.Headers is not null)
             {
@@ -214,22 +208,19 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
             if (_notificationHandlerTypes.TryGetValue(queueName, out var notificationHandlerType))
             {
-                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
-                    _rootServiceProvider,
-                    message!,
+                await _dispatcher.DispatchNotificationToHandlerAsync(
+                    payload,
+                    messageTypeName,
                     notificationHandlerType,
                     headers,
                     CancellationToken.None);
             }
             else
             {
-                var commandType = messageType;
-                var handlerType = _commandHandlerInfos?.GetHandlers(commandType).FirstOrDefault()
-                    ?? throw new InvalidOperationException($"Cannot route command '{commandType.Name}'. No matching handler registered.");
-                await InboundHandlerInvoker.ExecuteCommandAsync(
-                    _rootServiceProvider,
-                    handlerType,
-                    message!,
+                await _dispatcher.DispatchCommandAsync(
+                    payload,
+                    messageTypeName,
+                    queueName,
                     headers,
                     CancellationToken.None);
             }

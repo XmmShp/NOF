@@ -48,20 +48,17 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     private readonly IServiceProvider _serviceProvider;
     private readonly IExecutionContext _executionContext;
-    private readonly TenantOptions _tenantOptions;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         IExecutionContext executionContext,
-        IOptions<TenantOptions> tenantOptions,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
         _executionContext = executionContext;
-        _tenantOptions = tenantOptions.Value;
         _dbContextConfigurationOptions = dbContextConfigurationOptions.Value;
         _logger = logger;
     }
@@ -77,17 +74,17 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         var extension = new NOFTenantDbContextOptionsExtension
         {
             TenantId = tenantId,
-            TenantMode = _tenantOptions.Mode
+            TenantMode = _dbContextConfigurationOptions.TenantMode
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
         var connectionString = DbConnectionStringTemplateResolver.ResolveTenantId(_dbContextConfigurationOptions.ConnectionStringTemplate, tenantId);
-        EnsureSqliteInMemoryConnectionIsKeptAlive(connectionString);
         _dbContextConfigurationOptions.Configure(optionsBuilder, connectionString);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 
         var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);
+        EnsureSqliteInMemoryConnectionIsKeptAlive(dbContext);
 
         var contextType = string.IsNullOrWhiteSpace(tenantId) ? "Host" : "Tenant";
 
@@ -102,37 +99,33 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     private void ConfigureDbContext(TDbContext dbContext, string contextType)
     {
+        if (IsSqliteProvider(dbContext))
+        {
+            EnsureSqliteSchemaInitialized(dbContext, contextType);
+            return;
+        }
+
         if (_dbContextConfigurationOptions.AutoMigrate)
         {
-            if (dbContext.Database.IsRelational())
-            {
-                EnsureMigratedOnce(dbContext, contextType);
-            }
+            throw new NotSupportedException(
+                "Automatic migration is only supported for SQLite. " +
+                "For distributed deployments, please run migrations manually before starting the application.");
         }
-        else
+
+        if (dbContext.Database.IsRelational())
         {
-            if (dbContext.Database.IsRelational())
+            var pendingMigrations = dbContext.Database.GetPendingMigrations().ToArray();
+            if (pendingMigrations.Length != 0)
             {
-                var pendingMigrations = dbContext.Database.GetPendingMigrations().ToArray();
-                if (pendingMigrations.Length != 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{contextType} database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
-                        $"Enable auto-migration by configuring DbContextConfigurationOptions.AutoMigrate = true or run migrations manually.");
-                }
+                throw new InvalidOperationException(
+                    $"{contextType} database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
+                    "Automatic migration is only supported for SQLite. Please run migrations manually before starting the application.");
             }
         }
     }
 
-    private void EnsureMigratedOnce(TDbContext dbContext, string contextType)
+    private void EnsureSqliteSchemaInitialized(TDbContext dbContext, string contextType)
     {
-        if (IsSqliteInMemory(dbContext))
-        {
-            dbContext.Database.EnsureCreated();
-            _logger.LogDebug("Initialized in-memory SQLite schema for {ContextType}", contextType);
-            return;
-        }
-
         var key = GetMigrationKey(dbContext);
         if (MigratedContexts.ContainsKey(key))
         {
@@ -149,21 +142,16 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
             }
 
             var hasMigrations = dbContext.Database.GetMigrations().Any();
-            var schemaInitialized = false;
             if (hasMigrations)
             {
                 dbContext.Database.Migrate();
-                schemaInitialized = true;
             }
             else
             {
-                schemaInitialized = false;
+                dbContext.Database.EnsureCreated();
             }
             MigratedContexts.TryAdd(key, 0);
-            if (schemaInitialized)
-            {
-                _logger.LogDebug("Initialized database schema for {ContextType}", contextType);
-            }
+            _logger.LogDebug("Initialized SQLite schema for {ContextType}", contextType);
         }
         finally
         {
@@ -178,25 +166,25 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         return $"{typeof(TDbContext).AssemblyQualifiedName}|{provider}|{connectionString}";
     }
 
-    private static bool IsSqliteInMemory(TDbContext dbContext)
+    private static bool IsSqliteProvider(TDbContext dbContext)
     {
         var provider = dbContext.Database.ProviderName ?? string.Empty;
-        if (!provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+        return provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void EnsureSqliteInMemoryConnectionIsKeptAlive(TDbContext dbContext)
+    {
+        if (!IsSqliteProvider(dbContext))
         {
-            return false;
+            return;
         }
 
         var connectionString = dbContext.Database.GetConnectionString();
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            return false;
+            return;
         }
 
-        return connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void EnsureSqliteInMemoryConnectionIsKeptAlive(string connectionString)
-    {
         if (!connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase))
         {
             return;

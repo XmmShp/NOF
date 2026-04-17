@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Abstraction;
 using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
@@ -8,33 +7,29 @@ public class RabbitMQCommandRider : ICommandRider
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly IObjectSerializer _serializer;
 
     public RabbitMQCommandRider(
         RabbitMQConnectionManager connectionManager,
-        IOptions<RabbitMQOptions> options,
-        IObjectSerializer serializer)
+        IOptions<RabbitMQOptions> options)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _serializer = serializer;
     }
 
-    public async Task SendAsync(object command,
-        Type commandType,
+    public async Task SendAsync(ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        string commandTypeName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(commandType);
-        await PublishToRabbitMQAsync(command, commandType, headers, cancellationToken);
+        await PublishToRabbitMQAsync(payload, payloadTypeName, commandTypeName, headers, cancellationToken);
     }
 
-    private async Task PublishToRabbitMQAsync(object command, Type commandType, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
+    private async Task PublishToRabbitMQAsync(ReadOnlyMemory<byte> payload, string payloadTypeName, string commandTypeName, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 
-        var exchangeName = commandType.DisplayName;
+        var exchangeName = commandTypeName;
         var routingKey = exchangeName;
 
         await channel.ExchangeDeclareAsync(
@@ -48,7 +43,7 @@ public class RabbitMQCommandRider : ICommandRider
         {
             Persistent = _options.Value.Durable,
             ContentType = "application/octet-stream",
-            Type = command.GetType().FullName
+            Type = payloadTypeName
         };
 
         if (headers is not null)
@@ -61,13 +56,11 @@ public class RabbitMQCommandRider : ICommandRider
             properties.Headers = headerDict;
         }
 
-        var body = _serializer.Serialize(command);
-
         await channel.BasicPublishAsync(
             exchange: exchangeName,
             routingKey: routingKey,
             basicProperties: properties,
-            body: body,
+            body: payload,
             mandatory: false,
             cancellationToken: cancellationToken);
     }

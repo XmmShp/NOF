@@ -1,34 +1,18 @@
-using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
-
 namespace NOF.Infrastructure;
 
 public sealed class MemoryCommandRider : ICommandRider
 {
-    private readonly IServiceProvider _rootServiceProvider;
+    private readonly InboundMessageDispatcher _dispatcher;
 
-    public MemoryCommandRider(
-        IServiceProvider rootServiceProvider)
+    public MemoryCommandRider(InboundMessageDispatcher dispatcher)
     {
-        _rootServiceProvider = rootServiceProvider;
+        _dispatcher = dispatcher;
     }
 
-    public async Task SendAsync(object command,
-        Type commandType,
+    public Task SendAsync(ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        string commandTypeName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(commandType);
-        var handlerInfos = _rootServiceProvider.GetService<CommandHandlerInfos>();
-        var handlerType = handlerInfos?.GetHandlers(commandType).FirstOrDefault()
-            ?? throw new InvalidOperationException(
-                $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
-        await InboundHandlerInvoker.ExecuteCommandAsync(
-            _rootServiceProvider,
-            handlerType,
-            command,
-            headers,
-            cancellationToken).ConfigureAwait(false);
-    }
+        => _dispatcher.DispatchCommandAsync(payload, payloadTypeName, commandTypeName, headers, cancellationToken);
 }

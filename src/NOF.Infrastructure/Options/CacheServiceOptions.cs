@@ -10,6 +10,7 @@ public class CacheServiceOptions
 {
     /// <summary>
     /// Gets or sets the default cache key prefix applied to all keys.
+    /// Supports the <c>{tenantId}</c> placeholder.
     /// </summary>
     public string? KeyPrefix { get; set; }
 

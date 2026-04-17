@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
-using NOF.Application.Extension.Redis;
 using NOF.Hosting;
 using StackExchange.Redis;
 
@@ -31,8 +29,7 @@ public static class NOFInfrastructureExtensions
                 return ConnectionMultiplexer.Connect(string.Empty, configureConnectionOptions);
             });
 
-            builder.Services.ReplaceOrAddScoped<ICacheService, RedisCacheService>();
-            builder.Services.ReplaceOrAddScoped(sp => (IRedisCacheService)sp.GetRequiredService<ICacheService>());
+            builder.Services.ReplaceOrAddScoped<ICacheServiceRider, RedisCacheServiceRider>();
 
             return builder;
         }
