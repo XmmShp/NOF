@@ -8,8 +8,6 @@ public sealed class DbContextConfigurationOptions
 
     public Action<DbContextOptionsBuilder, string> Configure { get; set; } = static (_, _) => { };
 
-    public bool AutoMigrate { get; set; }
-
     public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;
 }
 

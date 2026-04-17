@@ -115,8 +115,7 @@ public static partial class NOFInfrastructureExtensions
             builder.UseDbContext<NOFDbContext>()
                 .WithConnectionString("Data Source=nof-sqlite-memory-{tenantId};Mode=Memory;Cache=Shared")
                 .WithTenantMode(TenantMode.DatabasePerTenant)
-                .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString))
-                .AutoMigrate();
+                .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
             #endregion
 
             return builder;

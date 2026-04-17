@@ -27,7 +27,6 @@
     <Project Path="src/NOF.Domain.SourceGenerator/NOF.Domain.SourceGenerator.csproj" Id="a03d6a7b-5166-4eb4-85d7-982271528615" />
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Hosting.Abstraction/NOF.Hosting.Abstraction.csproj" />
-    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
     <Project Path="src/NOF.Infrastructure/NOF.Infrastructure.csproj" />
     <Project Path="src/NOF.UI/NOF.UI.csproj" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
@@ -45,7 +44,6 @@
 	<Project Path="src/Extensions/NOF.Contract.Extension.Authorization.Jwt/NOF.Contract.Extension.Authorization.Jwt.csproj" />
   </Folder>
   <Folder Name="/src/Infrastructures/">
-    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj" Id="918de9e4-8bbd-4635-b1ed-498a19f0312d" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.RabbitMQ/NOF.Infrastructure.RabbitMQ.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
   </Folder>

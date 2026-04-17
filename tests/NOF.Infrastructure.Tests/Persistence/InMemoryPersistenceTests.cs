@@ -29,8 +29,7 @@ public class SqliteInMemoryPersistenceTests
         builder.AddInfrastructureDefaults();
         ConfigureSqliteInMemory(
             builder.UseDbContext<NOFDbContext>()
-                .WithTenantMode(TenantMode.DatabasePerTenant)
-                .AutoMigrate(),
+                .WithTenantMode(TenantMode.DatabasePerTenant),
             $"nof-tests-{Guid.NewGuid():N}");
 
         using var services = builder.Services.BuildNOFServiceProvider(new ServiceProviderOptions
@@ -559,8 +558,7 @@ public class SqliteInMemoryPersistenceTests
         builder.AddInfrastructureDefaults();
         ConfigureSqliteInMemory(
             builder.UseDbContext<TestDbContext>()
-                .WithTenantMode(tenantMode)
-                .AutoMigrate(),
+                .WithTenantMode(tenantMode),
             $"nof-tests-{Guid.NewGuid():N}");
         builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
 

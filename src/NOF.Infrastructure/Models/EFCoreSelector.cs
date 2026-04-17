@@ -13,15 +13,6 @@ public readonly struct EFCoreSelector
         Builder = builder;
     }
 
-    public EFCoreSelector AutoMigrate()
-    {
-        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
-        {
-            options.AutoMigrate = true;
-        });
-        return this;
-    }
-
     public EFCoreSelector WithTenantMode(TenantMode tenantMode)
     {
         Builder.Services.Configure<DbContextConfigurationOptions>(options =>

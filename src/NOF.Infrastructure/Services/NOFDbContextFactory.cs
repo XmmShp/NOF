@@ -105,13 +105,6 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
             return;
         }
 
-        if (_dbContextConfigurationOptions.AutoMigrate)
-        {
-            throw new NotSupportedException(
-                "Automatic migration is only supported for SQLite. " +
-                "For distributed deployments, please run migrations manually before starting the application.");
-        }
-
         if (dbContext.Database.IsRelational())
         {
             var pendingMigrations = dbContext.Database.GetPendingMigrations().ToArray();

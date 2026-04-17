@@ -45,20 +45,42 @@ public static class RpcServerInvoker
 
         await outboundPipeline.ExecuteAsync(outboundContext, async ct =>
         {
-            await InboundHandlerInvoker.ExecuteRpcAsync(
-                rootServiceProvider,
-                request,
-                methodInfo,
-                handlerType,
-                outboundContext.Headers,
-                async (sp, innerCt) =>
-                {
-                    var handler = (RpcHandler)sp.GetRequiredService(handlerType);
-                    outboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
-                },
-                ct).ConfigureAwait(false);
+            await using var scope = rootServiceProvider.CreateAsyncScope();
+            ApplyHeaders(scope.ServiceProvider, outboundContext.Headers);
+
+            var serviceType = methodInfo.DeclaringType
+                ?? throw new InvalidOperationException("RPC method must have a declaring type.");
+            var context = new RequestInboundContext
+            {
+                Message = request,
+                Services = scope.ServiceProvider,
+                HandlerType = handlerType,
+                ServiceType = serviceType,
+                MethodName = methodInfo.Name
+            };
+
+            var inboundPipeline = scope.ServiceProvider.GetRequiredService<IRequestInboundPipelineExecutor>();
+            await inboundPipeline.ExecuteAsync(context, async innerCt =>
+            {
+                var handler = (RpcHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+                outboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
 
         return outboundContext.Response;
+    }
+
+    private static void ApplyHeaders(IServiceProvider services, IEnumerable<KeyValuePair<string, string?>>? headers)
+    {
+        if (headers is null)
+        {
+            return;
+        }
+
+        var executionContext = services.GetRequiredService<IExecutionContext>();
+        foreach (var (headerKey, value) in headers)
+        {
+            executionContext[headerKey] = value;
+        }
     }
 }

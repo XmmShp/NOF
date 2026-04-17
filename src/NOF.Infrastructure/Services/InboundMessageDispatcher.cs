@@ -38,12 +38,22 @@ public sealed class InboundMessageDispatcher
             ?? throw new InvalidOperationException(
                 $"Cannot route command '{commandType.Name}'. No matching handler registered.");
 
-        await InboundHandlerInvoker.ExecuteCommandAsync(
-            _rootServiceProvider,
-            handlerType,
-            command,
-            headers,
-            cancellationToken).ConfigureAwait(false);
+        await using var scope = _rootServiceProvider.CreateAsyncScope();
+        ApplyHeaders(scope.ServiceProvider, headers);
+
+        var context = new CommandInboundContext
+        {
+            Message = command,
+            Services = scope.ServiceProvider,
+            HandlerType = handlerType
+        };
+
+        var pipeline = scope.ServiceProvider.GetRequiredService<ICommandInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(context, async ct =>
+        {
+            var handler = (CommandHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+            await handler.HandleAsync(command, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DispatchNotificationAsync(
@@ -71,8 +81,7 @@ public sealed class InboundMessageDispatcher
                     continue;
                 }
 
-                await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
-                    _rootServiceProvider,
+                await ExecuteNotificationToHandlerAsync(
                     notification,
                     handlerType,
                     headers,
@@ -92,11 +101,48 @@ public sealed class InboundMessageDispatcher
         var notification = _serializer.Deserialize(payload, payloadType)
             ?? throw new InvalidOperationException($"Failed to deserialize notification payload as '{payloadTypeName}'.");
 
-        await InboundHandlerInvoker.ExecuteNotificationToHandlerAsync(
-            _rootServiceProvider,
+        await ExecuteNotificationToHandlerAsync(
             notification,
             handlerType,
             headers,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task ExecuteNotificationToHandlerAsync(
+        object notification,
+        Type handlerType,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        CancellationToken cancellationToken)
+    {
+        await using var scope = _rootServiceProvider.CreateAsyncScope();
+        ApplyHeaders(scope.ServiceProvider, headers);
+
+        var context = new NotificationInboundContext
+        {
+            Message = notification,
+            Services = scope.ServiceProvider,
+            HandlerType = handlerType
+        };
+
+        var pipeline = scope.ServiceProvider.GetRequiredService<INotificationInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(context, async ct =>
+        {
+            var handler = (NotificationHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+            await handler.HandleAsync(notification, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void ApplyHeaders(IServiceProvider services, IEnumerable<KeyValuePair<string, string?>>? headers)
+    {
+        if (headers is null)
+        {
+            return;
+        }
+
+        var executionContext = services.GetRequiredService<IExecutionContext>();
+        foreach (var (headerKey, value) in headers)
+        {
+            executionContext[headerKey] = value;
+        }
     }
 }
