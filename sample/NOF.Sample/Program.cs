@@ -12,10 +12,6 @@ using NOF.Sample.Application;
 using NOF.Sample.Application.Repositories;
 using NOF.Sample.Repositories;
 
-[assembly: MapServiceToHttpEndpoints<INOFSampleService>]
-[assembly: MapServiceToHttpEndpoints<IJwtAuthorityService>]
-[assembly: MapServiceToHttpEndpoints<IJwksService>]
-
 var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
@@ -41,9 +37,9 @@ builder.AddRabbitMQ();
 
 builder.UseDbContext<ConfigurationDbContext>()
     .WithTenantMode(TenantMode.SharedDatabase)
-    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
-        ?? throw new InvalidOperationException("Connection string 'postgres' not found in configuration."))
-    .WithOptions((optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString));
+    .WithConnectionString(builder.Configuration.GetConnectionString("sqlite")
+        ?? "Data Source=nof-sample-{tenantId}.db")
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
 
 builder.Services.AddScoped<IConfigNodeChildrenRepository, ConfigNodeChildrenRepository>();
 
@@ -70,6 +66,10 @@ builder.Services.AddHostedService(async (sp, ct) =>
 var app = await builder.BuildAsync();
 
 app.UseAntiforgery();
+
+app.MapHttpEndpoint<NOFSampleService>();
+app.MapHttpEndpoint<JwtAuthorityService>();
+app.MapHttpEndpoint<JwksService>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

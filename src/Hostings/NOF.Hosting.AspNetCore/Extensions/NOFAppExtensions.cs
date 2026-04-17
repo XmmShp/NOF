@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
 
-public static class NOFHostingAspNetCoreExtensions
+public static partial class NOFHostingAspNetCoreExtensions
 {
     extension(INOFAppBuilder builder)
     {

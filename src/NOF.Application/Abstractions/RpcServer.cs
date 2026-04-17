@@ -1,18 +1,20 @@
 using NOF.Contract;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
+
+public interface IRpcServer
+{
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+    static abstract Type ServiceType { get; }
+}
 
 /// <summary>
 /// Base type for source-generated RPC server containers.
 /// </summary>
 public abstract class RpcServer
 {
-    /// <summary>
-    /// Gets the RPC contract type handled by this server.
-    /// </summary>
-    public abstract Type ServiceType { get; }
-
     /// <summary>
     /// Returns the mapping from operation name to split handler base type.
     /// </summary>
@@ -38,9 +40,8 @@ public abstract class RpcServer
 /// <summary>
 /// Typed base class for an RPC server container.
 /// </summary>
-public abstract class RpcServer<TRpcService> : RpcServer
+public abstract class RpcServer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService> : RpcServer, IRpcServer
     where TRpcService : class, IRpcService
 {
-    /// <inheritdoc />
-    public sealed override Type ServiceType => typeof(TRpcService);
+    public static Type ServiceType => typeof(TRpcService);
 }

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using NOF.Application;
+using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
 
@@ -60,6 +62,15 @@ public static partial class NOFJwtAuthorizationExtensions
                 {
                     client.BaseAddress = new Uri(jwksUri.GetLeftPart(UriPartial.Authority));
                 }
+            });
+            builder.Services.ReplaceOrAddScoped<LocalJwksServiceClient, LocalJwksServiceClient>();
+            builder.Services.ReplaceOrAddScoped<IJwksServiceClient>(sp =>
+            {
+                // Prefer local RPC (outbound -> inbound pipelines) when the service is hosted in-process.
+                var infos = sp.GetRequiredService<RpcServerInfos>();
+                return infos.TryGetImplementationType(typeof(IJwksService), out _)
+                    ? sp.GetRequiredService<LocalJwksServiceClient>()
+                    : sp.GetRequiredService<HttpJwksService>();
             });
             builder.Services.ReplaceOrAddSingleton<IJwksProvider, JwksProvider>();
             builder.Services.AddRequestInboundMiddleware<JwtResourceServerInboundMiddleware>();

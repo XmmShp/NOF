@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NOF.Abstraction;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using NOF.Abstraction;
 
 namespace NOF.Infrastructure;
 

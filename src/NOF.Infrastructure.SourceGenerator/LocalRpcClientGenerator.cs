@@ -113,10 +113,38 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
             ? method.Name.Substring(0, method.Name.Length - 5)
             : method.Name;
 
-        sb.AppendLine($"        public virtual async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::System.Threading.CancellationToken cancellationToken = default)");
+        sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
         sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, \"{operationName}\", {requestParameter.Name}, cancellationToken).ConfigureAwait(false);");
-        sb.AppendLine($"            return ({returnType})result!;");
+        // Most clients return Task<T>. In an async Task<T> method we must return T, not Task<T>.
+        if (method.ReturnType is INamedTypeSymbol { Name: "Task", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } taskType)
+        {
+            if (taskType.IsGenericType && taskType.TypeArguments.Length == 1)
+            {
+                var inner = taskType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"            return ({inner})result!;");
+            }
+            else
+            {
+                sb.AppendLine("            return;");
+            }
+        }
+        else if (method.ReturnType is INamedTypeSymbol { Name: "ValueTask", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } valueTaskType)
+        {
+            if (valueTaskType.IsGenericType && valueTaskType.TypeArguments.Length == 1)
+            {
+                var inner = valueTaskType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                sb.AppendLine($"            return ({inner})result!;");
+            }
+            else
+            {
+                sb.AppendLine("            return;");
+            }
+        }
+        else
+        {
+            sb.AppendLine($"            return ({returnType})result!;");
+        }
         sb.AppendLine("        }");
         sb.AppendLine();
     }

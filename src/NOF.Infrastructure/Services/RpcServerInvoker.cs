@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -11,7 +12,7 @@ public static class RpcServerInvoker
         string operationName,
         object request,
         CancellationToken cancellationToken)
-        where TRpcService : class, Contract.IRpcService
+        where TRpcService : class, IRpcService
     {
         ArgumentNullException.ThrowIfNull(rootServiceProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);

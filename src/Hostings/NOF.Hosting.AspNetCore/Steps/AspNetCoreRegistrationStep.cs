@@ -34,7 +34,6 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
             ));
 
         builder.AddInitializationStep(new HealthCheckInitializationStep());
-        builder.AddInitializationStep(new RpcServiceEndpointInitializationStep());
 
         return ValueTask.CompletedTask;
     }
@@ -56,16 +55,5 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
         }
     }
 
-    private class RpcServiceEndpointInitializationStep : IEndpointInitializationStep
-    {
-        public Task ExecuteAsync(IHost app)
-        {
-            if (app is IEndpointRouteBuilder endpointRouteBuilder)
-            {
-                RpcServiceEndpointRegistry.MapAll(endpointRouteBuilder);
-            }
-
-            return Task.CompletedTask;
-        }
-    }
+    // HTTP endpoint mapping is explicit via app.MapHttpEndpoint<TRpcServer>().
 }

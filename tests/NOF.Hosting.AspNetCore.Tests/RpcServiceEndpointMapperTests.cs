@@ -8,7 +8,7 @@ using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public class RpcServiceEndpointMapperTests
+public class RpcHttpEndpointRegistryGeneratorTests
 {
     private static readonly Type[] _refs =
     [
@@ -18,39 +18,25 @@ public class RpcServiceEndpointMapperTests
         typeof(Result),
         typeof(Result<>),
         typeof(AssemblyInitializeAttribute),
-        typeof(Hosting.AspNetCore.MapServiceToHttpEndpointsAttribute<>),
-        typeof(Hosting.AspNetCore.RpcServiceEndpointRegistry),
+        typeof(Hosting.AspNetCore.RpcHttpEndpointHandlerRegistry),
         typeof(Hosting.AspNetCore.NOFHostingAspNetCoreExtensions),
+        typeof(Microsoft.AspNetCore.Mvc.FromBodyAttribute),
+        typeof(Microsoft.AspNetCore.Mvc.FromServicesAttribute),
+        typeof(Application.RpcServer<>),
+        typeof(Infrastructure.RpcServerInvoker),
         typeof(Microsoft.AspNetCore.Builder.WebApplication)
     ];
 
     [Fact]
-    public void GenerateMapServiceToHttpEndpoints_WithMainAndReferencedServices_CombinesAll()
+    public void GenerateMapHttpEndpoint_WhenCalled_GeneratesInitializerAndRegistrations()
     {
-        const string libSource = """
-            using NOF.Contract;
-
-            namespace Lib
-            {
-                public record GetUserRequest(string Id);
-
-                
-                public partial interface ILibService : IRpcService
-                {
-                    [HttpEndpoint(HttpVerb.Get, "/api/user")]
-                    Result<string> GetUser(GetUserRequest request);
-                }
-            }
-            """;
-
-        var libComp = CSharpCompilation.CreateCompilation("Lib", libSource, isDll: true, _refs);
-        var libRef = libComp.CreateMetadataReference();
-
         const string mainSource = """
+            using System;
+            using System.Collections.Generic;
+            using Microsoft.AspNetCore.Builder;
+            using NOF.Application;
             using NOF.Contract;
-            
-            [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<Lib.ILibService>]
-            [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<App.IAppService>(Prefix = "/v1")]
+            using NOF.Hosting.AspNetCore;
 
             namespace App
             {
@@ -59,34 +45,39 @@ public class RpcServiceEndpointMapperTests
                 
                 public partial interface IAppService : IRpcService
                 {
-                    [HttpEndpoint(HttpVerb.Post, "/api/user")]
+                    [HttpEndpoint(HttpVerb.Post, "/rpc/CreateUser")]
                     Result CreateUser(CreateUserRequest request);
+                }
+
+                public sealed class AppServer : RpcServer<IAppService>
+                {
+                    protected override IReadOnlyDictionary<string, Type> GetHandlerMappings()
+                        => new Dictionary<string, Type>();
+                }
+
+                public static class Startup
+                {
+                    public static void Configure(WebApplication app)
+                    {
+                        app.MapHttpEndpoint<AppServer>();
+                    }
                 }
             }
             """;
 
-        var mainRefs = _refs.Select(static type => type.ToMetadataReference())
-            .Cast<MetadataReference>()
-            .Append(libRef)
-            .ToArray();
-        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, mainRefs);
-        var result = new RpcServiceEndpointMapperGenerator().GetResult(mainComp);
+        var mainComp = CSharpCompilation.CreateCompilation("App", mainSource, isDll: true, _refs);
+        var result = new RpcHttpEndpointRegistryGenerator().GetResult(mainComp);
 
         Assert.Single(result.GeneratedTrees);
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcServiceEndpointAssemblyInitializer>", code);
-        Assert.Contains("RpcServiceEndpointRegistry.Register(__AppRpcServiceEndpointMappings.Map_0);", code);
-        Assert.Contains("RpcServiceEndpointRegistry.Register(__AppRpcServiceEndpointMappings.Map_1);", code);
-        Assert.Contains("app.MapGet(BuildRoute(\"\", \"/api/user\")", code);
-        Assert.Contains("app.MapPost(BuildRoute(\"/v1\", \"/api/user\")", code);
-        Assert.Contains("global::System.IServiceProvider services", code);
-        Assert.Contains("RpcServerInvoker.InvokeAsync<global::Lib.ILibService>(services, \"GetUser\", request, cancellationToken)", code);
+        Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcHttpEndpointAssemblyInitializer>", code);
+        Assert.Contains("RpcHttpEndpointHandlerRegistry.Register(typeof(global::App.IAppService), \"CreateUser\"", code);
         Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IAppService>(services, \"CreateUser\", request, cancellationToken)", code);
     }
 
     [Fact]
-    public void GenerateMapServiceToHttpEndpoints_WhenNoAttribute_GeneratesNothing()
+    public void GenerateMapHttpEndpoint_WhenNoCall_GeneratesNothing()
     {
         const string source = """
             using NOF.Contract;
@@ -107,74 +98,7 @@ public class RpcServiceEndpointMapperTests
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
+        var result = new RpcHttpEndpointRegistryGenerator().GetResult(comp);
         Assert.Empty(result.GeneratedTrees);
-    }
-
-    [Fact]
-    public void GenerateMapServiceToHttpEndpoints_MethodWithoutHttpEndpoint_DefaultsToPost()
-    {
-        const string source = """
-            using NOF.Contract;
-            
-            [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<App.IMyService>]
-
-            namespace App
-            {
-                public record InternalRequest(string Data);
-
-                
-                public partial interface IMyService : IRpcService
-                {
-                    Result Internal(InternalRequest request);
-                }
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
-
-        Assert.Single(result.GeneratedTrees);
-        var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
-        Assert.Contains("MapPost", code);
-        Assert.Contains("BuildRoute(\"\", \"Internal\")", code);
-    }
-
-    [Fact]
-    public void GenerateMapServiceToHttpEndpoints_RouteAndBodyHybridBinding_Works()
-    {
-        const string source = """
-            using NOF.Contract;
-            
-            [assembly: NOF.Hosting.AspNetCore.MapServiceToHttpEndpoints<App.IMyService>]
-
-            namespace App
-            {
-                public record UpdateItemRequest(long Id)
-                {
-                    public string? Value { get; set; }
-                    public int? Priority { get; set; }
-                }
-
-                
-                public partial interface IMyService : IRpcService
-                {
-                    [HttpEndpoint(HttpVerb.Patch, "/api/items/{id}")]
-                    Result UpdateItem(UpdateItemRequest request);
-                }
-            }
-            """;
-
-        var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, _refs);
-        var result = new RpcServiceEndpointMapperGenerator().GetResult(comp);
-
-        Assert.Single(result.GeneratedTrees);
-        var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
-
-        Assert.Contains("class __App_IMyService_UpdateItemRequest_Body__", code);
-        Assert.Contains("UpdateItemRequest(id)", code);
-        Assert.Contains("Value = __body__.Value", code);
-        Assert.Contains("Priority = __body__.Priority", code);
-        Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IMyService>(services, \"UpdateItem\", request, cancellationToken)", code);
     }
 }
