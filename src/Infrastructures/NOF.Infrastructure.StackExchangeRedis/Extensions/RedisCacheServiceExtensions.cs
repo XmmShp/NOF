@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Application.Extension.Redis;
@@ -15,22 +14,25 @@ public static class NOFInfrastructureExtensions
         /// <summary>
         /// Replaces the default in-memory cache with a Redis-based cache service using StackExchange.Redis.
         /// </summary>
-        /// <param name="connectionName">The name of the connection string in configuration (e.g., "Redis").</param>
-        /// <param name="configureOptions">Optional action to configure the cache service options.</param>
+        /// <param name="configureConnectionOptions">Configures StackExchange.Redis connection options.</param>
+        /// <param name="configureCacheOptions">Optional action to configure cache service options.</param>
         /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
-        public INOFAppBuilder AddRedisCache(string connectionName = "redis", Action<CacheServiceOptions>? configureOptions = null)
+        public INOFAppBuilder AddRedisCache(Action<ConfigurationOptions> configureConnectionOptions, Action<CacheServiceOptions>? configureCacheOptions = null)
         {
+            ArgumentNullException.ThrowIfNull(configureConnectionOptions);
+
+            if (configureCacheOptions is not null)
+            {
+                builder.Services.Configure(configureCacheOptions);
+            }
+
             builder.Services.ReplaceOrAddSingleton<IConnectionMultiplexer>(sp =>
             {
-                var configuration = sp.GetRequiredService<IConfiguration>();
-                var connectionString = configuration.GetConnectionString(connectionName)
-                                       ?? throw new InvalidOperationException($"Connection string '{connectionName}' not found in configuration.");
-
-                return ConnectionMultiplexer.Connect(connectionString);
+                return ConnectionMultiplexer.Connect(string.Empty, configureConnectionOptions);
             });
 
-            builder.Services.ReplaceOrAddCacheService<RedisCacheService>(configureOptions);
-            builder.Services.ReplaceOrAddScoped<IRedisCacheService>(sp => sp.GetRequiredService<RedisCacheService>());
+            builder.Services.ReplaceOrAddScoped<ICacheService, RedisCacheService>();
+            builder.Services.ReplaceOrAddScoped(sp => (IRedisCacheService)sp.GetRequiredService<ICacheService>());
 
             return builder;
         }

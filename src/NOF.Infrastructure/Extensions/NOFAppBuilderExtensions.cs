@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +30,7 @@ public static partial class NOFInfrastructureExtensions
             }
 
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
+            builder.Services.AddOptions<CacheServiceOptions>();
             builder.Services.TryAddSingleton<CommandOutboundPipelineTypes>();
             builder.Services.TryAddSingleton<NotificationOutboundPipelineTypes>();
             builder.Services.TryAddSingleton<CommandInboundPipelineTypes>();

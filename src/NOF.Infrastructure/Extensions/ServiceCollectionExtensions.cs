@@ -82,5 +82,19 @@ public static partial class NOFInfrastructureExtensions
             return services;
         }
 
+        /// <summary>
+        /// Registers a hosted service backed by an asynchronous delegate.
+        /// </summary>
+        public IServiceCollection AddHostedService(Func<IServiceProvider, CancellationToken, Task> startAction)
+        {
+            return services.AddHostedService(sp => new DelegateBackgroundService(sp, startAction));
+        }
+
+        /// <summary>
+        /// Registers a hosted service backed by a synchronous delegate.
+        /// </summary>
+        public IServiceCollection AddHostedService(Action<IServiceProvider, CancellationToken> startAction)
+            => services.AddHostedService((sp, ct) => { startAction(sp, ct); return Task.CompletedTask; });
+
     }
 }

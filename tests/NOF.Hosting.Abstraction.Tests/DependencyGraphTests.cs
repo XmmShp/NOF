@@ -1,5 +1,4 @@
 using NOF.Abstraction;
-using NOF.Hosting;
 using Xunit;
 
 namespace NOF.Hosting.Abstraction.Tests;

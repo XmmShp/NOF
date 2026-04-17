@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
@@ -9,7 +8,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 using Xunit;
@@ -62,21 +60,17 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void TryAddCacheService_ShouldNotOverrideExistingRegistration()
+    public void AddHostedService_WithDelegate_ShouldRegisterDelegateBackgroundService()
     {
         var services = new ServiceCollection();
-        services.AddOptions();
-        services.AddSingleton<IObjectSerializer, JsonObjectSerializer>();
-        services.AddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
 
-        services.AddCacheService<TestCacheService>();
-        services.TryAddCacheService<MemoryCacheService>();
+        services.AddHostedService((_, _) => Task.CompletedTask);
 
-        var descriptors = services
-            .Where(service => service.ServiceType == typeof(ICacheService))
-            .ToList();
+        var descriptor = Assert.Single(services, service => service.ServiceType == typeof(IHostedService));
+        Assert.NotNull(descriptor.ImplementationFactory);
 
-        Assert.Single(descriptors);
+        using var provider = services.BuildServiceProvider();
+        Assert.IsType<DelegateBackgroundService>(provider.GetRequiredService<IEnumerable<IHostedService>>().Single());
     }
 
     [Fact]
@@ -233,93 +227,4 @@ public class InfrastructureDefaultsTests
         public long NextId() => Interlocked.Increment(ref _current);
     }
 
-    private sealed class TestCacheService : ICacheService
-    {
-        public byte[]? Get(string key) => null;
-
-        public Task<byte[]?> GetAsync(string key, CancellationToken token = default)
-            => Task.FromResult<byte[]?>(null);
-
-        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
-        {
-        }
-
-        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
-            => Task.CompletedTask;
-
-        public void Refresh(string key)
-        {
-        }
-
-        public Task RefreshAsync(string key, CancellationToken token = default)
-            => Task.CompletedTask;
-
-        public void Remove(string key)
-        {
-        }
-
-        public Task RemoveAsync(string key, CancellationToken token = default)
-            => Task.CompletedTask;
-
-        public ValueTask<Optional<T>> GetAsync<T>(string key, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<Optional<T>>(Optional.None);
-
-        public ValueTask<T> GetOrSetAsync<T>(string key, Func<CancellationToken, ValueTask<T>> factory, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
-            => factory(cancellationToken);
-
-        public ValueTask SetAsync<T>(string key, T value, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
-            => ValueTask.CompletedTask;
-
-        public ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(false);
-
-        public ValueTask<IReadOnlyDictionary<string, Optional<T>>> GetManyAsync<T>(IEnumerable<string> keys, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<IReadOnlyDictionary<string, Optional<T>>>(new Dictionary<string, Optional<T>>());
-
-        public ValueTask SetManyAsync<T>(IDictionary<string, T> items, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
-            => ValueTask.CompletedTask;
-
-        public ValueTask<long> RemoveManyAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(0L);
-
-        public ValueTask<long> IncrementAsync(string key, long value = 1, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(value);
-
-        public ValueTask<long> DecrementAsync(string key, long value = 1, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(-value);
-
-        public ValueTask<bool> SetIfNotExistsAsync<T>(string key, T value, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(true);
-
-        public ValueTask<Optional<T>> GetAndSetAsync<T>(string key, T newValue, DistributedCacheEntryOptions? options = null, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<Optional<T>>(Optional.None);
-
-        public ValueTask<Optional<T>> GetAndRemoveAsync<T>(string key, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<Optional<T>>(Optional.None);
-
-        public ValueTask<Optional<TimeSpan>> GetTimeToLiveAsync(string key, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<Optional<TimeSpan>>(Optional.None);
-
-        public ValueTask<bool> SetTimeToLiveAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(true);
-
-        public ValueTask<IDistributedLock> AcquireLockAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<IDistributedLock>(new TestDistributedLock(key));
-
-        public ValueTask<Optional<IDistributedLock>> TryAcquireLockAsync(string key, TimeSpan expiration, TimeSpan timeout, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(Optional.Of<IDistributedLock>(new TestDistributedLock(key)));
-    }
-
-    private sealed class TestDistributedLock(string key) : IDistributedLock
-    {
-        public string Key { get; } = key;
-
-        public bool IsAcquired => true;
-
-        public ValueTask<bool> ReleaseAsync(CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(true);
-
-        public ValueTask DisposeAsync()
-            => ValueTask.CompletedTask;
-    }
 }

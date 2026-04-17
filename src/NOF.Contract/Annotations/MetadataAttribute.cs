@@ -14,17 +14,16 @@ public class MetadataAttribute : Attribute
     /// <summary>
     /// The metadata value.
     /// </summary>
-    public string Value { get; }
+    public string? Value { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetadataAttribute"/> class.
     /// </summary>
     /// <param name="key">Metadata key.</param>
     /// <param name="value">Metadata value.</param>
-    public MetadataAttribute(string key, string value)
+    public MetadataAttribute(string key, string? value = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        ArgumentNullException.ThrowIfNull(value);
 
         Key = key;
         Value = value;

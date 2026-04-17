@@ -21,7 +21,12 @@ var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
     .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
 
-builder.AddRedisCache();
+builder.AddRedisCache(options =>
+{
+    var endpoint = builder.Configuration.GetConnectionString("redis")
+                   ?? throw new InvalidOperationException("Connection string 'redis' not found in configuration.");
+    options.EndPoints.Add(endpoint);
+});
 
 builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
 

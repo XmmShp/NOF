@@ -63,8 +63,7 @@ public sealed class AuthorizationInboundMiddleware :
         }
 
         // Then fall back to service method attribute.
-        var method = serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
-            .FirstOrDefault(m => string.Equals(m.Name, methodName, StringComparison.Ordinal));
+        var method = serviceType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
         return method?.GetCustomAttributes(true).OfType<RequirePermissionAttribute>().FirstOrDefault();
     }
 }

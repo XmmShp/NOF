@@ -2,7 +2,6 @@ using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Contract.Extension.Authorization.Jwt;
-using NOF.Hosting;
 using NOF.Infrastructure.Extension.Authorization.Jwt;
 using System.Net;
 using System.Net.Http.Headers;

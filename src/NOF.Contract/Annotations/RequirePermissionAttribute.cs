@@ -13,7 +13,7 @@ public sealed class RequirePermissionAttribute : MetadataAttribute
     /// <summary>
     /// Required permission, if null then only authentication is required
     /// </summary>
-    public string? Permission => string.IsNullOrEmpty(Value) ? null : Value;
+    public string? Permission => Value;
 
     /// <summary>
     /// Constructor
