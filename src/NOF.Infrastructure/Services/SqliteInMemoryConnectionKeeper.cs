@@ -15,6 +15,13 @@ public sealed class SqliteInMemoryConnectionKeeper : IDisposable, IAsyncDisposab
         ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
 
         var connectionString = CreateConnectionString(databaseName);
+        return EnsureConnection(connectionString);
+    }
+
+    public string EnsureConnection(string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
         _connections.GetOrAdd(connectionString, static value =>
         {
             var connection = new SqliteConnection(value);

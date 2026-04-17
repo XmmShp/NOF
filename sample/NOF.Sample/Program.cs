@@ -1,9 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
-using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
 using NOF.Infrastructure.Extension.Authorization.Jwt;
 using NOF.Infrastructure.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
@@ -41,9 +41,11 @@ builder.AddRabbitMQ();
 
 builder.UseSharedDatabaseTenancy();
 
-builder.AddEFCore<ConfigurationDbContext>()
+builder.UseDbContext<ConfigurationDbContext>()
     .AutoMigrate()
-    .UsePostgreSQL();
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found in configuration."))
+    .WithOptions((optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IConfigNodeChildrenRepository, ConfigNodeChildrenRepository>();
 

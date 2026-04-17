@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Hosting;
 
@@ -14,9 +15,31 @@ public readonly struct EFCoreSelector
 
     public EFCoreSelector AutoMigrate()
     {
-        Builder.Services.Configure<DbContextFactoryOptions>(options =>
+        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
         {
             options.AutoMigrate = true;
+        });
+        return this;
+    }
+
+    public EFCoreSelector WithConnectionString(string connectionStringTemplate)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionStringTemplate);
+
+        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
+        {
+            options.ConnectionStringTemplate = connectionStringTemplate;
+        });
+        return this;
+    }
+
+    public EFCoreSelector WithOptions(Action<DbContextOptionsBuilder, string> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
+        {
+            options.Configure = configure;
         });
         return this;
     }

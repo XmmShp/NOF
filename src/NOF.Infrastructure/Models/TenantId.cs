@@ -5,7 +5,7 @@ namespace NOF.Infrastructure;
 
 public readonly partial struct TenantId : IValueObject<string>
 {
-    public static TenantId Host => Of(NOFAbstractionConstants.Tenant.HostId);
+    public static TenantId Host { get; } = Of(NOFAbstractionConstants.Tenant.HostId);
 
     public static string Normalize(string? tenantId)
     {

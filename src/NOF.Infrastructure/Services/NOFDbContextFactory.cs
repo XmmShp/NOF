@@ -13,11 +13,31 @@ namespace NOF.Infrastructure;
 
 /// <summary>
 /// NOF database context factory interface
+/// </summary>
+public interface INOFDbContextFactory
+{
+    NOFDbContext CreateDbContext();
+    NOFDbContext CreateDbContext(string tenantId);
+}
+
+/// <summary>
+/// NOF database context factory interface
 /// Used to create database contexts of the specified type
 /// </summary>
-public interface INOFDbContextFactory<TDbContext> : IDbContextFactory<TDbContext> where TDbContext : NOFDbContext
+public interface INOFDbContextFactory<TDbContext> : INOFDbContextFactory where TDbContext : NOFDbContext
 {
-    TDbContext CreateDbContext(string tenantId);
+    NOFDbContext INOFDbContextFactory.CreateDbContext() => CreateDbContext();
+    NOFDbContext INOFDbContextFactory.CreateDbContext(string tenantId) => CreateDbContext(tenantId);
+
+    new TDbContext CreateDbContext();
+    new TDbContext CreateDbContext(string tenantId);
+}
+
+internal sealed class DbContextFactory<TDbContext>(INOFDbContextFactory<TDbContext> dbContextFactory) : IDbContextFactory<TDbContext>
+    where TDbContext : NOFDbContext
+{
+    public TDbContext CreateDbContext()
+        => dbContextFactory.CreateDbContext();
 }
 
 internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDbContext>
@@ -29,23 +49,20 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
     private readonly IServiceProvider _serviceProvider;
     private readonly IExecutionContext _executionContext;
     private readonly TenantOptions _tenantOptions;
-    private readonly DbContextOptionsConfiguration _dbContextOptionsConfiguration;
-    private readonly DbContextFactoryOptions _options;
+    private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         IExecutionContext executionContext,
         IOptions<TenantOptions> tenantOptions,
-        DbContextOptionsConfiguration dbContextOptionsConfiguration,
-        IOptions<DbContextFactoryOptions> options,
+        IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
         _executionContext = executionContext;
         _tenantOptions = tenantOptions.Value;
-        _dbContextOptionsConfiguration = dbContextOptionsConfiguration;
-        _options = options.Value;
+        _dbContextConfigurationOptions = dbContextConfigurationOptions.Value;
         _logger = logger;
     }
 
@@ -64,7 +81,9 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
-        _dbContextOptionsConfiguration.Configure(_serviceProvider, optionsBuilder, tenantId, _tenantOptions.Mode);
+        var connectionString = DbConnectionStringTemplateResolver.ResolveTenantId(_dbContextConfigurationOptions.ConnectionStringTemplate, tenantId);
+        EnsureSqliteInMemoryConnectionIsKeptAlive(connectionString);
+        _dbContextConfigurationOptions.Configure(optionsBuilder, connectionString);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 
@@ -83,7 +102,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
     private void ConfigureDbContext(TDbContext dbContext, string contextType)
     {
-        if (_options.AutoMigrate)
+        if (_dbContextConfigurationOptions.AutoMigrate)
         {
             if (dbContext.Database.IsRelational())
             {
@@ -99,7 +118,7 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
                 {
                     throw new InvalidOperationException(
                         $"{contextType} database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
-                        $"Enable auto-migration by configuring NOFDbContextFactoryOptions.AutoMigrate = true or run migrations manually.");
+                        $"Enable auto-migration by configuring DbContextConfigurationOptions.AutoMigrate = true or run migrations manually.");
                 }
             }
         }
@@ -174,5 +193,16 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
         }
 
         return connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void EnsureSqliteInMemoryConnectionIsKeptAlive(string connectionString)
+    {
+        if (!connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var keeper = _serviceProvider.GetService<SqliteInMemoryConnectionKeeper>();
+        keeper?.EnsureConnection(connectionString);
     }
 }
