@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
@@ -33,21 +32,18 @@ public interface IRevokedRefreshTokenRepository
 /// </summary>
 public class CacheRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ICacheService _cacheService;
 
-    public CacheRevokedRefreshTokenRepository(IServiceProvider serviceProvider)
+    public CacheRevokedRefreshTokenRepository(ICacheService cacheService)
     {
-        _serviceProvider = serviceProvider;
+        _cacheService = cacheService;
     }
 
     /// <inheritdoc />
     public async Task RevokeAsync(string tokenId, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var cache = scope.ServiceProvider.GetRequiredService<ICacheService>();
-
         var cacheKey = new RevokedRefreshTokenCacheKey(tokenId);
-        await cache.SetAsync(cacheKey, true, new DistributedCacheEntryOptions
+        await _cacheService.SetAsync(cacheKey, true, new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = expiration
         }, cancellationToken);
@@ -56,11 +52,8 @@ public class CacheRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
     /// <inheritdoc />
     public async Task<bool> IsRevokedAsync(string tokenId, CancellationToken cancellationToken = default)
     {
-        await using var scope = _serviceProvider.CreateAsyncScope();
-        var cache = scope.ServiceProvider.GetRequiredService<ICacheService>();
-
         var cacheKey = new RevokedRefreshTokenCacheKey(tokenId);
-        var result = await cache.GetAsync(cacheKey, cancellationToken);
+        var result = await _cacheService.GetAsync(cacheKey, cancellationToken);
         return result.HasValue;
     }
 }
