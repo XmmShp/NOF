@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
@@ -112,10 +111,11 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         var operationName = method.Name.EndsWith("Async", System.StringComparison.Ordinal)
             ? method.Name.Substring(0, method.Name.Length - 5)
             : method.Name;
+        var operationNameExpression = $"nameof({serviceType}.{operationName})";
 
         sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
-        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, \"{operationName}\", {requestParameter.Name}, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {operationNameExpression}, {requestParameter.Name}, cancellationToken).ConfigureAwait(false);");
         // Most clients return Task<T>. In an async Task<T> method we must return T, not Task<T>.
         if (method.ReturnType is INamedTypeSymbol { Name: "Task", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } taskType)
         {

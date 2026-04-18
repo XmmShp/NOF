@@ -22,7 +22,6 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
 
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        builder.Services.GetOrAddSingleton<RpcHttpEndpointHandlerInfos>();
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
 

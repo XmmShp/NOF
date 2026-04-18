@@ -157,16 +157,20 @@ public sealed class RpcHttpEndpointRegistryGenerator : IIncrementalGenerator
                 }
 
                 var requestTypeName = requestParam.Type.ToDisplayString(typeFormat);
-                var returnTypeName = method.ReturnType.ToDisplayString(typeFormat);
+                var returnTypeName = GetNormalizedResponseType(method.ReturnType);
                 var operationName = method.Name;
+                var operationNameExpression = $"nameof({serviceTypeName}.{method.Name})";
+                var requestBindingAttribute = IsGetMethod(method)
+                    ? "[global::Microsoft.AspNetCore.Http.AsParameters] "
+                    : "[FromBody] ";
 
                 var handlerMethodName = $"Handle_{SanitizeIdentifier(serviceType.Name)}_{SanitizeIdentifier(operationName)}";
                 sb.AppendLine($"        public static async global::System.Threading.Tasks.Task<{returnTypeName}> {handlerMethodName}(");
-                sb.AppendLine($"            [FromBody] {requestTypeName} request,");
+                sb.AppendLine($"            {requestBindingAttribute}{requestTypeName} request,");
                 sb.AppendLine($"            [FromServices] global::System.IServiceProvider services,");
                 sb.AppendLine($"            global::System.Threading.CancellationToken cancellationToken)");
                 sb.AppendLine("        {");
-                sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceTypeName}>(services, \"{EscapeString(operationName)}\", request, cancellationToken).ConfigureAwait(false);");
+                sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceTypeName}>(services, {operationNameExpression}, request, cancellationToken).ConfigureAwait(false);");
                 sb.AppendLine($"            return ({returnTypeName})result!;");
                 sb.AppendLine("        }");
                 sb.AppendLine();
@@ -175,7 +179,7 @@ public sealed class RpcHttpEndpointRegistryGenerator : IIncrementalGenerator
                     "            global::NOF.Abstraction.Registry.RpcHttpEndpointHandlerRegistrations.Add(" +
                     $"new global::NOF.Hosting.AspNetCore.RpcHttpEndpointHandlerRegistration(" +
                     $"typeof({serviceTypeName}), " +
-                    $"\"{EscapeString(operationName)}\", " +
+                    $"{operationNameExpression}, " +
                     $"(global::System.Delegate)(global::System.Func<{requestTypeName}, global::System.IServiceProvider, global::System.Threading.CancellationToken, global::System.Threading.Tasks.Task<{returnTypeName}>>){handlersTypeName}.{handlerMethodName}, " +
                     $"typeof({returnTypeName}))" +
                     ");";
@@ -224,6 +228,55 @@ public sealed class RpcHttpEndpointRegistryGenerator : IIncrementalGenerator
         }
 
         return false;
+    }
+
+    private static bool IsGetMethod(IMethodSymbol method)
+    {
+        foreach (var attribute in method.GetAttributes())
+        {
+            if (attribute.AttributeClass?.ToDisplayString() != "NOF.Contract.HttpEndpointAttribute")
+            {
+                continue;
+            }
+
+            if (attribute.ConstructorArguments.Length == 0)
+            {
+                continue;
+            }
+
+            if (attribute.ConstructorArguments[0].Type is not INamedTypeSymbol enumType
+                || attribute.ConstructorArguments[0].Value is not int verb)
+            {
+                continue;
+            }
+
+            var getField = enumType.GetMembers("Get")
+                .OfType<IFieldSymbol>()
+                .FirstOrDefault(m => m.HasConstantValue && m.ConstantValue is int);
+            if (getField?.ConstantValue is int getValue && verb == getValue)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetNormalizedResponseType(ITypeSymbol returnType)
+    {
+        var returnTypeDisplay = returnType.ToDisplayString();
+        if (returnTypeDisplay is "NOF.Contract.Empty" or "NOF.Contract.Result")
+        {
+            return "global::NOF.Contract.Result";
+        }
+
+        if (returnType is INamedTypeSymbol { IsGenericType: true } namedType
+            && namedType.OriginalDefinition.ToDisplayString() == "NOF.Contract.Result<T>")
+        {
+            return returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        return $"global::NOF.Contract.Result<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
     }
 
     private static string EscapeString(string s)

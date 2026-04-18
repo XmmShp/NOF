@@ -41,18 +41,29 @@ public class RpcHttpEndpointRegistryGeneratorTests
             namespace App
             {
                 public record CreateUserRequest(string Name);
+                public record GetUserRequest(string Name);
+                public record UserDto(string Name);
 
                 
                 public partial interface IAppService : IRpcService
                 {
                     [HttpEndpoint(HttpVerb.Post, "/rpc/CreateUser")]
                     Result CreateUser(CreateUserRequest request);
+
+                    [HttpEndpoint(HttpVerb.Get, "/rpc/GetUser")]
+                    UserDto GetUser(GetUserRequest request);
+
+                    [HttpEndpoint(HttpVerb.Post, "/rpc/DeleteUser")]
+                    Empty DeleteUser(GetUserRequest request);
                 }
 
-                public sealed class AppServer : RpcServer<IAppService>
+                public sealed class AppServer : RpcServer<IAppService>, IRpcServer
                 {
-                    protected override IReadOnlyDictionary<string, Type> GetHandlerMappings()
-                        => new Dictionary<string, Type>();
+                    public static new Type ServiceType => typeof(IAppService);
+                    public static IReadOnlyDictionary<string, RpcHandlerMapping> HandlerMappings => new Dictionary<string, RpcHandlerMapping>();
+
+                    protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings()
+                        => new Dictionary<string, RpcHandlerMapping>();
                 }
 
                 public static class Startup
@@ -72,8 +83,12 @@ public class RpcHttpEndpointRegistryGeneratorTests
         var code = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcHttpEndpointAssemblyInitializer>", code);
-        Assert.Contains("Registry.RpcHttpEndpointHandlerRegistrations.Add(new global::NOF.Hosting.AspNetCore.RpcHttpEndpointHandlerRegistration(typeof(global::App.IAppService), \"CreateUser\"", code);
-        Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IAppService>(services, \"CreateUser\", request, cancellationToken)", code);
+        Assert.Contains("RpcHttpEndpointHandlerRegistration(typeof(global::App.IAppService), nameof(global::App.IAppService.CreateUser)", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::App.IAppService>(services, nameof(global::App.IAppService.CreateUser), request, cancellationToken)", code);
+        Assert.Contains("Task<global::NOF.Contract.Result<global::App.UserDto>>", code);
+        Assert.Contains("[global::Microsoft.AspNetCore.Http.AsParameters] global::App.GetUserRequest request", code);
+        Assert.Contains("nameof(global::App.IAppService.DeleteUser)", code);
+        Assert.Contains("typeof(global::NOF.Contract.Result))", code);
     }
 
     [Fact]

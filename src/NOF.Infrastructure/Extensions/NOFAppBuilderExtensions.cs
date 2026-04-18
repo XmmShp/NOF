@@ -28,10 +28,13 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
             builder.Services.TryAddSingleton<InboundMessageDispatcher>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
-            builder.Services.TryAddScoped(sp => (IDistributedCache)sp.GetRequiredService<ICacheService>());
-            builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
-            builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
+
             builder.Services.TryAddScoped<ICacheService, CacheService>();
+            builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+
+            builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
+            builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
+
             #endregion
 
             #region Options
@@ -49,11 +52,11 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Pipelines
-            builder.Services.TryAddSingleton<CommandOutboundPipelineTypes>();
-            builder.Services.TryAddSingleton<NotificationOutboundPipelineTypes>();
-            builder.Services.TryAddSingleton<CommandInboundPipelineTypes>();
-            builder.Services.TryAddSingleton<NotificationInboundPipelineTypes>();
-            builder.Services.TryAddSingleton<RequestInboundPipelineTypes>();
+            builder.Services.GetOrAddSingleton<CommandOutboundPipelineTypes>();
+            builder.Services.GetOrAddSingleton<NotificationOutboundPipelineTypes>();
+            builder.Services.GetOrAddSingleton<CommandInboundPipelineTypes>();
+            builder.Services.GetOrAddSingleton<NotificationInboundPipelineTypes>();
+            builder.Services.GetOrAddSingleton<RequestInboundPipelineTypes>();
             builder.Services.TryAddSingleton<ICommandOutboundPipelineExecutor, CommandOutboundPipelineExecutor>();
             builder.Services.TryAddSingleton<INotificationOutboundPipelineExecutor, NotificationOutboundPipelineExecutor>();
             builder.Services.TryAddSingleton<ICommandInboundPipelineExecutor, CommandInboundPipelineExecutor>();
@@ -83,6 +86,9 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Inbound Middlewares
+            builder.Services.AddCommandInboundMiddleware<DaemonServiceInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<DaemonServiceInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<DaemonServiceInboundMiddleware>();
             builder.Services.AddCommandInboundMiddleware<InboundExceptionMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<InboundExceptionMiddleware>();
             builder.Services.AddRequestInboundMiddleware<InboundExceptionMiddleware>();
@@ -112,13 +118,12 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();
 
-            if (builder.Services.FirstOrDefault(d => d.ServiceType == typeof(INOFDbContextFactory)) is null)
-            {
-                builder.UseDbContext<NOFDbContext>()
+
+            builder.UseDbContext<NOFDbContext>()
                 .WithConnectionString("Data Source=nof-sqlite-memory-{tenantId};Mode=Memory;Cache=Shared")
                 .WithTenantMode(TenantMode.DatabasePerTenant)
                 .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
-            }
+
             #endregion
 
             return builder;
@@ -129,8 +134,11 @@ public static partial class NOFInfrastructureExtensions
         {
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>();
             builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, DbContextFactory<TDbContext>>();
-            builder.Services.ReplaceOrAddScoped(sp => (INOFDbContextFactory)sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
-            builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
+            builder.Services.ReplaceOrAddScoped<INOFDbContextFactory>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
+            if (typeof(TDbContext) != typeof(NOFDbContext))
+            {
+                builder.Services.ReplaceOrAddScoped<TDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
+            }
 
             return new EFCoreSelector(builder);
         }

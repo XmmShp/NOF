@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Infrastructure;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -13,6 +14,14 @@ namespace NOF.Hosting.AspNetCore;
 
 public static partial class NOFHostingAspNetCoreExtensions
 {
+    private static readonly MethodInfo _createGetHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateGetHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateGetHandlerCore)}' was not found.");
+
+    private static readonly MethodInfo _createBodyHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateBodyHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateBodyHandlerCore)}' was not found.");
+
     extension(IEndpointRouteBuilder app)
     {
         [RequiresUnreferencedCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
@@ -22,47 +31,30 @@ public static partial class NOFHostingAspNetCoreExtensions
         {
             ArgumentNullException.ThrowIfNull(app);
 
-            // Ensure registry entries generated for this assembly are applied before mapping.
-            InitializeAssembly(typeof(TRpcServer).Assembly);
-
-            var infos = app.ServiceProvider.GetRequiredService<RpcHttpEndpointHandlerInfos>();
             var serviceType = TRpcServer.ServiceType;
-            foreach (var method in serviceType.GetMethods())
+            var handlerMappings = TRpcServer.HandlerMappings;
+            foreach (var (operationName, handlerMapping) in handlerMappings)
             {
-                if (method.IsSpecialName)
-                {
-                    continue;
-                }
-
-                var operationName = method.Name;
-                if (!infos.TryGet(serviceType, operationName, out var entry))
-                {
-                    throw new InvalidOperationException(
-                        $"HTTP endpoint handler is not registered for '{serviceType.FullName}.{operationName}'. " +
-                        $"Ensure MapHttpEndpoint<{typeof(TRpcServer).Name}> was included in a project with NOF.Hosting.AspNetCore.SourceGenerator enabled.");
-                }
-
+                var method = serviceType.GetMethod(operationName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                    ?? throw new InvalidOperationException($"RPC contract method '{serviceType.FullName}.{operationName}' was not found.");
+                var responseType = GetNormalizedResponseType(handlerMapping.ReturnType);
                 var endpoints = GetHttpEndpoints(method, operationName);
                 foreach (var (verb, route) in endpoints)
                 {
                     var fullRoute = BuildRoute(prefix, route);
-
+                    var handler = CreateEndpointHandler(serviceType, handlerMapping.RequestType, operationName, verb);
                     var builder = verb switch
                     {
-                        HttpVerb.Get => app.MapGet(fullRoute, entry.Handler),
-                        HttpVerb.Post => app.MapPost(fullRoute, entry.Handler),
-                        HttpVerb.Put => app.MapPut(fullRoute, entry.Handler),
-                        HttpVerb.Delete => app.MapDelete(fullRoute, entry.Handler),
-                        HttpVerb.Patch => app.MapPatch(fullRoute, entry.Handler),
+                        HttpVerb.Get => app.MapGet(fullRoute, handler),
+                        HttpVerb.Post => app.MapPost(fullRoute, handler),
+                        HttpVerb.Put => app.MapPut(fullRoute, handler),
+                        HttpVerb.Delete => app.MapDelete(fullRoute, handler),
+                        HttpVerb.Patch => app.MapPatch(fullRoute, handler),
                         _ => throw new InvalidOperationException($"Unsupported HTTP verb '{verb}'.")
                     };
 
                     ApplyDocumentation(builder, method);
-
-                    if (entry.ReturnType != typeof(void))
-                    {
-                        builder.Produces(statusCode: 200, responseType: entry.ReturnType);
-                    }
+                    builder.Produces(statusCode: 200, responseType: responseType);
                 }
             }
 
@@ -70,12 +62,53 @@ public static partial class NOFHostingAspNetCoreExtensions
         }
     }
 
-    private static void InitializeAssembly(Assembly assembly)
+    [RequiresUnreferencedCode("Endpoint handler creation uses runtime generic method binding.")]
+    [RequiresDynamicCode("Endpoint handler creation uses runtime generic method instantiation.")]
+    private static Delegate CreateEndpointHandler(Type serviceType, Type requestType, string operationName, HttpVerb verb)
     {
-        foreach (var attribute in assembly.GetCustomAttributes<AssemblyInitializeAttribute>())
+        var templateMethod = verb == HttpVerb.Get ? _createGetHandlerMethod : _createBodyHandlerMethod;
+        var genericMethod = templateMethod.MakeGenericMethod(serviceType, requestType);
+        return (Delegate)genericMethod.Invoke(null, [operationName])!;
+    }
+
+    private static Delegate CreateGetHandlerCore<TService, TRequest>(string operationName)
+        where TService : class, IRpcService
+    {
+        async Task<object?> Handler([AsParameters] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
         {
-            attribute.InitializeMethod();
+            ArgumentNullException.ThrowIfNull(services);
+            return await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
+
+        return (Func<TRequest, IServiceProvider, CancellationToken, Task<object?>>)Handler;
+    }
+
+    private static Delegate CreateBodyHandlerCore<TService, TRequest>(string operationName)
+        where TService : class, IRpcService
+    {
+        async Task<object?> Handler([FromBody] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            return await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+        }
+
+        return (Func<TRequest, IServiceProvider, CancellationToken, Task<object?>>)Handler;
+    }
+
+    [RequiresDynamicCode("Result type normalization may require runtime generic instantiation.")]
+    private static Type GetNormalizedResponseType(Type returnType)
+    {
+        if (returnType == typeof(Empty) || returnType == typeof(Result))
+        {
+            return typeof(Result);
+        }
+
+        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Result<>))
+        {
+            return returnType;
+        }
+
+        return typeof(Result<>).MakeGenericType(returnType);
     }
 
     private static IEnumerable<(HttpVerb Verb, string Route)> GetHttpEndpoints(MethodInfo method, string defaultRoute)
@@ -90,7 +123,7 @@ public static partial class NOFHostingAspNetCoreExtensions
                 continue;
             }
 
-            var route = string.IsNullOrWhiteSpace(attr.Value) ? defaultRoute : attr.Value!;
+            var route = string.IsNullOrWhiteSpace(attr.Value) ? defaultRoute : attr.Value;
             endpoints.Add((verb, route));
         }
 
@@ -134,7 +167,6 @@ public static partial class NOFHostingAspNetCoreExtensions
     private static string BuildRoute(string? prefix, string route)
     {
         prefix ??= string.Empty;
-        route ??= string.Empty;
 
         if (string.IsNullOrEmpty(prefix))
         {

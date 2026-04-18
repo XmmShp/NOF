@@ -65,11 +65,11 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
             sb.AppendLine("{");
         }
 
-        sb.AppendLine($"partial class {classSymbol.Name}");
+        sb.AppendLine($"partial class {classSymbol.Name} : global::NOF.Application.IRpcServer");
         sb.AppendLine("{");
 
-        sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Type> __rpcHandlerMappings =");
-        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::System.Type>");
+        sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::NOF.Application.RpcHandlerMapping> __rpcHandlerMappings =");
+        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::NOF.Application.RpcHandlerMapping>");
         sb.AppendLine("        {");
 
         foreach (var method in serviceMethods)
@@ -79,11 +79,16 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            sb.AppendLine($"            [\"{method.Name}\"] = typeof({method.Name}),");
+            var serviceTypeName = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var requestTypeName = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var originalReturnTypeName = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            sb.AppendLine($"            [nameof({serviceTypeName}.{method.Name})] = new global::NOF.Application.RpcHandlerMapping(typeof({method.Name}), typeof({requestTypeName}), typeof({originalReturnTypeName})),");
         }
         sb.AppendLine("        };");
         sb.AppendLine();
-        sb.AppendLine("    protected override global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Type> GetHandlerMappings()");
+        sb.AppendLine("    public static global::System.Collections.Generic.IReadOnlyDictionary<string, global::NOF.Application.RpcHandlerMapping> HandlerMappings => __rpcHandlerMappings;");
+        sb.AppendLine();
+        sb.AppendLine("    protected override global::System.Collections.Generic.IReadOnlyDictionary<string, global::NOF.Application.RpcHandlerMapping> GetHandlerMappings()");
         sb.AppendLine("        => __rpcHandlerMappings;");
         sb.AppendLine();
 

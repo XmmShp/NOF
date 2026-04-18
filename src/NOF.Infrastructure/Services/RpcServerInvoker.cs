@@ -27,13 +27,10 @@ public static class RpcServerInvoker
         var server = rootServiceProvider.GetRequiredService(serverType) as RpcServer
             ?? throw new InvalidOperationException($"Resolved RPC server '{serverType.FullName}' does not inherit RpcServer.");
 
-        if (!server.TryGetHandlerType(operationName, out var handlerType))
+        if (!server.TryGetHandlerMapping(operationName, out var handlerMapping))
         {
             throw new InvalidOperationException($"RPC handler mapping is missing for '{typeof(TRpcService).FullName}.{operationName}'.");
         }
-
-        var methodInfo = typeof(TRpcService).GetMethod(operationName)
-            ?? throw new InvalidOperationException($"RPC contract method '{typeof(TRpcService).FullName}.{operationName}' was not found.");
 
         var outboundPipeline = rootServiceProvider.GetRequiredService<IRequestOutboundPipelineExecutor>();
         var outboundContext = new RequestOutboundContext
@@ -49,21 +46,19 @@ public static class RpcServerInvoker
             await using var scope = rootServiceProvider.CreateAsyncScope();
             ApplyHeaders(scope.ServiceProvider, outboundContext.Headers);
 
-            var serviceType = methodInfo.DeclaringType
-                ?? throw new InvalidOperationException("RPC method must have a declaring type.");
             var context = new RequestInboundContext
             {
                 Message = request,
                 Services = scope.ServiceProvider,
-                HandlerType = handlerType,
-                ServiceType = serviceType,
-                MethodName = methodInfo.Name
+                HandlerType = handlerMapping.HandlerType,
+                ServiceType = typeof(TRpcService),
+                MethodName = operationName
             };
 
             var inboundPipeline = scope.ServiceProvider.GetRequiredService<IRequestInboundPipelineExecutor>();
             await inboundPipeline.ExecuteAsync(context, async innerCt =>
             {
-                var handler = (RpcHandler)scope.ServiceProvider.GetRequiredService(handlerType);
+                var handler = (RpcHandler)scope.ServiceProvider.GetRequiredService(handlerMapping.HandlerType);
                 outboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);

@@ -180,6 +180,8 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         var responseType = endpoint.ReturnInfo.NormalizedResultTypeDisplay;
         var returnType = endpoint.ReturnInfo.ClientTaskReturnTypeDisplay;
         var methodName = method.Method.Name + "Async";
+        var serviceTypeName = method.Method.ContainingType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var operationNameExpression = $"nameof({serviceTypeName}.{method.Method.Name})";
         var httpMethod = GetHttpMethod(endpoint.Method);
         var isBodyMethod = IsBodyMethod(endpoint.Method);
         var fqnHttpMethod = $"global::System.Net.Http.{httpMethod}";
@@ -232,8 +234,8 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
             sb.AppendLine("                Message = null,");
         }
         sb.AppendLine("                Services = _serviceProvider,");
-        sb.AppendLine($"                ServiceType = typeof(global::{method.Method.ContainingType!.ToDisplayString()}),");
-        sb.AppendLine($"                MethodName = \"{method.OperationName}\"");
+        sb.AppendLine($"                ServiceType = typeof({serviceTypeName}),");
+        sb.AppendLine($"                MethodName = {operationNameExpression}");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine($"            {responseType}? result = default;");
@@ -268,7 +270,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
                     sb.AppendLine($"                var body = new global::System.Collections.Generic.Dictionary<string, object?>({nonRouteProperties.Count});");
                     foreach (var prop in nonRouteProperties)
                     {
-                        sb.AppendLine($"                body[\"{prop.Name}\"] = request.{prop.Name};");
+                        sb.AppendLine($"                body[nameof(request.{prop.Name})] = request.{prop.Name};");
                     }
                     sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
                     sb.AppendLine("                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(body, options: _jsonOptions);");
@@ -344,12 +346,12 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         {
             sb.AppendLine($"{indent1}if (request.{propName} is not null)");
             sb.AppendLine($"{indent1}{{");
-            sb.AppendLine($"{indent2}queryParts.Add(global::System.Uri.EscapeDataString(\"{propName}\") + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, true)}));");
+            sb.AppendLine($"{indent2}queryParts.Add(global::System.Uri.EscapeDataString(nameof(request.{propName})) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, true)}));");
             sb.AppendLine($"{indent1}}}");
         }
         else
         {
-            sb.AppendLine($"{indent1}queryParts.Add(global::System.Uri.EscapeDataString(\"{propName}\") + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, false)}));");
+            sb.AppendLine($"{indent1}queryParts.Add(global::System.Uri.EscapeDataString(nameof(request.{propName})) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression($"request.{propName}", prop.Type, false)}));");
         }
     }
 

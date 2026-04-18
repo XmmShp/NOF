@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NOF.Abstraction;
 using NOF.Application;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -90,31 +89,14 @@ internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDb
 
         if (Assembly.GetEntryAssembly()?.GetName().Name?.ToLowerInvariant() != "ef")
         {
-            ConfigureDbContext(dbContext, contextType);
+            if (IsSqliteProvider(dbContext))
+            {
+                EnsureSqliteSchemaInitialized(dbContext, contextType);
+            }
         }
 
         _logger.LogDebug("Created {DbContextType} for {ContextType}", typeof(TDbContext).Name, contextType);
         return dbContext;
-    }
-
-    private void ConfigureDbContext(TDbContext dbContext, string contextType)
-    {
-        if (IsSqliteProvider(dbContext))
-        {
-            EnsureSqliteSchemaInitialized(dbContext, contextType);
-            return;
-        }
-
-        if (dbContext.Database.IsRelational())
-        {
-            var pendingMigrations = dbContext.Database.GetPendingMigrations().ToArray();
-            if (pendingMigrations.Length != 0)
-            {
-                throw new InvalidOperationException(
-                    $"{contextType} database has {pendingMigrations.Length} pending migrations: {string.Join(", ", pendingMigrations)}. " +
-                    "Automatic migration is only supported for SQLite. Please run migrations manually before starting the application.");
-            }
-        }
     }
 
     private void EnsureSqliteSchemaInitialized(TDbContext dbContext, string contextType)

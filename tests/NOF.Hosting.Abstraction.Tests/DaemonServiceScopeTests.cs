@@ -13,23 +13,6 @@ namespace NOF.Hosting.Abstraction.Tests;
 public class DaemonServiceScopeTests
 {
     [Fact]
-    public void CreateScope_ShouldMaterializeDaemonServices_PerScopeOnly()
-    {
-        ScopeDaemon.Reset();
-        var services = new ServiceCollection();
-        services.AddScoped<IDaemonService, ScopeDaemon>();
-
-        using var provider = services.BuildNOFServiceProvider();
-        Assert.Equal(0, ScopeDaemon.CreatedCount);
-
-        using var firstScope = provider.CreateScope();
-        Assert.Equal(1, ScopeDaemon.CreatedCount);
-
-        using var secondScope = provider.CreateScope();
-        Assert.Equal(2, ScopeDaemon.CreatedCount);
-    }
-
-    [Fact]
     public void AddHostingDefaults_ShouldRegisterAmbientEventPublisherDaemon()
     {
         var builder = new TestAppBuilder();
@@ -40,26 +23,9 @@ public class DaemonServiceScopeTests
             service.ServiceType == typeof(IDaemonService)
             && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));
 
-        using var provider = builder.Services.BuildNOFServiceProvider();
+        using var provider = builder.Services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IEventPublisher>());
-    }
-
-    private sealed class ScopeDaemon : IDaemonService
-    {
-        private static int _createdCount;
-
-        public ScopeDaemon()
-        {
-            Interlocked.Increment(ref _createdCount);
-        }
-
-        public static int CreatedCount => _createdCount;
-
-        public static void Reset()
-        {
-            Interlocked.Exchange(ref _createdCount, 0);
-        }
     }
 
     private sealed class TestAppBuilder : NOFAppBuilder<FakeHost>

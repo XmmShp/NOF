@@ -98,7 +98,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     public virtual async Task<THostApplication> BuildAsync()
     {
-        ConfigureContainer(new NOFServiceProviderFactory());
         AddRegistrationStep(new AutoInjectServiceRegistrationStep());
         this.AddHostingDefaults();
         var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
