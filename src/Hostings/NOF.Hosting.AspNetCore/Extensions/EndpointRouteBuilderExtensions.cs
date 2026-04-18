@@ -124,6 +124,12 @@ public static partial class NOFHostingAspNetCoreExtensions
             }
 
             var route = string.IsNullOrWhiteSpace(attr.Value) ? defaultRoute : attr.Value;
+            if (route.IndexOf('{') >= 0 || route.IndexOf('}') >= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Route parameters are not supported for RPC HTTP endpoints. Method: '{method.DeclaringType?.FullName}.{method.Name}', route: '{route}'.");
+            }
+
             endpoints.Add((verb, route));
         }
 

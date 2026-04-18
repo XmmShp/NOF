@@ -84,44 +84,6 @@ public class RpcServiceClientGeneratorTests
     }
 
     [Fact]
-    public void PutRouteParams_UseBodyDictionaryWithoutRouteKeys()
-    {
-        const string source = """
-                              using NOF.Contract;
-                              using NOF.Hosting;
-                              namespace MyApp
-                              {
-                                  public class UpdateUserRequest
-                                  {
-                                      public int Id { get; set; }
-                                      public string Name { get; set; } = default!;
-                                      public string Email { get; set; } = default!;
-                                  }
-
-                                  public partial interface IMyService : IRpcService
-                                  {
-                                      [HttpEndpoint(HttpVerb.Put, "/api/users/{id}")]
-                                      Result UpdateUser(UpdateUserRequest request);
-                                  }
-
-                                  public partial interface IMyServiceClient : IRpcClient;
-
-                                  [HttpRpcClient<IMyServiceClient>]
-                                  public partial class MyServiceClient;
-                              }
-                              """;
-
-        var runResult = RunGenerators(source);
-        var code = GetGeneratedHttpClientCode(runResult);
-
-        Assert.Contains("global::System.Uri.EscapeDataString(request.Id.ToString()!)", code);
-        Assert.Contains("Dictionary<string, object?>", code);
-        Assert.Contains("body[\"Name\"] = request.Name", code);
-        Assert.Contains("body[\"Email\"] = request.Email", code);
-        Assert.DoesNotContain("body[\"Id\"]", code);
-    }
-
-    [Fact]
     public void GetMethod_WithSingleRequestParam_ShouldGenerateMessageVariable()
     {
         const string source = """

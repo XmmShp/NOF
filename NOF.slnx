@@ -33,7 +33,6 @@
     <Project Path="src/NOF.Test/NOF.Test.csproj" />
   </Folder>
   <Folder Name="/src/Hostings/">
-    <Project Path="src/Hostings/NOF.Hosting.AspNetCore.SourceGenerator/NOF.Hosting.AspNetCore.SourceGenerator.csproj" Id="1dc3e6b9-c8b7-43d5-ac4c-8220063f3af0" />
     <Project Path="src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj" Id="57ad399c-de92-4a77-9b06-891e87e1c907" />
     <Project Path="src/Hostings/NOF.Hosting.BlazorWebAssembly/NOF.Hosting.BlazorWebAssembly.csproj" Id="2d5a6c2d-1d8b-4b67-8c7b-4f718c7d61a1" />
     <Project Path="src/Hostings/NOF.Hosting.Maui/NOF.Hosting.Maui.csproj" Id="b7c3d4e5-f6a7-4890-abcd-1234567890ef" />
@@ -59,7 +58,6 @@
     <Project Path="tests/NOF.Test.Tests/NOF.Test.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Extensions/">
-    <Project Path="tests/Extensions/NOF.Contract.Extension.Authorization.Jwt.Tests/NOF.Contract.Extension.Authorization.Jwt.Tests.csproj" />
     <Project Path="tests/Extensions/NOF.Hosting.Extension.Authorization.Jwt.Tests/NOF.Hosting.Extension.Authorization.Jwt.Tests.csproj" />
     <Project Path="tests/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt.Tests/NOF.Infrastructure.Extension.Authorization.Jwt.Tests.csproj" />
   </Folder>

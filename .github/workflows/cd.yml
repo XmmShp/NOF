@@ -24,6 +24,7 @@ concurrency:
 env:
   DOTNET_VERSION: '10.0.x'
   CONFIGURATION: Release
+  SOLUTION_FILE: NOF.slnx
 
 jobs:
   build-and-test:
@@ -46,17 +47,17 @@ jobs:
       run: dotnet workload install maui
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
 
     - name: Verify code formatting
       if: runner.os == 'Linux'
       run: dotnet format --verify-no-changes --verbosity diagnostic
 
     - name: Build solution
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore
 
     - name: Run tests
-      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
+      run: dotnet test ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
 
   pack-and-publish:
     runs-on: windows-latest
@@ -77,10 +78,10 @@ jobs:
       run: dotnet workload install maui
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
 
     - name: Build solution
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore
 
     - name: Determine version
       id: version
@@ -118,28 +119,41 @@ jobs:
       shell: pwsh
       run: |
         $VERSION = "${{ steps.version.outputs.VERSION }}"
-        dotnet pack src/NOF.Abstraction/NOF.Abstraction.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Domain/NOF.Domain.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Contract/NOF.Contract.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Extensions/NOF.Contract.Extension.Authorization.Jwt/NOF.Contract.Extension.Authorization.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Application/NOF.Application.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Test/NOF.Test.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Extensions/NOF.Application.Extension.Redis/NOF.Application.Extension.Redis.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Extensions/NOF.Hosting.Extension.Authorization.Jwt/NOF.Hosting.Extension.Authorization.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Hostings/NOF.Hosting.AspNetCore/NOF.Hosting.AspNetCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Hostings/NOF.Hosting.BlazorWebAssembly/NOF.Hosting.BlazorWebAssembly.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Hostings/NOF.Hosting.Console/NOF.Hosting.Console.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Hostings/NOF.Hosting.Maui/NOF.Hosting.Maui.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Hosting.Abstraction/NOF.Hosting.Abstraction.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.Infrastructure/NOF.Infrastructure.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/NOF.UI/NOF.UI.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.SQLite/NOF.Infrastructure.EntityFrameworkCore.SQLite.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.Memory/NOF.Infrastructure.Memory.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.RabbitMQ/NOF.Infrastructure.RabbitMQ.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
-        dotnet pack src/Extensions/NOF.Infrastructure.Extension.Authorization.Jwt/NOF.Infrastructure.Extension.Authorization.Jwt.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        New-Item -ItemType Directory -Path ./artifacts -Force | Out-Null
+
+        $projectFiles = Get-ChildItem src -Recurse -Filter *.csproj | Sort-Object FullName
+        $packProjects = @()
+
+        foreach ($project in $projectFiles)
+        {
+          [xml]$xml = Get-Content $project.FullName -Raw
+          $propertyGroups = @($xml.Project.PropertyGroup)
+          $packageId = ($propertyGroups | ForEach-Object { $_.PackageId } | Where-Object { $_ } | Select-Object -First 1)
+          $isPackable = ($propertyGroups | ForEach-Object { $_.IsPackable } | Where-Object { $_ } | Select-Object -First 1)
+
+          if ([string]::IsNullOrWhiteSpace($packageId))
+          {
+            continue
+          }
+
+          if ($isPackable -and $isPackable.ToString().Trim().ToLowerInvariant() -eq "false")
+          {
+            continue
+          }
+
+          $packProjects += $project.FullName
+        }
+
+        if ($packProjects.Count -eq 0)
+        {
+          throw "No packable projects found under src/."
+        }
+
+        foreach ($projectPath in $packProjects)
+        {
+          Write-Host "Packing: $projectPath"
+          dotnet pack $projectPath --configuration ${{ env.CONFIGURATION }} --no-build --output ./artifacts /p:PackageVersion=$VERSION
+        }
 
     - name: Publish to NuGet.org
       shell: pwsh
@@ -163,6 +177,7 @@ jobs:
 
   deploy-docs:
     runs-on: ubuntu-latest
+    needs: build-and-test
 
     steps:
     - name: Checkout code
@@ -176,10 +191,10 @@ jobs:
     # Build first so DocFX can read pre-built DLLs instead of .csproj files.
     # Workaround for C# 14 support: https://github.com/dotnet/docfx/issues/10808
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
 
     - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration ${{ env.CONFIGURATION }} --no-restore
 
     - name: Install DocFX
       run: dotnet tool install -g docfx

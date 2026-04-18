@@ -29,7 +29,6 @@ src/
   Hostings/
     NOF.Hosting.AspNetCore/    - ASP.NET Core host, endpoint mapping, middleware, JSON config
     NOF.Hosting.BlazorWebAssembly/ - Blazor WebAssembly host integration and bootstrap
-    NOF.Hosting.AspNetCore.SourceGenerator/ - Endpoint mapper source generator
     NOF.Hosting.SourceGenerator/ - Hosting-level source generator
   Infrastructures/
     NOF.Infrastructure.EntityFrameworkCore/          - NOFDbContext, repositories, outbox, multi-tenancy
