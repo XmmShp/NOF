@@ -8,7 +8,6 @@ namespace NOF.Contract;
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class HttpEndpointAttribute : MetadataAttribute
 {
-    public const string MetadataKey = "api.http.endpoint";
     private const string MetadataKeyPrefix = "api.http.";
     private const string MetadataKeySuffix = ".endpoint";
 

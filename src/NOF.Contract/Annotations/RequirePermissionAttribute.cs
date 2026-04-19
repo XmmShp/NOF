@@ -5,7 +5,7 @@ namespace NOF.Contract;
 /// <summary>
 /// Permission requirement attribute for marking handlers or messages that need specific permissions
 /// </summary>
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct)]
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
 public sealed class RequirePermissionAttribute : MetadataAttribute
 {
     public const string MetadataKey = "api.permission";

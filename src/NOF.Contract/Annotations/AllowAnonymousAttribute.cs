@@ -6,7 +6,7 @@ namespace NOF.Contract;
 /// Marks an API as allowing anonymous access.
 /// Implemented as <c>api.permission = null</c> so it can override class-level permission requirements.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct)]
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface)]
 public sealed class AllowAnonymousAttribute : MetadataAttribute
 {
     public AllowAnonymousAttribute()
