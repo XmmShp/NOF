@@ -3,6 +3,7 @@ using NOF.Abstraction;
 using NOF.Annotation;
 using NOF.Contract;
 using NOF.Hosting;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
@@ -54,7 +55,7 @@ public sealed class AuthorizationInboundMiddleware :
         await next(cancellationToken);
     }
 
-    private static string? GetApiPermission(Type serviceType, string methodName)
+    private static string? GetApiPermission([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType, string methodName)
     {
         var method = serviceType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
         if (TryGetApiPermissionValue(method, out var methodPermission))

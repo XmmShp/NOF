@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NOF.Domain;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
@@ -43,7 +44,8 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
         return baseConverters.Prepend(info.Value);
     }
 
-    private static ValueConverterInfo? BuildConverterInfo(Type voType)
+    [RequiresDynamicCode("Calls System.Type.MakeGenericType(params Type[])")]
+    private static ValueConverterInfo? BuildConverterInfo([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.Interfaces)] Type voType)
     {
         var primitiveType = GetPrimitiveType(voType);
         if (primitiveType is null)
@@ -76,7 +78,7 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
             factory: _ => converterInstance);
     }
 
-    private static Type? GetPrimitiveType(Type voType)
+    private static Type? GetPrimitiveType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type voType)
         => voType.GetInterfaces()
             .Where(iface => iface.IsGenericType && iface.GetGenericTypeDefinition() == _interfaceOpenType)
             .Select(iface => iface.GenericTypeArguments[0])

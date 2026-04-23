@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using NOF.Abstraction;
 using NOF.Application;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
@@ -170,7 +172,14 @@ public class NOFDbContext : DbContext
         }
     }
 
-    private object?[]? AppendTenantKeyIfNeeded(Type entityClrType, object?[]? keyValues)
+    private object?[]? AppendTenantKeyIfNeeded([DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicConstructors
+        | DynamicallyAccessedMemberTypes.NonPublicConstructorsWithInherited
+        | DynamicallyAccessedMemberTypes.PublicFields
+        | DynamicallyAccessedMemberTypes.NonPublicFields
+        | DynamicallyAccessedMemberTypes.PublicProperties
+        | DynamicallyAccessedMemberTypes.NonPublicProperties
+        | DynamicallyAccessedMemberTypes.Interfaces)] Type entityClrType, object?[]? keyValues)
     {
         if (CurrentTenantMode != TenantMode.SharedDatabase)
         {

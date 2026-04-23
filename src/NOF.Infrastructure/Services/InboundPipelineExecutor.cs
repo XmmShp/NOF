@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Hosting;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
@@ -167,7 +168,7 @@ public sealed class RequestInboundPipelineExecutor
     public async ValueTask<object?> ExecuteAsync(
         object request,
         Type handlerType,
-        Type serviceType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
         string methodName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
@@ -188,7 +189,7 @@ public sealed class RequestInboundPipelineExecutor
         return context.Response;
     }
 
-    private static RequestInboundContext CreateContext(object request, Type handlerType, Type serviceType, string methodName)
+    private static RequestInboundContext CreateContext(object request, Type handlerType, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType, string methodName)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(handlerType);

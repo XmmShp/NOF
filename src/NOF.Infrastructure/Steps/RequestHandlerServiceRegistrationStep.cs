@@ -14,7 +14,7 @@ public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceReg
         var infos = builder.Services.GetOrAddSingleton<RequestHandlerInfos>();
         foreach (var registration in infos.Registrations)
         {
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.Key, registration.Value));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.Key, registration.Value.Type));
         }
 
         return ValueTask.CompletedTask;

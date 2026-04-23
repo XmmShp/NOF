@@ -29,6 +29,7 @@ public sealed class RequestInboundContext
 
     public required Type HandlerType { get; init; }
 
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     public required Type ServiceType { get; init; }
 
     public required string MethodName { get; init; }

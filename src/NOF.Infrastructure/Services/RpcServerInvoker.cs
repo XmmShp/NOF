@@ -2,12 +2,13 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
 public static class RpcServerInvoker
 {
-    public static async Task<object?> InvokeAsync<TRpcService>(
+    public static async Task<object?> InvokeAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService>(
         IServiceProvider rootServiceProvider,
         string operationName,
         object request,

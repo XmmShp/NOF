@@ -71,7 +71,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         return (Delegate)genericMethod.Invoke(null, [operationName])!;
     }
 
-    private static Delegate CreateGetHandlerCore<TService, TRequest>(string operationName)
+    private static Delegate CreateGetHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
         where TService : class, IRpcService
     {
         async Task<object?> Handler([AsParameters] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
@@ -83,7 +83,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         return (Func<TRequest, IServiceProvider, CancellationToken, Task<object?>>)Handler;
     }
 
-    private static Delegate CreateBodyHandlerCore<TService, TRequest>(string operationName)
+    private static Delegate CreateBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
         where TService : class, IRpcService
     {
         async Task<object?> Handler([FromBody] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)

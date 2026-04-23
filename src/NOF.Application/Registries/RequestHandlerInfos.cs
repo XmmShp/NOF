@@ -1,14 +1,17 @@
 using NOF.Abstraction;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
 
 public sealed class RequestHandlerInfos
 {
     private readonly Lock _gate = new();
-    private readonly Dictionary<Type, Type> _registrations = [];
+    public record DynamicallyAccessedPublicConstructorsType(
+        [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
+    private readonly Dictionary<Type, DynamicallyAccessedPublicConstructorsType> _registrations = [];
     private bool _isFrozen;
 
-    public IReadOnlyDictionary<Type, Type> Registrations
+    public IReadOnlyDictionary<Type, DynamicallyAccessedPublicConstructorsType> Registrations
     {
         get
         {
@@ -24,7 +27,7 @@ public sealed class RequestHandlerInfos
         lock (_gate)
         {
             ThrowIfFrozen();
-            _registrations[registration.ServiceType] = registration.ImplementationType;
+            _registrations[registration.ServiceType] = new(registration.ImplementationType);
         }
     }
 
@@ -37,7 +40,14 @@ public sealed class RequestHandlerInfos
     {
         ArgumentNullException.ThrowIfNull(serviceType);
         EnsureInitialized();
-        return _registrations.TryGetValue(serviceType, out handlerType);
+        if (!_registrations.TryGetValue(serviceType, out var handlerRegistration))
+        {
+            handlerType = default;
+            return false;
+        }
+
+        handlerType = handlerRegistration.Type;
+        return true;
     }
 
     private void EnsureInitialized()
@@ -56,7 +66,7 @@ public sealed class RequestHandlerInfos
 
             foreach (var registration in Registry.RequestHandlerRegistrations)
             {
-                _registrations[registration.ServiceType] = registration.ImplementationType;
+                _registrations[registration.ServiceType] = new(registration.ImplementationType);
             }
 
             _isFrozen = true;
