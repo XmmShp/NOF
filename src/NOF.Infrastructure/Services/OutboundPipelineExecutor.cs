@@ -3,13 +3,15 @@ using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandOutboundPipelineExecutor : ICommandOutboundPipelineExecutor
+public sealed class CommandOutboundPipelineExecutor
 {
     private readonly CommandOutboundPipelineTypes _middlewareTypes;
+    private readonly IServiceProvider _services;
 
-    public CommandOutboundPipelineExecutor(CommandOutboundPipelineTypes middlewareTypes)
+    public CommandOutboundPipelineExecutor(CommandOutboundPipelineTypes middlewareTypes, IServiceProvider services)
     {
         _middlewareTypes = middlewareTypes;
+        _services = services;
         _middlewareTypes.Freeze();
     }
 
@@ -19,7 +21,7 @@ public sealed class CommandOutboundPipelineExecutor : ICommandOutboundPipelineEx
 
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (ICommandOutboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (ICommandOutboundMiddleware)_services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }
@@ -28,13 +30,15 @@ public sealed class CommandOutboundPipelineExecutor : ICommandOutboundPipelineEx
     }
 }
 
-public sealed class NotificationOutboundPipelineExecutor : INotificationOutboundPipelineExecutor
+public sealed class NotificationOutboundPipelineExecutor
 {
     private readonly NotificationOutboundPipelineTypes _middlewareTypes;
+    private readonly IServiceProvider _services;
 
-    public NotificationOutboundPipelineExecutor(NotificationOutboundPipelineTypes middlewareTypes)
+    public NotificationOutboundPipelineExecutor(NotificationOutboundPipelineTypes middlewareTypes, IServiceProvider services)
     {
         _middlewareTypes = middlewareTypes;
+        _services = services;
         _middlewareTypes.Freeze();
     }
 
@@ -44,7 +48,7 @@ public sealed class NotificationOutboundPipelineExecutor : INotificationOutbound
 
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (INotificationOutboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (INotificationOutboundMiddleware)_services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }

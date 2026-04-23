@@ -57,22 +57,22 @@ public sealed class InboundMessageDispatcher
         var command = _serializer.Deserialize(payload, payloadType)
             ?? throw new InvalidOperationException($"Failed to deserialize command payload as '{payloadTypeName}'.");
 
-        await using var scope = _rootServiceProvider.CreateAsyncScope();
-        ApplyHeaders(scope.ServiceProvider, headers);
-
         var context = new CommandInboundContext
         {
             Message = command,
-            Services = scope.ServiceProvider,
             HandlerType = handlerType
         };
 
-        var pipeline = scope.ServiceProvider.GetRequiredService<ICommandInboundPipelineExecutor>();
-        await pipeline.ExecuteAsync(context, async ct =>
-        {
-            var handler = (CommandHandler)scope.ServiceProvider.GetRequiredService(handlerType);
-            await handler.HandleAsync(command, ct).ConfigureAwait(false);
-        }, cancellationToken).ConfigureAwait(false);
+        var pipeline = _rootServiceProvider.GetRequiredService<CommandInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(
+            context,
+            headers,
+            sp => async ct =>
+            {
+                var handler = (CommandHandler)sp.GetRequiredService(handlerType);
+                await handler.HandleAsync(command, ct).ConfigureAwait(false);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DispatchNotificationAsync(
@@ -133,35 +133,21 @@ public sealed class InboundMessageDispatcher
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
-        await using var scope = _rootServiceProvider.CreateAsyncScope();
-        ApplyHeaders(scope.ServiceProvider, headers);
-
         var context = new NotificationInboundContext
         {
             Message = notification,
-            Services = scope.ServiceProvider,
             HandlerType = handlerType
         };
 
-        var pipeline = scope.ServiceProvider.GetRequiredService<INotificationInboundPipelineExecutor>();
-        await pipeline.ExecuteAsync(context, async ct =>
-        {
-            var handler = (NotificationHandler)scope.ServiceProvider.GetRequiredService(handlerType);
-            await handler.HandleAsync(notification, ct).ConfigureAwait(false);
-        }, cancellationToken).ConfigureAwait(false);
-    }
-
-    private static void ApplyHeaders(IServiceProvider services, IEnumerable<KeyValuePair<string, string?>>? headers)
-    {
-        if (headers is null)
-        {
-            return;
-        }
-
-        var executionContext = services.GetRequiredService<IExecutionContext>();
-        foreach (var (headerKey, value) in headers)
-        {
-            executionContext[headerKey] = value;
-        }
+        var pipeline = _rootServiceProvider.GetRequiredService<NotificationInboundPipelineExecutor>();
+        await pipeline.ExecuteAsync(
+            context,
+            headers,
+            sp => async ct =>
+            {
+                var handler = (NotificationHandler)sp.GetRequiredService(handlerType);
+                await handler.HandleAsync(notification, ct).ConfigureAwait(false);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 }

@@ -10,24 +10,21 @@ namespace NOF.Infrastructure;
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
-    private readonly ICommandOutboundPipelineExecutor _outboundPipeline;
+    private readonly CommandOutboundPipelineExecutor _outboundPipeline;
     private readonly IExecutionContext _executionContext;
-    private readonly IServiceProvider _serviceProvider;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
 
     public CommandSender(
         ICommandRider rider,
-        ICommandOutboundPipelineExecutor outboundPipeline,
+        CommandOutboundPipelineExecutor outboundPipeline,
         IExecutionContext executionContext,
-        IServiceProvider serviceProvider,
         DbContext dbContext,
         IObjectSerializer objectSerializer)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
         _executionContext = executionContext;
-        _serviceProvider = serviceProvider;
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
     }
@@ -65,8 +62,7 @@ public sealed class CommandSender : ICommandSender
         ArgumentNullException.ThrowIfNull(commandType);
         var context = new CommandOutboundContext
         {
-            Message = command,
-            Services = _serviceProvider
+            Message = command
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>

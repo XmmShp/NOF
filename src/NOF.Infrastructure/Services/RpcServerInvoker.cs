@@ -32,51 +32,36 @@ public static class RpcServerInvoker
             throw new InvalidOperationException($"RPC handler mapping is missing for '{typeof(TRpcService).FullName}.{operationName}'.");
         }
 
-        var outboundPipeline = rootServiceProvider.GetRequiredService<IRequestOutboundPipelineExecutor>();
+        var outboundPipeline = rootServiceProvider.GetRequiredService<RequestOutboundPipelineExecutor>();
         var outboundContext = new RequestOutboundContext
         {
             Message = request,
-            Services = rootServiceProvider,
             ServiceType = typeof(TRpcService),
             MethodName = operationName
         };
 
         await outboundPipeline.ExecuteAsync(outboundContext, async ct =>
         {
-            await using var scope = rootServiceProvider.CreateAsyncScope();
-            ApplyHeaders(scope.ServiceProvider, outboundContext.Headers);
-
             var context = new RequestInboundContext
             {
                 Message = request,
-                Services = scope.ServiceProvider,
                 HandlerType = handlerMapping.HandlerType,
                 ServiceType = typeof(TRpcService),
                 MethodName = operationName
             };
 
-            var inboundPipeline = scope.ServiceProvider.GetRequiredService<IRequestInboundPipelineExecutor>();
-            await inboundPipeline.ExecuteAsync(context, async innerCt =>
-            {
-                var handler = (RpcHandler)scope.ServiceProvider.GetRequiredService(handlerMapping.HandlerType);
-                outboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
-            }, ct).ConfigureAwait(false);
+            var inboundPipeline = rootServiceProvider.GetRequiredService<RequestInboundPipelineExecutor>();
+            await inboundPipeline.ExecuteAsync(
+                context,
+                outboundContext.Headers,
+                sp => async innerCt =>
+                {
+                    var handler = (RpcHandler)sp.GetRequiredService(handlerMapping.HandlerType);
+                    outboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
+                },
+                ct).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
 
         return outboundContext.Response;
-    }
-
-    private static void ApplyHeaders(IServiceProvider services, IEnumerable<KeyValuePair<string, string?>>? headers)
-    {
-        if (headers is null)
-        {
-            return;
-        }
-
-        var executionContext = services.GetRequiredService<IExecutionContext>();
-        foreach (var (headerKey, value) in headers)
-        {
-            executionContext[headerKey] = value;
-        }
     }
 }

@@ -1,76 +1,107 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Application;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
 
-public sealed class CommandInboundPipelineExecutor : ICommandInboundPipelineExecutor
+public sealed class CommandInboundPipelineExecutor
 {
     private readonly CommandInboundPipelineTypes _middlewareTypes;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public CommandInboundPipelineExecutor(CommandInboundPipelineTypes middlewareTypes)
+    public CommandInboundPipelineExecutor(CommandInboundPipelineTypes middlewareTypes, IServiceScopeFactory scopeFactory)
     {
         _middlewareTypes = middlewareTypes;
+        _scopeFactory = scopeFactory;
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(CommandInboundContext context, HandlerDelegate inbound, CancellationToken cancellationToken)
+    public async ValueTask ExecuteAsync(
+        CommandInboundContext context,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        Func<IServiceProvider, HandlerDelegate> inboundFactory,
+        CancellationToken cancellationToken)
     {
-        var pipeline = inbound;
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().CopyHeadersFrom(headers);
+
+        var pipeline = inboundFactory(scope.ServiceProvider);
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (ICommandInboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (ICommandInboundMiddleware)scope.ServiceProvider.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }
 
-        return pipeline(cancellationToken);
+        await pipeline(cancellationToken).ConfigureAwait(false);
     }
+
 }
 
-public sealed class NotificationInboundPipelineExecutor : INotificationInboundPipelineExecutor
+public sealed class NotificationInboundPipelineExecutor
 {
     private readonly NotificationInboundPipelineTypes _middlewareTypes;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public NotificationInboundPipelineExecutor(NotificationInboundPipelineTypes middlewareTypes)
+    public NotificationInboundPipelineExecutor(NotificationInboundPipelineTypes middlewareTypes, IServiceScopeFactory scopeFactory)
     {
         _middlewareTypes = middlewareTypes;
+        _scopeFactory = scopeFactory;
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(NotificationInboundContext context, HandlerDelegate inbound, CancellationToken cancellationToken)
+    public async ValueTask ExecuteAsync(
+        NotificationInboundContext context,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        Func<IServiceProvider, HandlerDelegate> inboundFactory,
+        CancellationToken cancellationToken)
     {
-        var pipeline = inbound;
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().CopyHeadersFrom(headers);
+
+        var pipeline = inboundFactory(scope.ServiceProvider);
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (INotificationInboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (INotificationInboundMiddleware)scope.ServiceProvider.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }
 
-        return pipeline(cancellationToken);
+        await pipeline(cancellationToken).ConfigureAwait(false);
     }
+
 }
 
-public sealed class RequestInboundPipelineExecutor : IRequestInboundPipelineExecutor
+public sealed class RequestInboundPipelineExecutor
 {
     private readonly RequestInboundPipelineTypes _middlewareTypes;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public RequestInboundPipelineExecutor(RequestInboundPipelineTypes middlewareTypes)
+    public RequestInboundPipelineExecutor(RequestInboundPipelineTypes middlewareTypes, IServiceScopeFactory scopeFactory)
     {
         _middlewareTypes = middlewareTypes;
+        _scopeFactory = scopeFactory;
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(RequestInboundContext context, HandlerDelegate inbound, CancellationToken cancellationToken)
+    public async ValueTask ExecuteAsync(
+        RequestInboundContext context,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        Func<IServiceProvider, HandlerDelegate> inboundFactory,
+        CancellationToken cancellationToken)
     {
-        var pipeline = inbound;
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<IExecutionContext>().CopyHeadersFrom(headers);
+
+        var pipeline = inboundFactory(scope.ServiceProvider);
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
-            var middleware = (IRequestInboundMiddleware)context.Services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = (IRequestInboundMiddleware)scope.ServiceProvider.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
             pipeline = ct => middleware.InvokeAsync(context, next, ct);
         }
 
-        return pipeline(cancellationToken);
+        await pipeline(cancellationToken).ConfigureAwait(false);
     }
+
 }

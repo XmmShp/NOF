@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NOF.Abstraction;
 using NOF.Contract;
@@ -83,7 +82,6 @@ public sealed class AuthorizationInboundMiddlewareTests
         return new RequestInboundContext
         {
             Message = new TestRequest(),
-            Services = new ServiceCollection().BuildServiceProvider(),
             HandlerType = typeof(TestService),
             ServiceType = typeof(TestService),
             MethodName = methodName
@@ -118,4 +116,3 @@ public sealed class AuthorizationInboundMiddlewareTests
 
     private sealed class TestRequest;
 }
-

@@ -115,7 +115,6 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         return new RequestInboundContext
         {
             Message = new object(),
-            Services = new ServiceCollection().BuildServiceProvider(),
             HandlerType = typeof(object),
             ServiceType = typeof(object),
             MethodName = nameof(ToString)

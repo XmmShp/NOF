@@ -8,8 +8,6 @@ public sealed class RequestOutboundContext
 {
     public required object Message { get; init; }
 
-    public required IServiceProvider Services { get; init; }
-
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     public object? Response { get; set; }

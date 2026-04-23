@@ -19,6 +19,19 @@ public static partial class ExecutionContextExtensions
 {
     extension(IExecutionContext context)
     {
+        public void CopyHeadersFrom(IEnumerable<KeyValuePair<string, string?>>? headers)
+        {
+            if (headers is null)
+            {
+                return;
+            }
+
+            foreach (var (headerKey, value) in headers)
+            {
+                context[headerKey] = value;
+            }
+        }
+
         public string TenantId
         {
             get

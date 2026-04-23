@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using Xunit;
@@ -36,7 +35,6 @@ public class TenantInboundMiddlewareTests
         return new CommandInboundContext
         {
             Message = new object(),
-            Services = new ServiceCollection().BuildServiceProvider(),
             HandlerType = typeof(object)
         };
     }

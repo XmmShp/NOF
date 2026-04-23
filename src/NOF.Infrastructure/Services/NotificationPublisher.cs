@@ -10,24 +10,21 @@ namespace NOF.Infrastructure;
 public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
-    private readonly INotificationOutboundPipelineExecutor _outboundPipeline;
+    private readonly NotificationOutboundPipelineExecutor _outboundPipeline;
     private readonly IExecutionContext _executionContext;
-    private readonly IServiceProvider _serviceProvider;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
 
     public NotificationPublisher(
         INotificationRider rider,
-        INotificationOutboundPipelineExecutor outboundPipeline,
+        NotificationOutboundPipelineExecutor outboundPipeline,
         IExecutionContext executionContext,
-        IServiceProvider serviceProvider,
         DbContext dbContext,
         IObjectSerializer objectSerializer)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
         _executionContext = executionContext;
-        _serviceProvider = serviceProvider;
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
     }
@@ -65,8 +62,7 @@ public sealed class NotificationPublisher : INotificationPublisher
         ArgumentNullException.ThrowIfNull(notificationTypes);
         var context = new NotificationOutboundContext
         {
-            Message = notification,
-            Services = _serviceProvider
+            Message = notification
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>

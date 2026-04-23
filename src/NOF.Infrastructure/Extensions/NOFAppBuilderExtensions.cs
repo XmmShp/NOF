@@ -57,11 +57,11 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.GetOrAddSingleton<CommandInboundPipelineTypes>();
             builder.Services.GetOrAddSingleton<NotificationInboundPipelineTypes>();
             builder.Services.GetOrAddSingleton<RequestInboundPipelineTypes>();
-            builder.Services.TryAddSingleton<ICommandOutboundPipelineExecutor, CommandOutboundPipelineExecutor>();
-            builder.Services.TryAddSingleton<INotificationOutboundPipelineExecutor, NotificationOutboundPipelineExecutor>();
-            builder.Services.TryAddSingleton<ICommandInboundPipelineExecutor, CommandInboundPipelineExecutor>();
-            builder.Services.TryAddSingleton<INotificationInboundPipelineExecutor, NotificationInboundPipelineExecutor>();
-            builder.Services.TryAddSingleton<IRequestInboundPipelineExecutor, RequestInboundPipelineExecutor>();
+            builder.Services.TryAddScoped<CommandOutboundPipelineExecutor>();
+            builder.Services.TryAddScoped<NotificationOutboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<CommandInboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<NotificationInboundPipelineExecutor>();
+            builder.Services.TryAddSingleton<RequestInboundPipelineExecutor>();
             #endregion
 
             #region Application Services

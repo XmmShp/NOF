@@ -10,8 +10,3 @@ public interface IRequestOutboundMiddleware
 {
     ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken);
 }
-
-public interface IRequestOutboundPipelineExecutor
-{
-    ValueTask ExecuteAsync(RequestOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken);
-}

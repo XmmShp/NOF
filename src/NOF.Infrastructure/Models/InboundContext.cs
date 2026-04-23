@@ -9,8 +9,6 @@ public sealed class CommandInboundContext
 {
     public required object Message { get; init; }
 
-    public required IServiceProvider Services { get; init; }
-
     public required Type HandlerType { get; init; }
 }
 
@@ -19,8 +17,6 @@ public sealed class NotificationInboundContext
 {
     public required object Message { get; init; }
 
-    public required IServiceProvider Services { get; init; }
-
     public required Type HandlerType { get; init; }
 }
 
@@ -28,8 +24,6 @@ public sealed class NotificationInboundContext
 public sealed class RequestInboundContext
 {
     public required object Message { get; init; }
-
-    public required IServiceProvider Services { get; init; }
 
     public object? Response { get; set; }
 

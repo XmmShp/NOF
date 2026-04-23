@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Test;
@@ -89,7 +88,6 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         return new RequestOutboundContext
         {
             Message = new object(),
-            Services = new ServiceCollection().BuildServiceProvider(),
             ServiceType = typeof(object),
             MethodName = nameof(CreateOutboundContext)
         };
