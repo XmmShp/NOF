@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
+using NOF.Application;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -14,18 +15,21 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<InboxMessageBackgroundService> _logger;
-    private readonly InboundMessageDispatcher _dispatcher;
+    private readonly CommandInboundPipelineExecutor _commandPipelineExecutor;
+    private readonly NotificationInboundPipelineExecutor _notificationPipelineExecutor;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
-        InboundMessageDispatcher dispatcher)
+        CommandInboundPipelineExecutor commandPipelineExecutor,
+        NotificationInboundPipelineExecutor notificationPipelineExecutor)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Inbox;
         _logger = logger;
-        _dispatcher = dispatcher;
+        _commandPipelineExecutor = commandPipelineExecutor;
+        _notificationPipelineExecutor = notificationPipelineExecutor;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -111,21 +115,25 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             switch (message.MessageType)
             {
                 case InboxMessageType.Command:
-                    await _dispatcher.DispatchCommandToHandlerAsync(
-                        message.Payload,
-                        message.PayloadType,
-                        handlerType,
-                        headers,
-                        cancellationToken);
-                    break;
+                    {
+                        await _commandPipelineExecutor.ExecuteAsync(
+                            message.Payload,
+                            message.PayloadType,
+                            handlerType,
+                            headers,
+                            cancellationToken);
+                        break;
+                    }
                 case InboxMessageType.Notification:
-                    await _dispatcher.DispatchNotificationToHandlerAsync(
-                        message.Payload,
-                        message.PayloadType,
-                        handlerType,
-                        headers,
-                        cancellationToken);
-                    break;
+                    {
+                        await _notificationPipelineExecutor.ExecuteAsync(
+                            message.Payload,
+                            message.PayloadType,
+                            handlerType,
+                            headers,
+                            cancellationToken);
+                        break;
+                    }
                 default:
                     throw new InvalidOperationException($"Unsupported inbox message type '{message.MessageType}'.");
             }

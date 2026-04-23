@@ -26,7 +26,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
-            builder.Services.TryAddSingleton<InboundMessageDispatcher>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
 
             builder.Services.TryAddScoped<ICacheService, CacheService>();

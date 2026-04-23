@@ -42,23 +42,13 @@ public static class RpcServerInvoker
 
         await outboundPipeline.ExecuteAsync(outboundContext, async ct =>
         {
-            var context = new RequestInboundContext
-            {
-                Message = request,
-                HandlerType = handlerMapping.HandlerType,
-                ServiceType = typeof(TRpcService),
-                MethodName = operationName
-            };
-
             var inboundPipeline = rootServiceProvider.GetRequiredService<RequestInboundPipelineExecutor>();
-            await inboundPipeline.ExecuteAsync(
-                context,
+            outboundContext.Response = await inboundPipeline.ExecuteAsync(
+                request,
+                handlerMapping.HandlerType,
+                typeof(TRpcService),
+                operationName,
                 outboundContext.Headers,
-                sp => async innerCt =>
-                {
-                    var handler = (RpcHandler)sp.GetRequiredService(handlerMapping.HandlerType);
-                    outboundContext.Response = await handler.HandleAsync(request, innerCt).ConfigureAwait(false);
-                },
                 ct).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
 
