@@ -11,9 +11,9 @@ public sealed class TenantInboundMiddleware :
     IRequestInboundMiddleware,
     IAfter<InboundExceptionMiddleware>
 {
-    private readonly IExecutionContext _executionContext;
+    private readonly ITransparentInfos _executionContext;
 
-    public TenantInboundMiddleware(IExecutionContext executionContext)
+    public TenantInboundMiddleware(ITransparentInfos executionContext)
     {
         _executionContext = executionContext;
     }
@@ -38,7 +38,7 @@ public sealed class TenantInboundMiddleware :
 
     private void ApplyTenant()
     {
-        var tenantId = _executionContext.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
+        var tenantId = _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
             ? TenantId.Normalize(headerTenantId)
             : NOFAbstractionConstants.Tenant.HostId;
 

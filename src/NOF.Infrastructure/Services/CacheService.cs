@@ -14,14 +14,14 @@ public sealed class CacheService : ICacheService
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
-    private readonly IExecutionContext _executionContext;
+    private readonly ITransparentInfos _executionContext;
 
     public CacheService(
         ICacheServiceRider rider,
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
-        IExecutionContext executionContext)
+        ITransparentInfos executionContext)
     {
         ArgumentNullException.ThrowIfNull(rider);
         ArgumentNullException.ThrowIfNull(serializer);

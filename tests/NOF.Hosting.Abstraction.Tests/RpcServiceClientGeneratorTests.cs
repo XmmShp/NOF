@@ -51,7 +51,7 @@ public class RpcServiceClientGeneratorTests
         Assert.Contains(": global::MyApp.IMyServiceClient", code);
         Assert.Contains("CreateUserAsync", code);
         Assert.Contains("HttpMethod.Post", code);
-        Assert.DoesNotContain("global::NOF.Application.IExecutionContext", code);
+        Assert.DoesNotContain("global::NOF.Application.ITransparentInfos", code);
         Assert.Contains("foreach (var kvp in context.Headers)", code);
     }
 

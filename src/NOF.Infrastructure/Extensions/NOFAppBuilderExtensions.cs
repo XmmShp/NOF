@@ -67,16 +67,16 @@ public static partial class NOFInfrastructureExtensions
             #region Application Services
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.GetOrAddSingleton<EventHandlerInfos>();
-            builder.Services.TryAddScoped<IExecutionContext, Application.ExecutionContext>();
+            builder.Services.TryAddScoped<ITransparentInfos, Application.TransparentInfos>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
             #endregion
 
             #region Outbound Middlewares
-            builder.Services.AddCommandOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<ExecutionContextHeadersOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<TransparentInfosHeadersOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<TransparentInfosHeadersOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<TransparentInfosHeadersOutboundMiddleware>();
             builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<MessageIdOutboundMiddleware>();

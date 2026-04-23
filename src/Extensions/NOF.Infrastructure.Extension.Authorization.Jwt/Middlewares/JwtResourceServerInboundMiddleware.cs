@@ -18,14 +18,14 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
     private readonly JwtResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<JwtResourceServerInboundMiddleware> _logger;
-    private readonly IExecutionContext _executionContext;
+    private readonly ITransparentInfos _executionContext;
 
     public JwtResourceServerInboundMiddleware(
         IUserContext userContext,
         CachedJwksService jwksService,
         IOptions<JwtResourceServerOptions> jwtOptions,
         ILogger<JwtResourceServerInboundMiddleware> logger,
-        IExecutionContext executionContext)
+        ITransparentInfos executionContext)
     {
         _userContext = userContext;
         _jwksService = jwksService;
@@ -37,7 +37,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        if (!_executionContext.TryGetValue(_jwtOptions.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
+        if (!_executionContext.TryGetHeader(_jwtOptions.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
         {
             await next(cancellationToken);
             return;
@@ -77,7 +77,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
             _ = _tokenHandler.ValidateToken(token, validationParameters, out _);
             _userContext.User = JwtClaimsPrincipal.FromToken(token);
-            _executionContext.Remove(_jwtOptions.HeaderName);
+            _executionContext.RemoveHeader(_jwtOptions.HeaderName);
         }
         catch (SecurityTokenExpiredException)
         {

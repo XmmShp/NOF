@@ -1,7 +1,7 @@
 using NOF.Abstraction;
 using NOF.Application;
 using Xunit;
-using ExecutionContext = NOF.Application.ExecutionContext;
+using TransparentInfos = NOF.Application.TransparentInfos;
 
 namespace NOF.Infrastructure.Tests.Middlewares;
 
@@ -10,7 +10,7 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithoutIncomingTenantHeader_ShouldUseHostTenant()
     {
-        var executionContext = new ExecutionContext();
+        var executionContext = new TransparentInfos();
         var middleware = new TenantInboundMiddleware(executionContext);
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);
@@ -20,10 +20,8 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithIncomingTenantHeader_ShouldUseIncomingTenantHeader()
     {
-        var executionContext = new ExecutionContext
-        {
-            [NOFAbstractionConstants.Transport.Headers.TenantId] = "tenanta"
-        };
+        var executionContext = new TransparentInfos();
+        executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.TenantId, "tenanta");
         var middleware = new TenantInboundMiddleware(executionContext);
 
         await middleware.InvokeAsync(CreateContext(), _ => ValueTask.CompletedTask, default);

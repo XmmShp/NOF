@@ -30,7 +30,7 @@ public sealed class CommandInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().CopyHeadersFrom(headers);
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().CopyHeadersFrom(headers);
 
         var context = CreateContext(payload, payloadTypeName, handlerType);
         HandlerDelegate pipeline = ct => ExecuteCommandHandlerAsync(scope.ServiceProvider, handlerType, context, ct);
@@ -104,7 +104,7 @@ public sealed class NotificationInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().CopyHeadersFrom(headers);
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().CopyHeadersFrom(headers);
 
         var context = CreateContext(payload, payloadTypeName, handlerType);
         HandlerDelegate pipeline = ct => ExecuteNotificationHandlerAsync(scope.ServiceProvider, handlerType, context, ct);
@@ -174,7 +174,7 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        scope.ServiceProvider.GetRequiredService<IExecutionContext>().CopyHeadersFrom(headers);
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().CopyHeadersFrom(headers);
 
         var context = CreateContext(request, handlerType, serviceType, methodName);
         HandlerDelegate pipeline = ct => ExecuteRequestHandlerAsync(scope.ServiceProvider, handlerType, context, ct);

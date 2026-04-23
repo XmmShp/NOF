@@ -5,7 +5,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using System.Security.Cryptography;
 using Xunit;
-using ExecutionContext = NOF.Application.ExecutionContext;
+using TransparentInfos = NOF.Application.TransparentInfos;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.Middlewares;
 
@@ -16,7 +16,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksService = CreateCachedJwksService([]);
-        var executionContext = new ExecutionContext();
+        var executionContext = new TransparentInfos();
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
@@ -35,10 +35,8 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksService = CreateCachedJwksService([]);
-        var executionContext = new ExecutionContext
-        {
-            [NOFAbstractionConstants.Transport.Headers.Authorization] = "Bearer invalid-token"
-        };
+        var executionContext = new TransparentInfos();
+        executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
@@ -48,7 +46,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
         Assert.True(nextCalled);
-        Assert.True(executionContext.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
+        Assert.True(executionContext.ContainsHeader(NOFAbstractionConstants.Transport.Headers.Authorization));
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
     }
@@ -65,10 +63,8 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             CreatedAtUtc = DateTime.UtcNow
         };
         var jwksService = CreateCachedJwksService([key]);
-        var executionContext = new ExecutionContext
-        {
-            [NOFAbstractionConstants.Transport.Headers.Authorization] = "Bearer not-a-jwt"
-        };
+        var executionContext = new TransparentInfos();
+        executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
@@ -87,7 +83,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     private static JwtResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
         CachedJwksService jwksService,
-        IExecutionContext executionContext)
+        ITransparentInfos executionContext)
     {
         return new JwtResourceServerInboundMiddleware(
             userContext,

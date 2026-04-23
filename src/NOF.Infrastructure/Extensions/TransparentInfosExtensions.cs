@@ -4,29 +4,29 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-public static partial class ExecutionContextExtensions
+public static partial class TransparentInfosExtensions
 {
-    extension(IExecutionContext context)
+    extension(ITransparentInfos context)
     {
         public TracingInfo? TracingInfo
         {
             get
             {
-                context.TryGetValue(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
-                context.TryGetValue(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
+                context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
+                context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
                 return (traceId is not null && spanId is not null) ? new TracingInfo(traceId, spanId) : null;
             }
             set
             {
                 if (value is null)
                 {
-                    context.Remove(NOFAbstractionConstants.Transport.Headers.TraceId);
-                    context.Remove(NOFAbstractionConstants.Transport.Headers.SpanId);
+                    context.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
+                    context.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
                 }
                 else
                 {
-                    context[NOFAbstractionConstants.Transport.Headers.TraceId] = value.TraceId;
-                    context[NOFAbstractionConstants.Transport.Headers.SpanId] = value.SpanId;
+                    context.SetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, value.TraceId);
+                    context.SetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, value.SpanId);
                 }
             }
         }

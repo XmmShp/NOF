@@ -8,14 +8,14 @@ public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
     private readonly NotificationOutboundPipelineExecutor _outboundPipeline;
-    private readonly IExecutionContext _executionContext;
+    private readonly ITransparentInfos _executionContext;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
 
     public NotificationPublisher(
         INotificationRider rider,
         NotificationOutboundPipelineExecutor outboundPipeline,
-        IExecutionContext executionContext,
+        ITransparentInfos executionContext,
         DbContext dbContext,
         IObjectSerializer objectSerializer)
     {
@@ -32,10 +32,7 @@ public sealed class NotificationPublisher : INotificationPublisher
         ArgumentNullException.ThrowIfNull(notificationTypes);
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in _executionContext)
-        {
-            headers[kvp.Key] = kvp.Value;
-        }
+        _executionContext.CopyHeadersTo(headers);
 
         var payloadTypeName = TypeRegistry.Register(notification.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(

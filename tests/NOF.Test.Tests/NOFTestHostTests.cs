@@ -17,7 +17,7 @@ public class NOFTestHostTests
 
         using var scope = host.CreateScope();
         Assert.NotNull(
-        scope.GetRequiredService<IExecutionContext>());
+        scope.GetRequiredService<ITransparentInfos>());
         Assert.NotNull(
         scope.GetRequiredService<IUserContext>());
     }
@@ -33,10 +33,10 @@ public class NOFTestHostTests
         scope.SetTenant("tenanta")
             .SetTracing("trace-1", "span-1")
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
-        Assert.Equal("tenanta", scope.ExecutionContext.TenantId);
-        Assert.NotNull(scope.ExecutionContext.TracingInfo);
-        Assert.Equal("trace-1", scope.ExecutionContext.TracingInfo!.TraceId);
-        Assert.Equal("span-1", scope.ExecutionContext.TracingInfo!.SpanId);
+        Assert.Equal("tenanta", scope.TransparentInfos.TenantId);
+        Assert.NotNull(scope.TransparentInfos.TracingInfo);
+        Assert.Equal("trace-1", scope.TransparentInfos.TracingInfo!.TraceId);
+        Assert.Equal("span-1", scope.TransparentInfos.TracingInfo!.SpanId);
         Assert.Equal("user-1", scope.UserContext.User.Id);
         Assert.Equal("Alice", scope.UserContext.User.Name);
         Assert.Contains("orders.read", scope.UserContext.User.Permissions);

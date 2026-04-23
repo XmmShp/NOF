@@ -8,14 +8,14 @@ public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
     private readonly CommandOutboundPipelineExecutor _outboundPipeline;
-    private readonly IExecutionContext _executionContext;
+    private readonly ITransparentInfos _executionContext;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
 
     public CommandSender(
         ICommandRider rider,
         CommandOutboundPipelineExecutor outboundPipeline,
-        IExecutionContext executionContext,
+        ITransparentInfos executionContext,
         DbContext dbContext,
         IObjectSerializer objectSerializer)
     {
@@ -32,10 +32,7 @@ public sealed class CommandSender : ICommandSender
         ArgumentNullException.ThrowIfNull(commandType);
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in _executionContext)
-        {
-            headers[kvp.Key] = kvp.Value;
-        }
+        _executionContext.CopyHeadersTo(headers);
 
         var payloadTypeName = TypeRegistry.Register(command.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { TypeRegistry.Register(commandType) }, typeof(string[]));

@@ -47,13 +47,13 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     private static readonly ConcurrentDictionary<string, byte> MigratedContexts = new(StringComparer.Ordinal);
 
     private readonly IServiceProvider _serviceProvider;
-    private readonly IExecutionContext _executionContext;
+    private readonly ITransparentInfos _executionContext;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        IExecutionContext executionContext,
+        ITransparentInfos executionContext,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
