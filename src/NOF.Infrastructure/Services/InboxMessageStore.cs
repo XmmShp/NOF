@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NOF.Abstraction;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
@@ -11,11 +8,13 @@ public sealed class InboxMessageStore
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<InboxMessageStore> _logger;
+    private readonly IObjectSerializer _objectSerializer;
 
-    public InboxMessageStore(IServiceProvider serviceProvider, ILogger<InboxMessageStore> logger)
+    public InboxMessageStore(IServiceProvider serviceProvider, ILogger<InboxMessageStore> logger, IObjectSerializer objectSerializer)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _objectSerializer = objectSerializer;
     }
 
     public async Task<bool> EnqueueAsync(
@@ -56,11 +55,10 @@ public sealed class InboxMessageStore
         }
     }
 
-    private static string SerializeHeaders(IEnumerable<KeyValuePair<string, string?>>? headers)
+    private string SerializeHeaders(IEnumerable<KeyValuePair<string, string?>>? headers)
     {
         var dictionary = headers?.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value)
             ?? new Dictionary<string, string?>(StringComparer.Ordinal);
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
-        return JsonSerializer.Serialize(dictionary, headersTypeInfo);
+        return _objectSerializer.SerializeToText(dictionary, typeof(Dictionary<string, string?>));
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace NOF.Infrastructure;
@@ -26,6 +27,8 @@ internal static class TenantModelHelper
     public static bool IsTenantScopedEntity(IReadOnlyEntityType entityType)
         => entityType.FindAnnotation(TenantScopedAnnotationName)?.Value as bool? == true;
 
+    [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[])")]
+    [RequiresUnreferencedCode("Calls System.Linq.Expressions.Expression.Property(Expression, String)")]
     public static LambdaExpression BuildTenantFilter(Type entityClrType, NOFDbContext dbContext)
     {
         var entityParameter = Expression.Parameter(entityClrType, "entity");

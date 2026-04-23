@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -18,10 +17,10 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
-    public static readonly DiagnosticDescriptor MissingRouteParamProperty = new(
+    public static readonly DiagnosticDescriptor RouteParametersNotSupported = new(
         "NOF201",
-        "Missing public property for route parameter",
-        "Request type '{0}' does not contain a public property matching route parameter '{1}' (case-insensitive). Add a public property named '{1}'.",
+        "Route parameters are not supported",
+        "HttpEndpoint route '{0}' must not contain route parameters. Put input data on the request object instead.",
         "HttpEndpoint",
         DiagnosticSeverity.Error,
         true);
@@ -61,7 +60,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
-        MissingRouteParamProperty,
+        RouteParametersNotSupported,
         ClassMustHaveParameterlessCtor,
         InvalidServiceMethodSignature,
         ServiceMethodOverloadsNotSupported,
@@ -97,9 +96,6 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
         ValidateRequestPayloadShape(context, typeSymbol, typeLocation);
 
-        var allProperties = RpcServiceHelpers.GetAllPublicProperties(typeSymbol);
-        var propertyNames = new HashSet<string>(allProperties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
-
         foreach (var attr in httpEndpointAttributes)
         {
             var attrLocation = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? typeLocation;
@@ -109,7 +105,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            ValidateRouteParameters(context, typeSymbol.Name, route!, propertyNames, attrLocation);
+            ValidateRoute(context, route!, attrLocation);
         }
     }
 
@@ -191,9 +187,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
-                var allProperties = RpcServiceHelpers.GetAllPublicProperties(requestType);
-                var propertyNames = new HashSet<string>(allProperties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
-                ValidateRouteParameters(context, requestType.Name, route!, propertyNames, methodLocation);
+                ValidateRoute(context, route!, methodLocation);
             }
         }
 
@@ -224,18 +218,15 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static void ValidateRouteParameters(
+    private static void ValidateRoute(
         SymbolAnalysisContext context,
-        string requestTypeName,
         string route,
-        HashSet<string> propertyNames,
         Location location)
     {
-        var routeParams = RpcServiceHelpers.ExtractRouteParameters(route);
-        foreach (var routeParam in routeParams.Where(routeParam => !propertyNames.Contains(routeParam)))
+        if (RpcServiceHelpers.ContainsRouteParameters(route))
         {
             context.ReportDiagnostic(
-                Diagnostic.Create(MissingRouteParamProperty, location, requestTypeName, routeParam));
+                Diagnostic.Create(RouteParametersNotSupported, location, route));
         }
     }
 

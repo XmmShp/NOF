@@ -7,6 +7,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
@@ -128,7 +129,7 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        public EFCoreSelector UseDbContext<TDbContext>()
+        public EFCoreSelector UseDbContext<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>()
             where TDbContext : NOFDbContext
         {
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>();

@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
@@ -40,9 +37,10 @@ public sealed class NotificationPublisher : INotificationPublisher
             headers[kvp.Key] = kvp.Value;
         }
 
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var payloadTypeName = TypeRegistry.Register(notification.GetType());
-        var dispatchTypeNames = JsonSerializer.Serialize(notificationTypes.Select(TypeRegistry.Register).ToArray());
+        var dispatchTypeNames = _objectSerializer.SerializeToText(
+            notificationTypes.Select(TypeRegistry.Register).ToArray(),
+            typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
@@ -51,7 +49,7 @@ public sealed class NotificationPublisher : INotificationPublisher
             PayloadType = payloadTypeName,
             DispatchTypes = dispatchTypeNames,
             Payload = _objectSerializer.Serialize(notification).ToArray(),
-            Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
+            Headers = _objectSerializer.SerializeToText(headers, typeof(Dictionary<string, string?>)),
             ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });
     }

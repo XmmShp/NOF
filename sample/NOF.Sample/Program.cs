@@ -15,7 +15,7 @@ var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
     .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
 
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")!);
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
 builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
 

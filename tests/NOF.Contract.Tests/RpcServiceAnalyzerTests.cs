@@ -51,7 +51,7 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
-    public async Task MissingRouteParamProperty_ReportsNOF201()
+    public async Task RouteParametersNotSupported_ReportsNOF201()
     {
         const string source = """
             using NOF.Contract;

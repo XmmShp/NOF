@@ -42,7 +42,7 @@ public sealed class JwtJwksHttpClientTests
         var result = await service.GetJwksAsync();
         Assert.Single(result.Keys, k => k.Kid == "kid-1");
         Assert.NotNull(handler.LastRequest);
-        Assert.Equal(HttpMethod.Get, handler.LastRequest!.Method);
+        Assert.Equal(HttpMethod.Get, handler.LastRequest.Method);
         Assert.Equal("/.well-known/jwks.json", handler.LastRequest.PathAndQuery);
         Assert.Empty(handler.LastRequest.Headers);
     }

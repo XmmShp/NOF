@@ -78,12 +78,12 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public Task SendAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
     {
-        return GetRequiredService<ICommandSender>().SendAsync(command!, cancellationToken);
+        return GetRequiredService<ICommandSender>().SendAsync(command, cancellationToken);
     }
 
     public Task PublishAsync<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
     {
-        return GetRequiredService<INotificationPublisher>().PublishAsync(notification!, cancellationToken);
+        return GetRequiredService<INotificationPublisher>().PublishAsync(notification, cancellationToken);
     }
 
     public void Dispose()

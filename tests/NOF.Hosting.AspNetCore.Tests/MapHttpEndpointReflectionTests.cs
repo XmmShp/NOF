@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NOF.Contract;
-using NOF.Hosting.AspNetCore;
 using System.Reflection;
 using Xunit;
 
@@ -88,7 +87,7 @@ public class MapHttpEndpointReflectionTests
 
         var exception = Assert.Throws<TargetInvocationException>(() => GetHttpEndpoints(method, nameof(IAppService.InvalidRoute)));
         Assert.IsType<InvalidOperationException>(exception.InnerException);
-        Assert.Contains("Route parameters are not supported", exception.InnerException!.Message);
+        Assert.Contains("Route parameters are not supported", exception.InnerException.Message);
     }
 
     private static Type GetNormalizedResponseType(Type returnType)

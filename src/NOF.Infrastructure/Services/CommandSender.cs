@@ -1,9 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
@@ -40,9 +37,8 @@ public sealed class CommandSender : ICommandSender
             headers[kvp.Key] = kvp.Value;
         }
 
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var payloadTypeName = TypeRegistry.Register(command.GetType());
-        var dispatchTypeNames = JsonSerializer.Serialize(new[] { TypeRegistry.Register(commandType) });
+        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { TypeRegistry.Register(commandType) }, typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
@@ -51,7 +47,7 @@ public sealed class CommandSender : ICommandSender
             PayloadType = payloadTypeName,
             DispatchTypes = dispatchTypeNames,
             Payload = _objectSerializer.Serialize(command).ToArray(),
-            Headers = JsonSerializer.Serialize(headers, headersTypeInfo),
+            Headers = _objectSerializer.SerializeToText(headers, typeof(Dictionary<string, string?>)),
             ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
         });
     }

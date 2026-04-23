@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
 
@@ -32,17 +33,17 @@ public static partial class NOFApplicationExtensions
             return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
             {
                 var commandSender = sp.GetRequiredService<ICommandSender>();
-                await commandSender.SendAsync(commandFactory(notification)!, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await commandSender.SendAsync(commandFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
             });
         }
 
         /// <summary>Publishes a notification asynchronously when the transition is triggered.</summary>
-        public IStateMachineBuilderWhenClause<TState, TNotification> PublishNotificationAsync<TAnotherNotification>(Func<TNotification, TAnotherNotification> notificationFactory)
+        public IStateMachineBuilderWhenClause<TState, TNotification> PublishNotificationAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TAnotherNotification>(Func<TNotification, TAnotherNotification> notificationFactory)
         {
             return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
             {
                 var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
-                await notificationPublisher.PublishAsync(notificationFactory(notification)!, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await notificationPublisher.PublishAsync(notificationFactory(notification), cancellationToken: cancellationToken).ConfigureAwait(false);
             });
         }
     }

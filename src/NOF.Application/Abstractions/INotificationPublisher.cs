@@ -33,7 +33,7 @@ public static class NotificationPublisherExtensions
             return publisher.PublishAsync(notification, runtimeType.GetAllAssignableTypes(), cancellationToken);
         }
 
-        public void DeferPublish<TNotification>(TNotification notification)
+        public void DeferPublish<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification)
         {
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);

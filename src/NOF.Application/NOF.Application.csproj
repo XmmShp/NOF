@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     
     <!-- NuGet Package Settings -->
+    <IsAotCompatible>true</IsAotCompatible>
     <IsPackable>true</IsPackable>
     <PackageId>NOF.Application</PackageId>
     <Description>Application layer for the NOF Framework — request/command/notification handlers, state machines, caching, and unit of work.</Description>

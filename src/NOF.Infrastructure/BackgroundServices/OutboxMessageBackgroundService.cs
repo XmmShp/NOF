@@ -6,8 +6,6 @@ using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
@@ -103,10 +101,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         var payloadType = TypeRegistry.Resolve(message.PayloadType);
         var dispatchTypes = ResolveDispatchTypes(message);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
         var headers = string.IsNullOrWhiteSpace(message.Headers)
             ? new Dictionary<string, string?>()
-            : JsonSerializer.Deserialize(message.Headers, headersTypeInfo) ?? new Dictionary<string, string?>();
+            : _objectSerializer.Deserialize<Dictionary<string, string?>>(message.Headers) ?? new Dictionary<string, string?>();
 
         // Restore the ambient execution context for downstream components that rely on it.
         // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
@@ -177,14 +174,14 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             parent);
     }
 
-    private static Type[] ResolveDispatchTypes(NOFOutboxMessage message)
+    private Type[] ResolveDispatchTypes(NOFOutboxMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.DispatchTypes))
         {
             return [TypeRegistry.Resolve(message.PayloadType)];
         }
 
-        var typeNames = JsonSerializer.Deserialize<string[]>(message.DispatchTypes);
+        var typeNames = _objectSerializer.Deserialize<string[]>(message.DispatchTypes);
         if (typeNames is null || typeNames.Length == 0)
         {
             return [TypeRegistry.Resolve(message.PayloadType)];

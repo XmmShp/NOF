@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace NOF.Contract.SourceGenerator;
 
@@ -49,16 +48,9 @@ internal static class RpcServiceHelpers
         return properties;
     }
 
-    public static List<string> ExtractRouteParameters(string route)
+    public static bool ContainsRouteParameters(string route)
     {
-        var result = new List<string>();
-        var matches = Regex.Matches(route, @"\{(\w+)\}");
-        foreach (Match match in matches)
-        {
-            result.Add(match.Groups[1].Value);
-        }
-
-        return result;
+        return route.IndexOf('{') >= 0 || route.IndexOf('}') >= 0;
     }
 
     public static string GetHttpClientName(string interfaceName)

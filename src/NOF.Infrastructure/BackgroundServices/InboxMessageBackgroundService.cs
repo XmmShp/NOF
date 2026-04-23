@@ -3,10 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NOF.Abstraction;
-using NOF.Application;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace NOF.Infrastructure;
 
@@ -17,19 +13,22 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly ILogger<InboxMessageBackgroundService> _logger;
     private readonly CommandInboundPipelineExecutor _commandPipelineExecutor;
     private readonly NotificationInboundPipelineExecutor _notificationPipelineExecutor;
+    private readonly IObjectSerializer _objectSerializer;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
         CommandInboundPipelineExecutor commandPipelineExecutor,
-        NotificationInboundPipelineExecutor notificationPipelineExecutor)
+        NotificationInboundPipelineExecutor notificationPipelineExecutor,
+        IObjectSerializer objectSerializer)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Inbox;
         _logger = logger;
         _commandPipelineExecutor = commandPipelineExecutor;
         _notificationPipelineExecutor = notificationPipelineExecutor;
+        _objectSerializer = objectSerializer;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -270,15 +269,14 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         }
     }
 
-    private static IEnumerable<KeyValuePair<string, string?>> DeserializeHeaders(string raw)
+    private IEnumerable<KeyValuePair<string, string?>> DeserializeHeaders(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
             return Array.Empty<KeyValuePair<string, string?>>();
         }
 
-        var headersTypeInfo = (JsonTypeInfo<Dictionary<string, string?>>)JsonSerializerOptions.NOF.GetTypeInfo(typeof(Dictionary<string, string?>));
-        var dict = JsonSerializer.Deserialize(raw, headersTypeInfo) ?? new Dictionary<string, string?>();
+        var dict = _objectSerializer.Deserialize<Dictionary<string, string?>>(raw) ?? new Dictionary<string, string?>();
         return dict;
     }
 }

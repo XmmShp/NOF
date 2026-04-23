@@ -27,13 +27,13 @@ public sealed class NOFTestHost : IAsyncDisposable, IDisposable
     public async Task SendAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
     {
         using var scope = CreateScope();
-        await scope.SendAsync(command!, cancellationToken);
+        await scope.SendAsync(command, cancellationToken);
     }
 
     public async Task PublishAsync<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
     {
         using var scope = CreateScope();
-        await scope.PublishAsync(notification!, cancellationToken);
+        await scope.PublishAsync(notification, cancellationToken);
     }
 
     public void Dispose()

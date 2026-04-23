@@ -46,7 +46,7 @@ public record CreateOrderRequest(string ProductName, int Quantity);
 public partial interface IOrderService : IRpcService
 {
     [Summary("Get order")]
-    [HttpEndpoint(HttpVerb.Get, "/api/orders/{id}")]
+    [HttpEndpoint(HttpVerb.Get, "/api/orders/get")]
     Result<OrderDto> Get(GetOrderRequest request);
 
     [Summary("Create order")]
@@ -62,6 +62,7 @@ public partial interface IOrderService : IRpcService
 ### Other Annotations
 
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
+- Route parameters such as `"{id}"` are not supported for RPC HTTP endpoints; put input data on the request object instead
 - **`[RequirePermission]`** - declares required permissions for an endpoint
 - **`[Summary]`** - adds summary documentation to generated endpoints
 - These NOF-specific attributes are all metadata-backed and converge on `MetadataAttribute`

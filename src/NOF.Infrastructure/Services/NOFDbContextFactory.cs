@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
@@ -23,7 +24,7 @@ public interface INOFDbContextFactory
 /// NOF database context factory interface
 /// Used to create database contexts of the specified type
 /// </summary>
-public interface INOFDbContextFactory<TDbContext> : INOFDbContextFactory where TDbContext : NOFDbContext
+public interface INOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext> : INOFDbContextFactory where TDbContext : NOFDbContext
 {
     NOFDbContext INOFDbContextFactory.CreateDbContext() => CreateDbContext();
     NOFDbContext INOFDbContextFactory.CreateDbContext(string tenantId) => CreateDbContext(tenantId);
@@ -32,14 +33,14 @@ public interface INOFDbContextFactory<TDbContext> : INOFDbContextFactory where T
     new TDbContext CreateDbContext(string tenantId);
 }
 
-internal sealed class DbContextFactory<TDbContext>(INOFDbContextFactory<TDbContext> dbContextFactory) : IDbContextFactory<TDbContext>
+internal sealed class DbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>(INOFDbContextFactory<TDbContext> dbContextFactory) : IDbContextFactory<TDbContext>
     where TDbContext : NOFDbContext
 {
     public TDbContext CreateDbContext()
         => dbContextFactory.CreateDbContext();
 }
 
-internal sealed class NOFDbContextFactory<TDbContext> : INOFDbContextFactory<TDbContext>
+internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext> : INOFDbContextFactory<TDbContext>
     where TDbContext : NOFDbContext
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationLocks = new(StringComparer.Ordinal);
