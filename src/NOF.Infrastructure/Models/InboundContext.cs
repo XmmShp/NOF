@@ -1,5 +1,5 @@
-using NOF.Hosting;
 using NOF.Contract;
+using NOF.Hosting;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 

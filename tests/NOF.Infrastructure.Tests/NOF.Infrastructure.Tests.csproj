@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />

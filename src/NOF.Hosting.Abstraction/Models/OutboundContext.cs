@@ -1,6 +1,6 @@
+using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using NOF.Contract;
 
 namespace NOF.Hosting;
 
