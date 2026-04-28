@@ -121,8 +121,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         {
             if (taskType.IsGenericType && taskType.TypeArguments.Length == 1)
             {
-                var inner = taskType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                sb.AppendLine($"            return ({inner})result!;");
+                sb.AppendLine($"            return {BuildResultConversionExpression(taskType.TypeArguments[0], "result!")} ;");
             }
             else
             {
@@ -133,8 +132,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         {
             if (valueTaskType.IsGenericType && valueTaskType.TypeArguments.Length == 1)
             {
-                var inner = valueTaskType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                sb.AppendLine($"            return ({inner})result!;");
+                sb.AppendLine($"            return {BuildResultConversionExpression(valueTaskType.TypeArguments[0], "result!")} ;");
             }
             else
             {
@@ -143,10 +141,30 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         }
         else
         {
-            sb.AppendLine($"            return ({returnType})result!;");
+            sb.AppendLine($"            return {BuildResultConversionExpression(method.ReturnType, "result!")} ;");
         }
         sb.AppendLine("        }");
         sb.AppendLine();
+    }
+
+    private static string BuildResultConversionExpression(ITypeSymbol returnType, string valueExpression)
+    {
+        if (returnType is INamedTypeSymbol namedType
+            && namedType.ContainingNamespace.ToDisplayString() == "NOF.Contract")
+        {
+            if (namedType.Name == "Result" && !namedType.IsGenericType)
+            {
+                return $"global::NOF.Contract.Result.From((global::NOF.Contract.IResult){valueExpression})";
+            }
+
+            if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
+            {
+                var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                return $"global::NOF.Contract.Result.From<{innerType}>((global::NOF.Contract.IResult){valueExpression})";
+            }
+        }
+
+        return $"({returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}){valueExpression}";
     }
 
     private static bool TryGetRpcClientInterfaceFromLocalRpcClientAttribute(
