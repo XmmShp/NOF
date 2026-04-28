@@ -4,6 +4,7 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Infrastructure;
+using System.Reflection;
 
 namespace NOF.Hosting.Console;
 
@@ -14,7 +15,8 @@ public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
 {
     public HostApplicationBuilder HostApplicationBuilder { get; }
 
-    private NOFConsoleHostBuilder(string[]? args)
+    private NOFConsoleHostBuilder(string[]? args, Assembly? applicationAssembly)
+        : base(applicationAssembly)
     {
         HostApplicationBuilder = Host.CreateApplicationBuilder(args ?? []);
     }
@@ -26,7 +28,7 @@ public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
     /// <param name="useInfrastructureDefaults">When true, calls <see cref="NOFAppBuilderExtensions.AddInfrastructureDefaults"/>.</param>
     public static NOFConsoleHostBuilder Create(string[]? args = null, bool useInfrastructureDefaults = true)
     {
-        var builder = new NOFConsoleHostBuilder(args);
+        var builder = new NOFConsoleHostBuilder(args, Assembly.GetCallingAssembly());
         if (useInfrastructureDefaults)
         {
             builder.AddInfrastructureDefaults();

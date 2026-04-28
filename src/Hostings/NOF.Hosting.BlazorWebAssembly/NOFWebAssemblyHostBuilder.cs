@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.UI;
+using System.Reflection;
 
 namespace NOF.Hosting.BlazorWebAssembly;
 
@@ -15,7 +16,8 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
 
     public WebAssemblyHostBuilder WebAssemblyHostBuilder { get; }
 
-    protected NOFWebAssemblyHostBuilder(string[]? args)
+    protected NOFWebAssemblyHostBuilder(string[]? args, Assembly? applicationAssembly)
+        : base(applicationAssembly)
     {
         WebAssemblyHostBuilder = WebAssemblyHostBuilder.CreateDefault(args);
         Environment = new NOFWebAssemblyHostEnvironment(WebAssemblyHostBuilder.HostEnvironment);
@@ -24,7 +26,7 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
 
     public static NOFWebAssemblyHostBuilder Create(string[]? args)
     {
-        var builder = new NOFWebAssemblyHostBuilder(args);
+        var builder = new NOFWebAssemblyHostBuilder(args, Assembly.GetCallingAssembly());
         builder.Services.AddNOFUI();
         return builder;
     }

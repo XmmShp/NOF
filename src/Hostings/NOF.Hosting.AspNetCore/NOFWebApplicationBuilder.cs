@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Infrastructure;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("NOF.Integration.Tests")]
@@ -16,14 +17,15 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 {
     public WebApplicationBuilder WebApplicationBuilder { get; }
 
-    protected NOFWebApplicationBuilder(string[] args)
+    protected NOFWebApplicationBuilder(string[] args, Assembly? applicationAssembly)
+        : base(applicationAssembly)
     {
         WebApplicationBuilder = WebApplication.CreateBuilder(args);
     }
 
     public static NOFWebApplicationBuilder Create(string[] args, bool useDefaults = true)
     {
-        var builder = new NOFWebApplicationBuilder(args);
+        var builder = new NOFWebApplicationBuilder(args, Assembly.GetCallingAssembly());
         builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
         builder.Services.AddRequestOutboundMiddleware<HttpHeaderOutboundMiddleware>();

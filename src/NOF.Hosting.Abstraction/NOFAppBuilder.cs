@@ -42,11 +42,11 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     protected readonly HashSet<DependencyNode> ApplicationConfigs = [];
 
-    protected NOFAppBuilder()
+    protected NOFAppBuilder(Assembly? applicationAssembly = null)
     {
-        if (Assembly.GetEntryAssembly() is { } assembly)
+        if (applicationAssembly is not null)
         {
-            this.AddApplicationPart(assembly);
+            this.AddApplicationPart(applicationAssembly);
         }
     }
 

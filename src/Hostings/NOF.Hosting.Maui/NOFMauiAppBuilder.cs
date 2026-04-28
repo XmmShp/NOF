@@ -3,6 +3,7 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Infrastructure;
+using System.Reflection;
 
 namespace NOF.Hosting.Maui;
 
@@ -10,14 +11,15 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
 {
     public MauiAppBuilder MauiAppBuilder { get; }
 
-    protected NOFMauiAppBuilder(MauiAppBuilder mauiAppBuilder)
+    protected NOFMauiAppBuilder(MauiAppBuilder mauiAppBuilder, Assembly? applicationAssembly)
+        : base(applicationAssembly)
     {
         MauiAppBuilder = mauiAppBuilder;
     }
 
     public static NOFMauiAppBuilder Create(bool useDefaults = true)
     {
-        var builder = new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults));
+        var builder = new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults), Assembly.GetCallingAssembly());
         builder.AddInfrastructureDefaults();
         return builder;
     }
