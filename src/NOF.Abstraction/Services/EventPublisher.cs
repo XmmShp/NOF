@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace NOF.Abstraction;
 
@@ -16,6 +17,15 @@ public static class EventPublisher
         var previous = _currentPublisher.Value;
         _currentPublisher.Value = publisher;
         return new AmbientPublisherScope(previous);
+    }
+
+    public static IDisposable PushCurrent(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var publisher = services.GetService(typeof(IEventPublisher)) as IEventPublisher
+            ?? throw new InvalidOperationException($"No service of type '{typeof(IEventPublisher).FullName}' is registered.");
+        return PushCurrent(publisher);
     }
 
     public static void PublishEvent(object payload, Type[] eventTypes)
