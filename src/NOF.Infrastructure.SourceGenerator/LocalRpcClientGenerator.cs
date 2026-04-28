@@ -154,13 +154,13 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         {
             if (namedType.Name == "Result" && !namedType.IsGenericType)
             {
-                return $"global::NOF.Contract.Result.From((global::NOF.Contract.IResult){valueExpression})";
+                return $"global::NOF.Contract.Result.From({valueExpression})";
             }
 
             if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
             {
                 var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.Result.From<{innerType}>((global::NOF.Contract.IResult){valueExpression})";
+                return $"global::NOF.Contract.Result.From<{innerType}>({valueExpression})";
             }
         }
 

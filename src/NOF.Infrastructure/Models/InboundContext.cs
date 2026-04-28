@@ -1,4 +1,5 @@
 using NOF.Hosting;
+using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
@@ -25,7 +26,7 @@ public sealed class RequestInboundContext
 {
     public required object Message { get; init; }
 
-    public object? Response { get; set; }
+    public IResult? Response { get; set; }
 
     public required Type HandlerType { get; init; }
 

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
@@ -165,7 +166,7 @@ public sealed class RequestInboundPipelineExecutor
         _middlewareTypes.Freeze();
     }
 
-    public async ValueTask<object?> ExecuteAsync(
+    public async ValueTask<IResult?> ExecuteAsync(
         object request,
         Type handlerType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
@@ -212,7 +213,9 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         var handler = (RpcHandler)services.GetRequiredService(handlerType);
-        context.Response = await handler.HandleAsync(context.Message, cancellationToken).ConfigureAwait(false);
+        context.Response = await handler.HandleAsync(context.Message, cancellationToken).ConfigureAwait(false) as IResult
+            ?? throw new InvalidOperationException(
+                $"RPC handler '{handlerType.FullName}' must return a value implementing '{typeof(IResult).FullName}'.");
     }
 
     private static ValueTask ExecuteRequestMiddlewareAsync(

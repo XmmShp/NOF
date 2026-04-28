@@ -50,7 +50,10 @@ public class LocalRpcClientGeneratorTests
         var code = GetGeneratedCode(runResult);
 
         Assert.Contains(
-            "Result.From<global::MyApp.GetFleetOverviewResponse>((global::NOF.Contract.IResult)result!)",
+            "Result.From<global::MyApp.GetFleetOverviewResponse>(result!)",
+            code);
+        Assert.DoesNotContain(
+            "((global::NOF.Contract.IResult)result!)",
             code);
         Assert.DoesNotContain(
             "(global::MyApp.Result<global::MyApp.GetFleetOverviewResponse>)result!",

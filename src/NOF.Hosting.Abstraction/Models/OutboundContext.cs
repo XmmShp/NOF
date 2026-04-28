@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using NOF.Contract;
 
 namespace NOF.Hosting;
 
@@ -10,7 +11,7 @@ public sealed class RequestOutboundContext
 
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-    public object? Response { get; set; }
+    public IResult? Response { get; set; }
 
     public required Type ServiceType { get; init; }
 
