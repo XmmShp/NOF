@@ -13,16 +13,16 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// </summary>
 public sealed class JwtKeyRotationBackgroundService : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JwtAuthorityOptions _options;
     private readonly ILogger<JwtKeyRotationBackgroundService> _logger;
 
     public JwtKeyRotationBackgroundService(
-        IServiceProvider serviceProvider,
+        IServiceScopeFactory serviceScopeFactory,
         IOptions<JwtAuthorityOptions> options,
         ILogger<JwtKeyRotationBackgroundService> logger)
     {
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
         _options = options.Value;
         _logger = logger;
     }
@@ -37,15 +37,14 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
-
-                var nextRotation = ComputeNextRotationDelay(signingKeyService);
+                var nextRotation = ComputeNextRotationDelay();
 
                 _logger.LogDebug("Next key rotation in {Delay}", nextRotation);
 
                 await Task.Delay(nextRotation, stoppingToken);
 
+                using var scope = _serviceScopeFactory.CreateScope();
+                var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
                 signingKeyService.RotateKey();
                 _logger.LogInformation("Signing key rotated successfully. New kid: {Kid}",
                     signingKeyService.CurrentSigningKey.Kid);
@@ -71,8 +70,10 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
     /// Computes the delay until the next rotation based on the current key's age
     /// and the configured rotation interval.
     /// </summary>
-    private TimeSpan ComputeNextRotationDelay(ISigningKeyService signingKeyService)
+    private TimeSpan ComputeNextRotationDelay()
     {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
         var keyAge = DateTime.UtcNow - signingKeyService.CurrentSigningKey.CreatedAtUtc;
         var remaining = _options.KeyRotationInterval - keyAge;
 

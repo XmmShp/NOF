@@ -103,7 +103,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     {
         var signingKeyService = new FakeSigningKeyService(keys);
         var rootProvider = new FakeServiceProvider(typeof(ISigningKeyService), signingKeyService);
-        return new CachedJwksService(new FakeServiceScopeFactory(rootProvider), rootProvider);
+        return new CachedJwksService(new FakeServiceScopeFactory(rootProvider), signingKeyService);
     }
 
     private static RequestInboundContext CreateInboundContext()

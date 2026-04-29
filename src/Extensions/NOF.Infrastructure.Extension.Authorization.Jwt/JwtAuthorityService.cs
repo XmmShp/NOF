@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
@@ -13,28 +12,19 @@ public sealed partial class JwtAuthorityService : RpcServer<IJwtAuthorityService
 
 public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtToken
 {
+    private readonly ISigningKeyService _signingKeyService;
+    private readonly JwtAuthorityOptions _options;
+
+    public GenerateJwtTokenHandler(
+        ISigningKeyService signingKeyService,
+        IOptions<JwtAuthorityOptions> options)
+    {
+        _signingKeyService = signingKeyService;
+        _options = options.Value;
+    }
+
     public override Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-        return ExecuteGenerateJwtTokenCoreAsync(ServiceProvider, request, cancellationToken);
-    }
-
-    private IServiceProvider ServiceProvider { get; }
-
-    public GenerateJwtTokenHandler(IServiceProvider serviceProvider)
-    {
-        ServiceProvider = serviceProvider;
-    }
-
-    private static Task<Result<GenerateJwtTokenResponse>> ExecuteGenerateJwtTokenCoreAsync(
-        IServiceProvider serviceProvider,
-        GenerateJwtTokenRequest request,
-        CancellationToken cancellationToken)
-    {
-        _ = cancellationToken;
-        var signingKeyService = serviceProvider.GetRequiredService<ISigningKeyService>();
-        var options = serviceProvider.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value;
-
         var now = DateTime.UtcNow;
         var refreshTokenId = Guid.NewGuid().ToString("N");
 
@@ -55,11 +45,11 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var signingKey = signingKeyService.CurrentSigningKey.Key;
+        var signingKey = _signingKeyService.CurrentSigningKey.Key;
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
 
         var accessToken = tokenHandler.WriteToken(new JwtSecurityToken(
-            issuer: options.Issuer,
+            issuer: _options.Issuer,
             audience: request.Audience,
             claims: accessClaims,
             notBefore: now,
@@ -74,7 +64,7 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
         };
 
         var refreshToken = tokenHandler.WriteToken(new JwtSecurityToken(
-            issuer: options.Issuer,
+            issuer: _options.Issuer,
             audience: request.Audience,
             claims: refreshClaims,
             notBefore: now,
@@ -98,33 +88,31 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
 
 public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.ValidateJwtRefreshToken
 {
-    private IServiceProvider ServiceProvider { get; }
+    private readonly ISigningKeyService _signingKeyService;
+    private readonly IRevokedRefreshTokenRepository _revokedRefreshTokenRepository;
+    private readonly JwtAuthorityOptions _options;
 
-    public ValidateJwtRefreshTokenHandler(IServiceProvider serviceProvider)
+    public ValidateJwtRefreshTokenHandler(
+        ISigningKeyService signingKeyService,
+        IRevokedRefreshTokenRepository revokedRefreshTokenRepository,
+        IOptions<JwtAuthorityOptions> options)
     {
-        ServiceProvider = serviceProvider;
+        _signingKeyService = signingKeyService;
+        _revokedRefreshTokenRepository = revokedRefreshTokenRepository;
+        _options = options.Value;
     }
 
-    public override Task<Result<ValidateJwtRefreshTokenResponse>> HandleAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken)
-        => ExecuteValidateJwtRefreshTokenCoreAsync(ServiceProvider, request, cancellationToken);
-
-    private static async Task<Result<ValidateJwtRefreshTokenResponse>> ExecuteValidateJwtRefreshTokenCoreAsync(
-        IServiceProvider serviceProvider,
-        ValidateJwtRefreshTokenRequest request,
-        CancellationToken cancellationToken)
+    public override async Task<Result<ValidateJwtRefreshTokenResponse>> HandleAsync(ValidateJwtRefreshTokenRequest request, CancellationToken cancellationToken)
     {
-        var signingKeyService = serviceProvider.GetRequiredService<ISigningKeyService>();
-        var revokedRefreshTokenRepository = serviceProvider.GetRequiredService<IRevokedRefreshTokenRepository>();
-        var options = serviceProvider.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value;
         var tokenHandler = new JwtSecurityTokenHandler();
         try
         {
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKeys = signingKeyService.AllKeys.Select(k => k.Key),
+                IssuerSigningKeys = _signingKeyService.AllKeys.Select(k => k.Key),
                 ValidateIssuer = true,
-                ValidIssuer = options.Issuer,
+                ValidIssuer = _options.Issuer,
                 ValidateAudience = false,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
@@ -140,7 +128,7 @@ public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.Validat
                 return Result.Fail("400", "Invalid refresh token claims.");
             }
 
-            if (await revokedRefreshTokenRepository.IsRevokedAsync(tokenId, cancellationToken).ConfigureAwait(false))
+            if (await _revokedRefreshTokenRepository.IsRevokedAsync(tokenId, cancellationToken).ConfigureAwait(false))
             {
                 return Result.Fail("401", "Refresh token has been revoked.");
             }
@@ -161,24 +149,16 @@ public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.Validat
 
 public sealed class RevokeJwtRefreshTokenHandler : JwtAuthorityService.RevokeJwtRefreshToken
 {
-    private IServiceProvider ServiceProvider { get; }
+    private readonly IRevokedRefreshTokenRepository _revokedRefreshTokenRepository;
 
-    public RevokeJwtRefreshTokenHandler(IServiceProvider serviceProvider)
+    public RevokeJwtRefreshTokenHandler(IRevokedRefreshTokenRepository revokedRefreshTokenRepository)
     {
-        ServiceProvider = serviceProvider;
+        _revokedRefreshTokenRepository = revokedRefreshTokenRepository;
     }
 
-    public override Task<Result> HandleAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken)
-        => ExecuteRevokeJwtRefreshTokenCoreAsync(ServiceProvider, request, cancellationToken);
-
-    private static async Task<Result> ExecuteRevokeJwtRefreshTokenCoreAsync(
-        IServiceProvider serviceProvider,
-        RevokeJwtRefreshTokenRequest request,
-        CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(RevokeJwtRefreshTokenRequest request, CancellationToken cancellationToken)
     {
-        var revokedRefreshTokenRepository = serviceProvider.GetRequiredService<IRevokedRefreshTokenRepository>();
-
-        await revokedRefreshTokenRepository
+        await _revokedRefreshTokenRepository
             .RevokeAsync(request.TokenId, request.Expiration, cancellationToken)
             .ConfigureAwait(false);
 
