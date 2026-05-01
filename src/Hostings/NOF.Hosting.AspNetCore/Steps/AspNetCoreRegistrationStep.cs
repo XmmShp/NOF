@@ -24,6 +24,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
+        builder.Services.AddOptions<HttpHeaderOutboundOptions>();
 
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
         builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>
@@ -54,6 +55,4 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
             return Task.CompletedTask;
         }
     }
-
-    // HTTP endpoint mapping is explicit via app.MapHttpEndpoint<TRpcServer>().
 }

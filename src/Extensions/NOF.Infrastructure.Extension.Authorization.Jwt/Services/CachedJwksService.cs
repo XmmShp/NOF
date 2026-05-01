@@ -7,7 +7,7 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// <summary>
 /// Maintains a local cache of JWKS keys and refreshes them from the configured authority when needed.
 /// </summary>
-public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, ISigningKeyService? signingKeyService) : IDisposable
+public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, ISigningKeyService? signingKeyService = null) : IDisposable
 {
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly ISigningKeyService? _signingKeyService = signingKeyService;
