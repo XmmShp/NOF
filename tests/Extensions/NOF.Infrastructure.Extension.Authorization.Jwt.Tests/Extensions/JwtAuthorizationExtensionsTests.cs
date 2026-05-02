@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using NOF.Test;
@@ -23,6 +26,9 @@ public sealed class JwtAuthorizationExtensionsTests
         {
             options.Issuer = "https://issuer.local";
         });
+        builder.UseDbContext<NOFDbContext>()
+            .WithConnectionString($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
@@ -35,8 +41,35 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.NotNull(
         scope.GetRequiredService<CachedJwksService>());
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.IsType<PersistenceRevokedRefreshTokenRepository>(
+        scope.GetRequiredService<IRevokedRefreshTokenRepository>());
+        Assert.Contains(
+        scope.Services.GetServices<IHostedService>(),
+        service => service is RevokedRefreshTokenCleanupBackgroundService);
         Assert.Equal("https://issuer.local",
         scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value.Issuer);
+    }
+
+    [Fact]
+    public async Task AddJwtAuthority_ShouldRegisterPersistentRevokedRefreshTokenRepository()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddJwtAuthority(options =>
+        {
+            options.Issuer = "https://issuer.local";
+        });
+        builder.UseDbContext<NOFDbContext>()
+            .WithConnectionString($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        var repository = scope.GetRequiredService<IRevokedRefreshTokenRepository>();
+        await repository.RevokeAsync("refresh-token-id", TimeSpan.FromMinutes(5));
+
+        Assert.True(await repository.IsRevokedAsync("refresh-token-id"));
+        Assert.False(await repository.IsRevokedAsync("unknown-refresh-token-id"));
     }
 
     [Fact]

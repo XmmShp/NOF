@@ -32,4 +32,10 @@ public class JwtAuthorityOptions
     /// Default is 30 days.
     /// </summary>
     public TimeSpan KeyRotationInterval { get; set; } = TimeSpan.FromDays(30);
+
+    /// <summary>
+    /// Gets or sets the interval between revoked refresh token cleanup runs.
+    /// Default is 1 hour.
+    /// </summary>
+    public TimeSpan RevokedRefreshTokenCleanupInterval { get; set; } = TimeSpan.FromHours(1);
 }
