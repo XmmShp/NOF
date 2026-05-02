@@ -177,6 +177,108 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public void WithModelCreating_DifferentDelegates_ShouldNotReuseWrongModel()
+    {
+        using var firstServices = BuildServiceProviderWithModelCreating(
+            static modelBuilder =>
+            {
+                modelBuilder.Entity<FirstDynamicEntry>(entity =>
+                {
+                    entity.ToTable(nameof(FirstDynamicEntry));
+                    entity.HasKey(e => e.Id);
+                });
+            });
+        using var secondServices = BuildServiceProviderWithModelCreating(
+            static modelBuilder =>
+            {
+                modelBuilder.Entity<SecondDynamicEntry>(entity =>
+                {
+                    entity.ToTable(nameof(SecondDynamicEntry));
+                    entity.HasKey(e => e.Id);
+                });
+            });
+
+        using var firstScope = firstServices.CreateScope();
+        firstScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var firstDb = firstScope.ServiceProvider.GetRequiredService<NOFDbContext>();
+
+        using var secondScope = secondServices.CreateScope();
+        secondScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var secondDb = secondScope.ServiceProvider.GetRequiredService<NOFDbContext>();
+
+        Assert.NotNull(firstDb.Model.FindEntityType(typeof(FirstDynamicEntry)));
+        Assert.Null(firstDb.Model.FindEntityType(typeof(SecondDynamicEntry)));
+        Assert.NotNull(secondDb.Model.FindEntityType(typeof(SecondDynamicEntry)));
+        Assert.Null(secondDb.Model.FindEntityType(typeof(FirstDynamicEntry)));
+    }
+
+    [Fact]
+    public void OnModelCreatingOptions_IsHostOnly_ShouldMarkEntityOnModelBuilder()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<CommandHandlerInfos>();
+        builder.Services.AddSingleton<NotificationHandlerInfos>();
+        builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, ModelConfiguredHostOnlyEntryContributor>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.SharedDatabase),
+            $"nof-tests-{Guid.NewGuid():N}");
+
+        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+        var entityType = db.Model.FindEntityType(typeof(ModelConfiguredHostOnlyEntry));
+
+        Assert.NotNull(entityType);
+        Assert.Equal(true, entityType.FindAnnotation("NOF:HostOnly")?.Value);
+        Assert.Null(entityType.FindProperty("TenantId"));
+    }
+
+    [Fact]
+    public void HostOnlyAttribute_ShouldStillMarkEntityAsHostOnly()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<CommandHandlerInfos>();
+        builder.Services.AddSingleton<NotificationHandlerInfos>();
+        builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, AttributeHostOnlyEntryContributor>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.SharedDatabase),
+            $"nof-tests-{Guid.NewGuid():N}");
+
+        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+        var entityType = db.Model.FindEntityType(typeof(AttributeHostOnlyEntry));
+
+        Assert.NotNull(entityType);
+        Assert.Equal(true, entityType.FindAnnotation("NOF:HostOnly")?.Value);
+        Assert.Null(entityType.FindProperty("TenantId"));
+    }
+
+    [Fact]
     public async Task ModelCreatingContributor_ShouldAddExtensionPackageEntityType()
     {
         var builder = new TestServiceRegistrationContext();
@@ -654,6 +756,29 @@ public class SqliteInMemoryPersistenceTests
         });
     }
 
+    private static ServiceProvider BuildServiceProviderWithModelCreating(Action<ModelBuilder> configure)
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<CommandHandlerInfos>();
+        builder.Services.AddSingleton<NotificationHandlerInfos>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant)
+                .WithModelCreating(configure),
+            $"nof-tests-{Guid.NewGuid():N}");
+
+        return builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+    }
+
     private static ServiceProvider CreateServiceProvider(TransactionalMessageOptions? transactionalMessageOptions = null, TenantMode tenantMode = TenantMode.DatabasePerTenant)
     {
         var builder = new TestServiceRegistrationContext();
@@ -764,10 +889,56 @@ public class SqliteInMemoryPersistenceTests
         public string Message { get; init; } = string.Empty;
     }
 
+    private sealed class FirstDynamicEntry
+    {
+        public long Id { get; init; }
+    }
+
+    private sealed class SecondDynamicEntry
+    {
+        public long Id { get; init; }
+    }
+
+    private sealed class ModelConfiguredHostOnlyEntry
+    {
+        public long Id { get; init; }
+    }
+
+    [HostOnly]
+    private sealed class AttributeHostOnlyEntry
+    {
+        public long Id { get; init; }
+    }
+
     private sealed class DynamicAuditEntryModelCreatingContributor : INOFDbContextModelCreatingContributor
     {
         public void Configure(ModelBuilder modelBuilder)
             => ConfigureDynamicAuditEntry(modelBuilder);
+    }
+
+    private sealed class ModelConfiguredHostOnlyEntryContributor : INOFDbContextModelCreatingContributor
+    {
+        public void Configure(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ModelConfiguredHostOnlyEntry>(entity =>
+            {
+                entity.IsHostOnly();
+                entity.ToTable(nameof(ModelConfiguredHostOnlyEntry));
+                entity.HasKey(e => e.Id);
+            });
+        }
+    }
+
+    private sealed class AttributeHostOnlyEntryContributor : INOFDbContextModelCreatingContributor
+    {
+        public void Configure(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<AttributeHostOnlyEntry>(entity =>
+            {
+                entity.ToTable(nameof(AttributeHostOnlyEntry));
+                entity.HasKey(e => e.Id);
+            });
+        }
     }
 
     private sealed class TestOrder : ICloneable

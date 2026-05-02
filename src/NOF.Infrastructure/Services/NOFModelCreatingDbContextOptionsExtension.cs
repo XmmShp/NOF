@@ -46,7 +46,7 @@ internal sealed class NOFModelCreatingDbContextOptionsExtension : IDbContextOpti
 
             foreach (var contributor in Extension.Contributors)
             {
-                hashCode.Add(contributor.GetType());
+                hashCode.Add(contributor);
             }
 
             return hashCode.ToHashCode();

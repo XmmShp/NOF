@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics.CodeAnalysis;
@@ -25,14 +24,13 @@ public class NOFDbContext : DbContext
     internal DbSet<NOFOutboxMessage> NOFOutboxMessages { get; set; }
     internal DbSet<NOFTenant> NOFTenants { get; set; }
 
-    protected internal virtual Type[] GetHostOnlyEntityTypes() => [typeof(NOFTenant), typeof(NOFInboxMessage), typeof(NOFOutboxMessage), typeof(NOFStateMachineContext)];
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<NOFTenant>(entity =>
         {
+            entity.IsHostOnly();
             entity.ToTable(nameof(NOFTenant));
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Name).IsUnique();
@@ -43,6 +41,7 @@ public class NOFDbContext : DbContext
 
         modelBuilder.Entity<NOFInboxMessage>(entity =>
         {
+            entity.IsHostOnly();
             entity.ToTable(nameof(NOFInboxMessage));
             entity.HasKey(e => new { e.Id, e.HandlerType });
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
@@ -58,6 +57,7 @@ public class NOFDbContext : DbContext
 
         modelBuilder.Entity<NOFOutboxMessage>(entity =>
         {
+            entity.IsHostOnly();
             entity.ToTable(nameof(NOFOutboxMessage));
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.Status, e.CreatedAt });
@@ -79,6 +79,7 @@ public class NOFDbContext : DbContext
 
         modelBuilder.Entity<NOFStateMachineContext>(entity =>
         {
+            entity.IsHostOnly();
             entity.ToTable(nameof(NOFStateMachineContext));
             entity.HasKey(e => new { e.CorrelationId, e.DefinitionTypeName });
             entity.Property(e => e.CorrelationId).IsRequired();
@@ -132,8 +133,6 @@ public class NOFDbContext : DbContext
             return;
         }
 
-        var hostOnlyTypes = TenantModelHelper.CreateHostOnlyTypeSet(this);
-
         foreach (var entry in ChangeTracker.Entries()
                      .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
         {
@@ -142,8 +141,7 @@ public class NOFDbContext : DbContext
                 continue;
             }
 
-            if (entry.Metadata.ClrType is not null
-                && TenantModelHelper.IsHostOnlyType(entry.Metadata.ClrType, hostOnlyTypes))
+            if (TenantModelHelper.IsHostOnlyEntity(entry.Metadata))
             {
                 continue;
             }

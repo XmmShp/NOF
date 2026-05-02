@@ -21,7 +21,6 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             return;
         }
 
-        var hostOnlyTypes = TenantModelHelper.CreateHostOnlyTypeSet(dbContext);
         var entityTypes = modelBuilder.Model.GetEntityTypes().ToList();
         var useTenantDiscriminator = dbContext.CurrentTenantMode == TenantMode.SharedDatabase;
 
@@ -34,21 +33,26 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             }
 
             var entityBuilder = modelBuilder.Entity(entityType.ClrType);
+            var isHostOnly = TenantModelHelper.IsHostOnlyEntity(entityType);
             if (!useTenantDiscriminator)
             {
-                entityType.RemoveAnnotation(TenantModelHelper.TenantScopedAnnotationName);
-                entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
+                if (isHostOnly)
+                {
+                    entityType.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
+                }
+                else
+                {
+                    entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
+                }
                 continue;
             }
 
-            if (TenantModelHelper.IsHostOnlyType(entityType.ClrType, hostOnlyTypes))
+            if (isHostOnly)
             {
                 entityType.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
-                entityType.RemoveAnnotation(TenantModelHelper.TenantScopedAnnotationName);
                 continue;
             }
 
-            entityType.SetAnnotation(TenantModelHelper.TenantScopedAnnotationName, true);
             entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
 
             var tenantProperty = entityBuilder.Property<string>(TenantModelHelper.TenantIdPropertyName);
@@ -68,7 +72,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             }
 
             entityBuilder.HasQueryFilter(
-                TenantModelHelper.TenantScopedAnnotationName,
+                TenantModelHelper.TenantIdPropertyName,
                 TenantModelHelper.BuildTenantFilter(entityType.ClrType, dbContext));
         }
     }

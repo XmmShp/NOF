@@ -9,23 +9,16 @@ internal static class TenantModelHelper
 {
     public const string TenantIdPropertyName = "TenantId";
     public const int TenantIdMaxLength = 256;
-    public const string TenantScopedAnnotationName = "NOF:TenantScoped";
     public const string HostOnlyAnnotationName = "NOF:HostOnly";
-
-    public static HashSet<Type> CreateHostOnlyTypeSet(NOFDbContext dbContext)
-        => [.. dbContext.GetHostOnlyEntityTypes()];
 
     public static bool ShouldConfigureTenantBehavior(IMutableEntityType entityType)
         => entityType.BaseType is null
             && !entityType.IsOwned()
             && entityType.ClrType != typeof(Dictionary<string, object>);
 
-    public static bool IsHostOnlyType(Type clrType, HashSet<Type> hostOnlyTypes)
-        => clrType.IsDefined(typeof(HostOnlyAttribute), inherit: true)
-            || hostOnlyTypes.Contains(clrType);
-
-    public static bool IsTenantScopedEntity(IReadOnlyEntityType entityType)
-        => entityType.FindAnnotation(TenantScopedAnnotationName)?.Value as bool? == true;
+    public static bool IsHostOnlyEntity(IReadOnlyEntityType entityType)
+        => entityType.FindAnnotation(HostOnlyAnnotationName)?.Value as bool? == true
+            || (entityType.ClrType?.IsDefined(typeof(HostOnlyAttribute), inherit: true) ?? false);
 
     [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[])")]
     [RequiresUnreferencedCode("Calls System.Linq.Expressions.Expression.Property(Expression, String)")]
