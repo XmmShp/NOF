@@ -143,6 +143,15 @@ public static partial class NOFInfrastructureExtensions
             return new EFCoreSelector(builder);
         }
 
+        public INOFAppBuilder AddDbContextModelCreating(Action<ModelBuilder> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+
+            builder.Services.AddSingleton<INOFDbContextModelCreatingContributor>(
+                new DelegateDbContextModelCreatingContributor(configure));
+            return builder;
+        }
+
         public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
 

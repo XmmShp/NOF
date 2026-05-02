@@ -10,7 +10,6 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, ISigningKeyService? signingKeyService = null) : IDisposable
 {
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
-    private readonly ISigningKeyService? _signingKeyService = signingKeyService;
     private IReadOnlyList<SecurityKey>? _cachedKeys;
 
     public async Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(CancellationToken cancellationToken = default)
@@ -28,9 +27,9 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, 
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            if (_signingKeyService is not null)
+            if (signingKeyService is not null)
             {
-                _cachedKeys = ToSecurityKeys(_signingKeyService.AllKeys);
+                _cachedKeys = ToSecurityKeys(signingKeyService.AllKeys);
                 return _cachedKeys;
             }
 
@@ -51,14 +50,14 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, 
         }
     }
 
-    private static IReadOnlyList<SecurityKey> ToSecurityKeys(IReadOnlyCollection<ManagedSigningKey> managedKeys)
+    private static SecurityKey[] ToSecurityKeys(IReadOnlyCollection<ManagedSigningKey> managedKeys)
     {
         return managedKeys
-            .Select(managedKey => (SecurityKey)new RsaSecurityKey(managedKey.Key.Rsa) { KeyId = managedKey.Kid })
+            .Select(SecurityKey (managedKey) => new RsaSecurityKey(managedKey.Key.Rsa) { KeyId = managedKey.Kid })
             .ToArray();
     }
 
-    private static IReadOnlyList<SecurityKey> ToSecurityKeys(JsonWebKey[] jwkKeys)
+    private static SecurityKey[] ToSecurityKeys(JsonWebKey[] jwkKeys)
     {
         var keys = new List<SecurityKey>();
 
@@ -79,7 +78,7 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, 
             keys.Add(new RsaSecurityKey(rsa) { KeyId = jwk.Kid });
         }
 
-        return keys;
+        return keys.ToArray();
     }
 
     private static byte[] Base64UrlDecode(string input)

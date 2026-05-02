@@ -136,6 +136,85 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task OnModelCreatingOptions_ShouldAddDynamicEntityType()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<CommandHandlerInfos>();
+        builder.Services.AddSingleton<NotificationHandlerInfos>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant)
+                .WithModelCreating(static modelBuilder =>
+                {
+                    ConfigureDynamicAuditEntry(modelBuilder);
+                }),
+            $"nof-tests-{Guid.NewGuid():N}");
+
+        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+
+        db.Set<DynamicAuditEntry>().Add(new DynamicAuditEntry
+        {
+            Id = 1,
+            Message = "created from options"
+        });
+        await db.SaveChangesAsync();
+
+        var stored = await db.Set<DynamicAuditEntry>().SingleAsync(e => e.Id == 1);
+        Assert.Equal("created from options", stored.Message);
+    }
+
+    [Fact]
+    public async Task ModelCreatingContributor_ShouldAddExtensionPackageEntityType()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<CommandHandlerInfos>();
+        builder.Services.AddSingleton<NotificationHandlerInfos>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, DynamicAuditEntryModelCreatingContributor>();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant),
+            $"nof-tests-{Guid.NewGuid():N}");
+
+        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+
+        db.Set<DynamicAuditEntry>().Add(new DynamicAuditEntry
+        {
+            Id = 2,
+            Message = "created from contributor"
+        });
+        await db.SaveChangesAsync();
+
+        var stored = await db.Set<DynamicAuditEntry>().SingleAsync(e => e.Id == 2);
+        Assert.Equal("created from contributor", stored.Message);
+    }
+
+    [Fact]
     public async Task Transaction_Rollback_ShouldRestorePreviousState()
     {
         using var services = CreateServiceProvider();
@@ -565,6 +644,16 @@ public class SqliteInMemoryPersistenceTests
             .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
     }
 
+    private static void ConfigureDynamicAuditEntry(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DynamicAuditEntry>(entity =>
+        {
+            entity.ToTable(nameof(DynamicAuditEntry));
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Message).HasMaxLength(256).IsRequired();
+        });
+    }
+
     private static ServiceProvider CreateServiceProvider(TransactionalMessageOptions? transactionalMessageOptions = null, TenantMode tenantMode = TenantMode.DatabasePerTenant)
     {
         var builder = new TestServiceRegistrationContext();
@@ -667,6 +756,19 @@ public class SqliteInMemoryPersistenceTests
     }
 
     private sealed record TestEvent(string Name);
+
+    private sealed class DynamicAuditEntry
+    {
+        public long Id { get; init; }
+
+        public string Message { get; init; } = string.Empty;
+    }
+
+    private sealed class DynamicAuditEntryModelCreatingContributor : INOFDbContextModelCreatingContributor
+    {
+        public void Configure(ModelBuilder modelBuilder)
+            => ConfigureDynamicAuditEntry(modelBuilder);
+    }
 
     private sealed class TestOrder : ICloneable
     {

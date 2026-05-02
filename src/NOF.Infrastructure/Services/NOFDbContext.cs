@@ -9,10 +9,12 @@ namespace NOF.Infrastructure;
 public class NOFDbContext : DbContext
 {
     private readonly NOFTenantDbContextOptionsExtension _tenantOptions;
+    private readonly NOFModelCreatingDbContextOptionsExtension _modelCreatingOptions;
 
     public NOFDbContext(DbContextOptions options) : base(options)
     {
         _tenantOptions = options.FindExtension<NOFTenantDbContextOptionsExtension>() ?? new NOFTenantDbContextOptionsExtension();
+        _modelCreatingOptions = options.FindExtension<NOFModelCreatingDbContextOptionsExtension>() ?? new NOFModelCreatingDbContextOptionsExtension();
     }
 
     public string CurrentTenantId => _tenantOptions.TenantId;
@@ -82,6 +84,8 @@ public class NOFDbContext : DbContext
             entity.Property(e => e.CorrelationId).IsRequired();
             entity.Property(e => e.DefinitionTypeName).IsRequired();
         });
+
+        _modelCreatingOptions.ApplyModelCreating(modelBuilder);
     }
 
     public override object? Find(Type entityType, params object?[]? keyValues)

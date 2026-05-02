@@ -49,17 +49,20 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     private readonly IServiceProvider _serviceProvider;
     private readonly ITransparentInfos _executionContext;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
+    private readonly IEnumerable<INOFDbContextModelCreatingContributor> _modelCreatingContributors;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         ITransparentInfos executionContext,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
+        IEnumerable<INOFDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
         _executionContext = executionContext;
         _dbContextConfigurationOptions = dbContextConfigurationOptions.Value;
+        _modelCreatingContributors = modelCreatingContributors;
         _logger = logger;
     }
 
@@ -77,6 +80,12 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
             TenantMode = _dbContextConfigurationOptions.TenantMode
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
+
+        var modelCreatingExtension = new NOFModelCreatingDbContextOptionsExtension
+        {
+            Contributors = [.. _modelCreatingContributors]
+        };
+        ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(modelCreatingExtension);
 
         var connectionString = DbConnectionStringTemplateResolver.ResolveTenantId(_dbContextConfigurationOptions.ConnectionStringTemplate, tenantId);
         _dbContextConfigurationOptions.Configure(optionsBuilder, connectionString);
