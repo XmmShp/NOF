@@ -19,7 +19,7 @@ Provides JWT infrastructure for NOF applications as a resource server (token val
 ### Authority (Server)
 
 - **Token Issuance** - generate access and refresh token pairs with `kid` in JWT header
-- **Key Management** - `ISigningKeyService` with RSA key rotation and retired key retention
+- **Key Management** - `ISigningKeyService` with RSA key rotation, per-key persistence (`Active` / `Retired` / `Revoked`), encrypted private keys, and stored public keys
 - **JWKS Publishing** - expose keys through `IJwksService`
 - **Refresh Token Lifecycle** - validate and revoke refresh tokens with cache-based revocation
 - **Automatic Key Rotation** - background service rotates keys on a configurable interval
@@ -72,11 +72,23 @@ Configure via application settings:
 {
   "NOF": {
     "Authority": {
-      "Issuer": "your-app"
+      "Issuer": "your-app",
+      "SigningKeyEncryptionKey": "base64-encoded-aes-key"
     }
   }
 }
 ```
+
+The `SigningKeyEncryptionKey` value should decode to 16, 24, or 32 bytes. You can supply the same value in every instance that shares the signing key database for stronger security.
+
+If `SigningKeyEncryptionKey` is not configured, the authority generates an in-memory 32-byte fallback key for the current process and does not persist this fallback key. For multi-instance or restart-stable deployments, provide `SigningKeyEncryptionKey` via secure configuration (secrets manager, environment variable, or vault).
+
+Signing keys are stored as separate records with status transitions:
+- `Active`: current signing key.
+- `Retired`: historical validation keys retained based on `RetiredKeyRetentionCount`.
+- `Revoked`: keys removed from validation set and deleted later by cleanup.
+
+The persistence step also registers a background cleanup service that periodically deletes old revoked signing keys using `SigningKeyCleanupInterval` and `RevokedSigningKeyRetention`.
 
 ## Dependencies
 

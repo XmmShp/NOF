@@ -28,6 +28,12 @@ public class JwtAuthorityOptions
     public int RetiredKeyRetentionCount { get; set; } = 2;
 
     /// <summary>
+    /// Gets or sets the base64-encoded symmetric key used to encrypt the persisted signing key bundle.
+    /// The decoded value must be 16, 24, or 32 bytes long.
+    /// </summary>
+    public string SigningKeyEncryptionKey { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the interval between automatic key rotations.
     /// Default is 30 days.
     /// </summary>
@@ -38,4 +44,16 @@ public class JwtAuthorityOptions
     /// Default is 1 hour.
     /// </summary>
     public TimeSpan RevokedRefreshTokenCleanupInterval { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets or sets the interval between persisted signing key cleanup runs.
+    /// Default is 1 hour.
+    /// </summary>
+    public TimeSpan SigningKeyCleanupInterval { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets or sets how long revoked signing keys are retained before deletion.
+    /// Default is 30 days.
+    /// </summary>
+    public TimeSpan RevokedSigningKeyRetention { get; set; } = TimeSpan.FromDays(30);
 }

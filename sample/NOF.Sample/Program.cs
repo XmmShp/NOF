@@ -17,7 +17,12 @@ builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
-builder.AddJwtAuthority(o => o.Issuer = "NOF.Sample");
+builder.AddJwtAuthority(o =>
+{
+    o.Issuer = "NOF.Sample";
+    o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
+        ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
+});
 
 builder.AddJwtResourceServer(o =>
 {

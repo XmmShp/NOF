@@ -12,6 +12,7 @@ public sealed class JwtAuthorityPersistenceRegistrationStep : IServiceRegistrati
         builder.Services.TryAddScoped<IRevokedRefreshTokenRepository, PersistenceRevokedRefreshTokenRepository>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<INOFDbContextModelCreatingContributor, JwtAuthorizationDbContextModelCreatingContributor>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, RevokedRefreshTokenCleanupBackgroundService>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, PersistedSigningKeyCleanupBackgroundService>());
 
         return ValueTask.CompletedTask;
     }
