@@ -16,6 +16,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly NotificationHandlerInfos? _notificationHandlerInfos;
     private readonly InboxMessageStore _inboxMessageStore;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
     private readonly List<IChannel> _channels = [];
     private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -25,6 +26,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         IOptions<RabbitMQOptions> options,
         CommandHandlerInfos? commandHandlerInfos,
         NotificationHandlerInfos? notificationHandlerInfos,
+        IHostEnvironment hostEnvironment,
         InboxMessageStore inboxMessageStore,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
@@ -32,6 +34,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         _options = options;
         _commandHandlerInfos = commandHandlerInfos;
         _notificationHandlerInfos = notificationHandlerInfos;
+        _hostEnvironment = hostEnvironment;
         _inboxMessageStore = inboxMessageStore;
         _logger = logger;
     }
@@ -76,7 +79,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         foreach (var group in notificationGroups)
         {
             var handlerType = group.Key;
-            var queueName = handlerType.DisplayName;
+            var queueName = BuildNotificationQueueName(_hostEnvironment.ApplicationName, handlerType.DisplayName);
             var notificationTypes = group
                 .Select(info => info.NotificationType)
                 .Distinct()
@@ -259,6 +262,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
     private static string GetMessageExchangeName(Type messageType)
         => messageType.DisplayName;
+
+    internal static string BuildNotificationQueueName(string? applicationName, string handlerDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(applicationName))
+        {
+            return handlerDisplayName;
+        }
+
+        return $"{applicationName}.{handlerDisplayName}";
+    }
 
     private static Guid ResolveMessageId(Dictionary<string, string?>? headers)
     {
