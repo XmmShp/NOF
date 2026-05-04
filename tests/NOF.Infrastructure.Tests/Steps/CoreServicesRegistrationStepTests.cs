@@ -101,6 +101,16 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
+    public void UseDbContext_MigrateOnInitialize_ShouldRegisterDatabaseMigrationStep()
+    {
+        var builder = new TestServiceRegistrationContext();
+
+        builder.UseDbContext<NOFDbContext>().MigrateOnInitialize();
+
+        Assert.Contains(builder.InitializationSteps, step => step is IDatabaseMigrationInitializationStep);
+    }
+
+    [Fact]
     public void AddInfrastructureDefaults_ShouldValidateSnowflakeOptions()
     {
         var builder = new TestServiceRegistrationContext();
@@ -130,10 +140,10 @@ public class InfrastructureDefaultsTests
     {
         var hostEnvironment = new TestHostEnvironment
         {
-            ApplicationName = "fallback-name"
+            ApplicationName = "fallback-name",
+            ApplicationId = 1,
+            InstanceId = 7
         };
-        hostEnvironment.ApplicationId = 1;
-        hostEnvironment.InstanceId = 7;
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -248,6 +258,8 @@ public class InfrastructureDefaultsTests
         public IMetricsBuilder Metrics => _metrics;
 
         public IServiceCollection Services => _services;
+
+        public IReadOnlyList<IApplicationInitializationStep> InitializationSteps => _initializationSteps;
 
         public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
             where TContainerBuilder : notnull

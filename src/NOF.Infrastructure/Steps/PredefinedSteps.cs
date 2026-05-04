@@ -6,7 +6,9 @@ public interface IBaseSettingsServiceRegistrationStep : IServiceRegistrationStep
 
 public interface IDependentServiceRegistrationStep : IServiceRegistrationStep, IAfter<IBaseSettingsServiceRegistrationStep>;
 
-public interface IDataSeedInitializationStep : IApplicationInitializationStep;
+public interface IDatabaseMigrationInitializationStep : IApplicationInitializationStep;
+
+public interface IDataSeedInitializationStep : IApplicationInitializationStep, IAfter<IDatabaseMigrationInitializationStep>;
 
 public interface IObservabilityInitializationStep : IApplicationInitializationStep, IAfter<IDataSeedInitializationStep>;
 

@@ -150,7 +150,7 @@ public static partial class NOFInfrastructureExtensions
                 builder.Services.ReplaceOrAddScoped<TDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
             }
 
-            return new EFCoreSelector(builder);
+            return new EFCoreSelector(builder, typeof(TDbContext));
         }
 
         public INOFAppBuilder AddDbContextModelCreating(Action<ModelBuilder> configure)

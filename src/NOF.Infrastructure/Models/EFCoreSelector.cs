@@ -7,10 +7,12 @@ namespace NOF.Infrastructure;
 public readonly struct EFCoreSelector
 {
     public INOFAppBuilder Builder { get; }
+    public Type DbContextType { get; }
 
-    public EFCoreSelector(INOFAppBuilder builder)
+    public EFCoreSelector(INOFAppBuilder builder, Type dbContextType)
     {
         Builder = builder;
+        DbContextType = dbContextType;
     }
 
     public EFCoreSelector WithTenantMode(TenantMode tenantMode)
@@ -50,6 +52,16 @@ public readonly struct EFCoreSelector
 
         Builder.Services.AddSingleton<INOFDbContextModelCreatingContributor>(
             new DelegateDbContextModelCreatingContributor(configure));
+        return this;
+    }
+
+    public EFCoreSelector MigrateOnInitialize()
+    {
+        var dbContextType = DbContextType;
+        Builder.RemoveInitializationStep(step =>
+            step is DbContextMigrationInitializationStep existing &&
+            existing.DbContextType == dbContextType);
+        Builder.AddInitializationStep(new DbContextMigrationInitializationStep(dbContextType));
         return this;
     }
 }
