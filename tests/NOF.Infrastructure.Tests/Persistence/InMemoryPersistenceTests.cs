@@ -478,7 +478,7 @@ public class SqliteInMemoryPersistenceTests
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1)
         });
         await db.SaveChangesAsync();
 
@@ -486,14 +486,14 @@ public class SqliteInMemoryPersistenceTests
         var claimExpiresAt = DateTime.UtcNow.AddMinutes(1);
         var claimed = await db.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Pending && m.RetryCount < 100)
-            .OrderBy(m => m.CreatedAt)
+            .OrderBy(m => m.CreatedAtUtc)
             .Take(100)
             .ToListAsync();
         foreach (var message in claimed)
         {
             message.RetryCount++;
             message.ClaimedBy = claimLockId;
-            message.ClaimExpiresAt = claimExpiresAt;
+            message.ClaimExpiresAtUtc = claimExpiresAt;
         }
         await db.SaveChangesAsync();
         Assert.Single(claimed);
@@ -501,9 +501,9 @@ public class SqliteInMemoryPersistenceTests
         Assert.False(string.IsNullOrWhiteSpace(claimed[0].ClaimedBy));
 
         claimed[0].Status = OutboxMessageStatus.Sent;
-        claimed[0].SentAt = DateTime.UtcNow;
+        claimed[0].SentAtUtc = DateTime.UtcNow;
         claimed[0].ClaimedBy = null;
-        claimed[0].ClaimExpiresAt = null;
+        claimed[0].ClaimExpiresAtUtc = null;
         await db.SaveChangesAsync();
 
         using (var verify = services.CreateScope())
@@ -513,7 +513,7 @@ public class SqliteInMemoryPersistenceTests
             var stored = await verifyDb.FindAsync<NOFOutboxMessage>([id]);
             Assert.NotNull(stored);
             Assert.Equal(OutboxMessageStatus.Sent, stored.Status);
-            Assert.NotNull(stored.SentAt);
+            Assert.NotNull(stored.SentAtUtc);
         }
     }
 
@@ -559,14 +559,14 @@ public class SqliteInMemoryPersistenceTests
         var claimedUntilFuture = await db.FindAsync<NOFOutboxMessage>([id2]);
         Assert.NotNull(claimedUntilFuture);
         claimedUntilFuture.ClaimedBy = "test-claim-id";
-        claimedUntilFuture.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
+        claimedUntilFuture.ClaimExpiresAtUtc = DateTime.UtcNow.AddMinutes(5);
 
         await db.SaveChangesAsync();
 
         var claimed = await db.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Pending &&
                         m.RetryCount < 2 &&
-                        (m.ClaimedBy == null || m.ClaimExpiresAt == null || m.ClaimExpiresAt <= DateTime.UtcNow))
+                        (m.ClaimedBy == null || m.ClaimExpiresAtUtc == null || m.ClaimExpiresAtUtc <= DateTime.UtcNow))
             .ToListAsync();
         Assert.Empty(claimed);
     }
@@ -598,10 +598,10 @@ public class SqliteInMemoryPersistenceTests
         var claimed = await db.Set<NOFOutboxMessage>().ToListAsync();
         claimed[0].RetryCount++;
         claimed[0].ErrorMessage = "boom";
-        claimed[0].FailedAt = DateTime.UtcNow;
+        claimed[0].FailedAtUtc = DateTime.UtcNow;
         claimed[0].Status = OutboxMessageStatus.Failed;
         claimed[0].ClaimedBy = null;
-        claimed[0].ClaimExpiresAt = null;
+        claimed[0].ClaimExpiresAtUtc = null;
         await db.SaveChangesAsync();
 
         using (var verify = services.CreateScope())

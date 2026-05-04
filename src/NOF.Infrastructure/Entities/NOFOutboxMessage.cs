@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 public class NOFOutboxMessage
 {
     public Guid Id { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public int RetryCount { get; set; }
 
     public OutboxMessageType MessageType { get; set; }
@@ -17,12 +17,12 @@ public class NOFOutboxMessage
     public string DispatchTypes { get; set; } = null!;
     public byte[] Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
-    public DateTime? SentAt { get; set; }
-    public DateTime? FailedAt { get; set; }
+    public DateTime? SentAtUtc { get; set; }
+    public DateTime? FailedAtUtc { get; set; }
     public string? ErrorMessage { get; set; }
 
     public string? ClaimedBy { get; set; }
-    public DateTime? ClaimExpiresAt { get; set; }
+    public DateTime? ClaimExpiresAtUtc { get; set; }
     public OutboxMessageStatus Status { get; set; } = OutboxMessageStatus.Pending;
 
     public TracingInfo? ParentTracingInfo { get; set; }

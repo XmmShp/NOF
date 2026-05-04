@@ -3,7 +3,7 @@ namespace NOF.Infrastructure;
 public class NOFInboxMessage
 {
     public Guid Id { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public int RetryCount { get; set; }
 
     public InboxMessageType MessageType { get; set; }
@@ -11,12 +11,12 @@ public class NOFInboxMessage
     public string HandlerType { get; set; } = null!;
     public byte[] Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
-    public DateTime? ProcessedAt { get; set; }
-    public DateTime? FailedAt { get; set; }
+    public DateTime? ProcessedAtUtc { get; set; }
+    public DateTime? FailedAtUtc { get; set; }
     public string? ErrorMessage { get; set; }
 
     public string? ClaimedBy { get; set; }
-    public DateTime? ClaimExpiresAt { get; set; }
+    public DateTime? ClaimExpiresAtUtc { get; set; }
     public InboxMessageStatus Status { get; set; } = InboxMessageStatus.Pending;
 }
 

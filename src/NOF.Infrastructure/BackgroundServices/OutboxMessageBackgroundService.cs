@@ -246,13 +246,13 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         var rowsUpdated = await dbContext.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Pending &&
                         m.RetryCount < _options.MaxRetryCount &&
-                        (m.ClaimedBy == null || m.ClaimExpiresAt == null || m.ClaimExpiresAt <= now))
-            .OrderBy(m => m.CreatedAt)
+                        (m.ClaimedBy == null || m.ClaimExpiresAtUtc == null || m.ClaimExpiresAtUtc <= now))
+            .OrderBy(m => m.CreatedAtUtc)
             .Take(batchSize)
             .ExecuteUpdateAsync(setters => setters
                     .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
                     .SetProperty(m => m.ClaimedBy, lockId)
-                    .SetProperty(m => m.ClaimExpiresAt, expiresAt),
+                    .SetProperty(m => m.ClaimExpiresAtUtc, expiresAt),
                 cancellationToken);
 
         if (rowsUpdated == 0)
@@ -294,9 +294,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)
-                .SetProperty(m => m.SentAt, sentAt)
+                .SetProperty(m => m.SentAtUtc, sentAt)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
-                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
+                .SetProperty(m => m.ClaimExpiresAtUtc, (DateTime?)null),
                 cancellationToken);
     }
 
@@ -311,7 +311,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             .Where(m => m.Id == messageId && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.ErrorMessage, errorMessage)
-                .SetProperty(m => m.FailedAt, failedAt),
+                .SetProperty(m => m.FailedAtUtc, failedAt),
                 cancellationToken);
 
         if (rowsUpdated == 0)
@@ -342,7 +342,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             message.Status = OutboxMessageStatus.Failed;
             message.ClaimedBy = null;
-            message.ClaimExpiresAt = null;
+            message.ClaimExpiresAtUtc = null;
             _logger.LogWarning(
                 "Message {MessageId} marked as permanently failed after {RetryCount} retries. Error: {Error}",
                 messageId, message.RetryCount, errorMessage);
@@ -351,7 +351,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             message.Status = OutboxMessageStatus.Pending;
             message.ClaimedBy = null;
-            message.ClaimExpiresAt = null;
+            message.ClaimExpiresAtUtc = null;
 
             _logger.LogWarning(
                 "Message {MessageId} scheduled for retry #{RetryCount}. Error: {Error}",

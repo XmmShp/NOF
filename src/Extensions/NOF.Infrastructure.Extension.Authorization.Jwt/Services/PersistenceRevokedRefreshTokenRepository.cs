@@ -15,7 +15,7 @@ public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTo
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
 
-        var expiresAt = DateTime.UtcNow.Add(expiration);
+        var expiresAtUtc = DateTime.UtcNow.Add(expiration);
         var revokedToken = await _dbContext
             .FindAsync<RevokedRefreshToken>([tokenId], cancellationToken)
             .ConfigureAwait(false);
@@ -25,13 +25,13 @@ public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTo
             revokedToken = new RevokedRefreshToken
             {
                 TokenId = tokenId,
-                ExpiresAt = expiresAt
+                ExpiresAtUtc = expiresAtUtc
             };
             _dbContext.Set<RevokedRefreshToken>().Add(revokedToken);
         }
         else
         {
-            revokedToken.ExpiresAt = expiresAt;
+            revokedToken.ExpiresAtUtc = expiresAtUtc;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -45,6 +45,6 @@ public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTo
             .FindAsync<RevokedRefreshToken>([tokenId], cancellationToken)
             .ConfigureAwait(false);
 
-        return revokedToken is not null && revokedToken.ExpiresAt > DateTime.UtcNow;
+        return revokedToken is not null && revokedToken.ExpiresAtUtc > DateTime.UtcNow;
     }
 }

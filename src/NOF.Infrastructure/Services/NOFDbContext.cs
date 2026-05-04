@@ -44,8 +44,8 @@ public class NOFDbContext : DbContext
             entity.IsHostOnly();
             entity.ToTable(nameof(NOFInboxMessage));
             entity.HasKey(e => new { e.Id, e.HandlerType });
-            entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
+            entity.HasIndex(e => new { e.Status, e.CreatedAtUtc });
+            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAtUtc });
             entity.HasIndex(e => e.ClaimedBy);
             entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
             entity.Property(e => e.HandlerType).HasMaxLength(512).IsRequired();
@@ -60,8 +60,8 @@ public class NOFDbContext : DbContext
             entity.IsHostOnly();
             entity.ToTable(nameof(NOFOutboxMessage));
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.Status, e.CreatedAt });
-            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAt });
+            entity.HasIndex(e => new { e.Status, e.CreatedAtUtc });
+            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAtUtc });
             entity.HasIndex(e => e.ClaimedBy);
             entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
             entity.Property(e => e.DispatchTypes).IsRequired();

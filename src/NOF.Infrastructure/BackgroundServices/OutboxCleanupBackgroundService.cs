@@ -57,7 +57,7 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
         var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Sent)
-            .Where(m => m.SentAt != null && m.SentAt < olderThan)
+            .Where(m => m.SentAtUtc != null && m.SentAtUtc < olderThan)
             .ExecuteDeleteAsync(cancellationToken);
 
         if (deletedCount > 0)

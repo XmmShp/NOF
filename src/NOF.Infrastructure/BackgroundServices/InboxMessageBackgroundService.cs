@@ -164,10 +164,10 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             .Where(m => m.Id == messageId && m.HandlerType == handlerType && m.Status == InboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, InboxMessageStatus.Processed)
-                .SetProperty(m => m.ProcessedAt, processedAt)
+                .SetProperty(m => m.ProcessedAtUtc, processedAt)
                 .SetProperty(m => m.ErrorMessage, (string?)null)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
-                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
+                .SetProperty(m => m.ClaimExpiresAtUtc, (DateTime?)null),
                 cancellationToken);
     }
 
@@ -181,7 +181,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.ErrorMessage, error)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
-                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
+                .SetProperty(m => m.ClaimExpiresAtUtc, (DateTime?)null),
                 cancellationToken);
 
         _logger.LogWarning(
@@ -202,9 +202,9 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, InboxMessageStatus.Failed)
                 .SetProperty(m => m.ErrorMessage, error)
-                .SetProperty(m => m.FailedAt, failedAt)
+                .SetProperty(m => m.FailedAtUtc, failedAt)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
-                .SetProperty(m => m.ClaimExpiresAt, (DateTime?)null),
+                .SetProperty(m => m.ClaimExpiresAtUtc, (DateTime?)null),
                 cancellationToken);
 
         if (ex is null)
@@ -244,13 +244,13 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var rowsUpdated = await dbContext.Set<NOFInboxMessage>()
             .Where(m => m.Status == InboxMessageStatus.Pending &&
                         m.RetryCount < _options.MaxRetryCount &&
-                        (m.ClaimedBy == null || m.ClaimExpiresAt == null || m.ClaimExpiresAt <= now))
-            .OrderBy(m => m.CreatedAt)
+                        (m.ClaimedBy == null || m.ClaimExpiresAtUtc == null || m.ClaimExpiresAtUtc <= now))
+            .OrderBy(m => m.CreatedAtUtc)
             .Take(batchSize)
             .ExecuteUpdateAsync(setters => setters
                     .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
                     .SetProperty(m => m.ClaimedBy, lockId)
-                    .SetProperty(m => m.ClaimExpiresAt, expiresAt),
+                    .SetProperty(m => m.ClaimExpiresAtUtc, expiresAt),
                 cancellationToken);
 
         if (rowsUpdated == 0)

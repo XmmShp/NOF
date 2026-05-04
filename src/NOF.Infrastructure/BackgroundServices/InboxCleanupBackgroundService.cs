@@ -58,7 +58,7 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
         var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.NOFInboxMessages
             .Where(m => m.Status == InboxMessageStatus.Processed)
-            .Where(m => m.ProcessedAt != null && m.ProcessedAt < olderThan)
+            .Where(m => m.ProcessedAtUtc != null && m.ProcessedAtUtc < olderThan)
             .ExecuteDeleteAsync(cancellationToken);
 
         if (deletedCount > 0)

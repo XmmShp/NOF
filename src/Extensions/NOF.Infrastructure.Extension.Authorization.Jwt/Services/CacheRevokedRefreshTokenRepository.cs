@@ -24,7 +24,7 @@ public class CacheRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
         await _cacheService.SetAsync(cacheKey, new RevokedRefreshToken
         {
             TokenId = tokenId,
-            ExpiresAt = DateTime.UtcNow.Add(expiration)
+            ExpiresAtUtc = DateTime.UtcNow.Add(expiration)
         }, new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = expiration
@@ -38,6 +38,6 @@ public class CacheRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
 
         var cacheKey = new RevokedRefreshTokenCacheKey(tokenId);
         var result = await _cacheService.GetAsync(cacheKey, cancellationToken);
-        return result.HasValue && result.Value.ExpiresAt > DateTime.UtcNow;
+        return result.HasValue && result.Value.ExpiresAtUtc > DateTime.UtcNow;
     }
 }

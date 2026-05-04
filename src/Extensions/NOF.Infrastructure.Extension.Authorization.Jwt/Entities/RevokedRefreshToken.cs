@@ -6,7 +6,7 @@ public sealed class RevokedRefreshToken
 {
     public string TokenId { get; set; } = string.Empty;
 
-    public DateTime ExpiresAt { get; set; }
+    public DateTime ExpiresAtUtc { get; set; }
 }
 
 public sealed class RevokedRefreshTokenModelCreatingContributor : INOFDbContextModelCreatingContributor
@@ -18,9 +18,9 @@ public sealed class RevokedRefreshTokenModelCreatingContributor : INOFDbContextM
             entity.IsHostOnly();
             entity.ToTable(nameof(RevokedRefreshToken));
             entity.HasKey(e => e.TokenId);
-            entity.HasIndex(e => e.ExpiresAt);
+            entity.HasIndex(e => e.ExpiresAtUtc);
             entity.Property(e => e.TokenId).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.Property(e => e.ExpiresAtUtc).IsRequired();
         });
     }
 }

@@ -84,10 +84,10 @@
                                 </Button>
                             </DescriptionsItem>
                             <DescriptionsItem Title="Access Token Expires">
-                                <Tag Color="TagColor.Blue">@_tokenResult.TokenPair.AccessTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
+                                <Tag Color="TagColor.Blue">@_tokenResult.TokenPair.AccessTokenExpiresAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
                             </DescriptionsItem>
                             <DescriptionsItem Title="Refresh Token Expires">
-                                <Tag Color="TagColor.Green">@_tokenResult.TokenPair.RefreshTokenExpiresAt.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
+                                <Tag Color="TagColor.Green">@_tokenResult.TokenPair.RefreshTokenExpiresAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
                             </DescriptionsItem>
                         </Descriptions>
                     </ChildContent>

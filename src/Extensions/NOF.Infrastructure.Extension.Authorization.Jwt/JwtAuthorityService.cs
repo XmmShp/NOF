@@ -75,8 +75,8 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            AccessTokenExpiresAt = now.Add(request.AccessTokenExpiration),
-            RefreshTokenExpiresAt = now.Add(request.RefreshTokenExpiration)
+            AccessTokenExpiresAtUtc = now.Add(request.AccessTokenExpiration),
+            RefreshTokenExpiresAtUtc = now.Add(request.RefreshTokenExpiration)
         };
 
         return Result.Success(new GenerateJwtTokenResponse

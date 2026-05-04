@@ -18,10 +18,10 @@ public class TokenPair
     /// <summary>
     /// Gets or sets the expiration time of the access token.
     /// </summary>
-    public DateTime AccessTokenExpiresAt { get; set; }
+    public DateTime AccessTokenExpiresAtUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the expiration time of the refresh token.
     /// </summary>
-    public DateTime RefreshTokenExpiresAt { get; set; }
+    public DateTime RefreshTokenExpiresAtUtc { get; set; }
 }
