@@ -7,11 +7,10 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// </summary>
 public sealed class LocalJwksService(ISigningKeyService signingKeyService) : IJwksService
 {
-    public Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
+    public async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
     {
-        _ = cancellationToken;
-        var jwks = signingKeyService.AllKeys.Select(ToJsonWebKey).ToArray();
-        return Task.FromResult(new JwksDocument { Keys = jwks });
+        var jwks = (await signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(ToJsonWebKey).ToArray();
+        return new JwksDocument { Keys = jwks };
     }
 
     internal static JsonWebKey ToJsonWebKey(ManagedSigningKey managedKey)
@@ -30,4 +29,3 @@ public sealed class LocalJwksService(ISigningKeyService signingKeyService) : IJw
         };
     }
 }
-

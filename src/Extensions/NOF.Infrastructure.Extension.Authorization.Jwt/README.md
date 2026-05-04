@@ -73,13 +73,13 @@ Configure via application settings:
   "NOF": {
     "Authority": {
       "Issuer": "your-app",
-      "SigningKeyEncryptionKey": "base64-encoded-aes-key"
+      "SigningKeyEncryptionKey": "your-shared-signing-key-passphrase"
     }
   }
 }
 ```
 
-The `SigningKeyEncryptionKey` value should decode to 16, 24, or 32 bytes. You can supply the same value in every instance that shares the signing key database for stronger security.
+The `SigningKeyEncryptionKey` value can be any non-empty string. NOF deterministically derives an AES key from the configured string, so every instance that shares the signing key database must use the same value.
 
 If `SigningKeyEncryptionKey` is not configured, the authority generates an in-memory 32-byte fallback key for the current process and does not persist this fallback key. For multi-instance or restart-stable deployments, provide `SigningKeyEncryptionKey` via secure configuration (secrets manager, environment variable, or vault).
 

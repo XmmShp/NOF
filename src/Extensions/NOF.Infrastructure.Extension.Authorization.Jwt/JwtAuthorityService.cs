@@ -23,7 +23,7 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
         _options = options.Value;
     }
 
-    public override Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken)
+    public override async Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
         var refreshTokenId = Guid.NewGuid().ToString("N");
@@ -45,7 +45,7 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var signingKey = _signingKeyService.CurrentSigningKey.Key;
+        var signingKey = (await _signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
 
         var accessToken = tokenHandler.WriteToken(new JwtSecurityToken(
@@ -79,10 +79,10 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
             RefreshTokenExpiresAt = now.Add(request.RefreshTokenExpiration)
         };
 
-        return Task.FromResult(Result.Success(new GenerateJwtTokenResponse
+        return Result.Success(new GenerateJwtTokenResponse
         {
             TokenPair = tokenPair
-        }));
+        });
     }
 }
 
@@ -110,7 +110,7 @@ public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.Validat
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKeys = _signingKeyService.AllKeys.Select(k => k.Key),
+                IssuerSigningKeys = (await _signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(k => k.Key),
                 ValidateIssuer = true,
                 ValidIssuer = _options.Issuer,
                 ValidateAudience = false,

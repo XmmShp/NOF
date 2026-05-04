@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System.IO;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using NOF.Test;
 using System.Security.Claims;
@@ -12,7 +11,7 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.Extensions;
 
 public sealed class JwtAuthorizationExtensionsTests
 {
-    private const string SigningKeyEncryptionKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+    private const string SigningKeyEncryptionKey = "jwt-signing-key-passphrase-for-tests";
 
     [Fact]
     public void JwtId_ShouldExposeStandardJtiClaimType()
@@ -35,7 +34,6 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.IsType<PersistenceRevokedRefreshTokenRepository>(
         scope.GetRequiredService<IRevokedRefreshTokenRepository>());
         Assert.Contains(scope.Services.GetServices<IHostedService>(), service => service is RevokedRefreshTokenCleanupBackgroundService);
-        Assert.Contains(scope.Services.GetServices<IHostedService>(), service => service is PersistedSigningKeyCleanupBackgroundService);
         Assert.Equal("https://issuer.local", scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value.Issuer);
     }
 
@@ -69,9 +67,9 @@ public sealed class JwtAuthorizationExtensionsTests
             var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
             var dbContext = scope.GetRequiredService<NOFDbContext>();
 
-            firstKid = signingKeyService.CurrentSigningKey.Kid;
-            signingKeyService.RotateKey();
-            rotatedKid = signingKeyService.CurrentSigningKey.Kid;
+            firstKid = (await signingKeyService.GetCurrentSigningKeyAsync()).Kid;
+            await signingKeyService.RotateKeyAsync();
+            rotatedKid = (await signingKeyService.GetCurrentSigningKeyAsync()).Kid;
 
             Assert.NotEqual(firstKid, rotatedKid);
             Assert.Contains(dbContext.Set<PersistedSigningKey>(), key => !string.IsNullOrWhiteSpace(key.PublicKey));
@@ -82,8 +80,8 @@ public sealed class JwtAuthorizationExtensionsTests
             using var scope = secondHost.CreateScope();
             var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
 
-            Assert.Equal(rotatedKid, signingKeyService.CurrentSigningKey.Kid);
-            Assert.Contains(signingKeyService.AllKeys, key => key.Kid == firstKid);
+            Assert.Equal(rotatedKid, (await signingKeyService.GetCurrentSigningKeyAsync()).Kid);
+            Assert.Contains(await signingKeyService.GetAllKeysAsync(), key => key.Kid == firstKid);
         }
 
         try
@@ -96,6 +94,27 @@ public sealed class JwtAuthorizationExtensionsTests
         catch (IOException)
         {
         }
+    }
+
+    [Fact]
+    public async Task AddJwtAuthority_WithoutEncryptionKey_ShouldFallbackToMachineName()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddJwtAuthority(options =>
+        {
+            options.Issuer = "https://issuer.local";
+        });
+        builder.UseDbContext<NOFDbContext>()
+            .WithConnectionString($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, databaseConnectionString) => optionsBuilder.UseSqlite(databaseConnectionString));
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        _ = await scope.GetRequiredService<ISigningKeyService>().GetCurrentSigningKeyAsync();
+        var options = scope.GetRequiredService<IOptions<JwtAuthorityOptions>>().Value;
+
+        Assert.Equal(Environment.MachineName, options.SigningKeyEncryptionKey);
     }
 
     [Fact]

@@ -28,8 +28,7 @@ public class JwtAuthorityOptions
     public int RetiredKeyRetentionCount { get; set; } = 2;
 
     /// <summary>
-    /// Gets or sets the base64-encoded symmetric key used to encrypt the persisted signing key bundle.
-    /// The decoded value must be 16, 24, or 32 bytes long.
+    /// Gets or sets the passphrase used to derive the symmetric key that encrypts persisted signing keys.
     /// </summary>
     public string SigningKeyEncryptionKey { get; set; } = string.Empty;
 

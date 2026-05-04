@@ -4,9 +4,9 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
 {
-    private readonly NOFDbContext _dbContext;
+    private readonly DbContext _dbContext;
 
-    public PersistenceRevokedRefreshTokenRepository(NOFDbContext dbContext)
+    public PersistenceRevokedRefreshTokenRepository(DbContext dbContext)
     {
         _dbContext = dbContext;
     }

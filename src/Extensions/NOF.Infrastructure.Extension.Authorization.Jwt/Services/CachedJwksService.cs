@@ -29,7 +29,7 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, 
         {
             if (signingKeyService is not null)
             {
-                _cachedKeys = ToSecurityKeys(signingKeyService.AllKeys);
+                _cachedKeys = ToSecurityKeys(await signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false));
                 return _cachedKeys;
             }
 

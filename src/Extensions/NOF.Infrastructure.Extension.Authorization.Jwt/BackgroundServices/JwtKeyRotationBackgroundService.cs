@@ -37,7 +37,7 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
         {
             try
             {
-                var nextRotation = ComputeNextRotationDelay();
+                var nextRotation = await ComputeNextRotationDelayAsync(stoppingToken).ConfigureAwait(false);
 
                 _logger.LogDebug("Next key rotation in {Delay}", nextRotation);
 
@@ -45,9 +45,9 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
-                signingKeyService.RotateKey();
+                await signingKeyService.RotateKeyAsync(stoppingToken).ConfigureAwait(false);
                 _logger.LogInformation("Signing key rotated successfully. New kid: {Kid}",
-                    signingKeyService.CurrentSigningKey.Kid);
+                    (await signingKeyService.GetCurrentSigningKeyAsync(stoppingToken).ConfigureAwait(false)).Kid);
 
                 var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
                 await notificationPublisher.PublishAsync(new JwtKeyRotationNotification(), cancellationToken: stoppingToken);
@@ -70,11 +70,11 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
     /// Computes the delay until the next rotation based on the current key's age
     /// and the configured rotation interval.
     /// </summary>
-    private TimeSpan ComputeNextRotationDelay()
+    private async Task<TimeSpan> ComputeNextRotationDelayAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
-        var keyAge = DateTime.UtcNow - signingKeyService.CurrentSigningKey.CreatedAtUtc;
+        var keyAge = DateTime.UtcNow - (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).CreatedAtUtc;
         var remaining = _options.KeyRotationInterval - keyAge;
 
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;

@@ -101,7 +101,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
 
     private static CachedJwksService CreateCachedJwksService(IReadOnlyList<ManagedSigningKey> keys)
     {
-        var signingKeyService = new FakeSigningKeyService(keys);
+        var signingKeyService = new FakeSigningKeyService([.. keys]);
         var rootProvider = new FakeServiceProvider(typeof(ISigningKeyService), signingKeyService);
         return new CachedJwksService(new FakeServiceScopeFactory(rootProvider), signingKeyService);
     }
@@ -117,14 +117,24 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         };
     }
 
-    private sealed class FakeSigningKeyService(IReadOnlyList<ManagedSigningKey> keys) : ISigningKeyService
+    private sealed class FakeSigningKeyService(ManagedSigningKey[] keys) : ISigningKeyService
     {
-        public ManagedSigningKey CurrentSigningKey => keys.FirstOrDefault() ?? throw new InvalidOperationException("No signing keys configured.");
-
-        public IReadOnlyList<ManagedSigningKey> AllKeys => keys;
-
-        public void RotateKey()
+        public Task<ManagedSigningKey> GetCurrentSigningKeyAsync(CancellationToken cancellationToken = default)
         {
+            _ = cancellationToken;
+            return Task.FromResult(keys.FirstOrDefault() ?? throw new InvalidOperationException("No signing keys configured."));
+        }
+
+        public Task<ManagedSigningKey[]> GetAllKeysAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            return Task.FromResult(keys);
+        }
+
+        public Task RotateKeyAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            return Task.CompletedTask;
         }
     }
 
