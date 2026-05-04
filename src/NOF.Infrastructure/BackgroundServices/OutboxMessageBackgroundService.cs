@@ -15,17 +15,20 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
-        IObjectSerializer objectSerializer)
+        IObjectSerializer objectSerializer,
+        IHostEnvironment hostEnvironment)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
+        _hostEnvironment = hostEnvironment;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -167,7 +170,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
             ActivityKind.Producer,
-            parent);
+            parent,
+            _hostEnvironment);
     }
 
     private Type[] ResolveDispatchTypes(NOFOutboxMessage message)

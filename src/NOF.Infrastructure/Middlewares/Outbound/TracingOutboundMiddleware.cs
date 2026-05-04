@@ -1,11 +1,19 @@
 using NOF.Abstraction;
 using NOF.Hosting;
 using System.Diagnostics;
+using Microsoft.Extensions.Hosting;
 
 namespace NOF.Infrastructure;
 
 public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
 {
+    private readonly IHostEnvironment _hostEnvironment;
+
+    public TracingOutboundMiddleware(IHostEnvironment hostEnvironment)
+    {
+        _hostEnvironment = hostEnvironment;
+    }
+
     public async ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
         var messageType = context.Message.GetType();
@@ -13,6 +21,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
             ActivityKind.Producer);
+        activity?.SetServiceDeploymentTags(_hostEnvironment);
 
         var currentActivity = Activity.Current;
         context.Headers[NOFAbstractionConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
@@ -43,6 +52,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
             ActivityKind.Producer);
+        activity?.SetServiceDeploymentTags(_hostEnvironment);
 
         var currentActivity = Activity.Current;
         context.Headers[NOFAbstractionConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
@@ -72,6 +82,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {rpcMethod}",
             ActivityKind.Producer);
+        activity?.SetServiceDeploymentTags(_hostEnvironment);
 
         var currentActivity = Activity.Current;
         context.Headers[NOFAbstractionConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();

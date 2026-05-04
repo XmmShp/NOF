@@ -10,6 +10,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
+using System.Diagnostics;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Steps;
@@ -97,6 +98,62 @@ public class InfrastructureDefaultsTests
         using var provider = builder.Services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
         Assert.Equal(TenantMode.DatabasePerTenant, options.TenantMode);
+    }
+
+    [Fact]
+    public void HostEnvironmentExtensions_ShouldUseApplicationNameAndDefaultInstanceId()
+    {
+        var hostEnvironment = new TestHostEnvironment
+        {
+            ApplicationName = "Orders.Api"
+        };
+
+        Assert.Equal(0u, hostEnvironment.ApplicationId);
+        Assert.Equal("Orders.Api", hostEnvironment.ApplicationName);
+        Assert.NotEqual(0u, hostEnvironment.InstanceId);
+    }
+
+    [Fact]
+    public void EnvironmentBindConfiguration_ShouldPreferConfiguredValues()
+    {
+        var hostEnvironment = new TestHostEnvironment
+        {
+            ApplicationName = "fallback-name"
+        };
+        hostEnvironment.ApplicationId = 1;
+        hostEnvironment.InstanceId = 7;
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationId] = "42",
+                [NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId] = "24"
+            })
+            .Build();
+
+        hostEnvironment.BindConfiguration(configuration);
+
+        Assert.Equal(42u, hostEnvironment.ApplicationId);
+        Assert.Equal("fallback-name", hostEnvironment.ApplicationName);
+        Assert.Equal(24u, hostEnvironment.InstanceId);
+    }
+
+    [Fact]
+    public void SetCurrentServiceDeploymentTags_ShouldAttachDeploymentInfoToActivity()
+    {
+        var hostEnvironment = new TestHostEnvironment
+        {
+            ApplicationName = "orders-api"
+        };
+        hostEnvironment.ApplicationId = 42;
+        hostEnvironment.InstanceId = 24;
+
+        using var activity = new Activity("deployment-test").Start();
+        activity.SetServiceDeploymentTags(hostEnvironment);
+
+        Assert.Equal(42u, activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.ApplicationId));
+        Assert.Equal("orders-api", activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.ApplicationName));
+        Assert.Equal(24u, activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.InstanceId));
     }
 
     private sealed class TestServiceRegistrationContext : INOFAppBuilder

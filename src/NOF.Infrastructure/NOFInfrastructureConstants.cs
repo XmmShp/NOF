@@ -8,6 +8,22 @@ namespace NOF.Infrastructure;
 /// </summary>
 public static class NOFInfrastructureConstants
 {
+    public static class Deployment
+    {
+        public static class ConfigurationKeys
+        {
+            public const string ApplicationId = "ApplicationId";
+            public const string InstanceId = "InstanceId";
+        }
+
+        public static class Tags
+        {
+            public const string ApplicationId = "service.id";
+            public const string ApplicationName = "service.name";
+            public const string InstanceId = "service.instance.id";
+        }
+    }
+
     /// <summary>
     /// Handler pipeline tracing and metrics constants.
     /// </summary>

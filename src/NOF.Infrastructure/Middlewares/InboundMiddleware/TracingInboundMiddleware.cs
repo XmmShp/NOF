@@ -2,6 +2,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics;
+using Microsoft.Extensions.Hosting;
 
 namespace NOF.Infrastructure;
 
@@ -12,10 +13,12 @@ public sealed class TracingInboundMiddleware :
     IAfter<TenantInboundMiddleware>
 {
     private readonly ITransparentInfos _executionContext;
+    private readonly IHostEnvironment _hostEnvironment;
 
-    public TracingInboundMiddleware(ITransparentInfos executionContext)
+    public TracingInboundMiddleware(ITransparentInfos executionContext, IHostEnvironment hostEnvironment)
     {
         _executionContext = executionContext;
+        _hostEnvironment = hostEnvironment;
     }
 
     public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -23,7 +26,7 @@ public sealed class TracingInboundMiddleware :
         _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
-        using var activity = CreateCommandActivity(context, traceId, spanId);
+        using var activity = CreateCommandActivity(context, traceId, spanId, _hostEnvironment);
 
         _executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
@@ -47,7 +50,7 @@ public sealed class TracingInboundMiddleware :
         }
     }
 
-    private static Activity? CreateCommandActivity(CommandInboundContext context, string? traceId, string? spanId)
+    private static Activity? CreateCommandActivity(CommandInboundContext context, string? traceId, string? spanId, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
@@ -57,7 +60,8 @@ public sealed class TracingInboundMiddleware :
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
-            parent);
+            parent,
+            hostEnvironment);
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -65,7 +69,7 @@ public sealed class TracingInboundMiddleware :
         _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
-        using var activity = CreateNotificationActivity(context, traceId, spanId);
+        using var activity = CreateNotificationActivity(context, traceId, spanId, _hostEnvironment);
 
         _executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
@@ -89,7 +93,7 @@ public sealed class TracingInboundMiddleware :
         }
     }
 
-    private static Activity? CreateNotificationActivity(NotificationInboundContext context, string? traceId, string? spanId)
+    private static Activity? CreateNotificationActivity(NotificationInboundContext context, string? traceId, string? spanId, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
@@ -99,7 +103,8 @@ public sealed class TracingInboundMiddleware :
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
-            parent);
+            parent,
+            hostEnvironment);
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -107,7 +112,7 @@ public sealed class TracingInboundMiddleware :
         _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
-        using var activity = CreateRequestActivity(context, traceId, spanId);
+        using var activity = CreateRequestActivity(context, traceId, spanId, _hostEnvironment);
 
         _executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
         _executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
@@ -132,7 +137,7 @@ public sealed class TracingInboundMiddleware :
         }
     }
 
-    private static Activity? CreateRequestActivity(RequestInboundContext context, string? traceId, string? spanId)
+    private static Activity? CreateRequestActivity(RequestInboundContext context, string? traceId, string? spanId, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
@@ -142,6 +147,7 @@ public sealed class TracingInboundMiddleware :
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {requestName}",
             ActivityKind.Consumer,
-            parent);
+            parent,
+            hostEnvironment);
     }
 }
