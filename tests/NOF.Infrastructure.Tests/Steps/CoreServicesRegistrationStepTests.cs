@@ -101,6 +101,18 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
+    public void AddInfrastructureDefaults_ShouldValidateSnowflakeOptions()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.Configure<SnowflakeIdGeneratorOptions>(options => options.ApplicationIdBits = 0);
+        builder.AddInfrastructureDefaults();
+
+        using var provider = builder.Services.BuildServiceProvider();
+        var act = () => _ = provider.GetRequiredService<IOptions<SnowflakeIdGeneratorOptions>>().Value;
+        Assert.Throws<OptionsValidationException>(act);
+    }
+
+    [Fact]
     public void HostEnvironmentExtensions_ShouldUseApplicationNameAndDefaultInstanceId()
     {
         var hostEnvironment = new TestHostEnvironment
@@ -110,7 +122,7 @@ public class InfrastructureDefaultsTests
 
         Assert.Equal(0u, hostEnvironment.ApplicationId);
         Assert.Equal("Orders.Api", hostEnvironment.ApplicationName);
-        Assert.NotEqual(0u, hostEnvironment.InstanceId);
+        Assert.Equal(0u, hostEnvironment.InstanceId);
     }
 
     [Fact]

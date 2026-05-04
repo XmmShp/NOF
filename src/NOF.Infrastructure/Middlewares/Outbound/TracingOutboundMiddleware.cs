@@ -1,7 +1,7 @@
+using Microsoft.Extensions.Hosting;
 using NOF.Abstraction;
 using NOF.Hosting;
 using System.Diagnostics;
-using Microsoft.Extensions.Hosting;
 
 namespace NOF.Infrastructure;
 

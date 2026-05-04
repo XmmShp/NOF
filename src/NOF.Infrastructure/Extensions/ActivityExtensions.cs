@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
+using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 

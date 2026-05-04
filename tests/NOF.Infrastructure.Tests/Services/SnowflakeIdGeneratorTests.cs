@@ -1,12 +1,33 @@
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NOF.Domain;
+using NOF.Infrastructure;
+using System.ComponentModel.DataAnnotations;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Services;
 
 public class SnowflakeIdGeneratorTests
 {
-    private static SnowflakeIdGenerator Default() => new(Options.Create(new SnowflakeIdGeneratorOptions()));
+    private static SnowflakeIdGenerator Default()
+        => CreateGenerator(new SnowflakeIdGeneratorOptions());
+
+    private static SnowflakeIdGenerator CreateGenerator(
+        SnowflakeIdGeneratorOptions? options = null,
+        uint applicationId = 0,
+        uint instanceId = 0)
+    {
+        var hostEnvironment = new TestHostEnvironment
+        {
+            ApplicationName = "NOF.Infrastructure.Tests"
+        };
+        hostEnvironment.ApplicationId = applicationId;
+        hostEnvironment.InstanceId = instanceId;
+        return new SnowflakeIdGenerator(
+            Options.Create(options ?? new SnowflakeIdGeneratorOptions()),
+            hostEnvironment);
+    }
 
     // -----------------------------------------------------------------------
     // Basic generation
@@ -36,24 +57,26 @@ public class SnowflakeIdGeneratorTests
     }
 
     // -----------------------------------------------------------------------
-    // Options: MachineId embedded correctly
+    // Options: deployment fields embedded correctly
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void NextId_EmbedsMachineId_InCorrectBitPosition()
+    public void NextId_EmbedsApplicationIdAndInstanceId_InCorrectBitPosition()
     {
-        const int machineId = 7;
-        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = machineId }));
+        const uint applicationId = 7;
+        const uint instanceId = 9;
+        var gen = CreateGenerator(applicationId: applicationId, instanceId: instanceId);
         var id = gen.NextId();
 
-        // Default layout: 12 sequence bits, 10 machine bits
-        const int sequenceBits = 12;
-        const int machineIdBits = 10;
-        const long maxMachineId = (1L << machineIdBits) - 1;
-        var extractedMachineId = (int)((id >> sequenceBits) & maxMachineId);
-        Assert.Equal(machineId,
-
-        extractedMachineId);
+        const int sequenceBits = 8;
+        const int instanceIdBits = 6;
+        const int applicationIdBits = 8;
+        const long maxInstanceId = (1L << instanceIdBits) - 1;
+        const long maxApplicationId = (1L << applicationIdBits) - 1;
+        var extractedInstanceId = (uint)((id >> sequenceBits) & maxInstanceId);
+        var extractedApplicationId = (uint)((id >> (sequenceBits + instanceIdBits)) & maxApplicationId);
+        Assert.Equal(instanceId, extractedInstanceId);
+        Assert.Equal(applicationId, extractedApplicationId);
     }
 
     // -----------------------------------------------------------------------
@@ -61,34 +84,39 @@ public class SnowflakeIdGeneratorTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void CustomBitLayout_EmbedsMachineId_Correctly()
+    public void CustomBitLayout_EmbedsApplicationIdAndInstanceId_Correctly()
     {
-        const int machineIdBits = 8;
+        const int applicationIdBits = 6;
+        const int instanceIdBits = 7;
         const int sequenceBits = 8;
-        const int machineId = 5;
+        const uint applicationId = 5;
+        const uint instanceId = 13;
 
-        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions
+        var gen = CreateGenerator(new SnowflakeIdGeneratorOptions
         {
-            MachineIdBits = machineIdBits,
+            ApplicationIdBits = applicationIdBits,
+            InstanceIdBits = instanceIdBits,
             SequenceBits = sequenceBits,
-            MachineId = machineId,
-        }));
+        }, applicationId, instanceId);
 
         var id = gen.NextId();
-        var maxMachineId = (1L << machineIdBits) - 1;
-        var extracted = (int)((id >> sequenceBits) & maxMachineId);
-        Assert.Equal(machineId,
-        extracted);
+        var maxInstanceId = (1L << instanceIdBits) - 1;
+        var maxApplicationId = (1L << applicationIdBits) - 1;
+        var extractedInstanceId = (uint)((id >> sequenceBits) & maxInstanceId);
+        var extractedApplicationId = (uint)((id >> (sequenceBits + instanceIdBits)) & maxApplicationId);
+        Assert.Equal(instanceId, extractedInstanceId);
+        Assert.Equal(applicationId, extractedApplicationId);
     }
 
     [Fact]
     public void CustomBitLayout_StillProducesUniqueIds()
     {
-        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions
+        var gen = CreateGenerator(new SnowflakeIdGeneratorOptions
         {
-            MachineIdBits = 8,
+            ApplicationIdBits = 8,
+            InstanceIdBits = 6,
             SequenceBits = 8,
-        }));
+        }, applicationId: 3, instanceId: 7);
 
         var ids = Enumerable.Range(0, 500).Select(_ => gen.NextId()).ToList();
         Assert.Equal(500, ids.Distinct().Count());
@@ -103,7 +131,7 @@ public class SnowflakeIdGeneratorTests
     {
         // A later epoch means smaller timestamp component (less time has elapsed)
         var laterEpoch = DateTimeOffset.UtcNow.AddSeconds(-10);
-        var gen = new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { Epoch = laterEpoch }));
+        var gen = CreateGenerator(new SnowflakeIdGeneratorOptions { Epoch = laterEpoch });
         Assert.True(gen.NextId() > 0);
     }
 
@@ -112,30 +140,65 @@ public class SnowflakeIdGeneratorTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void MachineId_OutOfRange_Throws()
+    public void InvalidApplicationIdBits_ShouldFailOptionsValidation()
     {
-        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = 9999 }));
-        Assert.Throws<ArgumentOutOfRangeException>(act);
+        var results = ValidateOptions(new SnowflakeIdGeneratorOptions { ApplicationIdBits = 0 });
+        Assert.NotEmpty(results);
     }
 
     [Fact]
-    public void NegativeMachineId_Throws()
+    public void InvalidInstanceIdBits_ShouldFailOptionsValidation()
     {
-        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineId = -1 }));
-        Assert.Throws<ArgumentOutOfRangeException>(act);
+        var results = ValidateOptions(new SnowflakeIdGeneratorOptions { InstanceIdBits = 0 });
+        Assert.NotEmpty(results);
     }
 
     [Fact]
-    public void InvalidMachineIdBits_Throws()
+    public void InvalidSequenceBits_ShouldFailOptionsValidation()
     {
-        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineIdBits = 0 }));
-        Assert.Throws<ArgumentOutOfRangeException>(act);
+        var results = ValidateOptions(new SnowflakeIdGeneratorOptions { SequenceBits = 0 });
+        Assert.NotEmpty(results);
     }
 
     [Fact]
     public void BitLayoutOverflow_Throws()
     {
-        var act = () => new SnowflakeIdGenerator(Options.Create(new SnowflakeIdGeneratorOptions { MachineIdBits = 32, SequenceBits = 32 }));
+        var act = () => CreateGenerator(new SnowflakeIdGeneratorOptions
+        {
+            ApplicationIdBits = 32,
+            InstanceIdBits = 16,
+            SequenceBits = 16
+        });
+        Assert.Throws<ArgumentOutOfRangeException>(act);
+    }
+
+    [Fact]
+    public void ApplicationId_OutOfRange_Throws()
+    {
+        var act = () => CreateGenerator(
+            new SnowflakeIdGeneratorOptions
+            {
+                ApplicationIdBits = 4,
+                InstanceIdBits = 8,
+                SequenceBits = 8
+            },
+            applicationId: 16,
+            instanceId: 1);
+        Assert.Throws<ArgumentOutOfRangeException>(act);
+    }
+
+    [Fact]
+    public void InstanceId_OutOfRange_Throws()
+    {
+        var act = () => CreateGenerator(
+            new SnowflakeIdGeneratorOptions
+            {
+                ApplicationIdBits = 8,
+                InstanceIdBits = 4,
+                SequenceBits = 8
+            },
+            applicationId: 1,
+            instanceId: 16);
         Assert.Throws<ArgumentOutOfRangeException>(act);
     }
 
@@ -168,7 +231,22 @@ public class SnowflakeIdGeneratorTests
         var act = () => IdGenerator.SetCurrent(null!);
         Assert.Throws<ArgumentNullException>(act);
     }
+
+    private static List<ValidationResult> ValidateOptions(SnowflakeIdGeneratorOptions options)
+    {
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(options, new ValidationContext(options), results, validateAllProperties: true);
+        return results;
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+
+        public string ApplicationName { get; set; } = "NOF.Infrastructure.Tests";
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; } = null!;
+    }
 }
-
-
-

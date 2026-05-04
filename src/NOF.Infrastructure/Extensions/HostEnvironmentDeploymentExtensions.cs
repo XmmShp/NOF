@@ -58,7 +58,7 @@ public static class HostEnvironmentExtensions
 
         public uint InstanceId
         {
-            get => HostEnvironmentExtensionBag.GetOrAdd(environment, InstanceIdKey, BuildDefaultInstanceId);
+            get => HostEnvironmentExtensionBag.GetOrAdd(environment, InstanceIdKey, static () => 0u);
             set => HostEnvironmentExtensionBag.Set(environment, InstanceIdKey, value);
         }
 
@@ -71,22 +71,5 @@ public static class HostEnvironmentExtensions
             environment.InstanceId = configuration.GetValue<uint?>(
                 NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId) ?? environment.InstanceId;
         }
-    }
-
-    private static uint BuildDefaultInstanceId()
-    {
-        var machineName = string.IsNullOrWhiteSpace(Environment.MachineName)
-            ? "unknown-host"
-            : Environment.MachineName;
-        var value = 2166136261u;
-        foreach (var character in machineName)
-        {
-            value ^= character;
-            value *= 16777619u;
-        }
-
-        value ^= unchecked((uint)Environment.ProcessId);
-        value *= 16777619u;
-        return value;
     }
 }

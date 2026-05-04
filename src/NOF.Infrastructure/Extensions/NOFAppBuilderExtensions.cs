@@ -7,6 +7,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
@@ -41,7 +42,14 @@ public static partial class NOFInfrastructureExtensions
 
             #region Options
             builder.Services.AddOptions<CacheServiceOptions>();
-            builder.Services.AddOptions<SnowflakeIdGeneratorOptions>();
+            builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()
+                .Validate(options =>
+                    Validator.TryValidateObject(
+                        options,
+                        new ValidationContext(options),
+                        null,
+                        validateAllProperties: true),
+                    "SnowflakeIdGeneratorOptions is invalid.");
             builder.Services.AddOptions<DbContextConfigurationOptions>();
             builder.Services.AddOptions<TransactionalMessageOptions>();
             #endregion
