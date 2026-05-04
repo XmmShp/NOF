@@ -31,6 +31,12 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.NotNull(scope.GetRequiredService<ISigningKeyService>());
         Assert.NotNull(scope.GetRequiredService<CachedJwksService>());
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(ISigningKeyService) &&
+            descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IJwksService) &&
+            descriptor.Lifetime == ServiceLifetime.Scoped);
         Assert.IsType<PersistenceRevokedRefreshTokenRepository>(
         scope.GetRequiredService<IRevokedRefreshTokenRepository>());
         Assert.Contains(scope.Services.GetServices<IHostedService>(), service => service is RevokedRefreshTokenCleanupBackgroundService);

@@ -8,7 +8,7 @@ public sealed class PersistedSigningKeyPersistenceRegistrationStep : IServiceReg
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        builder.Services.ReplaceOrAddSingleton<ISigningKeyService, PersistenceSigningKeyService>();
+        builder.Services.ReplaceOrAddScoped<ISigningKeyService, PersistenceSigningKeyService>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<INOFDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
         builder.TryAddInitializationStep<PersistedSigningKeyInitializationStep>();
 

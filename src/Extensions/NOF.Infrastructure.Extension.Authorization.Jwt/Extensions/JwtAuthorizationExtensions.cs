@@ -18,7 +18,7 @@ public static partial class NOFJwtAuthorizationExtensions
 
             builder.TryAddRegistrationStep<PersistedSigningKeyPersistenceRegistrationStep>();
             builder.TryAddRegistrationStep<RevokedRefreshTokenPersistenceRegistrationStep>();
-            builder.Services.ReplaceOrAddSingleton<IJwksService, LocalJwksService>();
+            builder.Services.ReplaceOrAddScoped<IJwksService, LocalJwksService>();
             builder.Services.ReplaceOrAddSingleton<CachedJwksService, CachedJwksService>();
             builder.Services.ReplaceOrAddScoped<IJwtAuthorityServiceClient, LocalJwtAuthorityServiceClient>();
             builder.Services.AddHostedService<JwtKeyRotationBackgroundService>();

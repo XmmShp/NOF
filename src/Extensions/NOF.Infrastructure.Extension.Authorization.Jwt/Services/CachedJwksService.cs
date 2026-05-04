@@ -7,7 +7,7 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// <summary>
 /// Maintains a local cache of JWKS keys and refreshes them from the configured authority when needed.
 /// </summary>
-public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, ISigningKeyService? signingKeyService = null) : IDisposable
+public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory) : IDisposable
 {
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private IReadOnlyList<SecurityKey>? _cachedKeys;
@@ -27,12 +27,6 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, 
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            if (signingKeyService is not null)
-            {
-                _cachedKeys = ToSecurityKeys(await signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false));
-                return _cachedKeys;
-            }
-
             using var scope = serviceScopeFactory.CreateScope();
             var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
             var document = await jwksService.GetJwksAsync(cancellationToken);
@@ -48,13 +42,6 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory, 
         {
             _refreshLock.Release();
         }
-    }
-
-    private static SecurityKey[] ToSecurityKeys(IReadOnlyCollection<ManagedSigningKey> managedKeys)
-    {
-        return managedKeys
-            .Select(SecurityKey (managedKey) => new RsaSecurityKey(managedKey.Key.Rsa) { KeyId = managedKey.Kid })
-            .ToArray();
     }
 
     private static SecurityKey[] ToSecurityKeys(JsonWebKey[] jwkKeys)

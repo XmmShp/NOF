@@ -102,8 +102,9 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     private static CachedJwksService CreateCachedJwksService(IReadOnlyList<ManagedSigningKey> keys)
     {
         var signingKeyService = new FakeSigningKeyService([.. keys]);
-        var rootProvider = new FakeServiceProvider(typeof(ISigningKeyService), signingKeyService);
-        return new CachedJwksService(new FakeServiceScopeFactory(rootProvider), signingKeyService);
+        var jwksService = new LocalJwksService(signingKeyService);
+        var rootProvider = new FakeServiceProvider(typeof(IJwksService), jwksService);
+        return new CachedJwksService(new FakeServiceScopeFactory(rootProvider));
     }
 
     private static RequestInboundContext CreateInboundContext()
