@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 /// <summary>
 /// Marks an entity as host-only, meaning it should only be stored in the host/public database
