@@ -8,7 +8,7 @@ Provides shared UI-facing capabilities for browser clients:
 
 - Authorization components (`AuthGuard`, `PermissionRouteView`)
 - Browser storage abstractions (`ILocalStorage`, `ISessionStorage`)
-- Browser info service and platform helpers (`IBrowserInfoService`, `BrowserInfoExtensions`, `NOF.UI.lib.module.js` JS initializer)
+- Browser info service, change events, and platform helpers (`IBrowserInfoService`, `BrowserInfoExtensions`, `NOF.UI.lib.module.js` JS initializer)
 - HTTP request authorization handler for client `HttpClient` pipelines
 
 `NOF.Hosting.BlazorWebAssembly` depends on this package and focuses on host bootstrapping.
