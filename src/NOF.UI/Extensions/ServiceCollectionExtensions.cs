@@ -11,6 +11,7 @@ public static partial class NOFUIExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
 
+            services.TryAddScoped<IBrowserInfoService, BrowserInfoService>();
             services.TryAddScoped<ILocalStorage, LocalStorage>();
             services.TryAddScoped<ISessionStorage, SessionStorage>();
             return services;
