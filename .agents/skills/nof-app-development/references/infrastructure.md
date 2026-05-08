@@ -19,7 +19,8 @@ Notes:
 ## Redis Cache
 
 ```csharp
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+    ?? throw new InvalidOperationException("Connection string 'redis' not found."));
 ```
 
 Use `ICacheService` and `CacheKey<T>` for typed access.

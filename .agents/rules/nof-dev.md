@@ -13,12 +13,12 @@ Use this file when contributing to the NOF framework itself.
 - `src/Infrastructures/` infrastructure providers.
 - `src/Extensions/` optional extension packages.
 - `sample/` runnable sample app.
-- `tests/` test projects. Extension package tests live in `tests/Extensions/`.
+- `tests/` test projects. Most package and host tests live in `tests/NOF.*.Tests`, with extension tests in `tests/Extensions/`, infrastructure provider tests in `tests/Infrastructures/`, and shared helpers in `tests/Common/`.
 - `docs/` DocFX documentation.
 
 ## Tech Stack
 
-- .NET 10 / C# 14 preview features (`extension` blocks are used in this repo).
+- .NET 10 / C# 14 features (`extension` blocks are used in this repo).
 - Central Package Management via root `Directory.Packages.props`.
 - Roslyn incremental generators.
 - xUnit + Moq.

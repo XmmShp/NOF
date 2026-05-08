@@ -51,7 +51,8 @@ var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+    ?? throw new InvalidOperationException("Connection string 'redis' not found."));
 builder.AddRabbitMQ(options =>
 {
     options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
@@ -99,11 +100,12 @@ Full API documentation is available at the [GitHub Pages site](https://xmmshp.gi
 
 ## Testing
 
-The test layout mirrors `src/` at package level:
+The test layout is organized by package category:
 
-- Core package tests: `tests/NOF.*.Tests`
+- Core and host package tests: `tests/NOF.*.Tests`
 - Extension package tests: `tests/Extensions/NOF.*.Tests`
 - Infrastructure provider tests: `tests/Infrastructures/NOF.*.Tests`
+- Shared test utilities: `tests/Common/*`
 - Source generator tests are colocated with parent package tests when practical
 
 ## Dependency Version Management

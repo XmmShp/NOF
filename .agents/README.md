@@ -46,7 +46,8 @@ When framework behavior changes, keep these files in sync with `src/`, `tests/`,
 
 ## Test Layout Notes
 
-- `tests/` mirrors `src/` at a package level as much as possible.
-- Source generator tests are colocated with their parent package test projects when practical.
+- Most package and host tests live under `tests/NOF.*.Tests`.
 - Extension package tests are under `tests/Extensions/*`.
 - Infrastructure provider tests are under `tests/Infrastructures/*`.
+- Shared test helpers live under `tests/Common/*`.
+- Source generator tests are colocated with their parent package test projects when practical.

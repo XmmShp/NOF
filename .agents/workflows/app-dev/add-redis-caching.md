@@ -17,7 +17,8 @@ dotnet add package NOF.Infrastructure.StackExchangeRedis
 ```csharp
 using NOF.Infrastructure.StackExchangeRedis;
 
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+    ?? throw new InvalidOperationException("Connection string 'redis' not found."));
 ```
 
 ## 3. Configure Connection String

@@ -11,7 +11,8 @@ Provides a Redis-backed `ICacheService` implementation using StackExchange.Redis
 ```csharp
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+    ?? throw new InvalidOperationException("Connection string 'redis' not found."));
 ```
 
 Redis connection settings are typically resolved from your application configuration using the `redis` connection string.

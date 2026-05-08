@@ -32,12 +32,13 @@ builder.AddRabbitMQ(options =>
 ## 4. Send Messages
 
 ```csharp
-await _commandSender.SendAsync(command, destinationEndpointName: "order-service", cancellationToken: ct);
+await _commandSender.SendAsync(command, ct);
 await _notificationPublisher.PublishAsync(notification, ct);
 ```
 
 ## 5. Notes
 
 - Prefer NOF abstractions (generated RPC clients, `ICommandSender`, `INotificationPublisher`) instead of direct RabbitMQ client usage.
+- `ICommandSender.SendAsync(...)` and `INotificationPublisher.PublishAsync(...)` do not take a destination endpoint name; transport routing is derived from NOF handler metadata.
 - Tenant, user, and tracing headers flow through the NOF pipeline automatically.
 - For transactional reliability with persistence, use deferred send/publish and outbox support.
