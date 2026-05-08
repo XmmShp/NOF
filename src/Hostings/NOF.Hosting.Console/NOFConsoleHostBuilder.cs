@@ -25,15 +25,10 @@ public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
     /// Creates a console NOF builder.
     /// </summary>
     /// <param name="args">Program arguments.</param>
-    /// <param name="useInfrastructureDefaults">When true, calls <see cref="NOFAppBuilderExtensions.AddInfrastructureDefaults"/>.</param>
-    public static NOFConsoleHostBuilder Create(string[]? args = null, bool useInfrastructureDefaults = true)
+    public static NOFConsoleHostBuilder Create(string[]? args = null)
     {
         var builder = new NOFConsoleHostBuilder(args, Assembly.GetCallingAssembly());
-        if (useInfrastructureDefaults)
-        {
-            builder.AddInfrastructureDefaults();
-        }
-
+        builder.AddInfrastructureDefaults();
         return builder;
     }
 

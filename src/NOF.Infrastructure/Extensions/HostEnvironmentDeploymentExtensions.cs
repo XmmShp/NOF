@@ -66,6 +66,8 @@ public static class HostEnvironmentExtensions
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
+            environment.ApplicationName = configuration.GetValue<string>(
+                NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationName) ?? environment.ApplicationName;
             environment.ApplicationId = configuration.GetValue<uint?>(
                 NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationId) ?? environment.ApplicationId;
             environment.InstanceId = configuration.GetValue<uint?>(

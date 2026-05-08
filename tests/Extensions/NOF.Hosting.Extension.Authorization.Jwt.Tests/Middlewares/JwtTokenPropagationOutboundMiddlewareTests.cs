@@ -28,8 +28,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
         Assert.True(called);
-        Assert.Equal("Bearer " + token,
-        outboundContext.Headers[NOFAbstractionConstants.Transport.Headers.Authorization]);
+        Assert.Equal("Bearer " + token, outboundContext.Headers[NOFAbstractionConstants.Transport.Headers.Authorization]);
     }
 
     private static string CreateUnsignedToken()
@@ -58,9 +57,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
-        Assert.False(
-
-        outboundContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
+        Assert.False(outboundContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
     }
 
     [Fact]
@@ -76,11 +73,8 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
         var options = scope.GetRequiredService<IOptions<JwtTokenPropagationOptions>>().Value;
-        Assert.Equal("X-Auth",
-
-        options.HeaderName);
-        Assert.Equal("Token",
-        options.TokenType);
+        Assert.Equal("X-Auth", options.HeaderName);
+        Assert.Equal("Token", options.TokenType);
     }
 
     private static RequestOutboundContext CreateOutboundContext()

@@ -10,7 +10,7 @@ using NOF.Sample;
 using NOF.Sample.Application;
 using NOF.Sample.Services;
 
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
     .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
@@ -67,6 +67,7 @@ builder.Services.AddHostedService(async (sp, ct) =>
 
 var app = await builder.BuildAsync();
 
+app.MapOpenApi();
 app.UseAntiforgery();
 
 app.MapHttpEndpoint<NOFSampleService>();

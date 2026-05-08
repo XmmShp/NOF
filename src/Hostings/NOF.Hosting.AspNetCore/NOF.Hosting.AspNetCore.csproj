@@ -11,12 +11,11 @@
 
 	  <IsPackable>true</IsPackable>
 	  <PackageId>NOF.Hosting.AspNetCore</PackageId>
-	  <Description>ASP.NET Core hosting for the NOF Framework — automatic endpoint mapping, OpenAPI with Scalar, JSON configuration, and CORS.</Description>
+	  <Description>ASP.NET Core hosting for the NOF Framework - OpenAPI service registration, JSON configuration, and CORS.</Description>
   </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-		<PackageReference Include="Scalar.AspNetCore" />
 		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
 	</ItemGroup>
 

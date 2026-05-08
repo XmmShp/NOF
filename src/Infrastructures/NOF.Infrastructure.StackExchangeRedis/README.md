@@ -9,7 +9,7 @@ Provides a Redis-backed `ICacheService` implementation using StackExchange.Redis
 ## Usage
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddRedisCache();
 ```
@@ -33,4 +33,3 @@ dotnet add package NOF.Infrastructure.StackExchangeRedis
 ## License
 
 Apache-2.0
-

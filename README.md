@@ -39,7 +39,7 @@
 ## Quick Start
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddJwtAuthority();
 

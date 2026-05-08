@@ -30,7 +30,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Environment.BindConfiguration(builder.Configuration);
-            builder.Services.TryAddSingleton(builder.Environment);
 
             builder.Services.TryAddScoped<ICacheService, CacheService>();
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());

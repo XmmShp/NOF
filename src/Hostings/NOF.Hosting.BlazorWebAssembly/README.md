@@ -21,10 +21,10 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 var nofBuilder = NOFWebAssemblyHostBuilder.Create(builder);
 
-nofBuilder.WithAutoApplicationParts();
-
 await nofBuilder.BuildWebAssemblyHostAsync();
 ```
+
+`Create(...)` already adds the calling assembly as an application part. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
 
 ## Dependencies
 
@@ -41,4 +41,3 @@ dotnet add package NOF.Hosting.BlazorWebAssembly
 ## License
 
 Apache-2.0
-

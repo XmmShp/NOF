@@ -45,7 +45,7 @@ Built-in EF Core support includes:
 Example:
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddEFCore<AppDbContext>()
     .AutoMigrate();
@@ -56,7 +56,7 @@ builder.AddEFCore<AppDbContext>()
 `UseSqlite()` configures the `NOFDbContext` to use SQLite with the connection string resolved from your application configuration (default connection name: `"sqlite"`).
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddEFCore<AppDbContext>()
     .AutoMigrate()

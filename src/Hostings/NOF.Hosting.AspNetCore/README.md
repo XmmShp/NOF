@@ -4,12 +4,12 @@ ASP.NET Core hosting package for the [NOF Framework](https://github.com/XmmShp/N
 
 ## Overview
 
-Provides the ASP.NET Core host integration for NOF applications, including HTTP endpoint mapping from explicitly registered RPC servers, OpenAPI/Scalar documentation, JSON serialization configuration, middleware pipeline, and the `INOFAppBuilder` implementation for web applications.
+Provides the ASP.NET Core host integration for NOF applications, including HTTP endpoint mapping from explicitly registered RPC servers, OpenAPI service registration, JSON serialization configuration, middleware pipeline, and the `INOFAppBuilder` implementation for web applications.
 
 ## Features
 
 - **Explicit Service Endpoint Mapping** - `MapHttpEndpoint<TRpcServer>()` maps RPC server handlers to minimal API endpoints
-- **OpenAPI & Scalar** - built-in OpenAPI document generation with Scalar UI
+- **OpenAPI Registration** - built-in OpenAPI service registration; endpoint mapping stays explicit in the host application
 - **JSON Configuration** - pre-configured `System.Text.Json` options with sensible defaults
 - **Invocation Context Middleware** - propagates tenant ID and other context through the request pipeline
 - **`[AutoInject]` Support** - bundled source generators for automatic DI registration
@@ -17,11 +17,8 @@ Provides the ASP.NET Core host integration for NOF applications, including HTTP 
 ## Usage
 
 ```csharp
-// useDefaults: true automatically calls UseDefaultSettings()
-// which configures JSON options, CORS, and Scalar (in dev mode)
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
-
-builder.WithAutoApplicationParts();
+// Create() automatically configures JSON options, CORS, and OpenAPI services.
+var builder = NOFWebApplicationBuilder.Create(args);
 
 var app = await builder.BuildAsync();
 
@@ -29,6 +26,8 @@ app.MapHttpEndpoint<MyAppService>();
 
 await app.RunAsync();
 ```
+
+`Create()` already adds the calling assembly as an application part. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
 
 Methods on explicitly mapped RPC services are turned into minimal API endpoints:
 
