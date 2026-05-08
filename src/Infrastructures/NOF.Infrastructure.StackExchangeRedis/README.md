@@ -11,17 +11,14 @@ Provides a Redis-backed `ICacheService` implementation using StackExchange.Redis
 ```csharp
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddRedisCache();
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 ```
 
-Redis connection settings are resolved from your application configuration (default connection name: `"redis"`).
-
-For Redis-specific data structure abstractions such as hashes, sets, lists, and sorted sets, reference `NOF.Application.Extension.Redis` and inject `IRedisCacheService`.
+Redis connection settings are typically resolved from your application configuration using the `redis` connection string.
 
 ## Dependencies
 
 - [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)
-- [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis)
 - [`StackExchange.Redis`](https://www.nuget.org/packages/StackExchange.Redis)
 
 ## Installation

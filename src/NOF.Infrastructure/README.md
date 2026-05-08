@@ -4,10 +4,13 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 
 ## Overview
 
-`NOF.Infrastructure` provides a single integration entry for infrastructure capabilities by composing:
+`NOF.Infrastructure` provides the default runtime wiring for NOF applications, including:
 
-- `NOF.Hosting.Abstraction`
-- `NOF.Application`
+- builder defaults and step orchestration
+- in-memory cache and messaging riders
+- EF Core integration through `UseDbContext<TDbContext>()`
+- OpenTelemetry registration and transport middleware
+- tenant-aware `NOFDbContext` support
 
 This lets consumers reference one package/project while still getting the full default infrastructure setup.
 
@@ -25,55 +28,55 @@ dotnet add package NOF.Infrastructure
 
 This package includes:
 
-- In-memory cache (`MemoryCacheService`)
-- In-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
-- In-process event publisher (`EventPublisher`)
+- in-memory cache (`MemoryCacheService`)
+- in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
+- in-process event publisher (`IEventPublisher`)
 - EF Core infrastructure primitives (`NOFDbContext`, outbox/inbox entities, tenant-aware model customization, `NOFDbContextFactory`)
-- SQLite helpers for EF Core (`UseSqlite`, `UseSqliteInMemory`)
+- SQLite-based default persistence used by infrastructure defaults
 
 ## EF Core
 
-Built-in EF Core support includes:
-
-- `NOFDbContext`
-- outbox / inbox entities and background cleanup
-- state machine context persistence
-- tenant-aware model customization
-- `NOFDbContextFactory`
-- SQLite provider helpers
-
-Example:
+Built-in EF Core support is configured through `UseDbContext<TDbContext>()` and `EFCoreSelector`:
 
 ```csharp
+using Microsoft.EntityFrameworkCore;
+using NOF.Infrastructure;
+
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddEFCore<AppDbContext>()
-    .AutoMigrate();
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .MigrateOnInitialize();
 ```
+
+Available configuration methods:
+
+- `WithTenantMode(...)`
+- `WithConnectionString(...)`
+- `WithOptions(...)`
+- `WithModelCreating(...)`
+- `MigrateOnInitialize()`
 
 ## SQLite
 
-`UseSqlite()` configures the `NOFDbContext` to use SQLite with the connection string resolved from your application configuration (default connection name: `"sqlite"`).
+For SQLite, provide the provider configuration via `WithOptions(...)`:
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args);
-
-builder.AddEFCore<AppDbContext>()
-    .AutoMigrate()
-    .UseSqlite();
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.SharedDatabase)
+    .WithConnectionString(builder.Configuration.GetConnectionString("sqlite")
+        ?? throw new InvalidOperationException("Connection string 'sqlite' not found."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString))
+    .MigrateOnInitialize();
 ```
 
-### In-Memory SQLite
+## In-Memory SQLite
 
-For tests or lightweight local scenarios, you can use SQLite's in-memory mode while still keeping relational behavior:
-
-```csharp
-builder.AddEFCore<AppDbContext>()
-    .UseSingleTenant()
-    .UseSqliteInMemory();
-```
-
-`UseSqliteInMemory()` keeps a named in-memory database alive across `DbContext` instances by holding an internal shared connection open for the process lifetime.
+For tests or lightweight local scenarios, you can use the built-in default SQLite memory configuration that ships with `AddInfrastructureDefaults()`.
+If you need a custom app `DbContext`, configure it explicitly with `UseDbContext<TDbContext>()`.
 
 ## License
 

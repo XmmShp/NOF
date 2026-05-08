@@ -9,39 +9,47 @@ Use this file when building applications on top of NOF.
 ## Architecture
 
 ```text
-MyApp.Domain/      entities, aggregate roots, value objects, domain events, repository interfaces
-MyApp.Contract/    requests, commands, notifications, DTOs, failures
-MyApp.Application/ handlers, event handlers, state machines, cache keys
-MyApp/             host project (Program.cs, DbContext, migrations, appsettings)
+MyApp.Domain/      domain classes, value objects, failures, domain event payloads
+MyApp.Contract/    RPC contracts, commands, notifications, DTOs, failures
+MyApp.Application/ RPC servers, request handlers, command handlers, notification handlers, state machines
+MyApp/             host project (Program.cs, DbContext, appsettings)
 ```
 
 Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Application -> Contract`.
 
 ## Core Abstractions
 
-- `IRpcService`, `ICommand`, `INotification`, `IEvent`
-- generated service implementation base types, `ICommandHandler`, `INotificationHandler`, `IEventHandler`
-- `IRepository<T, TKey>`, `IUnitOfWork`
-- generated HTTP/RPC service clients, `ICommandSender`, `INotificationPublisher`
+- `IRpcService`, `ICommand`, `INotification`
+- `RpcServer<TService>` and generated nested RPC handler bases
+- `CommandHandler<T>`, `NotificationHandler<T>`, `InMemoryEventHandler<T>`
+- `ICommandSender`, `INotificationPublisher`
 - `IDeferredNotificationPublisher`, `IDeferredCommandSender`
 - `CacheKey<T>`, `IMapper`, `Result` / `Result<T>`
+- `DbContext` / `NOFDbContext` for persistence
 
 ## Source Generator Surface
 
 - `IValueObject<T>` and `[NewableValueObject]`
 - `[AutoInject]`
 - `[Failure]`
-- `[PublicApi]`, `[HttpEndpoint]`, `[GenerateService]`
+- `[HttpEndpoint]`
 - `[Mappable<TSource, TDestination>]`
 
 ## Program.cs Baseline
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+using Microsoft.EntityFrameworkCore;
+using NOF.Hosting.AspNetCore;
+using NOF.Infrastructure;
+using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Infrastructure.RabbitMQ;
+using NOF.Infrastructure.StackExchangeRedis;
+
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-builder.AddRedisCache();
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 builder.AddJwtAuthority(o => o.Issuer = "MyApp");
 builder.AddJwtResourceServer(o =>
 {
@@ -50,10 +58,17 @@ builder.AddJwtResourceServer(o =>
     o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
 });
 builder.AddRabbitMQ();
-builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
+
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .MigrateOnInitialize();
 
 var app = await builder.BuildAsync();
-app.MapServiceToHttpEndpoints<IMyAppService>();
+app.MapOpenApi();
+app.MapHttpEndpoint<MyAppService>();
 await app.RunAsync();
 ```
 
@@ -61,11 +76,12 @@ await app.RunAsync();
 
 - Authority mode: `AddJwtAuthority(...)`.
 - Resource server mode: `AddJwtResourceServer(...)`.
-- In handlers, use `IUserContext` and `IExecutionContext` to access user, tenant, and tracing info.
+- `AddJwtAuthority(...)` adds the authority assembly as an application part for you.
+- Expose authority HTTP endpoints explicitly with `app.MapHttpEndpoint<JwtAuthorityService>()` and a JWKS endpoint when needed.
 
 ## Important Convention
 
-After modifying aggregate roots, always call `_uow.Update(entity)` before `SaveChangesAsync()`.
+Persist application data through `DbContext` / `NOFDbContext` in the application layer. Do not rely on nonexistent public repository or unit-of-work abstractions.
 
 ## Workflows
 

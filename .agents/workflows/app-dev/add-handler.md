@@ -1,29 +1,30 @@
 ---
-description: Quick guide for NOF handler/service implementation patterns
+description: Quick guide for NOF handler and RPC server implementation patterns
 ---
 
-# Add Handler or Service Implementation
+# Add Handler or RPC Server Implementation
 
 NOF currently has:
-- RPC service implementations (generated from `IRpcService` contracts)
-- command handlers (`ICommandHandler<T>`)
-- notification handlers (`INotificationHandler<T>`)
-- domain event handlers (`IEventHandler<T>`)
+
+- RPC server implementations (`RpcServer<TService>`)
+- command handlers (`CommandHandler<T>`)
+- notification handlers (`NotificationHandler<T>`)
+- in-memory event handlers (`InMemoryEventHandler<T>`)
 
 ## RPC Pattern
 
 ```csharp
-[GenerateService]
-public partial interface IOrderService : IRpcService
+public interface IOrderService : IRpcService
 {
-    [PublicApi]
-    [HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
-    Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken = default);
+    [HttpEndpoint(HttpVerb.Get, "api/orders/get")]
+    Result<GetOrderResponse> GetOrder(GetOrderRequest request);
 }
+
+public partial class OrderService : RpcServer<IOrderService>;
 
 public sealed class GetOrder : OrderService.GetOrder
 {
-    public override Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken)
+    public override Task<Result<GetOrderResponse>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
         return Task.FromResult(Result.Success(new GetOrderResponse(request.Id, "demo")));
     }
@@ -35,9 +36,9 @@ public sealed class GetOrder : OrderService.GetOrder
 ```csharp
 public record RebuildCacheCommand(string TenantId) : ICommand;
 
-public sealed class RebuildCacheHandler : ICommandHandler<RebuildCacheCommand>
+public sealed class RebuildCacheHandler : CommandHandler<RebuildCacheCommand>
 {
-    public Task HandleAsync(RebuildCacheCommand command, CancellationToken cancellationToken)
+    public override Task HandleAsync(RebuildCacheCommand command, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -49,9 +50,23 @@ public sealed class RebuildCacheHandler : ICommandHandler<RebuildCacheCommand>
 ```csharp
 public record OrderCreatedNotification(string OrderId) : INotification;
 
-public sealed class OrderCreatedHandler : INotificationHandler<OrderCreatedNotification>
+public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {
-    public Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
+    public override Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+}
+```
+
+## In-Memory Event Pattern
+
+```csharp
+public record ProjectionRebuilt(string TenantId);
+
+public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRebuilt>
+{
+    public override Task HandleAsync(ProjectionRebuilt @event, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

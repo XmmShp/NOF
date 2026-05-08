@@ -9,11 +9,11 @@
 
 - **Clean Architecture** - layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
 - **CQRS & Messaging** - first-class `IRpcService`, command/notification dispatch, and handler pipelines
-- **Source Generators** - compile-time code generation for explicit HTTP service endpoint mapping, DI registration, and failure definitions
+- **Source Generators** - compile-time code generation for RPC servers, HTTP endpoint mapping, DI registration, and failure definitions
 - **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
 - **State Machines** - declarative, event-driven state machine builder with persistent context
-- **Multi-Tenancy** - tenant-aware persistence and infrastructure integration
-- **Modular Pipeline** - dependency-aware `IStep` system for ordered service registration and application initialization
+- **Multi-Tenancy** - tenant-aware persistence and deployment-aware runtime defaults
+- **Modular Pipeline** - dependency-aware registration and initialization steps
 - **OpenTelemetry** - built-in tracing, metrics, and logging integration
 
 ## Packages
@@ -22,38 +22,51 @@
 |---------|-------------|
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer - entities, aggregate roots, repositories, domain events |
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer - requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
-| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer - handler abstractions, state machines, caching, unit of work |
+| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer - RPC servers, handlers, state machines, caching, unit of work |
 | [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction) | Hosting abstractions - builder contracts, step contracts, dependency ordering |
-| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - app builder implementation, pipeline, OpenTelemetry, service wiring |
-| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, client cache services |
-| [`NOF.Application.Extension.Redis`](https://www.nuget.org/packages/NOF.Application.Extension.Redis) | Application Redis extension - advanced Redis cache abstractions built on top of `ICacheService` |
-| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI, service endpoint mapping, JSON configuration |
+| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - builder defaults, EF Core integration, OpenTelemetry, service wiring |
+| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, browser info, client cache services |
+| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, JSON configuration |
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - WebAssembly host builder integration |
+| [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console) | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline |
 | [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui) | .NET MAUI hosting - MAUI app builder integration for cross-platform applications |
 | [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT authorization contract - JWT service contracts, token models, and JWKS definitions |
-| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authorization and authority - token issuance, key rotation, JWKS |
-| [`NOF.Infrastructure.EntityFrameworkCore.PostgreSQL`](https://www.nuget.org/packages/NOF.Infrastructure.EntityFrameworkCore.PostgreSQL) | PostgreSQL provider for NOF EF Core infrastructure |
+| [`NOF.Hosting.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authorization.Jwt) | JWT outbound propagation - writes bearer tokens to outbound NOF requests |
+| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authority and resource server integration - token issuance, key rotation, JWKS |
 | [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ) | RabbitMQ integration - message bus adapter for commands, events, notifications |
 | [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis caching infrastructure via StackExchange.Redis |
+| [`NOF.Test`](https://www.nuget.org/packages/NOF.Test) | Test host helpers for NOF applications |
 
 ## Quick Start
 
 ```csharp
+using Microsoft.EntityFrameworkCore;
+using NOF.Hosting.AspNetCore;
+using NOF.Infrastructure;
+using NOF.Infrastructure.RabbitMQ;
+using NOF.Infrastructure.StackExchangeRedis;
+
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddJwtAuthority();
+builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-builder.AddRabbitMQ();
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
+builder.AddRabbitMQ(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+});
 
-builder.AddEFCore<AppDbContext>()
-    .AutoMigrate()
-    .UsePostgreSQL();
-
-builder.AddRedisCache();
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .MigrateOnInitialize();
 
 var app = await builder.BuildAsync();
 
-app.MapServiceToHttpEndpoints<IMyAppService>();
+app.MapOpenApi();
+app.MapHttpEndpoint<MyAppService>();
 
 await app.RunAsync();
 ```
@@ -63,16 +76,18 @@ await app.RunAsync();
 ```text
 NOF.Domain                     <- Domain entities, aggregate roots, events
 NOF.Contract                   <- Requests, commands, notifications, DTOs
-NOF.Application                <- Handlers, state machines, application services
+NOF.Application                <- RPC servers, handlers, state machines, application services
 NOF.Hosting.Abstraction        <- Host builder and step contracts
-NOF.Infrastructure             <- Builder implementation and shared runtime pipeline
+NOF.Infrastructure             <- Builder defaults and shared runtime pipeline
 NOF.UI                         <- Shared UI components and browser client primitives
 NOF.Hosting.AspNetCore         <- ASP.NET Core host integration
 NOF.Hosting.BlazorWebAssembly  <- Blazor WebAssembly host integration
-NOF.Hosting.Maui               <- .NET MAUI host integration for cross-platform apps
-NOF.Contract.Extension.*       <- Optional contract extensions (e.g., JWT)
-NOF.Infrastructure.Extension.* <- Optional infrastructure extensions (e.g., JWT)
-NOF.Infrastructure.*           <- Persistence, messaging, and caching providers
+NOF.Hosting.Console            <- Console host integration
+NOF.Hosting.Maui               <- .NET MAUI host integration
+NOF.Contract.Extension.*       <- Optional contract extensions (for example JWT)
+NOF.Hosting.Extension.*        <- Optional hosting extensions (for example outbound JWT propagation)
+NOF.Infrastructure.Extension.* <- Optional infrastructure extensions (for example JWT authority/resource server)
+NOF.Infrastructure.*           <- Messaging and caching providers
 ```
 
 ## Documentation
@@ -85,7 +100,8 @@ The test layout mirrors `src/` at package level:
 
 - Core package tests: `tests/NOF.*.Tests`
 - Extension package tests: `tests/Extensions/NOF.*.Tests`
-- Source generator tests are colocated with parent package tests (for example `NOF.Domain` + `NOF.Domain.SourceGenerator` in `tests/NOF.Domain.Tests`)
+- Infrastructure provider tests: `tests/Infrastructures/NOF.*.Tests`
+- Source generator tests are colocated with parent package tests when practical
 
 ## Dependency Version Management
 

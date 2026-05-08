@@ -1,28 +1,31 @@
-﻿# NOF.Application
+# NOF.Application
 
 Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Contains the application service abstractions: RPC service implementation generation, command handlers, notification handlers, state machines, caching, and unit of work patterns. This is where your business logic orchestration lives.
-
-For Redis-specific cache data structure abstractions, see the separate `NOF.Application.Extension.Redis` package.
+Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, caching, and unit of work patterns.
 
 ## Key Abstractions
 
-### RPC Service Implementation
+### RPC Servers
+
+RPC contracts are declared on `IRpcService` interfaces in the contract layer. Application implementations use `RpcServer<TService>`:
 
 ```csharp
-public class GetOrderHandler : OrderService.GetOrder
-{
-    public async Task<Result<OrderDto>> GetOrderAsync(
-        GetOrderRequest request, CancellationToken cancellationToken)
-    {
-        var order = await _repository.FindAsync([request.Id], cancellationToken);
-        if (order is null)
-            return Result.Fail("404", "Order not found");
+public partial class OrderService : RpcServer<IOrderService>;
 
-        return Result.Success(new OrderDto(order.Id, order.Status));
+public class GetOrder : OrderService.GetOrder
+{
+    public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
+    {
+        var order = await _repository.FindAsync(request.Id, cancellationToken);
+        if (order is null)
+        {
+            return Result.Fail("404", "Order not found");
+        }
+
+        return new OrderDto(order.Id, order.Status);
     }
 }
 ```
@@ -32,10 +35,9 @@ public class GetOrderHandler : OrderService.GetOrder
 ```csharp
 public class SendEmailHandler : CommandHandler<SendEmailCommand>
 {
-    public override async Task GetOrderAsync(
-        SendEmailCommand command, CancellationToken cancellationToken)
+    public override Task HandleAsync(SendEmailCommand command, CancellationToken cancellationToken)
     {
-        // Fire-and-forget command processing
+        return Task.CompletedTask;
     }
 }
 ```
@@ -45,34 +47,30 @@ public class SendEmailHandler : CommandHandler<SendEmailCommand>
 ```csharp
 public class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {
-    public override async Task GetOrderAsync(
-        OrderCreatedNotification notification, CancellationToken cancellationToken)
+    public override Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
     {
-        // React to domain events (pub/sub)
+        return Task.CompletedTask;
     }
 }
 ```
 
 ### State Machines
 
-Declarative, event-driven state machine with persistent context:
+Declarative, event-driven state machines:
 
 ```csharp
-public class OrderStateMachine : IStateMachineDefinition<OrderState, OrderContext>
+public class OrderStateMachine : IStateMachineDefinition<OrderState>
 {
-    public void Build(IStateMachineBuilder<OrderState, OrderContext> builder)
+    public void Build(IStateMachineBuilder<OrderState> builder)
     {
         builder.Correlate<OrderCreatedNotification>(n => n.OrderId.ToString());
         builder.Correlate<PaymentReceivedNotification>(n => n.OrderId.ToString());
 
-        builder.StartWhen<OrderCreatedNotification>(
-                OrderState.Pending,
-                n => new OrderContext { OrderId = n.OrderId })
-            .SendCommandAsync((ctx, n) => new StartProcessingCommand(n.OrderId));
+        builder.StartWhen<OrderCreatedNotification>(OrderState.Pending)
+            .SendCommandAsync(n => new StartProcessingCommand(n.OrderId));
 
         builder.On(OrderState.Pending)
             .When<PaymentReceivedNotification>()
-            .Modify((ctx, n) => ctx.PaidAt = DateTime.UtcNow)
             .TransitionTo(OrderState.Completed);
     }
 }
@@ -80,86 +78,23 @@ public class OrderStateMachine : IStateMachineDefinition<OrderState, OrderContex
 
 ### Transactional Message Sending
 
-Handler base classes provide built-in transactional outbox support - commands and notifications sent within a handler are automatically batched with the unit of work.
+Handlers can use `IDeferredCommandSender` and `IDeferredNotificationPublisher` for outbox-backed dispatch coordinated with the unit of work.
 
-### Object Mapping (IMapper)
+### Object Mapping (`IMapper`)
 
-Zero-reflection, explicit-only object mapper. Each `MapKey(Source, Destination, Name?)` holds exactly one delegate.
-No built-in mappings are provided - all mappings must be explicitly registered (explicit > implicit).
-
-**Registration** - `Add` (set/replace), `TryAdd` (skip if key exists):
-
-```csharp
-// Pre-build (Options pattern)
-builder.Services.Configure<MapperOptions>(o =>
-    o.Add<ConfigFile, ConfigFileDto>(f =>
-        new ConfigFileDto((string)f.Name, (string)f.Content)));
-
-// With IMapper for nested mapping
-o.Add<Order, OrderSummary>((o, mapper) => new OrderSummary(mapper.Map<Address, AddressDto>(o.Address)));
-
-// Runtime - TryAdd is safe in constructors (no-op if key already registered)
-_mapper.TryAdd<ConfigNode, ConfigNodeDto>(node => new ConfigNodeDto(...));
-
-// Non-generic (MapFunc: (object, IMapper) - object)
-_mapper.Add(typeof(Order), typeof(OrderDto), (src, mapper) => MapOrder((Order)src));
-```
-
-**Named mappings** - multiple names per type pair:
-
-```csharp
-_mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id), name: "summary");
-_mapper.Add<Order, OrderDto>(o => new OrderDto(o.Id, o.Details), name: "full");
-var dto = _mapper.Map<Order, OrderDto>(order, name: "full");
-```
-
-**TryMap** - standard C# `Try` pattern with `out` parameter:
-
-```csharp
-if (_mapper.TryMap<Order, OrderDto>(order, out var dto))
-{
-    // dto is the mapped value
-}
-```
-
-**Fluent extension syntax:**
-
-```csharp
-var dto = entity.Map.To<EntityDto>();                   // Registered mapping, fallback to cast
-var dto = entity.Map.To<EntityDto>(name: "v2");         // Named mapping
-var obj = entity.Map.To(typeof(EntityDto));              // Non-generic
-var dto = entity.Map.As<DerivedEntity>().To<EntityDto>(); // Change source type for lookup
-var dto = entity.Map.AsRuntime.To<EntityDto>();           // Use runtime type for lookup
-```
-
-**Nullable fallback**: A mapping `A - T` is automatically used for `A - T?` when no direct `A - T?` registration exists.
-
-### Source-Generated Mappings ([Mappable])
-
-For common scenarios (property-to-property, domain - DTO), use `[Mappable]` on a `partial static class` to let the source generator write the mapping delegates for you:
+NOF uses an explicit mapper with optional source-generated registrations via `[Mappable]`:
 
 ```csharp
 [Mappable<Order, OrderDto>]
-[Mappable<Order, OrderSummary>(TwoWay = true)]      // generates both directions
-[Mappable(typeof(Config), typeof(ConfigDto))]        // non-generic overload
+[Mappable<Order, OrderSummary>(TwoWay = true)]
 public static partial class Mappings;
-
-// Register at startup:
-builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 ```
 
-**Attributes can be scattered across multiple files** using partial declarations of the same class - the generator merges them into a single `ConfigureAutoMappings()` extension method.
+Register generated mappings at startup:
 
-**Matching rules:**
-- Only public, same-name properties are mapped (case-insensitive).
-- The constructor with the most matched parameters is selected. Matched writable properties also appear in the member initializer.
-- `Optional<T>`, `Result<T>`, `IValueObject<T>` are unwrapped/wrapped automatically.
-- Common conversions (string鈫攊nt, int鈫攅num, enum鈫攕tring, numeric casts) are built-in.
-- All other conversions use the `IMapper` parameter.
-
-**Diagnostics:**
-- `NOF020` - duplicate mapping (including TwoWay reverse).
-- `NOF021` - `[Mappable]` class must be `partial static`.
+```csharp
+builder.Services.Configure<MapperOptions>(options => options.ConfigureAutoMappings());
+```
 
 ## Installation
 
@@ -167,10 +102,8 @@ builder.Services.Configure<MapperOptions>(o => o.ConfigureAutoMappings());
 dotnet add package NOF.Application
 ```
 
-`ICacheService` implements `IDistributedCache`, so standard distributed cache consumers can resolve either abstraction from NOF cache registrations.
+`ICacheService` also implements `IDistributedCache`, so standard distributed cache consumers can resolve either abstraction from NOF cache registrations.
 
 ## License
 
 Apache-2.0
-
-

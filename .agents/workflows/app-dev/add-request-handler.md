@@ -4,45 +4,48 @@ description: Add a request/response operation using NOF RPC service contracts
 
 # Add Request-Response Operation
 
-NOF request-response is modeled via `IRpcService` contracts and generated service implementations.
+NOF request-response is modeled via `IRpcService` contracts and `RpcServer<TService>` implementations.
 
 ## 1. Define Contract
 
 ```csharp
-[GenerateService]
-public partial interface IOrderService : IRpcService
+public interface IOrderService : IRpcService
 {
-    [PublicApi]
     [HttpEndpoint(HttpVerb.Post, "api/orders/query")]
-    Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken = default);
+    Result<GetOrderResponse> GetOrder(GetOrderRequest request);
 }
 
 public record GetOrderRequest(string Id);
 public record GetOrderResponse(string Id, string Name);
 ```
 
-## 2. Implement Generated Base Type
+## 2. Define the RPC Server Container
+
+```csharp
+public partial class OrderService : RpcServer<IOrderService>;
+```
+
+## 3. Implement the Generated Handler Base
 
 ```csharp
 public sealed class GetOrder : OrderService.GetOrder
 {
-    public override async Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken)
+    public override Task<Result<GetOrderResponse>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
-        // query repository...
-        return new GetOrderResponse(request.Id, "demo");
+        return Task.FromResult(Result.Success(new GetOrderResponse(request.Id, "demo")));
     }
 }
 ```
 
-## 3. Wire in Program.cs
+## 4. Wire in Program.cs
 
 ```csharp
-builder.AddApplicationPart(typeof(IOrderService).Assembly);
+builder.AddApplicationPart(typeof(OrderService).Assembly);
 var app = await builder.BuildAsync();
-app.MapServiceToHttpEndpoints<IOrderService>();
+app.MapHttpEndpoint<OrderService>();
 ```
 
-## 4. Call from Other Components
+## 5. Call from Other Components
 
-- In-process: inject generated service implementation/client.
-- Cross-service: use generated HTTP service client.
+- In-process: inject the generated local client or use the normal dispatch abstractions.
+- Over HTTP: expose the RPC server with `MapHttpEndpoint<OrderService>()` and call the generated client from another NOF application.

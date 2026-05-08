@@ -2,7 +2,7 @@
 
 > Audience: human developers and AI coding assistants.
 
-This directory contains shared instructions for working with the NOF codebase.  
+This directory contains shared instructions for working with the NOF codebase.
 When framework behavior changes, keep these files in sync with `src/`, `tests/`, and sample usage.
 
 ## Directory Structure
@@ -30,7 +30,8 @@ When framework behavior changes, keep these files in sync with `src/`, `tests/`,
       add-request-handler.md
       add-state-machine.md
   skills/
-    nof-app-development/SKILL.md
+    nof-app-development/
+      SKILL.md
 ```
 
 ## Which File To Use
@@ -43,5 +44,6 @@ When framework behavior changes, keep these files in sync with `src/`, `tests/`,
 ## Test Layout Notes
 
 - `tests/` mirrors `src/` at a package level as much as possible.
-- Source generator tests are colocated with their parent package test projects (for example `NOF.Domain` and `NOF.Domain.SourceGenerator` are tested in `tests/NOF.Domain.Tests`).
+- Source generator tests are colocated with their parent package test projects when practical.
 - Extension package tests are under `tests/Extensions/*`.
+- Infrastructure provider tests are under `tests/Infrastructures/*`.

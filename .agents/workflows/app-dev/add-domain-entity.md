@@ -1,167 +1,149 @@
 ---
-description: How to add a domain entity, aggregate root, value objects, and domain events in a NOF application
+description: How to add domain types in a NOF application using the current value-object and in-memory event model
 ---
 
-# Add a Domain Entity
+# Add Domain Types
 
-NOF follows DDD patterns with aggregate roots, entities, value objects, and domain events.
+NOF currently models domain code around:
 
-## Adding a Value Object
+- value objects via `IValueObject<T>`
+- generated IDs via `[NewableValueObject]`
+- failure definitions via `[Failure(...)]`
+- ordinary domain classes
+- in-process domain events via `PublishAsEvent()`
+
+## Add a Value Object
 
 Value objects are immutable types wrapping a primitive. Implement `IValueObject<T>` and the source generator produces constructors, factory methods, JSON converters, equality, and casts.
-
-1. Create a file in `Domain/ValueObjects/`:
-   ```csharp
-   using NOF.Domain;
-
-   [NewableValueObject]  // Adds a static New() method (for SnowflakeId generation)
-   public readonly partial struct OrderId : IValueObject<long>;
-   ```
-
-2. For value objects with validation (override the `static virtual Validate` method):
-   ```csharp
-   using NOF.Domain;
-
-   public readonly partial struct EmailAddress : IValueObject<string>
-   {
-       public static void Validate(string value)
-       {
-           if (string.IsNullOrWhiteSpace(value))
-           {
-               throw new ValidationException("Email cannot be empty.");
-           }
-
-           if (!value.Contains('@'))
-           {
-               throw new ValidationException("Invalid email format.");
-           }
-       }
-   }
-   ```
-
-3. Usage:
-   ```csharp
-   var id = OrderId.New();           // SnowflakeId (requires [NewableValueObject])
-   var id = OrderId.Of(12345L);      // From primitive
-   long raw = (long)id;              // Back to primitive (explicit cast)
-   long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
-   var email = EmailAddress.Of("a@b.com");  // Validated
-   ```
-
-## Adding a Domain Event
-
-1. Create a file in `Domain/Events/`:
-   ```csharp
-   using NOF.Domain;
-
-   public record OrderCreatedEvent(OrderId Id, string CustomerName) : IEvent;
-   ```
-
-## Adding an Aggregate Root
-
-1. Create a file in `Domain/AggregateRoots/`:
-   ```csharp
-   using NOF.Domain;
-
-   public class Order : AggregateRoot
-   {
-       public OrderId Id { get; init; }
-       public string CustomerName { get; private set; }
-       public OrderStatus Status { get; private set; }
-
-       private Order() { }  // EF Core requires parameterless constructor
-
-       public static Order Create(string customerName)
-       {
-           var order = new Order
-           {
-               Id = OrderId.New(),
-               CustomerName = customerName,
-               Status = OrderStatus.Pending
-           };
-
-           order.AddEvent(new OrderCreatedEvent(order.Id, customerName));
-           return order;
-       }
-
-       public void Confirm()
-       {
-           Status = OrderStatus.Confirmed;
-           AddEvent(new OrderConfirmedEvent(Id));
-       }
-   }
-   ```
-
-## Adding a Child Entity
-
-For entities owned by an aggregate root, implement `IEntity` marker interface:
 
 ```csharp
 using NOF.Domain;
 
-public class OrderItem : IEntity
+[NewableValueObject]
+public readonly partial struct OrderId : IValueObject<long>;
+```
+
+For value objects with validation:
+
+```csharp
+using NOF.Domain;
+
+public readonly partial struct EmailAddress : IValueObject<string>
 {
-    public string ProductName { get; init; }
-    public int Quantity { get; private set; }
-
-    internal OrderItem() { }
-
-    public OrderItem(string productName, int quantity)
+    public static void Validate(string value)
     {
-        ProductName = productName;
-        Quantity = quantity;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ValidationException("Email cannot be empty.");
+        }
+
+        if (!value.Contains('@'))
+        {
+            throw new ValidationException("Invalid email format.");
+        }
     }
 }
 ```
 
-## Adding a Repository Interface
-
-1. Create a file in `Domain/Repositories/`:
-   ```csharp
-   using NOF.Domain;
-
-   public interface IOrderRepository : IRepository<Order, OrderId>
-   {
-       Task<Order?> FindByCustomerAsync(string customerName, CancellationToken ct = default);
-   }
-   ```
-
-2. Implement in the host project (EF Core):
-   ```csharp
-   using NOF.Infrastructure.EntityFrameworkCore;
-
-   [AutoInject(Lifetime.Scoped)]
-   public class OrderRepository : EFCoreRepository<Order, OrderId>, IOrderRepository
-   {
-       public OrderRepository(DbContext dbContext) : base(dbContext) { }
-
-       public async Task<Order?> FindByCustomerAsync(string customerName, CancellationToken ct)
-           => await DbSet.FirstOrDefaultAsync(o => o.CustomerName == customerName, ct);
-   }
-   ```
-
-## Adding Failure Definitions
-
-Use `[Failure]` to generate static `Failure` instances:
+## Add Failure Definitions
 
 ```csharp
 using NOF.Domain;
 
-[Failure("OrderNotFound", "Order not found.", "404")]
-[Failure("OrderAlreadyConfirmed", "Order is already confirmed.", "409")]
+[Failure("NotFound", "Order not found", "404001")]
+[Failure("InvalidStatus", "Order status is invalid", "400002")]
 public static partial class OrderFailures;
+```
 
-// Usage in handler:
-// return Result.Fail(OrderFailures.OrderNotFound);
+## Add a Domain Class
+
+```csharp
+using NOF.Abstraction;
+using NOF.Domain;
+
+public class Order
+{
+    public OrderId Id { get; init; }
+    public EmailAddress CustomerEmail { get; private set; }
+    public string Status { get; private set; }
+
+    private Order() { }
+
+    public static Order Create(EmailAddress customerEmail)
+    {
+        var order = new Order
+        {
+            Id = OrderId.New(),
+            CustomerEmail = customerEmail,
+            Status = "Pending"
+        };
+
+        new OrderCreatedEvent(order.Id, order.CustomerEmail).PublishAsEvent();
+        return order;
+    }
+
+    public void Confirm()
+    {
+        if (Status == "Confirmed")
+        {
+            throw new DomainException(OrderFailures.InvalidStatus);
+        }
+
+        Status = "Confirmed";
+        new OrderConfirmedEvent(Id).PublishAsEvent();
+    }
+}
+```
+
+## Add an In-Memory Event
+
+```csharp
+public record OrderCreatedEvent(OrderId Id, EmailAddress CustomerEmail);
+public record OrderConfirmedEvent(OrderId Id);
+```
+
+## Handle the Event in Application Layer
+
+```csharp
+using NOF.Abstraction;
+
+public sealed class OrderCreatedProjectionHandler : InMemoryEventHandler<OrderCreatedEvent>
+{
+    public override Task HandleAsync(OrderCreatedEvent @event, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+}
+```
+
+## Persist with `DbContext`
+
+Application handlers persist domain objects directly through `DbContext` / `NOFDbContext`:
+
+```csharp
+public sealed class CreateOrder : OrderService.CreateOrder
+{
+    private readonly DbContext _dbContext;
+
+    public CreateOrder(DbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public override async Task<Result> HandleAsync(CreateOrderRequest request, CancellationToken cancellationToken)
+    {
+        var order = Order.Create(EmailAddress.Of(request.CustomerEmail));
+        _dbContext.Set<Order>().Add(order);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
 ```
 
 ## Notes
 
-- Aggregate roots raise domain events via `AddEvent()` — events are dispatched when `IUnitOfWork.SaveChangesAsync()` is called.
-- `AggregateRoot.Events` is `ICollection<IEvent>` — users can add, remove, or clear events freely.
-- Child entities use `IEntity` marker interface (no base class). `Entity` base class has been removed.
-- After modifying an aggregate root, you **must** call `_uow.Update(entity)` before `SaveChangesAsync()` — EF Core auto-detect changes is disabled.
-- `[NewableValueObject]` requires the SnowflakeId generator to be configured (it is by default in `NOFAppBuilder`).
-- Value objects use explicit casts, not implicit — `(long)orderId` to get the primitive, or `id.GetUnderlyingValue()`.
-- Override `static void Validate(T value)` on the struct to add custom validation (it's a `static virtual` on the interface — default is no-op).
-- Always keep the parameterless constructor `private` or `internal` for EF Core compatibility.
+- Prefer ordinary domain classes plus value objects over nonexistent aggregate root base types.
+- Raise in-process domain events with `PublishAsEvent()`.
+- Handle those events with `InMemoryEventHandler<TEvent>` in the current DI scope.
+- Persist changes through `DbContext` / `NOFDbContext` in the application layer.
+- Value objects use explicit casts rather than a public `.Value` property.

@@ -25,9 +25,9 @@ Use this file when contributing to the NOF framework itself.
 
 ## Key Patterns
 
-- CQRS: `IRpcService`, `ICommand`, `INotification`, `IEvent`.
+- CQRS: `IRpcService`, `ICommand`, `INotification`, `InMemoryEventHandler<T>`, `IEventPublisher`.
 - Step pipeline: registration and initialization steps with `IAfter<T>` / `IBefore<T>`.
-- Source-gen attributes: `[AutoInject]`, `[PublicApi]`, `[HttpEndpoint]`, `[GenerateService]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`.
+- Source-gen attributes: `[AutoInject]`, `[HttpEndpoint]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`.
 - Transactional outbox: `IDeferredNotificationPublisher` / `IDeferredCommandSender`.
 
 ## Coding Rules

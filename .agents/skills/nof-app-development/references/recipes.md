@@ -3,11 +3,18 @@
 ## Program Bootstrap
 
 ```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+using Microsoft.EntityFrameworkCore;
+using NOF.Hosting.AspNetCore;
+using NOF.Infrastructure;
+using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Infrastructure.RabbitMQ;
+using NOF.Infrastructure.StackExchangeRedis;
+
+var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-builder.AddRedisCache();
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 builder.AddJwtAuthority(o => o.Issuer = "MyApp");
 builder.AddJwtResourceServer(o =>
 {
@@ -16,27 +23,34 @@ builder.AddJwtResourceServer(o =>
     o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
 });
 builder.AddRabbitMQ();
-builder.AddEFCore<AppDbContext>().UseSharedDatabaseTenancy().AutoMigrate().UsePostgreSQL();
+
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .MigrateOnInitialize();
 
 var app = await builder.BuildAsync();
-app.MapServiceToHttpEndpoints<IMyAppService>();
+app.MapOpenApi();
+app.MapHttpEndpoint<MyAppService>();
 await app.RunAsync();
 ```
 
 ## RPC Contract + Implementation
 
 ```csharp
-[GenerateService]
-public partial interface IOrderService : IRpcService
+public interface IOrderService : IRpcService
 {
-    [PublicApi]
-    [HttpEndpoint(HttpVerb.Get, "api/orders/{id}")]
-    Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken = default);
+    [HttpEndpoint(HttpVerb.Get, "api/orders/get")]
+    Result<GetOrderResponse> GetOrder(GetOrderRequest request);
 }
+
+public partial class OrderService : RpcServer<IOrderService>;
 
 public sealed class GetOrder : OrderService.GetOrder
 {
-    public Task<Result<GetOrderResponse>> GetOrderAsync(GetOrderRequest request, CancellationToken cancellationToken)
+    public override Task<Result<GetOrderResponse>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
         return Task.FromResult(Result.Success(new GetOrderResponse(request.Id, "sample")));
     }
@@ -46,9 +60,9 @@ public sealed class GetOrder : OrderService.GetOrder
 ## Domain Update
 
 ```csharp
-order.UpdateName(request.Name);
-_uow.Update(order);
-await _uow.SaveChangesAsync(cancellationToken);
+var order = await _dbContext.FindAsync<Order>([request.Id], cancellationToken);
+order!.Confirm();
+await _dbContext.SaveChangesAsync(cancellationToken);
 ```
 
 ## Access User/Tenant
@@ -65,5 +79,5 @@ public sealed class MyHandler(IUserContext userContext, IExecutionContext execut
 
 ```csharp
 _deferredNotificationPublisher.Publish(new OrderCreatedNotification(order.Id));
-await _uow.SaveChangesAsync(cancellationToken);
+await _dbContext.SaveChangesAsync(cancellationToken);
 ```

@@ -4,11 +4,12 @@ description: Add JWT authority/resource-server capabilities to a NOF application
 
 # Add JWT Auth
 
-NOF has two JWT modes:
-- authority mode (issue/revoke/introspect tokens)
-- resource-server mode (validate external or local-issued tokens)
+NOF supports two JWT modes:
 
-## 1. Add Package
+- authority mode (issue/revoke/introspect tokens)
+- resource-server mode (validate tokens and propagate them downstream)
+
+## 1. Add Packages
 
 ```bash
 dotnet add package NOF.Infrastructure.Extension.Authorization.Jwt
@@ -18,7 +19,12 @@ dotnet add package NOF.Contract.Extension.Authorization.Jwt
 ## 2. Register in Program.cs
 
 ```csharp
-builder.AddJwtAuthority(o => o.Issuer = "MyApp");
+builder.AddJwtAuthority(o =>
+{
+    o.Issuer = "MyApp";
+    o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
+        ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
+});
 
 builder.AddJwtResourceServer(o =>
 {
@@ -28,35 +34,26 @@ builder.AddJwtResourceServer(o =>
 });
 ```
 
-## 3. Map Services to HTTP Endpoints
+## 3. Expose HTTP Endpoints Explicitly
 
 ```csharp
-app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
-app.MapServiceToHttpEndpoints<IJwksService>();
+app.MapHttpEndpoint<JwtAuthorityService>();
+app.MapGet("/.well-known/jwks.json", async (IJwksService jwksService, CancellationToken cancellationToken) =>
+{
+    var document = await jwksService.GetJwksAsync(cancellationToken);
+    return Results.Ok(document);
+});
 ```
 
-## 4. Issue and Validate Tokens
-
-```csharp
-var issue = await _requestSender.SendAsync(new GenerateJwtTokenRequest(
-    UserId: "u-1",
-    TenantId: "t-1",
-    Audience: "my-api",
-    AccessTokenExpiration: TimeSpan.FromMinutes(30),
-    RefreshTokenExpiration: TimeSpan.FromDays(7)));
-
-var validate = await _requestSender.SendAsync(
-    new ValidateJwtRefreshTokenRequest(issue.Value!.TokenPair.RefreshToken));
-```
-
-## 5. Access Identity in Handlers
+## 4. Access Identity in Handlers
 
 Inject:
-- `IUserContext` for current principal and permissions
+
+- `IUserContext` for the current principal and permissions
 - `IExecutionContext` for tenant and tracing headers
 
-## 6. Notes
+## Notes
 
-- `AddJwksRequestHandler()` currently returns the selector for chaining compatibility.
-- JWKS fetch + cache is handled by `IJwksProvider`.
-- Key rotation notification is `JwtKeyRotationNotification`.
+- `AddJwtAuthority(...)` automatically adds the authority assembly as an application part.
+- `AddJwtResourceServer(...)` also enables outbound token propagation.
+- Key rotation notifications use `JwtKeyRotationNotification`.

@@ -1,163 +1,64 @@
 ---
-description: How to add domain event handlers and use the transactional outbox in a NOF application
+description: How to add in-process event handlers and transactional outbox behavior in a NOF application
 ---
 
-# Add Domain Event Handlers & Transactional Outbox
+# Add In-Process Event Handlers and Transactional Outbox
 
-NOF dispatches domain events raised by aggregate roots when `IUnitOfWork.SaveChangesAsync()` is called. Events can update read models, invalidate caches, or trigger side effects.
+NOF supports two complementary patterns:
 
-## 1. Define a Domain Event
+- in-process events via `InMemoryEventHandler<T>` and `IEventPublisher`
+- transactional outbox dispatch via `IDeferredNotificationPublisher` / `IDeferredCommandSender`
 
-In the Domain project:
+## 1. Define an In-Process Event
+
 ```csharp
-using NOF.Domain;
-
-public record OrderCreatedEvent(OrderId Id, string CustomerName) : IEvent;
-public record OrderUpdatedEvent(OrderId Id) : IEvent;
+public record ProjectionRebuilt(string TenantId);
 ```
 
-## 2. Raise Events from Aggregate Root
+## 2. Implement an Event Handler
 
 ```csharp
-public class Order : AggregateRoot
+public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRebuilt>
 {
-    public static Order Create(string customerName)
+    public override Task HandleAsync(ProjectionRebuilt @event, CancellationToken cancellationToken)
     {
-        var order = new Order { Id = OrderId.New(), CustomerName = customerName };
-        order.AddEvent(new OrderCreatedEvent(order.Id, customerName));
-        return order;
-    }
-
-    public void UpdateName(string newName)
-    {
-        CustomerName = newName;
-        AddEvent(new OrderUpdatedEvent(Id));
-    }
-}
-
-// In handler — explicit Update required:
-// order.UpdateName(newName);
-// _uow.Update(order);
-// await _uow.SaveChangesAsync(ct);
-```
-
-## 3. Implement Domain Event Handlers
-
-In the Application project under `EventHandlers/`:
-
-```csharp
-using NOF.Application;
-
-// Update a read model
-public class UpdateOrderViewOnCreated : IEventHandler<OrderCreatedEvent>
-{
-    private readonly IOrderViewRepository _viewRepo;
-
-    public UpdateOrderViewOnCreated(IOrderViewRepository viewRepo)
-    {
-        _viewRepo = viewRepo;
-    }
-
-    public async Task HandleAsync(OrderCreatedEvent @event, CancellationToken ct)
-    {
-        await _viewRepo.CreateViewAsync(@event.Id, @event.CustomerName, ct);
-    }
-}
-
-// Invalidate cache
-public class InvalidateCacheOnOrderUpdated : IEventHandler<OrderUpdatedEvent>
-{
-    private readonly ICacheService _cache;
-
-    public InvalidateCacheOnOrderUpdated(ICacheService cache)
-    {
-        _cache = cache;
-    }
-
-    public async Task HandleAsync(OrderUpdatedEvent @event, CancellationToken ct)
-    {
-        await _cache.RemoveAsync(new OrderCacheKey((long)@event.Id), ct);
+        return Task.CompletedTask;
     }
 }
 ```
 
-## 4. Domain Events vs Notifications
-
-| Feature | Domain Event (`IEvent`) | Notification (`INotification`) |
-|---------|------------------------|-------------------------------|
-| Scope | In-process only | In-process + distributed (RabbitMQ) |
-| Dispatch | Automatic on `SaveChangesAsync()` | Manual via `INotificationPublisher` |
-| Handler | `IEventHandler<T>` | `INotificationHandler<T>` |
-| Transactional | Same transaction as aggregate | Via transactional outbox |
-
-## 5. Transactional Outbox
-
-The outbox ensures notifications are only published after the database transaction commits — preventing message loss.
-
-### Using IDeferredNotificationPublisher
+## 3. Publish the Event in Scope
 
 ```csharp
-public class CreateOrderCommandHandler : ICommandHandler<CreateOrderCommand>
+await _eventPublisher.PublishAsync(new ProjectionRebuilt("tenant-a"), cancellationToken);
+```
+
+## 4. Use the Transactional Outbox for Cross-Boundary Work
+
+```csharp
+public sealed class CreateOrderHandler : CommandHandler<CreateOrderCommand>
 {
-    private readonly IOrderRepository _orderRepo;
-    private readonly IUnitOfWork _uow;
+    private readonly DbContext _dbContext;
     private readonly IDeferredNotificationPublisher _publisher;
 
-    public CreateOrderCommandHandler(
-        IOrderRepository orderRepo,
-        IUnitOfWork uow,
-        IDeferredNotificationPublisher publisher)
+    public CreateOrderHandler(DbContext dbContext, IDeferredNotificationPublisher publisher)
     {
-        _orderRepo = orderRepo;
-        _uow = uow;
+        _dbContext = dbContext;
         _publisher = publisher;
     }
 
-    public async Task HandleAsync(CreateOrderCommand command, CancellationToken ct)
+    public override async Task HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken)
     {
-        var order = Order.Create(command.CustomerName);
-        _orderRepo.Add(order);
-
-        // Deferred — written to outbox table in the same transaction
-        _publisher.Publish(new OrderCreatedNotification((long)order.Id));
-
-        // Domain events (IEvent) + outbox messages are all committed atomically
-        await _uow.SaveChangesAsync(ct);
-
+        var order = Order.Create(EmailAddress.Of(command.CustomerEmail));
+        _dbContext.Set<Order>().Add(order);
+        _publisher.Publish(new OrderCreatedNotification(order.Id));
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
 ```
 
-### How It Works
-
-1. `_publisher.Publish(notification)` — adds the notification to the outbox context (not yet persisted).
-2. `_uow.SaveChangesAsync()` — in a single transaction:
-   - Persists the aggregate root changes
-   - Dispatches domain events (`IEvent`) to `IEventHandler<T>` handlers
-   - Writes outbox messages to the `OutboxMessage` table
-3. A background service picks up outbox messages and publishes them via RabbitMQ.
-4. The inbox (`InboxMessage` table) ensures idempotent processing on the consumer side.
-
-## 6. Multiple Handlers for Same Event
-
-You can register multiple handlers for the same domain event:
-
-```csharp
-// Handler 1: Update read model
-public class UpdateViewOnOrderCreated : IEventHandler<OrderCreatedEvent> { ... }
-
-// Handler 2: Invalidate cache
-public class InvalidateCacheOnOrderCreated : IEventHandler<OrderCreatedEvent> { ... }
-
-// Handler 3: Send welcome email
-public class SendWelcomeOnOrderCreated : IEventHandler<OrderCreatedEvent> { ... }
-```
-
-All handlers execute within the same transaction scope as `SaveChangesAsync()`.
-
 ## Notes
 
-- Domain event handlers (`IEventHandler<T>`) run synchronously within the `SaveChangesAsync()` call — keep them fast.
-- For long-running side effects, use `IDeferredNotificationPublisher` to publish a notification that will be processed asynchronously.
-- The outbox/inbox tables are automatically configured by `NOFDbContext.OnModelCreating()`.
-- Background cleanup services (`InboxCleanupBackgroundService`, `OutboxCleanupBackgroundService`) are registered automatically.
+- Use `InMemoryEventHandler<T>` for same-scope, in-process reactions.
+- Use deferred notifications or commands when the work should flow through the outbox and optional transport integrations such as RabbitMQ.
+- Persist data through `DbContext` / `NOFDbContext` in the application layer.

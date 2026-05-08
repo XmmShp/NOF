@@ -4,16 +4,16 @@ description: How to scaffold a new NOF web application from scratch
 
 # Scaffold a New NOF Web Application
 
-Creates a new ASP.NET Core application powered by the NOF framework with clean architecture project structure.
+Creates a new ASP.NET Core application powered by the NOF framework with a clean architecture project structure.
 
 ## Project Structure
 
-```
+```text
 MyApp/
-  MyApp/                    — Host project (Program.cs, DbContext, appsettings.json)
-  MyApp.Domain/             — Domain layer (entities, aggregate roots, value objects, events, repositories)
-  MyApp.Application/        — Application layer (handlers, event handlers, state machines, cache keys)
-  MyApp.Contract/           — Contract layer (requests, commands, notifications, DTOs)
+  MyApp/                    - Host project (Program.cs, DbContext, appsettings.json)
+  MyApp.Domain/             - Domain layer (entities, aggregate roots, value objects, events, repositories)
+  MyApp.Application/        - Application layer (RPC servers, handlers, state machines, cache keys)
+  MyApp.Contract/           - Contract layer (RPC contracts, commands, notifications, DTOs)
 ```
 
 ## Steps
@@ -33,23 +33,19 @@ MyApp/
    cd MyApp
    dotnet add package NOF.Hosting.AspNetCore
    dotnet add package NOF.Infrastructure
-   dotnet add package NOF.Infrastructure.EntityFrameworkCore.PostgreSQL
    dotnet add package NOF.Infrastructure.RabbitMQ
    dotnet add package NOF.Infrastructure.StackExchangeRedis
-   dotnet add package NOF.Infrastructure.Extension.Authorization.Jwt
+   dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
    ```
 
 3. Add NOF layer packages:
    ```bash
-   # Domain project
    cd ../MyApp.Domain
    dotnet add package NOF.Domain
 
-   # Contract project
    cd ../MyApp.Contract
    dotnet add package NOF.Contract
 
-   # Application project
    cd ../MyApp.Application
    dotnet add package NOF.Application
    dotnet add reference ../MyApp.Domain/MyApp.Domain.csproj
@@ -65,26 +61,29 @@ MyApp/
 
 5. Create `Program.cs` in the host project:
    ```csharp
+   using Microsoft.EntityFrameworkCore;
    using NOF.Hosting.AspNetCore;
-   using NOF.Infrastructure.EntityFrameworkCore;
-   using NOF.Infrastructure.EntityFrameworkCore.PostgreSQL;
+   using NOF.Infrastructure;
    using NOF.Infrastructure.RabbitMQ;
    using NOF.Infrastructure.StackExchangeRedis;
 
-   var builder = NOFWebApplicationBuilder.Create(args, useDefaults: true);
+   var builder = NOFWebApplicationBuilder.Create(args);
    builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-   builder.AddRedisCache();
-
+   builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
    builder.AddRabbitMQ();
 
-   builder.AddEFCore<AppDbContext>()
-       .AutoMigrate()
-       .UsePostgreSQL();
+   builder.UseDbContext<AppDbContext>()
+       .WithTenantMode(TenantMode.DatabasePerTenant)
+       .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+           ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
+       .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+       .MigrateOnInitialize();
 
    var app = await builder.BuildAsync();
 
-   app.MapServiceToHttpEndpoints<IMyAppService>();
+   app.MapOpenApi();
+   app.MapHttpEndpoint<MyAppService>();
 
    await app.RunAsync();
    ```
@@ -92,18 +91,15 @@ MyApp/
 6. Create `AppDbContext.cs` in the host project:
    ```csharp
    using Microsoft.EntityFrameworkCore;
-   using NOF.Infrastructure.EntityFrameworkCore;
+   using NOF.Infrastructure;
 
    public class AppDbContext : NOFDbContext
    {
        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-       // Add DbSet<T> properties for your entities here
-
        protected override void OnModelCreating(ModelBuilder modelBuilder)
        {
            base.OnModelCreating(modelBuilder);
-           // Configure entity mappings here
        }
    }
    ```
@@ -112,48 +108,17 @@ MyApp/
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
+       "postgres": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
        "rabbitmq": "Host=localhost;Port=5672;UserName=guest;Password=guest;VirtualHost=/",
        "redis": "localhost:6379"
-     },
-     "NOF": {
-       "DbContextFactory": {
-         "AutoMigrate": true
-       }
      }
    }
    ```
 
-8. Set up the domain project folder structure:
-   ```
-   MyApp.Domain/
-     AggregateRoots/
-     Entities/
-     Events/
-     Repositories/
-     ValueObjects/
-   ```
-
-9. Set up the application project folder structure:
-   ```
-   MyApp.Application/
-     RequestHandlers/
-     EventHandlers/
-     Handlers/
-     CacheKeys/
-     Repositories/
-     StateMachines/
-   ```
-
-10. Set up the contract project folder structure:
-    ```
-    MyApp.Contract/
-      Requests/
-    ```
-
 ## Notes
 
-- `NOFWebApplicationBuilder.Create(args, useDefaults: true)` sets up OpenTelemetry, JSON serialization, OpenAPI (Scalar), and other defaults.
-- `builder.AddApplicationPart(assembly)` triggers assembly-level initializers generated by NOF source generators (AutoInject/handler/RPC mapper registrations).
-- `app.MapServiceToHttpEndpoints<TService>()` source-generates minimal API endpoints for the selected RPC service interface.
-- Always call `base.OnModelCreating(modelBuilder)` in your `NOFDbContext` subclass — it configures outbox/inbox tables.
+- `NOFWebApplicationBuilder.Create(args)` already configures JSON options, CORS, and OpenAPI services.
+- `builder.AddApplicationPart(assembly)` triggers assembly-level initializers generated by NOF source generators.
+- `app.MapHttpEndpoint<TRpcServer>()` maps one RPC server type to minimal API endpoints.
+- `app.MapOpenApi()` is optional and stays under application control.
+- Always call `base.OnModelCreating(modelBuilder)` in your `NOFDbContext` subclass.

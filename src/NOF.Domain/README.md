@@ -1,90 +1,85 @@
 # NOF.Domain
 
-Domain layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
+Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Provides the foundational building blocks for domain-driven design: entities, repositories, in-memory event publishing, and domain-specific annotations with source generation support.
+`NOF.Domain` currently provides the low-level domain building blocks that are shared across the framework:
+
+- `IValueObject<T>` for source-generated value objects
+- `[NewableValueObject]` for `long`-backed ID value objects
+- `Failure` and `[Failure(...)]` for strongly-typed failure definitions
+- `DomainException` and `ValidationException`
+- `IIdGenerator` and `IdGenerator.Current`
+
+This package does **not** currently expose aggregate root, repository, or unit-of-work abstractions.
 
 ## Key Abstractions
 
-### Entities & Events
-
-```csharp
-public class Order
-{
-    public Guid Id { get; private set; }
-    public OrderStatus Status { get; private set; }
-
-    public void Confirm()
-    {
-        Status = OrderStatus.Confirmed;
-        new OrderConfirmedEvent(Id).PublishAsEvent();
-    }
-}
-```
-
-Domain models no longer need to inherit from `AggregateRoot`. Events are published via the ambient `IEventPublisher` (AsyncLocal-backed) exposed through `NOF.Abstraction`.
-
-### Repository
-
-```csharp
-public interface IRepository<TAggregateRoot> where TAggregateRoot : class
-{
-    ValueTask<TAggregateRoot?> FindAsync(object?[] keyValues, CancellationToken cancellationToken = default);
-    void Add(TAggregateRoot entity);
-    void Remove(TAggregateRoot entity);
-}
-```
-
-### `[Failure]` Attribute
-
-Declaratively define domain failure codes. The source generator produces static `FailResult` instances at compile time.
-
-```csharp
-[Failure("NotFound", "Order not found", "404001")]
-[Failure("AlreadyPaid", "Order has already been paid", "409001")]
-public partial class OrderFailures;
-
-// Generated usage:
-return OrderFailures.NotFound;
-```
-
-### `IValueObject<T>` Interface
+### `IValueObject<T>`
 
 Implement `IValueObject<T>` on a `readonly partial struct` to define a value object. The source generator produces:
-- Private constructor + `Of(T)` factory that calls `Validate(T)`
-- Explicit cast to the primitive type
-- `GetUnderlyingValue()` returning the underlying primitive
-- `Equals`, `GetHashCode`, `ToString` delegating to the primitive
-- Nested `JsonConverter` for System.Text.Json
-- Optional `New()` factory via `[NewableValueObject]` (for snowflake IDs on `IValueObject<long>`)
 
-The interface provides:
-- **`static virtual void Validate(T value)`** �?override to add custom validation (default is no-op)
-- **`object IValueObject.GetUnderlyingValue()`** �?default implementation forwarding to `T GetUnderlyingValue()`
+- a private constructor accepting the primitive value
+- a static `Of(T)` factory method that calls `Validate(T)`
+- an explicit cast operator to the primitive type
+- equality members and `ToString()`
+- a nested `JsonConverter`
 
 ```csharp
-[NewableValueObject]
-public readonly partial struct OrderId : IValueObject<long>;
+using NOF.Domain;
 
 public readonly partial struct CustomerName : IValueObject<string>
 {
     public static void Validate(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException("Customer name cannot be empty");
+        {
+            throw new ValidationException("Customer name cannot be empty.");
+        }
     }
 }
-
-// Usage
-var id = OrderId.New();              // Snowflake ID
-var name = CustomerName.Of("Alice"); // Validated
-long raw = (long)id;                 // Explicit cast to primitive
-long raw2 = id.GetUnderlyingValue(); // IValueObject<T> interface
 ```
 
-The `IValueObject` / `IValueObject<T>` interfaces enable the source generator's `ValueObject �?primitive` conversion at compile time. See [design/value-object.md](/docs/design/value-object.md) for the full design rationale.
+### `[NewableValueObject]`
+
+Apply `[NewableValueObject]` to a `readonly partial struct` implementing `IValueObject<long>` to generate a `New()` factory backed by `IdGenerator.Current`.
+
+```csharp
+using NOF.Domain;
+
+[NewableValueObject]
+public readonly partial struct OrderId : IValueObject<long>;
+```
+
+Before using `New()`, ensure the app has initialized an `IIdGenerator`. In NOF hosts this is typically done through infrastructure setup such as `builder.AddSnowflakeIdGenerator()`.
+
+### `Failure` and `[Failure]`
+
+Use `[Failure]` on a static partial class to declare strongly-typed domain failures. The source generator emits static members returning `Failure` instances.
+
+```csharp
+using NOF.Domain;
+
+[Failure("NotFound", "Order not found", "404001")]
+[Failure("AlreadyPaid", "Order has already been paid", "409001")]
+public static partial class OrderFailures;
+```
+
+`Failure` can also be converted into exceptions when needed:
+
+```csharp
+OrderFailures.NotFound.ThrowAsDomainException();
+```
+
+### Exceptions
+
+- `DomainException` represents a domain rule violation with an `ErrorCode`
+- `ValidationException` is a `DomainException` specialization for validation failures
+
+```csharp
+throw new ValidationException("Customer name cannot be empty.");
+```
 
 ## Installation
 

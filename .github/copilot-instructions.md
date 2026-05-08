@@ -1,300 +1,62 @@
-# NOF Framework -AI Assistant Instructions
+# NOF Framework - AI Assistant Instructions
 
-> **See also**: The `.agents/` directory contains organized rules, workflows, and skills for AI agents:
->
-> - `.agents/rules/nof-dev.md` -Rules for developing the NOF framework itself
-> - `.agents/rules/app-dev.md` -Rules for developing applications that USE NOF
-> - `.agents/workflows/nof-dev/` -Step-by-step workflows for framework contributors
-> - `.agents/workflows/app-dev/` -Step-by-step workflows for application developers
-> - `.agents/skills/nof-app-development.md` -Comprehensive skill for building NOF applications
+> **See also**: The `.agents/` directory contains organized rules, workflows, and skills for AI agents.
 
 You are working in the **NOF (Neat Opinionated Framework)** repository, a modular .NET framework for building scalable applications with clean architecture, CQRS, and source generators.
 
 ## Repository Structure
 
-```
+```text
 src/
-  NOF.Domain/                  - Domain entities, aggregate roots, events, [AutoInject]
-  NOF.Contract/                - IRequest, ICommand, INotification, Result<T>, [PublicApi], [HttpEndpoint]
-  NOF.Application/             - Handlers, state machines, caching, unit of work
-  NOF.Hosting.Abstraction/     - INOFAppBuilder, IStep, shared hosting abstractions
-  NOF.Infrastructure/          - App builder, step pipeline, OpenTelemetry, service wiring
-  NOF.UI/                      - Reusable UI primitives (auth components, browser storage, client cache services)
-  NOF.Domain.SourceGenerator/  - Source generator for [AutoInject], IValueObject<T>, [NewableValueObject]
-  NOF.Contract.SourceGenerator/ - Source generator for [PublicApi], [HttpEndpoint], [GenerateService], [Failure]
-  NOF.Application.SourceGenerator/ - Source generator for handler registration
-  Extensions/
-    NOF.Application.Extension.Redis/ - Redis-specific application cache abstractions
-    NOF.Infrastructure.Extension.Authorization.Jwt/ - JWT authority, OIDC, JWKS
+  NOF.Abstraction/            - shared annotations and ambient event publishing primitives
+  NOF.Domain/                 - aggregate roots, repositories, value objects, failures
+  NOF.Contract/               - RPC contracts, commands, notifications, HTTP endpoint metadata
+  NOF.Application/            - RPC servers, handlers, state machines, mapping, caching abstractions
+  NOF.Hosting.Abstraction/    - builder contracts and step contracts
+  NOF.Infrastructure/         - builder defaults, EF Core integration, OpenTelemetry, runtime pipeline
+  NOF.UI/                     - reusable UI primitives for Blazor-based clients
   Hostings/
-    NOF.Hosting.AspNetCore/    - ASP.NET Core host, endpoint mapping, middleware, JSON config
-    NOF.Hosting.BlazorWebAssembly/ - Blazor WebAssembly host integration and bootstrap
-    NOF.Hosting.SourceGenerator/ - Hosting-level source generator
+    NOF.Hosting.AspNetCore/   - ASP.NET Core host integration and endpoint mapping
+    NOF.Hosting.BlazorWebAssembly/ - Blazor WebAssembly host integration
+    NOF.Hosting.Console/      - console host integration
+    NOF.Hosting.Maui/         - MAUI host integration
+  Extensions/
+    NOF.Contract.Extension.Authorization.Jwt/
+    NOF.Hosting.Extension.Authorization.Jwt/
+    NOF.Infrastructure.Extension.Authorization.Jwt/
   Infrastructures/
-    NOF.Infrastructure.EntityFrameworkCore/          - NOFDbContext, repositories, outbox, multi-tenancy
-    NOF.Infrastructure.EntityFrameworkCore.PostgreSQL/ - PostgreSQL provider
-    NOF.Infrastructure.RabbitMQ/                     - RabbitMQ messaging
-    NOF.Infrastructure.StackExchangeRedis/           - Redis caching
-sample/                        - Sample application demonstrating NOF usage
-tests/                         - Unit and integration tests
+    NOF.Infrastructure.RabbitMQ/
+    NOF.Infrastructure.StackExchangeRedis/
+sample/                       - runnable sample app demonstrating current usage
+tests/                        - unit and integration tests
 ```
 
-## Tech Stack
+## Key Patterns
 
-- **.NET 10** (C# 14, preview features enabled)
-- **Central Package Management** via root `Directory.Packages.props`
-- **Source Generators** using Microsoft.CodeAnalysis (Roslyn)
-- **RabbitMQ** for messaging
-- **Entity Framework Core 10** with PostgreSQL
-- **StackExchange.Redis** for caching
-- **OpenTelemetry** for observability
-- **xUnit** + **FluentAssertions** + **Moq** for testing
-- **DocFX** for API documentation
-- **GitHub Actions** for CI/CD
+- RPC contracts are declared as `IRpcService` interfaces with one request parameter per method.
+- Application implementations use `RpcServer<TService>` and generated nested handler base classes.
+- ASP.NET Core maps endpoints explicitly with `app.MapHttpEndpoint<TRpcServer>()`.
+- `NOFWebApplicationBuilder.Create(args)` always registers JSON, CORS, and OpenAPI services.
+- `app.MapOpenApi()` is an explicit host choice.
+- EF Core registration uses `UseDbContext<TDbContext>()` plus `WithTenantMode(...)`, `WithConnectionString(...)`, `WithOptions(...)`, and optional `MigrateOnInitialize()`.
+- Aggregate mutations require `_uow.Update(entity)` before `SaveChangesAsync()`.
+- Central package versions live in `Directory.Packages.props`.
 
-## Key Abstractions
-
-### Messaging (CQRS)
-
-- `IRequest` / `IRequest<TResponse>` -query/request messages
-- `ICommand` -fire-and-forget command messages
-- `INotification` -publish/subscribe event messages
-- `IRequestHandler<T>` / `IRequestHandler<T, TResponse>` -handles requests
-- `ICommandHandler<T>` -handles commands
-- `INotificationHandler<T>` -handles notifications
-- `IRequestSender`, `ICommandSender`, `INotificationPublisher` -dispatch abstractions
-- `IDeferredNotificationPublisher`, `IDeferredCommandSender` -outbox-based deferred dispatch
-
-### Builder Pipeline
-
-- `INOFAppBuilder` -main builder interface, extends `IHostApplicationBuilder`
-- `IStep` -base marker; exposes `Type Type` instance property for AOT-safe interface discovery
-- `IStep<TSelf>` -CRTP helper; provides default `Type` via `typeof(TSelf)`
-- `IServiceRegistrationStep` / `IServiceRegistrationStep<TSelf>` -runs during DI container setup
-- `IApplicationInitializationStep` / `IApplicationInitializationStep<TSelf>` -runs after host is built, before start
-- `IInboundMiddlewareStep<TSelf, TMiddleware>` / `IOutboundMiddlewareStep<TSelf, TMiddleware>` -middleware pipeline steps
-- `IAfter<T>` / `IBefore<T>` -dependency ordering between steps
-- Steps are executed in topological order based on declared dependencies
-- Concrete steps should use the CRTP `<TSelf>` variant (e.g. `MyStep : IServiceRegistrationStep<MyStep>`)
-
-### Source Generator Attributes & Interfaces
-
-- `IValueObject<T>` (interface) -generate value object boilerplate (constructors, equality, JSON converter, `Of()` factory, explicit cast)
-- `[NewableValueObject]` -generate static `New()` method (SnowflakeId, requires `IValueObject<long>`)
-- `[AutoInject(Lifetime)]` -auto-register class in DI container
-- `[Failure(name, message, errorCode)]` -generate static failure instances
-- `[PublicApi]` -mark request as public API operation (required by `[HttpEndpoint]` and `[GenerateService]`)
-- `[HttpEndpoint(HttpVerb, route)]` -expose request as HTTP endpoint (requires `[PublicApi]`)
-- `[GenerateService]` -generate service interface + HTTP client + `IRequestSender` client (on `partial interface`)
-- `[Mappable<TSource, TDest>]` -auto-generate mapper registrations (on `partial static class`)
-
-### Domain
-
-- `IEntity` -marker interface for child entities (no base class)
-- `AggregateRoot` -base class for aggregate roots; `Events` is `ICollection<IEvent>`
-- `IRepository<T, TKey>` -repository abstraction (FindAsync, FindAllAsync, Add, Remove)
-- `IUnitOfWork` -explicit `Update(entity)` + transactional `SaveChangesAsync()`
-- `IDeferredNotificationPublisher` / `IDeferredCommandSender` -outbox-based deferred dispatch
-
-## Coding Conventions
-
-### Style (enforced by .editorconfig + dotnet format)
-
-- File-scoped namespaces (warning)
-- Braces required for all control-flow blocks (warning)
-- Allman-style braces (opening brace on new line)
-- `var` when type is apparent
-- Private instance fields: `_camelCase`
-- Private static/readonly fields: `PascalCase`
-- Constants: `PascalCase`
-- All public APIs must have XML doc comments
-
-### Project Rules
-
-- `TreatWarningsAsErrors` is enabled for all `src/` projects
-- Never specify NuGet `Version` in `.csproj` -use root `Directory.Packages.props`
-- EF Core migrations (`**/Migrations/*.cs`) are excluded from formatting
-- Commits follow Conventional Commits: `<type>(<scope>): <summary>`
-
-## Build & Test Commands
+## Build and Validation
 
 ```bash
-dotnet restore                                    # Restore packages
-dotnet build --configuration Release              # Build all projects
-dotnet test                                       # Run all tests
-dotnet format --verify-no-changes                 # Check formatting
-dotnet pack src/<Project>/<Project>.csproj -o out  # Pack a NuGet package
+dotnet restore
+dotnet build --configuration Release
+dotnet test
+dotnet format --verify-no-changes
 ```
 
-## Usage Patterns for NOF Applications
+## Documentation Sync
 
-### Application Bootstrap
+When framework behavior changes, check all of the following and keep them consistent with `src/`, `tests/`, and the sample app:
 
-```csharp
-var builder = NOFWebApplicationBuilder.Create(args, useDefaultConfigs: true);
-builder.Services.AddMyAppAutoInjectServices();  // Source-generated
-builder.Services.AddAllHandlers();               // Source-generated
-builder.AddRedisCache();
-builder.AddJwtAuthority().AddJwksRequestHandler();
-builder.AddJwtAuthorization();
-builder.AddRabbitMQ();
-builder.AddEFCore<AppDbContext>().AutoMigrate().UsePostgreSQL();
-var app = await builder.BuildAsync();
-app.MapAllHttpEndpoints();
-await app.RunAsync();
-```
-
-### Value Objects (source-generated)
-
-```csharp
-[NewableValueObject]  // Adds static New() for SnowflakeId
-public readonly partial struct OrderId : IValueObject<long>;
-
-public readonly partial struct EmailAddress : IValueObject<string>
-{
-    public static void Validate(string input) { /* throw on invalid */ }
-}
-```
-
-### Aggregate Roots & Domain Events
-
-```csharp
-public class Order : AggregateRoot
-{
-    public OrderId Id { get; init; }
-    private Order() { }
-    public static Order Create(string name)
-    {
-        var order = new Order { Id = OrderId.New(), Name = name };
-        order.AddEvent(new OrderCreatedEvent(order.Id));
-        return order;
-    }
-}
-public record OrderCreatedEvent(OrderId Id) : IEvent;
-```
-
-### Repository Pattern
-
-```csharp
-// Domain layer -interface
-public interface IOrderRepository : IRepository<Order, OrderId> { }
-
-// Host project -EF Core implementation
-[AutoInject(Lifetime.Scoped)]
-public class OrderRepository : EFCoreRepository<Order>, IOrderRepository
-{
-    public OrderRepository(NOFDbContext dbContext) : base(dbContext) { }
-}
-// IRepository<T> provides: FindAsync, FindAllAsync (IAsyncEnumerable<T>), Add, Remove
-```
-
-### Explicit Update Pattern
-
-```csharp
-var order = await _orderRepo.FindAsync(orderId, ct);
-order.UpdateName(newName);
-_uow.Update(order);  // Marks aggregate root + child entities for persistence
-await _uow.SaveChangesAsync(ct);
-// Note: AutoDetectChangesEnabled is false -Update() is required for mutations
-```
-
-### Typed Cache Keys
-
-```csharp
-public record OrderCacheKey(long Id) : CacheKey<OrderDto>($"Order:{Id}");
-// Usage: await _cache.GetAsync(new OrderCacheKey(id), ct);
-```
-
-### Cache Registration
-
-- `ICacheService` implementations also satisfy `IDistributedCache`
-- cache defaults (`ICacheSerializer`, lock retry strategy, default `ICacheService`, default `IDistributedCache`, factory) are installed once through registration steps
-- Redis-specific abstractions such as `IRedisCacheService` live in `NOF.Application.Extension.Redis`
-
-### PatchRequest with Optional Fields
-
-```csharp
-[PublicApi]
-[HttpEndpoint(HttpVerb.Patch, "api/orders/{id}")]
-public record UpdateOrderRequest : PatchRequest, IRequest
-{
-    public long Id { get; init; }
-    public Optional<string> Name { get => Get<string>(); set => Set(value); }
-}
-// Handler: request.Name.IfSome(n => order.UpdateName(n));
-```
-
-### Failure Definitions (source-generated)
-
-```csharp
-[Failure("OrderNotFound", "Order not found.", "404")]
-[Failure("OrderAlreadyConfirmed", "Already confirmed.", "409")]
-public static partial class OrderFailures;
-// Usage: return Result.Fail(OrderFailures.OrderNotFound);
-```
-
-### State Machine
-
-```csharp
-public class OrderStateMachine : IStateMachineDefinition<OrderState>
-{
-    public void Build(IStateMachineBuilder<OrderState> builder)
-    {
-        builder.Correlate<OrderPlacedNotification>(n => $"Order-{n.OrderId}");
-        builder.StartWhen<OrderPlacedNotification>(OrderState.Pending);
-        builder.On(OrderState.Pending).When<PaymentReceived>().TransitionTo(OrderState.Processing);
-    }
-}
-```
-
-### Transactional Outbox
-
-```csharp
-_publisher.Publish(new OrderCreatedNotification(id));  // Deferred
-await _uow.SaveChangesAsync(ct);  // Commits entity + outbox atomically
-// For mutations, call _uow.Update(entity) before SaveChangesAsync()
-```
-
-### Endpoint Metadata
-
-| Attribute                         | Purpose                                       |
-| --------------------------------- | --------------------------------------------- |
-| `[PublicApi]`                     | Mark as public API operation                  |
-| `[HttpEndpoint(HttpVerb, route)]` | Map to HTTP endpoint (requires `[PublicApi]`) |
-| `[AllowAnonymous]`                | Skip authentication                           |
-| `[Summary("...")]`                | OpenAPI summary                               |
-| `[EndpointDescription("...")]`    | OpenAPI description                           |
-| `[Category("...")]`               | OpenAPI tag/group                             |
-
-### Dispatch APIs
-
-| Interface                        | Method                           | Description                               |
-| -------------------------------- | -------------------------------- | ----------------------------------------- |
-| `IRequestSender`                 | `SendAsync(request, ct)`         | Send request, get `Result<T>`             |
-| `ICommandSender`                 | `SendAsync(command, ct)`         | Fire-and-forget command                   |
-| `INotificationPublisher`         | `PublishAsync(notification, ct)` | Broadcast notification                    |
-| `IDeferredNotificationPublisher` | `Publish(notification)`          | Outbox -published on `SaveChangesAsync()` |
-| `IDeferredCommandSender`         | `Send(command)`                  | Outbox -published on `SaveChangesAsync()` |
-
-## When Making Changes
-
-1. **Prefer minimal edits** -fix root causes, not symptoms.
-2. **Follow existing patterns** -look at neighboring files for conventions.
-3. **Add XML docs** for any new public API.
-4. **Add or update tests** for behavioral changes.
-5. **Never break the step pipeline** -ensure `IAfter<T>` / `IBefore<T>` dependencies are correct.
-6. **Source generators** produce code at compile time -changes to generators require rebuilding consuming projects.
-7. **Central package management** -add new NuGet dependencies to root `Directory.Packages.props`, not individual `.csproj` files.
-
-## ⚠️ Complete Change Checklist
-
-> **For both human developers and AI agents**: Every change to the NOF framework MUST consider ALL of the following. Do NOT only update source code.
-
-- [ ] **Tests** -Add/update unit, integration, or source generator tests (`dotnet test`)
-- [ ] **Sample** -Update `sample/` if APIs changed (must still compile)
-- [ ] **Docs** -XML doc comments, `docs/`, `README.md`, `CONTRIBUTING.md` as needed
-- [ ] **CI/CD** -Update `.github/workflows/` if new packages or test projects added
-- [ ] **Agent instructions** -Update `.agents/` rules/workflows/skills and `.github/copilot-instructions.md`
-- [ ] **Formatting** -`dotnet format --verify-no-changes` passes
-- [ ] **Build** -`dotnet build --configuration Release` succeeds with no warnings
-- [ ] **Commits** -Follow conventional commits: `<type>(<scope>): <summary>`
+- `README.md`
+- `docs/`
+- `.agents/`
+- `.github/`
+- sample usage in `sample/`

@@ -1,17 +1,18 @@
-﻿# Request Dispatch Removal
+# Request Dispatch
 
 ## Decision
 
-NOF no longer treats generic request-dispatch as the primary public path.
-RPC invocation is centered on strong-typed service interfaces marked with `IRpcService`.
+NOF keeps generic command and notification dispatch, but RPC-style request handling is centered on strongly typed `IRpcService` contracts and `RpcServer<TService>` implementations.
 
 ## Current Invocation Model
 
-- RPC-style requests: call `IRpcService` methods directly.
-- Command sending: unchanged.
-- Notification publishing: unchanged.
+- RPC operations: call `IRpcService` methods through generated RPC clients or local server dispatch.
+- Command sending: use `ICommandSender`.
+- Notification publishing: use `INotificationPublisher`.
+- Deferred dispatch: use `IDeferredCommandSender` and `IDeferredNotificationPublisher`.
 
 ## Notes
 
-- Transport-specific HTTP client generation is now triggered by `[HttpServiceClient<TService>]` on partial classes.
-- Service implementation splitting uses `[ServiceImplementation<TService>]` and runtime startup validation.
+- HTTP exposure for RPC services is explicit via `app.MapHttpEndpoint<TRpcServer>()`.
+- OpenAPI registration is always enabled by `NOFWebApplicationBuilder.Create(args)`, but `app.MapOpenApi()` remains an explicit host decision.
+- Application implementations are built around `RpcServer<TService>` rather than ad-hoc request-dispatch APIs.

@@ -1,6 +1,6 @@
 ---
 name: nof-app-development
-description: Build .NET applications using the NOF (Neat Opinionated Framework) with clean architecture, CQRS messaging, source generators, and DDD patterns. Use when the user asks to create a new NOF application, add features (entities, handlers, endpoints, caching, messaging, auth) to an existing NOF app, or references NOF abstractions like IRpcService, ICommand, AggregateRoot, Result, CacheKey, etc.
+description: Build .NET applications using the NOF (Neat Opinionated Framework) with clean architecture, CQRS messaging, source generators, and DDD patterns. Use when the user asks to create a new NOF application, add features (entities, handlers, endpoints, caching, messaging, auth) to an existing NOF app, or references NOF abstractions like IRpcService, ICommand, Result, CacheKey, DbContext, etc.
 ---
 
 # NOF Application Development
@@ -8,7 +8,7 @@ description: Build .NET applications using the NOF (Neat Opinionated Framework) 
 ## Architecture
 
 ```text
-MyApp.Domain/      entities, value objects, events, repositories
+MyApp.Domain/      domain classes, value objects, failures, in-memory event payloads
 MyApp.Contract/    DTOs, RPC contracts, commands, notifications
 MyApp.Application/ service implementations, handlers, state machines, cache keys
 MyApp/             host program and infrastructure wiring
@@ -20,10 +20,10 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 
 | Type | Contract | Handling |
 |---|---|---|
-| RPC operation | `IRpcService` method | generated service implementation base class |
-| Command | `ICommand` | `ICommandHandler<T>` |
-| Notification | `INotification` | `INotificationHandler<T>` |
-| Domain event | `IEvent` | `IEventHandler<T>` |
+| RPC operation | `IRpcService` method | generated nested handler base under `RpcServer<TService>` |
+| Command | `ICommand` | `CommandHandler<T>` |
+| Notification | `INotification` | `NotificationHandler<T>` |
+| In-memory event | arbitrary payload object | `InMemoryEventHandler<T>` |
 
 ## Dispatch APIs
 
@@ -34,6 +34,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | `INotificationPublisher` | `PublishAsync(notification, ct)` | broadcast |
 | `IDeferredCommandSender` | `Send(command)` | outbox dispatch on save |
 | `IDeferredNotificationPublisher` | `Publish(notification)` | outbox dispatch on save |
+| `IEventPublisher` | `PublishAsync(payload, ct)` | in-scope event dispatch |
 
 ## Source Generator Surface
 
@@ -42,9 +43,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | `IValueObject<T>` | equality, converters, casts, validation hooks |
 | `[NewableValueObject]` | static `New()` |
 | `[AutoInject]` | DI registration |
-| `[GenerateService]` | service contract + clients |
 | `[HttpEndpoint]` | HTTP route metadata for RPC methods |
-| `[PublicApi]` | public API marker |
 | `[Mappable]` | mapping registrations |
 | `[Failure]` | static failure definitions |
 
@@ -52,10 +51,11 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 
 | I want to... | Use |
 |---|---|
-| expose HTTP API | `IRpcService` + `[GenerateService]` + `[HttpEndpoint]` |
+| expose HTTP API | `IRpcService` + `[HttpEndpoint]` + `app.MapHttpEndpoint<TRpcServer>()` |
 | send async work | `ICommand` + `ICommandSender` |
-| publish events | `INotification` + `INotificationPublisher` |
-| persist aggregate changes | `_uow.Update(entity)` + `_uow.SaveChangesAsync()` |
+| publish notifications | `INotification` + `INotificationPublisher` |
+| publish in-memory events | payload object + `PublishAsEvent()` or `IEventPublisher` |
+| persist application data | `DbContext` / `NOFDbContext` + `SaveChangesAsync()` |
 | cache data | `CacheKey<T>` + `ICacheService` |
 | add JWT auth | `AddJwtAuthority(...)` and/or `AddJwtResourceServer(...)` |
 
@@ -63,4 +63,4 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 
 - File-scoped namespaces, Allman braces, braces on all control-flow.
 - `Optional<T>` for PATCH semantics.
-- Explicitly call `_uow.Update(entity)` after aggregate mutation.
+- Persist application data through `DbContext` / `NOFDbContext` in application handlers.

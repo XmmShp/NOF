@@ -3,21 +3,23 @@
 ## EF Core + PostgreSQL
 
 ```csharp
-builder.AddEFCore<AppDbContext>()
-    .UseSharedDatabaseTenancy()
-    .AutoMigrate()
-    .UsePostgreSQL();
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
+        ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .MigrateOnInitialize();
 ```
 
 Notes:
-- `NOFDbContext` handles outbox/inbox/state machine tables.
-- `ChangeTracker.AutoDetectChangesEnabled` is disabled; call `_uow.Update(entity)` explicitly.
+- `NOFDbContext` handles outbox, inbox, and state machine tables.
 - Value object conversion is auto-wired for `IValueObject<T>`.
+- Application code persists data through `DbContext` / `NOFDbContext`.
 
 ## Redis Cache
 
 ```csharp
-builder.AddRedisCache();
+builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 ```
 
 Use `ICacheService` and `CacheKey<T>` for typed access.
@@ -25,13 +27,11 @@ Use `ICacheService` and `CacheKey<T>` for typed access.
 ## RabbitMQ
 
 ```csharp
-builder.AddRabbitMQ();
+builder.AddRabbitMQ(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+});
 ```
-
-Send through abstractions:
-- generated RPC service clients
-- `ICommandSender`
-- `INotificationPublisher`
 
 ## JWT
 
@@ -52,11 +52,15 @@ builder.AddJwtResourceServer(o =>
 });
 ```
 
-Map service contracts:
+Authority HTTP endpoints stay explicit:
 
 ```csharp
-app.MapServiceToHttpEndpoints<IJwtAuthorityService>();
-app.MapServiceToHttpEndpoints<IJwksService>();
+app.MapHttpEndpoint<JwtAuthorityService>();
+app.MapGet("/.well-known/jwks.json", async (IJwksService jwksService, CancellationToken cancellationToken) =>
+{
+    var document = await jwksService.GetJwksAsync(cancellationToken);
+    return Results.Ok(document);
+});
 ```
 
 ## Configuration Snippet
@@ -64,7 +68,7 @@ app.MapServiceToHttpEndpoints<IJwksService>();
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
+    "postgres": "Host=localhost;Database=myapp;Username=postgres;Password=postgres",
     "redis": "localhost:6379",
     "rabbitmq": "Host=localhost;Port=5672;UserName=guest;Password=guest;VirtualHost=/"
   }
