@@ -59,7 +59,7 @@ The CI pipeline enforces formatting via `dotnet format`. Fix any violations befo
 
 | Branch | Purpose |
 |--------|---------|
-| `main` | Stable releases; triggers CD (nightly NuGet + docs deployment) |
+| `main` | Default branch; push triggers nightly package publishing and docs deployment, while tags/manual runs produce release builds |
 | `develop` | Integration branch; CI runs on push and PR |
 | `feature/*` | New features |
 | `fix/*` | Bug fixes |
@@ -84,7 +84,7 @@ NOF enforces a consistent coding style through `.editorconfig` and `dotnet forma
 | Symbol | Convention | Example |
 |--------|-----------|---------|
 | Types (class, struct, interface, enum) | PascalCase | `OrderService` |
-| Interfaces | `I` + PascalCase | `IRequestHandler` |
+| Interfaces | `I` + PascalCase | `ICommandSender` |
 | Public members (property, method, event) | PascalCase | `HandleAsync` |
 | Private instance fields | `_camelCase` | `_repository` |
 | Private static / readonly fields | PascalCase | `DefaultTimeout` |
@@ -189,6 +189,8 @@ NOF.Contract                    ← RPC contracts, request/response models, Resu
 NOF.Application                 ← RPC servers, handlers, state machines, mapping, caching
 NOF.Hosting.Abstraction         ← INOFAppBuilder and step pipeline contracts
 NOF.Infrastructure              ← Builder defaults, EF Core integration, OpenTelemetry, runtime pipeline
+NOF.UI                          ← Shared UI components and browser client primitives
+NOF.Test                        ← Test host helpers for NOF applications
 NOF.Hosting.AspNetCore          ← ASP.NET Core host, endpoint mapping, middleware
 NOF.Hosting.*                   ← Host-specific integrations such as Console, Blazor WebAssembly, and MAUI
 NOF.Infrastructure.*            ← Transport and cache providers such as RabbitMQ and Redis
@@ -209,7 +211,7 @@ NOF.*.Extension.*               ← Optional features such as JWT authorization
 3. Implement registration via `IServiceRegistrationStep`.
 4. Add the project to `NOF.slnx`.
 5. Add NuGet versions to the root `Directory.Packages.props`.
-6. Add pack command to `cd.yml`.
+6. Ensure the project is packable with a `PackageId`; `cd.yml` auto-discovers packable `src/**/*.csproj` files.
 
 ## License
 

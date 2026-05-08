@@ -11,7 +11,7 @@ Creates a new ASP.NET Core application powered by the NOF framework with a clean
 ```text
 MyApp/
   MyApp/                    - Host project (Program.cs, DbContext, appsettings.json)
-  MyApp.Domain/             - Domain layer (entities, aggregate roots, value objects, events, repositories)
+  MyApp.Domain/             - Domain layer (domain classes, value objects, failures, in-memory events)
   MyApp.Application/        - Application layer (RPC servers, handlers, state machines, cache keys)
   MyApp.Contract/           - Contract layer (RPC contracts, commands, notifications, DTOs)
 ```

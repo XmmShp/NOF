@@ -13,7 +13,7 @@ body:
     attributes:
       label: Related Package(s)
       description: Which NOF package(s) is your question about?
-      placeholder: "e.g. NOF.Contract, NOF.Infrastructure.EntityFrameworkCore"
+      placeholder: "e.g. NOF.Contract, NOF.Infrastructure"
     validations:
       required: false
 

@@ -22,7 +22,7 @@ body:
     attributes:
       label: Package Version
       description: The version of the affected package(s).
-      placeholder: "e.g. 6.5.2"
+      placeholder: "e.g. 10.4.1"
     validations:
       required: true
 
@@ -78,4 +78,3 @@ body:
       description: Any other context, screenshots, or log output.
     validations:
       required: false
-

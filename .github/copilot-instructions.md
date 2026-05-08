@@ -15,6 +15,7 @@ src/
   NOF.Hosting.Abstraction/    - builder contracts and step contracts
   NOF.Infrastructure/         - builder defaults, EF Core integration, OpenTelemetry, and runtime pipeline
   NOF.UI/                     - reusable UI primitives for Blazor-based clients
+  NOF.Test/                   - lightweight test host and scoped test helpers for NOF apps
   Hostings/
     NOF.Hosting.AspNetCore/   - ASP.NET Core host integration and endpoint mapping
     NOF.Hosting.BlazorWebAssembly/ - Blazor WebAssembly host integration

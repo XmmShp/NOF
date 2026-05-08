@@ -82,6 +82,7 @@ NOF.Application                <- RPC servers, handlers, state machines, mapping
 NOF.Hosting.Abstraction        <- Host builder and step contracts
 NOF.Infrastructure             <- Builder defaults and shared runtime pipeline
 NOF.UI                         <- Shared UI components and browser client primitives
+NOF.Test                       <- Test host helpers for application and integration testing
 NOF.Hosting.AspNetCore         <- ASP.NET Core host integration
 NOF.Hosting.BlazorWebAssembly  <- Blazor WebAssembly host integration
 NOF.Hosting.Console            <- Console host integration
