@@ -13,6 +13,6 @@ var builder = NOFConsoleHostBuilder.Create(args);
 // builder.AddRegistrationStep(...);
 // builder.AddInitializationStep(...);
 
-await builder.RunAsync();
+using var app = await builder.BuildAsync();
+await app.RunAsync();
 ```
-

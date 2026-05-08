@@ -10,25 +10,29 @@ This package focuses on host bootstrapping. Reusable UI primitives are provided 
 
 ## Features
 
-- **NOF Builder Integration** - create and configure NOF apps on top of Blazor WebAssembly hosting
-- **AOT-friendly setup** - aligns with WebAssembly and trimming scenarios
-- **Source generator support** - includes NOF hosting source generator packing
+- **NOF Builder Integration** - create and configure NOF apps on top of the built-in Blazor WebAssembly host
+- **Underlying Builder Access** - use `builder.WebAssemblyHostBuilder` when you need direct access to root components or browser host settings
+- **UI Defaults** - `Create(...)` registers `NOF.UI` services for browser storage and browser-info support
 
 ## Usage
 
 ```csharp
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
+var builder = NOFWebAssemblyHostBuilder.Create(args);
 
-var nofBuilder = NOFWebAssemblyHostBuilder.Create(builder);
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(builder.WebAssemblyHostBuilder.HostEnvironment.BaseAddress)
+});
 
-await nofBuilder.BuildWebAssemblyHostAsync();
+var app = await builder.BuildAsync();
+await app.RunAsync();
 ```
 
 `Create(...)` already adds the calling assembly as an application part. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
 
 ## Dependencies
 
-- [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)
+- [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)
 - [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)
 - [`Microsoft.AspNetCore.Components.WebAssembly`](https://www.nuget.org/packages/Microsoft.AspNetCore.Components.WebAssembly)
 

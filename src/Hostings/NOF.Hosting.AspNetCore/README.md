@@ -32,7 +32,7 @@ await app.RunAsync();
 Methods on explicitly mapped RPC services are turned into minimal API endpoints:
 
 ```csharp
-public partial interface IOrderService : IRpcService
+public interface IOrderService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Get, "/api/orders/get")]
     Result<OrderDto> Get(GetOrderRequest request);

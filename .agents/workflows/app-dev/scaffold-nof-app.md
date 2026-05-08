@@ -25,7 +25,7 @@ MyApp/
    dotnet new classlib -n MyApp.Domain -o MyApp.Domain
    dotnet new classlib -n MyApp.Application -o MyApp.Application
    dotnet new classlib -n MyApp.Contract -o MyApp.Contract
-   dotnet sln add MyApp MyApp.Domain MyApp.Application MyApp.Contract
+   dotnet sln add MyApp/MyApp.csproj MyApp.Domain/MyApp.Domain.csproj MyApp.Application/MyApp.Application.csproj MyApp.Contract/MyApp.Contract.csproj
    ```
 
 2. Add NOF NuGet packages to the host project:
@@ -71,7 +71,10 @@ MyApp/
    builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
    builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
-   builder.AddRabbitMQ();
+   builder.AddRabbitMQ(options =>
+   {
+       options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+   });
 
    builder.UseDbContext<AppDbContext>()
        .WithTenantMode(TenantMode.DatabasePerTenant)

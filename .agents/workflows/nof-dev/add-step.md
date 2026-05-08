@@ -12,7 +12,7 @@ Runs during DI container setup, before the host is built.
 
 1. Create a class implementing `IServiceRegistrationStep`:
    ```csharp
-   public class MyFeatureRegistrationStep : IServiceRegistrationStep<MyFeatureRegistrationStep>, IAfter<CoreServicesRegistrationStep>
+   public sealed class MyFeatureRegistrationStep : IServiceRegistrationStep, IAfter<IBaseSettingsServiceRegistrationStep>
    {
        public ValueTask ExecuteAsync(IServiceRegistrationContext context)
        {
@@ -24,11 +24,12 @@ Runs during DI container setup, before the host is built.
 
 2. Use `IAfter<T>` to declare that this step must run after another step.
 3. Use `IBefore<T>` to declare that this step must run before another step.
-4. Register the step in the builder (typically via an extension method):
+4. Prefer the predefined marker interfaces from `NOF.Infrastructure/Steps/PredefinedSteps.cs` when you want to plug into a stable slot such as base settings, dependent service registration, or endpoint initialization.
+5. Register the step in the builder (typically via an extension method):
    ```csharp
    public static INOFAppBuilder AddMyFeature(this INOFAppBuilder builder)
    {
-       builder.AddRegistrationStep(new MyFeatureRegistrationStep());
+       builder.TryAddRegistrationStep(new MyFeatureRegistrationStep());
        return builder;
    }
    ```
@@ -39,9 +40,9 @@ Runs after the host is built but before it starts.
 
 1. Create a class implementing `IApplicationInitializationStep`:
    ```csharp
-   public class MyFeatureInitializationStep : IApplicationInitializationStep<MyFeatureInitializationStep>
+   public sealed class MyFeatureInitializationStep : IApplicationInitializationStep, IAfter<IEndpointInitializationStep>
    {
-       public async Task ExecuteAsync(IApplicationInitializationContext context, IHost host)
+       public async Task ExecuteAsync(IHost host)
        {
            var service = host.Services.GetRequiredService<IMyService>();
            await service.InitializeAsync();
@@ -49,18 +50,24 @@ Runs after the host is built but before it starts.
    }
    ```
 
-2. Register via `builder.AddInitializationStep(new MyFeatureInitializationStep())`.
+2. Register via `builder.TryAddInitializationStep(new MyFeatureInitializationStep())`.
 
 ## Step Ordering
 
 - Steps are executed in **topological order** based on `IAfter<T>` and `IBefore<T>` declarations.
 - Circular dependencies will cause a runtime error.
-- Default steps registered by `NOFAppBuilder`:
-  - `CoreServicesRegistrationStep` — core services
-  - `CacheServiceRegistrationStep` — caching
-  - `OutboxRegistrationStep` — transactional outbox
-  - `OpenTelemetryRegistrationStep` — observability
-  - `SnowflakeIdGeneratorRegistrationStep` — ID generation
-  - Various inbound/outbound middleware steps
+- `NOFAppBuilder.BuildAsync()` always adds `AutoInjectServiceRegistrationStep` and hosting defaults before executing registered service steps.
+- `NOF.Infrastructure` exposes stable predefined ordering slots:
+  - `IBaseSettingsServiceRegistrationStep`
+  - `IDependentServiceRegistrationStep`
+  - `IDatabaseMigrationInitializationStep`
+  - `IDataSeedInitializationStep`
+  - `IObservabilityInitializationStep`
+  - `ISecurityInitializationStep`
+  - `IResponseFormattingInitializationStep`
+  - `IAuthenticationInitializationStep`
+  - `IBusinessLogicInitializationStep`
+  - `IEndpointInitializationStep`
+- Concrete defaults such as `OpenTelemetryRegistrationStep`, `RequestHandlerServiceRegistrationStep`, `HandlerServiceRegistrationStep`, `IdGeneratorInitializationStep`, and `MapperInitializationStep` come from `NOF.Infrastructure`.
 
 > **Reminder**: See the complete change checklist in `rules/nof-dev.md` — don't forget CI/CD, docs, sample, and tests.

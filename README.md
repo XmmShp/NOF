@@ -31,7 +31,7 @@
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - host builder integration for browser apps |
 | [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console) | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline |
 | [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui) | .NET MAUI hosting - MAUI app builder integration for cross-platform applications |
-| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT contract extension - authority contracts, token models, and JWKS definitions |
+| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT contract extension - authority service contracts and token models |
 | [`NOF.Hosting.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authorization.Jwt) | JWT outbound propagation - writes bearer tokens to outbound NOF requests |
 | [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authority and resource server integration - token issuance, validation, key rotation, and JWKS |
 | [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ) | RabbitMQ transport for NOF command and notification dispatch |

@@ -43,7 +43,7 @@ do not end with `Async`, and must return a non-Task, non-`void` value. The retur
 public record GetOrderRequest(Guid Id);
 public record CreateOrderRequest(string ProductName, int Quantity);
 
-public partial interface IOrderService : IRpcService
+public interface IOrderService : IRpcService
 {
     [Summary("Get order")]
     [HttpEndpoint(HttpVerb.Get, "/api/orders/get")]

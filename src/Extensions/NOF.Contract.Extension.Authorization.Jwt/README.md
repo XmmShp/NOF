@@ -4,17 +4,17 @@ JWT contract extension for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Provides request/response models and service interfaces for JWT operations, including:
+Provides request/response models and service interfaces for JWT authority operations, including:
 
 - Authority token issuance contracts
-- JWKS retrieval contracts
-- Key-rotation notifications
+- Refresh-token validation and revocation contracts
+- Shared token payload models
 
-This package contains contracts only and no JWT validation or hosting middleware implementation.
+This package contains contracts only. It does not provide JWKS publishing, token validation middleware, or hosting integration.
 
 ## Usage
 
-Reference this package in projects that define or consume JWT authority/JWKS contracts.
+Reference this package in projects that define or consume JWT authority contracts.
 
 For implementation and runtime behavior:
 

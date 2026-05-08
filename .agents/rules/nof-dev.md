@@ -21,7 +21,7 @@ Use this file when contributing to the NOF framework itself.
 - .NET 10 / C# 14 preview features (`extension` blocks are used in this repo).
 - Central Package Management via root `Directory.Packages.props`.
 - Roslyn incremental generators.
-- xUnit + FluentAssertions + Moq.
+- xUnit + Moq.
 
 ## Key Patterns
 

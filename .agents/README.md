@@ -32,6 +32,9 @@ When framework behavior changes, keep these files in sync with `src/`, `tests/`,
   skills/
     nof-app-development/
       SKILL.md
+      references/
+        infrastructure.md
+        recipes.md
 ```
 
 ## Which File To Use

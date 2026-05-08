@@ -46,7 +46,7 @@ If you only need outbound propagation and do not need inbound token validation, 
 builder.AddJwtTokenPropagation();
 ```
 
-Configure via application settings:
+You can also keep the values in configuration and read them inside the `AddJwtResourceServer(...)` delegate:
 
 ```json
 {
@@ -60,6 +60,8 @@ Configure via application settings:
 }
 ```
 
+The JSON snippet is illustrative only; read these values from `builder.Configuration` in your registration code.
+
 ### As a JWT Authority
 
 ```csharp
@@ -70,7 +72,7 @@ builder.AddJwtAuthority(options =>
 });
 ```
 
-Configure via application settings:
+You can also keep the values in configuration and read them inside the `AddJwtAuthority(...)` delegate:
 
 ```json
 {
@@ -82,6 +84,8 @@ Configure via application settings:
   }
 }
 ```
+
+The JSON snippet is illustrative only; read these values from `builder.Configuration` in your registration code.
 
 The `SigningKeyEncryptionKey` value can be any non-empty string. NOF deterministically derives an AES key from the configured string, so every instance that shares the signing key database must use the same value.
 
