@@ -25,10 +25,11 @@ Use this file when contributing to the NOF framework itself.
 
 ## Key Patterns
 
-- CQRS: `IRpcService`, `ICommand`, `INotification`, `InMemoryEventHandler<T>`, `IEventPublisher`.
+- CQRS: `IRpcService`, `RpcServer<TService>`, `CommandHandler<T>`, `NotificationHandler<T>`, `InMemoryEventHandler<T>`, `ICommandSender`, `INotificationPublisher`, `IEventPublisher`.
+- Commands and notifications are plain payload types; discovery comes from handler base types, not marker interfaces.
 - Step pipeline: registration and initialization steps with `IAfter<T>` / `IBefore<T>`.
 - Source-gen attributes: `[AutoInject]`, `[HttpEndpoint]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`.
-- Transactional outbox: `IDeferredNotificationPublisher` / `IDeferredCommandSender`.
+- Transactional outbox: `ICommandSender.DeferSend(...)` / `INotificationPublisher.DeferPublish(...)`.
 
 ## Coding Rules
 

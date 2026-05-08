@@ -9,11 +9,11 @@ You are working in the **NOF (Neat Opinionated Framework)** repository, a modula
 ```text
 src/
   NOF.Abstraction/            - shared annotations and ambient event publishing primitives
-  NOF.Domain/                 - aggregate roots, repositories, value objects, failures
-  NOF.Contract/               - RPC contracts, commands, notifications, HTTP endpoint metadata
-  NOF.Application/            - RPC servers, handlers, state machines, mapping, caching abstractions
+  NOF.Domain/                 - value objects, failures, domain exceptions, and ID generation
+  NOF.Contract/               - RPC contracts, request/response models, and HTTP endpoint metadata
+  NOF.Application/            - RPC servers, handlers, state machines, mapping, and caching abstractions
   NOF.Hosting.Abstraction/    - builder contracts and step contracts
-  NOF.Infrastructure/         - builder defaults, EF Core integration, OpenTelemetry, runtime pipeline
+  NOF.Infrastructure/         - builder defaults, EF Core integration, OpenTelemetry, and runtime pipeline
   NOF.UI/                     - reusable UI primitives for Blazor-based clients
   Hostings/
     NOF.Hosting.AspNetCore/   - ASP.NET Core host integration and endpoint mapping
@@ -39,7 +39,7 @@ tests/                        - unit and integration tests
 - `NOFWebApplicationBuilder.Create(args)` always registers JSON, CORS, and OpenAPI services.
 - `app.MapOpenApi()` is an explicit host choice.
 - EF Core registration uses `UseDbContext<TDbContext>()` plus `WithTenantMode(...)`, `WithConnectionString(...)`, `WithOptions(...)`, and optional `MigrateOnInitialize()`.
-- Aggregate mutations require `_uow.Update(entity)` before `SaveChangesAsync()`.
+- Persist application data through `DbContext` / `NOFDbContext` and call `SaveChangesAsync()`; there is no public `_uow` abstraction.
 - Central package versions live in `Directory.Packages.props`.
 
 ## Build and Validation

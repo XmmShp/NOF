@@ -9,7 +9,7 @@ NOF keeps generic command and notification dispatch, but RPC-style request handl
 - RPC operations: call `IRpcService` methods through generated RPC clients or local server dispatch.
 - Command sending: use `ICommandSender`.
 - Notification publishing: use `INotificationPublisher`.
-- Deferred dispatch: use `IDeferredCommandSender` and `IDeferredNotificationPublisher`.
+- Deferred dispatch: use `ICommandSender.DeferSend(...)` and `INotificationPublisher.DeferPublish(...)` to stage outbox messages before `SaveChangesAsync()`.
 
 ## Notes
 

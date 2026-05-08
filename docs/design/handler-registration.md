@@ -9,13 +9,24 @@ The runtime model is:
 1. Source generators emit assembly-level initializers (`[assembly: AssemblyInitializeAttribute<...>]`).
 2. Initializers write metadata into static registries:
 - `Registry.AutoInjectRegistrations`
-- `RequestHandlerRegistry`
-- `HandlerRegistry`
+- `Registry.RequestHandlerRegistrations`
+- `Registry.CommandHandlerRegistrations`
+- `Registry.NotificationHandlerRegistrations`
+- `Registry.EventHandlerRegistrations`
+- `Registry.MapperRegistrations`
 3. At startup, `builder.AddApplicationPart(assembly)` executes those initializers.
-4. Infrastructure registration steps read registries and add services:
+4. Info singletons materialize and freeze registrations on first read:
+- `AutoInjectInfos`
+- `RequestHandlerInfos`
+- `CommandHandlerInfos`
+- `NotificationHandlerInfos`
+- `EventHandlerInfos`
+- `MapperInfos`
+5. Registration and initialization steps wire the runtime:
 - `AutoInjectServiceRegistrationStep`
 - `RequestHandlerServiceRegistrationStep`
 - `HandlerServiceRegistrationStep`
+- `MapperInitializationStep`
 
 This is the same pattern used by the sample app:
 
@@ -26,6 +37,6 @@ builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
 
 ## Practical Guidance
 
-- If handlers/services are not discovered, first check that the assembly containing them is added via `AddApplicationPart(...)`.
+- If handlers or mappers are not discovered, first check that the assembly containing them is added via `AddApplicationPart(...)`.
 - Keep RPC contracts (`IRpcService`) and their implementations in assemblies that are loaded as application parts.
-- For transport integrations (for example RabbitMQ), registrations come from `HandlerInfos`, which is populated from `HandlerRegistry` during startup steps.
+- Transport integrations such as RabbitMQ consume `CommandHandlerInfos` and `NotificationHandlerInfos`, so stale or missing application parts will prevent consumer registration.

@@ -10,8 +10,8 @@ Provides JWT infrastructure for NOF applications as a resource server (token val
 
 ### Resource Server
 
-- **JWKS Client** - `AddJwtResourceServer()` registers `NOF.Contract.Extension.Authorization.Jwt.HttpJwksService` as the default `IJwksService` client
-- **JWKS Provider** - `IJwksProvider` caches signing keys locally and serves validation from cache; when the host also acts as an authority it refreshes directly from local signing keys instead of re-calling `IJwksService`
+- **JWKS Client** - `AddJwtResourceServer()` registers `HttpJwksService` as the default `IJwksService` client
+- **Local Key Cache** - `CachedJwksService` keeps signing keys locally so validation does not need to hit the remote JWKS endpoint on every request
 - **Token Validation** - `JwtResourceServerInboundMiddleware` validates Bearer tokens with configurable issuer, audience, and lifetime checks
 - **Outbound Propagation** - resource server setup also enables JWT token propagation for downstream NOF calls
 - **Key Rotation Refresh** - `RefreshJwksOnKeyRotation` refreshes cached keys when `JwtKeyRotationNotification` is received
@@ -38,7 +38,7 @@ builder.AddJwtResourceServer(options =>
 ```
 
 The configuration type for this package is `JwtResourceServerOptions`. `JwksEndpoint` is required, and by default the endpoint must use HTTPS.
-If you provide your own `IJwksService`, `AddJwtResourceServer()` will keep it and still layer `IJwksProvider` on top for local caching.
+If you provide your own `IJwksService`, `AddJwtResourceServer()` preserves it and still layers local caching through `CachedJwksService`.
 
 If you only need outbound propagation and do not need inbound token validation, reference `NOF.Hosting.Extension.Authorization.Jwt` and use:
 
@@ -63,7 +63,11 @@ Configure via application settings:
 ### As a JWT Authority
 
 ```csharp
-builder.AddJwtAuthority();
+builder.AddJwtAuthority(options =>
+{
+    options.Issuer = "your-app";
+    options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
+});
 ```
 
 Configure via application settings:
@@ -84,6 +88,7 @@ The `SigningKeyEncryptionKey` value can be any non-empty string. NOF determinist
 If `SigningKeyEncryptionKey` is not configured, the authority generates an in-memory 32-byte fallback key for the current process and does not persist this fallback key. For multi-instance or restart-stable deployments, provide `SigningKeyEncryptionKey` via secure configuration (secrets manager, environment variable, or vault).
 
 Signing keys are stored as separate records with status transitions:
+
 - `Active`: current signing key.
 - `Retired`: historical validation keys retained based on `RetiredKeyRetentionCount`.
 - `Revoked`: keys removed from validation set and deleted later by cleanup.

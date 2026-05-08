@@ -1,6 +1,6 @@
 # NOF.Infrastructure.RabbitMQ
 
-RabbitMQ integration for the NOF Framework — message bus adapter for commands, events, and notifications using the official RabbitMQ client.
+RabbitMQ integration for the NOF Framework - a transport adapter for NOF command and notification dispatch using the official RabbitMQ client.
 
 ## Installation
 
@@ -11,20 +11,19 @@ dotnet add package NOF.Infrastructure.RabbitMQ
 ## Usage
 
 ```csharp
-using NOF.Hosting;
+using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure.RabbitMQ;
 
-var builder = NOFApp.CreateBuilder();
+var builder = NOFWebApplicationBuilder.Create(args);
+
 builder.AddRabbitMQ(options =>
 {
-    options.HostName = "localhost";
-    options.Port = 5672;
-    options.UserName = "guest";
-    options.Password = "guest";
-    options.VirtualHost = "/";
-    options.ExchangeName = "nof.exchange";
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+    options.PrefetchCount = 8;
 });
 ```
+
+You can configure RabbitMQ either through `ConnectionString` or the individual `HostName`, `Port`, `UserName`, `Password`, and `VirtualHost` properties on `RabbitMQOptions`.
 
 ## Dependencies
 

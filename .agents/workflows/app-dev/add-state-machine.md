@@ -22,9 +22,9 @@ public enum OrderState
 ## 2. Define Notifications
 
 ```csharp
-public record OrderPlacedNotification(string OrderId) : INotification;
-public record PaymentReceivedNotification(string OrderId) : INotification;
-public record OrderShippedNotification(string OrderId) : INotification;
+public record OrderPlacedNotification(string OrderId);
+public record PaymentReceivedNotification(string OrderId);
+public record OrderShippedNotification(string OrderId);
 ```
 
 ## 3. Implement the State Machine Definition
@@ -56,6 +56,7 @@ public class OrderStateMachine : IStateMachineDefinition<OrderState>
 
 ## Notes
 
+- State machine notifications are ordinary payload types handled through `NotificationHandler<T>` registrations.
 - Register one `Correlate<TNotification>(...)` rule for every notification type the state machine handles.
 - `StartWhen<TNotification>(...)` defines the first transition.
 - Later transitions are configured with `On(state).When<TNotification>()`.

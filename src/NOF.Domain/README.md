@@ -52,7 +52,7 @@ using NOF.Domain;
 public readonly partial struct OrderId : IValueObject<long>;
 ```
 
-Before using `New()`, ensure the app has initialized an `IIdGenerator`. In NOF hosts this is typically done through infrastructure setup such as `builder.AddSnowflakeIdGenerator()`.
+Before using `New()`, ensure the app has initialized an `IIdGenerator`. In NOF hosts this is typically handled by infrastructure defaults, which register `IIdGenerator` and run `IdGeneratorInitializationStep` during startup.
 
 ### `Failure` and `[Failure]`
 

@@ -3,13 +3,13 @@
 [![CI](https://github.com/XmmShp/NOF/actions/workflows/ci.yml/badge.svg)](https://github.com/XmmShp/NOF/actions/workflows/ci.yml)
 [![CD](https://github.com/XmmShp/NOF/actions/workflows/cd.yml/badge.svg)](https://github.com/XmmShp/NOF/actions/workflows/cd.yml)
 
-**NOF** (short for **N**eat **O**pinionated **F**ramework) is a modular, convention-driven application framework for .NET that embraces clean architecture principles. It provides a structured approach to building scalable applications with built-in support for CQRS, domain-driven design, transactional outbox, state machines, multi-tenancy, and observability.
+**NOF** (short for **N**eat **O**pinionated **F**ramework) is a modular, convention-driven application framework for .NET that embraces clean architecture principles. It provides a structured approach to building scalable applications with built-in support for CQRS, transactional outbox, state machines, multi-tenancy, and observability.
 
 ## Features
 
 - **Clean Architecture** - layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
-- **CQRS & Messaging** - first-class `IRpcService`, command/notification dispatch, and handler pipelines
-- **Source Generators** - compile-time code generation for RPC servers, HTTP endpoint mapping, DI registration, and failure definitions
+- **CQRS & Messaging** - first-class `IRpcService`, typed command/notification dispatch, and handler pipelines
+- **Source Generators** - compile-time code generation for RPC servers, HTTP endpoint mapping, DI registration, mapping registration, and failure definitions
 - **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
 - **State Machines** - declarative, event-driven state machine builder with persistent context
 - **Multi-Tenancy** - tenant-aware persistence and deployment-aware runtime defaults
@@ -20,21 +20,22 @@
 
 | Package | Description |
 |---------|-------------|
-| [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain layer - entities, aggregate roots, repositories, domain events |
-| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer - requests, commands, notifications, `Result<T>`, HTTP endpoint attributes |
-| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer - RPC servers, handlers, state machines, caching, unit of work |
-| [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction) | Hosting abstractions - builder contracts, step contracts, dependency ordering |
-| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - builder defaults, EF Core integration, OpenTelemetry, service wiring |
-| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, browser info, client cache services |
-| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, JSON configuration |
-| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - WebAssembly host builder integration |
+| [`NOF.Abstraction`](https://www.nuget.org/packages/NOF.Abstraction) | Shared annotations, user context, ambient headers, and in-memory event primitives |
+| [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain primitives - value objects, failures, domain exceptions, and ID generation |
+| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer - RPC contracts, request/response models, `Result<T>`, `Optional<T>`, HTTP endpoint attributes |
+| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts |
+| [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction) | Hosting abstractions - builder contracts, step contracts, and dependency ordering |
+| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, and runtime wiring |
+| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers |
+| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, and JSON configuration |
+| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - host builder integration for browser apps |
 | [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console) | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline |
 | [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui) | .NET MAUI hosting - MAUI app builder integration for cross-platform applications |
-| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT authorization contract - JWT service contracts, token models, and JWKS definitions |
+| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT contract extension - authority contracts, token models, and JWKS definitions |
 | [`NOF.Hosting.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authorization.Jwt) | JWT outbound propagation - writes bearer tokens to outbound NOF requests |
-| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authority and resource server integration - token issuance, key rotation, JWKS |
-| [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ) | RabbitMQ integration - message bus adapter for commands, events, notifications |
-| [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis caching infrastructure via StackExchange.Redis |
+| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authority and resource server integration - token issuance, validation, key rotation, and JWKS |
+| [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ) | RabbitMQ transport for NOF command and notification dispatch |
+| [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis-backed cache infrastructure via StackExchange.Redis |
 | [`NOF.Test`](https://www.nuget.org/packages/NOF.Test) | Test host helpers for NOF applications |
 
 ## Quick Start
@@ -74,9 +75,10 @@ await app.RunAsync();
 ## Architecture
 
 ```text
-NOF.Domain                     <- Domain entities, aggregate roots, events
-NOF.Contract                   <- Requests, commands, notifications, DTOs
-NOF.Application                <- RPC servers, handlers, state machines, application services
+NOF.Abstraction                <- Shared annotations, user context, in-memory events
+NOF.Domain                     <- Value objects, failures, domain utilities
+NOF.Contract                   <- RPC contracts, payload models, endpoint metadata
+NOF.Application                <- RPC servers, handlers, state machines, mapping, caching
 NOF.Hosting.Abstraction        <- Host builder and step contracts
 NOF.Infrastructure             <- Builder defaults and shared runtime pipeline
 NOF.UI                         <- Shared UI components and browser client primitives

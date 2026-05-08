@@ -8,31 +8,30 @@ Provides the .NET MAUI host integration for NOF applications, wrapping `MauiAppB
 
 ## Features
 
-- **NOF Step Pipeline** �?full support for `IServiceRegistrationStep` and `IApplicationInitializationStep`
-- **`[AutoInject]` Support** �?bundled source generators for automatic DI registration
-- **Seamless Integration** �?works with existing `MauiAppBuilder` configuration
+- **NOF Step Pipeline** - full support for `IServiceRegistrationStep` and `IApplicationInitializationStep`
+- **`[AutoInject]` Support** - bundled source generators for automatic DI registration
+- **Seamless Integration** - works with existing `MauiAppBuilder` configuration
 
 ## Usage
 
 ```csharp
 public static MauiApp CreateMauiApp()
 {
-    var mauiBuilder = MauiApp.CreateBuilder();
+    var builder = NOFMauiAppBuilder.Create();
 
-    mauiBuilder
+    builder.MauiAppBuilder
         .UseMauiApp<App>()
         .ConfigureFonts(fonts =>
         {
             fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
         });
 
-    var builder = NOFMauiAppBuilder.Create(mauiBuilder);
-
-    return builder.BuildMauiAppAsync().GetAwaiter().GetResult();
+    var nofApp = builder.BuildAsync().GetAwaiter().GetResult();
+    return nofApp.MauiApp;
 }
 ```
 
-`Create(...)` already adds the calling assembly as an application part. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
+`Create()` already adds the calling assembly as an application part and applies infrastructure defaults. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
 
 ## Installation
 

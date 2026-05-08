@@ -4,7 +4,9 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 ## Overview
 
-Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, caching, and unit of work patterns.
+Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, and caching.
+
+Commands and notifications are plain payload types. Handler discovery comes from the `CommandHandler<T>` and `NotificationHandler<T>` base classes rather than marker interfaces on the message types.
 
 ## Key Abstractions
 
@@ -15,17 +17,24 @@ RPC contracts are declared on `IRpcService` interfaces in the contract layer. Ap
 ```csharp
 public partial class OrderService : RpcServer<IOrderService>;
 
-public class GetOrder : OrderService.GetOrder
+public sealed class GetOrder : OrderService.GetOrder
 {
+    private readonly DbContext _dbContext;
+
+    public GetOrder(DbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
-        var order = await _repository.FindAsync(request.Id, cancellationToken);
+        var order = await _dbContext.Set<Order>().FindAsync([request.Id], cancellationToken);
         if (order is null)
         {
             return Result.Fail("404", "Order not found");
         }
 
-        return new OrderDto(order.Id, order.Status);
+        return Result.Success(new OrderDto(order.Id, order.Status));
     }
 }
 ```
@@ -33,7 +42,9 @@ public class GetOrder : OrderService.GetOrder
 ### Command Handlers
 
 ```csharp
-public class SendEmailHandler : CommandHandler<SendEmailCommand>
+public record SendEmailCommand(string To, string Subject, string Body);
+
+public sealed class SendEmailHandler : CommandHandler<SendEmailCommand>
 {
     public override Task HandleAsync(SendEmailCommand command, CancellationToken cancellationToken)
     {
@@ -45,7 +56,9 @@ public class SendEmailHandler : CommandHandler<SendEmailCommand>
 ### Notification Handlers
 
 ```csharp
-public class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
+public record OrderCreatedNotification(Guid OrderId);
+
+public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {
     public override Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
     {
@@ -59,7 +72,7 @@ public class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 Declarative, event-driven state machines:
 
 ```csharp
-public class OrderStateMachine : IStateMachineDefinition<OrderState>
+public sealed class OrderStateMachine : IStateMachineDefinition<OrderState>
 {
     public void Build(IStateMachineBuilder<OrderState> builder)
     {
@@ -78,7 +91,13 @@ public class OrderStateMachine : IStateMachineDefinition<OrderState>
 
 ### Transactional Message Sending
 
-Handlers can use `IDeferredCommandSender` and `IDeferredNotificationPublisher` for outbox-backed dispatch coordinated with the unit of work.
+Use `ICommandSender` and `INotificationPublisher` for both immediate and deferred dispatch:
+
+```csharp
+_notificationPublisher.DeferPublish(new OrderCreatedNotification(order.Id));
+_commandSender.DeferSend(new SendEmailCommand(order.Email, "Created", "Order created."));
+await _dbContext.SaveChangesAsync(cancellationToken);
+```
 
 ### Object Mapping (`IMapper`)
 
@@ -90,11 +109,7 @@ NOF uses an explicit mapper with optional source-generated registrations via `[M
 public static partial class Mappings;
 ```
 
-Register generated mappings at startup:
-
-```csharp
-builder.Services.Configure<MapperOptions>(options => options.ConfigureAutoMappings());
-```
+The generator writes `MapperRegistration` entries into the global registry. Those mappings become available once the assembly is added via `AddApplicationPart(...)` and the host finishes `MapperInitializationStep`.
 
 ## Installation
 

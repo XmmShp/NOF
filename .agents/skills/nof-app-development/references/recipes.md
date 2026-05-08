@@ -15,14 +15,22 @@ var builder = NOFWebApplicationBuilder.Create(args);
 builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
-builder.AddJwtAuthority(o => o.Issuer = "MyApp");
+builder.AddJwtAuthority(o =>
+{
+    o.Issuer = "MyApp";
+    o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
+        ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
+});
 builder.AddJwtResourceServer(o =>
 {
     o.Issuer = "MyApp";
     o.RequireHttpsMetadata = false;
     o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
 });
-builder.AddRabbitMQ();
+builder.AddRabbitMQ(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+});
 
 builder.UseDbContext<AppDbContext>()
     .WithTenantMode(TenantMode.DatabasePerTenant)
@@ -68,16 +76,16 @@ await _dbContext.SaveChangesAsync(cancellationToken);
 ## Access User/Tenant
 
 ```csharp
-public sealed class MyHandler(IUserContext userContext, IExecutionContext executionContext)
+public sealed class MyHandler(IUserContext userContext, ITransparentInfos transparentInfos)
 {
-    public string? CurrentUserId => userContext.Id;
-    public string CurrentTenant => executionContext.TenantId;
+    public string? CurrentUserId => userContext.User.Id;
+    public string CurrentTenant => transparentInfos.TenantId;
 }
 ```
 
 ## Deferred Outbox Dispatch
 
 ```csharp
-_deferredNotificationPublisher.Publish(new OrderCreatedNotification(order.Id));
+_notificationPublisher.DeferPublish(new OrderCreatedNotification(order.Id));
 await _dbContext.SaveChangesAsync(cancellationToken);
 ```

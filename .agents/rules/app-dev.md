@@ -10,7 +10,7 @@ Use this file when building applications on top of NOF.
 
 ```text
 MyApp.Domain/      domain classes, value objects, failures, domain event payloads
-MyApp.Contract/    RPC contracts, commands, notifications, DTOs, failures
+MyApp.Contract/    RPC contracts, request/response models, DTOs, failures
 MyApp.Application/ RPC servers, request handlers, command handlers, notification handlers, state machines
 MyApp/             host project (Program.cs, DbContext, appsettings)
 ```
@@ -19,13 +19,13 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 
 ## Core Abstractions
 
-- `IRpcService`, `ICommand`, `INotification`
+- `IRpcService`
 - `RpcServer<TService>` and generated nested RPC handler bases
 - `CommandHandler<T>`, `NotificationHandler<T>`, `InMemoryEventHandler<T>`
-- `ICommandSender`, `INotificationPublisher`
-- `IDeferredNotificationPublisher`, `IDeferredCommandSender`
+- `ICommandSender`, `INotificationPublisher`, `IEventPublisher`
 - `CacheKey<T>`, `IMapper`, `Result` / `Result<T>`
 - `DbContext` / `NOFDbContext` for persistence
+- Commands and notifications are plain payload objects; use handler base types to opt into dispatch.
 
 ## Source Generator Surface
 
@@ -50,14 +50,22 @@ var builder = NOFWebApplicationBuilder.Create(args);
 builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
-builder.AddJwtAuthority(o => o.Issuer = "MyApp");
+builder.AddJwtAuthority(o =>
+{
+    o.Issuer = "MyApp";
+    o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
+        ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
+});
 builder.AddJwtResourceServer(o =>
 {
     o.Issuer = "MyApp";
     o.RequireHttpsMetadata = false;
     o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
 });
-builder.AddRabbitMQ();
+builder.AddRabbitMQ(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+});
 
 builder.UseDbContext<AppDbContext>()
     .WithTenantMode(TenantMode.DatabasePerTenant)

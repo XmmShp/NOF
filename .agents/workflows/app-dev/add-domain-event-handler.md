@@ -7,7 +7,7 @@ description: How to add in-process event handlers and transactional outbox behav
 NOF supports two complementary patterns:
 
 - in-process events via `InMemoryEventHandler<T>` and `IEventPublisher`
-- transactional outbox dispatch via `IDeferredNotificationPublisher` / `IDeferredCommandSender`
+- transactional outbox dispatch via `INotificationPublisher.DeferPublish(...)` and `ICommandSender.DeferSend(...)`
 
 ## 1. Define an In-Process Event
 
@@ -39,9 +39,9 @@ await _eventPublisher.PublishAsync(new ProjectionRebuilt("tenant-a"), cancellati
 public sealed class CreateOrderHandler : CommandHandler<CreateOrderCommand>
 {
     private readonly DbContext _dbContext;
-    private readonly IDeferredNotificationPublisher _publisher;
+    private readonly INotificationPublisher _publisher;
 
-    public CreateOrderHandler(DbContext dbContext, IDeferredNotificationPublisher publisher)
+    public CreateOrderHandler(DbContext dbContext, INotificationPublisher publisher)
     {
         _dbContext = dbContext;
         _publisher = publisher;
@@ -51,7 +51,7 @@ public sealed class CreateOrderHandler : CommandHandler<CreateOrderCommand>
     {
         var order = Order.Create(EmailAddress.Of(command.CustomerEmail));
         _dbContext.Set<Order>().Add(order);
-        _publisher.Publish(new OrderCreatedNotification(order.Id));
+        _publisher.DeferPublish(new OrderCreatedNotification(order.Id));
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

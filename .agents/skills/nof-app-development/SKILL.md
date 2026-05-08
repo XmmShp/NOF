@@ -1,6 +1,6 @@
 ---
 name: nof-app-development
-description: Build .NET applications using the NOF (Neat Opinionated Framework) with clean architecture, CQRS messaging, source generators, and DDD patterns. Use when the user asks to create a new NOF application, add features (entities, handlers, endpoints, caching, messaging, auth) to an existing NOF app, or references NOF abstractions like IRpcService, ICommand, Result, CacheKey, DbContext, etc.
+description: Build .NET applications using the NOF (Neat Opinionated Framework) with clean architecture, CQRS messaging, source generators, and DDD patterns. Use when the user asks to create a new NOF application, add features (entities, handlers, endpoints, caching, messaging, auth) to an existing NOF app, or references NOF abstractions like `IRpcService`, `CommandHandler<T>`, `NotificationHandler<T>`, `Result`, `CacheKey`, or `DbContext`.
 ---
 
 # NOF Application Development
@@ -9,7 +9,7 @@ description: Build .NET applications using the NOF (Neat Opinionated Framework) 
 
 ```text
 MyApp.Domain/      domain classes, value objects, failures, in-memory event payloads
-MyApp.Contract/    DTOs, RPC contracts, commands, notifications
+MyApp.Contract/    DTOs, RPC contracts, request/response models
 MyApp.Application/ service implementations, handlers, state machines, cache keys
 MyApp/             host program and infrastructure wiring
 ```
@@ -21,8 +21,8 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | Type | Contract | Handling |
 |---|---|---|
 | RPC operation | `IRpcService` method | generated nested handler base under `RpcServer<TService>` |
-| Command | `ICommand` | `CommandHandler<T>` |
-| Notification | `INotification` | `NotificationHandler<T>` |
+| Command | plain payload object | `CommandHandler<T>` |
+| Notification | plain payload object | `NotificationHandler<T>` |
 | In-memory event | arbitrary payload object | `InMemoryEventHandler<T>` |
 
 ## Dispatch APIs
@@ -30,10 +30,10 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | Interface | Method | Use |
 |---|---|---|
 | Generated RPC client/service | service methods | request/response operations |
-| `ICommandSender` | `SendAsync(command, ct)` | fire-and-forget |
-| `INotificationPublisher` | `PublishAsync(notification, ct)` | broadcast |
-| `IDeferredCommandSender` | `Send(command)` | outbox dispatch on save |
-| `IDeferredNotificationPublisher` | `Publish(notification)` | outbox dispatch on save |
+| `ICommandSender` | `SendAsync(command, ct)` | immediate command dispatch |
+| `ICommandSender` | `DeferSend(command)` | outbox dispatch on save |
+| `INotificationPublisher` | `PublishAsync(notification, ct)` | immediate broadcast |
+| `INotificationPublisher` | `DeferPublish(notification)` | outbox dispatch on save |
 | `IEventPublisher` | `PublishAsync(payload, ct)` | in-scope event dispatch |
 
 ## Source Generator Surface
@@ -52,8 +52,8 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | I want to... | Use |
 |---|---|
 | expose HTTP API | `IRpcService` + `[HttpEndpoint]` + `app.MapHttpEndpoint<TRpcServer>()` |
-| send async work | `ICommand` + `ICommandSender` |
-| publish notifications | `INotification` + `INotificationPublisher` |
+| send async work | payload object + `ICommandSender` |
+| publish notifications | payload object + `INotificationPublisher` |
 | publish in-memory events | payload object + `PublishAsEvent()` or `IEventPublisher` |
 | persist application data | `DbContext` / `NOFDbContext` + `SaveChangesAsync()` |
 | cache data | `CacheKey<T>` + `ICacheService` |

@@ -34,7 +34,7 @@ public sealed class GetOrder : OrderService.GetOrder
 ## Command Pattern
 
 ```csharp
-public record RebuildCacheCommand(string TenantId) : ICommand;
+public record RebuildCacheCommand(string TenantId);
 
 public sealed class RebuildCacheHandler : CommandHandler<RebuildCacheCommand>
 {
@@ -48,7 +48,7 @@ public sealed class RebuildCacheHandler : CommandHandler<RebuildCacheCommand>
 ## Notification Pattern
 
 ```csharp
-public record OrderCreatedNotification(string OrderId) : INotification;
+public record OrderCreatedNotification(string OrderId);
 
 public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {

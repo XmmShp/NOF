@@ -183,13 +183,16 @@ chore(ci): upgrade to .NET 10 SDK
 ## Architecture Overview
 
 ```
-NOF.Domain              ← Domain entities, aggregate roots, events, [AutoInject]
-NOF.Contract            ← Contract DTOs, Result<T>, [HttpEndpoint]
-NOF.Application         ← Handlers, state machines, caching, unit of work
-NOF.Infrastructure ← INOFAppBuilder, IStep pipeline, OpenTelemetry
-NOF.Hosting.AspNetCore  ← ASP.NET Core host, endpoint mapping, middleware
-NOF.Infrastructure.*    ← EF Core, RabbitMQ, Redis providers
-NOF.Extensions.*        ← JWT authorization, optional features
+NOF.Abstraction                 ← Shared annotations, user context, in-memory events
+NOF.Domain                      ← Value objects, failures, domain exceptions, ID generation
+NOF.Contract                    ← RPC contracts, request/response models, Result<T>, [HttpEndpoint]
+NOF.Application                 ← RPC servers, handlers, state machines, mapping, caching
+NOF.Hosting.Abstraction         ← INOFAppBuilder and step pipeline contracts
+NOF.Infrastructure              ← Builder defaults, EF Core integration, OpenTelemetry, runtime pipeline
+NOF.Hosting.AspNetCore          ← ASP.NET Core host, endpoint mapping, middleware
+NOF.Hosting.*                   ← Host-specific integrations such as Console, Blazor WebAssembly, and MAUI
+NOF.Infrastructure.*            ← Transport and cache providers such as RabbitMQ and Redis
+NOF.*.Extension.*               ← Optional features such as JWT authorization
 ```
 
 ### Key Patterns

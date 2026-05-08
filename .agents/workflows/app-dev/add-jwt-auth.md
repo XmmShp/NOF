@@ -50,7 +50,7 @@ app.MapGet("/.well-known/jwks.json", async (IJwksService jwksService, Cancellati
 Inject:
 
 - `IUserContext` for the current principal and permissions
-- `IExecutionContext` for tenant and tracing headers
+- `ITransparentInfos` for tenant and tracing headers
 
 ## Notes
 
