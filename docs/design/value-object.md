@@ -46,7 +46,7 @@ This reads as a type conversion, not as reaching inside a wrapper to pull someth
 
 This is the pragmatic reason, and it's the one that settled the debate.
 
-Consider a repository query:
+Consider an EF Core query:
 
 ```csharp
 var order = await dbContext.Orders
@@ -91,16 +91,17 @@ The explicit cast is an intentional speed bump:
 string raw = (string)orderName;  // You have to think about this
 ```
 
-## The Escape Hatch: `GetUnderlyingValue()`
+## Extraction Model
 
-For the rare cases where you genuinely need the primitive at a generic/infrastructure level (serialization, reflection-based tooling, diagnostics), the `IValueObject<T>` interface provides `GetUnderlyingValue()`:
+There is no separate `.Value` property or framework-provided `GetUnderlyingValue()` API on `IValueObject<T>`.
+
+When you need the primitive, use the explicit cast generated for the value object:
 
 ```csharp
-T GetUnderlyingValue();                        // IValueObject<T>
-object IValueObject.GetUnderlyingValue();      // IValueObject (non-generic, boxed)
+string raw = (string)orderName;
 ```
 
-This method exists on the interface, not on the struct's public surface — it's `[EditorBrowsable(Never)]` at the non-generic level. IntelliSense won't suggest it. You have to know it's there. That's the right level of friction for an infrastructure-only escape hatch.
+That keeps the public API small and consistent with how the framework's mapper and EF Core integration already reason about value objects.
 
 ## How This Interacts with the Mapper
 
@@ -118,6 +119,6 @@ The generator never looks for `.Value`. It uses the same explicit cast that hand
 |----------|-------------|--------------|-----------------|------------|
 | `.Value` property | Container | Problematic (expression tree) | Low (too easy) | ❌ |
 | Explicit cast `(T)` | Type conversion | Transparent (ValueConverter) | Medium (intentional) | ✅ |
-| `GetUnderlyingValue()` | Infrastructure escape hatch | N/A | High (interface-only) | ✅ (infra only) |
+| No extra API beyond explicit cast | Small public surface | N/A | Medium (intentional) | ✅ |
 
 The value object is a type, not a box. Treat it as one.

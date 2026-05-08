@@ -36,7 +36,7 @@ Follow these steps to add a new infrastructure provider package to NOF.
 
 7. Add the project to `NOF.slnx` under the `/src/Infrastructures/` folder.
 
-8. Add `dotnet pack` commands for the new project in `.github/workflows/cd.yml`.
+8. Ensure the new project is packable and has a `PackageId`. `.github/workflows/cd.yml` auto-discovers packable `src/**/*.csproj` files, so no per-project `dotnet pack` command needs to be added.
 
 9. Add the package to the table in `README.md`.
 

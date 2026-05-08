@@ -6,28 +6,24 @@ description: How to run the full CI pipeline locally before pushing
 
 Replicate the GitHub Actions CI pipeline on your local machine.
 
-// turbo
 1. Restore dependencies:
    ```bash
-   dotnet restore
+   dotnet restore NOF.slnx
    ```
 
-// turbo
 2. Verify code formatting:
    ```bash
    dotnet format --verify-no-changes --verbosity diagnostic
    ```
 
-// turbo
 3. Build the solution in Release mode:
    ```bash
-   dotnet build --configuration Release --no-restore
+   dotnet build NOF.slnx --configuration Release --no-restore
    ```
 
-// turbo
 4. Run all tests:
    ```bash
-   dotnet test --configuration Release --no-build --verbosity normal
+   dotnet test NOF.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
    ```
 
 5. If formatting fails, auto-fix with:

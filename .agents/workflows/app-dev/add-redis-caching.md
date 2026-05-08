@@ -42,15 +42,15 @@ public record OrderCacheKey(long OrderId)
 ## 5. Use `ICacheService` in Handlers
 
 ```csharp
-public class GetOrder : OrderService.GetOrder
+public sealed class GetOrder : OrderService.GetOrder
 {
+    private readonly DbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IOrderRepository _orderRepository;
 
-    public GetOrder(ICacheService cache, IOrderRepository orderRepository)
+    public GetOrder(DbContext dbContext, ICacheService cache)
     {
+        _dbContext = dbContext;
         _cache = cache;
-        _orderRepository = orderRepository;
     }
 
     public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
@@ -59,18 +59,18 @@ public class GetOrder : OrderService.GetOrder
         var cached = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
         if (cached.HasValue)
         {
-            return cached.Value;
+            return Result.Success(cached.Value);
         }
 
-        var order = await _orderRepository.FindAsync(OrderId.Of(request.Id), cancellationToken);
+        var order = await _dbContext.Set<Order>().FindAsync([request.Id], cancellationToken);
         if (order is null)
         {
             return Result.Fail("404", "Order not found");
         }
 
-        var dto = new OrderDto(request.Id, "demo");
+        var dto = new OrderDto(order.Id, order.Status);
         await _cache.SetAsync(cacheKey, dto, cancellationToken: cancellationToken);
-        return dto;
+        return Result.Success(dto);
     }
 }
 ```
@@ -80,3 +80,4 @@ public class GetOrder : OrderService.GetOrder
 - `ICacheService` also satisfies `IDistributedCache`.
 - `AddRedisCache(...)` replaces the default in-memory cache registration.
 - Use typed `CacheKey<T>` records rather than ad-hoc string keys when possible.
+- Prefer `DbContext` / `NOFDbContext` in handlers instead of assuming a framework-provided repository abstraction.

@@ -10,7 +10,6 @@ NOF uses incremental generators for compile-time code generation.
 
 - Place generator projects under `src/*SourceGenerator/`.
 - Keep target/framework settings aligned with existing generator projects.
-- Reference shared helper code from `src/Common/NOF.SourceGenerator.Shared/` when applicable.
 
 ## 2. Wire Generator to Parent Package
 

@@ -13,9 +13,10 @@ dotnet add package NOF.Infrastructure.RabbitMQ
 ## 2. Register in Program.cs
 
 ```csharp
-builder.AddRabbitMQ();
-// or:
-// builder.AddRabbitMQ("rabbitmq");
+builder.AddRabbitMQ(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+});
 ```
 
 ## 3. Configure Connection String
