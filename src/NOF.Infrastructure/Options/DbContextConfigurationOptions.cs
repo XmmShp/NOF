@@ -9,6 +9,8 @@ public sealed class DbContextConfigurationOptions
     public Action<DbContextOptionsBuilder, string> Configure { get; set; } = static (_, _) => { };
 
     public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;
+
+    public bool SoftDeleteEnabled { get; set; } = true;
 }
 
 public enum TenantMode

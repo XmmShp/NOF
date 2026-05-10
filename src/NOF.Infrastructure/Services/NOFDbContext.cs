@@ -18,6 +18,7 @@ public class NOFDbContext : DbContext
 
     public string CurrentTenantId => _tenantOptions.TenantId;
     public TenantMode CurrentTenantMode => _tenantOptions.TenantMode;
+    public bool CurrentSoftDeleteEnabled => _tenantOptions.SoftDeleteEnabled;
 
     internal DbSet<NOFStateMachineContext> NOFStateMachineContexts { get; set; }
     internal DbSet<NOFInboxMessage> NOFInboxMessages { get; set; }
@@ -90,39 +91,85 @@ public class NOFDbContext : DbContext
     }
 
     public override object? Find(Type entityType, params object?[]? keyValues)
-        => base.Find(entityType, AppendTenantKeyIfNeeded(entityType, keyValues));
+        => HideSoftDeletedEntity(base.Find(entityType, AppendTenantKeyIfNeeded(entityType, keyValues)));
 
     public override TEntity? Find<TEntity>(params object?[]? keyValues)
         where TEntity : class
-        => base.Find<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues));
+        => HideSoftDeletedEntity(base.Find<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues)));
 
-    public override ValueTask<object?> FindAsync(Type entityType, params object?[]? keyValues)
-        => base.FindAsync(entityType, AppendTenantKeyIfNeeded(entityType, keyValues));
+    public override async ValueTask<object?> FindAsync(Type entityType, params object?[]? keyValues)
+        => HideSoftDeletedEntity(await base.FindAsync(entityType, AppendTenantKeyIfNeeded(entityType, keyValues)));
 
-    public override ValueTask<object?> FindAsync(Type entityType, object?[]? keyValues, CancellationToken cancellationToken)
-        => base.FindAsync(entityType, AppendTenantKeyIfNeeded(entityType, keyValues), cancellationToken);
+    public override async ValueTask<object?> FindAsync(Type entityType, object?[]? keyValues, CancellationToken cancellationToken)
+        => HideSoftDeletedEntity(await base.FindAsync(entityType, AppendTenantKeyIfNeeded(entityType, keyValues), cancellationToken));
 
-    public override ValueTask<TEntity?> FindAsync<TEntity>(params object?[]? keyValues)
+    public override async ValueTask<TEntity?> FindAsync<TEntity>(params object?[]? keyValues)
         where TEntity : class
-        => base.FindAsync<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues));
+        => HideSoftDeletedEntity(await base.FindAsync<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues)));
 
-    public override ValueTask<TEntity?> FindAsync<TEntity>(object?[]? keyValues, CancellationToken cancellationToken)
+    public override async ValueTask<TEntity?> FindAsync<TEntity>(object?[]? keyValues, CancellationToken cancellationToken)
         where TEntity : class
-        => base.FindAsync<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues), cancellationToken);
+        => HideSoftDeletedEntity(await base.FindAsync<TEntity>(AppendTenantKeyIfNeeded(typeof(TEntity), keyValues), cancellationToken));
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        ApplySoftDeleteRules();
         ApplyTenantRules();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        ApplySoftDeleteRules();
         ApplyTenantRules();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
 
+
+    private void ApplySoftDeleteRules()
+    {
+        if (!CurrentSoftDeleteEnabled)
+        {
+            return;
+        }
+
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(entry => entry.State == EntityState.Deleted))
+        {
+            if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUtcPropertyName) is null)
+            {
+                continue;
+            }
+
+            entry.State = EntityState.Unchanged;
+            entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).CurrentValue = DateTime.UtcNow;
+            entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).IsModified = true;
+        }
+    }
+
+    private TEntity? HideSoftDeletedEntity<TEntity>(TEntity? entity)
+        where TEntity : class
+        => IsSoftDeletedEntity(entity) ? null : entity;
+
+    private object? HideSoftDeletedEntity(object? entity)
+        => IsSoftDeletedEntity(entity) ? null : entity;
+
+    private bool IsSoftDeletedEntity(object? entity)
+    {
+        if (entity is null || !CurrentSoftDeleteEnabled)
+        {
+            return false;
+        }
+
+        var entry = Entry(entity);
+        if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUtcPropertyName) is null)
+        {
+            return false;
+        }
+
+        return entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).CurrentValue is not null;
+    }
 
     private void ApplyTenantRules()
     {

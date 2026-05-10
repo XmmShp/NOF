@@ -77,7 +77,8 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
         var extension = new NOFTenantDbContextOptionsExtension
         {
             TenantId = tenantId,
-            TenantMode = _dbContextConfigurationOptions.TenantMode
+            TenantMode = _dbContextConfigurationOptions.TenantMode,
+            SoftDeleteEnabled = _dbContextConfigurationOptions.SoftDeleteEnabled
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 

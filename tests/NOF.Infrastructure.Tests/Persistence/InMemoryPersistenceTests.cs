@@ -434,6 +434,66 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task SoftDelete_ShouldAddShadowDeletedAtAndFilterDeletedRows()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var entityType = db.Model.FindEntityType(typeof(TestOrder));
+
+        Assert.NotNull(entityType);
+        Assert.NotNull(entityType.FindProperty("__DeletedAtUtc"));
+
+        db.Set<TestOrder>().Add(TestOrder.Create(10, "soft-delete"));
+        await db.SaveChangesAsync();
+
+        var order = await db.FindAsync<TestOrder>([10L]);
+        Assert.NotNull(order);
+
+        db.Set<TestOrder>().Remove(order);
+        await db.SaveChangesAsync();
+
+        Assert.Null(await db.FindAsync<TestOrder>([10L]));
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        Assert.Null(await verifyDb.Set<TestOrder>().SingleOrDefaultAsync(e => e.Id == 10));
+
+        var deletedAtUtc = await verifyDb.Set<TestOrder>()
+            .IgnoreQueryFilters()
+            .Where(e => e.Id == 10)
+            .Select(e => EF.Property<DateTime?>(e, "__DeletedAtUtc"))
+            .SingleAsync();
+
+        Assert.NotNull(deletedAtUtc);
+    }
+
+    [Fact]
+    public async Task WithSoftDelete_Disabled_ShouldPhysicallyDeleteRows()
+    {
+        using var services = CreateServiceProvider(softDeleteEnabled: false);
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestOrder>().Add(TestOrder.Create(11, "hard-delete"));
+        await db.SaveChangesAsync();
+
+        var order = await db.FindAsync<TestOrder>([11L]);
+        Assert.NotNull(order);
+
+        db.Set<TestOrder>().Remove(order);
+        await db.SaveChangesAsync();
+
+        Assert.Null(await db.Set<TestOrder>().IgnoreQueryFilters().SingleOrDefaultAsync(e => e.Id == 11));
+    }
+
+    [Fact]
     public async Task InboxRepository_ShouldAddFindAndRemoveMessages()
     {
         using var services = CreateServiceProvider();
@@ -779,7 +839,10 @@ public class SqliteInMemoryPersistenceTests
         });
     }
 
-    private static ServiceProvider CreateServiceProvider(TransactionalMessageOptions? transactionalMessageOptions = null, TenantMode tenantMode = TenantMode.DatabasePerTenant)
+    private static ServiceProvider CreateServiceProvider(
+        TransactionalMessageOptions? transactionalMessageOptions = null,
+        TenantMode tenantMode = TenantMode.DatabasePerTenant,
+        bool softDeleteEnabled = true)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -792,7 +855,8 @@ public class SqliteInMemoryPersistenceTests
         builder.AddInfrastructureDefaults();
         ConfigureSqliteInMemory(
             builder.UseDbContext<TestDbContext>()
-                .WithTenantMode(tenantMode),
+                .WithTenantMode(tenantMode)
+                .WithSoftDelete(softDeleteEnabled),
             $"nof-tests-{Guid.NewGuid():N}");
         builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
 

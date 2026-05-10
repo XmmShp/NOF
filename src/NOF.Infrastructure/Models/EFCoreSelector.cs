@@ -24,6 +24,15 @@ public readonly struct EFCoreSelector
         return this;
     }
 
+    public EFCoreSelector WithSoftDelete(bool enabled)
+    {
+        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
+        {
+            options.SoftDeleteEnabled = enabled;
+        });
+        return this;
+    }
+
     public EFCoreSelector WithConnectionString(string connectionStringTemplate)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionStringTemplate);

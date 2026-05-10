@@ -23,16 +23,38 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
         var entityTypes = modelBuilder.Model.GetEntityTypes().ToList();
         var useTenantDiscriminator = dbContext.CurrentTenantMode == TenantMode.SharedDatabase;
+        var useSoftDelete = dbContext.CurrentSoftDeleteEnabled;
 
         foreach (var entityType in entityTypes)
         {
-            if (!TenantModelHelper.ShouldConfigureTenantBehavior(entityType)
-                || entityType.ClrType is null)
+            if (entityType.ClrType is null)
+            {
+                continue;
+            }
+
+            var shouldConfigureSoftDelete = useSoftDelete && SoftDeleteModelHelper.ShouldConfigureSoftDelete(entityType);
+            var shouldConfigureTenantBehavior = TenantModelHelper.ShouldConfigureTenantBehavior(entityType);
+            if (!shouldConfigureSoftDelete && !shouldConfigureTenantBehavior)
             {
                 continue;
             }
 
             var entityBuilder = modelBuilder.Entity(entityType.ClrType);
+
+            if (shouldConfigureSoftDelete)
+            {
+                entityBuilder.Property<DateTime?>(SoftDeleteModelHelper.DeletedAtUtcPropertyName);
+                entityBuilder.HasIndex(SoftDeleteModelHelper.DeletedAtUtcPropertyName);
+                entityBuilder.HasQueryFilter(
+                    SoftDeleteModelHelper.DeletedAtUtcPropertyName,
+                    SoftDeleteModelHelper.BuildSoftDeleteFilter(entityType.ClrType));
+            }
+
+            if (!shouldConfigureTenantBehavior)
+            {
+                continue;
+            }
+
             var isHostOnly = TenantModelHelper.IsHostOnlyEntity(entityType);
             if (!useTenantDiscriminator)
             {

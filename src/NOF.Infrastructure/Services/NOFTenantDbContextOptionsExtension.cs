@@ -12,6 +12,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
     public string TenantId { get; set; } = NOFAbstractionConstants.Tenant.HostId;
     public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;
+    public bool SoftDeleteEnabled { get; set; } = true;
 
     public void ApplyServices(IServiceCollection services)
     {
@@ -61,19 +62,22 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
             => (NOFTenantDbContextOptionsExtension)base.Extension;
 
         public override bool IsDatabaseProvider => false;
-        public override string LogFragment => $"TenantContext(TenantId={Extension.TenantId},Mode={Extension.TenantMode}) ";
+        public override string LogFragment => $"TenantContext(TenantId={Extension.TenantId},Mode={Extension.TenantMode},SoftDelete={Extension.SoftDeleteEnabled}) ";
 
         public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other)
-            => other is ExtensionInfo;
+            => other is ExtensionInfo otherInfo
+                && otherInfo.Extension.TenantMode == Extension.TenantMode
+                && otherInfo.Extension.SoftDeleteEnabled == Extension.SoftDeleteEnabled;
 
         public override int GetServiceProviderHashCode()
-            => 0;
+            => HashCode.Combine(Extension.TenantMode, Extension.SoftDeleteEnabled);
 
         public override void PopulateDebugInfo(IDictionary<string, string> debugInfo)
         {
             debugInfo["NOF:TenantContext"] = "true";
             debugInfo["NOF:TenantId"] = Extension.TenantId;
             debugInfo["NOF:TenantMode"] = Extension.TenantMode.ToString();
+            debugInfo["NOF:SoftDeleteEnabled"] = Extension.SoftDeleteEnabled.ToString();
         }
     }
 }
