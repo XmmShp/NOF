@@ -30,6 +30,9 @@ public class MappableGeneratorTests
     private static GeneratorDriverRunResult RunGenerator(string source)
         => new MappableGenerator().GetResult(source, _extraRefs);
 
+    private static GeneratorDriverRunResult RunGeneratorPostGen(string source)
+        => new MappableGenerator().GetResultPostGen(source, _extraRefs);
+
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
     {
@@ -320,11 +323,95 @@ public class MappableGeneratorTests
 
         var result = RunGenerator(source);
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        // int 閳?enum: cast
+        // int -> enum: cast
         Assert.Contains("(global::Test.Status)(src.StatusCode)", code);
-        // enum 閳?string: ToString
+        // enum -> string: ToString
         Assert.Contains("src.Status", code);
         Assert.Contains("ToString()", code);
+    }
+
+    [Fact]
+    public void DirectEnumToEnumMapping_GeneratesCompilableSwitchMapping()
+    {
+        const string source = """
+            using NOF.Application;
+            namespace Test
+            {
+                public enum SourceStatus { Active = 1, pending = 2, Archived = 3 }
+                public enum DestinationStatus { Active = 10, Pending = 20 }
+
+                [Mappable<SourceStatus, DestinationStatus>]
+                public static partial class Mappings;
+            }
+            """;
+
+        var result = RunGeneratorPostGen(source);
+        var code = result.GeneratedTrees.Single().GetText().ToString();
+
+        Assert.Contains("MapperRegistration.Of<global::Test.SourceStatus, global::Test.DestinationStatus>", code);
+        Assert.Contains("src => src switch", code);
+        Assert.Contains("global::Test.SourceStatus.Active => global::Test.DestinationStatus.Active", code);
+        Assert.Contains("global::Test.SourceStatus.pending => global::Test.DestinationStatus.Pending", code);
+        Assert.Contains("_ => (global::Test.DestinationStatus)(int)(src)", code);
+        Assert.DoesNotContain("global::Test.SourceStatus.Archived =>", code);
+        Assert.DoesNotContain("new global::Test.DestinationStatus", code);
+    }
+
+    [Fact]
+    public void EnumPropertyMapping_WithRegisteredEnumMapping_UsesNestedMapper()
+    {
+        const string source = """
+            using NOF.Application;
+            namespace Test
+            {
+                public enum SourceStatus { Active = 1, pending = 2, Archived = 3 }
+                public enum DestinationStatus { Active = 10, Pending = 20 }
+
+                public class Order { public SourceStatus Status { get; set; } }
+                public class OrderDto { public DestinationStatus Status { get; set; } }
+
+                [Mappable<SourceStatus, DestinationStatus>]
+                [Mappable<Order, OrderDto>]
+                public static partial class Mappings;
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+        var code = result.GeneratedTrees.Single().GetText().ToString();
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF023");
+        Assert.Contains("Status = mapper.Map<global::Test.SourceStatus, global::Test.DestinationStatus>(src.Status)", code);
+        Assert.Contains("src => src switch", code);
+        Assert.Contains("global::Test.SourceStatus.Active => global::Test.DestinationStatus.Active", code);
+        Assert.Contains("global::Test.SourceStatus.pending => global::Test.DestinationStatus.Pending", code);
+        Assert.Contains("_ => (global::Test.DestinationStatus)(int)(src)", code);
+        Assert.DoesNotContain("global::Test.SourceStatus.Archived =>", code);
+    }
+
+    [Fact]
+    public void EnumPropertyMapping_WithoutRegisteredEnumMapping_EmitsNOF023()
+    {
+        const string source = """
+            using NOF.Application;
+            namespace Test
+            {
+                public enum SourceStatus { Active = 1 }
+                public enum DestinationStatus { Active = 10 }
+
+                public class Order { public SourceStatus Status { get; set; } }
+                public class OrderDto { public DestinationStatus Status { get; set; } }
+
+                [Mappable<Order, OrderDto>]
+                public static partial class Mappings;
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+        var code = result.GeneratedTrees.Single().GetText().ToString();
+
+        Assert.Contains(diagnostics, d => d.Id == "NOF023");
+        Assert.Contains("Status = mapper.Map<global::Test.SourceStatus, global::Test.DestinationStatus>(src.Status)", code);
+        Assert.DoesNotContain("Status = src.Status switch", code);
     }
 
     // -----------------------------------------------------------------------
