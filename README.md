@@ -18,25 +18,25 @@
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [`NOF.Abstraction`](https://www.nuget.org/packages/NOF.Abstraction) | Shared annotations, user context, ambient headers, and in-memory event primitives |
-| [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain) | Domain primitives - value objects, failures, domain exceptions, and ID generation |
-| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract) | Contract layer - RPC contracts, request/response models, `Result<T>`, `Optional<T>`, HTTP endpoint attributes |
-| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application) | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts |
-| [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction) | Hosting abstractions - builder contracts, step contracts, and dependency ordering |
-| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure) | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, and runtime wiring |
-| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI) | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers |
-| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore) | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, and JSON configuration |
-| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly) | Blazor WebAssembly hosting - host builder integration for browser apps |
-| [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console) | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline |
-| [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui) | .NET MAUI hosting - MAUI app builder integration for cross-platform applications |
-| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt) | JWT contract extension - authority service contracts and token models |
-| [`NOF.Hosting.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authorization.Jwt) | JWT outbound propagation - writes bearer tokens to outbound NOF requests |
-| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authority and resource server integration - token issuance, validation, key rotation, and JWKS |
-| [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ) | RabbitMQ transport for NOF command and notification dispatch |
-| [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis) | Redis-backed cache infrastructure via StackExchange.Redis |
-| [`NOF.Test`](https://www.nuget.org/packages/NOF.Test) | Test host helpers for NOF applications |
+| Package                                                                                                                           | Description                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [`NOF.Abstraction`](https://www.nuget.org/packages/NOF.Abstraction)                                                               | Shared annotations, user context, ambient headers, and in-memory event primitives                                       |
+| [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain)                                                                         | Domain primitives - value objects, failures, domain exceptions, and ID generation                                       |
+| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract)                                                                     | Contract layer - RPC contracts, request/response models, `Result<T>`, `Optional<T>`, HTTP endpoint attributes           |
+| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application)                                                               | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts                   |
+| [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)                                               | Hosting abstractions - builder contracts, step contracts, and dependency ordering                                       |
+| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, and runtime wiring |
+| [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)                                                                                 | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers             |
+| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore)                                                 | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, and JSON configuration               |
+| [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly)                                   | Blazor WebAssembly hosting - host builder integration for browser apps                                                  |
+| [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console)                                                       | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline                                        |
+| [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui)                                                             | .NET MAUI hosting - MAUI app builder integration for cross-platform applications                                        |
+| [`NOF.Contract.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Contract.Extension.Authorization.Jwt)             | JWT contract extension - authority service contracts and token models                                                   |
+| [`NOF.Hosting.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authorization.Jwt)               | JWT outbound propagation - writes bearer tokens to outbound NOF requests                                                |
+| [`NOF.Infrastructure.Extension.Authorization.Jwt`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authorization.Jwt) | JWT authority and resource server integration - token issuance, validation, key rotation, and JWKS                      |
+| [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ)                                       | RabbitMQ transport for NOF command and notification dispatch                                                            |
+| [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis)                   | Redis-backed cache infrastructure via StackExchange.Redis                                                               |
+| [`NOF.Test`](https://www.nuget.org/packages/NOF.Test)                                                                             | Test host helpers for NOF applications                                                                                  |
 
 ## Quick Start
 
@@ -97,6 +97,28 @@ NOF.Infrastructure.*           <- Messaging and caching providers
 ## Documentation
 
 Full API documentation is available at the [GitHub Pages site](https://xmmshp.github.io/NOF/).
+
+## JSON And AOT
+
+NOF supports both regular JIT execution and Native AOT-oriented setups.
+
+- Framework-managed HTTP JSON paths use `JsonTypeInfo`/`JsonSerializerContext`-based APIs where possible.
+- `JsonSerializerOptions.NOF` ships with built-in metadata for NOF's common primitive needs and value-object primitives.
+- Application DTOs still need source-generated metadata in AOT scenarios.
+
+Register your app context before the type is first serialized or deserialized:
+
+```csharp
+using System.Text.Json;
+using MyApp;
+
+JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
+{
+    options.TypeInfoResolverChain.Add(MyAppJsonSerializerContext.Default);
+});
+```
+
+If metadata is missing, NOF now throws a framework-specific error that includes the concrete runtime type name to make AOT failures easier to locate.
 
 ## Testing
 

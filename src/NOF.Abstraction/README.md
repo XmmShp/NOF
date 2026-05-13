@@ -25,6 +25,25 @@ This mechanism can be used by domain aggregates, application services, or any ot
 dotnet add package NOF.Abstraction
 ```
 
+## JSON And AOT
+
+`NOF.Abstraction` exposes the shared `JsonSerializerOptions.NOF` instance used across the framework.
+
+- It includes `NOFJsonSerializerContext` for common primitive and framework-adjacent types.
+- It stays compatible with normal JIT execution.
+- In AOT-oriented apps, register your own source-generated contexts before a type is first serialized or deserialized.
+
+```csharp
+using System.Text.Json;
+
+JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
+{
+    options.TypeInfoResolverChain.Add(MyAppJsonSerializerContext.Default);
+});
+```
+
+If a type is missing JSON metadata, NOF throws an `InvalidOperationException` that includes the concrete type name and points you at `ConfigureNOFJsonSerializerOptions(...)`.
+
 ## License
 
 Apache-2.0

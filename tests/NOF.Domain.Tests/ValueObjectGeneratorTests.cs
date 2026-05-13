@@ -134,6 +134,9 @@ public class ValueObjectGeneratorTests
         Assert.Contains("public static bool operator ==(Name left, Name right)", code);
         Assert.Contains("public static bool operator !=(Name left, Name right)", code);
         Assert.Contains("public sealed class __JsonConverter", code);
+        Assert.Contains("private static global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<string> __GetPrimitiveJsonTypeInfo", code);
+        Assert.Contains("JsonSerializer.Deserialize(ref reader, __GetPrimitiveJsonTypeInfo(options))", code);
+        Assert.Contains("JsonSerializer.Serialize(writer, value._value, __GetPrimitiveJsonTypeInfo(options))", code);
         Assert.DoesNotContain("Of(string? value)", code); // no nullable overload for ref types
         Assert.DoesNotContain("public static Name New()", code);
     }
@@ -259,6 +262,5 @@ public class ValueObjectGeneratorTests
         Assert.True(nullGuardIdx < validateIdx);
     }
 }
-
 
 

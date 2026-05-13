@@ -26,6 +26,9 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 - equality members and `ToString()`
 - a nested `JsonConverter`
 
+The generated `JsonConverter` is AOT-friendly and resolves primitive serialization through `JsonTypeInfo`.
+If you use Native AOT-style publishing, make sure the `JsonSerializerOptions` passed to serialization includes metadata for the primitive type backing the value object.
+
 ```csharp
 using NOF.Domain;
 

@@ -44,13 +44,13 @@ public sealed class CachedJwksService(IServiceScopeFactory serviceScopeFactory) 
         }
     }
 
-    private static SecurityKey[] ToSecurityKeys(JsonWebKey[] jwkKeys)
+    private static SecurityKey[] ToSecurityKeys(JwkKeyDocument[] jwkKeys)
     {
         var keys = new List<SecurityKey>();
 
         foreach (var jwk in jwkKeys)
         {
-            if (jwk.Kty != "RSA")
+            if (jwk.Kty != "RSA" || string.IsNullOrWhiteSpace(jwk.N) || string.IsNullOrWhiteSpace(jwk.E))
             {
                 continue;
             }

@@ -26,7 +26,7 @@ public class JsonObjectSerializer : IObjectSerializer
 
         runtimeType ??= value.GetType();
 
-        var typeInfo = Options.GetTypeInfo(runtimeType);
+        var typeInfo = Options.GetRequiredTypeInfo(runtimeType);
         return JsonSerializer.SerializeToUtf8Bytes(value, typeInfo);
     }
 
@@ -39,7 +39,7 @@ public class JsonObjectSerializer : IObjectSerializer
             return default;
         }
 
-        var typeInfo = Options.GetTypeInfo(runtimeType);
+        var typeInfo = Options.GetRequiredTypeInfo(runtimeType);
         return JsonSerializer.Deserialize(data.Span, typeInfo);
     }
 }

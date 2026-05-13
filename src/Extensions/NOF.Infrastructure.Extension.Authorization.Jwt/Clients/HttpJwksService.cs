@@ -12,7 +12,7 @@ public sealed class HttpJwksService(HttpClient httpClient, IOptions<JwtResourceS
 {
     public async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
     {
-        return await httpClient.GetFromJsonAsync<JwksDocument>(options.Value.JwksEndpoint, JsonSerializerOptions.NOF, cancellationToken).ConfigureAwait(false)
+        return await httpClient.GetFromJsonAsync(options.Value.JwksEndpoint, JsonSerializerOptions.NOF.GetRequiredTypeInfo<JwksDocument>(), cancellationToken).ConfigureAwait(false)
             ?? new JwksDocument();
     }
 }

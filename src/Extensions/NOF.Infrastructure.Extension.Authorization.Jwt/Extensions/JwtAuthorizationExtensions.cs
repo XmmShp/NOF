@@ -28,6 +28,7 @@ public static partial class NOFJwtAuthorizationExtensions
 
         public INOFAppBuilder AddJwtResourceServer(Action<JwtResourceServerOptions> configureOptions, Action<JwtTokenPropagationOptions>? tokenPropagationOptions = null)
         {
+            builder.AddApplicationPart(typeof(HttpJwksService).Assembly);
             builder.Services.Configure(configureOptions);
 
             builder.AddJwtTokenPropagation(tokenPropagationOptions);

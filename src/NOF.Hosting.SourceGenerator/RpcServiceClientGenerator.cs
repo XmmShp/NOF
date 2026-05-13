@@ -102,6 +102,9 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine("            _serviceProvider = serviceProvider;");
         sb.AppendLine("        }");
         sb.AppendLine();
+        sb.AppendLine("        private static global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> GetJsonTypeInfo<T>()");
+        sb.AppendLine("            => _jsonOptions.GetRequiredTypeInfo<T>();");
+        sb.AppendLine();
 
         foreach (var method in methods)
         {
@@ -233,7 +236,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
             if (isBodyMethod)
             {
                 sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
-                sb.AppendLine($"                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request, typeof({requestType}), options: _jsonOptions);");
+                sb.AppendLine($"                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request, GetJsonTypeInfo<{requestType}>());");
             }
             else
             {
@@ -272,7 +275,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine("                response.EnsureSuccessStatusCode();");
         sb.AppendLine();
 
-        sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<{responseType}>(response.Content, _jsonOptions, ct);");
+        sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<{responseType}>(), ct);");
         sb.AppendLine("                result = apiResponse!;");
         sb.AppendLine("                context.Response = result;");
 

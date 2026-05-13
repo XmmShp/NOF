@@ -10,6 +10,7 @@ public class RpcServiceClientGeneratorTests
 {
     private static readonly Type[] _extraRefs =
     [
+        typeof(NOF.Abstraction.NOFAbstractionExtensions),
         typeof(HttpEndpointAttribute),
         typeof(IRpcClient),
         typeof(HttpRpcClientAttribute<>),
@@ -141,7 +142,8 @@ public class RpcServiceClientGeneratorTests
         var code = GetGeneratedHttpClientCode(runResult);
 
         Assert.Contains("Task<global::NOF.Contract.Result<global::MyApp.MyData>> GetDataAsync", code);
-        Assert.Contains("ReadFromJsonAsync<global::NOF.Contract.Result<global::MyApp.MyData>>", code);
+        Assert.Contains("ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.Result<global::MyApp.MyData>>()", code);
+        Assert.Contains("private static global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> GetJsonTypeInfo<T>()", code);
     }
 
     private static Microsoft.CodeAnalysis.GeneratorDriverRunResult RunGenerators(string source)

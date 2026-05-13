@@ -9,16 +9,16 @@ public sealed class LocalJwksService(ISigningKeyService signingKeyService) : IJw
 {
     public async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
     {
-        var jwks = (await signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(ToJsonWebKey).ToArray();
+        var jwks = (await signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(ToJwkKeyDocument).ToArray();
         return new JwksDocument { Keys = jwks };
     }
 
-    internal static JsonWebKey ToJsonWebKey(ManagedSigningKey managedKey)
+    internal static JwkKeyDocument ToJwkKeyDocument(ManagedSigningKey managedKey)
     {
         var rsa = managedKey.Key.Rsa;
         var parameters = rsa.ExportParameters(false);
 
-        return new JsonWebKey
+        return new JwkKeyDocument
         {
             Kty = "RSA",
             Use = "sig",

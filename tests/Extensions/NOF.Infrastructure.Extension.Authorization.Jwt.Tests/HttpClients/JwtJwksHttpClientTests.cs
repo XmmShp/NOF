@@ -1,9 +1,7 @@
-using Microsoft.IdentityModel.Tokens;
-using NOF.Abstraction;
+using NOF.Test;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 using Xunit;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.HttpClients;
@@ -17,7 +15,7 @@ public sealed class JwtJwksHttpClientTests
         {
             Keys =
             [
-                new JsonWebKey
+                new JwkKeyDocument
                 {
                     Kid = "kid-1",
                     Kty = "RSA",
@@ -34,6 +32,12 @@ public sealed class JwtJwksHttpClientTests
             BaseAddress = new Uri("https://auth.local")
         };
 
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddJwtResourceServer(options =>
+        {
+            options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
+        });
+
         var service = new HttpJwksService(httpClient, global::Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
         {
             JwksEndpoint = "https://auth.local/.well-known/jwks.json"
@@ -49,10 +53,12 @@ public sealed class JwtJwksHttpClientTests
 
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)
     {
+        Assert.IsType<JwksDocument>(payload);
+
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(
-                JsonSerializer.Serialize(payload, JsonSerializerOptions.NOF),
+                """{"keys":[{"kid":"kid-1","kty":"RSA","use":"sig","n":"abc","e":"AQAB"}]}""",
                 Encoding.UTF8,
                 new MediaTypeHeaderValue("application/json"))
         };
