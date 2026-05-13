@@ -33,6 +33,7 @@ public static partial class NOFInfrastructureExtensions
 
             builder.Services.TryAddScoped<ICacheService, CacheService>();
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
 
             builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());

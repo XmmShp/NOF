@@ -55,6 +55,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddSingleton<ProtectedFleetServer>();
         services.AddTransient<GetFleetOverviewHandler>();
         services.AddTransient<ProtectedFleetClient>();
+        services.AddTransient<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>();
         services.AddTransient<AuthorizationInboundMiddleware>();
 
         var requestInboundTypes = new RequestInboundPipelineTypes();

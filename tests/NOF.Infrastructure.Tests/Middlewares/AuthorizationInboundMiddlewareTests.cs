@@ -12,7 +12,7 @@ public sealed class AuthorizationInboundMiddlewareTests
     public async Task InvokeAsync_MethodAllowAnonymous_ShouldOverrideClassPermission_AndAllowUnauthenticated()
     {
         var userContext = new UserContext();
-        var middleware = new AuthorizationInboundMiddleware(userContext, NullLogger<AuthorizationInboundMiddleware>.Instance);
+        var middleware = CreateMiddleware(userContext);
 
         var nextCalled = false;
         await middleware.InvokeAsync(CreateContext(nameof(TestService.AllowAnonymousMethod)), _ =>
@@ -28,7 +28,7 @@ public sealed class AuthorizationInboundMiddlewareTests
     public async Task InvokeAsync_EmptyPermission_ShouldRequireAuthentication_ButNotSpecificPermission()
     {
         var userContext = new UserContext();
-        var middleware = new AuthorizationInboundMiddleware(userContext, NullLogger<AuthorizationInboundMiddleware>.Instance);
+        var middleware = CreateMiddleware(userContext);
 
         // Unauthenticated => 401
         var unauthContext = CreateContext(nameof(TestService.LoginOnlyMethod));
@@ -56,7 +56,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         {
             User = CreateAuthenticatedUser(ClaimTypes.Permission, "permclass")
         };
-        var middleware = new AuthorizationInboundMiddleware(userContext, NullLogger<AuthorizationInboundMiddleware>.Instance);
+        var middleware = CreateMiddleware(userContext);
 
         // Authenticated but missing method permission => 403
         var deniedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
@@ -77,6 +77,59 @@ public sealed class AuthorizationInboundMiddlewareTests
         Assert.Null(allowedContext.Response);
     }
 
+    [Fact]
+    public async Task InvokeAsync_CustomPolicy_ShouldShortCircuitWithPolicyResponse()
+    {
+        var middleware = new AuthorizationInboundMiddleware([new DenyAllAuthorizationPolicy("499")]);
+        var context = CreateContext(nameof(TestService.AllowAnonymousMethod));
+        var nextCalled = false;
+
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        var denied = Assert.IsType<FailResult>(context.Response);
+        Assert.Equal("499", denied.ErrorCode);
+        Assert.False(nextCalled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_MultiplePolicies_ShouldAllowWhenAnyPolicyAllows()
+    {
+        var middleware = new AuthorizationInboundMiddleware([
+            new DenyAllAuthorizationPolicy("498"),
+            new AllowAllAuthorizationPolicy()
+        ]);
+        var context = CreateContext(nameof(TestService.LoginOnlyMethod));
+        var nextCalled = false;
+
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.True(nextCalled);
+        Assert.Null(context.Response);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_MultiplePolicies_ShouldUseFirstFailureWhenAllPoliciesDeny()
+    {
+        var middleware = new AuthorizationInboundMiddleware([
+            new DenyAllAuthorizationPolicy("498"),
+            new DenyAllAuthorizationPolicy("499")
+        ]);
+        var context = CreateContext(nameof(TestService.LoginOnlyMethod));
+
+        await middleware.InvokeAsync(context, _ => ValueTask.CompletedTask, default);
+
+        var denied = Assert.IsType<FailResult>(context.Response);
+        Assert.Equal("498", denied.ErrorCode);
+    }
+
     private static RequestInboundContext CreateContext(string methodName)
     {
         return new RequestInboundContext
@@ -86,6 +139,14 @@ public sealed class AuthorizationInboundMiddlewareTests
             ServiceType = typeof(TestService),
             MethodName = methodName
         };
+    }
+
+    private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext)
+    {
+        var policy = new MetadataRequestAuthorizationPolicy(
+            userContext,
+            NullLogger<MetadataRequestAuthorizationPolicy>.Instance);
+        return new AuthorizationInboundMiddleware([policy]);
     }
 
     private static ClaimsPrincipal CreateAuthenticatedUser(params string[] permissionClaims)
@@ -115,4 +176,16 @@ public sealed class AuthorizationInboundMiddlewareTests
     }
 
     private sealed class TestRequest;
+
+    private sealed class AllowAllAuthorizationPolicy : IRequestAuthorizationPolicy
+    {
+        public ValueTask<IResult?> AuthorizeAsync(RequestInboundContext context, CancellationToken cancellationToken)
+            => ValueTask.FromResult<IResult?>(null);
+    }
+
+    private sealed class DenyAllAuthorizationPolicy(string errorCode) : IRequestAuthorizationPolicy
+    {
+        public ValueTask<IResult?> AuthorizeAsync(RequestInboundContext context, CancellationToken cancellationToken)
+            => ValueTask.FromResult<IResult?>(Result.Fail(errorCode, "custom policy denied"));
+    }
 }
