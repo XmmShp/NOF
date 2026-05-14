@@ -10,6 +10,12 @@ namespace NOF.Application;
 public interface ICacheService : IDistributedCache
 {
     /// <summary>
+    /// Creates a cache service view that ignores query filters such as the configured key prefix.
+    /// </summary>
+    /// <returns>A cache service view without query filters.</returns>
+    ICacheService IgnoreQueryFilters();
+
+    /// <summary>
     /// Gets a cached value by key.
     /// </summary>
     /// <typeparam name="T">The type of the cached value.</typeparam>

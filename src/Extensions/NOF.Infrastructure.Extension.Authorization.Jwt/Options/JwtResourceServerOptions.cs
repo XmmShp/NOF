@@ -8,6 +8,12 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 public class JwtResourceServerOptions : JwtTokenPropagationOptions
 {
     /// <summary>
+    /// Gets or sets the minimum interval between two JWKS refresh attempts.
+    /// Default is 24 hours.
+    /// </summary>
+    public TimeSpan JwksRefreshInterval { get; set; } = TimeSpan.FromHours(24);
+
+    /// <summary>
     /// Gets or sets the JWKS endpoint used to fetch signing keys for token validation.
     /// </summary>
     public string JwksEndpoint { get; set; } = string.Empty;

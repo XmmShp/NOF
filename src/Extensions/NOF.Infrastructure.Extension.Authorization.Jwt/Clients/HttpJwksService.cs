@@ -11,8 +11,6 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 public sealed class HttpJwksService(HttpClient httpClient, IOptions<JwtResourceServerOptions> options) : IJwksService
 {
     public async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
-    {
-        return await httpClient.GetFromJsonAsync(options.Value.JwksEndpoint, JsonSerializerOptions.NOF.GetRequiredTypeInfo<JwksDocument>(), cancellationToken).ConfigureAwait(false)
+        => await httpClient.GetFromJsonAsync(options.Value.JwksEndpoint, JsonSerializerOptions.NOF.GetRequiredTypeInfo<JwksDocument>(), cancellationToken).ConfigureAwait(false)
             ?? new JwksDocument();
-    }
 }

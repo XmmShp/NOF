@@ -1,16 +1,13 @@
 using NOF.Abstraction;
-using NOF.Annotation;
 using System.Text.Json;
-
-[assembly: AssemblyInitialize<NOF.Infrastructure.Extension.Authorization.Jwt.NOFJwtAuthorizationJsonRegistration>]
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
-internal sealed class NOFJwtAuthorizationJsonRegistration : IAssemblyInitializer
+internal static class NOFJwtAuthorizationJsonRegistration
 {
     private static int _initialized;
 
-    public static void Initialize()
+    public static void EnsureRegistered()
     {
         if (Interlocked.Exchange(ref _initialized, 1) == 1)
         {

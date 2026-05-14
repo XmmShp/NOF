@@ -29,8 +29,8 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.NotNull(scope.GetRequiredService<JwtAuthorityService>());
         Assert.NotNull(scope.GetRequiredService<IJwksService>());
         Assert.NotNull(scope.GetRequiredService<ISigningKeyService>());
-        Assert.NotNull(scope.GetRequiredService<CachedJwksService>());
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.NotNull(scope.GetRequiredService<LocalJwksService>());
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ISigningKeyService) &&
             descriptor.Lifetime == ServiceLifetime.Scoped);
@@ -143,9 +143,30 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.Equal("https://auth.local/.well-known/jwks.json", resourceOptions.JwksEndpoint);
         Assert.Equal("X-Authorization", propagationOptions.HeaderName);
         Assert.Equal("Token", propagationOptions.TokenType);
-        Assert.NotNull(scope.GetRequiredService<CachedJwksService>());
         Assert.IsType<HttpJwksService>(scope.GetRequiredService<HttpJwksService>());
         Assert.IsType<HttpJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.NotNull(scope.GetRequiredService<ResourceServerJwksCacheService>());
+    }
+
+    [Fact]
+    public async Task AddJwtResourceServer_Only_ShouldNotRegisterAuthorityHandlers()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddJwtResourceServer(options =>
+        {
+            options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
+        });
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        Assert.Null(scope.Services.GetService<JwtAuthorityService>());
+        Assert.Null(scope.Services.GetService<JwtAuthorityService.GenerateJwtToken>());
+        Assert.Null(scope.Services.GetService<JwtAuthorityService.ValidateJwtRefreshToken>());
+        Assert.Null(scope.Services.GetService<JwtAuthorityService.RevokeJwtRefreshToken>());
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(GenerateJwtTokenHandler));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(ValidateJwtRefreshTokenHandler));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(RevokeJwtRefreshTokenHandler));
     }
 
     private static NOFTestAppBuilder CreateAuthorityBuilder(string connectionString)

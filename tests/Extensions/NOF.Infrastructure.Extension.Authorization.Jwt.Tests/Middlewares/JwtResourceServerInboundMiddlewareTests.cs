@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
@@ -15,7 +14,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     public async Task InvokeAsync_WhenAuthorizationHeaderMissing_ShouldContinueWithoutValidation()
     {
         var userContext = new UserContext();
-        var jwksService = CreateCachedJwksService([]);
+        var jwksService = CreateJwksService([]);
         var executionContext = new TransparentInfos();
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
@@ -34,7 +33,7 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     public async Task InvokeAsync_WhenKeysUnavailable_ShouldContinueAndKeepHeader()
     {
         var userContext = new UserContext();
-        var jwksService = CreateCachedJwksService([]);
+        var jwksService = CreateJwksService([]);
         var executionContext = new TransparentInfos();
         executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
@@ -62,19 +61,22 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
             CreatedAtUtc = DateTime.UtcNow
         };
-        var jwksService = CreateCachedJwksService([key]);
+        var jwksService = CreateJwksService([key]);
         var executionContext = new TransparentInfos();
         executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
-        var act = async () => await middleware.InvokeAsync(CreateInboundContext(), _ =>
+        async Task Act()
         {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
+            await middleware.InvokeAsync(CreateInboundContext(), _ =>
+            {
+                nextCalled = true;
+                return ValueTask.CompletedTask;
+            }, default);
+        }
 
-        Assert.Null(await Record.ExceptionAsync(act));
+        Assert.Null(await Record.ExceptionAsync(Act));
         Assert.True(nextCalled);
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
@@ -82,12 +84,12 @@ public sealed class JwtResourceServerInboundMiddlewareTests
 
     private static JwtResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        CachedJwksService jwksService,
+        ResourceServerJwksCacheService jwksCacheService,
         ITransparentInfos executionContext)
     {
         return new JwtResourceServerInboundMiddleware(
             userContext,
-            jwksService,
+            jwksCacheService,
             Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
             {
                 HeaderName = NOFAbstractionConstants.Transport.Headers.Authorization,
@@ -99,12 +101,12 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             executionContext);
     }
 
-    private static CachedJwksService CreateCachedJwksService(IReadOnlyList<ManagedSigningKey> keys)
+    private static ResourceServerJwksCacheService CreateJwksService(IReadOnlyList<ManagedSigningKey> keys)
     {
         var signingKeyService = new FakeSigningKeyService([.. keys]);
-        var jwksService = new LocalJwksService(signingKeyService);
-        var rootProvider = new FakeServiceProvider(typeof(IJwksService), jwksService);
-        return new CachedJwksService(new FakeServiceScopeFactory(rootProvider));
+        return new ResourceServerJwksCacheService(
+            new LocalJwksService(signingKeyService),
+            Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions()));
     }
 
     private static RequestInboundContext CreateInboundContext()
@@ -139,22 +141,4 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         }
     }
 
-    private sealed class FakeServiceProvider(Type serviceType, object? service) : IServiceProvider
-    {
-        public object? GetService(Type requestedType) => requestedType == serviceType ? service : null;
-    }
-
-    private sealed class FakeServiceScopeFactory(IServiceProvider serviceProvider) : IServiceScopeFactory
-    {
-        public IServiceScope CreateScope() => new FakeServiceScope(serviceProvider);
-    }
-
-    private sealed class FakeServiceScope(IServiceProvider serviceProvider) : IServiceScope
-    {
-        public IServiceProvider ServiceProvider => serviceProvider;
-
-        public void Dispose()
-        {
-        }
-    }
 }

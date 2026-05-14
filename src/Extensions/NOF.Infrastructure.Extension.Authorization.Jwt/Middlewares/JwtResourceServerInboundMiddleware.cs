@@ -14,7 +14,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
     IBefore<TenantInboundMiddleware>
 {
     private readonly IUserContext _userContext;
-    private readonly CachedJwksService _jwksService;
+    private readonly ResourceServerJwksCacheService _jwksCacheService;
     private readonly JwtResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<JwtResourceServerInboundMiddleware> _logger;
@@ -22,13 +22,13 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
     public JwtResourceServerInboundMiddleware(
         IUserContext userContext,
-        CachedJwksService jwksService,
+        ResourceServerJwksCacheService jwksCacheService,
         IOptions<JwtResourceServerOptions> jwtOptions,
         ILogger<JwtResourceServerInboundMiddleware> logger,
         ITransparentInfos executionContext)
     {
         _userContext = userContext;
-        _jwksService = jwksService;
+        _jwksCacheService = jwksCacheService;
         _jwtOptions = jwtOptions.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
         _logger = logger;
@@ -56,7 +56,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
         try
         {
-            var keys = await _jwksService.GetSecurityKeysAsync(cancellationToken);
+            var keys = await _jwksCacheService.GetSecurityKeysAsync(cancellationToken);
             if (keys.Count == 0)
             {
                 _logger.LogDebug("No JWKS keys available for JWT validation");

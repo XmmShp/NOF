@@ -2,14 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NOF.Application;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>
 /// Background service that periodically rotates the JWT signing key
-/// and publishes a <see cref="JwtKeyRotationNotification"/> so that all instances
-/// in a distributed deployment refresh their cached JWKS.
+/// and refreshes cached JWKS registrations.
 /// </summary>
 public sealed class JwtKeyRotationBackgroundService : BackgroundService
 {
@@ -48,10 +46,6 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
                 await signingKeyService.RotateKeyAsync(stoppingToken).ConfigureAwait(false);
                 _logger.LogInformation("Signing key rotated successfully. New kid: {Kid}",
                     (await signingKeyService.GetCurrentSigningKeyAsync(stoppingToken).ConfigureAwait(false)).Kid);
-
-                var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
-                await notificationPublisher.PublishAsync(new JwtKeyRotationNotification(), cancellationToken: stoppingToken);
-                _logger.LogInformation("Key rotation notification published");
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

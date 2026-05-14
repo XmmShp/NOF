@@ -15,6 +15,7 @@ public sealed class CacheService : ICacheService
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
     private readonly ITransparentInfos _executionContext;
+    private readonly bool _ignoreQueryFilters;
 
     public CacheService(
         ICacheServiceRider rider,
@@ -22,6 +23,23 @@ public sealed class CacheService : ICacheService
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
         ITransparentInfos executionContext)
+        : this(
+            rider,
+            serializer,
+            lockRetryStrategy,
+            options?.Value ?? throw new ArgumentNullException(nameof(options)),
+            executionContext,
+            ignoreQueryFilters: false)
+    {
+    }
+
+    private CacheService(
+        ICacheServiceRider rider,
+        IObjectSerializer serializer,
+        ICacheLockRetryStrategy lockRetryStrategy,
+        CacheServiceOptions options,
+        ITransparentInfos executionContext,
+        bool ignoreQueryFilters)
     {
         ArgumentNullException.ThrowIfNull(rider);
         ArgumentNullException.ThrowIfNull(serializer);
@@ -32,12 +50,23 @@ public sealed class CacheService : ICacheService
         _rider = rider;
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
-        _options = options.Value;
+        _options = options;
         _executionContext = executionContext;
+        _ignoreQueryFilters = ignoreQueryFilters;
     }
+
+    public ICacheService IgnoreQueryFilters()
+        => _ignoreQueryFilters
+            ? this
+            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _executionContext, ignoreQueryFilters: true);
 
     private string ApplyKeyPrefix(string key)
     {
+        if (_ignoreQueryFilters)
+        {
+            return key;
+        }
+
         var keyPrefixTemplate = _options.KeyPrefix ?? string.Empty;
         var keyPrefix = DbConnectionStringTemplateResolver.ResolveTenantId(
             keyPrefixTemplate,
@@ -87,8 +116,8 @@ public sealed class CacheService : ICacheService
             return result.Value;
         }
 
-        var prefixedKey = ApplyKeyPrefix(key);
-        var localLock = _localLocks.GetOrAdd(prefixedKey, _ => new SemaphoreSlim(1, 1));
+        var normalizedKey = ApplyKeyPrefix(key);
+        var localLock = _localLocks.GetOrAdd(normalizedKey, _ => new SemaphoreSlim(1, 1));
         await localLock.WaitAsync(cancellationToken);
         try
         {
@@ -122,13 +151,13 @@ public sealed class CacheService : ICacheService
     public async ValueTask<IReadOnlyDictionary<string, Optional<T>>> GetManyAsync<T>(IEnumerable<string> keys, CancellationToken cancellationToken = default)
     {
         var keyList = keys.ToList();
-        var prefixedKeys = keyList.Select(ApplyKeyPrefix).ToList();
-        var rawMap = await _rider.GetManyAsync(prefixedKeys, cancellationToken);
+        var normalizedKeys = keyList.Select(ApplyKeyPrefix).ToList();
+        var rawMap = await _rider.GetManyAsync(normalizedKeys, cancellationToken);
 
         var result = new Dictionary<string, Optional<T>>(keyList.Count);
         for (var i = 0; i < keyList.Count; i++)
         {
-            var raw = rawMap[prefixedKeys[i]];
+            var raw = rawMap[normalizedKeys[i]];
             if (raw is not null)
             {
                 var value = _serializer.Deserialize<T>(raw);
@@ -139,6 +168,7 @@ public sealed class CacheService : ICacheService
                 result[keyList[i]] = Optional.None;
             }
         }
+
         return result;
     }
 
@@ -150,6 +180,7 @@ public sealed class CacheService : ICacheService
         {
             rawItems[ApplyKeyPrefix(k)] = _serializer.Serialize(v).ToArray();
         }
+
         await _rider.SetManyAsync(rawItems, opts, cancellationToken);
     }
 
@@ -178,6 +209,7 @@ public sealed class CacheService : ICacheService
         {
             return Optional.None;
         }
+
         var oldValue = _serializer.Deserialize<T>(oldData);
         return oldValue is not null ? Optional.Of(oldValue) : Optional.None;
     }
@@ -189,6 +221,7 @@ public sealed class CacheService : ICacheService
         {
             return Optional.None;
         }
+
         var value = _serializer.Deserialize<T>(oldData);
         return value is not null ? Optional.Of(value) : Optional.None;
     }
@@ -315,6 +348,7 @@ public sealed class CacheService : ICacheService
             {
                 await _renewalCts.CancelAsync();
             }
+
             if (_renewalTask is not null)
             {
                 try
@@ -326,6 +360,7 @@ public sealed class CacheService : ICacheService
                     // Ignore cancellation exceptions
                 }
             }
+
             _renewalCts?.Dispose();
 
             return await _rider.ReleaseLockAsync(Key, _lockId, cancellationToken);
