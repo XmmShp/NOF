@@ -68,7 +68,7 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
-        var keyAge = DateTime.UtcNow - (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).CreatedAtUtc;
+        var keyAge = DateTime.UtcNow - (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).ActivatedAtUtc;
         var remaining = _options.KeyRotationInterval - keyAge;
 
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;

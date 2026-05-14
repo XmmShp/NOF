@@ -21,4 +21,9 @@ public sealed class ManagedSigningKey
     /// The UTC time when this key was created.
     /// </summary>
     public required DateTime CreatedAtUtc { get; init; }
+
+    /// <summary>
+    /// The UTC time when this key most recently became the active signing key.
+    /// </summary>
+    public required DateTime ActivatedAtUtc { get; init; }
 }

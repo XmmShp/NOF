@@ -74,20 +74,36 @@ public sealed class JwtAuthorizationExtensionsTests
             var dbContext = scope.GetRequiredService<NOFDbContext>();
 
             firstKid = (await signingKeyService.GetCurrentSigningKeyAsync()).Kid;
+            var initializedKeys = await dbContext.Set<PersistedSigningKey>().AsNoTracking().ToListAsync();
+
+            Assert.Single(initializedKeys, key => key.Status == PersistedSigningKeyStatus.Active);
+            Assert.Single(initializedKeys, key => key.Status == PersistedSigningKeyStatus.NextActive);
+
             await signingKeyService.RotateKeyAsync();
             rotatedKid = (await signingKeyService.GetCurrentSigningKeyAsync()).Kid;
+            var rotatedKeys = await dbContext.Set<PersistedSigningKey>().AsNoTracking().ToListAsync();
 
             Assert.NotEqual(firstKid, rotatedKid);
             Assert.Contains(dbContext.Set<PersistedSigningKey>(), key => !string.IsNullOrWhiteSpace(key.PublicKey));
+            Assert.Single(rotatedKeys, key => key.Status == PersistedSigningKeyStatus.Active);
+            Assert.Single(rotatedKeys, key => key.Status == PersistedSigningKeyStatus.NextActive);
+            Assert.Contains(rotatedKeys, key => key.Status == PersistedSigningKeyStatus.Retired && key.Kid == firstKid);
         }
 
         await using (var secondHost = await CreateAuthorityBuilder(connectionString).BuildTestHostAsync())
         {
             using var scope = secondHost.CreateScope();
             var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
+            var dbContext = scope.GetRequiredService<NOFDbContext>();
+            var allKeys = await signingKeyService.GetAllKeysAsync();
+            var persistedKeys = await dbContext.Set<PersistedSigningKey>().AsNoTracking().ToListAsync();
 
             Assert.Equal(rotatedKid, (await signingKeyService.GetCurrentSigningKeyAsync()).Kid);
-            Assert.Contains(await signingKeyService.GetAllKeysAsync(), key => key.Kid == firstKid);
+            Assert.Contains(allKeys, key => key.Kid == firstKid);
+            Assert.Contains(allKeys, key => key.Kid == rotatedKid);
+            Assert.Equal(3, allKeys.Length);
+            Assert.Single(persistedKeys, key => key.Status == PersistedSigningKeyStatus.Active);
+            Assert.Single(persistedKeys, key => key.Status == PersistedSigningKeyStatus.NextActive);
         }
 
         try

@@ -11,12 +11,13 @@ public interface ISigningKeyService
     Task<ManagedSigningKey> GetCurrentSigningKeyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all active keys (current + retired) that can be used for token validation.
+    /// Gets all published keys (current + next + retired) that can be used for token validation.
     /// </summary>
     Task<ManagedSigningKey[]> GetAllKeysAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Rotates the signing key: generates a new key and retires the current one.
+    /// Rotates the signing key by promoting the prepared next key, generating a new next key,
+    /// and retiring the previous current key.
     /// Retired keys are kept for validation up to the configured retention count.
     /// </summary>
     Task RotateKeyAsync(CancellationToken cancellationToken = default);

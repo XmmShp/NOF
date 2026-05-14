@@ -6,7 +6,8 @@ public enum PersistedSigningKeyStatus
 {
     Active = 1,
     Retired = 2,
-    Revoked = 3
+    Revoked = 3,
+    NextActive = 4
 }
 
 public sealed class PersistedSigningKey

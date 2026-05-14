@@ -59,7 +59,8 @@ public sealed class JwtResourceServerInboundMiddlewareTests
         {
             Kid = "kid-1",
             Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
         };
         var jwksService = CreateJwksService([key]);
         var executionContext = new TransparentInfos();
