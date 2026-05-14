@@ -9,6 +9,8 @@ namespace NOF.Hosting;
 /// </summary>
 public interface IServiceRegistrationContext : IHostApplicationBuilder
 {
+    Registry Registry { get; }
+
     IServiceRegistrationContext AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep, params Type[] allInterfaces)
         where TStep : IApplicationInitializationStep;
 

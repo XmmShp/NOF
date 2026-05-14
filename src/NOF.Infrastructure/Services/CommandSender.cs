@@ -11,19 +11,22 @@ public sealed class CommandSender : ICommandSender
     private readonly ITransparentInfos _executionContext;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly TypeResolver _typeResolver;
 
     public CommandSender(
         ICommandRider rider,
         CommandOutboundPipelineExecutor outboundPipeline,
         ITransparentInfos executionContext,
         DbContext dbContext,
-        IObjectSerializer objectSerializer)
+        IObjectSerializer objectSerializer,
+        TypeResolver typeResolver)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
         _executionContext = executionContext;
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
+        _typeResolver = typeResolver;
     }
 
     public void DeferSend(object command, Type commandType)
@@ -34,8 +37,8 @@ public sealed class CommandSender : ICommandSender
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         _executionContext.CopyHeadersTo(headers);
 
-        var payloadTypeName = TypeRegistry.Register(command.GetType());
-        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { TypeRegistry.Register(commandType) }, typeof(string[]));
+        var payloadTypeName = _typeResolver.Register(command.GetType());
+        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { _typeResolver.Register(commandType) }, typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
@@ -61,8 +64,8 @@ public sealed class CommandSender : ICommandSender
         await _outboundPipeline.ExecuteAsync(context, async ct =>
         {
             var payload = _objectSerializer.Serialize(command, command.GetType());
-            var payloadTypeName = TypeRegistry.Register(command.GetType());
-            var commandTypeName = TypeRegistry.Register(commandType);
+            var payloadTypeName = _typeResolver.Register(command.GetType());
+            var commandTypeName = _typeResolver.Register(commandType);
             await _rider.SendAsync(payload, payloadTypeName, commandTypeName, context.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }

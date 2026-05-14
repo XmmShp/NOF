@@ -13,12 +13,13 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var registry = builder.GetOrAddRegistry();
+        var registry = builder.Registry;
+        var typeResolver = builder.Services.GetOrAddSingleton<TypeResolver>();
 
         foreach (var info in registry.CommandHandlerRegistry.Freeze())
         {
-            TypeRegistry.Register(info.CommandType);
-            TypeRegistry.Register(info.HandlerType);
+            typeResolver.Register(info.CommandType);
+            typeResolver.Register(info.HandlerType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
@@ -29,8 +30,8 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
 
         foreach (var info in registry.NotificationHandlerRegistry.Freeze())
         {
-            TypeRegistry.Register(info.NotificationType);
-            TypeRegistry.Register(info.HandlerType);
+            typeResolver.Register(info.NotificationType);
+            typeResolver.Register(info.HandlerType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 

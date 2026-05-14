@@ -7,13 +7,16 @@ public sealed class MemoryNotificationRider : INotificationRider
 {
     private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
     private readonly InboxMessageStore _inboxMessageStore;
+    private readonly TypeResolver _typeResolver;
 
     public MemoryNotificationRider(
         NotificationHandlerRegistry notificationHandlerRegistry,
-        InboxMessageStore inboxMessageStore)
+        InboxMessageStore inboxMessageStore,
+        TypeResolver typeResolver)
     {
         _notificationHandlerRegistry = notificationHandlerRegistry;
         _inboxMessageStore = inboxMessageStore;
+        _typeResolver = typeResolver;
     }
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
@@ -28,7 +31,7 @@ public sealed class MemoryNotificationRider : INotificationRider
         var seenHandlerTypes = new HashSet<Type>();
         foreach (var notificationTypeName in notificationTypeNames)
         {
-            var notificationType = TypeRegistry.Resolve(notificationTypeName);
+            var notificationType = _typeResolver.Resolve(notificationTypeName);
             foreach (var handlerType in _notificationHandlerRegistry.GetHandlers(notificationType))
             {
                 if (!seenHandlerTypes.Add(handlerType))
@@ -41,7 +44,7 @@ public sealed class MemoryNotificationRider : INotificationRider
                     InboxMessageType.Notification,
                     payload,
                     payloadTypeName,
-                    TypeRegistry.Register(handlerType),
+                    _typeResolver.Register(handlerType),
                     headers,
                     cancellationToken);
             }

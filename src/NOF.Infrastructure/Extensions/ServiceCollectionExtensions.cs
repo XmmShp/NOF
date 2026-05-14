@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
@@ -13,38 +12,6 @@ public static partial class NOFInfrastructureExtensions
     /// <param name="services">The <see cref="IServiceCollection"/> to add the service to.</param>
     extension(IServiceCollection services)
     {
-        /// <summary>
-        /// Adds one or more command handler entries to the shared <see cref="Registry"/>.
-        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
-        /// </summary>
-        public IServiceCollection AddHandlerRegistration(params CommandHandlerRegistration[] registrations)
-        {
-            var set = services.GetOrAddSingleton<Registry>().CommandHandlerRegistry;
-            services.GetOrAddSingleton(() => set);
-            foreach (var registration in registrations)
-            {
-                set.Add(registration);
-            }
-
-            return services;
-        }
-
-        /// <summary>
-        /// Adds one or more notification handler entries to the shared <see cref="Registry"/>.
-        /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
-        /// </summary>
-        public IServiceCollection AddHandlerRegistration(params NotificationHandlerRegistration[] registrations)
-        {
-            var set = services.GetOrAddSingleton<Registry>().NotificationHandlerRegistry;
-            services.GetOrAddSingleton(() => set);
-            foreach (var registration in registrations)
-            {
-                set.Add(registration);
-            }
-
-            return services;
-        }
-
         public IServiceCollection AddCommandInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, ICommandInboundMiddleware
         {

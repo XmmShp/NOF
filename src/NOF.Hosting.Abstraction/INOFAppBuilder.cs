@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using NOF.Abstraction;
 using NOF.Annotation;
 using System.Diagnostics.CodeAnalysis;
@@ -22,7 +20,6 @@ public interface INOFAppBuilder : IServiceRegistrationContext
 
 public static partial class NOFHostingExtensions
 {
-    private static readonly object RegistryKey = new();
     private static readonly object ApplicationPartsKey = new();
 
     extension(INOFAppBuilder builder)
@@ -37,10 +34,9 @@ public static partial class NOFHostingExtensions
                 return builder;
             }
 
-            var registry = GetOrAddRegistry(builder);
             foreach (var attribute in assembly.GetCustomAttributes<AssemblyInitializeAttribute>())
             {
-                attribute.Initialize(registry);
+                attribute.Initialize(builder.Registry);
             }
 
             return builder;
@@ -99,34 +95,6 @@ public static partial class NOFHostingExtensions
 
         public INOFAppBuilder TryAddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] T>() where T : IApplicationInitializationStep, new()
             => (INOFAppBuilder)((IServiceRegistrationContext)builder).TryAddInitializationStep<T>();
-    }
-
-    extension(IServiceRegistrationContext context)
-    {
-        public Registry GetOrAddRegistry()
-            => GetOrAddRegistry((IHostApplicationBuilder)context);
-    }
-
-    private static Registry GetOrAddRegistry(IHostApplicationBuilder builder)
-    {
-        if (builder.Properties.TryGetValue(RegistryKey, out var existing) && existing is Registry currentRegistry)
-        {
-            builder.Services.TryAddSingleton(currentRegistry);
-            return currentRegistry;
-        }
-
-        var existingDescriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(Registry));
-        if (existingDescriptor?.ImplementationInstance is Registry existingRegistry)
-        {
-            builder.Properties[RegistryKey] = existingRegistry;
-            builder.Services.TryAddSingleton(existingRegistry);
-            return existingRegistry;
-        }
-
-        var registry = new Registry();
-        builder.Properties[RegistryKey] = registry;
-        builder.Services.TryAddSingleton(registry);
-        return registry;
     }
 
     private static HashSet<Assembly> GetOrAddApplicationParts(INOFAppBuilder builder)

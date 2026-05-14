@@ -127,9 +127,9 @@ public class AutoInjectGenerator : IIncrementalGenerator
 
         var lifetime = intValue switch
         {
-            0 => "global::NOF.Annotation.Lifetime.Singleton",
-            1 => "global::NOF.Annotation.Lifetime.Scoped",
-            2 => "global::NOF.Annotation.Lifetime.Transient",
+            0 => "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton",
+            1 => "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped",
+            2 => "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient",
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -166,9 +166,15 @@ public class AutoInjectGenerator : IIncrementalGenerator
             .ToList();
 
         void Emit(string serviceTypeName, bool useFactory)
-            => sb.AppendLine($"            registry.AutoInjectRegistry.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({serviceTypeName}), typeof({implementationTypeName}), {lifetime}, {(useFactory ? "true" : "false")}));");
+        {
+            var descriptor = useFactory
+                ? $"global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof({serviceTypeName}), sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(sp, typeof({implementationTypeName})), {lifetime})"
+                : $"global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof({serviceTypeName}), typeof({implementationTypeName}), {lifetime})";
 
-        if (lifetime is "global::NOF.Annotation.Lifetime.Singleton" or "global::NOF.Annotation.Lifetime.Scoped")
+            sb.AppendLine($"            registry.AutoInjectRegistry.Add({descriptor});");
+        }
+
+        if (intValue is 0 or 1)
         {
             var typesToRegister = hasExplicitRegisterTypes ? explicitNonSelfTypes : defaultInterfaceTypes;
             if (typesToRegister.Count == 1)

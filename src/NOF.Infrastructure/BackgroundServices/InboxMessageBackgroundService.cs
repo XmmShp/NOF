@@ -14,6 +14,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly CommandInboundPipelineExecutor _commandPipelineExecutor;
     private readonly NotificationInboundPipelineExecutor _notificationPipelineExecutor;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly TypeResolver _typeResolver;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
@@ -21,7 +22,8 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         ILogger<InboxMessageBackgroundService> logger,
         CommandInboundPipelineExecutor commandPipelineExecutor,
         NotificationInboundPipelineExecutor notificationPipelineExecutor,
-        IObjectSerializer objectSerializer)
+        IObjectSerializer objectSerializer,
+        TypeResolver typeResolver)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Inbox;
@@ -29,6 +31,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         _commandPipelineExecutor = commandPipelineExecutor;
         _notificationPipelineExecutor = notificationPipelineExecutor;
         _objectSerializer = objectSerializer;
+        _typeResolver = typeResolver;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -107,7 +110,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         }
 
         var headers = DeserializeHeaders(message.Headers);
-        var handlerType = TypeRegistry.Resolve(message.HandlerType);
+        var handlerType = _typeResolver.Resolve(message.HandlerType);
 
         try
         {

@@ -13,11 +13,12 @@ namespace NOF.Hosting.Abstraction.Tests;
 public class DaemonServiceScopeTests
 {
     [Fact]
-    public void AddHostingDefaults_ShouldRegisterAmbientEventPublisherDaemon()
+    public async Task AddHostingDefaults_ShouldRegisterAmbientEventPublisherDaemon()
     {
         var builder = new TestAppBuilder();
 
         builder.AddHostingDefaults();
+        await new AutoInjectServiceRegistrationStep().ExecuteAsync(builder);
 
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IDaemonService)

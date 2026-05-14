@@ -11,15 +11,18 @@ public sealed class CommandInboundPipelineExecutor
     private readonly CommandInboundPipelineTypes _middlewareTypes;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IObjectSerializer _serializer;
+    private readonly TypeResolver _typeResolver;
 
     public CommandInboundPipelineExecutor(
         CommandInboundPipelineTypes middlewareTypes,
         IServiceScopeFactory scopeFactory,
-        IObjectSerializer serializer)
+        IObjectSerializer serializer,
+        TypeResolver typeResolver)
     {
         _middlewareTypes = middlewareTypes;
         _scopeFactory = scopeFactory;
         _serializer = serializer;
+        _typeResolver = typeResolver;
         _middlewareTypes.Freeze();
     }
 
@@ -47,7 +50,7 @@ public sealed class CommandInboundPipelineExecutor
 
     private CommandInboundContext CreateContext(ReadOnlyMemory<byte> payload, string payloadTypeName, Type handlerType)
     {
-        var payloadType = TypeRegistry.Resolve(payloadTypeName);
+        var payloadType = _typeResolver.Resolve(payloadTypeName);
         var message = _serializer.Deserialize(payload, payloadType)
             ?? throw new InvalidOperationException($"Failed to deserialize command payload as '{payloadTypeName}'.");
 
@@ -85,15 +88,18 @@ public sealed class NotificationInboundPipelineExecutor
     private readonly NotificationInboundPipelineTypes _middlewareTypes;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IObjectSerializer _serializer;
+    private readonly TypeResolver _typeResolver;
 
     public NotificationInboundPipelineExecutor(
         NotificationInboundPipelineTypes middlewareTypes,
         IServiceScopeFactory scopeFactory,
-        IObjectSerializer serializer)
+        IObjectSerializer serializer,
+        TypeResolver typeResolver)
     {
         _middlewareTypes = middlewareTypes;
         _scopeFactory = scopeFactory;
         _serializer = serializer;
+        _typeResolver = typeResolver;
         _middlewareTypes.Freeze();
     }
 
@@ -121,7 +127,7 @@ public sealed class NotificationInboundPipelineExecutor
 
     private NotificationInboundContext CreateContext(ReadOnlyMemory<byte> payload, string payloadTypeName, Type handlerType)
     {
-        var payloadType = TypeRegistry.Resolve(payloadTypeName);
+        var payloadType = _typeResolver.Resolve(payloadTypeName);
         var message = _serializer.Deserialize(payload, payloadType)
             ?? throw new InvalidOperationException($"Failed to deserialize notification payload as '{payloadTypeName}'.");
 

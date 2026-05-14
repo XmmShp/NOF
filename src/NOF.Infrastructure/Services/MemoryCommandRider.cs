@@ -7,13 +7,16 @@ public sealed class MemoryCommandRider : ICommandRider
 {
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
     private readonly InboxMessageStore _inboxMessageStore;
+    private readonly TypeResolver _typeResolver;
 
     public MemoryCommandRider(
         CommandHandlerRegistry commandHandlerRegistry,
-        InboxMessageStore inboxMessageStore)
+        InboxMessageStore inboxMessageStore,
+        TypeResolver typeResolver)
     {
         _commandHandlerRegistry = commandHandlerRegistry;
         _inboxMessageStore = inboxMessageStore;
+        _typeResolver = typeResolver;
     }
 
     public async Task SendAsync(ReadOnlyMemory<byte> payload,
@@ -22,7 +25,7 @@ public sealed class MemoryCommandRider : ICommandRider
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        var commandType = TypeRegistry.Resolve(commandTypeName);
+        var commandType = _typeResolver.Resolve(commandTypeName);
         var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
             ?? throw new InvalidOperationException(
                 $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
@@ -33,7 +36,7 @@ public sealed class MemoryCommandRider : ICommandRider
             InboxMessageType.Command,
             payload,
             payloadTypeName,
-            TypeRegistry.Register(handlerType),
+            _typeResolver.Register(handlerType),
             headers,
             cancellationToken);
     }

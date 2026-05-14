@@ -26,7 +26,7 @@ public class InfrastructureDefaultsTests
 
         builder.AddInfrastructureDefaults();
 
-        using var provider = builder.Services.BuildServiceProvider();
+        using var provider = BuildServiceProvider(builder);
         using var scope = provider.CreateScope();
         Assert.NotNull(scope.ServiceProvider.GetService<Microsoft.EntityFrameworkCore.DbContext>());
         Assert.IsType<CacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
@@ -39,7 +39,7 @@ public class InfrastructureDefaultsTests
         var builder = new TestServiceRegistrationContext();
         builder.AddInfrastructureDefaults();
 
-        using var provider = builder.Services.BuildServiceProvider();
+        using var provider = BuildServiceProvider(builder);
 
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
@@ -84,7 +84,7 @@ public class InfrastructureDefaultsTests
         builder.AddInfrastructureDefaults();
         builder.UseDbContext<NOFDbContext>().WithTenantMode(TenantMode.SharedDatabase);
 
-        using var provider = builder.Services.BuildServiceProvider();
+        using var provider = BuildServiceProvider(builder);
         var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
         Assert.Equal(TenantMode.SharedDatabase, options.TenantMode);
     }
@@ -95,7 +95,7 @@ public class InfrastructureDefaultsTests
         var builder = new TestServiceRegistrationContext();
         builder.AddInfrastructureDefaults();
 
-        using var provider = builder.Services.BuildServiceProvider();
+        using var provider = BuildServiceProvider(builder);
         var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
         Assert.Equal(TenantMode.DatabasePerTenant, options.TenantMode);
     }
@@ -117,7 +117,7 @@ public class InfrastructureDefaultsTests
         builder.Services.Configure<SnowflakeIdGeneratorOptions>(options => options.ApplicationIdBits = 0);
         builder.AddInfrastructureDefaults();
 
-        using var provider = builder.Services.BuildServiceProvider();
+        using var provider = BuildServiceProvider(builder);
         var act = () => _ = provider.GetRequiredService<IOptions<SnowflakeIdGeneratorOptions>>().Value;
         Assert.Throws<OptionsValidationException>(act);
     }
@@ -190,6 +190,7 @@ public class InfrastructureDefaultsTests
         private readonly Dictionary<object, object> _properties;
         private readonly List<IServiceRegistrationStep> _registrationSteps;
         private readonly List<IApplicationInitializationStep> _initializationSteps;
+        private readonly Registry _registry;
 
         public TestServiceRegistrationContext()
         {
@@ -203,6 +204,7 @@ public class InfrastructureDefaultsTests
             _properties = [];
             _registrationSteps = [];
             _initializationSteps = [];
+            _registry = new Registry();
         }
 
         public TestServiceRegistrationContext(TestServiceRegistrationContext other)
@@ -215,6 +217,7 @@ public class InfrastructureDefaultsTests
             _properties = other._properties;
             _registrationSteps = other._registrationSteps;
             _initializationSteps = other._initializationSteps;
+            _registry = other._registry;
         }
 
         public INOFAppBuilder AddRegistrationStep<TStep>(TStep registrationStep, params Type[] allInterfaces)
@@ -250,6 +253,8 @@ public class InfrastructureDefaultsTests
             => RemoveInitializationStep(predicate);
 
         public IDictionary<object, object> Properties => _properties;
+
+        public Registry Registry => _registry;
 
         public IConfigurationManager Configuration => _configuration;
 
@@ -304,6 +309,12 @@ public class InfrastructureDefaultsTests
         private long _current = 1000;
 
         public long NextId() => Interlocked.Increment(ref _current);
+    }
+
+    private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)
+    {
+        new AutoInjectServiceRegistrationStep().ExecuteAsync(builder).GetAwaiter().GetResult();
+        return builder.Services.BuildServiceProvider();
     }
 
 }

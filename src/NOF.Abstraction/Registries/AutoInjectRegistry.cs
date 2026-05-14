@@ -1,10 +1,8 @@
-using NOF.Annotation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF.Abstraction;
 
 /// <summary>
-/// Indexed registry of AutoInject registrations.
+/// Registry of auto-inject service descriptors.
 /// </summary>
-public sealed class AutoInjectRegistry : Registry<AutoInjectServiceRegistration>
-{
-}
+public sealed class AutoInjectRegistry : Registry<ServiceDescriptor>;

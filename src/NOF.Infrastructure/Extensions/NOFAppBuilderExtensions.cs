@@ -18,15 +18,16 @@ public static partial class NOFInfrastructureExtensions
     {
         public INOFAppBuilder AddInfrastructureDefaults()
         {
-            var registry = builder.GetOrAddRegistry();
+            _ = builder.Registry.EventHandlerRegistry;
+            _ = builder.Registry.MapperRegistry;
+            _ = builder.Registry.CommandHandlerRegistry;
+            _ = builder.Registry.NotificationHandlerRegistry;
+            _ = builder.Registry.RequestHandlerRegistry;
+            _ = builder.Registry.RpcServerRegistry;
+            builder.Services.GetOrAddSingleton<TypeResolver>();
 
             #region Core Services
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
-            builder.Services.GetOrAddSingleton(() => registry.MapperRegistry);
-            builder.Services.GetOrAddSingleton(() => registry.CommandHandlerRegistry);
-            builder.Services.GetOrAddSingleton(() => registry.NotificationHandlerRegistry);
-            builder.Services.GetOrAddSingleton(() => registry.RequestHandlerRegistry);
-            builder.Services.GetOrAddSingleton(() => registry.RpcServerRegistry);
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
@@ -78,7 +79,6 @@ public static partial class NOFInfrastructureExtensions
 
             #region Application Services
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
-            builder.Services.GetOrAddSingleton(() => registry.EventHandlerRegistry);
             builder.Services.TryAddScoped<ITransparentInfos, TransparentInfos>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();

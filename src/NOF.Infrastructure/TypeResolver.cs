@@ -3,21 +3,20 @@ using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure;
 
-public static class TypeRegistry
+public sealed class TypeResolver
 {
-    private static readonly ConcurrentDictionary<string, Type> _types = [];
+    private readonly ConcurrentDictionary<string, Type> _types = new(StringComparer.Ordinal);
 
-    public static string Register(Type type)
+    public string Register(Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
 
         var typeName = type.DisplayName;
-
         _types.TryAdd(typeName, type);
         return typeName;
     }
 
-    public static Type Resolve(string typeName)
+    public Type Resolve(string typeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
 

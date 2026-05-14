@@ -17,6 +17,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly InboxMessageStore _inboxMessageStore;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly TypeResolver _typeResolver;
     private readonly List<IChannel> _channels = [];
     private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -28,6 +29,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         NotificationHandlerRegistry notificationHandlerRegistry,
         IHostEnvironment hostEnvironment,
         InboxMessageStore inboxMessageStore,
+        TypeResolver typeResolver,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
@@ -36,6 +38,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         _notificationHandlerRegistry = notificationHandlerRegistry;
         _hostEnvironment = hostEnvironment;
         _inboxMessageStore = inboxMessageStore;
+        _typeResolver = typeResolver;
         _logger = logger;
     }
 
@@ -212,13 +215,13 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     InboxMessageType.Notification,
                     payload,
                     messageTypeName,
-                    TypeRegistry.Register(notificationHandlerType),
+                    _typeResolver.Register(notificationHandlerType),
                     headers,
                     CancellationToken.None);
             }
             else
             {
-                var commandType = TypeRegistry.Resolve(queueName);
+                var commandType = _typeResolver.Resolve(queueName);
                 var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
                     ?? throw new InvalidOperationException(
                         $"Cannot route command '{commandType.Name}'. No matching handler registered.");
@@ -229,7 +232,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     InboxMessageType.Command,
                     payload,
                     messageTypeName,
-                    TypeRegistry.Register(handlerType),
+                    _typeResolver.Register(handlerType),
                     headers,
                     CancellationToken.None);
             }

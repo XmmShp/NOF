@@ -12,7 +12,7 @@ public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceReg
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        foreach (var registration in builder.GetOrAddRegistry().RequestHandlerRegistry.Freeze())
+        foreach (var registration in builder.Registry.RequestHandlerRegistry.Freeze())
         {
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.ServiceType, registration.ImplementationType));
         }

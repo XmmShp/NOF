@@ -11,10 +11,7 @@ public static partial class NOFHostingExtensions
         public INOFAppBuilder AddHostingDefaults()
         {
             builder.Services.TryAddSingleton(builder.Environment);
-
-            var registry = builder.GetOrAddRegistry();
-            builder.Services.GetOrAddSingleton(() => registry.AutoInjectRegistry);
-            builder.Services.GetOrAddSingleton(() => registry.EventHandlerRegistry);
+            _ = builder.Registry.EventHandlerRegistry;
             builder.Services.GetOrAddSingleton<RequestOutboundPipelineTypes>();
             builder.Services.TryAddScoped<RequestOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();

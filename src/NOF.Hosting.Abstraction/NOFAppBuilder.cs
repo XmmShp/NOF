@@ -42,6 +42,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     protected readonly HashSet<DependencyNode> ApplicationConfigs = [];
 
+    public Registry Registry { get; } = new();
+
     protected NOFAppBuilder(Assembly? applicationAssembly = null)
     {
         if (applicationAssembly is not null)

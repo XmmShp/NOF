@@ -1,4 +1,4 @@
-using NOF.Annotation;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 
 namespace NOF.Abstraction;
@@ -10,7 +10,15 @@ public sealed class Registry
 {
     private readonly ConcurrentDictionary<string, object> _items = new(StringComparer.Ordinal);
 
+    public Registry()
+    {
+        AutoInjectRegistry = new AutoInjectRegistry();
+        RegisterSingletonAutoInject(this);
+        RegisterSingletonAutoInject(AutoInjectRegistry);
+    }
+
     public ConcurrentDictionary<Type, bool> IsInitialized { get; } = new();
+    public AutoInjectRegistry AutoInjectRegistry { get; }
 
     public T GetOrAdd<T>(string key, Func<T> factory)
         where T : class
@@ -18,21 +26,38 @@ public sealed class Registry
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(factory);
 
-        return (T)_items.GetOrAdd(key, static (_, currentFactory) => currentFactory(), factory);
+        while (true)
+        {
+            if (_items.TryGetValue(key, out var existing))
+            {
+                return (T)existing;
+            }
+
+            var created = factory();
+            if (!_items.TryAdd(key, created))
+            {
+                continue;
+            }
+
+            RegisterSingletonAutoInject(created);
+            return created;
+        }
+    }
+
+    private void RegisterSingletonAutoInject<T>(T instance)
+        where T : class
+    {
+        AutoInjectRegistry.Add(ServiceDescriptor.Singleton(instance));
     }
 }
 
 public static partial class RegistryExtensions
 {
     private const string EventHandlerRegistryKey = "NOF.Abstraction.EventHandlerRegistry";
-    private const string AutoInjectRegistryKey = "NOF.Abstraction.AutoInjectRegistry";
 
     extension(Registry registry)
     {
         public EventHandlerRegistry EventHandlerRegistry
             => registry.GetOrAdd(EventHandlerRegistryKey, static () => new EventHandlerRegistry());
-
-        public AutoInjectRegistry AutoInjectRegistry
-            => registry.GetOrAdd(AutoInjectRegistryKey, static () => new AutoInjectRegistry());
     }
 }

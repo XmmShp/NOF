@@ -29,11 +29,7 @@ public class SqliteInMemoryPersistenceTests
                 .WithTenantMode(TenantMode.DatabasePerTenant),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -58,9 +54,9 @@ public class SqliteInMemoryPersistenceTests
             var builder = new TestServiceRegistrationContext();
             builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
             builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-                    builder.Configuration.AddInMemoryCollection([
-                new KeyValuePair<string, string?>("ConnectionStrings:sqlite", $"Data Source={Path.Combine(tempDirectory, "nof-{TenantId}.db")}")
-            ]);
+            builder.Configuration.AddInMemoryCollection([
+        new KeyValuePair<string, string?>("ConnectionStrings:sqlite", $"Data Source={Path.Combine(tempDirectory, "nof-{TenantId}.db")}")
+    ]);
 
             builder.AddHostingDefaults();
             builder.AddInfrastructureDefaults();
@@ -70,11 +66,7 @@ public class SqliteInMemoryPersistenceTests
                     ?? throw new InvalidOperationException("Connection string 'sqlite' not found in configuration."))
                 .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
 
-            using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-            {
-                ValidateOnBuild = true,
-                ValidateScopes = true
-            });
+            using var services = BuildServiceProvider(builder);
 
             using var tenantAScope = services.CreateScope();
             tenantAScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = "tenanta";
@@ -111,11 +103,7 @@ public class SqliteInMemoryPersistenceTests
                 .WithTenantMode(TenantMode.DatabasePerTenant),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -147,11 +135,7 @@ public class SqliteInMemoryPersistenceTests
                 }),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -219,11 +203,7 @@ public class SqliteInMemoryPersistenceTests
                 .WithTenantMode(TenantMode.SharedDatabase),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -250,11 +230,7 @@ public class SqliteInMemoryPersistenceTests
                 .WithTenantMode(TenantMode.SharedDatabase),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -281,11 +257,7 @@ public class SqliteInMemoryPersistenceTests
                 .WithTenantMode(TenantMode.DatabasePerTenant),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
 
@@ -816,11 +788,7 @@ public class SqliteInMemoryPersistenceTests
                 .WithModelCreating(configure),
             $"nof-tests-{Guid.NewGuid():N}");
 
-        return builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        return BuildServiceProvider(builder);
     }
 
     private static ServiceProvider CreateServiceProvider(
@@ -851,11 +819,7 @@ public class SqliteInMemoryPersistenceTests
             });
         }
 
-        var provider = builder.Services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        });
+        var provider = BuildServiceProvider(builder);
 
         EnsureCreated(provider, NOFAbstractionConstants.Tenant.HostId);
         EnsureCreated(provider, "tenanta");
@@ -873,6 +837,16 @@ public class SqliteInMemoryPersistenceTests
     private static void ActivateDaemons(IServiceProvider provider)
     {
         _ = provider.GetServices<IDaemonService>().ToArray();
+    }
+
+    private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)
+    {
+        new AutoInjectServiceRegistrationStep().ExecuteAsync(builder).GetAwaiter().GetResult();
+        return builder.Services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
     }
 
     private static void DeleteDirectoryWithRetry(string directory)
@@ -1028,6 +1002,7 @@ public class SqliteInMemoryPersistenceTests
         private readonly Dictionary<object, object> _properties;
         private readonly List<IServiceRegistrationStep> _registrationSteps;
         private readonly List<IApplicationInitializationStep> _initializationSteps;
+        private readonly Registry _registry;
 
         public TestServiceRegistrationContext()
         {
@@ -1041,6 +1016,7 @@ public class SqliteInMemoryPersistenceTests
             _properties = [];
             _registrationSteps = [];
             _initializationSteps = [];
+            _registry = new Registry();
         }
 
         public INOFAppBuilder AddRegistrationStep<TStep>(TStep registrationStep, params Type[] allInterfaces)
@@ -1076,6 +1052,8 @@ public class SqliteInMemoryPersistenceTests
             => RemoveInitializationStep(predicate);
 
         public IDictionary<object, object> Properties => _properties;
+
+        public Registry Registry => _registry;
 
         public IConfigurationManager Configuration => _configuration;
 

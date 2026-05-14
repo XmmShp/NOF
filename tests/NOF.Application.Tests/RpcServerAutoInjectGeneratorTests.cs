@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Annotation;
 using NOF.Application;
@@ -47,7 +48,7 @@ public class RpcServerAutoInjectGeneratorTests
             typeof(Result),
             typeof(Result<>),
             typeof(Registry),
-            typeof(AutoInjectServiceRegistration),
+            typeof(ServiceDescriptor),
             typeof(AssemblyInitializeAttribute),
             typeof(RpcServerRegistration));
 
@@ -63,9 +64,9 @@ public class RpcServerAutoInjectGeneratorTests
 
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcServerAutoInjectAssemblyInitializer>", generatedCode);
         Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppRpcServerAutoInjectAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.AutoInjectRegistry.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Scoped, false));", generatedCode);
+        Assert.Contains("registry.AutoInjectRegistry.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(typeof(global::App.MyService), typeof(global::App.MyService)));", generatedCode);
         Assert.Contains("registry.RpcServerRegistry.Add(new global::NOF.Application.RpcServerRegistration(typeof(global::App.IMyService), typeof(global::App.MyService)));", generatedCode);
-        Assert.Contains("registry.AutoInjectRegistry.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler), global::NOF.Annotation.Lifetime.Transient, false));", generatedCode);
+        Assert.Contains("registry.AutoInjectRegistry.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler)));", generatedCode);
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class RpcServerAutoInjectGeneratorTests
             typeof(Result),
             typeof(Result<>),
             typeof(Registry),
-            typeof(AutoInjectServiceRegistration),
+            typeof(ServiceDescriptor),
             typeof(AssemblyInitializeAttribute),
             typeof(RpcServerRegistration));
 

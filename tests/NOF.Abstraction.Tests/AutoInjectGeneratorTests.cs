@@ -19,7 +19,7 @@ public class AutoInjectGeneratorTests
             namespace App.Lib
             {
                 public interface ILibSvc { }
-                [AutoInject(Lifetime.Singleton)]
+                [AutoInject(ServiceLifetime.Singleton)]
                 public class LibService : ILibSvc { }
             }
             """;
@@ -34,7 +34,7 @@ public class AutoInjectGeneratorTests
             namespace App
             {
                 public interface IAppSvc { }
-                [AutoInject(Lifetime.Transient)]
+                [AutoInject(ServiceLifetime.Transient)]
                 public class AppService : IAppSvc { }
             }
             """;
@@ -65,7 +65,7 @@ public class AutoInjectGeneratorTests
             namespace App
             {
                 public interface IAppSvc { }
-                [AutoInject(Lifetime.Scoped)]
+                [AutoInject(ServiceLifetime.Scoped)]
                 public class AppService : IAppSvc { }
             }
             """;
@@ -78,10 +78,15 @@ public class AutoInjectGeneratorTests
         Assert.Single(trees);
 
         var generatedCode = trees.Single().GetRoot().ToFullString();
+        const string scopedInterfaceDescriptor = "registry.AutoInjectRegistry.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof(global::App.IAppSvc), typeof(global::App.AppService), global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped));";
+
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]", generatedCode);
         Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppAutoInjectAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.AutoInjectRegistry.Add", generatedCode);
-        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, false)", generatedCode);
+        Assert.Contains(scopedInterfaceDescriptor, generatedCode);
+        Assert.DoesNotContain("AutoInjectServiceRegistration", generatedCode);
+        Assert.DoesNotContain("ServiceProviderServiceExtensions.GetRequiredService(sp, typeof(global::App.AppService))", generatedCode);
+        Assert.DoesNotContain("ServiceDescriptor.Describe(typeof(global::App.AppService), typeof(global::App.AppService)", generatedCode);
+        Assert.Equal(1, CountOccurrences(generatedCode, "registry.AutoInjectRegistry.Add("));
     }
 
     [Fact]
@@ -93,7 +98,7 @@ public class AutoInjectGeneratorTests
             namespace App
             {
                 public interface IMyService { }
-                [AutoInject(Lifetime.Scoped)]
+                [AutoInject(ServiceLifetime.Scoped)]
                 public class MyService : IMyService { }
             }
             """;
@@ -118,7 +123,7 @@ public class AutoInjectGeneratorTests
             {
                 public interface IFoo { }
                 public interface IBar { }
-                [AutoInject(Lifetime.Singleton, RegisterTypes = [typeof(IFoo), typeof(IBar)])]
+                [AutoInject(ServiceLifetime.Singleton, RegisterTypes = [typeof(IFoo), typeof(IBar)])]
                 public class FooBar : IFoo, IBar { }
             }
             """;
@@ -128,10 +133,21 @@ public class AutoInjectGeneratorTests
 
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
+        const string selfDescriptor = "registry.AutoInjectRegistry.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof(global::App.FooBar), typeof(global::App.FooBar), global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton));";
+        const string fooFactoryDescriptor = "registry.AutoInjectRegistry.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof(global::App.IFoo), sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(sp, typeof(global::App.FooBar)), global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton));";
+        const string barFactoryDescriptor = "registry.AutoInjectRegistry.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof(global::App.IBar), sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(sp, typeof(global::App.FooBar)), global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton));";
 
-        Assert.Contains("registry.AutoInjectRegistry.Add", generatedCode);
-        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, false)", generatedCode);
-        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IFoo), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, true)", generatedCode);
-        Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, true)", generatedCode);
+        Assert.Contains(selfDescriptor, generatedCode);
+        Assert.Contains(fooFactoryDescriptor, generatedCode);
+        Assert.Contains(barFactoryDescriptor, generatedCode);
+        Assert.DoesNotContain("AutoInjectServiceRegistration", generatedCode);
+        Assert.Equal(3, CountOccurrences(generatedCode, "registry.AutoInjectRegistry.Add("));
+        Assert.Equal(2, CountOccurrences(generatedCode, "ServiceProviderServiceExtensions.GetRequiredService(sp, typeof(global::App.FooBar))"));
+        Assert.Equal(3, CountOccurrences(generatedCode, "global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton"));
+        Assert.DoesNotContain("global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped", generatedCode);
+        Assert.DoesNotContain("global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient", generatedCode);
     }
+
+    private static int CountOccurrences(string source, string value)
+        => source.Split(value, StringSplitOptions.None).Length - 1;
 }
