@@ -10,14 +10,15 @@ public readonly partial struct OrderName : IValueObject<string>
     public static void Validate(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ValidationException("Order name cannot be empty.");
+            throw new DomainValidationException("Order name cannot be empty.");
     }
 }
 ```
 
 The source generator produces everything else: a private constructor, a `static Of(T)` factory that calls `Validate`, an explicit cast to `T`, equality members, `ToString`, and a nested `JsonConverter`. The developer writes only the type declaration and optional validation. That's it.
+If you override `Normalize(T)`, keep it limited to canonicalization such as trimming or casing, and avoid calling `Of(...)` or `Validate(...)` from inside `Normalize`.
 
-One thing the developer does *not* get is a `.Value` property. This is deliberate, and the rest of this document explains why.
+One thing the developer does _not_ get is a `.Value` property. This is deliberate, and the rest of this document explains why.
 
 ## The Temptation of `.Value`
 
@@ -32,7 +33,7 @@ This is what many value object libraries do. It is readable, discoverable, and f
 
 ## Reason 1: Independence of the Value Object
 
-A value object is supposed to *be* its value, not *contain* its value. An `OrderName` is a `string` with extra semantics — it's not a box around a `string`. The `.Value` property turns the value object into a container, subtly shifting the mental model from "this *is* a name" to "this *has* a name inside it."
+A value object is supposed to _be_ its value, not _contain_ its value. An `OrderName` is a `string` with extra semantics — it's not a box around a `string`. The `.Value` property turns the value object into a container, subtly shifting the mental model from "this _is_ a name" to "this _has_ a name inside it."
 
 The explicit cast preserves the correct mental model:
 
@@ -115,10 +116,10 @@ The generator never looks for `.Value`. It uses the same explicit cast that hand
 
 ## Summary
 
-| Approach | Mental Model | EF Core LINQ | Unwrap Friction | NOF Choice |
-|----------|-------------|--------------|-----------------|------------|
-| `.Value` property | Container | Problematic (expression tree) | Low (too easy) | ❌ |
-| Explicit cast `(T)` | Type conversion | Transparent (ValueConverter) | Medium (intentional) | ✅ |
-| No extra API beyond explicit cast | Small public surface | N/A | Medium (intentional) | ✅ |
+| Approach                          | Mental Model         | EF Core LINQ                  | Unwrap Friction      | NOF Choice |
+| --------------------------------- | -------------------- | ----------------------------- | -------------------- | ---------- |
+| `.Value` property                 | Container            | Problematic (expression tree) | Low (too easy)       | ❌         |
+| Explicit cast `(T)`               | Type conversion      | Transparent (ValueConverter)  | Medium (intentional) | ✅         |
+| No extra API beyond explicit cast | Small public surface | N/A                           | Medium (intentional) | ✅         |
 
 The value object is a type, not a box. Treat it as one.

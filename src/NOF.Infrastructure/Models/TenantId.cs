@@ -9,9 +9,7 @@ public readonly partial struct TenantId : IValueObject<string>
 
     public static string Normalize(string? tenantId)
     {
-        return string.IsNullOrWhiteSpace(tenantId)
-            ? (string)Host
-            : (string)Of(tenantId);
+        return NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId).Trim();
     }
 
     public static void Validate(string value)

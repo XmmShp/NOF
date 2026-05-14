@@ -10,12 +10,12 @@ public readonly partial struct ConfigNodeName : IValueObject<string>
     {
         if (string.IsNullOrWhiteSpace(input))
         {
-            throw new ValidationException("Node name cannot be empty.");
+            throw new DomainValidationException("Node name cannot be empty.");
         }
 
         if (input.Length > 100)
         {
-            throw new ValidationException("Node name cannot exceed 100 characters.");
+            throw new DomainValidationException("Node name cannot exceed 100 characters.");
         }
     }
 }
@@ -26,12 +26,12 @@ public readonly partial struct ConfigFileName : IValueObject<string>
     {
         if (string.IsNullOrWhiteSpace(input))
         {
-            throw new ValidationException("File name cannot be empty.");
+            throw new DomainValidationException("File name cannot be empty.");
         }
 
         if (input.Length > 100)
         {
-            throw new ValidationException("File name cannot exceed 100 characters.");
+            throw new DomainValidationException("File name cannot exceed 100 characters.");
         }
     }
 }
@@ -42,7 +42,7 @@ public readonly partial struct ConfigContent : IValueObject<string>
     {
         if (string.IsNullOrWhiteSpace(input))
         {
-            throw new ValidationException("Config content cannot be empty.");
+            throw new DomainValidationException("Config content cannot be empty.");
         }
 
         try
@@ -50,12 +50,12 @@ public readonly partial struct ConfigContent : IValueObject<string>
             var node = JsonNode.Parse(input);
             if (node is not JsonObject)
             {
-                throw new ValidationException("Config content must be a JSON object.");
+                throw new DomainValidationException("Config content must be a JSON object.");
             }
         }
         catch (JsonException)
         {
-            throw new ValidationException("Invalid JSON format.");
+            throw new DomainValidationException("Invalid JSON format.");
         }
     }
 }

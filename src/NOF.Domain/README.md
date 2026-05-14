@@ -9,7 +9,7 @@ Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF)
 - `IValueObject<T>` for source-generated value objects
 - `[NewableValueObject]` for `long`-backed ID value objects
 - `Failure` and `[Failure(...)]` for strongly-typed failure definitions
-- `DomainException` and `ValidationException`
+- `DomainException` and `DomainValidationException`
 - `IIdGenerator` and `IdGenerator.Current`
 
 This package does **not** currently expose aggregate root, repository, or unit-of-work abstractions.
@@ -28,6 +28,7 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 
 The generated `JsonConverter` is AOT-friendly and resolves primitive serialization through `JsonTypeInfo`.
 If you use Native AOT-style publishing, make sure the `JsonSerializerOptions` passed to serialization includes metadata for the primitive type backing the value object.
+Best practice: keep `Normalize(T)` limited to canonicalization such as trimming or casing, and avoid calling `Of(...)` or `Validate(...)` from inside `Normalize`.
 
 ```csharp
 using NOF.Domain;
@@ -38,7 +39,7 @@ public readonly partial struct CustomerName : IValueObject<string>
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ValidationException("Customer name cannot be empty.");
+            throw new DomainValidationException("Customer name cannot be empty.");
         }
     }
 }
@@ -78,10 +79,10 @@ OrderFailures.NotFound.ThrowAsDomainException();
 ### Exceptions
 
 - `DomainException` represents a domain rule violation with an `ErrorCode`
-- `ValidationException` is a `DomainException` specialization for validation failures
+- `DomainValidationException` is a `DomainException` specialization for validation failures
 
 ```csharp
-throw new ValidationException("Customer name cannot be empty.");
+throw new DomainValidationException("Customer name cannot be empty.");
 ```
 
 ## Installation
