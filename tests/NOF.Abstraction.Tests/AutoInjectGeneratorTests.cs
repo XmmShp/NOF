@@ -79,7 +79,8 @@ public class AutoInjectGeneratorTests
 
         var generatedCode = trees.Single().GetRoot().ToFullString();
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add", generatedCode);
+        Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppAutoInjectAssemblyInitializer), true)", generatedCode);
+        Assert.Contains("registry.AutoInjectRegistrations.Add", generatedCode);
         Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IAppSvc), typeof(global::App.AppService), global::NOF.Annotation.Lifetime.Scoped, false)", generatedCode);
     }
 
@@ -128,7 +129,7 @@ public class AutoInjectGeneratorTests
         var result = new AutoInjectGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("Registry.AutoInjectRegistrations.Add", generatedCode);
+        Assert.Contains("registry.AutoInjectRegistrations.Add", generatedCode);
         Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.FooBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, false)", generatedCode);
         Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IFoo), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, true)", generatedCode);
         Assert.Contains("new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.IBar), typeof(global::App.FooBar), global::NOF.Annotation.Lifetime.Singleton, true)", generatedCode);

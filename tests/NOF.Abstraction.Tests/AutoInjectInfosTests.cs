@@ -6,15 +6,16 @@ namespace NOF.Abstraction.Tests;
 public class AutoInjectInfosTests
 {
     [Fact]
-    public void Registrations_FirstReadShouldImportStaticRegistryAndFreeze()
+    public void Registrations_FirstReadShouldImportRegistryAndFreeze()
     {
-        Registry.AutoInjectRegistrations.Add(new AutoInjectServiceRegistration(
+        var registry = new Registry();
+        registry.AutoInjectRegistrations.Add(new AutoInjectServiceRegistration(
             typeof(IFoo),
             typeof(Foo),
             Lifetime.Scoped,
             UseFactory: false));
 
-        var infos = new AutoInjectInfos();
+        var infos = new AutoInjectInfos(registry);
 
         Assert.Contains(infos.Registrations, r =>
             r.ServiceType == typeof(IFoo) &&

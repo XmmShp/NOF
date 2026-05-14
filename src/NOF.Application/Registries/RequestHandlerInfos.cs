@@ -5,11 +5,29 @@ namespace NOF.Application;
 
 public sealed class RequestHandlerInfos
 {
-    private readonly Lock _gate = new();
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<RequestHandlerRegistration> _registrationsList = [];
     public record DynamicallyAccessedPublicConstructorsType(
         [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type Type);
     private readonly Dictionary<Type, DynamicallyAccessedPublicConstructorsType> _registrations = [];
-    private bool _isFrozen;
+    private bool _isInitialized;
+
+    public RequestHandlerInfos()
+        : this(new Registry())
+    {
+    }
+
+    public RequestHandlerInfos(Registry registry)
+    {
+        _registry = registry;
+    }
+
+    public void Add(RequestHandlerRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        AddCore(registration);
+    }
 
     public IReadOnlyDictionary<Type, DynamicallyAccessedPublicConstructorsType> Registrations
     {
@@ -18,22 +36,6 @@ public sealed class RequestHandlerInfos
             EnsureInitialized();
             return _registrations;
         }
-    }
-
-    public void Add(RequestHandlerRegistration registration)
-    {
-        ArgumentNullException.ThrowIfNull(registration);
-
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            _registrations[registration.ServiceType] = new(registration.ImplementationType);
-        }
-    }
-
-    public void Freeze()
-    {
-        EnsureInitialized();
     }
 
     public bool TryGetHandlerType(Type serviceType, out Type? handlerType)
@@ -52,32 +54,31 @@ public sealed class RequestHandlerInfos
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            foreach (var registration in Registry.RequestHandlerRegistrations)
+            foreach (var registration in _registry.RequestHandlerRegistrations)
             {
-                _registrations[registration.ServiceType] = new(registration.ImplementationType);
+                AddCore(registration);
             }
 
-            _isFrozen = true;
+            _registrationsList.Freeze();
+            _isInitialized = true;
         }
     }
 
-    private void ThrowIfFrozen()
+    private void AddCore(RequestHandlerRegistration registration)
     {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("RequestHandlerInfos is frozen after its first read.");
-        }
+        _registrationsList.Add(registration);
+        _registrations[registration.ServiceType] = new(registration.ImplementationType);
     }
 }

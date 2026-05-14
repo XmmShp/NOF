@@ -5,9 +5,27 @@ namespace NOF.Application;
 
 public sealed class RpcServerInfos
 {
-    private readonly Lock _gate = new();
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<RpcServerRegistration> _registrationsList = [];
     private readonly Dictionary<Type, Type> _registrations = [];
-    private bool _isFrozen;
+    private bool _isInitialized;
+
+    public RpcServerInfos()
+        : this(new Registry())
+    {
+    }
+
+    public RpcServerInfos(Registry registry)
+    {
+        _registry = registry;
+    }
+
+    public void Add(RpcServerRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        AddCore(registration);
+    }
 
     public IReadOnlyDictionary<Type, Type> Registrations
     {
@@ -16,22 +34,6 @@ public sealed class RpcServerInfos
             EnsureInitialized();
             return _registrations;
         }
-    }
-
-    public void Add(RpcServerRegistration registration)
-    {
-        ArgumentNullException.ThrowIfNull(registration);
-
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            _registrations[registration.ServiceType] = registration.ImplementationType;
-        }
-    }
-
-    public void Freeze()
-    {
-        EnsureInitialized();
     }
 
     public bool TryGetImplementationType(Type contractType, [MaybeNullWhen(false)] out Type implementationType)
@@ -43,32 +45,31 @@ public sealed class RpcServerInfos
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            foreach (var registration in Registry.RpcServerRegistrations)
+            foreach (var registration in _registry.RpcServerRegistrations)
             {
-                _registrations[registration.ServiceType] = registration.ImplementationType;
+                AddCore(registration);
             }
 
-            _isFrozen = true;
+            _registrationsList.Freeze();
+            _isInitialized = true;
         }
     }
 
-    private void ThrowIfFrozen()
+    private void AddCore(RpcServerRegistration registration)
     {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("RpcServerInfos is frozen after its first read.");
-        }
+        _registrationsList.Add(registration);
+        _registrations[registration.ServiceType] = registration.ImplementationType;
     }
 }

@@ -109,6 +109,21 @@ public static partial class NOFHostingExtensions
             return instance;
         }
 
+        public T GetOrAddSingleton<T>(Func<T> factory) where T : class
+        {
+            ArgumentNullException.ThrowIfNull(factory);
+
+            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
+            if (descriptor?.ImplementationInstance is T existing)
+            {
+                return existing;
+            }
+
+            var instance = factory();
+            services.AddSingleton(instance);
+            return instance;
+        }
+
         public IServiceCollection AddRequestOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, IRequestOutboundMiddleware
         {

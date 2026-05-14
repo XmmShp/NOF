@@ -86,11 +86,9 @@ public class AutoInjectGenerator : IIncrementalGenerator
 
         sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        private static int _initialized;");
-        sb.AppendLine();
-        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
         sb.AppendLine("        {");
-        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
@@ -168,7 +166,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
             .ToList();
 
         void Emit(string serviceTypeName, bool useFactory)
-            => sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({serviceTypeName}), typeof({implementationTypeName}), {lifetime}, {(useFactory ? "true" : "false")}));");
+            => sb.AppendLine($"            registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({serviceTypeName}), typeof({implementationTypeName}), {lifetime}, {(useFactory ? "true" : "false")}));");
 
         if (lifetime is "global::NOF.Annotation.Lifetime.Singleton" or "global::NOF.Annotation.Lifetime.Scoped")
         {

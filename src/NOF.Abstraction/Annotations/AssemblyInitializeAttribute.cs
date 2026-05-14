@@ -1,3 +1,5 @@
+using NOF.Abstraction;
+
 namespace NOF.Annotation;
 
 /// <summary>
@@ -6,19 +8,9 @@ namespace NOF.Annotation;
 public abstract class AssemblyInitializeAttribute : Attribute
 {
     /// <summary>
-    /// Gets the initialization delegate for this assembly initializer entry.
+    /// Runs the assembly initializer against the provided registry.
     /// </summary>
-    public Action InitializeMethod { get; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AssemblyInitializeAttribute"/> class.
-    /// </summary>
-    /// <param name="initializeMethod">The initialization delegate.</param>
-    protected AssemblyInitializeAttribute(Action initializeMethod)
-    {
-        ArgumentNullException.ThrowIfNull(initializeMethod);
-        InitializeMethod = initializeMethod;
-    }
+    public abstract void Initialize(Registry registry);
 }
 
 /// <summary>
@@ -28,11 +20,8 @@ public abstract class AssemblyInitializeAttribute : Attribute
 public sealed class AssemblyInitializeAttribute<TInitializer> : AssemblyInitializeAttribute
     where TInitializer : IAssemblyInitializer
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AssemblyInitializeAttribute{TInitializer}"/> class.
-    /// </summary>
-    public AssemblyInitializeAttribute()
-        : base(TInitializer.Initialize)
+    public override void Initialize(Registry registry)
     {
+        TInitializer.Initialize(registry);
     }
 }

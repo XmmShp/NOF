@@ -6,10 +6,21 @@ namespace NOF.Abstraction;
 /// </summary>
 public sealed class EventHandlerInfos
 {
-    private readonly Lock _gate = new();
-    private readonly HashSet<EventHandlerRegistration> _events = [];
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<EventHandlerRegistration> _events = [];
     private readonly Dictionary<Type, List<Type>> _eventByMessage = new();
-    private bool _isFrozen;
+    private bool _isInitialized;
+
+    public EventHandlerInfos()
+        : this(new Registry())
+    {
+    }
+
+    public EventHandlerInfos(Registry registry)
+    {
+        _registry = registry;
+    }
 
     public IReadOnlyCollection<EventHandlerRegistration> Events
     {
@@ -23,23 +34,14 @@ public sealed class EventHandlerInfos
     public void Add(EventHandlerRegistration registration)
     {
         ArgumentNullException.ThrowIfNull(registration);
-
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            AddCore(registration);
-        }
+        AddCore(registration);
     }
 
     public void AddRange(ReadOnlySpan<EventHandlerRegistration> registrations)
     {
-        lock (_gate)
+        foreach (var registration in registrations)
         {
-            ThrowIfFrozen();
-            foreach (var registration in registrations)
-            {
-                AddCore(registration);
-            }
+            AddCore(registration);
         }
     }
 
@@ -52,30 +54,36 @@ public sealed class EventHandlerInfos
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            foreach (var registration in Registry.EventHandlerRegistrations)
+            foreach (var registration in _registry.EventHandlerRegistrations)
             {
                 AddCore(registration);
             }
 
-            _isFrozen = true;
+            _events.Freeze();
+            _isInitialized = true;
         }
     }
 
     private void AddCore(EventHandlerRegistration registration)
     {
         _events.Add(registration);
+        Index(registration);
+    }
+
+    private void Index(EventHandlerRegistration registration)
+    {
         if (!_eventByMessage.TryGetValue(registration.EventType, out var eventHandlers))
         {
             eventHandlers = [];
@@ -85,14 +93,6 @@ public sealed class EventHandlerInfos
         if (!eventHandlers.Contains(registration.HandlerType))
         {
             eventHandlers.Add(registration.HandlerType);
-        }
-    }
-
-    private void ThrowIfFrozen()
-    {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("EventHandlerInfos is frozen after its first read.");
         }
     }
 }

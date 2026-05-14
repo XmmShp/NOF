@@ -4,9 +4,27 @@ namespace NOF.Application;
 
 public sealed class MapperInfos
 {
-    private readonly Lock _gate = new();
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<MapperRegistration> _registrations = [];
     private readonly Dictionary<MapKey, MapFunc> _mappings = [];
-    private bool _isFrozen;
+    private bool _isInitialized;
+
+    public MapperInfos()
+        : this(new Registry())
+    {
+    }
+
+    public MapperInfos(Registry registry)
+    {
+        _registry = registry;
+    }
+
+    public void Add(MapperRegistration registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        AddCore(registration);
+    }
 
     public IReadOnlyDictionary<MapKey, MapFunc> Mappings
     {
@@ -15,22 +33,6 @@ public sealed class MapperInfos
             EnsureInitialized();
             return _mappings;
         }
-    }
-
-    public void Add(MapperRegistration registration)
-    {
-        ArgumentNullException.ThrowIfNull(registration);
-
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            _mappings[registration.Key] = registration.MappingFunc;
-        }
-    }
-
-    public void Freeze()
-    {
-        EnsureInitialized();
     }
 
     public bool TryGet(MapKey key, out MapFunc? mappingFunc)
@@ -42,32 +44,31 @@ public sealed class MapperInfos
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            foreach (var registration in Registry.MapperRegistrations)
+            foreach (var registration in _registry.MapperRegistrations)
             {
-                _mappings[registration.Key] = registration.MappingFunc;
+                AddCore(registration);
             }
 
-            _isFrozen = true;
+            _registrations.Freeze();
+            _isInitialized = true;
         }
     }
 
-    private void ThrowIfFrozen()
+    private void AddCore(MapperRegistration registration)
     {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("MapperInfos is frozen after its first read.");
-        }
+        _registrations.Add(registration);
+        _mappings[registration.Key] = registration.MappingFunc;
     }
 }

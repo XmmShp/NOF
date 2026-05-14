@@ -20,11 +20,12 @@ public class EventHandlerInfosTests
     }
 
     [Fact]
-    public void Events_FirstReadShouldImportStaticRegistryAndFreeze()
+    public void Events_FirstReadShouldImportRegistryAndFreeze()
     {
-        Registry.EventHandlerRegistrations.Add(new EventHandlerRegistration(typeof(RegistryHandler), typeof(RegistryEvent)));
+        var registry = new Registry();
+        registry.EventHandlerRegistrations.Add(new EventHandlerRegistration(typeof(RegistryHandler), typeof(RegistryEvent)));
 
-        var infos = new EventHandlerInfos();
+        var infos = new EventHandlerInfos(registry);
 
         Assert.Contains(infos.Events, registration =>
             registration.HandlerType == typeof(RegistryHandler) &&

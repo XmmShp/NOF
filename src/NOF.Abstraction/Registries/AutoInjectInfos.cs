@@ -8,9 +8,20 @@ namespace NOF.Abstraction;
 /// </summary>
 public sealed class AutoInjectInfos
 {
-    private readonly Lock _gate = new();
-    private readonly List<AutoInjectServiceRegistration> _registrations = [];
-    private bool _isFrozen;
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<AutoInjectServiceRegistration> _registrations = [];
+    private bool _isInitialized;
+
+    public AutoInjectInfos()
+        : this(new Registry())
+    {
+    }
+
+    public AutoInjectInfos(Registry registry)
+    {
+        _registry = registry;
+    }
 
     public IReadOnlyList<AutoInjectServiceRegistration> Registrations
     {
@@ -24,48 +35,32 @@ public sealed class AutoInjectInfos
     public void Add(AutoInjectServiceRegistration registration)
     {
         ArgumentNullException.ThrowIfNull(registration);
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            _registrations.Add(registration);
-        }
+        _registrations.Add(registration);
     }
 
     public void AddRange(IEnumerable<AutoInjectServiceRegistration> registrations)
     {
         ArgumentNullException.ThrowIfNull(registrations);
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            _registrations.AddRange(registrations);
-        }
+        _registrations.AddRange(registrations);
     }
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            // Import from static registry storage and then freeze.
-            _registrations.AddRange(Registry.AutoInjectRegistrations);
-            _isFrozen = true;
-        }
-    }
-
-    private void ThrowIfFrozen()
-    {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("AutoInjectInfos is frozen after its first read.");
+            _registrations.AddRange(_registry.AutoInjectRegistrations);
+            _registrations.Freeze();
+            _isInitialized = true;
         }
     }
 }

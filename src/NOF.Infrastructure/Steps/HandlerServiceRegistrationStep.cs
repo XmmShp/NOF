@@ -13,9 +13,10 @@ public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var commandInfos = builder.Services.GetOrAddSingleton<CommandHandlerInfos>();
-        var notificationInfos = builder.Services.GetOrAddSingleton<NotificationHandlerInfos>();
-        var eventInfos = builder.Services.GetOrAddSingleton<EventHandlerInfos>();
+        var registry = builder.GetOrAddRegistry();
+        var commandInfos = builder.Services.GetOrAddSingleton(() => new CommandHandlerInfos(registry));
+        var notificationInfos = builder.Services.GetOrAddSingleton(() => new NotificationHandlerInfos(registry));
+        var eventInfos = builder.Services.GetOrAddSingleton(() => new EventHandlerInfos(registry));
 
         foreach (var info in commandInfos.Registrations)
         {

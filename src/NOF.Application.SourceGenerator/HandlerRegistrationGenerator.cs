@@ -120,11 +120,9 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("{");
         sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        private static int _initialized;");
-        sb.AppendLine();
-        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
         sb.AppendLine("        {");
-        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
@@ -152,13 +150,13 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.CommandHandler<TCommand>", out var commandType))
         {
             var messageType = commandType!.ToDisplayString(typeFormat);
-            registrations.Add($"global::NOF.Abstraction.Registry.CommandHandlerRegistrations.Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            registrations.Add($"registry.CommandHandlerRegistrations.Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
         }
 
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.NotificationHandler<TNotification>", out var notificationType))
         {
             var messageType = notificationType!.ToDisplayString(typeFormat);
-            registrations.Add($"global::NOF.Abstraction.Registry.NotificationHandlerRegistrations.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            registrations.Add($"registry.NotificationHandlerRegistrations.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
         }
     }
 

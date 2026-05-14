@@ -212,18 +212,16 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
 
         sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        private static int _initialized;");
-        sb.AppendLine();
-        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
         sb.AppendLine("        {");
-        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
         sb.AppendLine();
         foreach (var (handlerClassName, notificationFullName) in handlerPairs)
         {
-            sb.AppendLine($"            global::NOF.Abstraction.Registry.NotificationHandlerRegistrations.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName})));");
+            sb.AppendLine($"            registry.NotificationHandlerRegistrations.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName})));");
         }
         sb.AppendLine("        }");
         sb.AppendLine("    }");

@@ -33,7 +33,8 @@ public class EventHandlerRegistrationGeneratorTests
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppEventHandlerAssemblyInitializer>]", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.Registry.EventHandlerRegistrations.Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
+        Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppEventHandlerAssemblyInitializer), true)", generatedCode);
+        Assert.Contains("registry.EventHandlerRegistrations.Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

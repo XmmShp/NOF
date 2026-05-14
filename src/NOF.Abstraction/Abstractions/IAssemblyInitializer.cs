@@ -1,3 +1,5 @@
+using NOF.Abstraction;
+
 namespace NOF.Annotation;
 
 /// <summary>
@@ -8,5 +10,5 @@ public interface IAssemblyInitializer
     /// <summary>
     /// Initializes assembly-level runtime registrations.
     /// </summary>
-    static abstract void Initialize();
+    static abstract void Initialize(Registry registry);
 }

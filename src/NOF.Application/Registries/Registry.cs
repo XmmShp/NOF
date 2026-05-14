@@ -1,26 +1,30 @@
 using NOF.Application;
-using System.Collections.Concurrent;
 
 namespace NOF.Abstraction;
 
 public static class NOFApplicationRegistryExtensions
 {
-    private static readonly ConcurrentBag<CommandHandlerRegistration> _commandHandlerRegistrations = [];
-    private static readonly ConcurrentBag<NotificationHandlerRegistration> _notificationHandlerRegistrations = [];
-    private static readonly ConcurrentBag<RequestHandlerRegistration> _requestHandlerRegistrations = [];
-    private static readonly ConcurrentBag<RpcServerRegistration> _rpcServerRegistrations = [];
-    private static readonly ConcurrentBag<MapperRegistration> _mapperRegistrations = [];
+    private const string CommandHandlerRegistrationsKey = "NOF.Application.CommandHandlerRegistrations";
+    private const string NotificationHandlerRegistrationsKey = "NOF.Application.NotificationHandlerRegistrations";
+    private const string RequestHandlerRegistrationsKey = "NOF.Application.RequestHandlerRegistrations";
+    private const string RpcServerRegistrationsKey = "NOF.Application.RpcServerRegistrations";
+    private const string MapperRegistrationsKey = "NOF.Application.MapperRegistrations";
 
-    extension(Registry)
+    extension(Registry registry)
     {
-        public static ConcurrentBag<CommandHandlerRegistration> CommandHandlerRegistrations => _commandHandlerRegistrations;
+        public List<CommandHandlerRegistration> CommandHandlerRegistrations
+            => registry.GetOrAdd(CommandHandlerRegistrationsKey, static () => new List<CommandHandlerRegistration>());
 
-        public static ConcurrentBag<NotificationHandlerRegistration> NotificationHandlerRegistrations => _notificationHandlerRegistrations;
+        public List<NotificationHandlerRegistration> NotificationHandlerRegistrations
+            => registry.GetOrAdd(NotificationHandlerRegistrationsKey, static () => new List<NotificationHandlerRegistration>());
 
-        public static ConcurrentBag<RequestHandlerRegistration> RequestHandlerRegistrations => _requestHandlerRegistrations;
+        public List<RequestHandlerRegistration> RequestHandlerRegistrations
+            => registry.GetOrAdd(RequestHandlerRegistrationsKey, static () => new List<RequestHandlerRegistration>());
 
-        public static ConcurrentBag<RpcServerRegistration> RpcServerRegistrations => _rpcServerRegistrations;
+        public List<RpcServerRegistration> RpcServerRegistrations
+            => registry.GetOrAdd(RpcServerRegistrationsKey, static () => new List<RpcServerRegistration>());
 
-        public static ConcurrentBag<MapperRegistration> MapperRegistrations => _mapperRegistrations;
+        public List<MapperRegistration> MapperRegistrations
+            => registry.GetOrAdd(MapperRegistrationsKey, static () => new List<MapperRegistration>());
     }
 }

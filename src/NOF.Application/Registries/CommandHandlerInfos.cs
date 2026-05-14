@@ -4,10 +4,21 @@ namespace NOF.Application;
 
 public sealed class CommandHandlerInfos
 {
-    private readonly Lock _gate = new();
-    private readonly HashSet<CommandHandlerRegistration> _registrations = [];
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<CommandHandlerRegistration> _registrations = [];
     private readonly Dictionary<Type, List<Type>> _handlersByCommand = new();
-    private bool _isFrozen;
+    private bool _isInitialized;
+
+    public CommandHandlerInfos()
+        : this(new Registry())
+    {
+    }
+
+    public CommandHandlerInfos(Registry registry)
+    {
+        _registry = registry;
+    }
 
     public IReadOnlyCollection<CommandHandlerRegistration> Registrations
     {
@@ -21,29 +32,15 @@ public sealed class CommandHandlerInfos
     public void Add(CommandHandlerRegistration registration)
     {
         ArgumentNullException.ThrowIfNull(registration);
-
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            AddCore(registration);
-        }
+        AddCore(registration);
     }
 
     public void AddRange(ReadOnlySpan<CommandHandlerRegistration> registrations)
     {
-        lock (_gate)
+        foreach (var registration in registrations)
         {
-            ThrowIfFrozen();
-            foreach (var registration in registrations)
-            {
-                AddCore(registration);
-            }
+            AddCore(registration);
         }
-    }
-
-    public void Freeze()
-    {
-        EnsureInitialized();
     }
 
     public IReadOnlyCollection<Type> GetHandlers(Type commandType)
@@ -55,30 +52,36 @@ public sealed class CommandHandlerInfos
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            foreach (var registration in Registry.CommandHandlerRegistrations)
+            foreach (var registration in _registry.CommandHandlerRegistrations)
             {
                 AddCore(registration);
             }
 
-            _isFrozen = true;
+            _registrations.Freeze();
+            _isInitialized = true;
         }
     }
 
     private void AddCore(CommandHandlerRegistration registration)
     {
         _registrations.Add(registration);
+        Index(registration);
+    }
+
+    private void Index(CommandHandlerRegistration registration)
+    {
         if (!_handlersByCommand.TryGetValue(registration.CommandType, out var handlers))
         {
             handlers = [];
@@ -88,14 +91,6 @@ public sealed class CommandHandlerInfos
         if (!handlers.Contains(registration.HandlerType))
         {
             handlers.Add(registration.HandlerType);
-        }
-    }
-
-    private void ThrowIfFrozen()
-    {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("CommandHandlerInfos is frozen after its first read.");
         }
     }
 }

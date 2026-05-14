@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using NOF.Test;
 using System.Security.Claims;
@@ -30,7 +31,6 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.NotNull(scope.GetRequiredService<IJwksService>());
         Assert.NotNull(scope.GetRequiredService<ISigningKeyService>());
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
-        Assert.NotNull(scope.GetRequiredService<LocalJwksService>());
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ISigningKeyService) &&
             descriptor.Lifetime == ServiceLifetime.Scoped);
@@ -162,12 +162,11 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.Equal("https://auth.local/.well-known/jwks.json", resourceOptions.JwksEndpoint);
         Assert.Equal("X-Authorization", propagationOptions.HeaderName);
         Assert.Equal("Token", propagationOptions.TokenType);
-        var httpJwksService1 = scope.GetRequiredService<HttpJwksService>();
-        var httpJwksService2 = scope.GetRequiredService<HttpJwksService>();
-        var jwksService = scope.GetRequiredService<IJwksService>();
-        Assert.IsType<HttpJwksService>(httpJwksService1);
-        Assert.IsType<HttpJwksService>(jwksService);
-        Assert.NotSame(httpJwksService1, httpJwksService2);
+        var jwksService1 = scope.GetRequiredService<IJwksService>();
+        var jwksService2 = scope.GetRequiredService<IJwksService>();
+        Assert.IsType<HttpJwksService>(jwksService1);
+        Assert.IsType<HttpJwksService>(jwksService2);
+        Assert.NotSame(jwksService1, jwksService2);
         Assert.NotNull(scope.GetRequiredService<ResourceServerJwksCacheService>());
     }
 
@@ -193,7 +192,7 @@ public sealed class JwtAuthorizationExtensionsTests
     }
 
     [Fact]
-    public async Task AddJwtResourceServer_Only_ShouldNotRegisterAuthorityHandlers()
+    public async Task AddJwtResourceServer_Only_ShouldNotRegisterAuthorityServicesExplicitly()
     {
         var builder = NOFTestAppBuilder.Create();
         builder.AddJwtResourceServer(options =>
@@ -211,6 +210,10 @@ public sealed class JwtAuthorizationExtensionsTests
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(GenerateJwtTokenHandler));
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(ValidateJwtRefreshTokenHandler));
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(RevokeJwtRefreshTokenHandler));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ServiceType == typeof(IJwtAuthorityServiceClient));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(LocalJwtAuthorityServiceClient));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(LocalJwksService));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(JwtKeyRotationBackgroundService));
     }
 
     private static NOFTestAppBuilder CreateAuthorityBuilder(string connectionString)

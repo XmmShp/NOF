@@ -124,11 +124,9 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("{");
         sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        private static int _initialized;");
-        sb.AppendLine();
-        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
         sb.AppendLine("        {");
-        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
@@ -136,7 +134,7 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
-            sb.AppendLine($"            global::NOF.Abstraction.Registry.EventHandlerRegistrations.Add({registration});");
+            sb.AppendLine($"            registry.EventHandlerRegistrations.Add({registration});");
         }
 
         sb.AppendLine("        }");

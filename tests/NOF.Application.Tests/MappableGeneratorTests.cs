@@ -69,7 +69,8 @@ public class MappableGeneratorTests
         Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("Registry.MapperRegistrations.Add(global::NOF.Application.MapperRegistration.Of<", code);
+        Assert.Contains("registry.IsInitialized.TryAdd(typeof(", code);
+        Assert.Contains("registry.MapperRegistrations.Add(global::NOF.Application.MapperRegistration.Of<", code);
         Assert.Contains("MapperAssemblyInitializer", code);
         Assert.Contains("Id = src.Id", code);
         Assert.Contains("Name = src.Name", code);

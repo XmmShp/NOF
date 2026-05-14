@@ -107,11 +107,9 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
         sb.AppendLine("{");
         sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        private static int _initialized;");
-        sb.AppendLine();
-        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
         sb.AppendLine("        {");
-        sb.AppendLine("            if (global::System.Threading.Interlocked.Exchange(ref _initialized, 1) == 1)");
+        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
@@ -121,12 +119,12 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
         {
             if (registration.Kind == RegistrationKind.Server)
             {
-                sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Scoped, false));");
-                sb.AppendLine($"            global::NOF.Abstraction.Registry.RpcServerRegistrations.Add(new global::NOF.Application.RpcServerRegistration(typeof({registration.ServiceContractType}), typeof({registration.ImplementationType})));");
+                sb.AppendLine($"            registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Scoped, false));");
+                sb.AppendLine($"            registry.RpcServerRegistrations.Add(new global::NOF.Application.RpcServerRegistration(typeof({registration.ServiceContractType}), typeof({registration.ImplementationType})));");
                 continue;
             }
 
-            sb.AppendLine($"            global::NOF.Abstraction.Registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Transient, false));");
+            sb.AppendLine($"            registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({registration.ServiceType}), typeof({registration.ImplementationType}), global::NOF.Annotation.Lifetime.Transient, false));");
         }
 
         sb.AppendLine("        }");

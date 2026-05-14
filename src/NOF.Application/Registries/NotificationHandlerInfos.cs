@@ -4,10 +4,21 @@ namespace NOF.Application;
 
 public sealed class NotificationHandlerInfos
 {
-    private readonly Lock _gate = new();
-    private readonly HashSet<NotificationHandlerRegistration> _registrations = [];
+    private readonly Lock _initializeGate = new();
+    private readonly Registry _registry;
+    private readonly FreezableList<NotificationHandlerRegistration> _registrations = [];
     private readonly Dictionary<Type, List<Type>> _handlersByNotification = new();
-    private bool _isFrozen;
+    private bool _isInitialized;
+
+    public NotificationHandlerInfos()
+        : this(new Registry())
+    {
+    }
+
+    public NotificationHandlerInfos(Registry registry)
+    {
+        _registry = registry;
+    }
 
     public IReadOnlyCollection<NotificationHandlerRegistration> Registrations
     {
@@ -21,29 +32,15 @@ public sealed class NotificationHandlerInfos
     public void Add(NotificationHandlerRegistration registration)
     {
         ArgumentNullException.ThrowIfNull(registration);
-
-        lock (_gate)
-        {
-            ThrowIfFrozen();
-            AddCore(registration);
-        }
+        AddCore(registration);
     }
 
     public void AddRange(ReadOnlySpan<NotificationHandlerRegistration> registrations)
     {
-        lock (_gate)
+        foreach (var registration in registrations)
         {
-            ThrowIfFrozen();
-            foreach (var registration in registrations)
-            {
-                AddCore(registration);
-            }
+            AddCore(registration);
         }
-    }
-
-    public void Freeze()
-    {
-        EnsureInitialized();
     }
 
     public IReadOnlyCollection<Type> GetHandlers(Type notificationType)
@@ -55,33 +52,36 @@ public sealed class NotificationHandlerInfos
 
     private void EnsureInitialized()
     {
-        if (_isFrozen)
+        if (_isInitialized)
         {
             return;
         }
 
-        lock (_gate)
+        lock (_initializeGate)
         {
-            if (_isFrozen)
+            if (_isInitialized)
             {
                 return;
             }
 
-            foreach (var registration in Registry.NotificationHandlerRegistrations)
+            foreach (var registration in _registry.NotificationHandlerRegistrations)
             {
-                if (registration is NotificationHandlerRegistration typedRegistration)
-                {
-                    AddCore(typedRegistration);
-                }
+                AddCore(registration);
             }
 
-            _isFrozen = true;
+            _registrations.Freeze();
+            _isInitialized = true;
         }
     }
 
     private void AddCore(NotificationHandlerRegistration registration)
     {
         _registrations.Add(registration);
+        Index(registration);
+    }
+
+    private void Index(NotificationHandlerRegistration registration)
+    {
         if (!_handlersByNotification.TryGetValue(registration.NotificationType, out var handlers))
         {
             handlers = [];
@@ -91,14 +91,6 @@ public sealed class NotificationHandlerInfos
         if (!handlers.Contains(registration.HandlerType))
         {
             handlers.Add(registration.HandlerType);
-        }
-    }
-
-    private void ThrowIfFrozen()
-    {
-        if (_isFrozen)
-        {
-            throw new InvalidOperationException("NotificationHandlerInfos is frozen after its first read.");
         }
     }
 }
