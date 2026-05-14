@@ -30,10 +30,37 @@ public sealed class CacheServiceTests
         Assert.Equal("shared-value", sharedViaShared.Value);
     }
 
+    [Fact]
+    public async Task DifferentMemoryHosts_ShouldNotShareInMemoryCacheState()
+    {
+        var hostA = CreateCacheService(
+            new MemoryCacheServiceRider(new MemoryCacheServiceRiderState()),
+            new CacheServiceLocalLockState());
+        var hostB = CreateCacheService(
+            new MemoryCacheServiceRider(new MemoryCacheServiceRiderState()),
+            new CacheServiceLocalLockState());
+
+        await hostA.SetAsync("shared-key", "host-a-value");
+
+        var valueOnHostA = await hostA.GetAsync<string>("shared-key");
+        var valueOnHostB = await hostB.GetAsync<string>("shared-key");
+
+        Assert.True(valueOnHostA.HasValue);
+        Assert.Equal("host-a-value", valueOnHostA.Value);
+        Assert.False(valueOnHostB.HasValue);
+    }
+
     private static CacheService CreateCacheService()
     {
+        return CreateCacheService(new MemoryCacheServiceRider(), new CacheServiceLocalLockState());
+    }
+
+    private static CacheService CreateCacheService(
+        ICacheServiceRider rider,
+        CacheServiceLocalLockState localLockState)
+    {
         return new CacheService(
-            new MemoryCacheServiceRider(),
+            rider,
             new TestObjectSerializer(),
             new ExponentialBackoffCacheLockRetryStrategy(),
             Options.Create(new CacheServiceOptions
@@ -43,7 +70,8 @@ public sealed class CacheServiceTests
             new TransparentInfos
             {
                 TenantId = TenantId.Normalize("tenant-a")
-            });
+            },
+            localLockState);
     }
 
     private sealed class TestObjectSerializer : IObjectSerializer

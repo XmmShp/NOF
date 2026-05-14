@@ -64,6 +64,21 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
+    public void AddInfrastructureDefaults_ShouldRegisterAmbientMapperAndIdGeneratorDaemons()
+    {
+        var builder = new TestServiceRegistrationContext();
+
+        builder.AddInfrastructureDefaults();
+
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IDaemonService) &&
+            service.ImplementationType == typeof(MapperAmbientDaemonService));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IDaemonService) &&
+            service.ImplementationType == typeof(IdGeneratorAmbientDaemonService));
+    }
+
+    [Fact]
     public void AddHostedService_WithDelegate_ShouldRegisterDelegateBackgroundService()
     {
         var services = new ServiceCollection();

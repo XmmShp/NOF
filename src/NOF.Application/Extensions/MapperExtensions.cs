@@ -8,10 +8,19 @@ public static partial class NOFApplicationExtensions
     extension<TSource>(TSource source) where TSource : notnull
     {
         /// <summary>
-        /// Gets a <see cref="MapSelector{TSource}"/> bound to the current global <see cref="IMapper"/>
+        /// Gets a <see cref="MapSelector{TSource}"/> bound to the current ambient <see cref="IMapper"/>
         /// instance, providing fluent mapping via <c>.As&lt;T&gt;()</c> and <c>.To&lt;T&gt;()</c>.
         /// </summary>
         public MapSelector<TSource> Map => new(source, typeof(TSource), Mapper.Current);
+
+        /// <summary>
+        /// Gets a <see cref="MapSelector{TSource}"/> bound to the provided <see cref="IMapper"/>.
+        /// </summary>
+        public MapSelector<TSource> MapWith(IMapper mapper)
+        {
+            ArgumentNullException.ThrowIfNull(mapper);
+            return new(source, typeof(TSource), mapper);
+        }
     }
 }
 

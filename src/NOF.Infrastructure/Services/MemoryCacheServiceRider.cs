@@ -1,54 +1,34 @@
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Contract;
-using System.Collections.Concurrent;
 using System.Text;
 
 namespace NOF.Infrastructure;
 
 public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 {
-    internal static readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
-    private static readonly Timer _expirationTimer = new(RemoveExpiredEntries, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    private readonly MemoryCacheServiceRiderState _state;
+    private readonly bool _ownsState;
 
-    private static void RemoveExpiredEntries(object? state)
+    public MemoryCacheServiceRider()
+        : this(new MemoryCacheServiceRiderState())
     {
-        var now = DateTimeOffset.UtcNow;
+        _ownsState = true;
+    }
 
-        var expiredKeys = _cache
-            .AsParallel()
-            .Where(kvp => kvp.Value.IsExpired(now))
-            .Select(kvp => kvp.Key)
-            .ToList();
-
-        foreach (var key in expiredKeys)
-        {
-            _cache.TryRemove(key, out _);
-        }
-
-        var unusedLocks = _localLocks
-            .Where(kvp => kvp.Value.CurrentCount == 1)
-            .Select(kvp => kvp.Key)
-            .ToList();
-
-        foreach (var key in unusedLocks)
-        {
-            if (_localLocks.TryRemove(key, out var semaphore))
-            {
-                semaphore.Dispose();
-            }
-        }
+    public MemoryCacheServiceRider(MemoryCacheServiceRiderState state)
+    {
+        _state = state ?? throw new ArgumentNullException(nameof(state));
     }
 
     public byte[]? Get(string key)
     {
         var now = DateTimeOffset.UtcNow;
-        if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
+        if (_state.Cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
         {
             if (entry.SlidingExpiration is not null)
             {
                 var newEntry = entry.WithUpdatedAccess(now);
-                _cache.TryUpdate(key, newEntry, entry);
+                _state.Cache.TryUpdate(key, newEntry, entry);
             }
             return entry.Data.ToArray();
         }
@@ -64,7 +44,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
     public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
     {
         var entry = new CacheEntry(value, options);
-        _cache[key] = entry;
+        _state.Cache[key] = entry;
     }
 
     public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
@@ -76,12 +56,12 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
     public void Refresh(string key)
     {
         var now = DateTimeOffset.UtcNow;
-        if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
+        if (_state.Cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
         {
             if (entry.SlidingExpiration is not null)
             {
                 var newEntry = entry.WithUpdatedAccess(now);
-                _cache.TryUpdate(key, newEntry, entry);
+                _state.Cache.TryUpdate(key, newEntry, entry);
             }
         }
     }
@@ -94,7 +74,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public void Remove(string key)
     {
-        _cache.TryRemove(key, out _);
+        _state.Cache.TryRemove(key, out _);
     }
 
     public Task RemoveAsync(string key, CancellationToken token = default)
@@ -106,7 +86,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
     public ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
-        var exists = _cache.TryGetValue(key, out var entry) && !entry.IsExpired(now);
+        var exists = _state.Cache.TryGetValue(key, out var entry) && !entry.IsExpired(now);
         return ValueTask.FromResult(exists);
     }
 
@@ -117,7 +97,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
         foreach (var key in keys)
         {
-            if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
+            if (_state.Cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
             {
                 result[key] = entry.Data.ToArray();
             }
@@ -133,7 +113,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
     {
         foreach (var item in items)
         {
-            _cache[item.Key] = new CacheEntry(item.Value, options);
+            _state.Cache[item.Key] = new CacheEntry(item.Value, options);
         }
         return ValueTask.CompletedTask;
     }
@@ -143,7 +123,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
         long count = 0;
         foreach (var key in keys)
         {
-            if (_cache.TryRemove(key, out _))
+            if (_state.Cache.TryRemove(key, out _))
             {
                 count++;
             }
@@ -157,7 +137,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
         while (true)
         {
-            if (_cache.TryGetValue(key, out var oldEntry))
+            if (_state.Cache.TryGetValue(key, out var oldEntry))
             {
                 if (oldEntry.Data.Length != sizeof(long))
                 {
@@ -172,7 +152,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
                     SlidingExpiration = oldEntry.SlidingExpiration
                 });
 
-                if (_cache.TryUpdate(key, newEntry, oldEntry))
+                if (_state.Cache.TryUpdate(key, newEntry, oldEntry))
                 {
                     break;
                 }
@@ -181,7 +161,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
             {
                 newValue = delta;
                 var newEntry = new CacheEntry(BitConverter.GetBytes(newValue), new DistributedCacheEntryOptions());
-                if (_cache.TryAdd(key, newEntry))
+                if (_state.Cache.TryAdd(key, newEntry))
                 {
                     break;
                 }
@@ -199,7 +179,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
     public ValueTask<bool> SetIfNotExistsAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken cancellationToken = default)
     {
         var entry = new CacheEntry(value, options);
-        var added = _cache.TryAdd(key, entry);
+        var added = _state.Cache.TryAdd(key, entry);
         return ValueTask.FromResult(added);
     }
 
@@ -209,7 +189,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
         var now = DateTimeOffset.UtcNow;
         byte[]? oldValue = null;
 
-        _cache.AddOrUpdate(
+        _state.Cache.AddOrUpdate(
             key,
             _ => newEntry,
             (_, existingEntry) =>
@@ -226,7 +206,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public ValueTask<byte[]?> GetAndRemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        if (_cache.TryRemove(key, out var entry) && !entry.IsExpired(DateTimeOffset.UtcNow))
+        if (_state.Cache.TryRemove(key, out var entry) && !entry.IsExpired(DateTimeOffset.UtcNow))
         {
             return ValueTask.FromResult<byte[]?>(entry.Data.ToArray());
         }
@@ -237,7 +217,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
     public ValueTask<Optional<TimeSpan>> GetTimeToLiveAsync(string key, CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
-        if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
+        if (_state.Cache.TryGetValue(key, out var entry) && !entry.IsExpired(now))
         {
             var ttl = entry.GetTimeToLive(now);
             return ValueTask.FromResult(ttl is not null ? Optional.Of(ttl.Value) : Optional.None);
@@ -247,7 +227,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public ValueTask<bool> SetTimeToLiveAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
-        while (_cache.TryGetValue(key, out var oldEntry))
+        while (_state.Cache.TryGetValue(key, out var oldEntry))
         {
             if (oldEntry.SlidingExpiration is not null)
             {
@@ -255,7 +235,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
             }
 
             var newEntry = oldEntry.WithNewExpiration(DateTimeOffset.UtcNow.Add(expiration));
-            if (_cache.TryUpdate(key, newEntry, oldEntry))
+            if (_state.Cache.TryUpdate(key, newEntry, oldEntry))
             {
                 return ValueTask.FromResult(true);
             }
@@ -266,7 +246,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public ValueTask<bool> TryAcquireLockAsync(string key, string lockId, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
-        var acquired = _cache.TryAdd(key, new CacheEntry(Encoding.UTF8.GetBytes(lockId), new DistributedCacheEntryOptions
+        var acquired = _state.Cache.TryAdd(key, new CacheEntry(Encoding.UTF8.GetBytes(lockId), new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = expiration
         }));
@@ -275,7 +255,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public ValueTask<bool> RenewLockAsync(string key, string lockId, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
-        while (_cache.TryGetValue(key, out var oldEntry))
+        while (_state.Cache.TryGetValue(key, out var oldEntry))
         {
             var storedLockId = Encoding.UTF8.GetString(oldEntry.Data.Span);
             if (storedLockId != lockId)
@@ -284,7 +264,7 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
             }
 
             var newEntry = oldEntry.WithNewExpiration(DateTimeOffset.UtcNow.Add(expiration));
-            if (_cache.TryUpdate(key, newEntry, oldEntry))
+            if (_state.Cache.TryUpdate(key, newEntry, oldEntry))
             {
                 return ValueTask.FromResult(true);
             }
@@ -295,12 +275,12 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public ValueTask<bool> ReleaseLockAsync(string key, string lockId, CancellationToken cancellationToken = default)
     {
-        if (_cache.TryGetValue(key, out var entry))
+        if (_state.Cache.TryGetValue(key, out var entry))
         {
             var storedLockId = Encoding.UTF8.GetString(entry.Data.Span);
             if (storedLockId == lockId)
             {
-                return ValueTask.FromResult(_cache.TryRemove(key, out _));
+                return ValueTask.FromResult(_state.Cache.TryRemove(key, out _));
             }
         }
 
@@ -309,6 +289,11 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
     public void Dispose()
     {
+        if (_ownsState)
+        {
+            _state.Dispose();
+        }
+
         GC.SuppressFinalize(this);
     }
 

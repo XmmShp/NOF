@@ -1,33 +1,58 @@
 namespace NOF.Application;
 
 /// <summary>
-/// Provides access to the global <see cref="IMapper"/> singleton.
-/// Must be initialized via <c>Mapper.SetCurrent</c> before first use
-/// (typically done by an application initialization step).
+/// Provides access to the ambient <see cref="IMapper"/> for the current async flow.
 /// </summary>
 public static class Mapper
 {
-    /// <summary>
-    /// Gets the globally registered <see cref="IMapper"/> instance.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown if <see cref="SetCurrent"/> has not been called yet.
-    /// </exception>
-    public static IMapper Current
-    {
-        get => field ?? throw new InvalidOperationException(
-            "Mapper has not been initialized. " +
-            "Ensure application parts are added so assembly initializers run and mappings are registered.");
-        private set;
-    }
+    private static readonly AsyncLocal<IMapper?> _currentMapper = new();
 
     /// <summary>
-    /// Sets the global <see cref="IMapper"/> instance.
-    /// Should be called once during application startup.
+    /// Gets the ambient <see cref="IMapper"/> instance for the current async flow.
     /// </summary>
-    public static void SetCurrent(IMapper mapper)
+    public static IMapper Current
+    {
+        get => _currentMapper.Value ?? throw new InvalidOperationException(
+            "No ambient IMapper is available for the current async flow.");
+    }
+
+    public static IDisposable PushCurrent(IMapper mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
-        Current = mapper;
+
+        var previous = _currentMapper.Value;
+        _currentMapper.Value = mapper;
+        return new AmbientMapperScope(previous);
+    }
+
+    public static IDisposable PushCurrent(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var mapper = services.GetService(typeof(IMapper)) as IMapper
+            ?? throw new InvalidOperationException($"No service of type '{typeof(IMapper).FullName}' is registered.");
+        return PushCurrent(mapper);
+    }
+
+    private sealed class AmbientMapperScope : IDisposable
+    {
+        private readonly IMapper? _previousMapper;
+        private bool _disposed;
+
+        public AmbientMapperScope(IMapper? previousMapper)
+        {
+            _previousMapper = previousMapper;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _currentMapper.Value = _previousMapper;
+            _disposed = true;
+        }
     }
 }

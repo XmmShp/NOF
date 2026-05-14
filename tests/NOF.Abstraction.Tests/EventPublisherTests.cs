@@ -18,6 +18,19 @@ public class EventPublisherTests
         Assert.Contains(typeof(TestEvent), publisher.LastEventTypes!);
     }
 
+    [Fact]
+    public async Task PublishAsEvent_WithExplicitPublisher_ShouldDispatchWithoutAmbientScope()
+    {
+        var publisher = new RecordingPublisher();
+        var payload = new TestEvent("explicit");
+
+        payload.PublishAsEvent(publisher);
+
+        await publisher.LastInvocation!;
+        Assert.Same(payload, publisher.LastPayload);
+        Assert.Contains(typeof(TestEvent), publisher.LastEventTypes!);
+    }
+
     private sealed record TestEvent(string Value);
 
     private sealed class RecordingPublisher : IEventPublisher

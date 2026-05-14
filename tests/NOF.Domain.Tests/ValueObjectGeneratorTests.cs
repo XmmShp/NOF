@@ -263,8 +263,11 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
+        Assert.Contains("public static EntityId New(global::NOF.Domain.IIdGenerator generator)", code);
+        Assert.Contains("global::System.ArgumentNullException.ThrowIfNull(generator);", code);
+        Assert.Contains("return Of(generator.NextId());", code);
         Assert.Contains("public static EntityId New()", code);
-        Assert.Contains("global::NOF.Domain.IdGenerator.Current.NextId()", code);
+        Assert.Contains("=> New(global::NOF.Domain.IdGenerator.Current);", code);
     }
 
     [Fact]
@@ -290,4 +293,3 @@ public class ValueObjectGeneratorTests
         Assert.True(normalizeIdx < validateIdx);
     }
 }
-

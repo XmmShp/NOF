@@ -13,6 +13,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     public NOFTestScope(AsyncServiceScope scope)
     {
         _scope = scope;
+        _ = _scope.ServiceProvider.GetServices<IDaemonService>().ToArray();
     }
 
     public IServiceProvider Services => _scope.ServiceProvider;

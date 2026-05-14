@@ -2,8 +2,7 @@ namespace NOF.Domain;
 
 /// <summary>
 /// When applied to an <c>IValueObject&lt;long&gt;</c> struct, instructs the source generator
-/// to emit a static <c>New()</c> factory method that calls <see cref="IdGenerator.Current"/>
-/// to produce a new snowflake ID.
+/// to emit static <c>New()</c> and <c>New(IIdGenerator)</c> factory methods.
 /// </summary>
 /// <remarks>
 /// Only valid on <c>IValueObject&lt;long&gt;</c> structs. Applying it to a struct with any other

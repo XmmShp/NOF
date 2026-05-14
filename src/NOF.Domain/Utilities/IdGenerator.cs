@@ -1,33 +1,58 @@
 namespace NOF.Domain;
 
 /// <summary>
-/// Provides access to the global <see cref="IIdGenerator"/> singleton.
-/// Must be initialized via <c>IdGenerator.SetCurrent</c> before first use
-/// (typically done by an application initialization step).
+/// Provides access to the ambient <see cref="IIdGenerator"/> for the current async flow.
 /// </summary>
 public static class IdGenerator
 {
-    /// <summary>
-    /// Gets the globally registered <see cref="IIdGenerator"/> instance.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown if <see cref="SetCurrent"/> has not been called yet.
-    /// </exception>
-    public static IIdGenerator Current
-    {
-        get => field ?? throw new InvalidOperationException(
-            "IdGenerator has not been initialized. " +
-            "Call builder.AddSnowflakeIdGenerator() during application setup.");
-        private set;
-    }
+    private static readonly AsyncLocal<IIdGenerator?> _currentGenerator = new();
 
     /// <summary>
-    /// Sets the global <see cref="IIdGenerator"/> instance.
-    /// Should be called once during application startup.
+    /// Gets the ambient <see cref="IIdGenerator"/> instance for the current async flow.
     /// </summary>
-    public static void SetCurrent(IIdGenerator generator)
+    public static IIdGenerator Current
+    {
+        get => _currentGenerator.Value ?? throw new InvalidOperationException(
+            "No ambient IIdGenerator is available for the current async flow.");
+    }
+
+    public static IDisposable PushCurrent(IIdGenerator generator)
     {
         ArgumentNullException.ThrowIfNull(generator);
-        Current = generator;
+
+        var previous = _currentGenerator.Value;
+        _currentGenerator.Value = generator;
+        return new AmbientIdGeneratorScope(previous);
+    }
+
+    public static IDisposable PushCurrent(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var generator = services.GetService(typeof(IIdGenerator)) as IIdGenerator
+            ?? throw new InvalidOperationException($"No service of type '{typeof(IIdGenerator).FullName}' is registered.");
+        return PushCurrent(generator);
+    }
+
+    private sealed class AmbientIdGeneratorScope : IDisposable
+    {
+        private readonly IIdGenerator? _previousGenerator;
+        private bool _disposed;
+
+        public AmbientIdGeneratorScope(IIdGenerator? previousGenerator)
+        {
+            _previousGenerator = previousGenerator;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _currentGenerator.Value = _previousGenerator;
+            _disposed = true;
+        }
     }
 }

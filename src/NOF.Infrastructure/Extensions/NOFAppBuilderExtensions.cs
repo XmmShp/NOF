@@ -34,9 +34,19 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Environment.BindConfiguration(builder.Configuration);
 
-            builder.Services.TryAddScoped<ICacheService, CacheService>();
+            builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
+            builder.Services.TryAddSingleton<CacheServiceLocalLockState>();
+            builder.Services.TryAddScoped<ICacheService>(sp => new CacheService(
+                sp.GetRequiredService<ICacheServiceRider>(),
+                sp.GetRequiredService<IObjectSerializer>(),
+                sp.GetRequiredService<ICacheLockRetryStrategy>(),
+                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheServiceOptions>>(),
+                sp.GetRequiredService<ITransparentInfos>(),
+                sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
 
             builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
@@ -119,13 +129,12 @@ public static partial class NOFInfrastructureExtensions
             #region Registration & Initialization Steps
             builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
                 .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
-                .TryAddRegistrationStep<HandlerServiceRegistrationStep>()
-                .TryAddInitializationStep<IdGeneratorInitializationStep>()
-                .TryAddInitializationStep<MapperInitializationStep>();
+                .TryAddRegistrationStep<HandlerServiceRegistrationStep>();
             #endregion
 
             #region Default Persistence
-            builder.Services.TryAddScoped<ICacheServiceRider, MemoryCacheServiceRider>();
+            builder.Services.TryAddScoped<ICacheServiceRider>(sp => new MemoryCacheServiceRider(
+                sp.GetRequiredService<MemoryCacheServiceRiderState>()));
             builder.Services.TryAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();

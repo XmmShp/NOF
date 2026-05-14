@@ -214,21 +214,30 @@ public class SnowflakeIdGeneratorTests
     }
 
     // -----------------------------------------------------------------------
-    // IdGenerator.Current static accessor
+    // IdGenerator ambient accessor
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void IdGenerator_SetCurrent_MakesCurrent_Available()
+    public void IdGenerator_PushCurrent_MakesCurrent_Available_AndRestoresPrevious()
     {
-        var gen = Default();
-        IdGenerator.SetCurrent(gen);
-        Assert.Same(gen, IdGenerator.Current);
+        var outer = Default();
+        var inner = CreateGenerator(applicationId: 1, instanceId: 1);
+
+        using var outerScope = IdGenerator.PushCurrent(outer);
+        Assert.Same(outer, IdGenerator.Current);
+
+        using (IdGenerator.PushCurrent(inner))
+        {
+            Assert.Same(inner, IdGenerator.Current);
+        }
+
+        Assert.Same(outer, IdGenerator.Current);
     }
 
     [Fact]
-    public void IdGenerator_SetCurrent_Null_Throws()
+    public void IdGenerator_PushCurrent_Null_Throws()
     {
-        var act = () => IdGenerator.SetCurrent(null!);
+        var act = () => IdGenerator.PushCurrent((IIdGenerator)null!);
         Assert.Throws<ArgumentNullException>(act);
     }
 

@@ -231,8 +231,14 @@ public class ValueObjectGenerator : IIncrementalGenerator
         // New() — only when [NewableValueObject] is present
         if (info.HasNewMethod)
         {
+            sb.AppendLine($"        public static {info.TypeName} New(global::NOF.Domain.IIdGenerator generator)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(generator);");
+            sb.AppendLine("            return Of(generator.NextId());");
+            sb.AppendLine("        }");
+            sb.AppendLine();
             sb.AppendLine($"        public static {info.TypeName} New()");
-            sb.AppendLine("            => Of(global::NOF.Domain.IdGenerator.Current.NextId());");
+            sb.AppendLine($"            => New(global::NOF.Domain.IdGenerator.Current);");
             sb.AppendLine();
         }
 

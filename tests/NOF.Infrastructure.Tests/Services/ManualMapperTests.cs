@@ -324,6 +324,30 @@ public class ManualMapperTests
     }
 
     [Fact]
+    public void Map_Extension_UsesAmbientMapper()
+    {
+        var mapper = CreateMapper(m =>
+            Add(m, (int x) => x.ToString()));
+
+        using var _ = Mapper.PushCurrent(mapper);
+
+        var result = 42.Map.To<string>();
+
+        Assert.Equal("42", result);
+    }
+
+    [Fact]
+    public void MapWith_Extension_UsesExplicitMapperWithoutAmbientScope()
+    {
+        var mapper = CreateMapper(m =>
+            Add(m, (int x) => x.ToString()));
+
+        var result = 42.MapWith(mapper).To<string>();
+
+        Assert.Equal("42", result);
+    }
+
+    [Fact]
     public void Map_NonGeneric_NullSourceType_ThrowsArgumentNullException()
     {
         var mapper = CreateMapper();

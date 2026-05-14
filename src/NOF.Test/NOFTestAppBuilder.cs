@@ -30,8 +30,6 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
     public async Task<NOFTestHost> BuildTestHostAsync()
     {
         var host = await BuildAsync();
-        IdGenerator.SetCurrent(host.Services.GetRequiredService<IIdGenerator>());
-        Mapper.SetCurrent(host.Services.GetRequiredService<IMapper>());
         return new NOFTestHost(host);
     }
 

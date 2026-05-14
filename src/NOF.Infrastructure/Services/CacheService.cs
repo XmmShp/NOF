@@ -2,19 +2,17 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NOF.Application;
 using NOF.Contract;
-using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure;
 
 public sealed class CacheService : ICacheService
 {
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _localLocks = new();
-
     private readonly ICacheServiceRider _rider;
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
     private readonly ITransparentInfos _executionContext;
+    private readonly CacheServiceLocalLockState _localLockState;
     private readonly bool _ignoreQueryFilters;
 
     public CacheService(
@@ -29,6 +27,25 @@ public sealed class CacheService : ICacheService
             lockRetryStrategy,
             options?.Value ?? throw new ArgumentNullException(nameof(options)),
             executionContext,
+            new CacheServiceLocalLockState(),
+            ignoreQueryFilters: false)
+    {
+    }
+
+    public CacheService(
+        ICacheServiceRider rider,
+        IObjectSerializer serializer,
+        ICacheLockRetryStrategy lockRetryStrategy,
+        IOptions<CacheServiceOptions> options,
+        ITransparentInfos executionContext,
+        CacheServiceLocalLockState localLockState)
+        : this(
+            rider,
+            serializer,
+            lockRetryStrategy,
+            options?.Value ?? throw new ArgumentNullException(nameof(options)),
+            executionContext,
+            localLockState,
             ignoreQueryFilters: false)
     {
     }
@@ -39,6 +56,7 @@ public sealed class CacheService : ICacheService
         ICacheLockRetryStrategy lockRetryStrategy,
         CacheServiceOptions options,
         ITransparentInfos executionContext,
+        CacheServiceLocalLockState localLockState,
         bool ignoreQueryFilters)
     {
         ArgumentNullException.ThrowIfNull(rider);
@@ -46,19 +64,21 @@ public sealed class CacheService : ICacheService
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(executionContext);
+        ArgumentNullException.ThrowIfNull(localLockState);
 
         _rider = rider;
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
         _options = options;
         _executionContext = executionContext;
+        _localLockState = localLockState;
         _ignoreQueryFilters = ignoreQueryFilters;
     }
 
     public ICacheService IgnoreQueryFilters()
         => _ignoreQueryFilters
             ? this
-            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _executionContext, ignoreQueryFilters: true);
+            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _executionContext, _localLockState, ignoreQueryFilters: true);
 
     private string ApplyKeyPrefix(string key)
     {
@@ -117,7 +137,7 @@ public sealed class CacheService : ICacheService
         }
 
         var normalizedKey = ApplyKeyPrefix(key);
-        var localLock = _localLocks.GetOrAdd(normalizedKey, _ => new SemaphoreSlim(1, 1));
+        var localLock = _localLockState.GetOrAdd(normalizedKey);
         await localLock.WaitAsync(cancellationToken);
         try
         {
