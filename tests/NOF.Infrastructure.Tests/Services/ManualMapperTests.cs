@@ -6,21 +6,21 @@ namespace NOF.Infrastructure.Tests.Services;
 
 public class ManualMapperTests
 {
-    private static ManualMapper CreateMapper(Action<MapperInfos>? configure = null)
+    private static ManualMapper CreateMapper(Action<MapperRegistry>? configure = null)
     {
-        var infos = new MapperInfos();
-        configure?.Invoke(infos);
-        return new ManualMapper(infos);
+        var mapperRegistry = new MapperRegistry();
+        configure?.Invoke(mapperRegistry);
+        return new ManualMapper(mapperRegistry);
     }
 
-    private static void Add<TSource, TDestination>(MapperInfos infos, Func<TSource, TDestination> mappingFunc, string? name = null)
-        => infos.Add(MapperRegistration.Of(mappingFunc, name));
+    private static void Add<TSource, TDestination>(MapperRegistry registry, Func<TSource, TDestination> mappingFunc, string? name = null)
+        => registry.Add(MapperRegistration.Of(mappingFunc, name));
 
-    private static void Add<TSource, TDestination>(MapperInfos infos, Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
-        => infos.Add(MapperRegistration.Of(mappingFunc, name));
+    private static void Add<TSource, TDestination>(MapperRegistry registry, Func<TSource, IMapper, TDestination> mappingFunc, string? name = null)
+        => registry.Add(MapperRegistration.Of(mappingFunc, name));
 
-    private static void Add(MapperInfos infos, Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
-        => infos.Add(new MapperRegistration(new MapKey(sourceType, destinationType, name), mappingFunc));
+    private static void Add(MapperRegistry registry, Type sourceType, Type destinationType, MapFunc mappingFunc, string? name = null)
+        => registry.Add(new MapperRegistration(new MapKey(sourceType, destinationType, name), mappingFunc));
 
     [Fact]
     public void Map_Generic_ReturnsExpectedResult()
@@ -373,4 +373,3 @@ public class ManualMapperTests
 
     private record TargetDto(string Label);
 }
-

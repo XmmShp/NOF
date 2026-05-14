@@ -11,8 +11,7 @@ public sealed class AutoInjectServiceRegistrationStep : IServiceRegistrationStep
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var infos = builder.Services.GetOrAddSingleton(() => new AutoInjectInfos(builder.GetOrAddRegistry()));
-        foreach (var registration in infos.Registrations)
+        foreach (var registration in builder.GetOrAddRegistry().AutoInjectRegistry.Freeze())
         {
             var lifetime = ToServiceLifetime(registration.Lifetime);
             if (registration.UseFactory)

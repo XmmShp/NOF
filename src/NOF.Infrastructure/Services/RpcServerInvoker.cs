@@ -19,8 +19,8 @@ public static class RpcServerInvoker
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
         ArgumentNullException.ThrowIfNull(request);
 
-        var rpcServerInfos = rootServiceProvider.GetRequiredService<RpcServerInfos>();
-        if (!rpcServerInfos.TryGetImplementationType(typeof(TRpcService), out var serverType))
+        var rpcServerRegistry = rootServiceProvider.GetRequiredService<RpcServerRegistry>();
+        if (!rpcServerRegistry.TryGetImplementationType(typeof(TRpcService), out var serverType))
         {
             throw new InvalidOperationException($"RPC server is not registered for '{typeof(TRpcService).FullName}'.");
         }

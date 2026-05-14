@@ -5,14 +5,14 @@ namespace NOF.Infrastructure;
 
 public sealed class MemoryNotificationRider : INotificationRider
 {
-    private readonly NotificationHandlerInfos _notificationHandlerInfos;
+    private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
     private readonly InboxMessageStore _inboxMessageStore;
 
     public MemoryNotificationRider(
-        NotificationHandlerInfos notificationHandlerInfos,
+        NotificationHandlerRegistry notificationHandlerRegistry,
         InboxMessageStore inboxMessageStore)
     {
-        _notificationHandlerInfos = notificationHandlerInfos;
+        _notificationHandlerRegistry = notificationHandlerRegistry;
         _inboxMessageStore = inboxMessageStore;
     }
 
@@ -29,7 +29,7 @@ public sealed class MemoryNotificationRider : INotificationRider
         foreach (var notificationTypeName in notificationTypeNames)
         {
             var notificationType = TypeRegistry.Resolve(notificationTypeName);
-            foreach (var handlerType in _notificationHandlerInfos.GetHandlers(notificationType))
+            foreach (var handlerType in _notificationHandlerRegistry.GetHandlers(notificationType))
             {
                 if (!seenHandlerTypes.Add(handlerType))
                 {

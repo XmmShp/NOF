@@ -166,7 +166,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
             .ToList();
 
         void Emit(string serviceTypeName, bool useFactory)
-            => sb.AppendLine($"            registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({serviceTypeName}), typeof({implementationTypeName}), {lifetime}, {(useFactory ? "true" : "false")}));");
+            => sb.AppendLine($"            registry.AutoInjectRegistry.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof({serviceTypeName}), typeof({implementationTypeName}), {lifetime}, {(useFactory ? "true" : "false")}));");
 
         if (lifetime is "global::NOF.Annotation.Lifetime.Singleton" or "global::NOF.Annotation.Lifetime.Scoped")
         {

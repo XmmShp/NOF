@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
@@ -13,12 +14,13 @@ public static partial class NOFInfrastructureExtensions
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Adds one or more command handler entries to the <see cref="CommandHandlerInfos"/> singleton.
+        /// Adds one or more command handler entries to the shared <see cref="Registry"/>.
         /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
         /// </summary>
         public IServiceCollection AddHandlerRegistration(params CommandHandlerRegistration[] registrations)
         {
-            var set = services.GetOrAddSingleton<CommandHandlerInfos>();
+            var set = services.GetOrAddSingleton<Registry>().CommandHandlerRegistry;
+            services.GetOrAddSingleton(() => set);
             foreach (var registration in registrations)
             {
                 set.Add(registration);
@@ -28,12 +30,13 @@ public static partial class NOFInfrastructureExtensions
         }
 
         /// <summary>
-        /// Adds one or more notification handler entries to the <see cref="NotificationHandlerInfos"/> singleton.
+        /// Adds one or more notification handler entries to the shared <see cref="Registry"/>.
         /// Keyed service registrations are deferred to <c>HandlerKeyedServiceRegistrationStep</c>.
         /// </summary>
         public IServiceCollection AddHandlerRegistration(params NotificationHandlerRegistration[] registrations)
         {
-            var set = services.GetOrAddSingleton<NotificationHandlerInfos>();
+            var set = services.GetOrAddSingleton<Registry>().NotificationHandlerRegistry;
+            services.GetOrAddSingleton(() => set);
             foreach (var registration in registrations)
             {
                 set.Add(registration);

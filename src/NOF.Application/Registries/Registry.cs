@@ -4,27 +4,27 @@ namespace NOF.Abstraction;
 
 public static class NOFApplicationRegistryExtensions
 {
-    private const string CommandHandlerRegistrationsKey = "NOF.Application.CommandHandlerRegistrations";
-    private const string NotificationHandlerRegistrationsKey = "NOF.Application.NotificationHandlerRegistrations";
-    private const string RequestHandlerRegistrationsKey = "NOF.Application.RequestHandlerRegistrations";
-    private const string RpcServerRegistrationsKey = "NOF.Application.RpcServerRegistrations";
-    private const string MapperRegistrationsKey = "NOF.Application.MapperRegistrations";
+    private const string CommandHandlerRegistryKey = "NOF.Application.CommandHandlerRegistry";
+    private const string NotificationHandlerRegistryKey = "NOF.Application.NotificationHandlerRegistry";
+    private const string RequestHandlerRegistryKey = "NOF.Application.RequestHandlerRegistry";
+    private const string RpcServerRegistryKey = "NOF.Application.RpcServerRegistry";
+    private const string MapperRegistryKey = "NOF.Application.MapperRegistry";
 
     extension(Registry registry)
     {
-        public List<CommandHandlerRegistration> CommandHandlerRegistrations
-            => registry.GetOrAdd(CommandHandlerRegistrationsKey, static () => new List<CommandHandlerRegistration>());
+        public CommandHandlerRegistry CommandHandlerRegistry
+            => registry.GetOrAdd(CommandHandlerRegistryKey, static () => new CommandHandlerRegistry());
 
-        public List<NotificationHandlerRegistration> NotificationHandlerRegistrations
-            => registry.GetOrAdd(NotificationHandlerRegistrationsKey, static () => new List<NotificationHandlerRegistration>());
+        public NotificationHandlerRegistry NotificationHandlerRegistry
+            => registry.GetOrAdd(NotificationHandlerRegistryKey, static () => new NotificationHandlerRegistry());
 
-        public List<RequestHandlerRegistration> RequestHandlerRegistrations
-            => registry.GetOrAdd(RequestHandlerRegistrationsKey, static () => new List<RequestHandlerRegistration>());
+        public RequestHandlerRegistry RequestHandlerRegistry
+            => registry.GetOrAdd(RequestHandlerRegistryKey, static () => new RequestHandlerRegistry());
 
-        public List<RpcServerRegistration> RpcServerRegistrations
-            => registry.GetOrAdd(RpcServerRegistrationsKey, static () => new List<RpcServerRegistration>());
+        public RpcServerRegistry RpcServerRegistry
+            => registry.GetOrAdd(RpcServerRegistryKey, static () => new RpcServerRegistry());
 
-        public List<MapperRegistration> MapperRegistrations
-            => registry.GetOrAdd(MapperRegistrationsKey, static () => new List<MapperRegistration>());
+        public MapperRegistry MapperRegistry
+            => registry.GetOrAdd(MapperRegistryKey, static () => new MapperRegistry());
     }
 }

@@ -20,11 +20,11 @@ public sealed class ManualMapper : IMapper
     /// <summary>
     /// Creates a new <see cref="ManualMapper"/> seeded with mappings from the global registry.
     /// </summary>
-    public ManualMapper(MapperInfos mapperInfos)
+    public ManualMapper(MapperRegistry mapperRegistry)
     {
-        foreach (var kvp in mapperInfos.Mappings)
+        foreach (var registration in mapperRegistry.Freeze())
         {
-            _mappings[kvp.Key] = kvp.Value;
+            _mappings[registration.Key] = registration.MappingFunc;
         }
     }
 

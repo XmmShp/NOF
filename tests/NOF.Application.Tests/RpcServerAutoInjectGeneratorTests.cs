@@ -63,9 +63,9 @@ public class RpcServerAutoInjectGeneratorTests
 
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcServerAutoInjectAssemblyInitializer>", generatedCode);
         Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppRpcServerAutoInjectAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Scoped, false));", generatedCode);
-        Assert.Contains("registry.RpcServerRegistrations.Add(new global::NOF.Application.RpcServerRegistration(typeof(global::App.IMyService), typeof(global::App.MyService)));", generatedCode);
-        Assert.Contains("registry.AutoInjectRegistrations.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler), global::NOF.Annotation.Lifetime.Transient, false));", generatedCode);
+        Assert.Contains("registry.AutoInjectRegistry.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService), typeof(global::App.MyService), global::NOF.Annotation.Lifetime.Scoped, false));", generatedCode);
+        Assert.Contains("registry.RpcServerRegistry.Add(new global::NOF.Application.RpcServerRegistration(typeof(global::App.IMyService), typeof(global::App.MyService)));", generatedCode);
+        Assert.Contains("registry.AutoInjectRegistry.Add(new global::NOF.Annotation.AutoInjectServiceRegistration(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler), global::NOF.Annotation.Lifetime.Transient, false));", generatedCode);
     }
 
     [Fact]

@@ -134,7 +134,7 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
-            sb.AppendLine($"            registry.EventHandlerRegistrations.Add({registration});");
+            sb.AppendLine($"            registry.EventHandlerRegistry.Add({registration});");
         }
 
         sb.AppendLine("        }");

@@ -35,7 +35,7 @@ public class HandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppHandlerAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.CommandHandlerRegistrations.Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
+        Assert.Contains("registry.CommandHandlerRegistry.Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
 
     }
@@ -66,7 +66,7 @@ public class HandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppHandlerAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.NotificationHandlerRegistrations.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
+        Assert.Contains("registry.NotificationHandlerRegistry.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

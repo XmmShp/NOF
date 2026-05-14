@@ -6,12 +6,12 @@ namespace NOF.Abstraction;
 public sealed class InMemoryEventPublisher : IEventPublisher
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly EventHandlerInfos _eventHandlerInfos;
+    private readonly EventHandlerRegistry _eventHandlerRegistry;
 
-    public InMemoryEventPublisher(IServiceProvider serviceProvider, EventHandlerInfos eventHandlerInfos)
+    public InMemoryEventPublisher(IServiceProvider serviceProvider, EventHandlerRegistry eventHandlerRegistry)
     {
         _serviceProvider = serviceProvider;
-        _eventHandlerInfos = eventHandlerInfos;
+        _eventHandlerRegistry = eventHandlerRegistry;
     }
 
     public async Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken)
@@ -21,7 +21,7 @@ public sealed class InMemoryEventPublisher : IEventPublisher
 
         foreach (var eventType in eventTypes)
         {
-            foreach (var handlerType in _eventHandlerInfos.GetHandlerTypes(eventType))
+            foreach (var handlerType in _eventHandlerRegistry.GetHandlerTypes(eventType))
             {
                 if (_serviceProvider.GetService(handlerType) is not InMemoryEventHandler handler)
                 {

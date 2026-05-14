@@ -21,8 +21,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -60,9 +58,7 @@ public class SqliteInMemoryPersistenceTests
             var builder = new TestServiceRegistrationContext();
             builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
             builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-            builder.Services.AddSingleton<CommandHandlerInfos>();
-            builder.Services.AddSingleton<NotificationHandlerInfos>();
-            builder.Configuration.AddInMemoryCollection([
+                    builder.Configuration.AddInMemoryCollection([
                 new KeyValuePair<string, string?>("ConnectionStrings:sqlite", $"Data Source={Path.Combine(tempDirectory, "nof-{TenantId}.db")}")
             ]);
 
@@ -107,8 +103,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -141,8 +135,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -218,8 +210,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
         builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, ModelConfiguredHostOnlyEntryContributor>();
 
         builder.AddHostingDefaults();
@@ -251,8 +241,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
         builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, AttributeHostOnlyEntryContributor>();
 
         builder.AddHostingDefaults();
@@ -284,8 +272,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -821,8 +807,6 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -848,8 +832,6 @@ public class SqliteInMemoryPersistenceTests
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
         builder.Services.AddSingleton<TestEventPublisher>();
-        builder.Services.AddSingleton<CommandHandlerInfos>();
-        builder.Services.AddSingleton<NotificationHandlerInfos>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();

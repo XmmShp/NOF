@@ -12,7 +12,9 @@ public static partial class NOFHostingExtensions
         {
             builder.Services.TryAddSingleton(builder.Environment);
 
-            builder.Services.GetOrAddSingleton(() => new EventHandlerInfos(builder.GetOrAddRegistry()));
+            var registry = builder.GetOrAddRegistry();
+            builder.Services.GetOrAddSingleton(() => registry.AutoInjectRegistry);
+            builder.Services.GetOrAddSingleton(() => registry.EventHandlerRegistry);
             builder.Services.GetOrAddSingleton<RequestOutboundPipelineTypes>();
             builder.Services.TryAddScoped<RequestOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<IUserContext, UserContext>();

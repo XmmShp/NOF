@@ -66,9 +66,10 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddSingleton<RequestInboundPipelineExecutor>();
         services.AddSingleton<RequestOutboundPipelineExecutor>();
 
-        var rpcServerInfos = new RpcServerInfos();
-        rpcServerInfos.Add(new RpcServerRegistration(typeof(IProtectedFleetService), typeof(ProtectedFleetServer)));
-        services.AddSingleton(rpcServerInfos);
+        var registry = new Registry();
+        registry.RpcServerRegistry.Add(new RpcServerRegistration(typeof(IProtectedFleetService), typeof(ProtectedFleetServer)));
+        services.AddSingleton(registry);
+        services.AddSingleton(registry.RpcServerRegistry);
 
         return services.BuildServiceProvider();
     }

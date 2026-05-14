@@ -12,8 +12,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 {
     private readonly RabbitMQConnectionManager _connectionManager;
     private readonly IOptions<RabbitMQOptions> _options;
-    private readonly CommandHandlerInfos? _commandHandlerInfos;
-    private readonly NotificationHandlerInfos? _notificationHandlerInfos;
+    private readonly CommandHandlerRegistry _commandHandlerRegistry;
+    private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
     private readonly InboxMessageStore _inboxMessageStore;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
@@ -24,16 +24,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     public RabbitMQConsumerHostedService(
         RabbitMQConnectionManager connectionManager,
         IOptions<RabbitMQOptions> options,
-        CommandHandlerInfos? commandHandlerInfos,
-        NotificationHandlerInfos? notificationHandlerInfos,
+        CommandHandlerRegistry commandHandlerRegistry,
+        NotificationHandlerRegistry notificationHandlerRegistry,
         IHostEnvironment hostEnvironment,
         InboxMessageStore inboxMessageStore,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
         _options = options;
-        _commandHandlerInfos = commandHandlerInfos;
-        _notificationHandlerInfos = notificationHandlerInfos;
+        _commandHandlerRegistry = commandHandlerRegistry;
+        _notificationHandlerRegistry = notificationHandlerRegistry;
         _hostEnvironment = hostEnvironment;
         _inboxMessageStore = inboxMessageStore;
         _logger = logger;
@@ -43,7 +43,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     {
         try
         {
-            await RegisterConsumersFromHandlerInfosAsync(cancellationToken);
+            await RegisterConsumersFromRegistryAsync(cancellationToken);
             _logger.LogInformation("RabbitMQ consumers initialized successfully");
         }
         catch (Exception ex)
@@ -58,21 +58,16 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task RegisterConsumersFromHandlerInfosAsync(CancellationToken cancellationToken)
+    private async Task RegisterConsumersFromRegistryAsync(CancellationToken cancellationToken)
     {
-        if (_commandHandlerInfos is null && _notificationHandlerInfos is null)
-        {
-            return;
-        }
-
-        var commandTypes = (_commandHandlerInfos?.Registrations ?? [])
+        var commandTypes = _commandHandlerRegistry.Freeze()
             .Select(info => info.CommandType)
             .Distinct()
             .ToArray();
 
         await SetupCommandConsumersAsync(commandTypes, cancellationToken);
 
-        var notificationGroups = (_notificationHandlerInfos?.Registrations ?? [])
+        var notificationGroups = _notificationHandlerRegistry.Freeze()
             .GroupBy(info => info.HandlerType)
             .ToArray();
 
@@ -223,13 +218,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             }
             else
             {
-                if (_commandHandlerInfos is null)
-                {
-                    throw new InvalidOperationException("Command handler infos are not available.");
-                }
-
                 var commandType = TypeRegistry.Resolve(queueName);
-                var handlerType = _commandHandlerInfos.GetHandlers(commandType).FirstOrDefault()
+                var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
                     ?? throw new InvalidOperationException(
                         $"Cannot route command '{commandType.Name}'. No matching handler registered.");
 

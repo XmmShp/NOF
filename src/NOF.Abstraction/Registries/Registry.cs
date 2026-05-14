@@ -24,15 +24,15 @@ public sealed class Registry
 
 public static partial class RegistryExtensions
 {
-    private const string EventHandlerRegistrationsKey = "NOF.Abstraction.EventHandlerRegistrations";
-    private const string AutoInjectRegistrationsKey = "NOF.Abstraction.AutoInjectRegistrations";
+    private const string EventHandlerRegistryKey = "NOF.Abstraction.EventHandlerRegistry";
+    private const string AutoInjectRegistryKey = "NOF.Abstraction.AutoInjectRegistry";
 
     extension(Registry registry)
     {
-        public List<EventHandlerRegistration> EventHandlerRegistrations
-            => registry.GetOrAdd(EventHandlerRegistrationsKey, static () => new List<EventHandlerRegistration>());
+        public EventHandlerRegistry EventHandlerRegistry
+            => registry.GetOrAdd(EventHandlerRegistryKey, static () => new EventHandlerRegistry());
 
-        public List<AutoInjectServiceRegistration> AutoInjectRegistrations
-            => registry.GetOrAdd(AutoInjectRegistrationsKey, static () => new List<AutoInjectServiceRegistration>());
+        public AutoInjectRegistry AutoInjectRegistry
+            => registry.GetOrAdd(AutoInjectRegistryKey, static () => new AutoInjectRegistry());
     }
 }

@@ -115,6 +115,14 @@ public static partial class NOFHostingExtensions
             return currentRegistry;
         }
 
+        var existingDescriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(Registry));
+        if (existingDescriptor?.ImplementationInstance is Registry existingRegistry)
+        {
+            builder.Properties[RegistryKey] = existingRegistry;
+            builder.Services.TryAddSingleton(existingRegistry);
+            return existingRegistry;
+        }
+
         var registry = new Registry();
         builder.Properties[RegistryKey] = registry;
         builder.Services.TryAddSingleton(registry);

@@ -150,13 +150,13 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.CommandHandler<TCommand>", out var commandType))
         {
             var messageType = commandType!.ToDisplayString(typeFormat);
-            registrations.Add($"registry.CommandHandlerRegistrations.Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            registrations.Add($"registry.CommandHandlerRegistry.Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
         }
 
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.NotificationHandler<TNotification>", out var notificationType))
         {
             var messageType = notificationType!.ToDisplayString(typeFormat);
-            registrations.Add($"registry.NotificationHandlerRegistrations.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            registrations.Add($"registry.NotificationHandlerRegistry.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
         }
     }
 

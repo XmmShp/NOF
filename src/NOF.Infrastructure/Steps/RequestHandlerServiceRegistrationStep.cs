@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Hosting;
 
@@ -11,10 +12,9 @@ public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceReg
 {
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var infos = builder.Services.GetOrAddSingleton(() => new RequestHandlerInfos(builder.GetOrAddRegistry()));
-        foreach (var registration in infos.Registrations)
+        foreach (var registration in builder.GetOrAddRegistry().RequestHandlerRegistry.Freeze())
         {
-            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.Key, registration.Value.Type));
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(registration.ServiceType, registration.ImplementationType));
         }
 
         return ValueTask.CompletedTask;
