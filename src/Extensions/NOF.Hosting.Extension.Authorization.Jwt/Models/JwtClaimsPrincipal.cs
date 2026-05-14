@@ -13,18 +13,22 @@ public sealed class JwtClaimsPrincipal : ClaimsPrincipal
     /// </summary>
     public string Token { get; }
 
-    private JwtClaimsPrincipal(ClaimsIdentity identity, string token)
+    public JwtClaimsPrincipal(string token)
+        : this(CreateIdentity(token), token)
+    {
+    }
+
+    public JwtClaimsPrincipal(ClaimsIdentity identity, string token)
         : base(identity)
     {
         Token = token;
     }
 
-    public static JwtClaimsPrincipal FromToken(string token)
+    private static ClaimsIdentity CreateIdentity(string token)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-        var identity = new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
-        return new JwtClaimsPrincipal(identity, token);
+        return new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
     }
 }

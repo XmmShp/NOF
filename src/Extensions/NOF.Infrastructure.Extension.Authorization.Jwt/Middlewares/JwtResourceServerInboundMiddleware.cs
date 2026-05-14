@@ -76,7 +76,7 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
             };
 
             _ = _tokenHandler.ValidateToken(token, validationParameters, out _);
-            _userContext.User = JwtClaimsPrincipal.FromToken(token);
+            _userContext.User = new JwtClaimsPrincipal(token);
             _executionContext.RemoveHeader(_jwtOptions.HeaderName);
         }
         catch (SecurityTokenExpiredException)

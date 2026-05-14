@@ -14,7 +14,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     {
         var userContext = new FakeUserContext();
         var token = CreateUnsignedToken();
-        userContext.User = JwtClaimsPrincipal.FromToken(token);
+        userContext.User = new JwtClaimsPrincipal(token);
 
         var middleware = new JwtTokenPropagationOutboundMiddleware(
             userContext,

@@ -1,19 +1,21 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
-using NOF.Hosting.Extension.Authorization.Jwt;
+using System.Text.Json;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 public static partial class NOFJwtAuthorizationExtensions
 {
+    private static int _jsonInitialized;
+
     extension(INOFAppBuilder builder)
     {
         public INOFAppBuilder AddJwtAuthority(Action<JwtAuthorityOptions> configureOptions)
         {
-            NOFJwtAuthorizationJsonRegistration.EnsureRegistered();
+            EnsureJsonRegistered();
             builder.Services.Configure(configureOptions);
 
             builder.TryAddRegistrationStep<PersistedSigningKeyPersistenceRegistrationStep>();
@@ -32,27 +34,29 @@ public static partial class NOFJwtAuthorizationExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddJwtResourceServer(Action<JwtResourceServerOptions> configureOptions, Action<JwtTokenPropagationOptions>? tokenPropagationOptions = null)
+        public INOFAppBuilder AddJwtResourceServer(Action<JwtResourceServerOptions> configureOptions)
         {
-            NOFJwtAuthorizationJsonRegistration.EnsureRegistered();
+            EnsureJsonRegistered();
             builder.Services.Configure(configureOptions);
 
-            builder.AddJwtTokenPropagation(tokenPropagationOptions);
-            builder.Services.AddOptions<JwtTokenPropagationOptions>()
-                .Configure<IOptions<JwtResourceServerOptions>>((propagation, resource) =>
-                {
-                    propagation.HeaderName = resource.Value.HeaderName;
-                    propagation.TokenType = resource.Value.TokenType;
-                });
-            builder.Services.AddHttpClient(nameof(HttpJwksService));
-            builder.Services.ReplaceOrAddSingleton(sp =>
-                new HttpJwksService(
-                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(HttpJwksService)),
-                    sp.GetRequiredService<IOptions<JwtResourceServerOptions>>()));
-            builder.Services.ReplaceOrAddSingleton<IJwksService>(sp => sp.GetRequiredService<HttpJwksService>());
+            builder.Services.AddHttpClient<HttpJwksService>();
+            builder.Services.ReplaceOrAddTransient<IJwksService>(sp => sp.GetRequiredService<HttpJwksService>());
             builder.Services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
             builder.Services.AddRequestInboundMiddleware<JwtResourceServerInboundMiddleware>();
             return builder;
         }
+    }
+
+    private static void EnsureJsonRegistered()
+    {
+        if (Interlocked.Exchange(ref _jsonInitialized, 1) == 1)
+        {
+            return;
+        }
+
+        JsonSerializerOptions.ConfigureNOFJsonSerializerOptions(options =>
+        {
+            options.TypeInfoResolverChain.Add(NOFJwtAuthorizationJsonSerializerContext.Default);
+        });
     }
 }
