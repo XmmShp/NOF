@@ -38,7 +38,7 @@ public sealed class JwtJwksHttpClientTests
             options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
         });
 
-        var service = new HttpJwksService(httpClient, global::Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
+        var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
         {
             JwksEndpoint = "https://auth.local/.well-known/jwks.json"
         }));

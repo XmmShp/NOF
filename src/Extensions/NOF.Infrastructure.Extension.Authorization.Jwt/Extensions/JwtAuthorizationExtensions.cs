@@ -45,7 +45,7 @@ public static partial class NOFJwtAuthorizationExtensions
                     propagation.TokenType = resource.Value.TokenType;
                 });
             builder.Services.AddHttpClient(nameof(HttpJwksService));
-            builder.Services.ReplaceOrAddSingleton<HttpJwksService>(sp =>
+            builder.Services.ReplaceOrAddSingleton(sp =>
                 new HttpJwksService(
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(HttpJwksService)),
                     sp.GetRequiredService<IOptions<JwtResourceServerOptions>>()));

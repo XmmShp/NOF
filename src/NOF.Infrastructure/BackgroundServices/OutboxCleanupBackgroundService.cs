@@ -13,15 +13,18 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<OutboxCleanupBackgroundService> _logger;
     private readonly TransactionalMessageProcessorOptions _options;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public OutboxCleanupBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
-        ILogger<OutboxCleanupBackgroundService> logger)
+        ILogger<OutboxCleanupBackgroundService> logger,
+        IHostEnvironment hostEnvironment)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,6 +38,14 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
             try
             {
                 await Task.Delay(_options.CleanupInterval, stoppingToken);
+                if (!_hostEnvironment.IsPrimaryNodeEnvironment)
+                {
+                    _logger.LogDebug(
+                        "Skipping outbox cleanup on non-primary node {InstanceId}",
+                        _hostEnvironment.InstanceId);
+                    continue;
+                }
+
                 await CleanupOutboxAsync(stoppingToken);
             }
             catch (OperationCanceledException)

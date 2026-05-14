@@ -47,6 +47,7 @@ public static class HostEnvironmentExtensions
 {
     private const string ApplicationIdKey = "ApplicationId";
     private const string InstanceIdKey = "InstanceId";
+    private const string IsPrimaryNodeEnvironmentPredicatorKey = "IsPrimaryNodeEnvironmentPredicator";
 
     extension(IHostEnvironment environment)
     {
@@ -58,8 +59,22 @@ public static class HostEnvironmentExtensions
 
         public uint InstanceId
         {
-            get => HostEnvironmentExtensionBag.GetOrAdd(environment, InstanceIdKey, static () => 0u);
+            get => HostEnvironmentExtensionBag.GetOrAdd(environment, InstanceIdKey, static () => 1u);
             set => HostEnvironmentExtensionBag.Set(environment, InstanceIdKey, value);
+        }
+
+        public bool IsPrimaryNodeEnvironment
+        {
+            get => HostEnvironmentExtensionBag.GetOrAdd<Predicate<IHostEnvironment>>(
+                environment,
+                IsPrimaryNodeEnvironmentPredicatorKey,
+                static () => env => env.InstanceId == 1)(environment);
+        }
+
+        public void SetPrimaryNodeEnvironmentPredicator(Predicate<IHostEnvironment> predicator)
+        {
+            ArgumentNullException.ThrowIfNull(predicator);
+            HostEnvironmentExtensionBag.Set(environment, IsPrimaryNodeEnvironmentPredicatorKey, predicator);
         }
 
         public void BindConfiguration(IConfiguration configuration)

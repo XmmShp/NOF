@@ -50,7 +50,7 @@ public sealed class TracingInboundMiddleware :
         }
     }
 
-    private static Activity? CreateCommandActivity(CommandInboundContext context, string? traceId, string? spanId, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
+    private static Activity? CreateCommandActivity(CommandInboundContext context, string? traceId, string? spanId, IHostEnvironment hostEnvironment)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
@@ -93,7 +93,7 @@ public sealed class TracingInboundMiddleware :
         }
     }
 
-    private static Activity? CreateNotificationActivity(NotificationInboundContext context, string? traceId, string? spanId, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
+    private static Activity? CreateNotificationActivity(NotificationInboundContext context, string? traceId, string? spanId, IHostEnvironment hostEnvironment)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)
@@ -137,7 +137,7 @@ public sealed class TracingInboundMiddleware :
         }
     }
 
-    private static Activity? CreateRequestActivity(RequestInboundContext context, string? traceId, string? spanId, Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
+    private static Activity? CreateRequestActivity(RequestInboundContext context, string? traceId, string? spanId, IHostEnvironment hostEnvironment)
     {
         TracingInfo? parent = (!string.IsNullOrEmpty(traceId) && !string.IsNullOrEmpty(spanId))
             ? new TracingInfo(traceId, spanId)

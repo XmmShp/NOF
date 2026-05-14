@@ -132,7 +132,8 @@ public class InfrastructureDefaultsTests
 
         Assert.Equal(0u, hostEnvironment.ApplicationId);
         Assert.Equal("Orders.Api", hostEnvironment.ApplicationName);
-        Assert.Equal(0u, hostEnvironment.InstanceId);
+        Assert.Equal(1u, hostEnvironment.InstanceId);
+        Assert.True(hostEnvironment.IsPrimaryNodeEnvironment);
     }
 
     [Fact]
@@ -158,6 +159,7 @@ public class InfrastructureDefaultsTests
         Assert.Equal(42u, hostEnvironment.ApplicationId);
         Assert.Equal("fallback-name", hostEnvironment.ApplicationName);
         Assert.Equal(24u, hostEnvironment.InstanceId);
+        Assert.False(hostEnvironment.IsPrimaryNodeEnvironment);
     }
 
     [Fact]

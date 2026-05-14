@@ -112,22 +112,22 @@ public sealed class GetFleetOverviewHandler(InvocationRecorder recorder) : RpcHa
     public override Task<Result<GetFleetOverviewResponse>> HandleAsync(Empty request, CancellationToken cancellationToken)
     {
         recorder.Count++;
-        return Task.FromResult<Result<GetFleetOverviewResponse>>(Result.Success(new GetFleetOverviewResponse("fleet")));
+        return Task.FromResult(Result.Success(new GetFleetOverviewResponse("fleet")));
     }
 }
 
 internal static class TestPrincipalFactory
 {
-    public static System.Security.Claims.ClaimsPrincipal CreateAuthenticatedUser(params (string Type, string Value)[] claims)
+    public static ClaimsPrincipal CreateAuthenticatedUser(params (string Type, string Value)[] claims)
     {
-        var identity = new System.Security.Claims.ClaimsIdentity("Test");
-        identity.AddClaim(new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, "user-1"));
+        var identity = new ClaimsIdentity("Test");
+        identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, "user-1"));
 
         foreach (var (type, value) in claims)
         {
-            identity.AddClaim(new System.Security.Claims.Claim(type, value));
+            identity.AddClaim(new Claim(type, value));
         }
 
-        return new System.Security.Claims.ClaimsPrincipal(identity);
+        return new ClaimsPrincipal(identity);
     }
 }

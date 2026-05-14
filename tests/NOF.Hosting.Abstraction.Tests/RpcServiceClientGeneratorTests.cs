@@ -10,7 +10,7 @@ public class RpcServiceClientGeneratorTests
 {
     private static readonly Type[] _extraRefs =
     [
-        typeof(NOF.Abstraction.NOFAbstractionExtensions),
+        typeof(Abstraction.NOFAbstractionExtensions),
         typeof(HttpEndpointAttribute),
         typeof(IRpcClient),
         typeof(HttpRpcClientAttribute<>),
@@ -150,7 +150,7 @@ public class RpcServiceClientGeneratorTests
     {
         var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
-        var driver = CSharpGeneratorDriver.Create(new NOF.Hosting.SourceGenerator.RpcServiceClientGenerator());
+        var driver = CSharpGeneratorDriver.Create(new Hosting.SourceGenerator.RpcServiceClientGenerator());
 
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
 

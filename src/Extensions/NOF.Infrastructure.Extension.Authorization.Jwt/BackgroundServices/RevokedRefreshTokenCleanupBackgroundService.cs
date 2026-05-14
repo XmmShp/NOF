@@ -11,15 +11,18 @@ public sealed class RevokedRefreshTokenCleanupBackgroundService : BackgroundServ
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JwtAuthorityOptions _options;
     private readonly ILogger<RevokedRefreshTokenCleanupBackgroundService> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public RevokedRefreshTokenCleanupBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         IOptions<JwtAuthorityOptions> options,
-        ILogger<RevokedRefreshTokenCleanupBackgroundService> logger)
+        ILogger<RevokedRefreshTokenCleanupBackgroundService> logger,
+        IHostEnvironment hostEnvironment)
     {
         _serviceScopeFactory = serviceScopeFactory;
         _options = options.Value;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,6 +36,14 @@ public sealed class RevokedRefreshTokenCleanupBackgroundService : BackgroundServ
             try
             {
                 await Task.Delay(_options.RevokedRefreshTokenCleanupInterval, stoppingToken);
+                if (!_hostEnvironment.IsPrimaryNodeEnvironment)
+                {
+                    _logger.LogDebug(
+                        "Skipping revoked refresh token cleanup on non-primary node {InstanceId}",
+                        _hostEnvironment.InstanceId);
+                    continue;
+                }
+
                 await CleanupAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

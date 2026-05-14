@@ -14,15 +14,18 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JwtAuthorityOptions _options;
     private readonly ILogger<JwtKeyRotationBackgroundService> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public JwtKeyRotationBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         IOptions<JwtAuthorityOptions> options,
-        ILogger<JwtKeyRotationBackgroundService> logger)
+        ILogger<JwtKeyRotationBackgroundService> logger,
+        IHostEnvironment hostEnvironment)
     {
         _serviceScopeFactory = serviceScopeFactory;
         _options = options.Value;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,6 +38,15 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
         {
             try
             {
+                if (!_hostEnvironment.IsPrimaryNodeEnvironment)
+                {
+                    _logger.LogDebug(
+                        "Skipping JWT key rotation on non-primary node {InstanceId}",
+                        _hostEnvironment.InstanceId);
+                    await Task.Delay(_options.KeyRotationInterval, stoppingToken);
+                    continue;
+                }
+
                 var nextRotation = await ComputeNextRotationDelayAsync(stoppingToken).ConfigureAwait(false);
 
                 _logger.LogDebug("Next key rotation in {Delay}", nextRotation);

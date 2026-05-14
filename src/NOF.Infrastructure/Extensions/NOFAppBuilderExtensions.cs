@@ -35,7 +35,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
 
-            builder.Services.TryAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
+            builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
 
             #endregion
@@ -77,7 +77,7 @@ public static partial class NOFInfrastructureExtensions
             #region Application Services
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.GetOrAddSingleton<EventHandlerInfos>();
-            builder.Services.TryAddScoped<ITransparentInfos, Application.TransparentInfos>();
+            builder.Services.TryAddScoped<ITransparentInfos, TransparentInfos>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
@@ -147,7 +147,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
-                builder.Services.ReplaceOrAddScoped<TDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
+                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
             }
 
             return new EFCoreSelector(builder, typeof(TDbContext));
