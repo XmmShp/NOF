@@ -121,7 +121,7 @@ internal static class TestPrincipalFactory
     public static System.Security.Claims.ClaimsPrincipal CreateAuthenticatedUser(params (string Type, string Value)[] claims)
     {
         var identity = new System.Security.Claims.ClaimsIdentity("Test");
-        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "user-1"));
+        identity.AddClaim(new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, "user-1"));
 
         foreach (var (type, value) in claims)
         {

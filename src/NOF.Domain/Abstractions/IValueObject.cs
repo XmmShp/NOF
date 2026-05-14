@@ -10,13 +10,22 @@ namespace NOF.Domain;
 ///   <item>A nested <c>JsonConverter</c> and a <c>[JsonConverter]</c> attribute on the struct.</item>
 ///   <item><c>Equals</c>, <c>GetHashCode</c>, and <c>ToString</c> delegating to the primitive.</item>
 /// </list>
+/// <para>Override <see cref="Normalize"/> to normalize incoming primitive values before validation and construction.</para>
 /// <para>Override <see cref="Validate"/> to add custom validation logic.</para>
 /// </summary>
 /// <typeparam name="T">The underlying primitive type (e.g. <c>string</c>, <c>int</c>, <c>Guid</c>).</typeparam>
 public interface IValueObject<T> where T : notnull
 {
     /// <summary>
-    /// Validates the primitive value before constructing the value object.
+    /// Normalizes the primitive value before validation and construction.
+    /// Override this method to trim, canonicalize, or otherwise normalize input values.
+    /// </summary>
+    /// <param name="value">The primitive value to normalize.</param>
+    /// <returns>The normalized primitive value.</returns>
+    static virtual T Normalize(T value) => value;
+
+    /// <summary>
+    /// Validates the primitive value after normalization and before constructing the value object.
     /// Override this method to add custom validation logic that throws on invalid input.
     /// </summary>
     /// <param name="value">The primitive value to validate.</param>

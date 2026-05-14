@@ -184,7 +184,7 @@ public class ValueObjectGeneratorTests
     [Fact]
     public void AlwaysCallsValidateInOf()
     {
-        // Validate is a static virtual on IValueObject<T> 鈥?always called even without override
+        // Validate is a static virtual on IValueObject<T> and is always called after Normalize.
         const string source = """
             using NOF.Domain;
             namespace Test
@@ -196,6 +196,7 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
+        Assert.Contains("value = __CallNormalize<OrderId>(value);", code);
         Assert.Contains("__CallValidate<OrderId>(value);", code);
     }
 
@@ -219,7 +220,32 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
 
         var code = GetVoCode(result);
+        Assert.Contains("value = __CallNormalize<OrderId>(value);", code);
         Assert.Contains("__CallValidate<OrderId>(value);", code);
+    }
+
+    [Fact]
+    public void Normalize_IsCalledBeforeValidate()
+    {
+        const string source = """
+            #nullable enable
+            using NOF.Domain;
+            namespace Test
+            {
+                public readonly partial struct Name : IValueObject<string>
+                {
+                    public static string Normalize(string value) => value.Trim();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+        var code = GetVoCode(result);
+
+        var normalizeIdx = code.IndexOf("__CallNormalize<Name>(value);", StringComparison.Ordinal);
+        var validateIdx = code.IndexOf("__CallValidate<Name>(value);", StringComparison.Ordinal);
+        Assert.True(normalizeIdx >= 0);
+        Assert.True(validateIdx > normalizeIdx);
     }
 
     [Fact]
@@ -256,11 +282,12 @@ public class ValueObjectGeneratorTests
         var result = RunGenerator(source);
         var code = GetVoCode(result);
 
-        // null guard must come before Validate
+        // null guard must come before Normalize/Validate
         var nullGuardIdx = code.IndexOf("ArgumentNullException.ThrowIfNull", StringComparison.Ordinal);
+        var normalizeIdx = code.IndexOf("__CallNormalize<Tag>(value);", StringComparison.Ordinal);
         var validateIdx = code.IndexOf("__CallValidate<Tag>(value);", StringComparison.Ordinal);
-        Assert.True(nullGuardIdx < validateIdx);
+        Assert.True(nullGuardIdx < normalizeIdx);
+        Assert.True(normalizeIdx < validateIdx);
     }
 }
-
 

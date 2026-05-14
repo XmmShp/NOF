@@ -174,11 +174,18 @@ public class ValueObjectGenerator : IIncrementalGenerator
             sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(value);");
         }
 
-        // Validate via static virtual on IValueObject<T> — dispatches to user override or default no-op
+        sb.AppendLine($"            value = __CallNormalize<{info.TypeName}>(value);");
+        sb.AppendLine();
+        sb.AppendLine("            // Validate via static virtual on IValueObject<T> — dispatches to user override or default no-op");
         sb.AppendLine($"            __CallValidate<{info.TypeName}>(value);");
 
         sb.AppendLine($"            return new {info.TypeName}(value);");
         sb.AppendLine("        }");
+        sb.AppendLine();
+
+        sb.AppendLine($"        private static {info.PrimitiveFullName} __CallNormalize<TSelf>({info.PrimitiveFullName} value)");
+        sb.AppendLine($"            where TSelf : global::NOF.Domain.IValueObject<{info.PrimitiveFullName}>");
+        sb.AppendLine("            => TSelf.Normalize(value);");
         sb.AppendLine();
 
         // Helper to call static virtual Validate through constrained generic dispatch
