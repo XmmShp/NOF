@@ -22,6 +22,7 @@ public class MapHttpEndpointReflectionTests
 
     public record GetUserRequest(string Name);
     public record CreateUserRequest(string Name);
+    public record DeleteUserRequest(string Name);
     public record UserDto(string Name);
 
     private interface IAppService : IRpcService
@@ -31,6 +32,9 @@ public class MapHttpEndpointReflectionTests
 
         [HttpEndpoint(HttpVerb.Post, "/rpc/CreateUser")]
         Empty CreateUser(CreateUserRequest request);
+
+        [HttpEndpoint(HttpVerb.Delete, "/rpc/DeleteUser")]
+        Empty DeleteUser(DeleteUserRequest request);
 
         Result Ping(GetUserRequest request);
 
@@ -65,6 +69,16 @@ public class MapHttpEndpointReflectionTests
 
         Assert.NotNull(requestParameter.GetCustomAttribute<FromBodyAttribute>());
         Assert.Null(requestParameter.GetCustomAttribute<AsParametersAttribute>());
+    }
+
+    [Fact]
+    public void CreateEndpointHandler_WhenDelete_UsesAsParametersBinding()
+    {
+        var handler = CreateHandler(nameof(IAppService.DeleteUser), HttpVerb.Delete, typeof(DeleteUserRequest));
+        var requestParameter = handler.Method.GetParameters()[0];
+
+        Assert.NotNull(requestParameter.GetCustomAttribute<AsParametersAttribute>());
+        Assert.Null(requestParameter.GetCustomAttribute<FromBodyAttribute>());
     }
 
     [Fact]

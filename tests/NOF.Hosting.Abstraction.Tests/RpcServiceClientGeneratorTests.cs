@@ -115,6 +115,38 @@ public class RpcServiceClientGeneratorTests
     }
 
     [Fact]
+    public void DeleteMethod_WithRequest_ShouldUseQueryStringInsteadOfBody()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Hosting;
+                              namespace MyApp
+                              {
+                                  public record DeleteUserRequest(string Name, int Age);
+
+                                  public partial interface IMyService : IRpcService
+                                  {
+                                      [HttpEndpoint(HttpVerb.Delete, "/api/users")]
+                                      Result DeleteUser(DeleteUserRequest request);
+                                  }
+
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
+                              }
+                              """;
+
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
+
+        Assert.Contains("HttpMethod.Delete", code);
+        Assert.Contains("var queryParts = new global::System.Collections.Generic.List<string>();", code);
+        Assert.DoesNotContain("JsonContent.Create(request", code);
+        Assert.DoesNotContain("httpRequest.Content =", code);
+    }
+
+    [Fact]
     public void BareReturnType_IsNormalizedToResultOfT()
     {
         const string source = """

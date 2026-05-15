@@ -14,9 +14,9 @@ namespace NOF.Hosting.AspNetCore;
 
 public static partial class NOFHostingAspNetCoreExtensions
 {
-    private static readonly MethodInfo _createGetHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
-        .GetMethod(nameof(CreateGetHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
-        ?? throw new InvalidOperationException($"Method '{nameof(CreateGetHandlerCore)}' was not found.");
+    private static readonly MethodInfo _createQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateQueryHandlerCore)}' was not found.");
 
     private static readonly MethodInfo _createBodyHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
         .GetMethod(nameof(CreateBodyHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
@@ -66,12 +66,14 @@ public static partial class NOFHostingAspNetCoreExtensions
     [RequiresDynamicCode("Endpoint handler creation uses runtime generic method instantiation.")]
     private static Delegate CreateEndpointHandler(Type serviceType, Type requestType, string operationName, HttpVerb verb)
     {
-        var templateMethod = verb == HttpVerb.Get ? _createGetHandlerMethod : _createBodyHandlerMethod;
+        var templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
+            ? _createQueryHandlerMethod
+            : _createBodyHandlerMethod;
         var genericMethod = templateMethod.MakeGenericMethod(serviceType, requestType);
         return (Delegate)genericMethod.Invoke(null, [operationName])!;
     }
 
-    private static Delegate CreateGetHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
+    private static Delegate CreateQueryHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
         where TService : class, IRpcService
     {
         async Task<object?> Handler([AsParameters] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
