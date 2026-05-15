@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -8,7 +9,7 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// </summary>
 public sealed class ResourceServerJwksCacheService : IDisposable
 {
-    private readonly IJwksService _jwksService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _minimumRefreshInterval;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
@@ -17,22 +18,22 @@ public sealed class ResourceServerJwksCacheService : IDisposable
     private DateTimeOffset? _lastSuccessfulRefreshAtUtc;
 
     public ResourceServerJwksCacheService(
-        IJwksService jwksService,
+        IServiceScopeFactory scopeFactory,
         IOptions<JwtResourceServerOptions> options)
-        : this(jwksService, options, TimeProvider.System)
+        : this(scopeFactory, options, TimeProvider.System)
     {
     }
 
     public ResourceServerJwksCacheService(
-        IJwksService jwksService,
+        IServiceScopeFactory scopeFactory,
         IOptions<JwtResourceServerOptions> options,
         TimeProvider timeProvider)
     {
-        ArgumentNullException.ThrowIfNull(jwksService);
+        ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
-        _jwksService = jwksService;
+        _scopeFactory = scopeFactory;
         _timeProvider = timeProvider;
         _minimumRefreshInterval = options.Value.JwksRefreshInterval > TimeSpan.Zero
             ? options.Value.JwksRefreshInterval
@@ -75,7 +76,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
         try
         {
-            var document = await _jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false);
+            var document = await GetJwksAsync(cancellationToken).ConfigureAwait(false);
             var keys = JwksSecurityKeyConverter.ToSecurityKeys(document.Keys);
 
             if (keys.Length == 0 && previousSnapshot.HasUsableKeys)
@@ -91,6 +92,13 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         {
             return previousSnapshot.Keys;
         }
+    }
+
+    private async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
+        return await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private CacheSnapshot CreateSnapshot()

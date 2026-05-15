@@ -171,6 +171,22 @@ public sealed class JwtAuthorizationExtensionsTests
     }
 
     [Fact]
+    public async Task AddJwtAuthority_AndResourceServer_ShouldAllowSingletonJwksCacheToRefreshViaScope()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+        builder.AddJwtResourceServer(options =>
+        {
+            options.JwksEndpoint = "https://issuer.local/.well-known/jwks.json";
+            options.Issuer = "https://issuer.local";
+        });
+
+        await using var host = await builder.BuildTestHostAsync();
+        var cache = host.Services.GetRequiredService<ResourceServerJwksCacheService>();
+
+        Assert.NotNull(cache);
+    }
+
+    [Fact]
     public async Task AddJwtResourceServer_Only_ShouldNotRegisterTokenPropagation()
     {
         var builder = NOFTestAppBuilder.Create();

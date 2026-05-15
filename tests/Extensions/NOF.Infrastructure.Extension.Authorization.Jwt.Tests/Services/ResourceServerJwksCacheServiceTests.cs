@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
@@ -84,12 +85,19 @@ public sealed class ResourceServerJwksCacheServiceTests
 
     private static ResourceServerJwksCacheService CreateService(FakeJwksService jwksService, TimeProvider? timeProvider = null, TimeSpan? minimumRefreshInterval = null)
         => new(
-            jwksService,
+            CreateScopeFactory(jwksService),
             Options.Create(new JwtResourceServerOptions
             {
                 JwksRefreshInterval = minimumRefreshInterval ?? TimeSpan.FromMinutes(10)
             }),
             timeProvider ?? TimeProvider.System);
+
+    private static IServiceScopeFactory CreateScopeFactory(IJwksService jwksService)
+    {
+        var services = new ServiceCollection();
+        services.AddScoped(_ => jwksService);
+        return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+    }
 
     private static JwksDocument CreateJwksDocument(string kid)
     {

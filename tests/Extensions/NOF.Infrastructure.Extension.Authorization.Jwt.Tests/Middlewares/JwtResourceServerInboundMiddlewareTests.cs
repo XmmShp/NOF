@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
@@ -105,9 +106,13 @@ public sealed class JwtResourceServerInboundMiddlewareTests
     private static ResourceServerJwksCacheService CreateJwksService(IReadOnlyList<ManagedSigningKey> keys)
     {
         var signingKeyService = new FakeSigningKeyService([.. keys]);
+        var services = new ServiceCollection();
+        services.AddScoped<IJwksService>(_ => new LocalJwksService(signingKeyService));
+        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
         return new ResourceServerJwksCacheService(
-            new LocalJwksService(signingKeyService),
-            Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions()));
+            scopeFactory,
+            Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions()),
+            TimeProvider.System);
     }
 
     private static RequestInboundContext CreateInboundContext()
