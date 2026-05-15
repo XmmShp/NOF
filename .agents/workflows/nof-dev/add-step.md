@@ -68,6 +68,7 @@ Runs after the host is built but before it starts.
   - `IAuthenticationInitializationStep`
   - `IBusinessLogicInitializationStep`
   - `IEndpointInitializationStep`
-- Concrete defaults such as `OpenTelemetryRegistrationStep`, `RequestHandlerServiceRegistrationStep`, `HandlerServiceRegistrationStep`, `IdGeneratorInitializationStep`, and `MapperInitializationStep` come from `NOF.Infrastructure`.
+- Concrete defaults such as `OpenTelemetryRegistrationStep`, `RequestHandlerServiceRegistrationStep`, and `HandlerServiceRegistrationStep` come from `NOF.Infrastructure`.
+- Ambient conveniences like `Mapper`, `IdGenerator`, and `EventPublisher` are no longer initialized through application initialization steps; they are activated in scoped execution boundaries through `IDaemonService`.
 
 > **Reminder**: See the complete change checklist in `rules/nof-dev.md` — don't forget CI/CD, docs, sample, and tests.

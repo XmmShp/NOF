@@ -15,6 +15,8 @@ Notes:
 - `NOFDbContext` handles outbox, inbox, and state machine tables.
 - Value object conversion is auto-wired for `IValueObject<T>`.
 - Application code persists data through `DbContext` / `NOFDbContext`.
+- Default in-memory cache state is isolated per host through DI singletons rather than process-wide mutable `static` fields.
+- Ambient conveniences such as `Mapper`, `IdGenerator`, and `EventPublisher` are activated per scope; prefer explicit overloads when your app code benefits from visible dependencies.
 
 ## Redis Cache
 
@@ -24,6 +26,7 @@ builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
 ```
 
 Use `ICacheService` and `CacheKey<T>` for typed access.
+The built-in memory cache keeps rider state and local lock state in DI singletons so multiple hosts in the same process do not bleed into each other.
 
 ## RabbitMQ
 

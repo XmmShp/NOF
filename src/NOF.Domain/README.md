@@ -10,7 +10,7 @@ Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF)
 - `[NewableValueObject]` for `long`-backed ID value objects
 - `Failure` and `[Failure(...)]` for strongly-typed failure definitions
 - `DomainException` and `DomainValidationException`
-- `IIdGenerator` and `IdGenerator.Current`
+- `IIdGenerator` and the ambient `IdGenerator` facade
 
 This package does **not** currently expose aggregate root, repository, or unit-of-work abstractions.
 
@@ -47,7 +47,10 @@ public readonly partial struct CustomerName : IValueObject<string>
 
 ### `[NewableValueObject]`
 
-Apply `[NewableValueObject]` to a `readonly partial struct` implementing `IValueObject<long>` to generate a `New()` factory backed by `IdGenerator.Current`.
+Apply `[NewableValueObject]` to a `readonly partial struct` implementing `IValueObject<long>` to generate:
+
+- `New(IIdGenerator generator)` for explicit ID generation
+- `New()` as a convenience wrapper over the ambient `IdGenerator.Current`
 
 ```csharp
 using NOF.Domain;
@@ -56,7 +59,9 @@ using NOF.Domain;
 public readonly partial struct OrderId : IValueObject<long>;
 ```
 
-Before using `New()`, ensure the app has initialized an `IIdGenerator`. In NOF hosts this is typically handled by infrastructure defaults, which register `IIdGenerator` and run `IdGeneratorInitializationStep` during startup.
+Before using `New()`, ensure the current scope has an ambient `IIdGenerator`.
+In standard NOF hosts this is handled by infrastructure defaults, which register `IIdGenerator` and activate the ambient scope through `IDaemonService`.
+Use `New(IIdGenerator)` when you want an explicit dependency instead of relying on ambient scope.
 
 ### `Failure` and `[Failure]`
 

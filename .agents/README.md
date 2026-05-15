@@ -5,6 +5,13 @@
 This directory contains shared instructions for working with the NOF codebase.
 When framework behavior changes, keep these files in sync with `src/`, `tests/`, and sample usage.
 
+Current framework-wide architectural expectations that agent guidance must preserve:
+
+- prefer builder-owned or DI-managed state over process-wide mutable `static` state
+- keep `Registry` as a first-class builder concept
+- keep `TypeResolver` DI-managed instead of reviving `TypeRegistry`
+- treat ambient APIs (`Mapper`, `IdGenerator`, `EventPublisher`) as convenience layers with explicit alternatives available
+
 ## Directory Structure
 
 ```text

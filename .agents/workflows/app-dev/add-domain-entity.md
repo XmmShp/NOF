@@ -10,7 +10,7 @@ NOF currently models domain code around:
 - generated IDs via `[NewableValueObject]`
 - failure definitions via `[Failure(...)]`
 - ordinary domain classes
-- in-process domain events via `PublishAsEvent()`
+- in-process domain events via `PublishAsEvent()` with an explicit `PublishAsEvent(IEventPublisher)` alternative
 
 ## Add a Value Object
 
@@ -143,7 +143,8 @@ public sealed class CreateOrder : OrderService.CreateOrder
 ## Notes
 
 - Prefer ordinary domain classes plus value objects over nonexistent aggregate root base types.
-- Raise in-process domain events with `PublishAsEvent()`.
+- Raise in-process domain events with `PublishAsEvent()` for convenience, or `PublishAsEvent(publisher)` when you want the dependency to stay explicit.
 - Handle those events with `InMemoryEventHandler<TEvent>` in the current DI scope.
 - Persist changes through `DbContext` / `NOFDbContext` in the application layer.
+- `[NewableValueObject]` generates both `New()` and `New(IIdGenerator)`.
 - Value objects use explicit casts rather than a public `.Value` property.

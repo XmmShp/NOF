@@ -34,12 +34,14 @@ Wraps the built `IHost` and provides convenient helpers for application tests:
 
 ### `NOFTestScope`
 
-Represents a scoped test execution context. It makes it easy to configure ambient context before invoking application logic:
+Represents a scoped test execution context. It makes it easy to configure execution context before invoking application logic:
 
 - `SetTenant(...)`
 - `SetTracing(...)`
 - `SetUser(...)`
 - `SetAnonymousUser()`
+
+When a test scope is created, NOF also activates scoped daemon services so ambient conveniences such as `Mapper`, `IdGenerator`, and `EventPublisher` behave the same way they do in normal NOF execution scopes.
 
 ```csharp
 using var scope = host.CreateScope();

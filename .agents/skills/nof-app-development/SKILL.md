@@ -41,7 +41,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | Attribute / Interface | Generates |
 |---|---|
 | `IValueObject<T>` | equality, converters, casts, validation hooks |
-| `[NewableValueObject]` | static `New()` |
+| `[NewableValueObject]` | static `New()` and `New(IIdGenerator)` |
 | `[AutoInject]` | DI registration |
 | `[HttpEndpoint]` | HTTP route metadata for RPC methods |
 | `[Mappable]` | mapping registrations |
@@ -54,7 +54,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | expose HTTP API | `IRpcService` + `[HttpEndpoint]` + `app.MapHttpEndpoint<TRpcServer>()` |
 | send async work | payload object + `ICommandSender` |
 | publish notifications | payload object + `INotificationPublisher` |
-| publish in-memory events | payload object + `PublishAsEvent()` or `IEventPublisher` |
+| publish in-memory events | payload object + `PublishAsEvent()` / `PublishAsEvent(publisher)` / `IEventPublisher` |
 | persist application data | `DbContext` / `NOFDbContext` + `SaveChangesAsync()` |
 | cache data | `CacheKey<T>` + `ICacheService` |
 | add JWT auth | `AddJwtAuthority(...)` and/or `AddJwtResourceServer(...)` |
@@ -64,3 +64,4 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 - File-scoped namespaces, Allman braces, braces on all control-flow.
 - `Optional<T>` for PATCH semantics.
 - Persist application data through `DbContext` / `NOFDbContext` in application handlers.
+- Treat ambient APIs as convenience only: keep explicit `IMapper`, `IIdGenerator`, and `IEventPublisher` paths available in app code when that improves clarity or testability.

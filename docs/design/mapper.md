@@ -2,13 +2,15 @@
 
 ## Current Model
 
-NOF's mapper is intentionally explicit.
+NOF's mapper is intentionally explicit, while still exposing an ambient convenience facade.
 
 - `IMapper` performs runtime mapping.
 - `ManualMapper` is the default implementation registered by `NOF.Infrastructure`.
 - `MapperRegistration` stores one mapping delegate for one `(source, destination, name)` key.
-- `MapperInfos` materializes source-generated and manual registrations from `Registry.MapperRegistrations` and freezes them on first read.
-- `MapperInitializationStep` assigns the resolved mapper instance to `Mapper.Current` after the host is built.
+- `MapperRegistry` lives under the builder-owned `Registry` and freezes on first materialization.
+- `Mapper.Current` is ambient per async flow, not a process-wide mutable singleton.
+- `Mapper.PushCurrent(...)` and `MapperAmbientDaemonService` establish ambient mapper scope where convenience APIs need it.
+- `source.Map` uses the ambient mapper; `source.MapWith(mapper)` is the explicit alternative.
 
 ## Core Types
 
@@ -42,9 +44,21 @@ You declare mapping pairs on a `partial static class` using `[Mappable]`:
 public static partial class Mappings;
 ```
 
-The source generator emits an assembly initializer that adds `MapperRegistration` entries into `Registry.MapperRegistrations`.
+The source generator emits an assembly initializer that adds `MapperRegistration` entries into `Registry.MapperRegistry`.
 Those registrations become active when the assembly is loaded through `AddApplicationPart(...)`.
 No extra mapper bootstrap code is required in `Program.cs`.
+
+## Ambient vs Explicit Usage
+
+Both styles are supported:
+
+```csharp
+var dto = order.Map.To<OrderDto>();
+var dto2 = order.MapWith(mapper).To<OrderDto>();
+```
+
+Use the ambient path for ergonomics inside NOF-managed scopes.
+Use `MapWith(...)` when you want the dependency to remain explicit.
 
 ## Runtime Resolution Order
 

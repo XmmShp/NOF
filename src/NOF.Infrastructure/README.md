@@ -11,6 +11,8 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 - EF Core integration through `UseDbContext<TDbContext>()`
 - OpenTelemetry registration and transport middleware
 - tenant-aware `NOFDbContext` support
+- builder-scoped `TypeResolver`
+- ambient `IMapper` / `IIdGenerator` activation through scoped `IDaemonService`
 
 This lets consumers reference one package/project while still getting the full default infrastructure setup.
 
@@ -28,11 +30,17 @@ dotnet add package NOF.Infrastructure
 
 This package includes:
 
-- in-memory cache (`MemoryCacheService`)
+- in-memory cache (`ICacheService` + `MemoryCacheServiceRider`)
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-process event publisher (`IEventPublisher`)
 - EF Core infrastructure primitives (`NOFDbContext`, outbox/inbox entities, tenant-aware model customization, `NOFDbContextFactory`)
 - SQLite-based default persistence used by infrastructure defaults
+
+The default in-memory cache implementation is isolated per NOF host:
+
+- cache data lives in `MemoryCacheServiceRiderState`
+- local `GetOrSetAsync(...)` locks live in `CacheServiceLocalLockState`
+- both are registered as DI singletons instead of process-wide `static` state
 
 ## EF Core
 

@@ -7,26 +7,19 @@ NOF no longer depends on calling `AddAllHandlers()` or `Add*AutoInjectServices()
 The runtime model is:
 
 1. Source generators emit assembly-level initializers (`[assembly: AssemblyInitializeAttribute<...>]`).
-2. Initializers write metadata into static registries:
-- `Registry.AutoInjectRegistrations`
-- `Registry.RequestHandlerRegistrations`
-- `Registry.CommandHandlerRegistrations`
-- `Registry.NotificationHandlerRegistrations`
-- `Registry.EventHandlerRegistrations`
-- `Registry.MapperRegistrations`
+2. Initializers write metadata into the builder-owned `Registry`:
+- `Registry.AutoInjectRegistry`
+- `Registry.RequestHandlerRegistry`
+- `Registry.CommandHandlerRegistry`
+- `Registry.NotificationHandlerRegistry`
+- `Registry.EventHandlerRegistry`
+- `Registry.MapperRegistry`
 3. At startup, `builder.AddApplicationPart(assembly)` executes those initializers.
-4. Info singletons materialize and freeze registrations on first read:
-- `AutoInjectInfos`
-- `RequestHandlerInfos`
-- `CommandHandlerInfos`
-- `NotificationHandlerInfos`
-- `EventHandlerInfos`
-- `MapperInfos`
-5. Registration and initialization steps wire the runtime:
+4. Registry collections freeze on first read; indexed registries build their indexes when frozen.
+5. Registration steps wire the runtime:
 - `AutoInjectServiceRegistrationStep`
 - `RequestHandlerServiceRegistrationStep`
 - `HandlerServiceRegistrationStep`
-- `MapperInitializationStep`
 
 This is the same pattern used by the sample app:
 
@@ -39,4 +32,5 @@ builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
 
 - If handlers or mappers are not discovered, first check that the assembly containing them is added via `AddApplicationPart(...)`.
 - Keep RPC contracts (`IRpcService`) and their implementations in assemblies that are loaded as application parts.
-- Transport integrations such as RabbitMQ consume `CommandHandlerInfos` and `NotificationHandlerInfos`, so stale or missing application parts will prevent consumer registration.
+- Transport integrations such as RabbitMQ consume the frozen handler registries, so stale or missing application parts will prevent consumer registration.
+- `AutoInjectRegistry` stores native `ServiceDescriptor` instances; there is no separate `AutoInjectServiceRegistration` model anymore.

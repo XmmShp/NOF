@@ -8,6 +8,7 @@ Provides shared contracts and annotations intended for use across layers:
 
 - `[AutoInject]`
 - `InMemoryEventHandler<TEvent>` / `IEventPublisher`
+- ambient event publishing helpers via `EventPublisher` and `PublishAsEvent(...)`
 
 ## In-Memory Events
 
@@ -18,6 +19,12 @@ NOF provides a scoped in-memory event mechanism for invoking distributed handler
 - `IEventPublisher` dispatches the event to all handlers resolved from the current scope
 
 This mechanism can be used by domain aggregates, application services, or any other in-scope collaboration that should remain in-process.
+
+For convenience, NOF also exposes an ambient publisher facade:
+
+- `payload.PublishAsEvent()` uses the ambient `IEventPublisher` for the current async flow
+- `payload.PublishAsEvent(publisher)` is the explicit alternative when ambient scope is not desired
+- standard NOF hosts establish the ambient publisher through scoped `IDaemonService` activation
 
 ## Installation
 

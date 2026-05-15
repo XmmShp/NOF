@@ -41,6 +41,11 @@ tests/                        - unit and integration tests
 - `app.MapOpenApi()` is an explicit host choice.
 - EF Core registration uses `UseDbContext<TDbContext>()` plus `WithTenantMode(...)`, `WithConnectionString(...)`, `WithOptions(...)`, and optional `MigrateOnInitialize()`.
 - Persist application data through `DbContext` / `NOFDbContext` and call `SaveChangesAsync()`; there is no public `_uow` abstraction.
+- `Registry` is a first-class builder property; do not describe or implement it as hidden `Properties` state.
+- Auto-injected services are recorded as native `ServiceDescriptor` entries in `Registry.AutoInjectRegistry`.
+- `TypeResolver` is a DI singleton; do not reintroduce `TypeRegistry` or other process-wide type maps.
+- `Mapper`, `IdGenerator`, and `EventPublisher` use ambient async-flow scope for convenience plus explicit overloads for full functionality.
+- Avoid reintroducing process-wide mutable `static` state when a builder-level or DI singleton service can hold the same data.
 - Central package versions live in `Directory.Packages.props`.
 
 ## Build and Validation

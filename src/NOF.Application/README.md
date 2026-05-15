@@ -109,7 +109,9 @@ NOF uses an explicit mapper with optional source-generated registrations via `[M
 public static partial class Mappings;
 ```
 
-The generator writes `MapperRegistration` entries into the global registry. Those mappings become available once the assembly is added via `AddApplicationPart(...)` and the host finishes `MapperInitializationStep`.
+The generator writes `MapperRegistration` entries into `Registry.MapperRegistry`.
+Those mappings become available once the assembly is added via `AddApplicationPart(...)`.
+Convenience APIs can use the ambient mapper via `source.Map`, while explicit code can use `source.MapWith(mapper)`.
 
 ## Installation
 

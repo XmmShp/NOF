@@ -30,6 +30,11 @@ Use this file when contributing to the NOF framework itself.
 - Step pipeline: registration and initialization steps with `IAfter<T>` / `IBefore<T>`.
 - Source-gen attributes: `[AutoInject]`, `[HttpEndpoint]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`.
 - Transactional outbox: `ICommandSender.DeferSend(...)` / `INotificationPublisher.DeferPublish(...)`.
+- `Registry` is builder-owned and first-class; do not document or implement it as hidden builder property-bag state.
+- `AutoInjectRegistry` stores `ServiceDescriptor` entries directly.
+- `TypeResolver` is DI-managed; do not reintroduce `TypeRegistry` or other mutable process-wide lookup singletons.
+- Ambient convenience APIs such as `Mapper`, `IdGenerator`, and `EventPublisher` are async-flow scoped and must keep explicit overloads available.
+- Prefer DI singletons over mutable `static` state when data must be shared per host or per builder.
 
 ## Coding Rules
 
