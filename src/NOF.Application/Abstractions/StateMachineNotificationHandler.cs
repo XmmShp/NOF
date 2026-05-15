@@ -61,9 +61,10 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
         var definitionTypeName = typeof(TStateMachineDefinition).FullName;
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionTypeName);
 
-        var existing = await _dbContext.FindAsync<NOFStateMachineContext>(
-            keyValues: [correlationId, definitionTypeName],
-            cancellationToken: cancellationToken);
+        var existing = await _dbContext.Set<NOFStateMachineContext>()
+            .FirstOrDefaultAsync(
+                context => context.CorrelationId == correlationId && context.DefinitionTypeName == definitionTypeName,
+                cancellationToken);
 
         if (existing is not null)
         {

@@ -36,7 +36,8 @@ public sealed class GetOrder : OrderService.GetOrder
 
     public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
     {
-        var order = await _dbContext.Set<Order>().FindAsync([request.Id], cancellationToken);
+        var order = await _dbContext.Set<Order>()
+            .FirstOrDefaultAsync(entity => entity.Id == request.Id, cancellationToken);
         if (order is null)
         {
             return Result.Fail("404", "Order not found");

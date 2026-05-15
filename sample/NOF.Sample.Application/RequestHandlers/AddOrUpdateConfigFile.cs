@@ -20,7 +20,8 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
     public override async Task<Result> HandleAsync(AddOrUpdateConfigFileRequest request, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
-        var node = await _dbContext.FindAsync<ConfigNode>([id], cancellationToken);
+        var node = await _dbContext.Set<ConfigNode>()
+            .FirstOrDefaultAsync(configNode => configNode.Id == id, cancellationToken);
 
         if (node is null)
         {
