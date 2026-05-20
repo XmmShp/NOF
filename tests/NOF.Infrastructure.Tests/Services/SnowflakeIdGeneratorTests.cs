@@ -2,7 +2,6 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NOF.Domain;
-using NOF.Infrastructure;
 using System.ComponentModel.DataAnnotations;
 using Xunit;
 

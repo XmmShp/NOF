@@ -4,7 +4,7 @@ Contract layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 ## Overview
 
-Defines the messaging contracts and shared models that form the public API surface of your application. This package contains `Result<T>`, `Empty`, HTTP endpoint annotations, and other shared attributes used by source generators and hosts.
+Defines the messaging contracts and shared models that form the public API surface of your application. This package contains `Result<T>`, `StreamingResult<T>`, `Empty`, HTTP endpoint annotations, and other shared attributes used by source generators and hosts.
 
 ## Key Abstractions
 
@@ -34,10 +34,25 @@ return Result.Success(orderDto);
 return Result.Fail("404", "Order not found");
 ```
 
+### Streaming Result Type
+
+Use `StreamingResult<T>` when an RPC method returns a server-side stream. This keeps the contract surface synchronous while still allowing generated clients to return `Task<StreamingResult<T>>`.
+
+```csharp
+public record WatchOrdersRequest(Guid CustomerId);
+public record OrderEvent(Guid OrderId, string Status);
+
+public interface IOrderService : IRpcService
+{
+    [HttpEndpoint(HttpVerb.Get, "/api/orders/watch")]
+    StreamingResult<OrderEvent> Watch(WatchOrdersRequest request);
+}
+```
+
 ### RPC Contracts
 
 RPC service methods use a strict single-request signature, do not accept `CancellationToken` on the contract surface,
-do not end with `Async`, and must return a non-Task, non-`void` value. The return type does not need to be `Result`-based.
+do not end with `Async`, and must return a non-Task, non-`void` value. Unary methods may return plain payload types or `Result`-based types. Streaming methods must return `StreamingResult<T>`.
 
 ```csharp
 public record GetOrderRequest(Guid Id);
@@ -56,6 +71,10 @@ public interface IOrderService : IRpcService
     [Summary("Archive order")]
     [HttpEndpoint(HttpVerb.Post, "/api/orders/archive")]
     Empty Archive(ArchiveOrderRequest request);
+
+    [Summary("Watch order events")]
+    [HttpEndpoint(HttpVerb.Get, "/api/orders/watch")]
+    StreamingResult<OrderEvent> Watch(WatchOrdersRequest request);
 }
 ```
 
@@ -63,6 +82,7 @@ public interface IOrderService : IRpcService
 
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
 - Route parameters such as `"{id}"` are not supported for RPC HTTP endpoints; put input data on the request object instead
+- Streaming HTTP endpoints use server-sent events when hosted by `NOF.Hosting.AspNetCore`
 - **`[RequirePermission]`** - declares required permissions for an endpoint
 - **`[Summary]`** - adds summary documentation to generated endpoints
 - These NOF-specific attributes are all metadata-backed and converge on `MetadataAttribute`

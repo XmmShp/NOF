@@ -40,6 +40,29 @@ public sealed class GetOrder : OrderService.GetOrder
 }
 ```
 
+Streaming RPC handlers use the same generated nested `RpcHandler<TRequest, StreamingResult<T>>` model:
+
+```csharp
+public partial class OrderService : RpcServer<IOrderService>;
+
+public sealed class Watch : OrderService.Watch
+{
+    public override Task<StreamingResult<OrderEvent>> HandleAsync(WatchOrdersRequest request, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(StreamingResult.Success(Stream()));
+
+        async IAsyncEnumerable<OrderEvent> Stream()
+        {
+            yield return new OrderEvent(Guid.NewGuid(), "Created");
+            await Task.Delay(1000, cancellationToken);
+            yield return new OrderEvent(Guid.NewGuid(), "Shipped");
+        }
+    }
+}
+```
+
+The contract surface for the same method remains `StreamingResult<OrderEvent> Watch(WatchOrdersRequest request);`.
+
 ### Command Handlers
 
 ```csharp

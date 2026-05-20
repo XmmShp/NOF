@@ -23,6 +23,7 @@ public class MapHttpEndpointReflectionTests
     public record GetUserRequest(string Name);
     public record CreateUserRequest(string Name);
     public record DeleteUserRequest(string Name);
+    public record StreamUsersRequest(string Name);
     public record UserDto(string Name);
 
     private interface IAppService : IRpcService
@@ -35,6 +36,9 @@ public class MapHttpEndpointReflectionTests
 
         [HttpEndpoint(HttpVerb.Delete, "/rpc/DeleteUser")]
         Empty DeleteUser(DeleteUserRequest request);
+
+        [HttpEndpoint(HttpVerb.Get, "/rpc/StreamUsers")]
+        StreamingResult<UserDto> StreamUsers(StreamUsersRequest request);
 
         Result Ping(GetUserRequest request);
 
@@ -54,7 +58,7 @@ public class MapHttpEndpointReflectionTests
     [Fact]
     public void CreateEndpointHandler_WhenGet_UsesAsParametersBinding()
     {
-        var handler = CreateHandler(nameof(IAppService.GetUser), HttpVerb.Get, typeof(GetUserRequest));
+        var handler = CreateHandler(nameof(IAppService.GetUser), HttpVerb.Get, typeof(GetUserRequest), typeof(UserDto));
         var requestParameter = handler.Method.GetParameters()[0];
 
         Assert.NotNull(requestParameter.GetCustomAttribute<AsParametersAttribute>());
@@ -64,7 +68,7 @@ public class MapHttpEndpointReflectionTests
     [Fact]
     public void CreateEndpointHandler_WhenPost_UsesFromBodyBinding()
     {
-        var handler = CreateHandler(nameof(IAppService.CreateUser), HttpVerb.Post, typeof(CreateUserRequest));
+        var handler = CreateHandler(nameof(IAppService.CreateUser), HttpVerb.Post, typeof(CreateUserRequest), typeof(Empty));
         var requestParameter = handler.Method.GetParameters()[0];
 
         Assert.NotNull(requestParameter.GetCustomAttribute<FromBodyAttribute>());
@@ -72,9 +76,19 @@ public class MapHttpEndpointReflectionTests
     }
 
     [Fact]
+    public void CreateEndpointHandler_WhenStreamingGet_ReturnsIResult()
+    {
+        var handler = CreateHandler(nameof(IAppService.StreamUsers), HttpVerb.Get, typeof(StreamUsersRequest), typeof(StreamingResult<UserDto>));
+
+        Assert.Equal(typeof(Task<Microsoft.AspNetCore.Http.IResult>), handler.Method.ReturnType);
+        var requestParameter = handler.Method.GetParameters()[0];
+        Assert.NotNull(requestParameter.GetCustomAttribute<AsParametersAttribute>());
+    }
+
+    [Fact]
     public void CreateEndpointHandler_WhenDelete_UsesAsParametersBinding()
     {
-        var handler = CreateHandler(nameof(IAppService.DeleteUser), HttpVerb.Delete, typeof(DeleteUserRequest));
+        var handler = CreateHandler(nameof(IAppService.DeleteUser), HttpVerb.Delete, typeof(DeleteUserRequest), typeof(Empty));
         var requestParameter = handler.Method.GetParameters()[0];
 
         Assert.NotNull(requestParameter.GetCustomAttribute<AsParametersAttribute>());
@@ -107,8 +121,8 @@ public class MapHttpEndpointReflectionTests
     private static Type GetNormalizedResponseType(Type returnType)
         => (Type)GetNormalizedResponseTypeMethod.Invoke(null, [returnType])!;
 
-    private static Delegate CreateHandler(string operationName, HttpVerb verb, Type requestType)
-        => (Delegate)CreateEndpointHandlerMethod.Invoke(null, [typeof(IAppService), requestType, operationName, verb])!;
+    private static Delegate CreateHandler(string operationName, HttpVerb verb, Type requestType, Type returnType)
+        => (Delegate)CreateEndpointHandlerMethod.Invoke(null, [typeof(IAppService), requestType, operationName, verb, returnType])!;
 
     private static (HttpVerb Verb, string Route)[] GetHttpEndpoints(MethodInfo method, string defaultRoute)
         => ((IEnumerable<(HttpVerb Verb, string Route)>)GetHttpEndpointsMethod.Invoke(null, [method, defaultRoute])!).ToArray();

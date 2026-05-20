@@ -100,6 +100,7 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
                 continue;
             }
 
+            var isStream = TryGetStreamItemType(method.ReturnType, out var streamItemType);
             var responseType = GetNormalizedResponseType(method.ReturnType);
             var requestTypeName = requestType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
@@ -121,6 +122,11 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
 
     private static string GetNormalizedResponseType(ITypeSymbol returnType)
     {
+        if (TryGetStreamItemType(returnType, out _))
+        {
+            return returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
         var returnTypeDisplay = returnType.ToDisplayString();
         if (returnTypeDisplay is "NOF.Contract.Empty" or "NOF.Contract.Result")
         {
@@ -134,6 +140,20 @@ public sealed class RpcServerGenerator : IIncrementalGenerator
         }
 
         return $"global::NOF.Contract.Result<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
+    }
+
+    private static bool TryGetStreamItemType(ITypeSymbol returnType, out ITypeSymbol? streamItemType)
+    {
+        if (returnType is INamedTypeSymbol { IsGenericType: true } namedType
+            && namedType.OriginalDefinition.ToDisplayString() == "NOF.Contract.StreamingResult<T>"
+            && namedType.TypeArguments.Length == 1)
+        {
+            streamItemType = namedType.TypeArguments[0];
+            return true;
+        }
+
+        streamItemType = null;
+        return false;
     }
 
 }

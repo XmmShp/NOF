@@ -219,9 +219,9 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         var handler = (RpcHandler)services.GetRequiredService(handlerType);
-        context.Response = await handler.HandleAsync(context.Message, cancellationToken).ConfigureAwait(false) as IResult
-            ?? throw new InvalidOperationException(
-                $"RPC handler '{handlerType.FullName}' must return a value implementing '{typeof(IResult).FullName}'.");
+        var response = await handler.HandleAsync(context.Message, cancellationToken).ConfigureAwait(false);
+        context.Response = response as IResult
+            ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a non-result response.");
     }
 
     private static ValueTask ExecuteRequestMiddlewareAsync(

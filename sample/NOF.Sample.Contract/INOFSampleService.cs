@@ -62,4 +62,10 @@ public interface INOFSampleService : IRpcService
     [HttpEndpoint(HttpVerb.Get, "rpc/NOFSample/GetConfiguration")]
     Result<GetConfigurationResponse> GetConfiguration(GetConfigurationRequest request);
 
+    [HttpEndpoint(HttpVerb.Get, "rpc/NOFSample/WatchSampleStream")]
+    [Summary("流式传输演示")]
+    [Description("返回一个基于 Server-Sent Events 的演示事件流，用于展示 StreamingResult<T> 的端到端调用方式")]
+    [Category("流式传输")]
+    StreamingResult<SampleStreamEvent> WatchSampleStream(WatchSampleStreamRequest request);
+
 }

@@ -6,6 +6,7 @@
 
 - **Clean Architecture** - Layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns.
 - **CQRS & Messaging** - First-class `IRpcService`, command/notification dispatch, and handler pipelines.
+- **Streaming RPC** - Contract-first server-streaming via `StreamingResult<T>` with HTTP SSE support in ASP.NET Core.
 - **Source Generators** - Compile-time code generation for RPC servers, HTTP endpoint mapping, DI registration, failure definitions, and more.
 - **Transactional Outbox** - Reliable message delivery with inbox/outbox pattern built into EF Core infrastructure.
 - **State Machines** - Declarative, event-driven state machine builder with persistent context.

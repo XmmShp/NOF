@@ -8,7 +8,7 @@
 ## Features
 
 - **Clean Architecture** - layered packages (`Domain`, `Contract`, `Application`, `Infrastructure`) enforce separation of concerns
-- **CQRS & Messaging** - first-class `IRpcService`, typed command/notification dispatch, and handler pipelines
+- **CQRS & Messaging** - first-class `IRpcService`, typed command/notification dispatch, handler pipelines, and streaming RPC support
 - **Source Generators** - compile-time code generation for RPC servers, HTTP endpoint mapping, DI registration, mapping registration, and failure definitions
 - **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
 - **State Machines** - declarative, event-driven state machine builder with persistent context
@@ -30,12 +30,12 @@
 | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | [`NOF.Abstraction`](https://www.nuget.org/packages/NOF.Abstraction)                                                               | Shared annotations, user context, ambient headers, and in-memory event primitives                                       |
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain)                                                                         | Domain primitives - value objects, failures, domain exceptions, and ID generation                                       |
-| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract)                                                                     | Contract layer - RPC contracts, request/response models, `Result<T>`, `Optional<T>`, HTTP endpoint attributes           |
+| [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract)                                                                     | Contract layer - RPC contracts, request/response models, `Result<T>`, `StreamingResult<T>`, `Optional<T>`, HTTP endpoint attributes |
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application)                                                               | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts                   |
 | [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)                                               | Hosting abstractions - builder contracts, step contracts, and dependency ordering                                       |
 | [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, and runtime wiring |
 | [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)                                                                                 | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers             |
-| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore)                                                 | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, and JSON configuration               |
+| [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore)                                                 | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, JSON configuration, and SSE streaming |
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly)                                   | Blazor WebAssembly hosting - host builder integration for browser apps                                                  |
 | [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console)                                                       | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline                                        |
 | [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui)                                                             | .NET MAUI hosting - MAUI app builder integration for cross-platform applications                                        |
@@ -80,6 +80,36 @@ app.MapHttpEndpoint<MyAppService>();
 
 await app.RunAsync();
 ```
+
+## Streaming RPC
+
+NOF RPC contracts can expose server-streaming operations by returning `StreamingResult<T>` from the contract surface. Generated clients normalize those methods to `Task<StreamingResult<T>>`.
+
+```csharp
+public record WatchOrdersRequest(Guid CustomerId);
+public record OrderEvent(Guid OrderId, string Status);
+
+public interface IOrderService : IRpcService
+{
+    [HttpEndpoint(HttpVerb.Get, "/api/orders/watch")]
+    StreamingResult<OrderEvent> Watch(WatchOrdersRequest request);
+}
+```
+
+Client usage stays result-first:
+
+```csharp
+var result = await orderClient.WatchAsync(new WatchOrdersRequest(customerId), cancellationToken);
+if (result.IsSuccess)
+{
+    await foreach (var item in result.Value.WithCancellation(cancellationToken))
+    {
+        Console.WriteLine($"{item.OrderId}: {item.Status}");
+    }
+}
+```
+
+When the service is exposed through `NOF.Hosting.AspNetCore`, NOF uses .NET 10 server-sent events for HTTP streaming endpoints.
 
 ## Architecture
 

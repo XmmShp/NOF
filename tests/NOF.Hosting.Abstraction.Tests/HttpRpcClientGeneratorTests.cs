@@ -6,7 +6,7 @@ using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public class RpcServiceClientGeneratorTests
+public class HttpRpcClientGeneratorTests
 {
     private static readonly Type[] _extraRefs =
     [
@@ -19,6 +19,7 @@ public class RpcServiceClientGeneratorTests
         typeof(Empty),
         typeof(Result),
         typeof(Result<>),
+        typeof(StreamingResult<>),
         typeof(System.Text.Json.JsonSerializerOptions),
         typeof(System.Net.Http.Json.JsonContent),
         typeof(System.Net.Http.Json.HttpContentJsonExtensions)
@@ -178,11 +179,48 @@ public class RpcServiceClientGeneratorTests
         Assert.Contains("private static global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> GetJsonTypeInfo<T>()", code);
     }
 
+    [Fact]
+    public void StreamReturnType_IsNormalizedToTaskOfStreamingResultAndUsesSse()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Hosting;
+                              using System.Collections.Generic;
+
+                              namespace MyApp
+                              {
+                                  public record StreamRequest(string Key);
+                                  public record StreamEvent(string Value);
+
+                                  public partial interface IMyService : IRpcService
+                                  {
+                                      [HttpEndpoint(HttpVerb.Get, "/api/data/stream")]
+                                      StreamingResult<StreamEvent> StreamData(StreamRequest request);
+                                  }
+
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
+                              }
+                              """;
+
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
+
+        Assert.Contains("Task<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>> StreamDataAsync", code);
+        Assert.Contains("text/event-stream", code);
+        Assert.Contains("HttpCompletionOption.ResponseHeadersRead", code);
+        Assert.Contains("SseResponseReader.ReadAsync<global::MyApp.StreamEvent>", code);
+        Assert.Contains("StreamingResult.Success<global::MyApp.StreamEvent>(stream)", code);
+        Assert.Contains("StreamingResult.From<global::MyApp.StreamEvent>(apiResponse!)", code);
+    }
+
     private static Microsoft.CodeAnalysis.GeneratorDriverRunResult RunGenerators(string source)
     {
         var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
-        var driver = CSharpGeneratorDriver.Create(new Hosting.SourceGenerator.RpcServiceClientGenerator());
+        var driver = CSharpGeneratorDriver.Create(new Hosting.SourceGenerator.HttpRpcClientGenerator());
 
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
 

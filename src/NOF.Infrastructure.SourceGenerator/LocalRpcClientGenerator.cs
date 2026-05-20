@@ -10,6 +10,14 @@ namespace NOF.Infrastructure.SourceGenerator;
 [Generator]
 public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 {
+    private static readonly DiagnosticDescriptor _unsupportedClientReturnType = new(
+        id: "NOF030",
+        title: "Local RPC client method must use normalized contract return type",
+        messageFormat: "Local RPC client method '{0}' must return '{1}' to match the normalized contract signature",
+        category: "LocalRpcClientGenerator",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var classProvider = context.SyntaxProvider
@@ -60,6 +68,19 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         if (clientMethods.Count == 0)
         {
             return;
+        }
+
+        foreach (var method in clientMethods)
+        {
+            if (!IsSupportedClientMethod(method, serviceInterface, out var expectedReturnType))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    _unsupportedClientReturnType,
+                    method.Locations.FirstOrDefault(),
+                    method.ToDisplayString(),
+                    expectedReturnType ?? "a normalized contract return type"));
+                return;
+            }
         }
 
         var targetNamespace = RpcClientHelpers.GetFullNamespace(targetClass.ContainingNamespace);
@@ -116,12 +137,11 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
         sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {operationNameExpression}, {requestParameter.Name}, cancellationToken).ConfigureAwait(false);");
-        // Most clients return Task<T>. In an async Task<T> method we must return T, not Task<T>.
         if (method.ReturnType is INamedTypeSymbol { Name: "Task", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } taskType)
         {
             if (taskType.IsGenericType && taskType.TypeArguments.Length == 1)
             {
-                sb.AppendLine($"            return {BuildResultConversionExpression(taskType.TypeArguments[0], "result!")} ;");
+                sb.AppendLine($"            return {BuildResponseConversionExpression(taskType.TypeArguments[0], "result")};");
             }
             else
             {
@@ -132,7 +152,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         {
             if (valueTaskType.IsGenericType && valueTaskType.TypeArguments.Length == 1)
             {
-                sb.AppendLine($"            return {BuildResultConversionExpression(valueTaskType.TypeArguments[0], "result!")} ;");
+                sb.AppendLine($"            return {BuildResponseConversionExpression(valueTaskType.TypeArguments[0], "result")};");
             }
             else
             {
@@ -141,30 +161,105 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         }
         else
         {
-            sb.AppendLine($"            return {BuildResultConversionExpression(method.ReturnType, "result!")} ;");
+            sb.AppendLine($"            return {BuildResponseConversionExpression(method.ReturnType, "result")};");
         }
         sb.AppendLine("        }");
         sb.AppendLine();
     }
 
-    private static string BuildResultConversionExpression(ITypeSymbol returnType, string valueExpression)
+    private static string BuildResponseConversionExpression(ITypeSymbol returnType, string valueExpression)
     {
+        var requiredResultExpression = BuildRequiredRpcResultExpression(valueExpression);
+
         if (returnType is INamedTypeSymbol namedType
             && namedType.ContainingNamespace.ToDisplayString() == "NOF.Contract")
         {
+            if (namedType.Name == "IResult" && !namedType.IsGenericType)
+            {
+                return requiredResultExpression;
+            }
+
             if (namedType.Name == "Result" && !namedType.IsGenericType)
             {
-                return $"global::NOF.Contract.Result.From({valueExpression})";
+                return $"global::NOF.Contract.Result.From({requiredResultExpression})";
             }
 
             if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
             {
                 var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.Result.From<{innerType}>({valueExpression})";
+                return $"global::NOF.Contract.Result.From<{innerType}>({requiredResultExpression})";
+            }
+
+            if (namedType.Name == "StreamingResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
+            {
+                var itemType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                return $"global::NOF.Contract.StreamingResult.From<{itemType}>({requiredResultExpression})";
             }
         }
 
-        return $"({returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}){valueExpression}";
+        throw new global::System.InvalidOperationException($"Unsupported local RPC client return type '{returnType.ToDisplayString()}'.");
+    }
+
+    private static string BuildRequiredRpcResultExpression(string valueExpression)
+    {
+        return $"{valueExpression} ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\")";
+    }
+
+    private static bool IsSupportedClientMethod(IMethodSymbol clientMethod, INamedTypeSymbol serviceInterface, out string? expectedReturnType)
+    {
+        expectedReturnType = null;
+
+        var operationName = clientMethod.Name.EndsWith("Async", System.StringComparison.Ordinal)
+            ? clientMethod.Name.Substring(0, clientMethod.Name.Length - 5)
+            : clientMethod.Name;
+
+        var serviceMethod = serviceInterface.GetMembers()
+            .OfType<IMethodSymbol>()
+            .FirstOrDefault(m => m.MethodKind == MethodKind.Ordinary
+                && !m.IsImplicitlyDeclared
+                && m.Name == operationName);
+        if (serviceMethod is null)
+        {
+            return true;
+        }
+
+        expectedReturnType = BuildExpectedClientReturnTypeDisplay(serviceMethod);
+        return clientMethod.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == expectedReturnType;
+    }
+
+    private static string BuildExpectedClientReturnTypeDisplay(IMethodSymbol serviceMethod)
+    {
+        var normalizedResponseType = BuildNormalizedClientResponseTypeDisplay(serviceMethod.ReturnType);
+        return $"global::System.Threading.Tasks.Task<{normalizedResponseType}>";
+    }
+
+    private static string BuildNormalizedClientResponseTypeDisplay(ITypeSymbol returnType)
+    {
+        if (returnType is INamedTypeSymbol namedType
+            && namedType.ContainingNamespace.ToDisplayString() == "NOF.Contract")
+        {
+            if (namedType.Name == "StreamingResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
+            {
+                return namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            }
+
+            if (namedType.Name == "Result" && !namedType.IsGenericType)
+            {
+                return "global::NOF.Contract.Result";
+            }
+
+            if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
+            {
+                return namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            }
+
+            if (namedType.Name == "Empty" && !namedType.IsGenericType)
+            {
+                return "global::NOF.Contract.Result";
+            }
+        }
+
+        return $"global::NOF.Contract.Result<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
     }
 
     private static bool TryGetRpcClientInterfaceFromLocalRpcClientAttribute(

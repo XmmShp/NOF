@@ -1,0 +1,152 @@
+@page "/streaming-demo"
+@implements IDisposable
+@inject IMessageService Message
+@inject INOFSampleServiceClient NOFService
+
+<PageTitle>流式传输 Demo</PageTitle>
+
+<div style="padding: 24px;">
+    <Card Title="StreamingResult SSE Demo">
+        <Space Style="width: 100%;">
+            <Space Wrap="true">
+                <SpaceItem>
+                    <Input @bind-Value="_request.Topic" Placeholder="Topic" Style="width: 240px;"
+                           Disabled="@_isStreaming" />
+                </SpaceItem>
+                <SpaceItem>
+                    <AntDesign.InputNumber TValue="int" @bind-Value="_request.Count" Min="1" Max="20"
+                                           Disabled="@_isStreaming" />
+                </SpaceItem>
+                <SpaceItem>
+                    <AntDesign.InputNumber TValue="int" @bind-Value="_request.IntervalMilliseconds" Min="100" Max="5000"
+                                           Step="100" Disabled="@_isStreaming" />
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" Loading="@_isStreaming" OnClick="StartStream">
+                        开始流式调用
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Disabled="@(!_isStreaming)" OnClick="StopStream">
+                        停止
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button OnClick="ClearEvents">
+                        清空
+                    </Button>
+                </SpaceItem>
+            </Space>
+
+            <Alert Type="@AlertType.Info" ShowIcon="true">
+                <ChildContent>
+                    这个页面通过 `INOFSampleServiceClient` 调用 `WatchSampleStreamAsync`，
+                    最终走 `StreamingResult&lt;SampleStreamEvent&gt;` + HTTP SSE 链路。
+                </ChildContent>
+            </Alert>
+
+            <Descriptions Title="调用参数" Column="1" Bordered="true" Size="@DescriptionsSize.Small">
+                <DescriptionsItem Title="Topic">@_request.Topic</DescriptionsItem>
+                <DescriptionsItem Title="Count">@_request.Count</DescriptionsItem>
+                <DescriptionsItem Title="Interval">@($"{_request.IntervalMilliseconds} ms")</DescriptionsItem>
+                <DescriptionsItem Title="状态">@(_isStreaming ? "Streaming" : "Idle")</DescriptionsItem>
+            </Descriptions>
+
+            @if (_events.Count == 0)
+            {
+                <Empty Description="@("点击“开始流式调用”后，这里会实时显示服务端推送的事件")" />
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @foreach (var item in _events)
+                    {
+                        <Card Size="@CardSize.Small">
+                            <Space>
+                                <Space>
+                                    <Tag Color="TagColor.Blue">@item.Topic</Tag>
+                                    <Tag Color="TagColor.Green">@($"#{item.Index}")</Tag>
+                                    <Text>@item.Timestamp.ToLocalTime().ToString("HH:mm:ss.fff")</Text>
+                                </Space>
+                                <Text>@item.Message</Text>
+                            </Space>
+                        </Card>
+                    }
+                </div>
+            }
+        </Space>
+    </Card>
+</div>
+
+@code {
+    private readonly List<SampleStreamEvent> _events = [];
+    private WatchSampleStreamRequest _request = new();
+    private CancellationTokenSource? _streamCancellationTokenSource;
+    private bool _isStreaming;
+
+    private async Task StartStream()
+    {
+        if (_isStreaming)
+        {
+            return;
+        }
+
+        _events.Clear();
+        _streamCancellationTokenSource = new CancellationTokenSource();
+        _isStreaming = true;
+
+        try
+        {
+            var result = await NOFService.WatchSampleStreamAsync(_request, _streamCancellationTokenSource.Token);
+            if (!result.IsSuccess)
+            {
+                Message.Error(result.Message);
+                return;
+            }
+
+            await foreach (var item in result.Value!.WithCancellation(_streamCancellationTokenSource.Token))
+            {
+                _events.Add(item);
+                await InvokeAsync(StateHasChanged);
+            }
+
+            Message.Success("流式调用完成");
+        }
+        catch (OperationCanceledException)
+        {
+            Message.Warning("流式调用已取消");
+        }
+        catch (Exception ex)
+        {
+            Message.Error($"流式调用失败: {ex.Message}");
+        }
+        finally
+        {
+            _streamCancellationTokenSource?.Dispose();
+            _streamCancellationTokenSource = null;
+            _isStreaming = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void StopStream()
+    {
+        _streamCancellationTokenSource?.Cancel();
+    }
+
+    private void ClearEvents()
+    {
+        if (_isStreaming)
+        {
+            return;
+        }
+
+        _events.Clear();
+    }
+
+    public void Dispose()
+    {
+        _streamCancellationTokenSource?.Cancel();
+        _streamCancellationTokenSource?.Dispose();
+    }
+}

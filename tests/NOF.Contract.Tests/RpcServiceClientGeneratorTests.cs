@@ -13,7 +13,8 @@ public class RpcServiceClientGeneratorTests
         typeof(IRpcClient),
         typeof(IRpcService),
         typeof(Result),
-        typeof(Result<>)
+        typeof(Result<>),
+        typeof(StreamingResult<>)
     ];
 
     [Fact]
@@ -44,5 +45,29 @@ public class RpcServiceClientGeneratorTests
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> PingAsync", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<global::App.Pong>> GetAsync", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> ArchiveAsync", code);
+    }
+
+    [Fact]
+    public void GeneratesClientInterface_WithStreamingResultForStreamingMethods()
+    {
+        const string source = """
+            using NOF.Contract;
+            using System.Collections.Generic;
+
+            namespace App;
+
+            public record StreamRequest(string Value);
+            public record StreamEvent(string Value);
+
+            public partial interface IMyService : IRpcService
+            {
+                StreamingResult<StreamEvent> Stream(StreamRequest request);
+            }
+            """;
+
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _refs);
+        var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
+
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.StreamingResult<global::App.StreamEvent>> StreamAsync", code);
     }
 }

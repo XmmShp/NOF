@@ -10,7 +10,7 @@ using System.Text;
 namespace NOF.Hosting.SourceGenerator;
 
 [Generator]
-public class RpcServiceClientGenerator : IIncrementalGenerator
+public sealed class HttpRpcClientGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -180,7 +180,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
 
     private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint)
     {
-        var responseType = endpoint.ReturnInfo.NormalizedResultTypeDisplay;
+        var responseType = endpoint.ReturnInfo.NormalizedClientResponseTypeDisplay;
         var returnType = endpoint.ReturnInfo.ClientTaskReturnTypeDisplay;
         var methodName = method.Method.Name + "Async";
         var serviceTypeName = method.Method.ContainingType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -188,6 +188,8 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         var httpMethod = GetHttpMethod(endpoint.Method);
         var isBodyMethod = IsBodyMethod(endpoint.Method);
         var fqnHttpMethod = $"global::System.Net.Http.{httpMethod}";
+        var isStream = endpoint.ReturnInfo.IsStream;
+        var streamItemType = endpoint.ReturnInfo.StreamItemType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         List<IPropertySymbol> allProperties = [];
 
@@ -208,7 +210,6 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
             sb.AppendLine($"        public virtual async {returnType} {methodName}(global::System.Threading.CancellationToken cancellationToken = default)");
         }
         sb.AppendLine("        {");
-
         sb.AppendLine("            var context = new global::NOF.Hosting.RequestOutboundContext");
         sb.AppendLine("            {");
         if (hasRequestParam)
@@ -217,7 +218,7 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
         else
         {
-            sb.AppendLine("                Message = null,");
+            sb.AppendLine("                Message = null!,");
         }
         sb.AppendLine($"                ServiceType = typeof({serviceTypeName}),");
         sb.AppendLine($"                MethodName = {operationNameExpression}");
@@ -262,6 +263,10 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine();
+        if (isStream)
+        {
+            sb.AppendLine("                httpRequest.Headers.Accept.Add(new global::System.Net.Http.Headers.MediaTypeWithQualityHeaderValue(\"text/event-stream\"));");
+        }
         sb.AppendLine("                foreach (var kvp in context.Headers)");
         sb.AppendLine("                {");
         sb.AppendLine("                    if (kvp.Value != null)");
@@ -271,18 +276,38 @@ public class RpcServiceClientGenerator : IIncrementalGenerator
         sb.AppendLine("                    }");
         sb.AppendLine("                }");
         sb.AppendLine();
-        sb.AppendLine($"                using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);");
-        sb.AppendLine("                response.EnsureSuccessStatusCode();");
-        sb.AppendLine();
-
-        sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<{responseType}>(), ct);");
-        sb.AppendLine("                result = apiResponse!;");
+        if (isStream)
+        {
+            sb.AppendLine("                var response = await _httpClient.SendAsync(httpRequest, global::System.Net.Http.HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);");
+            sb.AppendLine("                response.EnsureSuccessStatusCode();");
+            sb.AppendLine();
+            sb.AppendLine("                var contentType = response.Content.Headers.ContentType?.MediaType;");
+            sb.AppendLine("                if (string.Equals(contentType, \"text/event-stream\", global::System.StringComparison.OrdinalIgnoreCase))");
+            sb.AppendLine("                {");
+            sb.AppendLine($"                    var stream = global::NOF.Hosting.SseResponseReader.ReadAsync<{streamItemType}>(response, GetJsonTypeInfo<{streamItemType}>(), ct);");
+            sb.AppendLine($"                    result = global::NOF.Contract.StreamingResult.Success<{streamItemType}>(stream);");
+            sb.AppendLine("                }");
+            sb.AppendLine("                else");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    using (response)");
+            sb.AppendLine("                    {");
+            sb.AppendLine("                        var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.Result>(), ct);");
+            sb.AppendLine($"                        result = global::NOF.Contract.StreamingResult.From<{streamItemType}>(apiResponse!);");
+            sb.AppendLine("                    }");
+            sb.AppendLine("                }");
+        }
+        else
+        {
+            sb.AppendLine("                using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);");
+            sb.AppendLine("                response.EnsureSuccessStatusCode();");
+            sb.AppendLine();
+            sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<{responseType}>(), ct);");
+            sb.AppendLine("                result = apiResponse!;");
+        }
         sb.AppendLine("                context.Response = result;");
-
         sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");
         sb.AppendLine();
         sb.AppendLine("            return result!;");
-
         sb.AppendLine("        }");
         sb.AppendLine();
     }

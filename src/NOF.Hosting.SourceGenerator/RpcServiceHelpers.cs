@@ -13,6 +13,7 @@ internal static class RpcServiceHelpers
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
     public const string RpcClientInterfaceFqn = "NOF.Contract.IRpcClient";
     public const string HttpRpcClientAttributeFqn = "NOF.Hosting.HttpRpcClientAttribute<TRpcClient>";
+    public const string StreamingResultFqn = "NOF.Contract.StreamingResult<T>";
     public const string ResultFqn = "NOF.Contract.Result";
     public const string GenericResultFqn = "NOF.Contract.Result<T>";
     public const string EmptyFqn = "NOF.Contract.Empty";
@@ -269,10 +270,24 @@ internal readonly struct ServiceReturnInfo
         => ValueType is INamedTypeSymbol { IsGenericType: true } namedType
            && namedType.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.GenericResultFqn;
 
+    public bool IsStream
+        => ValueType is INamedTypeSymbol { IsGenericType: true } namedType
+           && namedType.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.StreamingResultFqn;
+
+    public ITypeSymbol? StreamItemType
+        => ValueType is INamedTypeSymbol { IsGenericType: true } namedType && namedType.TypeArguments.Length == 1
+            ? namedType.TypeArguments[0]
+            : null;
+
     public string NormalizedResultTypeDisplay
     {
         get
         {
+            if (IsStream)
+            {
+                return ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            }
+
             if (IsEmpty || IsNonGenericResult)
             {
                 return "global::NOF.Contract.Result";
@@ -287,8 +302,21 @@ internal readonly struct ServiceReturnInfo
         }
     }
 
+    public string NormalizedClientResponseTypeDisplay
+    {
+        get
+        {
+            if (!IsStream)
+            {
+                return NormalizedResultTypeDisplay;
+            }
+
+            return ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+    }
+
     public string ClientTaskReturnTypeDisplay
-        => $"global::System.Threading.Tasks.Task<{NormalizedResultTypeDisplay}>";
+        => $"global::System.Threading.Tasks.Task<{NormalizedClientResponseTypeDisplay}>";
 }
 
 internal enum HttpVerb

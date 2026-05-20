@@ -22,6 +22,14 @@ public static partial class NOFHostingAspNetCoreExtensions
         .GetMethod(nameof(CreateBodyHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"Method '{nameof(CreateBodyHandlerCore)}' was not found.");
 
+    private static readonly MethodInfo _createStreamQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateStreamQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateStreamQueryHandlerCore)}' was not found.");
+
+    private static readonly MethodInfo _createStreamBodyHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateStreamBodyHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateStreamBodyHandlerCore)}' was not found.");
+
     extension(IEndpointRouteBuilder app)
     {
         [RequiresUnreferencedCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
@@ -37,12 +45,13 @@ public static partial class NOFHostingAspNetCoreExtensions
             {
                 var method = serviceType.GetMethod(operationName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
                     ?? throw new InvalidOperationException($"RPC contract method '{serviceType.FullName}.{operationName}' was not found.");
-                var responseType = GetNormalizedResponseType(handlerMapping.ReturnType);
+                var isStream = TryGetStreamItemType(handlerMapping.ReturnType, out var streamItemType);
+                var responseType = isStream ? streamItemType : GetNormalizedResponseType(handlerMapping.ReturnType);
                 var endpoints = GetHttpEndpoints(method, operationName);
                 foreach (var (verb, route) in endpoints)
                 {
                     var fullRoute = BuildRoute(prefix, route);
-                    var handler = CreateEndpointHandler(serviceType, handlerMapping.RequestType, operationName, verb);
+                    var handler = CreateEndpointHandler(serviceType, handlerMapping.RequestType, operationName, verb, handlerMapping.ReturnType);
                     var builder = verb switch
                     {
                         HttpVerb.Get => app.MapGet(fullRoute, handler),
@@ -54,7 +63,14 @@ public static partial class NOFHostingAspNetCoreExtensions
                     };
 
                     ApplyDocumentation(builder, method);
-                    builder.Produces(statusCode: 200, responseType: responseType);
+                    if (isStream)
+                    {
+                        builder.Produces(statusCode: 200, contentType: "text/event-stream");
+                    }
+                    else
+                    {
+                        builder.Produces(statusCode: 200, responseType: responseType);
+                    }
                 }
             }
 
@@ -64,12 +80,26 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     [RequiresUnreferencedCode("Endpoint handler creation uses runtime generic method binding.")]
     [RequiresDynamicCode("Endpoint handler creation uses runtime generic method instantiation.")]
-    private static Delegate CreateEndpointHandler(Type serviceType, Type requestType, string operationName, HttpVerb verb)
+    private static Delegate CreateEndpointHandler(Type serviceType, Type requestType, string operationName, HttpVerb verb, Type returnType)
     {
-        var templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
-            ? _createQueryHandlerMethod
-            : _createBodyHandlerMethod;
-        var genericMethod = templateMethod.MakeGenericMethod(serviceType, requestType);
+        MethodInfo templateMethod;
+        Type[] genericArguments;
+        if (TryGetStreamItemType(returnType, out var streamItemType))
+        {
+            templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
+                ? _createStreamQueryHandlerMethod
+                : _createStreamBodyHandlerMethod;
+            genericArguments = [serviceType, requestType, streamItemType];
+        }
+        else
+        {
+            templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
+                ? _createQueryHandlerMethod
+                : _createBodyHandlerMethod;
+            genericArguments = [serviceType, requestType];
+        }
+
+        var genericMethod = templateMethod.MakeGenericMethod(genericArguments);
         return (Delegate)genericMethod.Invoke(null, [operationName])!;
     }
 
@@ -82,7 +112,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             return await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
 
-        return (Func<TRequest, IServiceProvider, CancellationToken, Task<object?>>)Handler;
+        return Handler;
     }
 
     private static Delegate CreateBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
@@ -94,7 +124,53 @@ public static partial class NOFHostingAspNetCoreExtensions
             return await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
 
-        return (Func<TRequest, IServiceProvider, CancellationToken, Task<object?>>)Handler;
+        return Handler;
+    }
+
+    private static Delegate CreateStreamQueryHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest, TItem>(string operationName)
+        where TService : class, IRpcService
+    {
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler([AsParameters] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            var response = await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return CreateStreamingResult<TItem>(response);
+        }
+
+        return Handler;
+    }
+
+    private static Delegate CreateStreamBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest, TItem>(string operationName)
+        where TService : class, IRpcService
+    {
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler([FromBody] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            var response = await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return CreateStreamingResult<TItem>(response);
+        }
+
+        return Handler;
+    }
+
+    private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult<TItem>(object? response)
+    {
+        if (response is StreamingResult<TItem> streamingResult)
+        {
+            if (!streamingResult.IsSuccess)
+            {
+                return TypedResults.Ok(Result.Fail(streamingResult.ErrorCode, streamingResult.Message, streamingResult.Extra));
+            }
+
+            return TypedResults.ServerSentEvents(streamingResult.Value!);
+        }
+
+        if (response is NOF.Contract.IResult result)
+        {
+            return TypedResults.Ok(Result.From(result));
+        }
+
+        throw new InvalidOperationException($"Streaming RPC endpoints must return '{typeof(StreamingResult<TItem>).FullName}'.");
     }
 
     [RequiresDynamicCode("Result type normalization may require runtime generic instantiation.")]
@@ -111,6 +187,19 @@ public static partial class NOFHostingAspNetCoreExtensions
         }
 
         return typeof(Result<>).MakeGenericType(returnType);
+    }
+
+    private static bool TryGetStreamItemType(Type returnType, [NotNullWhen(true)] out Type? streamItemType)
+    {
+        if (returnType.IsGenericType
+            && returnType.GetGenericTypeDefinition() == typeof(StreamingResult<>))
+        {
+            streamItemType = returnType.GetGenericArguments()[0];
+            return true;
+        }
+
+        streamItemType = null;
+        return false;
     }
 
     private static IEnumerable<(HttpVerb Verb, string Route)> GetHttpEndpoints(MethodInfo method, string defaultRoute)
