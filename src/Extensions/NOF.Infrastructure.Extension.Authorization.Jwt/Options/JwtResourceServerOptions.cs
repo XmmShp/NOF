@@ -1,5 +1,3 @@
-using NOF.Abstraction;
-
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
 /// <summary>
@@ -8,16 +6,9 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 public class JwtResourceServerOptions
 {
     /// <summary>
-    /// Gets or sets the header name used to read the authorization token.
-    /// Default is "Authorization".
+    /// Gets or sets the accepted JWT token sources.
     /// </summary>
-    public string HeaderName { get; set; } = NOFAbstractionConstants.Transport.Headers.Authorization;
-
-    /// <summary>
-    /// Gets or sets the token type prefix (e.g., "Bearer").
-    /// Default is "Bearer".
-    /// </summary>
-    public string TokenType { get; set; } = "Bearer";
+    public List<JwtResourceServerTokenSourceOptions> Sources { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the minimum interval between two JWKS refresh attempts.

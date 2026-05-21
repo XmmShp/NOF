@@ -143,25 +143,26 @@ public sealed class JwtAuthorizationExtensionsTests
     public async Task AddJwtResourceServer_WithExplicitTokenPropagation_ShouldRegisterSeparately()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddJwtTokenPropagation(options =>
-        {
-            options.HeaderName = "X-Authorization";
-            options.TokenType = "Token";
-        });
+        builder.AddJwtTokenPropagation();
         builder.AddJwtResourceServer(options =>
         {
             options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
             options.RequireHttpsMetadata = true;
+            options.Sources.Add(new JwtResourceServerTokenSourceOptions
+            {
+                HeaderName = "X-Authorization",
+                TokenType = "Token"
+            });
         });
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
 
         var resourceOptions = scope.GetRequiredService<IOptions<JwtResourceServerOptions>>().Value;
-        var propagationOptions = scope.GetRequiredService<IOptions<JwtTokenPropagationOptions>>().Value;
         Assert.Equal("https://auth.local/.well-known/jwks.json", resourceOptions.JwksEndpoint);
-        Assert.Equal("X-Authorization", propagationOptions.HeaderName);
-        Assert.Equal("Token", propagationOptions.TokenType);
+        Assert.Single(resourceOptions.Sources);
+        Assert.Equal("X-Authorization", resourceOptions.Sources[0].HeaderName);
+        Assert.Equal("Token", resourceOptions.Sources[0].TokenType);
         var jwksService1 = scope.GetRequiredService<IJwksService>();
         var jwksService2 = scope.GetRequiredService<IJwksService>();
         Assert.IsType<HttpJwksService>(jwksService1);
@@ -193,17 +194,14 @@ public sealed class JwtAuthorizationExtensionsTests
         builder.AddJwtResourceServer(options =>
         {
             options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
-            options.HeaderName = "X-Authorization";
-            options.TokenType = "Token";
+            options.Sources.Add(new JwtResourceServerTokenSourceOptions
+            {
+                HeaderName = "X-Authorization",
+                TokenType = "Token"
+            });
         });
 
         await using var host = await builder.BuildTestHostAsync();
-        using var scope = host.CreateScope();
-
-        var propagationOptions = scope.GetRequiredService<IOptions<JwtTokenPropagationOptions>>().Value;
-
-        Assert.Equal("Authorization", propagationOptions.HeaderName);
-        Assert.Equal("Bearer", propagationOptions.TokenType);
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
     }
 

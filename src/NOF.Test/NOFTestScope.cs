@@ -44,13 +44,14 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetUser(ClaimsPrincipal user)
     {
-        UserContext.User = user;
+        UserContext.Logout();
+        UserContext.User.AddIdentities(user.Identities.OfType<ClaimsIdentity>());
         return this;
     }
 
     public NOFTestScope SetAnonymousUser()
     {
-        UserContext.User = null;
+        UserContext.Logout();
         return this;
     }
 
@@ -76,7 +77,6 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
         return SetUser(new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType)));
     }
-
     public Task SendAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
     {
         return GetRequiredService<ICommandSender>().SendAsync(command, cancellationToken);

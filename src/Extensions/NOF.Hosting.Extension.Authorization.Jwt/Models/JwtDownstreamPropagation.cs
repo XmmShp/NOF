@@ -3,19 +3,17 @@ using NOF.Abstraction;
 namespace NOF.Hosting.Extension.Authorization.Jwt;
 
 /// <summary>
-/// Configuration options for outbound JWT token propagation.
+/// Downstream propagation settings for one JWT identity.
 /// </summary>
-public class JwtTokenPropagationOptions
+public sealed class JwtDownstreamPropagation
 {
     /// <summary>
-    /// Gets or sets the header name used to propagate the authorization token.
-    /// Default is "Authorization".
+    /// The header name used to propagate the token downstream.
     /// </summary>
     public string HeaderName { get; set; } = NOFAbstractionConstants.Transport.Headers.Authorization;
 
     /// <summary>
-    /// Gets or sets the token type prefix (e.g., "Bearer").
-    /// Default is "Bearer".
+    /// The token type prefix used to propagate the token downstream.
     /// </summary>
     public string TokenType { get; set; } = "Bearer";
 }

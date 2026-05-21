@@ -1,7 +1,5 @@
-using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Test;
-using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Xunit;
 
@@ -12,13 +10,11 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithJwtPrincipal_ShouldWriteAuthorizationHeader()
     {
-        var userContext = new FakeUserContext();
+        var userContext = new UserContext();
         var token = CreateUnsignedToken();
-        userContext.User = new JwtClaimsPrincipal(token);
+        userContext.User.AddIdentity(new JwtClaimsIdentity(token));
 
-        var middleware = new JwtTokenPropagationOutboundMiddleware(
-            userContext,
-            Options.Create(new JwtTokenPropagationOptions()));
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
 
         var called = false;
         var outboundContext = CreateOutboundContext();
@@ -33,7 +29,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
     private static string CreateUnsignedToken()
     {
-        // Untrusted token used only to populate JwtClaimsPrincipal without validation.
+        // Untrusted token used only to populate JwtClaimsIdentity without validation.
         var header = Base64UrlEncode("""{"alg":"none","typ":"JWT"}""");
         var payload = Base64UrlEncode("""{"sub":"user-1"}""");
         return header + "." + payload + ".";
@@ -48,12 +44,10 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithNonJwtPrincipal_ShouldNotWriteAuthorizationHeader()
     {
-        var userContext = new FakeUserContext();
-        userContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom"));
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom"));
 
-        var middleware = new JwtTokenPropagationOutboundMiddleware(
-            userContext,
-            Options.Create(new JwtTokenPropagationOptions()));
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
 
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
@@ -61,20 +55,24 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     }
 
     [Fact]
-    public async Task AddJwtTokenPropagation_ShouldApplyConfiguredOptions()
+    public async Task InvokeAsync_WithCustomDownstreamPropagation_ShouldWriteConfiguredHeader()
     {
-        var builder = NOFTestAppBuilder.Create();
-        builder.AddJwtTokenPropagation(options =>
-        {
-            options.HeaderName = "X-Auth";
-            options.TokenType = "Token";
-        });
+        var userContext = new UserContext();
+        var token = CreateUnsignedToken();
+        userContext.User.AddIdentity(new JwtClaimsIdentity(
+            new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "jwt"),
+            token,
+            new JwtDownstreamPropagation
+            {
+                HeaderName = "X-Auth",
+                TokenType = "Token"
+            }));
 
-        await using var host = await builder.BuildTestHostAsync();
-        using var scope = host.CreateScope();
-        var options = scope.GetRequiredService<IOptions<JwtTokenPropagationOptions>>().Value;
-        Assert.Equal("X-Auth", options.HeaderName);
-        Assert.Equal("Token", options.TokenType);
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
+        var outboundContext = CreateOutboundContext();
+        await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
+
+        Assert.Equal("Token " + token, outboundContext.Headers["X-Auth"]);
     }
 
     private static RequestOutboundContext CreateOutboundContext()
@@ -87,24 +85,13 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         };
     }
 
-    private sealed class FakeUserContext : IUserContext
+    [Fact]
+    public void AddJwtTokenPropagation_ShouldRegisterOutboundMiddleware()
     {
-        private static readonly ClaimsPrincipal _anonymous = new();
-        private ClaimsPrincipal _user = _anonymous;
+        var builder = NOFTestAppBuilder.Create();
 
-        [AllowNull]
-        public ClaimsPrincipal User
-        {
-            get => _user;
-            set
-            {
-                StateChanging?.Invoke();
-                _user = value ?? _anonymous;
-                StateChanged?.Invoke();
-            }
-        }
+        builder.AddJwtTokenPropagation();
 
-        public event Action? StateChanging;
-        public event Action? StateChanged;
+        Assert.Contains(builder.Services, descriptor => descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
     }
 }

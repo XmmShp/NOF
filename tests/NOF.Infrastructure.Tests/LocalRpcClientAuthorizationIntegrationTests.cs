@@ -31,7 +31,8 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     {
         using var provider = BuildServiceProvider();
         var userContext = (UserContext)provider.GetRequiredService<IUserContext>();
-        userContext.User = TestPrincipalFactory.CreateAuthenticatedUser((ClaimTypes.Permission, "fleet.read"));
+        userContext.Logout();
+        userContext.User.AddIdentity(TestPrincipalFactory.CreateAuthenticatedIdentity((ClaimTypes.Permission, "fleet.read")));
 
         var client = provider.GetRequiredService<ProtectedFleetClient>();
         var result = await client.GetFleetOverviewAsync(new Empty());
@@ -119,7 +120,7 @@ public sealed class GetFleetOverviewHandler(InvocationRecorder recorder) : RpcHa
 
 internal static class TestPrincipalFactory
 {
-    public static ClaimsPrincipal CreateAuthenticatedUser(params (string Type, string Value)[] claims)
+    public static ClaimsIdentity CreateAuthenticatedIdentity(params (string Type, string Value)[] claims)
     {
         var identity = new ClaimsIdentity("Test");
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, "user-1"));
@@ -129,6 +130,6 @@ internal static class TestPrincipalFactory
             identity.AddClaim(new Claim(type, value));
         }
 
-        return new ClaimsPrincipal(identity);
+        return identity;
     }
 }

@@ -34,10 +34,32 @@ builder.AddJwtResourceServer(options =>
     options.JwksEndpoint = "https://auth.example.com/.well-known/jwks.json";
     options.Issuer = "your-app";
     options.Audience = "your-audience";
+    options.Sources.Add(new JwtResourceServerTokenSourceOptions
+    {
+        HeaderName = "Authorization",
+        TokenType = "Bearer",
+        DownstreamPropagation = new JwtDownstreamPropagation
+        {
+            HeaderName = "Authorization",
+            TokenType = "Bearer"
+        }
+    });
+    options.Sources.Add(new JwtResourceServerTokenSourceOptions
+    {
+        HeaderName = "X-Internal-Jwt",
+        TokenType = "Bearer",
+        DownstreamPropagation = new JwtDownstreamPropagation
+        {
+            HeaderName = "X-Internal-Jwt",
+            TokenType = "Bearer"
+        }
+    });
 });
 ```
 
 The configuration type for this package is `JwtResourceServerOptions`. `JwksEndpoint` is required, and by default the endpoint must use HTTPS.
+`Sources` is required for inbound token capture.
+If a source does not explicitly configure `DownstreamPropagation`, downstream propagation defaults to the same `HeaderName` and `TokenType` as that source.
 If you provide your own `IJwksService`, `AddJwtResourceServer()` preserves it and still layers local caching through `CachedJwksService`.
 
 If you only need outbound propagation and do not need inbound token validation, reference `NOF.Hosting.Extension.Authorization.Jwt` and use:
@@ -50,13 +72,13 @@ You can also keep the values in configuration and read them inside the `AddJwtRe
 
 ```json
 {
-  "NOF": {
-    "JwtResourceServer": {
-      "JwksEndpoint": "https://auth.example.com/.well-known/jwks.json",
-      "Issuer": "your-app",
-      "Audience": "your-audience"
+    "NOF": {
+        "JwtResourceServer": {
+            "JwksEndpoint": "https://auth.example.com/.well-known/jwks.json",
+            "Issuer": "your-app",
+            "Audience": "your-audience"
+        }
     }
-  }
 }
 ```
 
@@ -76,12 +98,12 @@ You can also keep the values in configuration and read them inside the `AddJwtAu
 
 ```json
 {
-  "NOF": {
-    "Authority": {
-      "Issuer": "your-app",
-      "SigningKeyEncryptionKey": "your-shared-signing-key-passphrase"
+    "NOF": {
+        "Authority": {
+            "Issuer": "your-app",
+            "SigningKeyEncryptionKey": "your-shared-signing-key-passphrase"
+        }
     }
-  }
 }
 ```
 

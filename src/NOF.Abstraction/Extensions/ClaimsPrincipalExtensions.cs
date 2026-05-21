@@ -9,7 +9,7 @@ public static partial class NOFAbstractionExtensions
         /// <summary>
         /// Gets a value indicating whether the user is authenticated.
         /// </summary>
-        public bool IsAuthenticated => user.Identity?.IsAuthenticated == true;
+        public bool IsAuthenticated => user.Identities.Any(identity => identity.IsAuthenticated);
 
         /// <summary>
         /// Gets the unique identifier of the current user from the NameIdentifier claim.
@@ -19,7 +19,11 @@ public static partial class NOFAbstractionExtensions
         /// <summary>
         /// Gets the username of the current user from the Name claim.
         /// </summary>
-        public string? Name => user.Identity?.Name;
+        public string? Name => user.Identities
+            .Where(identity => identity.IsAuthenticated)
+            .Select(identity => identity.Name)
+            .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name))
+            ?? user.Identity?.Name;
 
         /// <summary>
         /// Gets the list of permissions from the custom permission claims of the current user.
@@ -55,6 +59,22 @@ public static partial class NOFAbstractionExtensions
             return permissions
                 .Where(pattern => pattern.Contains('*'))
                 .Any(pattern => permission.MatchWildcard(pattern, comparison));
+        }
+
+        /// <summary>
+        /// Gets the first identity of the specified type from the current user.
+        /// </summary>
+        public TIdentity? GetIdentity<TIdentity>() where TIdentity : ClaimsIdentity
+        {
+            return user.Identities.OfType<TIdentity>().FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Gets all identities of the specified type from the current user.
+        /// </summary>
+        public IReadOnlyList<TIdentity> GetIdentities<TIdentity>() where TIdentity : ClaimsIdentity
+        {
+            return user.Identities.OfType<TIdentity>().ToList().AsReadOnly();
         }
     }
 }

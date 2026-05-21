@@ -6,6 +6,7 @@ using NOF.Application;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authorization.Jwt;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -37,18 +38,8 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        if (!_executionContext.TryGetHeader(_jwtOptions.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
-        {
-            await next(cancellationToken);
-            return;
-        }
-
-        var prefix = _jwtOptions.TokenType + " ";
-        var token = authHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? authHeader[prefix.Length..]
-            : authHeader;
-
-        if (string.IsNullOrEmpty(token))
+        var tokenSources = GetTokenSources();
+        if (tokenSources.Count == 0)
         {
             await next(cancellationToken);
             return;
@@ -64,28 +55,48 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
                 return;
             }
 
-            var validationParameters = new TokenValidationParameters
+            foreach (var source in tokenSources)
             {
-                ValidateIssuer = !string.IsNullOrEmpty(_jwtOptions.Issuer),
-                ValidIssuer = _jwtOptions.Issuer,
-                ValidateAudience = !string.IsNullOrEmpty(_jwtOptions.Audience),
-                ValidAudience = _jwtOptions.Audience,
-                ValidateLifetime = true,
-                IssuerSigningKeys = keys,
-                ClockSkew = TimeSpan.FromSeconds(30)
-            };
+                if (!TryGetToken(source, out var token))
+                {
+                    continue;
+                }
 
-            _ = _tokenHandler.ValidateToken(token, validationParameters, out _);
-            _userContext.User = new JwtClaimsPrincipal(token);
-            _executionContext.RemoveHeader(_jwtOptions.HeaderName);
-        }
-        catch (SecurityTokenExpiredException)
-        {
-            _logger.LogDebug("JWT token expired");
-        }
-        catch (SecurityTokenValidationException ex)
-        {
-            _logger.LogDebug(ex, "JWT token validation failed: {Message}", ex.Message);
+                try
+                {
+                    var validationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = !string.IsNullOrEmpty(_jwtOptions.Issuer),
+                        ValidIssuer = _jwtOptions.Issuer,
+                        ValidateAudience = !string.IsNullOrEmpty(_jwtOptions.Audience),
+                        ValidAudience = _jwtOptions.Audience,
+                        ValidateLifetime = true,
+                        IssuerSigningKeys = keys,
+                        ClockSkew = TimeSpan.FromSeconds(30)
+                    };
+
+                    var principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
+                    var identity = principal.Identities.OfType<ClaimsIdentity>().FirstOrDefault();
+                    _userContext.User.AddIdentity(identity is null
+                        ? new JwtClaimsIdentity(
+                            CreateIdentity(token),
+                            token,
+                            downstreamPropagation: source.DownstreamPropagation)
+                        : new JwtClaimsIdentity(
+                            identity,
+                            token,
+                            downstreamPropagation: source.DownstreamPropagation));
+                    _executionContext.RemoveHeader(source.HeaderName);
+                }
+                catch (SecurityTokenExpiredException)
+                {
+                    _logger.LogDebug("JWT token expired from header {HeaderName}", source.HeaderName);
+                }
+                catch (SecurityTokenValidationException ex)
+                {
+                    _logger.LogDebug(ex, "JWT token validation failed from header {HeaderName}: {Message}", source.HeaderName, ex.Message);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -93,5 +104,35 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
         }
 
         await next(cancellationToken);
+    }
+
+    private List<JwtResourceServerTokenSourceOptions> GetTokenSources()
+    {
+        return _jwtOptions.Sources;
+    }
+
+    private bool TryGetToken(JwtResourceServerTokenSourceOptions source, out string token)
+    {
+        token = string.Empty;
+
+        if (!_executionContext.TryGetHeader(source.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
+        {
+            return false;
+        }
+
+        var prefix = source.TokenType + " ";
+        token = authHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? authHeader[prefix.Length..]
+            : authHeader;
+
+        return !string.IsNullOrEmpty(token);
+    }
+
+    private static ClaimsIdentity CreateIdentity(string token)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        return new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
     }
 }

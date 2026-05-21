@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 
 namespace NOF.Hosting.Extension.Authorization.Jwt;
@@ -7,21 +6,20 @@ namespace NOF.Hosting.Extension.Authorization.Jwt;
 public sealed class JwtTokenPropagationOutboundMiddleware : IRequestOutboundMiddleware
 {
     private readonly IUserContext _userContext;
-    private readonly JwtTokenPropagationOptions _options;
 
-    public JwtTokenPropagationOutboundMiddleware(
-        IUserContext userContext,
-        IOptions<JwtTokenPropagationOptions> options)
+    public JwtTokenPropagationOutboundMiddleware(IUserContext userContext)
     {
         _userContext = userContext;
-        _options = options.Value;
     }
 
     public ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        if (_userContext.User is JwtClaimsPrincipal { Token: { Length: > 0 } token })
+        foreach (var identity in _userContext.User.GetIdentities<JwtClaimsIdentity>()
+            .Where(identity => identity.DownstreamPropagation is not null)
+            .Where(identity => identity.Token.Length > 0))
         {
-            context.Headers[_options.HeaderName] = $"{_options.TokenType} {token}";
+            var propagation = identity.DownstreamPropagation!;
+            context.Headers[propagation.HeaderName] = $"{propagation.TokenType} {identity.Token}";
         }
 
         return next(cancellationToken);

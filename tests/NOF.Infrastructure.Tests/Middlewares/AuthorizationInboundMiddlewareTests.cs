@@ -37,7 +37,8 @@ public sealed class AuthorizationInboundMiddlewareTests
         Assert.Equal("401", unauthResult.ErrorCode);
 
         // Authenticated without permissions => allowed
-        userContext.User = CreateAuthenticatedUser();
+        userContext.Logout();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity());
         var authContext = CreateContext(nameof(TestService.LoginOnlyMethod));
         var nextCalled = false;
         await middleware.InvokeAsync(authContext, _ =>
@@ -52,10 +53,8 @@ public sealed class AuthorizationInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_MethodPermission_ShouldOverrideClassPermission()
     {
-        var userContext = new UserContext
-        {
-            User = CreateAuthenticatedUser(ClaimTypes.Permission, "permclass")
-        };
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "permclass"));
         var middleware = CreateMiddleware(userContext);
 
         // Authenticated but missing method permission => 403
@@ -65,7 +64,8 @@ public sealed class AuthorizationInboundMiddlewareTests
         Assert.Equal("403", denied.ErrorCode);
 
         // With method permission => allowed
-        userContext.User = CreateAuthenticatedUser(ClaimTypes.Permission, "permmethod");
+        userContext.Logout();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "permmethod"));
         var allowedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
         var nextCalled = false;
         await middleware.InvokeAsync(allowedContext, _ =>
@@ -149,7 +149,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         return new AuthorizationInboundMiddleware([policy]);
     }
 
-    private static ClaimsPrincipal CreateAuthenticatedUser(params string[] permissionClaims)
+    private static ClaimsIdentity CreateAuthenticatedIdentity(params string[] permissionClaims)
     {
         var identity = new ClaimsIdentity("Test");
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, "user-1"));
@@ -159,7 +159,7 @@ public sealed class AuthorizationInboundMiddlewareTests
             identity.AddClaim(new Claim(permissionClaims[i], permissionClaims[i + 1]));
         }
 
-        return new ClaimsPrincipal(identity);
+        return identity;
     }
 
     [RequirePermission("permclass")]

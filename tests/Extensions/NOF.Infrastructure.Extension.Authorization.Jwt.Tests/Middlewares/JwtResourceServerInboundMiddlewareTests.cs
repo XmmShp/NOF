@@ -94,10 +94,16 @@ public sealed class JwtResourceServerInboundMiddlewareTests
             jwksCacheService,
             Microsoft.Extensions.Options.Options.Create(new JwtResourceServerOptions
             {
-                HeaderName = NOFAbstractionConstants.Transport.Headers.Authorization,
-                TokenType = "Bearer",
                 JwksEndpoint = "https://auth.local/.well-known/jwks.json",
-                RequireHttpsMetadata = true
+                RequireHttpsMetadata = true,
+                Sources =
+                [
+                    new JwtResourceServerTokenSourceOptions
+                    {
+                        HeaderName = NOFAbstractionConstants.Transport.Headers.Authorization,
+                        TokenType = "Bearer"
+                    }
+                ]
             }),
             NullLogger<JwtResourceServerInboundMiddleware>.Instance,
             executionContext);
