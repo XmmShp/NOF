@@ -160,9 +160,13 @@ public sealed class JwtAuthorizationExtensionsTests
 
         var resourceOptions = scope.GetRequiredService<IOptions<JwtResourceServerOptions>>().Value;
         Assert.Equal("https://auth.local/.well-known/jwks.json", resourceOptions.JwksEndpoint);
-        Assert.Single(resourceOptions.Sources);
-        Assert.Equal("X-Authorization", resourceOptions.Sources[0].HeaderName);
-        Assert.Equal("Token", resourceOptions.Sources[0].TokenType);
+        Assert.Equal(2, resourceOptions.Sources.Count);
+        Assert.Contains(resourceOptions.Sources, source =>
+            source.HeaderName == "Authorization" &&
+            source.TokenType == "Bearer");
+        Assert.Contains(resourceOptions.Sources, source =>
+            source.HeaderName == "X-Authorization" &&
+            source.TokenType == "Token");
         var jwksService1 = scope.GetRequiredService<IJwksService>();
         var jwksService2 = scope.GetRequiredService<IJwksService>();
         Assert.IsType<HttpJwksService>(jwksService1);
