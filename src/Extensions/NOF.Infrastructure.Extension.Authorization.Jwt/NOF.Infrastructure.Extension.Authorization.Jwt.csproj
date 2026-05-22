@@ -7,8 +7,6 @@
 
     <!-- AOT Compatibility -->
     <IsAotCompatible>true</IsAotCompatible>
-    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
-    <NoWarn>$(NoWarn);IL2026;IL3050</NoWarn>
 
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Extension.Authorization.Jwt</PackageId>

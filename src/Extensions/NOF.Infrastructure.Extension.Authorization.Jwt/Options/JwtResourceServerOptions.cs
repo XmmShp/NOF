@@ -8,7 +8,7 @@ public class JwtResourceServerOptions
     /// <summary>
     /// Gets or sets the accepted JWT token sources.
     /// </summary>
-    public List<JwtResourceServerTokenSourceOptions> Sources { get; set; } = [];
+    public List<JwtResourceServerTokenSourceOptions> Sources { get; set; } = [new JwtResourceServerTokenSourceOptions()];
 
     /// <summary>
     /// Gets or sets the minimum interval between two JWKS refresh attempts.
