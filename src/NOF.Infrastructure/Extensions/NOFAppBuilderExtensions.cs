@@ -32,6 +32,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
+            builder.Services.TryAddScoped<RpcServerInvocationResolver>();
             builder.Environment.BindConfiguration(builder.Configuration);
 
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();

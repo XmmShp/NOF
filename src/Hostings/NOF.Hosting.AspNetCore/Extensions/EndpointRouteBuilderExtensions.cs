@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Routing;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -106,10 +105,13 @@ public static partial class NOFHostingAspNetCoreExtensions
     private static Delegate CreateQueryHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<object?> Handler([AsParameters] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        async Task<object?> Handler(
+            [AsParameters] TRequest request,
+            HttpContext httpContext,
+            [FromServices] HttpRequestInboundAdapter adapter,
+            CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(services);
-            return await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
 
         return Handler;
@@ -118,10 +120,13 @@ public static partial class NOFHostingAspNetCoreExtensions
     private static Delegate CreateBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<object?> Handler([FromBody] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        async Task<object?> Handler(
+            [FromBody] TRequest request,
+            HttpContext httpContext,
+            [FromServices] HttpRequestInboundAdapter adapter,
+            CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(services);
-            return await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
 
         return Handler;
@@ -130,10 +135,13 @@ public static partial class NOFHostingAspNetCoreExtensions
     private static Delegate CreateStreamQueryHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest, TItem>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler([AsParameters] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+            [AsParameters] TRequest request,
+            HttpContext httpContext,
+            [FromServices] HttpRequestInboundAdapter adapter,
+            CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(services);
-            var response = await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
             return CreateStreamingResult<TItem>(response);
         }
 
@@ -143,10 +151,13 @@ public static partial class NOFHostingAspNetCoreExtensions
     private static Delegate CreateStreamBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest, TItem>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler([FromBody] TRequest request, [FromServices] IServiceProvider services, CancellationToken cancellationToken)
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+            [FromBody] TRequest request,
+            HttpContext httpContext,
+            [FromServices] HttpRequestInboundAdapter adapter,
+            CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(services);
-            var response = await RpcServerInvoker.InvokeAsync<TService>(services, operationName, request!, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
             return CreateStreamingResult<TItem>(response);
         }
 

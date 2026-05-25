@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
@@ -18,20 +17,8 @@ public static class RpcServerInvoker
         ArgumentNullException.ThrowIfNull(rootServiceProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
         ArgumentNullException.ThrowIfNull(request);
-
-        var rpcServerRegistry = rootServiceProvider.GetRequiredService<RpcServerRegistry>();
-        if (!rpcServerRegistry.TryGetImplementationType(typeof(TRpcService), out var serverType))
-        {
-            throw new InvalidOperationException($"RPC server is not registered for '{typeof(TRpcService).FullName}'.");
-        }
-
-        var server = rootServiceProvider.GetRequiredService(serverType) as RpcServer
-            ?? throw new InvalidOperationException($"Resolved RPC server '{serverType.FullName}' does not inherit RpcServer.");
-
-        if (!server.TryGetHandlerMapping(operationName, out var handlerMapping))
-        {
-            throw new InvalidOperationException($"RPC handler mapping is missing for '{typeof(TRpcService).FullName}.{operationName}'.");
-        }
+        var invocationResolver = rootServiceProvider.GetRequiredService<RpcServerInvocationResolver>();
+        var resolution = invocationResolver.Resolve<TRpcService>(operationName);
 
         var outboundPipeline = rootServiceProvider.GetRequiredService<RequestOutboundPipelineExecutor>();
         var outboundContext = new RequestOutboundContext
@@ -46,7 +33,7 @@ public static class RpcServerInvoker
             var inboundPipeline = rootServiceProvider.GetRequiredService<RequestInboundPipelineExecutor>();
             outboundContext.Response = await inboundPipeline.ExecuteAsync(
                 request,
-                handlerMapping.HandlerType,
+                resolution.HandlerMapping.HandlerType,
                 typeof(TRpcService),
                 operationName,
                 outboundContext.Headers,

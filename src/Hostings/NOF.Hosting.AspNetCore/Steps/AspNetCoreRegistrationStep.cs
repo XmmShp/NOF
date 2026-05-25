@@ -24,6 +24,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<HttpRequestInboundAdapter>();
         builder.Services.AddOptions<HttpHeaderOutboundOptions>();
 
         builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
