@@ -9,16 +9,22 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\..\src\NOF.Abstraction\NOF.Abstraction.csproj" />

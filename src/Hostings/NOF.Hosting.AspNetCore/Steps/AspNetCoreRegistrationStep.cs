@@ -35,6 +35,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
                     && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
             ));
 
+        builder.AddInitializationStep(new RpcHttpEndpointResultWrappingInitializationStep());
         builder.AddInitializationStep(new HealthCheckInitializationStep());
 
         return ValueTask.CompletedTask;
@@ -51,6 +52,19 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
                 {
                     Predicate = r => r.Tags.Contains(Tag)
                 });
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private class RpcHttpEndpointResultWrappingInitializationStep : IBusinessLogicInitializationStep
+    {
+        public Task ExecuteAsync(IHost app)
+        {
+            if (app is IApplicationBuilder actualApp)
+            {
+                actualApp.UseMiddleware<NofRpcHttpResultWrappingMiddleware>();
             }
 
             return Task.CompletedTask;

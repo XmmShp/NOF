@@ -31,7 +31,6 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         var builder = new NOFWebApplicationBuilder(args, Assembly.GetCallingAssembly());
         builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
-        builder.Services.AddRequestOutboundMiddleware<HttpHeaderOutboundMiddleware>();
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
             var nof = JsonSerializerOptions.NOF;

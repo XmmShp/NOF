@@ -61,6 +61,7 @@ public static partial class NOFHostingAspNetCoreExtensions
                         _ => throw new InvalidOperationException($"Unsupported HTTP verb '{verb}'.")
                     };
 
+                    builder.WithMetadata(NofRpcHttpEndpointMetadata.Instance);
                     ApplyDocumentation(builder, method);
                     if (isStream)
                     {

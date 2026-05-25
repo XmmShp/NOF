@@ -1,0 +1,110 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
+using NOF.Application;
+using NOF.Contract;
+using NOF.Infrastructure;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using Xunit;
+
+namespace NOF.Hosting.AspNetCore.Tests;
+
+public sealed class NofRpcHttpResultWrappingMiddlewareTests
+{
+    [Fact]
+    public async Task RpcHttpEndpoint_WhenModelBindingFails_WrapsNon200ResponseAsNofResult()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.PostAsync(
+            "/rpc/CreateUser",
+            new StringContent("""{"age":"invalid"}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<Result<CreateUserResponse>>();
+        Assert.NotNull(result);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("400", result.ErrorCode);
+        Assert.False(string.IsNullOrWhiteSpace(result.Message));
+    }
+
+    [Fact]
+    public async Task UserDefinedEndpoint_WhenModelBindingFails_IsNotWrapped()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.PostAsync(
+            "/custom",
+            new StringContent("""{"age":"invalid"}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private static async Task<WebApplication> CreateAppAsync()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+
+        builder.Services.AddRouting();
+        builder.Services.AddScoped<ITransparentInfos, TransparentInfos>();
+        builder.Services.AddSingleton(new RequestInboundPipelineTypes());
+        builder.Services.AddSingleton<RequestInboundPipelineExecutor>();
+        builder.Services.AddScoped<RpcServerInvocationResolver>();
+        builder.Services.AddScoped<HttpRequestInboundAdapter>();
+        builder.Services.AddOptions<HttpHeaderOutboundOptions>();
+
+        builder.Services.AddSingleton<ValidationRpcServer>();
+        builder.Services.AddTransient<CreateUserHandler>();
+
+        var registry = new Registry();
+        registry.RpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
+        builder.Services.AddSingleton(registry);
+        builder.Services.AddSingleton(registry.RpcServerRegistry);
+
+        var app = builder.Build();
+        app.UseMiddleware<NofRpcHttpResultWrappingMiddleware>();
+        app.MapHttpEndpoint<ValidationRpcServer>("/rpc");
+        app.MapPost("/custom", ([FromBody] CreateUserRequest request) => Results.Ok(Result.Success(new CreateUserResponse(request.Age))));
+        await app.StartAsync();
+        return app;
+    }
+
+    public sealed class CreateUserRequest
+    {
+        public int Age { get; set; }
+    }
+
+    public sealed record CreateUserResponse(int Age);
+
+    public partial interface IValidationRpcService : IRpcService
+    {
+        [HttpEndpoint(HttpVerb.Post, "/CreateUser")]
+        Result<CreateUserResponse> CreateUser(CreateUserRequest request);
+    }
+
+    public sealed class ValidationRpcServer : RpcServer<IValidationRpcService>, IRpcServer
+    {
+        public static IReadOnlyDictionary<string, RpcHandlerMapping> HandlerMappings { get; } =
+            new Dictionary<string, RpcHandlerMapping>
+            {
+                [nameof(IValidationRpcService.CreateUser)] =
+                    new(typeof(CreateUserHandler), typeof(CreateUserRequest), typeof(Result<CreateUserResponse>))
+            };
+
+        protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
+    }
+
+    public sealed class CreateUserHandler : RpcHandler<CreateUserRequest, Result<CreateUserResponse>>
+    {
+        public override Task<Result<CreateUserResponse>> HandleAsync(CreateUserRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new CreateUserResponse(request.Age)));
+    }
+}
