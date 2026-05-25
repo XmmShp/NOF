@@ -212,7 +212,7 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("text/event-stream", code);
         Assert.Contains("HttpCompletionOption.ResponseHeadersRead", code);
         Assert.Contains("SseResponseReader.ReadAsync<global::MyApp.StreamEvent>", code);
-        Assert.Contains("StreamingResult.Success<global::MyApp.StreamEvent>(stream)", code);
+        Assert.Contains("Result.Stream<global::MyApp.StreamEvent>(stream)", code);
         Assert.Contains("StreamingResult.From<global::MyApp.StreamEvent>(apiResponse!)", code);
     }
 

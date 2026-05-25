@@ -3,6 +3,16 @@ using System.Text.Json.Serialization;
 
 namespace NOF.Contract;
 
+internal static class ResultExtra
+{
+    public static Dictionary<string, string> Create(IDictionary<string, string>? extra)
+    {
+        return extra is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(extra);
+    }
+}
+
 /// <summary>
 /// Marker interface for result types that represent the outcome of an operation,
 /// either success or failure.
@@ -19,9 +29,9 @@ public interface IResult
     string Message { get; }
 
     /// <summary>
-    /// Additional metadata to accompany the result. Optional and may be null.
+    /// Additional metadata to accompany the result.
     /// </summary>
-    IDictionary<string, string>? Extra { get; }
+    IDictionary<string, string> Extra { get; }
 }
 
 /// <summary>
@@ -37,7 +47,7 @@ public record Result : IResult
         IsSuccess = isSuccess;
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
-        Extra = extra;
+        Extra = ResultExtra.Create(extra);
     }
 
     /// <summary>
@@ -58,9 +68,9 @@ public record Result : IResult
     public string Message { get; }
 
     /// <summary>
-    /// Additional metadata to accompany the result. Optional and may be null.
+    /// Additional metadata to accompany the result.
     /// </summary>
-    public IDictionary<string, string>? Extra { get; }
+    public IDictionary<string, string> Extra { get; }
 
     #region Static Helpers
 
@@ -71,7 +81,7 @@ public record Result : IResult
     /// <param name="result">The failure result to convert.</param>
     public static implicit operator Result(FailResult result)
     {
-        return new Result(false, result.ErrorCode, result.Message);
+        return new Result(false, result.ErrorCode, result.Message, result.Extra);
     }
 
     /// <summary>
@@ -103,6 +113,15 @@ public record Result : IResult
     public static Result<T> Success<T>(T value, IDictionary<string, string>? extra = null)
     {
         return new Result<T>(true, string.Empty, string.Empty, value, extra);
+    }
+
+    /// <summary>
+    /// Creates a successful <see cref="StreamingResult{T}"/> containing the specified async stream.
+    /// </summary>
+    public static StreamingResult<T> Stream<T>(IAsyncEnumerable<T> value, IDictionary<string, string>? extra = null)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return new StreamingResult<T>(true, string.Empty, string.Empty, value, extra);
     }
 
     /// <summary>
@@ -189,7 +208,7 @@ public record FailResult : IResult
     {
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
-        Extra = extra;
+        Extra = ResultExtra.Create(extra);
     }
 
     /// <summary>
@@ -208,9 +227,9 @@ public record FailResult : IResult
     public bool IsSuccess => false;
 
     /// <summary>
-    /// Additional metadata to accompany the result. Optional and may be null.
+    /// Additional metadata to accompany the result.
     /// </summary>
-    public IDictionary<string, string>? Extra { get; }
+    public IDictionary<string, string> Extra { get; }
 }
 
 /// <summary>
@@ -228,7 +247,7 @@ public record Result<T> : IResult
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
         Value = value;
-        Extra = extra;
+        Extra = ResultExtra.Create(extra);
     }
 
     /// <summary>
@@ -257,9 +276,9 @@ public record Result<T> : IResult
     public T? Value { get; }
 
     /// <summary>
-    /// Additional metadata to accompany the result. Optional and may be null.
+    /// Additional metadata to accompany the result.
     /// </summary>
-    public IDictionary<string, string>? Extra { get; }
+    public IDictionary<string, string> Extra { get; }
 
     /// <summary>
     /// Defines an implicit conversion from <see cref="FailResult"/> to <see cref="Result{T}"/>.
@@ -324,5 +343,46 @@ public record Result<T> : IResult
         {
             onFailure(ErrorCode, Message);
         }
+    }
+}
+
+/// <summary>
+/// Represents the outcome of a streaming RPC operation.
+/// </summary>
+public sealed record StreamingResult<T> : IResult
+{
+    internal StreamingResult(bool isSuccess, string? errorCode, string? message, IAsyncEnumerable<T>? value, IDictionary<string, string>? extra = null)
+    {
+        IsSuccess = isSuccess;
+        ErrorCode = errorCode ?? string.Empty;
+        Message = message ?? string.Empty;
+        Value = value;
+        Extra = ResultExtra.Create(extra);
+    }
+
+    [MemberNotNullWhen(true, nameof(Value))]
+    public bool IsSuccess { get; }
+
+    public string ErrorCode { get; }
+
+    public string Message { get; }
+
+    public IAsyncEnumerable<T>? Value { get; }
+
+    public IDictionary<string, string> Extra { get; }
+
+    public static implicit operator StreamingResult<T>(FailResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return new StreamingResult<T>(false, result.ErrorCode, result.Message, null, result.Extra);
+    }
+}
+
+public static class StreamingResult
+{
+    public static StreamingResult<T> From<T>(IResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result is FailResult fail ? fail : (StreamingResult<T>)result;
     }
 }

@@ -285,7 +285,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
             sb.AppendLine("                if (string.Equals(contentType, \"text/event-stream\", global::System.StringComparison.OrdinalIgnoreCase))");
             sb.AppendLine("                {");
             sb.AppendLine($"                    var stream = global::NOF.Hosting.SseResponseReader.ReadAsync<{streamItemType}>(response, GetJsonTypeInfo<{streamItemType}>(), ct);");
-            sb.AppendLine($"                    result = global::NOF.Contract.StreamingResult.Success<{streamItemType}>(stream);");
+            sb.AppendLine($"                    result = global::NOF.Contract.Result.Stream<{streamItemType}>(stream);");
             sb.AppendLine("                }");
             sb.AppendLine("                else");
             sb.AppendLine("                {");

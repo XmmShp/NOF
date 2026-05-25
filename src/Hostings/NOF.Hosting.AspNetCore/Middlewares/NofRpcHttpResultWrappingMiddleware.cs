@@ -91,20 +91,13 @@ public sealed class NofRpcHttpResultWrappingMiddleware(RequestDelegate next)
             writer.WriteString("errorCode", result.ErrorCode);
             writer.WriteString("message", result.Message);
             writer.WritePropertyName("extra");
-            if (result.Extra is null)
+            writer.WriteStartObject();
+            foreach (var pair in result.Extra)
             {
-                writer.WriteNullValue();
+                writer.WriteString(pair.Key, pair.Value);
             }
-            else
-            {
-                writer.WriteStartObject();
-                foreach (var pair in result.Extra)
-                {
-                    writer.WriteString(pair.Key, pair.Value);
-                }
 
-                writer.WriteEndObject();
-            }
+            writer.WriteEndObject();
 
             writer.WriteEndObject();
         }

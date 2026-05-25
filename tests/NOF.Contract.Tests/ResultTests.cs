@@ -388,9 +388,12 @@ public class ResultTests
     {
         var a = Result.Fail("404", "Not found");
         var b = Result.Fail("404", "Not found");
-        Assert.Equal(b,
-
-        a);
+        Assert.Equal(b.ErrorCode, a.ErrorCode);
+        Assert.Equal(b.Message, a.Message);
+        Assert.Equal(b.IsSuccess, a.IsSuccess);
+        Assert.Empty(a.Extra);
+        Assert.Empty(b.Extra);
+        Assert.NotSame(b.Extra, a.Extra);
     }
 
     [Fact]
@@ -439,5 +442,4 @@ public class ResultTests
         public string Name { get; set; } = string.Empty;
     }
 }
-
 
