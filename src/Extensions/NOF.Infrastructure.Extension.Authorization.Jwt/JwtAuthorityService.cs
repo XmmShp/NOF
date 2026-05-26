@@ -26,63 +26,58 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
     public override async Task<Result<GenerateJwtTokenResponse>> HandleAsync(GenerateJwtTokenRequest request, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        var refreshTokenId = Guid.NewGuid().ToString("N");
-
-        var accessClaims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, request.UserId),
-            new(ClaimTypes.TenantId, request.TenantId)
-        };
-
-        if (request.Permissions is { Length: > 0 })
-        {
-            accessClaims.AddRange(request.Permissions.Select(permission => new Claim(ClaimTypes.Permission, permission)));
-        }
-
-        if (request.CustomClaims is not null)
-        {
-            accessClaims.AddRange(request.CustomClaims.Select(pair => new Claim(pair.Key, pair.Value)));
-        }
+        var accessClaims = CreateClaims(request.AccessClaims);
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var signingKey = (await _signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
+        var accessTokenExpiresAtUtc = now.Add(request.AccessTokenExpiration);
 
         var accessToken = tokenHandler.WriteToken(new JwtSecurityToken(
             issuer: _options.Issuer,
             audience: request.Audience,
             claims: accessClaims,
             notBefore: now,
-            expires: now.Add(request.AccessTokenExpiration),
+            expires: accessTokenExpiresAtUtc,
             signingCredentials: signingCredentials));
 
-        var refreshClaims = new[]
+        IssuedJwtRefreshToken? refreshToken = null;
+        if (request.RefreshToken is not null)
         {
-            new Claim(ClaimTypes.JwtId, refreshTokenId),
-            new Claim(ClaimTypes.NameIdentifier, request.UserId),
-            new Claim(ClaimTypes.TenantId, request.TenantId)
-        };
+            var refreshClaims = CreateClaims(request.RefreshToken.Claims);
+            refreshClaims.RemoveAll(claim => claim.Type == ClaimTypes.JwtId);
+            refreshClaims.Insert(0, new Claim(ClaimTypes.JwtId, Guid.NewGuid().ToString("N")));
 
-        var refreshToken = tokenHandler.WriteToken(new JwtSecurityToken(
-            issuer: _options.Issuer,
-            audience: request.Audience,
-            claims: refreshClaims,
-            notBefore: now,
-            expires: now.Add(request.RefreshTokenExpiration),
-            signingCredentials: signingCredentials));
-
-        var tokenPair = new TokenPair
-        {
-            AccessToken = accessToken,
-            RefreshToken = refreshToken,
-            AccessTokenExpiresAtUtc = now.Add(request.AccessTokenExpiration),
-            RefreshTokenExpiresAtUtc = now.Add(request.RefreshTokenExpiration)
-        };
+            var refreshTokenExpiresAtUtc = now.Add(request.RefreshToken.Expiration);
+            var refreshTokenValue = tokenHandler.WriteToken(new JwtSecurityToken(
+                issuer: _options.Issuer,
+                audience: request.Audience,
+                claims: refreshClaims,
+                notBefore: now,
+                expires: refreshTokenExpiresAtUtc,
+                signingCredentials: signingCredentials));
+            refreshToken = new IssuedJwtRefreshToken
+            {
+                Token = refreshTokenValue,
+                ExpiresAtUtc = refreshTokenExpiresAtUtc
+            };
+        }
 
         return Result.Success(new GenerateJwtTokenResponse
         {
-            TokenPair = tokenPair
+            AccessToken = accessToken,
+            AccessTokenExpiresAtUtc = accessTokenExpiresAtUtc,
+            RefreshToken = refreshToken
         });
+    }
+
+    private static List<Claim> CreateClaims(IEnumerable<KeyValuePair<string, string>>? claims)
+    {
+        return claims?
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Key))
+            .Select(static claim => new Claim(claim.Key, claim.Value))
+            .ToList()
+            ?? [];
     }
 }
 
@@ -120,10 +115,8 @@ public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.Validat
 
             var principal = tokenHandler.ValidateToken(request.RefreshToken, validationParameters, out _);
             var tokenId = principal.FindFirst(ClaimTypes.JwtId)?.Value;
-            var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var tenantId = principal.FindFirst(ClaimTypes.TenantId)?.Value;
 
-            if (string.IsNullOrWhiteSpace(tokenId) || string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(tenantId))
+            if (string.IsNullOrWhiteSpace(tokenId))
             {
                 return Result.Fail("400", "Invalid refresh token claims.");
             }
@@ -136,8 +129,9 @@ public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.Validat
             return Result.Success(new ValidateJwtRefreshTokenResponse
             {
                 TokenId = tokenId,
-                UserId = userId,
-                TenantId = tenantId
+                Claims = principal.Claims
+                    .Select(static claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                    .ToArray()
             });
         }
         catch (Exception ex)

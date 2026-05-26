@@ -1,4 +1,5 @@
 @page "/jwt-demo"
+@using System.Security.Claims
 @using NOF.Contract
 @using NOF.Contract.Extension.Authorization.Jwt
 @using Result = NOF.Contract.Result
@@ -39,119 +40,121 @@
 <Row Gutter="16">
     <!-- 令牌生成 -->
     <Col Span="12">
-        <Card Title="🔑 Generate Token" Class="jwt-section">
-            <Form Model="@_tokenRequest" Layout="@FormLayout.Vertical" OnFinish="@GenerateToken" TModel="TokenRequestModel">
-                <FormItem Label="User ID">
-                    <Input @bind-Value="_tokenRequest.UserId" Placeholder="Enter user ID" />
-                </FormItem>
-                <FormItem Label="Tenant ID">
-                    <Input @bind-Value="_tokenRequest.TenantId" Placeholder="Enter tenant ID" />
-                </FormItem>
-                <FormItem Label="Audience">
-                    <Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
-                </FormItem>
-                <FormItem Label="Permissions">
-                    <Input @bind-Value="_tokenRequest.PermissionsInput" Placeholder="e.g., read,write,delete" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@_isGenerating" Block>
-                        Generate Token
-                    </Button>
-                </FormItem>
-            </Form>
+    <Card Title="🔑 Generate Token" Class="jwt-section">
+        <Form Model="@_tokenRequest" Layout="@FormLayout.Vertical" OnFinish="@GenerateToken" TModel="TokenRequestModel">
+            <FormItem Label="User ID">
+                <Input @bind-Value="_tokenRequest.UserId" Placeholder="Enter user ID" />
+            </FormItem>
+            <FormItem Label="Tenant ID">
+                <Input @bind-Value="_tokenRequest.TenantId" Placeholder="Enter tenant ID" />
+            </FormItem>
+            <FormItem Label="Audience">
+                <Input @bind-Value="_tokenRequest.Audience" Placeholder="Enter audience" />
+            </FormItem>
+            <FormItem Label="Permissions">
+                <Input @bind-Value="_tokenRequest.PermissionsInput" Placeholder="e.g., read,write,delete" />
+            </FormItem>
+            <FormItem>
+                <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@_isGenerating" Block>
+                    Generate Token
+                </Button>
+            </FormItem>
+        </Form>
 
-            @if (_tokenResult != null)
-            {
-                <Card Class="result-card" Size="@CardSize.Small">
-                    <TitleTemplate>
-                        <Icon Type="check-circle" Theme="IconThemeType.Outline" />
-                        <Text Strong>Token Pair Generated</Text>
-                    </TitleTemplate>
-                    <ChildContent>
-                        <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
-                            <DescriptionsItem Title="Access Token">
-                                <div class="token-display">@_tokenResult.TokenPair.AccessToken</div>
-                                <Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")"
-                                        OnClick="() => CopyToClipboard(_tokenResult.TokenPair.AccessToken)">
-                                    Copy
-                                </Button>
-                            </DescriptionsItem>
+        @if (_tokenResult != null)
+        {
+            <Card Class="result-card" Size="@CardSize.Small">
+                <TitleTemplate>
+                    <Icon Type="check-circle" Theme="IconThemeType.Outline" />
+                    <Text Strong>Token Generated</Text>
+                </TitleTemplate>
+                <ChildContent>
+                    <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
+                        <DescriptionsItem Title="Access Token">
+                            <div class="token-display">@_tokenResult.AccessToken</div>
+                            <Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")"
+                                    OnClick="() => CopyToClipboard(_tokenResult.AccessToken)">
+                                Copy
+                            </Button>
+                        </DescriptionsItem>
+                        <DescriptionsItem Title="Access Token Expires">
+                            <Tag Color="TagColor.Blue">@_tokenResult.AccessTokenExpiresAtUtc.ToString("yyyy-MM-dd HH:mm:ss")
+                            </Tag>
+                        </DescriptionsItem>
+                        @if (_tokenResult.RefreshToken is not null)
+                        {
                             <DescriptionsItem Title="Refresh Token">
-                                <div class="token-display">@_tokenResult.TokenPair.RefreshToken</div>
+                                <div class="token-display">@_tokenResult.RefreshToken.Token</div>
                                 <Button Size="@ButtonSize.Small" Type="@ButtonType.Link" Icon="@("copy")"
-                                        OnClick="() => CopyToClipboard(_tokenResult.TokenPair.RefreshToken)">
+                                        OnClick="() => CopyToClipboard(_tokenResult.RefreshToken.Token)">
                                     Copy
                                 </Button>
-                            </DescriptionsItem>
-                            <DescriptionsItem Title="Access Token Expires">
-                                <Tag Color="TagColor.Blue">@_tokenResult.TokenPair.AccessTokenExpiresAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
                             </DescriptionsItem>
                             <DescriptionsItem Title="Refresh Token Expires">
-                                <Tag Color="TagColor.Green">@_tokenResult.TokenPair.RefreshTokenExpiresAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
+                                <Tag Color="TagColor.Green">@_tokenResult.RefreshToken.ExpiresAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</Tag>
                             </DescriptionsItem>
-                        </Descriptions>
-                    </ChildContent>
-                </Card>
-            }
-        </Card>
-    </Col>
+                        }
+                    </Descriptions>
+                </ChildContent>
+            </Card>
+        }
+    </Card>
+</Col>
 
-    <!-- 令牌验证 -->
-    <Col Span="12">
-        <Card Title="�?Validate Token" Class="jwt-section">
-            <Form Layout="@FormLayout.Vertical" TModel="object">
-                <FormItem Label="Refresh Token">
-                    <TextArea @bind-Value="_refreshTokenToValidate" Rows="4" Placeholder="Paste refresh token here" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Default" OnClick="ValidateRefreshToken" Loading="@_isValidating" Block>
-                        Validate Token
-                    </Button>
-                </FormItem>
-            </Form>
+<!-- 令牌验证 -->
+<Col Span="12">
+<Card Title="�?Validate Token" Class="jwt-section">
+    <Form Layout="@FormLayout.Vertical" TModel="object">
+        <FormItem Label="Refresh Token">
+            <TextArea @bind-Value="_refreshTokenToValidate" Rows="4" Placeholder="Paste refresh token here" />
+        </FormItem>
+        <FormItem>
+            <Button Type="@ButtonType.Default" OnClick="ValidateRefreshToken" Loading="@_isValidating" Block>
+                Validate Token
+            </Button>
+        </FormItem>
+    </Form>
 
-            @if (_validationResult != null)
-            {
-                <Alert Class="result-card" Type="@((_validationResult.IsSuccess ? AlertType.Success : AlertType.Error))"
-                       Message="@(_validationResult.IsSuccess ? "Token Valid!" : "Token Invalid")"
-                       Description="@(_validationResult.IsSuccess ? 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         $"Token ID: {_validationResult.Value.TokenId}\nUser ID: {_validationResult.Value.UserId}\nTenant ID: {_validationResult.Value.TenantId}" :
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         _validationResult.Message)"
-                       ShowIcon="true" />
-            }
-        </Card>
-    </Col>
+    @if (_validationResult != null)
+    {
+        <Alert Class="result-card" Type="@((_validationResult.IsSuccess ? AlertType.Success : AlertType.Error))"
+               Message="@(_validationResult.IsSuccess ? "Token Valid!" : "Token Invalid")"
+               Description="@(_validationResult.IsSuccess ? BuildValidationDescription(_validationResult.Value) : _validationResult.Message)"
+               ShowIcon="true" />
+    }
+</Card>
+</Col>
 </Row>
 
 <Row Gutter="16">
     <!-- 令牌撤销 -->
     <Col Span="12">
-        <Card Title="🚫 Revoke Token" Class="jwt-section">
-            <Form Layout="@FormLayout.Vertical" TModel="object">
-                <FormItem Label="Token ID">
-                    <Input @bind-Value="_tokenIdToRevoke" Placeholder="Token ID from validation result"
-                           Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" />
-                </FormItem>
-                <FormItem Label="Expiration (hours)">
-                    <AntDesign.InputNumber @bind-Value="_revokeExpirationHours" Min="1" Max="168" Style="width: 100%" />
-                </FormItem>
-                <FormItem>
-                    <Button Type="@ButtonType.Default" OnClick="RevokeRefreshToken" Loading="@_isRevoking"
-                            Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" Block>
-                        Revoke Token
-                    </Button>
-                </FormItem>
-            </Form>
+    <Card Title="🚫 Revoke Token" Class="jwt-section">
+        <Form Layout="@FormLayout.Vertical" TModel="object">
+            <FormItem Label="Token ID">
+                <Input @bind-Value="_tokenIdToRevoke" Placeholder="Token ID from validation result"
+                       Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" />
+            </FormItem>
+            <FormItem Label="Expiration (hours)">
+                <AntDesign.InputNumber @bind-Value="_revokeExpirationHours" Min="1" Max="168" Style="width: 100%" />
+            </FormItem>
+            <FormItem>
+                <Button Type="@ButtonType.Default" OnClick="RevokeRefreshToken" Loading="@_isRevoking"
+                        Disabled="@string.IsNullOrEmpty(_tokenIdToRevoke)" Block>
+                    Revoke Token
+                </Button>
+            </FormItem>
+        </Form>
 
-            @if (_revokeResult != null)
-            {
-                <Alert Class="result-card" Type="@((_revokeResult.IsSuccess ? AlertType.Success : AlertType.Error))"
-                       Message="@(_revokeResult.IsSuccess ? "Token Revoked Successfully!" : "Revocation Failed")"
-                       Description="@(_revokeResult.IsSuccess ? "The refresh token has been revoked and can no longer be used." : _revokeResult.Message)"
-                       ShowIcon="true" />
-            }
-        </Card>
-    </Col>
+        @if (_revokeResult != null)
+        {
+            <Alert Class="result-card" Type="@((_revokeResult.IsSuccess ? AlertType.Success : AlertType.Error))"
+                   Message="@(_revokeResult.IsSuccess ? "Token Revoked Successfully!" : "Revocation Failed")"
+                   Description="@(_revokeResult.IsSuccess ? "The refresh token has been revoked and can no longer be used." : _revokeResult.Message)"
+                   ShowIcon="true" />
+        }
+    </Card>
+</Col>
 
 </Row>
 
@@ -184,17 +187,20 @@
         try
         {
             var permissions = string.IsNullOrEmpty(_tokenRequest.PermissionsInput)
-                ? null
-                : _tokenRequest.PermissionsInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                ? []
+                : _tokenRequest.PermissionsInput
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             var request = new GenerateJwtTokenRequest
             {
-                UserId = _tokenRequest.UserId,
-                TenantId = _tokenRequest.TenantId,
                 Audience = _tokenRequest.Audience,
                 AccessTokenExpiration = TimeSpan.FromMinutes(30),
-                RefreshTokenExpiration = TimeSpan.FromDays(7),
-                Permissions = permissions
+                AccessClaims = BuildAccessClaims(permissions),
+                RefreshToken = new JwtRefreshTokenOptions
+                {
+                    Expiration = TimeSpan.FromDays(7),
+                    Claims = BuildRefreshClaims()
+                }
             };
             var result = await JwtService.GenerateJwtTokenAsync(request);
 
@@ -313,5 +319,40 @@
         {
             MessageService.Error($"Failed to copy: {ex.Message}");
         }
+    }
+
+    private KeyValuePair<string, string>[] BuildAccessClaims(IEnumerable<string> permissions)
+    {
+        var claims = new List<KeyValuePair<string, string>>
+        {
+            new(ClaimTypes.NameIdentifier, _tokenRequest.UserId),
+            new(ClaimTypes.TenantId, _tokenRequest.TenantId)
+        };
+
+        claims.AddRange(permissions.Select(permission => new KeyValuePair<string, string>(ClaimTypes.Permission, permission)));
+        return claims.ToArray();
+    }
+
+    private KeyValuePair<string, string>[] BuildRefreshClaims()
+    {
+        return
+        [
+            new(ClaimTypes.NameIdentifier, _tokenRequest.UserId),
+            new(ClaimTypes.TenantId, _tokenRequest.TenantId)
+        ];
+    }
+
+    private static string BuildValidationDescription(ValidateJwtRefreshTokenResponse response)
+    {
+        var userId = GetClaimValue(response.Claims, ClaimTypes.NameIdentifier);
+        var tenantId = GetClaimValue(response.Claims, ClaimTypes.TenantId);
+        var claims = string.Join('\n', response.Claims.Select(static claim => $"{claim.Key}: {claim.Value}"));
+
+        return $"Token ID: {response.TokenId}\nUser ID: {userId}\nTenant ID: {tenantId}\nClaims:\n{claims}";
+    }
+
+    private static string GetClaimValue(IEnumerable<KeyValuePair<string, string>> claims, string claimType)
+    {
+        return claims.FirstOrDefault(claim => claim.Key == claimType).Value ?? "(not found)";
     }
 }

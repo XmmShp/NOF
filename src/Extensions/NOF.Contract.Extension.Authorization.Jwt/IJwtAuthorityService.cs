@@ -8,12 +8,12 @@ namespace NOF.Contract.Extension.Authorization.Jwt;
 public interface IJwtAuthorityService : IRpcService
 {
     /// <summary>
-    /// Generates a new JWT access token and refresh token pair.
+    /// Generates new JWT tokens from caller-provided claims.
     /// </summary>
     /// <param name="request">The token generation request.</param>
-    /// <returns>The generated token pair.</returns>
-    [Summary("Issue JWT token pair")]
-    [Description("Issues a JWT access token and refresh token for the requested principal.")]
+    /// <returns>The generated tokens.</returns>
+    [Summary("Issue JWT tokens")]
+    [Description("Issues JWT access and optional refresh tokens from caller-provided claims.")]
     [Category("JWT Authority")]
     [HttpEndpoint(HttpVerb.Post, "connect/token")]
     Result<GenerateJwtTokenResponse> GenerateJwtToken(GenerateJwtTokenRequest request);
