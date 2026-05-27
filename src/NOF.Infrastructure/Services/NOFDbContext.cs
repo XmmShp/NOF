@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics.CodeAnalysis;
@@ -134,8 +135,16 @@ public class NOFDbContext : DbContext
             return;
         }
 
-        foreach (var entry in ChangeTracker.Entries()
-                     .Where(entry => entry.State == EntityState.Deleted))
+        var deletedEntries = ChangeTracker.Entries()
+            .Where(entry => entry.State == EntityState.Deleted)
+            .ToList();
+        if (deletedEntries.Count == 0)
+        {
+            return;
+        }
+
+        var softDeletedEntries = new HashSet<EntityEntry>();
+        foreach (var entry in deletedEntries)
         {
             if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUtcPropertyName) is null)
             {
@@ -145,6 +154,46 @@ public class NOFDbContext : DbContext
             entry.State = EntityState.Unchanged;
             entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).CurrentValue = DateTime.UtcNow;
             entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).IsModified = true;
+            softDeletedEntries.Add(entry);
+        }
+
+        if (softDeletedEntries.Count == 0)
+        {
+            return;
+        }
+
+        var preservedOwnedEntries = new HashSet<EntityEntry>();
+        foreach (var entry in softDeletedEntries)
+        {
+            PreserveOwnedGraph(entry, preservedOwnedEntries);
+        }
+
+        PreserveForeignKeysForSoftDeletedPrincipals(softDeletedEntries);
+
+        var pendingOwnedEntries = ChangeTracker.Entries()
+            .Where(entry => entry.Metadata.IsOwned()
+                && entry.State is EntityState.Deleted or EntityState.Modified)
+            .ToList();
+
+        var madeProgress = true;
+        while (madeProgress && pendingOwnedEntries.Count > 0)
+        {
+            madeProgress = false;
+
+            foreach (var entry in pendingOwnedEntries.ToList())
+            {
+                var ownerEntry = FindOwnershipPrincipalEntry(entry);
+                if (ownerEntry is null
+                    || (!softDeletedEntries.Contains(ownerEntry) && !preservedOwnedEntries.Contains(ownerEntry)))
+                {
+                    continue;
+                }
+
+                entry.State = EntityState.Unchanged;
+                preservedOwnedEntries.Add(entry);
+                pendingOwnedEntries.Remove(entry);
+                madeProgress = true;
+            }
         }
     }
 
@@ -217,6 +266,138 @@ public class NOFDbContext : DbContext
             {
                 throw new InvalidOperationException(
                     $"Tenant id '{NOFAbstractionConstants.Tenant.HostId}' is reserved for the host tenant and cannot be created or updated as a tenant record.");
+            }
+        }
+    }
+
+    private EntityEntry? FindOwnershipPrincipalEntry(EntityEntry entry)
+    {
+        var ownership = entry.Metadata.FindOwnership();
+        if (ownership is null)
+        {
+            return null;
+        }
+
+        foreach (var candidate in ChangeTracker.Entries()
+                     .Where(candidate => candidate.Metadata == ownership.PrincipalEntityType))
+        {
+            var matches = true;
+            for (var index = 0; index < ownership.Properties.Count; index++)
+            {
+                var dependentProperty = ownership.Properties[index];
+                var principalProperty = ownership.PrincipalKey.Properties[index];
+                var dependentValue = entry.Property(dependentProperty.Name).CurrentValue
+                    ?? entry.Property(dependentProperty.Name).OriginalValue;
+                var principalValue = candidate.Property(principalProperty.Name).CurrentValue
+                    ?? candidate.Property(principalProperty.Name).OriginalValue;
+                if (!Equals(dependentValue, principalValue))
+                {
+                    matches = false;
+                    break;
+                }
+            }
+
+            if (matches)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private void PreserveOwnedGraph(EntityEntry ownerEntry, HashSet<EntityEntry> preservedOwnedEntries)
+    {
+        foreach (var reference in ownerEntry.References)
+        {
+            if (reference.TargetEntry is null || !reference.TargetEntry.Metadata.IsOwned())
+            {
+                continue;
+            }
+
+            PreserveOwnedEntry(reference.TargetEntry, preservedOwnedEntries);
+        }
+
+        foreach (var collection in ownerEntry.Collections)
+        {
+            if (collection.CurrentValue is null)
+            {
+                continue;
+            }
+
+            foreach (var entity in collection.CurrentValue)
+            {
+                var entry = Entry(entity);
+                if (!entry.Metadata.IsOwned())
+                {
+                    continue;
+                }
+
+                PreserveOwnedEntry(entry, preservedOwnedEntries);
+            }
+        }
+    }
+
+    private void PreserveOwnedEntry(EntityEntry entry, HashSet<EntityEntry> preservedOwnedEntries)
+    {
+        if (!entry.Metadata.IsOwned())
+        {
+            return;
+        }
+
+        if (entry.State is EntityState.Deleted or EntityState.Modified)
+        {
+            entry.State = EntityState.Unchanged;
+        }
+
+        if (!preservedOwnedEntries.Add(entry))
+        {
+            return;
+        }
+
+        PreserveOwnedGraph(entry, preservedOwnedEntries);
+    }
+
+    private void PreserveForeignKeysForSoftDeletedPrincipals(HashSet<EntityEntry> softDeletedEntries)
+    {
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(entry => entry.State == EntityState.Modified && !entry.Metadata.IsOwned()))
+        {
+            foreach (var foreignKey in entry.Metadata.GetForeignKeys().Where(foreignKey => !foreignKey.IsOwnership))
+            {
+                var originalForeignKeyValues = foreignKey.Properties
+                    .Select(property => entry.Property(property.Name).OriginalValue)
+                    .ToArray();
+                var currentForeignKeyValues = foreignKey.Properties
+                    .Select(property => entry.Property(property.Name).CurrentValue)
+                    .ToArray();
+                if (originalForeignKeyValues.All(value => value is null)
+                    || originalForeignKeyValues.SequenceEqual(currentForeignKeyValues))
+                {
+                    continue;
+                }
+
+                var softDeletedPrincipal = softDeletedEntries.FirstOrDefault(candidate =>
+                    candidate.Metadata == foreignKey.PrincipalEntityType
+                    && foreignKey.PrincipalKey.Properties
+                        .Select(property => candidate.Property(property.Name).CurrentValue)
+                        .SequenceEqual(originalForeignKeyValues));
+                if (softDeletedPrincipal is null)
+                {
+                    continue;
+                }
+
+                foreach (var property in foreignKey.Properties)
+                {
+                    var propertyEntry = entry.Property(property.Name);
+                    propertyEntry.CurrentValue = propertyEntry.OriginalValue;
+                    propertyEntry.IsModified = false;
+                }
+
+                if (entry.Properties.All(property => !property.IsModified))
+                {
+                    entry.State = EntityState.Unchanged;
+                }
             }
         }
     }

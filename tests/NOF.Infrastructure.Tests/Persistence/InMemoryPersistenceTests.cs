@@ -431,6 +431,721 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task SoftDelete_ShouldPreserveOwnedRows_ForRequiredOwnsOneAndOwnsMany()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestOrderWithOwned>().Add(TestOrderWithOwned.Create(
+            12,
+            "owned-soft-delete",
+            "required-detail",
+            "item-a",
+            "item-b"));
+        await db.SaveChangesAsync();
+
+        var order = await db.Set<TestOrderWithOwned>()
+            .SingleAsync(e => e.Id == 12);
+
+        db.Remove(order);
+        await db.SaveChangesAsync();
+
+        Assert.Null(await db.Set<TestOrderWithOwned>().SingleOrDefaultAsync(e => e.Id == 12));
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var deletedOrder = await verifyDb.Set<TestOrderWithOwned>()
+            .IgnoreQueryFilters()
+            .Where(e => e.Id == 12)
+            .Select(e => new
+            {
+                DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
+                DetailCode = e.RequiredDetail.Code,
+                ItemNames = e.Items.OrderBy(i => i.Id).Select(i => i.Name).ToList()
+            })
+            .SingleAsync();
+
+        Assert.NotNull(deletedOrder.DeletedAtUtc);
+        Assert.Equal("required-detail", deletedOrder.DetailCode);
+        Assert.Equal(["item-a", "item-b"], deletedOrder.ItemNames);
+    }
+
+    [Fact]
+    public void SoftDelete_ShouldNotConfigureShadowDeleteColumn_ForOwnedEntityTypes()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var ownerType = db.Model.FindEntityType(typeof(TestOrderWithOwned));
+        var ownsOneType = db.Model.FindEntityType(typeof(TestRequiredOwnedDetail));
+        var ownsManyType = db.Model.FindEntityType(typeof(TestOwnedItem));
+
+        Assert.NotNull(ownerType);
+        Assert.NotNull(ownerType.FindProperty("__DeletedAtUtc"));
+
+        Assert.NotNull(ownsOneType);
+        Assert.True(ownsOneType.IsOwned());
+        Assert.Null(ownsOneType.FindProperty("__DeletedAtUtc"));
+
+        Assert.NotNull(ownsManyType);
+        Assert.True(ownsManyType.IsOwned());
+        Assert.Null(ownsManyType.FindProperty("__DeletedAtUtc"));
+    }
+
+    [Fact]
+    public async Task SoftDelete_ShouldPreserveMultiLevelOwnedRows_ForNestedOwnsOneAndOwnsMany()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestOrderWithNestedOwned>().Add(TestOrderWithNestedOwned.Create(
+            13,
+            "nested-owned-soft-delete",
+            "detail-code",
+            "detail-leaf",
+            ["detail-note-a", "detail-note-b"],
+            [
+                TestCompositeOwnedItem.Create("item-a", "snapshot-a", ["tag-a1", "tag-a2"]),
+                TestCompositeOwnedItem.Create("item-b", "snapshot-b", ["tag-b1"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var order = await db.Set<TestOrderWithNestedOwned>()
+            .SingleAsync(e => e.Id == 13);
+
+        db.Remove(order);
+        await db.SaveChangesAsync();
+
+        Assert.Null(await db.Set<TestOrderWithNestedOwned>().SingleOrDefaultAsync(e => e.Id == 13));
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var deletedOrder = await verifyDb.Set<TestOrderWithNestedOwned>()
+            .IgnoreQueryFilters()
+            .Where(e => e.Id == 13)
+            .Select(e => new
+            {
+                DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
+                DetailCode = e.RequiredDetail.Code,
+                DetailLeafCode = e.RequiredDetail.RequiredLeaf.Code,
+                DetailNotes = e.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
+                Items = e.Items
+                    .OrderBy(i => i.Id)
+                    .Select(i => new
+                    {
+                        i.Name,
+                        SnapshotCode = i.Snapshot.Code,
+                        Tags = i.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
+                    })
+                    .ToList()
+            })
+            .SingleAsync();
+
+        Assert.NotNull(deletedOrder.DeletedAtUtc);
+        Assert.Equal("detail-code", deletedOrder.DetailCode);
+        Assert.Equal("detail-leaf", deletedOrder.DetailLeafCode);
+        Assert.Equal(["detail-note-a", "detail-note-b"], deletedOrder.DetailNotes);
+        Assert.Equal(2, deletedOrder.Items.Count);
+        Assert.Equal("item-a", deletedOrder.Items[0].Name);
+        Assert.Equal("snapshot-a", deletedOrder.Items[0].SnapshotCode);
+        Assert.Equal(["tag-a1", "tag-a2"], deletedOrder.Items[0].Tags);
+        Assert.Equal("item-b", deletedOrder.Items[1].Name);
+        Assert.Equal("snapshot-b", deletedOrder.Items[1].SnapshotCode);
+        Assert.Equal(["tag-b1"], deletedOrder.Items[1].Tags);
+    }
+
+    [Fact]
+    public async Task Include_ShouldFilterSoftDeletedChildren_FromCollectionNavigation()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var parent = TestIncludeParent.Create(20, "parent", [
+            TestIncludeChild.Create(201, "child-active"),
+            TestIncludeChild.Create(202, "child-deleted")
+        ]);
+
+        db.Set<TestIncludeParent>().Add(parent);
+        await db.SaveChangesAsync();
+
+        var childToDelete = await db.Set<TestIncludeChild>()
+            .SingleAsync(c => c.Id == 202);
+        db.Remove(childToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var visibleParent = await verifyDb.Set<TestIncludeParent>()
+            .Include(p => p.Children)
+            .SingleAsync(p => p.Id == 20);
+
+        Assert.Single(visibleParent.Children);
+        Assert.Equal("child-active", visibleParent.Children[0].Name);
+
+        var allChildren = await verifyDb.Set<TestIncludeParent>()
+            .IgnoreQueryFilters()
+            .Include(p => p.Children)
+            .Where(p => p.Id == 20)
+            .SingleAsync();
+
+        Assert.Equal(["child-active", "child-deleted"], allChildren.Children.OrderBy(c => c.Id).Select(c => c.Name).ToList());
+    }
+
+    [Fact]
+    public async Task Include_ShouldPreserveForeignKey_WhenParentSoftDeleted()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var parent = TestIncludeParent.Create(21, "parent", [
+            TestIncludeChild.Create(211, "child")
+        ]);
+
+        db.Set<TestIncludeParent>().Add(parent);
+        await db.SaveChangesAsync();
+
+        var parentToDelete = await db.Set<TestIncludeParent>()
+            .SingleAsync(p => p.Id == 21);
+        db.Remove(parentToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var visibleChild = await verifyDb.Set<TestIncludeChild>()
+            .Include(c => c.Parent)
+            .SingleAsync(c => c.Id == 211);
+
+        var deletedParent = await verifyDb.Set<TestIncludeParent>()
+            .IgnoreQueryFilters()
+            .Where(p => p.Id == 21)
+            .Select(p => new
+            {
+                DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                p.Name
+            })
+            .SingleAsync();
+
+        Assert.Equal(21, visibleChild.ParentId);
+        Assert.Null(visibleChild.Parent);
+        Assert.NotNull(deletedParent.DeletedAtUtc);
+        Assert.Equal("parent", deletedParent.Name);
+    }
+
+    [Fact]
+    public async Task IncludeAndOwns_ShouldFilterSoftDeletedChildren_ButKeepActiveOwnedGraphs()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            30,
+            "parent-30",
+            "parent-detail-30",
+            ["parent-note-30-a", "parent-note-30-b"],
+            [
+                TestIncludeOwnedChild.Create(301, "child-active", "profile-active", "leaf-active", ["tag-active-a", "tag-active-b"]),
+                TestIncludeOwnedChild.Create(302, "child-deleted", "profile-deleted", "leaf-deleted", ["tag-deleted-a"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var childToDelete = await db.Set<TestIncludeOwnedChild>()
+            .SingleAsync(c => c.Id == 302);
+        db.Remove(childToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
+            .Include(p => p.Children)
+                .ThenInclude(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+            .Include(p => p.Children)
+                .ThenInclude(c => c.Tags)
+            .SingleAsync(p => p.Id == 30);
+
+        Assert.Equal("parent-detail-30", parent.RequiredDetail.Code);
+        Assert.Equal(["parent-note-30-a", "parent-note-30-b"], parent.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList());
+        Assert.Single(parent.Children);
+        Assert.Equal("child-active", parent.Children[0].Name);
+        Assert.Equal("profile-active", parent.Children[0].RequiredProfile.Code);
+        Assert.Equal("leaf-active", parent.Children[0].RequiredProfile.RequiredLeaf.Code);
+        Assert.Equal(["tag-active-a", "tag-active-b"], parent.Children[0].Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList());
+    }
+
+    [Fact]
+    public async Task IncludeAndOwns_IgnoreQueryFilters_ShouldReturnSoftDeletedChildrenWithOwnedGraphs()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            31,
+            "parent-31",
+            "parent-detail-31",
+            ["parent-note-31"],
+            [
+                TestIncludeOwnedChild.Create(311, "child-active", "profile-active", "leaf-active", ["tag-active"]),
+                TestIncludeOwnedChild.Create(312, "child-deleted", "profile-deleted", "leaf-deleted", ["tag-deleted-a", "tag-deleted-b"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var childToDelete = await db.Set<TestIncludeOwnedChild>()
+            .SingleAsync(c => c.Id == 312);
+        db.Remove(childToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
+            .IgnoreQueryFilters()
+            .Include(p => p.Children)
+                .ThenInclude(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+            .Include(p => p.Children)
+                .ThenInclude(c => c.Tags)
+            .SingleAsync(p => p.Id == 31);
+
+        Assert.Equal("parent-detail-31", parent.RequiredDetail.Code);
+        Assert.Equal(["parent-note-31"], parent.RequiredDetail.Notes.Select(n => n.Message).ToList());
+        Assert.Equal(["child-active", "child-deleted"], parent.Children.OrderBy(c => c.Id).Select(c => c.Name).ToList());
+        Assert.Equal("profile-deleted", parent.Children.Single(c => c.Id == 312).RequiredProfile.Code);
+        Assert.Equal("leaf-deleted", parent.Children.Single(c => c.Id == 312).RequiredProfile.RequiredLeaf.Code);
+        Assert.Equal(["tag-deleted-a", "tag-deleted-b"], parent.Children.Single(c => c.Id == 312).Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList());
+    }
+
+    [Fact]
+    public async Task IncludeAndOwns_WhenParentSoftDeleted_ShouldKeepChildOwnedGraphAndParentForeignKey()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            32,
+            "parent-32",
+            "parent-detail-32",
+            ["parent-note-32"],
+            [
+                TestIncludeOwnedChild.Create(321, "child-321", "profile-321", "leaf-321", ["tag-321-a", "tag-321-b"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
+            .SingleAsync(p => p.Id == 32);
+        db.Remove(parentToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var child = await verifyDb.Set<TestIncludeOwnedChild>()
+            .Include(c => c.Parent)
+            .Include(c => c.RequiredProfile)
+                .ThenInclude(p => p.RequiredLeaf)
+            .Include(c => c.Tags)
+            .SingleAsync(c => c.Id == 321);
+
+        var deletedParent = await verifyDb.Set<TestIncludeOwnedParent>()
+            .IgnoreQueryFilters()
+            .Where(p => p.Id == 32)
+            .Select(p => new
+            {
+                DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                DetailCode = p.RequiredDetail.Code,
+                Notes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList()
+            })
+            .SingleAsync();
+
+        Assert.Equal(32, child.ParentId);
+        Assert.Null(child.Parent);
+        Assert.Equal("profile-321", child.RequiredProfile.Code);
+        Assert.Equal("leaf-321", child.RequiredProfile.RequiredLeaf.Code);
+        Assert.Equal(["tag-321-a", "tag-321-b"], child.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList());
+        Assert.NotNull(deletedParent.DeletedAtUtc);
+        Assert.Equal("parent-detail-32", deletedParent.DetailCode);
+        Assert.Equal(["parent-note-32"], deletedParent.Notes);
+    }
+
+    [Fact]
+    public async Task IncludeAndOwns_IgnoreQueryFilters_ShouldRestoreGraphs_WhenParentAndChildAreSoftDeleted()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            33,
+            "parent-33",
+            "parent-detail-33",
+            ["parent-note-33-a", "parent-note-33-b"],
+            [
+                TestIncludeOwnedChild.Create(331, "child-331", "profile-331", "leaf-331", ["tag-331"]),
+                TestIncludeOwnedChild.Create(332, "child-332", "profile-332", "leaf-332", ["tag-332-a", "tag-332-b"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var childToDelete = await db.Set<TestIncludeOwnedChild>()
+            .SingleAsync(c => c.Id == 332);
+        db.Remove(childToDelete);
+        await db.SaveChangesAsync();
+
+        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
+            .SingleAsync(p => p.Id == 33);
+        db.Remove(parentToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Include(p => p.Children)
+                .ThenInclude(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+            .Include(p => p.Children)
+                .ThenInclude(c => c.Tags)
+            .SingleAsync(p => p.Id == 33);
+
+        Assert.Equal("parent-detail-33", parent.RequiredDetail.Code);
+        Assert.Equal(["parent-note-33-a", "parent-note-33-b"], parent.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList());
+        Assert.Equal(["child-331", "child-332"], parent.Children.OrderBy(c => c.Id).Select(c => c.Name).ToList());
+        Assert.Equal("profile-331", parent.Children.Single(c => c.Id == 331).RequiredProfile.Code);
+        Assert.Equal("leaf-331", parent.Children.Single(c => c.Id == 331).RequiredProfile.RequiredLeaf.Code);
+        Assert.Equal(["tag-331"], parent.Children.Single(c => c.Id == 331).Tags.Select(t => t.Name).ToList());
+        Assert.Equal("profile-332", parent.Children.Single(c => c.Id == 332).RequiredProfile.Code);
+        Assert.Equal("leaf-332", parent.Children.Single(c => c.Id == 332).RequiredProfile.RequiredLeaf.Code);
+        Assert.Equal(["tag-332-a", "tag-332-b"], parent.Children.Single(c => c.Id == 332).Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList());
+    }
+
+    [Fact]
+    public async Task ThenInclude_ShouldTraverseOrdinaryNavigationIntoOwnedGraphs()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            34,
+            "parent-34",
+            "parent-detail-34",
+            ["parent-note-34-a", "parent-note-34-b"],
+            [
+                TestIncludeOwnedChild.Create(341, "child-341", "profile-341", "leaf-341", ["tag-341"])
+            ]));
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var child = await verifyDb.Set<TestIncludeOwnedChild>()
+            .Include(c => c.Parent)
+                .ThenInclude(p => p!.RequiredDetail)
+                    .ThenInclude(d => d.Notes)
+            .Include(c => c.RequiredProfile)
+                .ThenInclude(p => p.RequiredLeaf)
+            .SingleAsync(c => c.Id == 341);
+
+        Assert.NotNull(child.Parent);
+        Assert.Equal("parent-34", child.Parent.Name);
+        Assert.Equal("parent-detail-34", child.Parent.RequiredDetail.Code);
+        Assert.Equal(["parent-note-34-a", "parent-note-34-b"], child.Parent.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList());
+        Assert.Equal("profile-341", child.RequiredProfile.Code);
+        Assert.Equal("leaf-341", child.RequiredProfile.RequiredLeaf.Code);
+    }
+
+    [Fact]
+    public async Task IncludeAndOwns_AsSplitQuery_ShouldRestoreSoftDeletedGraphs()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            35,
+            "parent-35",
+            "parent-detail-35",
+            ["parent-note-35"],
+            [
+                TestIncludeOwnedChild.Create(351, "child-351", "profile-351", "leaf-351", ["tag-351-a", "tag-351-b"]),
+                TestIncludeOwnedChild.Create(352, "child-352", "profile-352", "leaf-352", ["tag-352"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var childToDelete = await db.Set<TestIncludeOwnedChild>()
+            .SingleAsync(c => c.Id == 352);
+        db.Remove(childToDelete);
+
+        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
+            .SingleAsync(p => p.Id == 35);
+        db.Remove(parentToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
+            .IgnoreQueryFilters()
+            .AsSplitQuery()
+            .Include(p => p.Children)
+                .ThenInclude(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+            .Include(p => p.Children)
+                .ThenInclude(c => c.Tags)
+            .SingleAsync(p => p.Id == 35);
+
+        Assert.Equal("parent-detail-35", parent.RequiredDetail.Code);
+        Assert.Equal(["child-351", "child-352"], parent.Children.OrderBy(c => c.Id).Select(c => c.Name).ToList());
+        Assert.Equal("profile-352", parent.Children.Single(c => c.Id == 352).RequiredProfile.Code);
+        Assert.Equal(["tag-351-a", "tag-351-b"], parent.Children.Single(c => c.Id == 351).Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList());
+    }
+
+    [Fact]
+    public async Task Projection_ShouldReturnComplexOwnedShape_WhenGraphsAreSoftDeleted()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        db.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+            36,
+            "parent-36",
+            "parent-detail-36",
+            ["parent-note-36"],
+            [
+                TestIncludeOwnedChild.Create(361, "child-361", "profile-361", "leaf-361", ["tag-361-a", "tag-361-b"])
+            ]));
+        await db.SaveChangesAsync();
+
+        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
+            .SingleAsync(p => p.Id == 36);
+        db.Remove(parentToDelete);
+        await db.SaveChangesAsync();
+
+        using var verifyScope = services.CreateScope();
+        verifyScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var projection = await verifyDb.Set<TestIncludeOwnedParent>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(p => p.Id == 36)
+            .Select(p => new
+            {
+                DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                DetailCode = p.RequiredDetail.Code,
+                ParentNotes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
+                Children = p.Children
+                    .OrderBy(c => c.Id)
+                    .Select(c => new
+                    {
+                        c.Name,
+                        ProfileCode = c.RequiredProfile.Code,
+                        LeafCode = c.RequiredProfile.RequiredLeaf.Code,
+                        Tags = c.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
+                    })
+                    .ToList()
+            })
+            .SingleAsync();
+
+        Assert.NotNull(projection.DeletedAtUtc);
+        Assert.Equal("parent-detail-36", projection.DetailCode);
+        Assert.Equal(["parent-note-36"], projection.ParentNotes);
+        Assert.Single(projection.Children);
+        Assert.Equal("child-361", projection.Children[0].Name);
+        Assert.Equal("profile-361", projection.Children[0].ProfileCode);
+        Assert.Equal("leaf-361", projection.Children[0].LeafCode);
+        Assert.Equal(["tag-361-a", "tag-361-b"], projection.Children[0].Tags);
+    }
+
+    [Fact]
+    public async Task SharedDatabase_IncludeAndOwns_ShouldIsolateTenantGraphs_AndFilterSoftDeletedChildren()
+    {
+        using var services = CreateSharedDatabaseServiceProvider();
+
+        using (var tenantAScope = services.CreateScope())
+        {
+            tenantAScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = "tenanta";
+            var tenantADb = tenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+            tenantADb.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+                41,
+                "tenant-a-parent",
+                "tenant-a-detail",
+                ["tenant-a-note"],
+                [
+                    TestIncludeOwnedChild.Create(411, "tenant-a-child-active", "tenant-a-profile-active", "tenant-a-leaf-active", ["tenant-a-tag-active"]),
+                    TestIncludeOwnedChild.Create(412, "tenant-a-child-deleted", "tenant-a-profile-deleted", "tenant-a-leaf-deleted", ["tenant-a-tag-deleted"])
+                ]));
+            await tenantADb.SaveChangesAsync();
+
+            var childToDelete = await tenantADb.Set<TestIncludeOwnedChild>()
+                .SingleAsync(c => c.Id == 412);
+            tenantADb.Remove(childToDelete);
+            await tenantADb.SaveChangesAsync();
+        }
+
+        using (var tenantBScope = services.CreateScope())
+        {
+            tenantBScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = "tenantb";
+            var tenantBDb = tenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+            tenantBDb.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+                42,
+                "tenant-b-parent",
+                "tenant-b-detail",
+                ["tenant-b-note"],
+                [
+                    TestIncludeOwnedChild.Create(421, "tenant-b-child", "tenant-b-profile", "tenant-b-leaf", ["tenant-b-tag"])
+                ]));
+            await tenantBDb.SaveChangesAsync();
+        }
+
+        using var verifyTenantAScope = services.CreateScope();
+        verifyTenantAScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = "tenanta";
+        var verifyTenantADb = verifyTenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var tenantAParent = await verifyTenantADb.Set<TestIncludeOwnedParent>()
+            .Include(p => p.Children)
+                .ThenInclude(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+            .Include(p => p.Children)
+                .ThenInclude(c => c.Tags)
+            .SingleAsync(p => p.Id == 41);
+
+        Assert.Equal("tenant-a-detail", tenantAParent.RequiredDetail.Code);
+        Assert.Single(tenantAParent.Children);
+        Assert.Equal("tenant-a-child-active", tenantAParent.Children[0].Name);
+        Assert.Equal("tenant-a-profile-active", tenantAParent.Children[0].RequiredProfile.Code);
+        Assert.Equal("tenant-a-leaf-active", tenantAParent.Children[0].RequiredProfile.RequiredLeaf.Code);
+        Assert.Equal(["tenant-a-tag-active"], tenantAParent.Children[0].Tags.Select(t => t.Name).ToList());
+        Assert.Null(await verifyTenantADb.Set<TestIncludeOwnedParent>().SingleOrDefaultAsync(p => p.Id == 42));
+
+        using var verifyTenantBScope = services.CreateScope();
+        verifyTenantBScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = "tenantb";
+        var verifyTenantBDb = verifyTenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var tenantBParent = await verifyTenantBDb.Set<TestIncludeOwnedParent>()
+            .Include(p => p.Children)
+                .ThenInclude(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+            .Include(p => p.Children)
+                .ThenInclude(c => c.Tags)
+            .SingleAsync(p => p.Id == 42);
+
+        Assert.Equal("tenant-b-detail", tenantBParent.RequiredDetail.Code);
+        Assert.Single(tenantBParent.Children);
+        Assert.Equal("tenant-b-child", tenantBParent.Children[0].Name);
+        Assert.Equal("tenant-b-profile", tenantBParent.Children[0].RequiredProfile.Code);
+        Assert.Null(await verifyTenantBDb.Set<TestIncludeOwnedParent>().SingleOrDefaultAsync(p => p.Id == 41));
+    }
+
+    [Fact]
+    public async Task SharedDatabase_IgnoreQueryFilters_ShouldExposeSoftDeletedGraphsWithinSharedStore()
+    {
+        using var services = CreateSharedDatabaseServiceProvider();
+
+        using (var tenantAScope = services.CreateScope())
+        {
+            tenantAScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = "tenanta";
+            var tenantADb = tenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+            tenantADb.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
+                43,
+                "tenant-a-parent-43",
+                "tenant-a-detail-43",
+                ["tenant-a-note-43"],
+                [
+                    TestIncludeOwnedChild.Create(431, "tenant-a-child-431", "tenant-a-profile-431", "tenant-a-leaf-431", ["tenant-a-tag-431"]),
+                    TestIncludeOwnedChild.Create(432, "tenant-a-child-432", "tenant-a-profile-432", "tenant-a-leaf-432", ["tenant-a-tag-432-a", "tenant-a-tag-432-b"])
+                ]));
+            await tenantADb.SaveChangesAsync();
+
+            var childToDelete = await tenantADb.Set<TestIncludeOwnedChild>()
+                .SingleAsync(c => c.Id == 432);
+            tenantADb.Remove(childToDelete);
+            await tenantADb.SaveChangesAsync();
+        }
+
+        using var hostScope = services.CreateScope();
+        hostScope.ServiceProvider.GetRequiredService<ITransparentInfos>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        var hostDb = hostScope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var tenantAProjection = await hostDb.Set<TestIncludeOwnedParent>()
+            .IgnoreQueryFilters()
+            .AsSplitQuery()
+            .Where(p => p.Id == 43)
+            .Select(p => new
+            {
+                DetailCode = p.RequiredDetail.Code,
+                Children = p.Children
+                    .OrderBy(c => c.Id)
+                    .Select(c => new
+                    {
+                        c.Name,
+                        ProfileCode = c.RequiredProfile.Code,
+                        LeafCode = c.RequiredProfile.RequiredLeaf.Code,
+                        Tags = c.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
+                    })
+                    .ToList()
+            })
+            .SingleAsync();
+
+        Assert.Equal("tenant-a-detail-43", tenantAProjection.DetailCode);
+        Assert.Equal(["tenant-a-child-431", "tenant-a-child-432"], tenantAProjection.Children.Select(c => c.Name).ToList());
+        Assert.Equal("tenant-a-profile-432", tenantAProjection.Children[1].ProfileCode);
+        Assert.Equal("tenant-a-leaf-432", tenantAProjection.Children[1].LeafCode);
+        Assert.Equal(["tenant-a-tag-432-a", "tenant-a-tag-432-b"], tenantAProjection.Children[1].Tags);
+    }
+
+    [Fact]
     public async Task WithSoftDelete_Disabled_ShouldPhysicallyDeleteRows()
     {
         using var services = CreateServiceProvider(softDeleteEnabled: false);
@@ -827,6 +1542,31 @@ public class SqliteInMemoryPersistenceTests
         return provider;
     }
 
+    private static ServiceProvider CreateSharedDatabaseServiceProvider(bool softDeleteEnabled = true)
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<TestEventPublisher>();
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+
+        var databaseName = $"nof-tests-shared-{Guid.NewGuid():N}";
+        builder.UseDbContext<TestDbContext>()
+            .WithTenantMode(TenantMode.SharedDatabase)
+            .WithSoftDelete(softDeleteEnabled)
+            .WithConnectionString($"Data Source={databaseName};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
+        builder.Services.ReplaceOrAddSingleton<IEventPublisher>(sp => sp.GetRequiredService<TestEventPublisher>());
+
+        var provider = BuildServiceProvider(builder);
+        EnsureCreated(provider, NOFAbstractionConstants.Tenant.HostId);
+        EnsureCreated(provider, "tenanta");
+        EnsureCreated(provider, "tenantb");
+        return provider;
+    }
+
     private static void EnsureCreated(IServiceProvider provider, string tenantId)
     {
         using var scope = provider.CreateScope();
@@ -977,6 +1717,309 @@ public class SqliteInMemoryPersistenceTests
             => Create(Id, Number);
     }
 
+    private sealed class TestOrderWithOwned
+    {
+        public long Id { get; init; }
+
+        public string Number { get; init; } = string.Empty;
+
+        public TestRequiredOwnedDetail RequiredDetail { get; private set; } = null!;
+
+        public List<TestOwnedItem> Items { get; private set; } = [];
+
+        public static TestOrderWithOwned Create(long id, string number, string detailCode, params string[] itemNames)
+            => new()
+            {
+                Id = id,
+                Number = number,
+                RequiredDetail = new TestRequiredOwnedDetail(detailCode),
+                Items = itemNames.Select(name => new TestOwnedItem(name)).ToList()
+            };
+    }
+
+    private sealed class TestRequiredOwnedDetail
+    {
+        public TestRequiredOwnedDetail(string code)
+        {
+            Code = code;
+        }
+
+        private TestRequiredOwnedDetail()
+        {
+        }
+
+        public string Code { get; private set; } = string.Empty;
+    }
+
+    private sealed class TestOwnedItem
+    {
+        public TestOwnedItem(string name)
+        {
+            Name = name;
+        }
+
+        private TestOwnedItem()
+        {
+        }
+
+        public int Id { get; private set; }
+
+        public string Name { get; private set; } = string.Empty;
+    }
+
+    private sealed class TestOrderWithNestedOwned
+    {
+        public long Id { get; init; }
+
+        public string Number { get; init; } = string.Empty;
+
+        public TestCompositeOwnedDetail RequiredDetail { get; private set; } = null!;
+
+        public List<TestCompositeOwnedItem> Items { get; private set; } = [];
+
+        public static TestOrderWithNestedOwned Create(
+            long id,
+            string number,
+            string detailCode,
+            string detailLeafCode,
+            IEnumerable<string> detailNotes,
+            IEnumerable<TestCompositeOwnedItem> items)
+            => new()
+            {
+                Id = id,
+                Number = number,
+                RequiredDetail = TestCompositeOwnedDetail.Create(detailCode, detailLeafCode, detailNotes),
+                Items = [.. items]
+            };
+    }
+
+    private sealed class TestCompositeOwnedDetail
+    {
+        public string Code { get; private set; } = string.Empty;
+
+        public TestOwnedLeaf RequiredLeaf { get; private set; } = null!;
+
+        public List<TestOwnedDetailNote> Notes { get; private set; } = [];
+
+        public static TestCompositeOwnedDetail Create(string code, string leafCode, IEnumerable<string> notes)
+            => new()
+            {
+                Code = code,
+                RequiredLeaf = TestOwnedLeaf.Create(leafCode),
+                Notes = [.. notes.Select(TestOwnedDetailNote.Create)]
+            };
+    }
+
+    private sealed class TestCompositeOwnedItem
+    {
+        public int Id { get; private set; }
+
+        public string Name { get; private set; } = string.Empty;
+
+        public TestOwnedLeaf Snapshot { get; private set; } = null!;
+
+        public List<TestOwnedItemTag> Tags { get; private set; } = [];
+
+        public static TestCompositeOwnedItem Create(string name, string snapshotCode, IEnumerable<string> tags)
+            => new()
+            {
+                Name = name,
+                Snapshot = TestOwnedLeaf.Create(snapshotCode),
+                Tags = [.. tags.Select(TestOwnedItemTag.Create)]
+            };
+    }
+
+    private sealed class TestOwnedLeaf
+    {
+        public string Code { get; private set; } = string.Empty;
+
+        public static TestOwnedLeaf Create(string code)
+            => new()
+            {
+                Code = code
+            };
+    }
+
+    private sealed class TestOwnedDetailNote
+    {
+        public int Id { get; private set; }
+
+        public string Message { get; private set; } = string.Empty;
+
+        public static TestOwnedDetailNote Create(string message)
+            => new()
+            {
+                Message = message
+            };
+    }
+
+    private sealed class TestOwnedItemTag
+    {
+        public int Id { get; private set; }
+
+        public string Name { get; private set; } = string.Empty;
+
+        public static TestOwnedItemTag Create(string name)
+            => new()
+            {
+                Name = name
+            };
+    }
+
+    private sealed class TestIncludeParent
+    {
+        public long Id { get; init; }
+
+        public string Name { get; init; } = string.Empty;
+
+        public List<TestIncludeChild> Children { get; init; } = [];
+
+        public static TestIncludeParent Create(long id, string name, IEnumerable<TestIncludeChild> children)
+            => new()
+            {
+                Id = id,
+                Name = name,
+                Children = [.. children]
+            };
+    }
+
+    private sealed class TestIncludeChild
+    {
+        public long Id { get; init; }
+
+        public long? ParentId { get; private set; }
+
+        public string Name { get; init; } = string.Empty;
+
+        public TestIncludeParent? Parent { get; private set; }
+
+        public static TestIncludeChild Create(long id, string name)
+            => new()
+            {
+                Id = id,
+                Name = name
+            };
+    }
+
+    private sealed class TestIncludeOwnedParent
+    {
+        public long Id { get; init; }
+
+        public string Name { get; init; } = string.Empty;
+
+        public TestIncludeOwnedParentDetail RequiredDetail { get; private set; } = null!;
+
+        public List<TestIncludeOwnedChild> Children { get; init; } = [];
+
+        public static TestIncludeOwnedParent Create(
+            long id,
+            string name,
+            string detailCode,
+            IEnumerable<string> detailNotes,
+            IEnumerable<TestIncludeOwnedChild> children)
+            => new()
+            {
+                Id = id,
+                Name = name,
+                RequiredDetail = TestIncludeOwnedParentDetail.Create(detailCode, detailNotes),
+                Children = [.. children]
+            };
+    }
+
+    private sealed class TestIncludeOwnedParentDetail
+    {
+        public string Code { get; private set; } = string.Empty;
+
+        public List<TestIncludeOwnedParentNote> Notes { get; private set; } = [];
+
+        public static TestIncludeOwnedParentDetail Create(string code, IEnumerable<string> notes)
+            => new()
+            {
+                Code = code,
+                Notes = [.. notes.Select(TestIncludeOwnedParentNote.Create)]
+            };
+    }
+
+    private sealed class TestIncludeOwnedParentNote
+    {
+        public int Id { get; private set; }
+
+        public string Message { get; private set; } = string.Empty;
+
+        public static TestIncludeOwnedParentNote Create(string message)
+            => new()
+            {
+                Message = message
+            };
+    }
+
+    private sealed class TestIncludeOwnedChild
+    {
+        public long Id { get; init; }
+
+        public long? ParentId { get; private set; }
+
+        public string Name { get; init; } = string.Empty;
+
+        public TestIncludeOwnedParent? Parent { get; private set; }
+
+        public TestIncludeOwnedChildProfile RequiredProfile { get; private set; } = null!;
+
+        public List<TestIncludeOwnedChildTag> Tags { get; private set; } = [];
+
+        public static TestIncludeOwnedChild Create(
+            long id,
+            string name,
+            string profileCode,
+            string leafCode,
+            IEnumerable<string> tags)
+            => new()
+            {
+                Id = id,
+                Name = name,
+                RequiredProfile = TestIncludeOwnedChildProfile.Create(profileCode, leafCode),
+                Tags = [.. tags.Select(TestIncludeOwnedChildTag.Create)]
+            };
+    }
+
+    private sealed class TestIncludeOwnedChildProfile
+    {
+        public string Code { get; private set; } = string.Empty;
+
+        public TestIncludeOwnedChildLeaf RequiredLeaf { get; private set; } = null!;
+
+        public static TestIncludeOwnedChildProfile Create(string code, string leafCode)
+            => new()
+            {
+                Code = code,
+                RequiredLeaf = TestIncludeOwnedChildLeaf.Create(leafCode)
+            };
+    }
+
+    private sealed class TestIncludeOwnedChildLeaf
+    {
+        public string Code { get; private set; } = string.Empty;
+
+        public static TestIncludeOwnedChildLeaf Create(string code)
+            => new()
+            {
+                Code = code
+            };
+    }
+
+    private sealed class TestIncludeOwnedChildTag
+    {
+        public int Id { get; private set; }
+
+        public string Name { get; private set; } = string.Empty;
+
+        public static TestIncludeOwnedChildTag Create(string name)
+            => new()
+            {
+                Name = name
+            };
+    }
+
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : NOFDbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -988,6 +2031,172 @@ public class SqliteInMemoryPersistenceTests
                 entity.ToTable(nameof(TestOrder));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Number).HasMaxLength(256).IsRequired();
+            });
+
+            modelBuilder.Entity<TestOrderWithOwned>(entity =>
+            {
+                entity.ToTable(nameof(TestOrderWithOwned));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Number).HasMaxLength(256).IsRequired();
+
+                entity.OwnsOne(e => e.RequiredDetail, detail =>
+                {
+                    detail.Property(d => d.Code)
+                        .HasColumnName(nameof(TestRequiredOwnedDetail.Code))
+                        .HasMaxLength(256)
+                        .IsRequired();
+                });
+                entity.Navigation(e => e.RequiredDetail).IsRequired();
+
+                entity.OwnsMany(e => e.Items, item =>
+                {
+                    item.ToTable(nameof(TestOwnedItem));
+                    item.WithOwner().HasForeignKey("TestOrderWithOwnedId");
+                    item.HasKey(i => i.Id);
+                    item.Property(i => i.Id).ValueGeneratedOnAdd();
+                    item.Property(i => i.Name).HasMaxLength(256).IsRequired();
+                });
+            });
+
+            modelBuilder.Entity<TestOrderWithNestedOwned>(entity =>
+            {
+                entity.ToTable(nameof(TestOrderWithNestedOwned));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Number).HasMaxLength(256).IsRequired();
+
+                entity.OwnsOne(e => e.RequiredDetail, detail =>
+                {
+                    detail.Property(d => d.Code)
+                        .HasColumnName("RequiredDetailCode")
+                        .HasMaxLength(256)
+                        .IsRequired();
+
+                    detail.OwnsOne(d => d.RequiredLeaf, leaf =>
+                    {
+                        leaf.Property(l => l.Code)
+                            .HasColumnName("RequiredDetailLeafCode")
+                            .HasMaxLength(256)
+                            .IsRequired();
+                    });
+                    detail.Navigation(d => d.RequiredLeaf).IsRequired();
+
+                    detail.OwnsMany(d => d.Notes, note =>
+                    {
+                        note.ToTable(nameof(TestOwnedDetailNote));
+                        note.WithOwner().HasForeignKey("TestOrderWithNestedOwnedId");
+                        note.HasKey(n => n.Id);
+                        note.Property(n => n.Id).ValueGeneratedOnAdd();
+                        note.Property(n => n.Message).HasMaxLength(256).IsRequired();
+                    });
+                });
+                entity.Navigation(e => e.RequiredDetail).IsRequired();
+
+                entity.OwnsMany(e => e.Items, item =>
+                {
+                    item.ToTable(nameof(TestCompositeOwnedItem));
+                    item.WithOwner().HasForeignKey("TestOrderWithNestedOwnedId");
+                    item.HasKey(i => i.Id);
+                    item.Property(i => i.Id).ValueGeneratedOnAdd();
+                    item.Property(i => i.Name).HasMaxLength(256).IsRequired();
+
+                    item.OwnsOne(i => i.Snapshot, snapshot =>
+                    {
+                        snapshot.Property(s => s.Code)
+                            .HasColumnName("SnapshotCode")
+                            .HasMaxLength(256)
+                            .IsRequired();
+                    });
+                    item.Navigation(i => i.Snapshot).IsRequired();
+
+                    item.OwnsMany(i => i.Tags, tag =>
+                    {
+                        tag.ToTable(nameof(TestOwnedItemTag));
+                        tag.WithOwner().HasForeignKey("TestCompositeOwnedItemId");
+                        tag.HasKey(t => t.Id);
+                        tag.Property(t => t.Id).ValueGeneratedOnAdd();
+                        tag.Property(t => t.Name).HasMaxLength(256).IsRequired();
+                    });
+                });
+            });
+
+            modelBuilder.Entity<TestIncludeParent>(entity =>
+            {
+                entity.ToTable(nameof(TestIncludeParent));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+                entity.HasMany(e => e.Children)
+                    .WithOne(e => e.Parent)
+                    .HasForeignKey(e => e.ParentId);
+            });
+
+            modelBuilder.Entity<TestIncludeChild>(entity =>
+            {
+                entity.ToTable(nameof(TestIncludeChild));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+            });
+
+            modelBuilder.Entity<TestIncludeOwnedParent>(entity =>
+            {
+                entity.ToTable(nameof(TestIncludeOwnedParent));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+
+                entity.OwnsOne(e => e.RequiredDetail, detail =>
+                {
+                    detail.Property(d => d.Code)
+                        .HasColumnName("RequiredDetailCode")
+                        .HasMaxLength(256)
+                        .IsRequired();
+
+                    detail.OwnsMany(d => d.Notes, note =>
+                    {
+                        note.ToTable(nameof(TestIncludeOwnedParentNote));
+                        note.WithOwner().HasForeignKey("TestIncludeOwnedParentId");
+                        note.HasKey(n => n.Id);
+                        note.Property(n => n.Id).ValueGeneratedOnAdd();
+                        note.Property(n => n.Message).HasMaxLength(256).IsRequired();
+                    });
+                });
+                entity.Navigation(e => e.RequiredDetail).IsRequired();
+
+                entity.HasMany(e => e.Children)
+                    .WithOne(e => e.Parent)
+                    .HasForeignKey(e => e.ParentId);
+            });
+
+            modelBuilder.Entity<TestIncludeOwnedChild>(entity =>
+            {
+                entity.ToTable(nameof(TestIncludeOwnedChild));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+
+                entity.OwnsOne(e => e.RequiredProfile, profile =>
+                {
+                    profile.Property(p => p.Code)
+                        .HasColumnName("RequiredProfileCode")
+                        .HasMaxLength(256)
+                        .IsRequired();
+
+                    profile.OwnsOne(p => p.RequiredLeaf, leaf =>
+                    {
+                        leaf.Property(l => l.Code)
+                            .HasColumnName("RequiredProfileLeafCode")
+                            .HasMaxLength(256)
+                            .IsRequired();
+                    });
+                    profile.Navigation(p => p.RequiredLeaf).IsRequired();
+                });
+                entity.Navigation(e => e.RequiredProfile).IsRequired();
+
+                entity.OwnsMany(e => e.Tags, tag =>
+                {
+                    tag.ToTable(nameof(TestIncludeOwnedChildTag));
+                    tag.WithOwner().HasForeignKey("TestIncludeOwnedChildId");
+                    tag.HasKey(t => t.Id);
+                    tag.Property(t => t.Id).ValueGeneratedOnAdd();
+                    tag.Property(t => t.Name).HasMaxLength(256).IsRequired();
+                });
             });
         }
     }
