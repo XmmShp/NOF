@@ -202,6 +202,24 @@ public class ResultTests
     }
 
     [Fact]
+    public void FromT_WithDeserializedFailedResult_ReturnsFailedResultT()
+    {
+        Result original = Result.Fail("422", "Validation failed", new Dictionary<string, string>
+        {
+            ["field"] = "Name"
+        });
+        var json = JsonSerializer.Serialize(original);
+        IResult response = JsonSerializer.Deserialize<Result>(json)!;
+
+        var result = Result.From<string>(response);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("422", result.ErrorCode);
+        Assert.Equal("Validation failed", result.Message);
+        Assert.Equal("Name", result.Extra["field"]);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
     public void From_WithSuccessResult_ReturnsSuccessResult()
     {
         IResult response = Result.Success();
@@ -237,6 +255,36 @@ public class ResultTests
     {
         var act = () => Result.From<string>(null!);
         Assert.Throws<ArgumentNullException>(act);
+    }
+
+    [Fact]
+    public void StreamingResultFrom_WithFailResult_ReturnsFailedStreamingResult()
+    {
+        IResult response = Result.Fail("500", "Internal server error");
+
+        var result = StreamingResult.From<string>(response);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("500", result.ErrorCode);
+        Assert.Equal("Internal server error", result.Message);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public void StreamingResultFrom_WithDeserializedFailedResult_ReturnsFailedStreamingResult()
+    {
+        Result original = Result.Fail("409", "Conflict", new Dictionary<string, string>
+        {
+            ["requestId"] = "abc"
+        });
+        var json = JsonSerializer.Serialize(original);
+        IResult response = JsonSerializer.Deserialize<Result>(json)!;
+
+        var result = StreamingResult.From<string>(response);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("409", result.ErrorCode);
+        Assert.Equal("Conflict", result.Message);
+        Assert.Equal("abc", result.Extra["requestId"]);
+        Assert.Null(result.Value);
     }
 
     #endregion
@@ -442,4 +490,3 @@ public class ResultTests
         public string Name { get; set; } = string.Empty;
     }
 }
-

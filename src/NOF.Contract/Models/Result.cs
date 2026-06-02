@@ -126,19 +126,21 @@ public record Result : IResult
 
     /// <summary>
     /// Converts an <see cref="IResult"/> to <see cref="Result"/>.
-    /// Handles <see cref="FailResult"/> via implicit conversion, avoiding <see cref="InvalidCastException"/>.
+    /// Preserves failure details from any result implementation.
     /// </summary>
     /// <param name="result">The result to convert.</param>
     /// <returns>A <see cref="Result"/> instance.</returns>
     public static Result From(IResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        return result is FailResult fail ? fail : (Result)result;
+        return result is Result typedResult
+            ? typedResult
+            : new Result(result.IsSuccess, result.ErrorCode, result.Message, result.Extra);
     }
 
     /// <summary>
     /// Converts an <see cref="IResult"/> to <see cref="Result{T}"/>.
-    /// Handles <see cref="FailResult"/> via implicit conversion, avoiding <see cref="InvalidCastException"/>.
+    /// Preserves failure details from any result implementation.
     /// </summary>
     /// <typeparam name="T">The expected response value type.</typeparam>
     /// <param name="result">The result to convert.</param>
@@ -146,7 +148,17 @@ public record Result : IResult
     public static Result<T> From<T>(IResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        return result is FailResult fail ? fail : (Result<T>)result;
+        if (result is Result<T> typedResult)
+        {
+            return typedResult;
+        }
+
+        if (!result.IsSuccess)
+        {
+            return new Result<T>(false, result.ErrorCode, result.Message, default, result.Extra);
+        }
+
+        throw new InvalidOperationException($"Cannot convert a successful '{result.GetType().FullName}' to '{typeof(Result<T>).FullName}'.");
     }
 
     #endregion
@@ -383,6 +395,16 @@ public static class StreamingResult
     public static StreamingResult<T> From<T>(IResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        return result is FailResult fail ? fail : (StreamingResult<T>)result;
+        if (result is StreamingResult<T> typedResult)
+        {
+            return typedResult;
+        }
+
+        if (!result.IsSuccess)
+        {
+            return new StreamingResult<T>(false, result.ErrorCode, result.Message, null, result.Extra);
+        }
+
+        throw new InvalidOperationException($"Cannot convert a successful '{result.GetType().FullName}' to '{typeof(StreamingResult<T>).FullName}'.");
     }
 }
