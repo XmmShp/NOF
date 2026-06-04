@@ -83,6 +83,24 @@ public sealed class ResourceServerJwksCacheServiceTests
         Assert.Equal(2, jwksService.RefreshCallCount);
     }
 
+    [Fact]
+    public async Task RefreshNowAsync_ShouldBypassRefreshIntervalAndReloadKeys()
+    {
+        var jwksService = new FakeJwksService(
+        [
+            _ => Task.FromResult(CreateJwksDocument("kid-1")),
+            _ => Task.FromResult(CreateJwksDocument("kid-2"))
+        ]);
+        var service = CreateService(jwksService, minimumRefreshInterval: TimeSpan.FromHours(1));
+
+        var initial = await service.GetSecurityKeysAsync();
+        var refreshed = await service.RefreshNowAsync();
+
+        Assert.Equal("kid-1", Assert.Single(initial).KeyId);
+        Assert.Equal("kid-2", Assert.Single(refreshed).KeyId);
+        Assert.Equal(2, jwksService.RefreshCallCount);
+    }
+
     private static ResourceServerJwksCacheService CreateService(FakeJwksService jwksService, TimeProvider? timeProvider = null, TimeSpan? minimumRefreshInterval = null)
         => new(
             CreateScopeFactory(jwksService),

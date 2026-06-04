@@ -14,7 +14,7 @@ Provides JWT infrastructure for NOF applications as a resource server (token val
 - **Local Key Cache** - `CachedJwksService` keeps signing keys locally so validation does not need to hit the remote JWKS endpoint on every request
 - **Token Validation** - `JwtResourceServerInboundMiddleware` validates Bearer tokens with configurable issuer, audience, and lifetime checks
 - **Outbound Propagation** - resource server setup also enables JWT token propagation for downstream NOF calls
-- **Key Rotation Refresh** - `RefreshJwksOnKeyRotation` refreshes cached keys when `JwtKeyRotationNotification` is received
+- **Local Key Refresh** - when the same process hosts both authority and resource server, local JWKS cache is refreshed immediately after key rotation
 
 ### Authority (Server)
 

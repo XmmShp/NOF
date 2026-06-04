@@ -20,7 +20,8 @@ public static partial class NOFJwtAuthorizationExtensions
             builder.AddApplicationPart(typeof(JwtAuthorityService).Assembly);
             builder.TryAddRegistrationStep<PersistedSigningKeyPersistenceRegistrationStep>();
             builder.TryAddRegistrationStep<RevokedRefreshTokenPersistenceRegistrationStep>();
-            builder.Services.ReplaceOrAddScoped<IJwksService, LocalJwksService>();
+            builder.Services.ReplaceOrAddScoped<LocalJwksService, LocalJwksService>();
+            builder.Services.ReplaceOrAddScoped<IJwksService>(static serviceProvider => serviceProvider.GetRequiredService<LocalJwksService>());
             builder.Services.ReplaceOrAddScoped<IJwtAuthorityServiceClient, LocalJwtAuthorityServiceClient>();
             builder.Services.AddHostedService<JwtKeyRotationBackgroundService>();
 
@@ -32,7 +33,11 @@ public static partial class NOFJwtAuthorizationExtensions
             EnsureJsonRegistered();
             builder.Services.Configure(configureOptions);
 
-            builder.Services.AddHttpClient<IJwksService, HttpJwksService>();
+            builder.Services.AddHttpClient<HttpJwksService>();
+            builder.Services.ReplaceOrAddScoped<IJwksService>(static serviceProvider =>
+                serviceProvider.GetService<LocalJwksService>() is IJwksService localJwksService
+                    ? localJwksService
+                    : serviceProvider.GetRequiredService<HttpJwksService>());
             builder.Services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
             builder.Services.AddRequestInboundMiddleware<JwtResourceServerInboundMiddleware>();
             return builder;

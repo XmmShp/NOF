@@ -56,6 +56,11 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
                 using var scope = _serviceScopeFactory.CreateScope();
                 var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
                 await signingKeyService.RotateKeyAsync(stoppingToken).ConfigureAwait(false);
+                var jwksCacheService = scope.ServiceProvider.GetService<ResourceServerJwksCacheService>();
+                if (jwksCacheService is not null)
+                {
+                    await jwksCacheService.RefreshNowAsync(stoppingToken).ConfigureAwait(false);
+                }
                 _logger.LogInformation("Signing key rotated successfully. New kid: {Kid}",
                     (await signingKeyService.GetCurrentSigningKeyAsync(stoppingToken).ConfigureAwait(false)).Kid);
             }

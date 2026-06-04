@@ -171,7 +171,7 @@ public sealed class JwtAuthorizationExtensionsTests
         var jwksService2 = scope.GetRequiredService<IJwksService>();
         Assert.IsType<HttpJwksService>(jwksService1);
         Assert.IsType<HttpJwksService>(jwksService2);
-        Assert.NotSame(jwksService1, jwksService2);
+        Assert.Same(jwksService1, jwksService2);
         Assert.NotNull(scope.GetRequiredService<ResourceServerJwksCacheService>());
     }
 
@@ -187,8 +187,10 @@ public sealed class JwtAuthorizationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         var cache = host.Services.GetRequiredService<ResourceServerJwksCacheService>();
+        using var scope = host.CreateScope();
 
         Assert.NotNull(cache);
+        Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
     }
 
     [Fact]

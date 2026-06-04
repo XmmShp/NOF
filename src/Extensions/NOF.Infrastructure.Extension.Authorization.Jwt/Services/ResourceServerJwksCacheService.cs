@@ -51,6 +51,26 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         return await RefreshRequiredAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public void Invalidate()
+    {
+        _cachedKeys = [];
+        _lastSuccessfulRefreshAtUtc = null;
+    }
+
+    public async Task<IReadOnlyList<SecurityKey>> RefreshNowAsync(CancellationToken cancellationToken = default)
+    {
+        await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            Invalidate();
+            return await RefreshUnsafeAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
     private async Task<IReadOnlyList<SecurityKey>> RefreshRequiredAsync(CancellationToken cancellationToken)
     {
         await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
