@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Application;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 
@@ -11,6 +12,10 @@ namespace NOF.Infrastructure.Extension.Authorization.Jwt;
 /// </summary>
 public sealed class JwtKeyRotationBackgroundService : BackgroundService
 {
+    private static readonly TimeSpan KeyRotationLockExpiration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan KeyRotationLockTimeout = TimeSpan.FromSeconds(5);
+    private const string KeyRotationLockKey = "jwt-signing-key-rotation";
+
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JwtAuthorityOptions _options;
     private readonly ILogger<JwtKeyRotationBackgroundService> _logger;
@@ -54,7 +59,40 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
                 await Task.Delay(nextRotation, stoppingToken);
 
                 using var scope = _serviceScopeFactory.CreateScope();
+                if (!_hostEnvironment.IsPrimaryNodeEnvironment)
+                {
+                    _logger.LogDebug(
+                        "Skipping JWT key rotation on non-primary node {InstanceId}",
+                        _hostEnvironment.InstanceId);
+                    continue;
+                }
+
+                var cacheService = scope.ServiceProvider.GetRequiredService<ICacheService>();
+                var rotationLock = await cacheService
+                    .IgnoreQueryFilters()
+                    .TryAcquireLockAsync(
+                        KeyRotationLockKey,
+                        KeyRotationLockExpiration,
+                        KeyRotationLockTimeout,
+                        stoppingToken)
+                    .ConfigureAwait(false);
+                if (!rotationLock.HasValue)
+                {
+                    _logger.LogDebug("Skipping JWT key rotation because another node holds the rotation lock.");
+                    continue;
+                }
+
+                await using var _ = rotationLock.Value;
                 var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
+                var recomputedNextRotation = await ComputeNextRotationDelayAsync(stoppingToken).ConfigureAwait(false);
+                if (recomputedNextRotation > TimeSpan.Zero)
+                {
+                    _logger.LogDebug(
+                        "Skipping JWT key rotation because the current key was already rotated. Next key rotation in {Delay}",
+                        recomputedNextRotation);
+                    continue;
+                }
+
                 await signingKeyService.RotateKeyAsync(stoppingToken).ConfigureAwait(false);
                 var jwksCacheService = scope.ServiceProvider.GetService<ResourceServerJwksCacheService>();
                 if (jwksCacheService is not null)
