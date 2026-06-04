@@ -48,6 +48,7 @@ public sealed class JwtAuthorityServiceTests
         Assert.NotEqual(default, generateResult.Value.RefreshToken.ExpiresAtUtc);
 
         var accessToken = new JwtSecurityTokenHandler().ReadJwtToken(generateResult.Value.AccessToken);
+        Assert.False(string.IsNullOrWhiteSpace(accessToken.Header.Kid));
         Assert.Contains(accessToken.Claims, claim => claim.Type == ClaimTypes.NameIdentifier && claim.Value == "user-1");
         Assert.Contains(accessToken.Claims, claim => claim.Type == ClaimTypes.TenantId && claim.Value == "tenant-1");
         Assert.Equal(2, accessToken.Claims.Count(claim => claim.Type == ClaimTypes.Permission));

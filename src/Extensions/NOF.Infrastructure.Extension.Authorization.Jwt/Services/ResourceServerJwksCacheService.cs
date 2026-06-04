@@ -51,6 +51,19 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         return await RefreshRequiredAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<SecurityKey>> GetSecurityKeysAsync(
+        string? requiredKid,
+        CancellationToken cancellationToken = default)
+    {
+        var snapshot = CreateSnapshot();
+        if (CanUseSnapshot(snapshot, requiredKid))
+        {
+            return snapshot.Keys;
+        }
+
+        return await RefreshRequiredAsync(requiredKid, cancellationToken).ConfigureAwait(false);
+    }
+
     public void Invalidate()
     {
         _cachedKeys = [];
@@ -78,6 +91,27 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         {
             var snapshot = CreateSnapshot();
             if (snapshot.HasUsableKeys && snapshot.Age < _minimumRefreshInterval)
+            {
+                return snapshot.Keys;
+            }
+
+            return await RefreshUnsafeAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
+    private async Task<IReadOnlyList<SecurityKey>> RefreshRequiredAsync(
+        string? requiredKid,
+        CancellationToken cancellationToken)
+    {
+        await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var snapshot = CreateSnapshot();
+            if (CanUseSnapshot(snapshot, requiredKid))
             {
                 return snapshot.Keys;
             }
@@ -131,6 +165,26 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         return new CacheSnapshot(_cachedKeys, age);
     }
 
+    private bool CanUseSnapshot(CacheSnapshot snapshot, string? requiredKid)
+    {
+        if (!snapshot.HasUsableKeys)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(requiredKid))
+        {
+            return snapshot.Age < _minimumRefreshInterval;
+        }
+
+        if (snapshot.Contains(requiredKid))
+        {
+            return true;
+        }
+
+        return snapshot.Age < _minimumRefreshInterval;
+    }
+
     public void Dispose()
     {
         _refreshLock.Dispose();
@@ -141,5 +195,8 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         TimeSpan Age)
     {
         public bool HasUsableKeys => Keys.Count > 0;
+
+        public bool Contains(string requiredKid)
+            => Keys.Any(key => string.Equals(key.KeyId, requiredKid, StringComparison.Ordinal));
     }
 }

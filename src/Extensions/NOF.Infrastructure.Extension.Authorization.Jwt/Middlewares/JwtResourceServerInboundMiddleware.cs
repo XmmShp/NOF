@@ -47,18 +47,19 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
         try
         {
-            var keys = await _jwksCacheService.GetSecurityKeysAsync(cancellationToken);
-            if (keys.Count == 0)
-            {
-                _logger.LogDebug("No JWKS keys available for JWT validation");
-                await next(cancellationToken);
-                return;
-            }
-
             foreach (var source in tokenSources)
             {
                 if (!TryGetToken(source, out var token))
                 {
+                    continue;
+                }
+
+                var keys = await _jwksCacheService
+                    .GetSecurityKeysAsync(GetTokenKid(token), cancellationToken)
+                    .ConfigureAwait(false);
+                if (keys.Count == 0)
+                {
+                    _logger.LogDebug("No JWKS keys available for JWT validation");
                     continue;
                 }
 
@@ -134,5 +135,22 @@ public sealed class JwtResourceServerInboundMiddleware : IRequestInboundMiddlewa
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         return new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
+    }
+
+    private string? GetTokenKid(string token)
+    {
+        if (!_tokenHandler.CanReadToken(token))
+        {
+            return null;
+        }
+
+        try
+        {
+            return _tokenHandler.ReadJwtToken(token).Header.Kid;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 }
