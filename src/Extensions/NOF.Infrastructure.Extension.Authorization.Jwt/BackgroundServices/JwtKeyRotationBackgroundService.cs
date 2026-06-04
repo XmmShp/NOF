@@ -14,7 +14,7 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
 {
     private static readonly TimeSpan KeyRotationLockExpiration = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan KeyRotationLockTimeout = TimeSpan.FromSeconds(5);
-    private const string KeyRotationLockKey = "jwt-signing-key-rotation";
+    private const string KeyRotationLockKeyPrefix = "jwt-signing-key-rotation";
 
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JwtAuthorityOptions _options;
@@ -71,7 +71,7 @@ public sealed class JwtKeyRotationBackgroundService : BackgroundService
                 var rotationLock = await cacheService
                     .IgnoreQueryFilters()
                     .TryAcquireLockAsync(
-                        KeyRotationLockKey,
+                        $"{KeyRotationLockKeyPrefix}:{_options.Issuer}",
                         KeyRotationLockExpiration,
                         KeyRotationLockTimeout,
                         stoppingToken)
