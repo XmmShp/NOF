@@ -7,7 +7,7 @@ public record GenerateJwtTokenRequest
 {
     public required string Audience { get; set; }
     public TimeSpan AccessTokenExpiration { get; set; }
-    public KeyValuePair<string, string>[]? AccessClaims { get; set; }
+    public JwtClaim[]? AccessClaims { get; set; }
     public JwtRefreshTokenOptions? RefreshToken { get; set; }
 }
 

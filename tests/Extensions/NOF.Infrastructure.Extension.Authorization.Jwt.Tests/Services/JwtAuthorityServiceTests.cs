@@ -66,9 +66,9 @@ public sealed class JwtAuthorityServiceTests
 
         Assert.True(validateResult.IsSuccess, validateResult.Message);
         Assert.False(string.IsNullOrWhiteSpace(validateResult.Value.TokenId));
-        Assert.Contains(validateResult.Value.Claims, claim => claim.Key == ClaimTypes.JwtId);
-        Assert.Contains(validateResult.Value.Claims, claim => claim.Key == ClaimTypes.NameIdentifier && claim.Value == "user-1");
-        Assert.DoesNotContain(validateResult.Value.Claims, claim => claim.Key == ClaimTypes.TenantId);
+        Assert.Contains(validateResult.Value.Claims, claim => claim.Type == ClaimTypes.JwtId);
+        Assert.Contains(validateResult.Value.Claims, claim => claim.Type == ClaimTypes.NameIdentifier && claim.Value == "user-1");
+        Assert.DoesNotContain(validateResult.Value.Claims, claim => claim.Type == ClaimTypes.TenantId);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class JwtAuthorityServiceTests
                 AccessClaims =
                 [
                     new(JwtRegisteredClaimNames.Sub, "user-1"),
-                    new(JwtRegisteredClaimNames.Iat, issuedAt),
+                    JwtClaim.Integer64(JwtRegisteredClaimNames.Iat, long.Parse(issuedAt)),
                     new("auth_time", issuedAt)
                 ]
             });

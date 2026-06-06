@@ -71,20 +71,26 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
         });
     }
 
-    private static List<Claim> CreateClaims(IEnumerable<KeyValuePair<string, string>>? claims)
+    private static List<Claim> CreateClaims(IEnumerable<JwtClaim>? claims)
     {
         return claims?
-            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Key))
-            .Select(static claim => CreateClaim(claim.Key, claim.Value))
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
+            .Select(static claim => CreateClaim(claim))
             .ToList()
             ?? [];
     }
 
-    private static Claim CreateClaim(string type, string value)
+    private static Claim CreateClaim(JwtClaim claim)
     {
-        return IsNumericDateClaim(type) && long.TryParse(value, out _)
-            ? new Claim(type, value, ClaimValueTypes.Integer64)
-            : new Claim(type, value);
+        var valueType = claim.ValueType;
+        if (string.IsNullOrWhiteSpace(valueType) && IsNumericDateClaim(claim.Type) && long.TryParse(claim.Value, out _))
+        {
+            valueType = ClaimValueTypes.Integer64;
+        }
+
+        return string.IsNullOrWhiteSpace(valueType)
+            ? new Claim(claim.Type, claim.Value)
+            : new Claim(claim.Type, claim.Value, valueType);
     }
 
     private static bool IsNumericDateClaim(string type)
@@ -145,7 +151,7 @@ public sealed class ValidateJwtRefreshTokenHandler : JwtAuthorityService.Validat
             {
                 TokenId = tokenId,
                 Claims = principal.Claims
-                    .Select(static claim => new KeyValuePair<string, string>(claim.Type, claim.Value))
+                    .Select(static claim => new JwtClaim(claim.Type, claim.Value, claim.ValueType))
                     .ToArray()
             });
         }

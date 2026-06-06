@@ -321,19 +321,19 @@
         }
     }
 
-    private KeyValuePair<string, string>[] BuildAccessClaims(IEnumerable<string> permissions)
+    private JwtClaim[] BuildAccessClaims(IEnumerable<string> permissions)
     {
-        var claims = new List<KeyValuePair<string, string>>
+        var claims = new List<JwtClaim>
         {
             new(ClaimTypes.NameIdentifier, _tokenRequest.UserId),
             new(ClaimTypes.TenantId, _tokenRequest.TenantId)
         };
 
-        claims.AddRange(permissions.Select(permission => new KeyValuePair<string, string>(ClaimTypes.Permission, permission)));
+        claims.AddRange(permissions.Select(permission => new JwtClaim(ClaimTypes.Permission, permission)));
         return claims.ToArray();
     }
 
-    private KeyValuePair<string, string>[] BuildRefreshClaims()
+    private JwtClaim[] BuildRefreshClaims()
     {
         return
         [
@@ -346,13 +346,13 @@
     {
         var userId = GetClaimValue(response.Claims, ClaimTypes.NameIdentifier);
         var tenantId = GetClaimValue(response.Claims, ClaimTypes.TenantId);
-        var claims = string.Join('\n', response.Claims.Select(static claim => $"{claim.Key}: {claim.Value}"));
+        var claims = string.Join('\n', response.Claims.Select(static claim => $"{claim.Type}: {claim.Value}"));
 
         return $"Token ID: {response.TokenId}\nUser ID: {userId}\nTenant ID: {tenantId}\nClaims:\n{claims}";
     }
 
-    private static string GetClaimValue(IEnumerable<KeyValuePair<string, string>> claims, string claimType)
+    private static string GetClaimValue(IEnumerable<JwtClaim> claims, string claimType)
     {
-        return claims.FirstOrDefault(claim => claim.Key == claimType).Value ?? "(not found)";
+        return claims.FirstOrDefault(claim => claim.Type == claimType)?.Value ?? "(not found)";
     }
 }

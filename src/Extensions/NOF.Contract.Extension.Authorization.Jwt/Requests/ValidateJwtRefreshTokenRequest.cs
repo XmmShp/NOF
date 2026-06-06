@@ -14,5 +14,5 @@ public record ValidateJwtRefreshTokenRequest
 public record ValidateJwtRefreshTokenResponse
 {
     public required string TokenId { get; set; }
-    public required KeyValuePair<string, string>[] Claims { get; set; }
+    public required JwtClaim[] Claims { get; set; }
 }

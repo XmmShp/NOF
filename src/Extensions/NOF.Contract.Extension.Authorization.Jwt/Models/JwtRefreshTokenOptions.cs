@@ -13,5 +13,5 @@ public sealed class JwtRefreshTokenOptions
     /// <summary>
     /// Gets or sets the refresh token claims.
     /// </summary>
-    public KeyValuePair<string, string>[]? Claims { get; set; }
+    public JwtClaim[]? Claims { get; set; }
 }
