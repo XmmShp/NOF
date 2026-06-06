@@ -75,9 +75,24 @@ public sealed class GenerateJwtTokenHandler : JwtAuthorityService.GenerateJwtTok
     {
         return claims?
             .Where(static claim => !string.IsNullOrWhiteSpace(claim.Key))
-            .Select(static claim => new Claim(claim.Key, claim.Value))
+            .Select(static claim => CreateClaim(claim.Key, claim.Value))
             .ToList()
             ?? [];
+    }
+
+    private static Claim CreateClaim(string type, string value)
+    {
+        return IsNumericDateClaim(type) && long.TryParse(value, out _)
+            ? new Claim(type, value, ClaimValueTypes.Integer64)
+            : new Claim(type, value);
+    }
+
+    private static bool IsNumericDateClaim(string type)
+    {
+        return string.Equals(type, JwtRegisteredClaimNames.Iat, StringComparison.Ordinal)
+            || string.Equals(type, JwtRegisteredClaimNames.Nbf, StringComparison.Ordinal)
+            || string.Equals(type, JwtRegisteredClaimNames.Exp, StringComparison.Ordinal)
+            || string.Equals(type, "auth_time", StringComparison.Ordinal);
     }
 }
 

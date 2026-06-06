@@ -3,6 +3,8 @@ using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Test;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace NOF.Infrastructure.Extension.Authorization.Jwt.Tests.Services;
@@ -92,6 +94,43 @@ public sealed class JwtAuthorityServiceTests
         Assert.True(generateResult.IsSuccess, generateResult.Message);
         Assert.False(string.IsNullOrWhiteSpace(generateResult.Value.AccessToken));
         Assert.Null(generateResult.Value.RefreshToken);
+    }
+
+    [Fact]
+    public async Task GenerateJwtToken_ShouldSerializeNumericDateClaimsAsNumbers()
+    {
+        var builder = CreateAuthorityBuilder();
+        const string issuedAt = "1710000000";
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var client = scope.GetRequiredService<IJwtAuthorityServiceClient>();
+
+        var generateResult = await client.GenerateJwtTokenAsync(
+            new GenerateJwtTokenRequest
+            {
+                Audience = "nof-tests",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims =
+                [
+                    new(JwtRegisteredClaimNames.Sub, "user-1"),
+                    new(JwtRegisteredClaimNames.Iat, issuedAt),
+                    new("auth_time", issuedAt)
+                ]
+            });
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+        var payloadJson = Encoding.UTF8.GetString(Base64UrlDecode(generateResult.Value.AccessToken.Split('.')[1]));
+        using var payload = JsonDocument.Parse(payloadJson);
+        Assert.Equal(JsonValueKind.Number, payload.RootElement.GetProperty(JwtRegisteredClaimNames.Iat).ValueKind);
+        Assert.Equal(JsonValueKind.Number, payload.RootElement.GetProperty("auth_time").ValueKind);
+    }
+
+    private static byte[] Base64UrlDecode(string value)
+    {
+        var padded = value.Replace('-', '+').Replace('_', '/');
+        padded = padded.PadRight(padded.Length + ((4 - padded.Length % 4) % 4), '=');
+        return Convert.FromBase64String(padded);
     }
 
     private static NOFTestAppBuilder CreateAuthorityBuilder()
