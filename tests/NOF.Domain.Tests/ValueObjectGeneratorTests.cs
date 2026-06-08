@@ -137,8 +137,10 @@ public class ValueObjectGeneratorTests
         Assert.Contains("private static global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<string> __GetPrimitiveJsonTypeInfo", code);
         Assert.Contains("JsonSerializer.Deserialize(ref reader, __GetPrimitiveJsonTypeInfo(options))", code);
         Assert.Contains("JsonSerializer.Serialize(writer, value._value, __GetPrimitiveJsonTypeInfo(options))", code);
+        Assert.Contains("public override string ToString()", code);
         Assert.DoesNotContain("Of(string? value)", code); // no nullable overload for ref types
         Assert.DoesNotContain("public static Name New()", code);
+        Assert.DoesNotContain("public override string? ToString()", code);
     }
 
     [Fact]
@@ -178,7 +180,44 @@ public class ValueObjectGeneratorTests
         Assert.Contains("value.HasValue ? Of(value.Value) : null", code);
         Assert.DoesNotContain("ArgumentNullException.ThrowIfNull", code);
         Assert.Contains("_value.GetHashCode()", code);   // value type 鈥?no ?.
-        Assert.Contains("_value.ToString()", code);
+        Assert.Contains("public override string ToString()", code);
+        Assert.Contains("_value.ToString() ?? string.Empty", code);
+    }
+
+    [Fact]
+    public void NullableReferenceUnderlyingType_EmitsNOF011_ButStillGeneratesSource()
+    {
+        const string source = """
+            #nullable enable
+            using NOF.Domain;
+            namespace Test
+            {
+                public readonly partial struct Name : IValueObject<string?> { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, d => d.Id == "NOF011" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Single(result.GeneratedTrees);
+    }
+
+    [Fact]
+    public void NullableValueUnderlyingType_EmitsNOF011_ButStillGeneratesSource()
+    {
+        const string source = """
+            #nullable enable
+            using NOF.Domain;
+            namespace Test
+            {
+                public readonly partial struct Score : IValueObject<int?> { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, d => d.Id == "NOF011" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Single(result.GeneratedTrees);
     }
 
     [Fact]

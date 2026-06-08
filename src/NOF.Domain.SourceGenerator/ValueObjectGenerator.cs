@@ -33,6 +33,14 @@ public class ValueObjectGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor _nullableUnderlyingTypeDescriptor = new(
+        id: "NOF011",
+        title: "ValueObject underlying type should not be nullable",
+        messageFormat: "'{0}' uses a nullable underlying type. Use a non-nullable underlying type and apply nullable at the usage site instead.",
+        category: "ValueObjectGenerator",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var candidates = context.SyntaxProvider
@@ -70,7 +78,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         }
 
         // Find IValueObject<TPrimitive> in the interface list
-        INamedTypeSymbol? primitiveType = null;
+        ITypeSymbol? primitiveType = null;
         var primitiveNullableAnnotation = NullableAnnotation.None;
         foreach (var iface in symbol.Interfaces)
         {
@@ -84,7 +92,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
                 continue;
             }
 
-            primitiveType = iface.TypeArguments[0] as INamedTypeSymbol;
+            primitiveType = iface.TypeArguments[0];
             primitiveNullableAnnotation = iface.TypeArgumentNullableAnnotations[0];
             break;
         }
@@ -112,6 +120,17 @@ public class ValueObjectGenerator : IIncrementalGenerator
         // Annotated = string?, NotAnnotated = string, None = no nullable context
         var primitiveRequiresNullCheck = !primitiveType.IsValueType
             && primitiveNullableAnnotation != NullableAnnotation.Annotated;
+
+        var primitiveIsNullableValueType = primitiveType is INamedTypeSymbol namedPrimitiveType
+            && namedPrimitiveType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
+
+        if (primitiveNullableAnnotation == NullableAnnotation.Annotated || primitiveIsNullableValueType)
+        {
+            result.Diagnostics.Add(Diagnostic.Create(
+                _nullableUnderlyingTypeDescriptor,
+                syntax.Identifier.GetLocation(),
+                symbol.Name));
+        }
 
         // Detect [NewableValueObject] — only valid on IValueObject<long>
         var hasNewableAttribute = symbol.GetAttributes()
@@ -214,12 +233,12 @@ public class ValueObjectGenerator : IIncrementalGenerator
         if (info.PrimitiveIsValueType)
         {
             sb.AppendLine("        public override int GetHashCode() => _value.GetHashCode();");
-            sb.AppendLine("        public override string? ToString() => _value.ToString();");
+            sb.AppendLine("        public override string ToString() => _value.ToString() ?? string.Empty;");
         }
         else
         {
             sb.AppendLine("        public override int GetHashCode() => _value?.GetHashCode() ?? 0;");
-            sb.AppendLine("        public override string? ToString() => _value?.ToString();");
+            sb.AppendLine("        public override string ToString() => _value?.ToString() ?? string.Empty;");
         }
         sb.AppendLine();
 
