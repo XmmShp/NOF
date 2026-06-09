@@ -48,6 +48,23 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task RpcHttpEndpoint_WhenRequestPropertyHasFromHeader_BindsHeaderValue()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/rpc/ReadToken");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "header-token");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<Result<ReadTokenResponse>>();
+        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
+        Assert.Equal("header-token", result.Value.Token);
+    }
+
     private static async Task<WebApplication> CreateAppAsync()
     {
         var builder = WebApplication.CreateBuilder();
@@ -63,6 +80,7 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
 
         builder.Services.AddSingleton<ValidationRpcServer>();
         builder.Services.AddTransient<CreateUserHandler>();
+        builder.Services.AddTransient<ReadTokenHandler>();
 
         var registry = new Registry();
         registry.RpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
@@ -82,12 +100,23 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
         public int Age { get; set; }
     }
 
+    public sealed class ReadTokenRequest
+    {
+        [NOF.Contract.FromHeader(NOFAbstractionConstants.Transport.Headers.Authorization, Prefix = "Bearer")]
+        public string Token { get; set; } = string.Empty;
+    }
+
     public sealed record CreateUserResponse(int Age);
+
+    public sealed record ReadTokenResponse(string Token);
 
     public partial interface IValidationRpcService : IRpcService
     {
         [HttpEndpoint(HttpVerb.Post, "/CreateUser")]
         Result<CreateUserResponse> CreateUser(CreateUserRequest request);
+
+        [HttpEndpoint(HttpVerb.Get, "/ReadToken")]
+        Result<ReadTokenResponse> ReadToken(ReadTokenRequest request);
     }
 
     public sealed class ValidationRpcServer : RpcServer<IValidationRpcService>, IRpcServer
@@ -96,7 +125,9 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
             new Dictionary<string, RpcHandlerMapping>
             {
                 [nameof(IValidationRpcService.CreateUser)] =
-                    new(typeof(CreateUserHandler), typeof(CreateUserRequest), typeof(Result<CreateUserResponse>))
+                    new(typeof(CreateUserHandler), typeof(CreateUserRequest), typeof(Result<CreateUserResponse>)),
+                [nameof(IValidationRpcService.ReadToken)] =
+                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(Result<ReadTokenResponse>))
             };
 
         protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
@@ -106,5 +137,11 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
     {
         public override Task<Result<CreateUserResponse>> HandleAsync(CreateUserRequest request, CancellationToken cancellationToken)
             => Task.FromResult(Result.Success(new CreateUserResponse(request.Age)));
+    }
+
+    public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, Result<ReadTokenResponse>>
+    {
+        public override Task<Result<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new ReadTokenResponse(request.Token)));
     }
 }

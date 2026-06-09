@@ -7,6 +7,7 @@ using NOF.Application;
 using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 
 namespace NOF.Hosting.AspNetCore;
@@ -28,6 +29,14 @@ public static partial class NOFHostingAspNetCoreExtensions
     private static readonly MethodInfo _createStreamBodyHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
         .GetMethod(nameof(CreateStreamBodyHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"Method '{nameof(CreateStreamBodyHandlerCore)}' was not found.");
+
+    private static readonly MethodInfo _createHeaderAwareQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateHeaderAwareQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateHeaderAwareQueryHandlerCore)}' was not found.");
+
+    private static readonly MethodInfo _createHeaderAwareStreamQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+        .GetMethod(nameof(CreateHeaderAwareStreamQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateHeaderAwareStreamQueryHandlerCore)}' was not found.");
 
     extension(IEndpointRouteBuilder app)
     {
@@ -87,14 +96,14 @@ public static partial class NOFHostingAspNetCoreExtensions
         if (TryGetStreamItemType(returnType, out var streamItemType))
         {
             templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
-                ? _createStreamQueryHandlerMethod
+                ? RequestHasHeaderBindings(requestType) ? _createHeaderAwareStreamQueryHandlerMethod : _createStreamQueryHandlerMethod
                 : _createStreamBodyHandlerMethod;
             genericArguments = [serviceType, requestType, streamItemType];
         }
         else
         {
             templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
-                ? _createQueryHandlerMethod
+                ? RequestHasHeaderBindings(requestType) ? _createHeaderAwareQueryHandlerMethod : _createQueryHandlerMethod
                 : _createBodyHandlerMethod;
             genericArguments = [serviceType, requestType];
         }
@@ -103,7 +112,9 @@ public static partial class NOFHostingAspNetCoreExtensions
         return (Delegate)genericMethod.Invoke(null, [operationName])!;
     }
 
-    private static Delegate CreateQueryHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
+    private static Delegate CreateQueryHandlerCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(string operationName)
         where TService : class, IRpcService
     {
         async Task<object?> Handler(
@@ -112,13 +123,15 @@ public static partial class NOFHostingAspNetCoreExtensions
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
-            return await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
 
         return Handler;
     }
 
-    private static Delegate CreateBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest>(string operationName)
+    private static Delegate CreateBodyHandlerCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(string operationName)
         where TService : class, IRpcService
     {
         async Task<object?> Handler(
@@ -127,13 +140,33 @@ public static partial class NOFHostingAspNetCoreExtensions
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
-            return await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
         }
 
         return Handler;
     }
 
-    private static Delegate CreateStreamQueryHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest, TItem>(string operationName)
+    private static Delegate CreateHeaderAwareQueryHandlerCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(string operationName)
+        where TService : class, IRpcService
+    {
+        async Task<object?> Handler(
+            HttpContext httpContext,
+            [FromServices] HttpRequestInboundAdapter adapter,
+            CancellationToken cancellationToken)
+        {
+            var request = CreateRequestFromQuery<TRequest>(httpContext);
+            return await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
+        }
+
+        return Handler;
+    }
+
+    private static Delegate CreateStreamQueryHandlerCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
+        TItem>(string operationName)
         where TService : class, IRpcService
     {
         async Task<Microsoft.AspNetCore.Http.IResult> Handler(
@@ -142,14 +175,17 @@ public static partial class NOFHostingAspNetCoreExtensions
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
-            var response = await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
             return CreateStreamingResult<TItem>(response);
         }
 
         return Handler;
     }
 
-    private static Delegate CreateStreamBodyHandlerCore<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService, TRequest, TItem>(string operationName)
+    private static Delegate CreateStreamBodyHandlerCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
+        TItem>(string operationName)
         where TService : class, IRpcService
     {
         async Task<Microsoft.AspNetCore.Http.IResult> Handler(
@@ -158,7 +194,26 @@ public static partial class NOFHostingAspNetCoreExtensions
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
-            var response = await adapter.InvokeAsync<TService>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return CreateStreamingResult<TItem>(response);
+        }
+
+        return Handler;
+    }
+
+    private static Delegate CreateHeaderAwareStreamQueryHandlerCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
+        TItem>(string operationName)
+        where TService : class, IRpcService
+    {
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+            HttpContext httpContext,
+            [FromServices] HttpRequestInboundAdapter adapter,
+            CancellationToken cancellationToken)
+        {
+            var request = CreateRequestFromQuery<TRequest>(httpContext);
+            var response = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
             return CreateStreamingResult<TItem>(response);
         }
 
@@ -212,6 +267,74 @@ public static partial class NOFHostingAspNetCoreExtensions
 
         streamItemType = null;
         return false;
+    }
+
+    private static bool RequestHasHeaderBindings([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type requestType)
+        => requestType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Any(static property => property.GetCustomAttribute<NOF.Contract.FromHeaderAttribute>(inherit: true) is not null);
+
+    private static TRequest CreateRequestFromQuery<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
+        HttpContext httpContext)
+    {
+        var request = Activator.CreateInstance<TRequest>();
+        foreach (var property in typeof(TRequest).GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (!property.CanWrite || property.GetCustomAttribute<NOF.Contract.FromHeaderAttribute>(inherit: true) is not null)
+            {
+                continue;
+            }
+
+            if (!httpContext.Request.Query.TryGetValue(property.Name, out var values))
+            {
+                continue;
+            }
+
+            property.SetValue(request, ConvertQueryValue(values.ToString(), property.PropertyType));
+        }
+
+        return request;
+    }
+
+    private static object? ConvertQueryValue(string value, Type propertyType)
+    {
+        var targetType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+        if (targetType == typeof(string))
+        {
+            return value;
+        }
+
+        if (targetType == typeof(int))
+        {
+            return int.Parse(value, CultureInfo.InvariantCulture);
+        }
+
+        if (targetType == typeof(long))
+        {
+            return long.Parse(value, CultureInfo.InvariantCulture);
+        }
+
+        if (targetType == typeof(bool))
+        {
+            return bool.Parse(value);
+        }
+
+        if (targetType == typeof(Guid))
+        {
+            return Guid.Parse(value);
+        }
+
+        if (targetType == typeof(DateTime))
+        {
+            return DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        }
+
+        if (targetType.IsEnum)
+        {
+            return Enum.Parse(targetType, value, ignoreCase: true);
+        }
+
+        return value;
     }
 
     private static IEnumerable<(HttpVerb Verb, string Route)> GetHttpEndpoints(MethodInfo method, string defaultRoute)

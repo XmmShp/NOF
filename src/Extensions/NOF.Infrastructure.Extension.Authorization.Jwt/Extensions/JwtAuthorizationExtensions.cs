@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Abstraction;
 using NOF.Contract.Extension.Authorization.Jwt;
 using NOF.Hosting;
@@ -40,6 +41,15 @@ public static partial class NOFJwtAuthorizationExtensions
                     : serviceProvider.GetRequiredService<HttpJwksService>());
             builder.Services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
             builder.Services.AddRequestInboundMiddleware<JwtResourceServerInboundMiddleware>();
+            return builder;
+        }
+
+        public INOFAppBuilder AddOAuthAuthorizationServer(Action<OAuthAuthorizationServerOptions> configureOptions)
+        {
+            EnsureJsonRegistered();
+            builder.Services.Configure(configureOptions);
+            builder.AddApplicationPart(typeof(OAuthAuthorizationServerService).Assembly);
+            builder.Services.TryAddScoped<IOAuthAuthorizationCodeService, OAuthAuthorizationCodeService>();
             return builder;
         }
     }

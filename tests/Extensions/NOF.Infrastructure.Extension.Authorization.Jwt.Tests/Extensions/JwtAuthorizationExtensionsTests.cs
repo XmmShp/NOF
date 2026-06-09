@@ -59,6 +59,25 @@ public sealed class JwtAuthorizationExtensionsTests
     }
 
     [Fact]
+    public async Task AddOAuthAuthorizationServer_ShouldRegisterProtocolServicesOnly()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddOAuthAuthorizationServer(options =>
+        {
+            options.Issuer = "https://issuer.local/oauth2";
+            options.AccessTokenAudience = "nof-tests";
+        });
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        Assert.NotNull(scope.GetRequiredService<IOAuthAuthorizationCodeService>());
+        Assert.Equal("https://issuer.local/oauth2", scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value.Issuer);
+        Assert.Null(scope.Services.GetService<IOAuthAuthorizationHandler>());
+        Assert.Null(scope.Services.GetService<IOAuthSubjectService>());
+    }
+
+    [Fact]
     public async Task AddJwtAuthority_ShouldPersistSigningKeysAcrossHostRestarts()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"nof-jwt-signing-keys-{Guid.NewGuid():N}.db");

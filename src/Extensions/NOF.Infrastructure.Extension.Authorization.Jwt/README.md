@@ -4,7 +4,7 @@ JWT authorization and authority extension for the [NOF Framework](https://github
 
 ## Overview
 
-Provides JWT infrastructure for NOF applications as a resource server (token validation) and as an optional JWT authority (token issuance). Outbound token propagation is provided separately by `NOF.Hosting.Extension.Authorization.Jwt`. No ASP.NET Core dependency; works with any NOF host.
+Provides JWT infrastructure for NOF applications as a resource server (token validation), as an optional JWT authority (token issuance), and as an OAuth 2.0 / OpenID Connect authorization server implemented through NOF RPC contracts. Outbound token propagation is provided separately by `NOF.Hosting.Extension.Authorization.Jwt`.
 
 ## Features
 
@@ -23,6 +23,17 @@ Provides JWT infrastructure for NOF applications as a resource server (token val
 - **JWKS Publishing** - expose keys through `IJwksService`
 - **Refresh Token Lifecycle** - validate and revoke refresh tokens with cache-based revocation
 - **Automatic Key Rotation** - background service rotates keys on a configurable interval
+
+### OAuth 2.0 / OpenID Connect Server
+
+- **Contract Mapped Endpoints** - exposes standard OAuth/OIDC operations through `IOAuthAuthorizationServerService` and `[HttpEndpoint]`
+- **Discovery Documents** - publishes OAuth authorization server and OIDC metadata
+- **JWKS Endpoint** - reuses the JWT authority signing keys
+- **Authorization Code Flow** - validates authorization requests, issues cache-backed authorization codes, and redirects with standard OAuth errors
+- **PKCE** - supports `plain` and `S256` code challenge verification
+- **Token Endpoint** - supports `authorization_code` and rotating `refresh_token` grants
+- **OIDC Claims** - emits `id_token` for `openid` requests and `userinfo` from the subject adapter
+- **Business Isolation** - user lookup, login UI, consent, tenant rules, external provider binding, and session policy are supplied through interfaces
 
 ## Usage
 
@@ -120,6 +131,39 @@ Signing keys are stored as separate records with status transitions:
 - `Revoked`: keys removed from validation set and deleted later by cleanup.
 
 The persistence step also registers a background cleanup service that periodically deletes old revoked signing keys using `SigningKeyCleanupInterval` and `RevokedSigningKeyRetention`.
+
+### As an OAuth/OIDC Authorization Server
+
+```csharp
+builder
+    .AddJwtAuthority(options =>
+    {
+        options.Issuer = "https://auth.example.com/oauth2";
+        options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
+    })
+    .AddOAuthAuthorizationServer(options =>
+    {
+        options.Issuer = "https://auth.example.com/oauth2";
+        options.AccessTokenAudience = "your-app";
+    });
+
+builder.Services.AddScoped<IOAuthAuthorizationHandler, YourAuthorizationHandler>();
+builder.Services.AddScoped<IOAuthSubjectService, YourSubjectService>();
+
+app.MapHttpEndpoint<OAuthAuthorizationServerService>();
+```
+
+NOF owns the protocol surface: discovery, `oauth2/authorize`, `oauth2/token`, `oauth2/userinfo`, authorization-code storage, PKCE, refresh-token rotation, JWT access tokens, OIDC `id_token`, and JWKS publishing. The HTTP routes are declared on `IOAuthAuthorizationServerService` in `NOF.Contract.Extension.Authorization.Jwt`; hosting packages map them with the existing NOF `MapHttpEndpoint<TServer>()` mechanism.
+
+Your application owns the business surface:
+
+- `IOAuthAuthorizationHandler` decides whether the request is already authenticated, must redirect to login/consent, or fails by business policy.
+- `IOAuthAuthorizationCodeService` can be injected into your login callback to issue a code after your own login flow succeeds.
+- `IOAuthSubjectService` maps an OAuth subject to access-token and identity claims, and can reject refresh-token reuse when your domain session is revoked.
+
+`userinfo` is exposed as a contract operation that accepts `OAuthUserInfoRequest.AccessToken`. A hosting adapter can map the standard `Authorization: Bearer` header into that request without adding an ASP.NET Core dependency to this package.
+
+The Koala user service should keep DingTalk/ZJU bridge logic, identity binding, email binding, user creation, role lookup, and session revocation in its own application layer, then adapt those behaviors through the interfaces above. Those concerns are Koala business policy, while NOF keeps only the reusable OAuth/OIDC protocol machinery.
 
 ## Dependencies
 

@@ -5,6 +5,7 @@ using NOF.Contract;
 using NOF.Infrastructure;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace NOF.Hosting.AspNetCore;
 
@@ -19,10 +20,12 @@ public sealed class HttpRequestInboundAdapter(
 {
     private readonly HttpHeaderOutboundOptions _httpHeaderOptions = httpHeaderOptions.Value;
 
-    public async Task<NOF.Contract.IResult?> InvokeAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService>(
+    public async Task<NOF.Contract.IResult?> InvokeAsync<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
         HttpContext httpContext,
         string operationName,
-        object request,
+        TRequest request,
         CancellationToken cancellationToken)
         where TRpcService : class, IRpcService
     {
@@ -31,6 +34,7 @@ public sealed class HttpRequestInboundAdapter(
         ArgumentNullException.ThrowIfNull(request);
         var resolution = invocationResolver.Resolve<TRpcService>(operationName);
 
+        BindHeaderProperties(httpContext, request);
         var headers = CreateInboundHeaders(httpContext);
         return await inboundPipeline.ExecuteAsync(
             request,
@@ -69,4 +73,48 @@ public sealed class HttpRequestInboundAdapter(
 
     private bool IsAllowed(string headerName)
         => _httpHeaderOptions.AllowedHeaders.Any(pattern => headerName.MatchWildcard(pattern, StringComparison.OrdinalIgnoreCase));
+
+    private static void BindHeaderProperties<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
+        HttpContext httpContext,
+        TRequest request)
+    {
+        foreach (var property in typeof(TRequest).GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            var attribute = property.GetCustomAttribute<FromHeaderAttribute>(inherit: true);
+            if (attribute is null || !property.CanWrite)
+            {
+                continue;
+            }
+
+            if (!httpContext.Request.Headers.TryGetValue(attribute.HeaderName, out var headerValues))
+            {
+                continue;
+            }
+
+            var value = headerValues.ToString();
+            if (string.IsNullOrEmpty(value))
+            {
+                continue;
+            }
+
+            value = TrimPrefix(value, attribute.Prefix);
+            if (property.PropertyType == typeof(string))
+            {
+                property.SetValue(request, value);
+            }
+        }
+    }
+
+    private static string TrimPrefix(string value, string? prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            return value;
+        }
+
+        var expectedPrefix = prefix.Trim() + " ";
+        return value.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase)
+            ? value[expectedPrefix.Length..].TrimStart()
+            : value;
+    }
 }
