@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.Metrics;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Infrastructure;
@@ -14,6 +16,8 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
     protected NOFMauiAppBuilder(MauiAppBuilder mauiAppBuilder, Assembly? applicationAssembly)
     {
         MauiAppBuilder = mauiAppBuilder;
+        Environment = new NOFMauiHostEnvironment(MauiAppBuilder.Environment);
+        Services.Replace(ServiceDescriptor.Singleton(Environment));
         if (applicationAssembly is not null)
         {
             this.AddApplicationPart(applicationAssembly);
@@ -46,7 +50,7 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
     public override IConfigurationManager Configuration => MauiAppBuilder.Configuration;
 
     /// <inheritdoc />
-    public override IHostEnvironment Environment => MauiAppBuilder.Environment;
+    public override IHostEnvironment Environment { get; }
 
     /// <inheritdoc />
     public override ILoggingBuilder Logging => MauiAppBuilder.Logging;
@@ -56,4 +60,35 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
 
     /// <inheritdoc />
     public override IServiceCollection Services => MauiAppBuilder.Services;
+
+    private sealed class NOFMauiHostEnvironment(IHostEnvironment innerEnvironment) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = GetValueOrDefault(
+            () => innerEnvironment.EnvironmentName,
+            Environments.Production);
+
+        public string ApplicationName { get; set; } = GetValueOrDefault(
+            () => innerEnvironment.ApplicationName,
+            AppDomain.CurrentDomain.FriendlyName);
+
+        public string ContentRootPath { get; set; } = GetValueOrDefault(
+            () => innerEnvironment.ContentRootPath,
+            AppContext.BaseDirectory);
+
+        public IFileProvider ContentRootFileProvider { get; set; } = GetValueOrDefault(
+            () => innerEnvironment.ContentRootFileProvider,
+            new NullFileProvider());
+
+        private static T GetValueOrDefault<T>(Func<T> valueFactory, T defaultValue)
+        {
+            try
+            {
+                return valueFactory() ?? defaultValue;
+            }
+            catch (NotImplementedException)
+            {
+                return defaultValue;
+            }
+        }
+    }
 }
