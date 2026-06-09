@@ -16,9 +16,12 @@ public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
     public HostApplicationBuilder HostApplicationBuilder { get; }
 
     private NOFConsoleHostBuilder(string[]? args, Assembly? applicationAssembly)
-        : base(applicationAssembly)
     {
         HostApplicationBuilder = Host.CreateApplicationBuilder(args ?? []);
+        if (applicationAssembly is not null)
+        {
+            this.AddApplicationPart(applicationAssembly);
+        }
     }
 
     /// <summary>

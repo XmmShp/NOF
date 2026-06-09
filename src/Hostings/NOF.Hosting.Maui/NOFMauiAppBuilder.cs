@@ -12,9 +12,12 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
     public MauiAppBuilder MauiAppBuilder { get; }
 
     protected NOFMauiAppBuilder(MauiAppBuilder mauiAppBuilder, Assembly? applicationAssembly)
-        : base(applicationAssembly)
     {
         MauiAppBuilder = mauiAppBuilder;
+        if (applicationAssembly is not null)
+        {
+            this.AddApplicationPart(applicationAssembly);
+        }
     }
 
     public static NOFMauiAppBuilder Create(bool useDefaults = true)

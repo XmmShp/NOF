@@ -21,9 +21,12 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     public WebApplicationBuilder WebApplicationBuilder { get; }
 
     protected NOFWebApplicationBuilder(string[] args, Assembly? applicationAssembly)
-        : base(applicationAssembly)
     {
         WebApplicationBuilder = WebApplication.CreateBuilder(args);
+        if (applicationAssembly is not null)
+        {
+            this.AddApplicationPart(applicationAssembly);
+        }
     }
 
     public static NOFWebApplicationBuilder Create(string[] args)

@@ -44,12 +44,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     public Registry Registry { get; } = new();
 
-    protected NOFAppBuilder(Assembly? applicationAssembly = null)
+    protected NOFAppBuilder()
     {
-        if (applicationAssembly is not null)
-        {
-            this.AddApplicationPart(applicationAssembly);
-        }
     }
 
     public virtual INOFAppBuilder AddRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep registrationStep, params Type[] allInterfaces)

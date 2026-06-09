@@ -17,11 +17,14 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
     public WebAssemblyHostBuilder WebAssemblyHostBuilder { get; }
 
     protected NOFWebAssemblyHostBuilder(string[]? args, Assembly? applicationAssembly)
-        : base(applicationAssembly)
     {
         WebAssemblyHostBuilder = WebAssemblyHostBuilder.CreateDefault(args);
         Environment = new NOFWebAssemblyHostEnvironment(WebAssemblyHostBuilder.HostEnvironment);
         _configuration.AddConfiguration(WebAssemblyHostBuilder.Configuration);
+        if (applicationAssembly is not null)
+        {
+            this.AddApplicationPart(applicationAssembly);
+        }
     }
 
     public static NOFWebAssemblyHostBuilder Create(string[]? args)
