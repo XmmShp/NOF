@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Infrastructure;
 using System.Reflection;
 
 namespace NOF.Hosting.Maui;
@@ -26,9 +26,7 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
 
     public static NOFMauiAppBuilder Create(bool useDefaults = true)
     {
-        var builder = new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults), Assembly.GetCallingAssembly());
-        builder.AddInfrastructureDefaults();
-        return builder;
+        return new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults), Assembly.GetCallingAssembly());
     }
 
     /// <inheritdoc />
