@@ -102,13 +102,29 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
 
     public sealed class ReadTokenRequest
     {
-        [NOF.Contract.FromHeader(NOFAbstractionConstants.Transport.Headers.Authorization, Prefix = "Bearer")]
-        public string Token { get; set; } = string.Empty;
+        [NOF.Contract.FromHeader(NOFAbstractionConstants.Transport.Headers.Authorization)]
+        public HeaderToken Token { get; set; }
     }
 
     public sealed record CreateUserResponse(int Age);
 
     public sealed record ReadTokenResponse(string Token);
+
+    public readonly record struct HeaderToken(string Value) : ITransportStringParsable<HeaderToken>
+    {
+        public static bool TryParse(string? value, IFormatProvider? provider, out HeaderToken result)
+        {
+            var token = value ?? string.Empty;
+            const string prefix = "Bearer ";
+            if (token.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                token = token[prefix.Length..].TrimStart();
+            }
+
+            result = new HeaderToken(token);
+            return true;
+        }
+    }
 
     public partial interface IValidationRpcService : IRpcService
     {
@@ -142,6 +158,6 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
     public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, Result<ReadTokenResponse>>
     {
         public override Task<Result<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, CancellationToken cancellationToken)
-            => Task.FromResult(Result.Success(new ReadTokenResponse(request.Token)));
+            => Task.FromResult(Result.Success(new ReadTokenResponse(request.Token.Value)));
     }
 }

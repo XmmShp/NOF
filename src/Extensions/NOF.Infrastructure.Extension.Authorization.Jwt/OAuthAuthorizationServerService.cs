@@ -421,7 +421,7 @@ public sealed class UserInfoHandler(
         CancellationToken cancellationToken)
     {
         var principal = await ValidateAccessTokenAsync(
-            request.AccessToken,
+            request.AccessToken.Value,
             signingKeyService,
             jwtAuthorityOptions.Value,
             cancellationToken).ConfigureAwait(false);

@@ -298,43 +298,7 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     private static object? ConvertQueryValue(string value, Type propertyType)
     {
-        var targetType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
-        if (targetType == typeof(string))
-        {
-            return value;
-        }
-
-        if (targetType == typeof(int))
-        {
-            return int.Parse(value, CultureInfo.InvariantCulture);
-        }
-
-        if (targetType == typeof(long))
-        {
-            return long.Parse(value, CultureInfo.InvariantCulture);
-        }
-
-        if (targetType == typeof(bool))
-        {
-            return bool.Parse(value);
-        }
-
-        if (targetType == typeof(Guid))
-        {
-            return Guid.Parse(value);
-        }
-
-        if (targetType == typeof(DateTime))
-        {
-            return DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-        }
-
-        if (targetType.IsEnum)
-        {
-            return Enum.Parse(targetType, value, ignoreCase: true);
-        }
-
-        return value;
+        return TransportStringValueConverter.Convert(value, propertyType);
     }
 
     private static IEnumerable<(HttpVerb Verb, string Route)> GetHttpEndpoints(MethodInfo method, string defaultRoute)

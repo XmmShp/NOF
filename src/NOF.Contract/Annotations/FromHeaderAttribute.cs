@@ -20,9 +20,4 @@ public sealed class FromHeaderAttribute : Attribute
     /// Gets the transport header name.
     /// </summary>
     public string HeaderName { get; }
-
-    /// <summary>
-    /// Gets or sets an optional scheme/prefix to trim from the header value, such as Bearer.
-    /// </summary>
-    public string? Prefix { get; set; }
 }

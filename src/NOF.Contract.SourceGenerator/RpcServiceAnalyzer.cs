@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -29,6 +30,14 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         "NOF202",
         "Class request must have a parameterless constructor",
         "Request class '{0}' must have a public parameterless constructor. Records may use primary constructors, but classes must have a parameterless constructor.",
+        "HttpEndpoint",
+        DiagnosticSeverity.Error,
+        true);
+
+    public static readonly DiagnosticDescriptor TransportStringPropertyMustBeParsable = new(
+        "NOF203",
+        "Transport string-bound property type must be parsable",
+        "Property '{0}' on request type '{1}' is bound from {2} and must be string, an enum, a TryParse-compatible type, or implement ITransportStringParsable<TSelf>",
         "HttpEndpoint",
         DiagnosticSeverity.Error,
         true);
@@ -62,6 +71,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         RequestMustBeReferenceType,
         RouteParametersNotSupported,
         ClassMustHaveParameterlessCtor,
+        TransportStringPropertyMustBeParsable,
         InvalidServiceMethodSignature,
         ServiceMethodOverloadsNotSupported,
         VoidReturnNotSupported
@@ -99,6 +109,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         foreach (var attr in httpEndpointAttributes)
         {
             var attrLocation = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? typeLocation;
+            ValidateTransportStringBoundProperties(context, typeSymbol, [attr], attrLocation);
             var route = attr.ConstructorArguments.Length > 1 ? attr.ConstructorArguments[1].Value as string : null;
             if (string.IsNullOrWhiteSpace(route))
             {
@@ -167,9 +178,10 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
                 requestType = type;
             }
 
-            var methodHttpEndpointAttr = method.GetAttributes()
-                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn);
-            if (methodHttpEndpointAttr is null)
+            var methodHttpEndpointAttrs = method.GetAttributes()
+                .Where(a => a.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn)
+                .ToArray();
+            if (methodHttpEndpointAttrs.Length == 0)
             {
                 continue;
             }
@@ -178,16 +190,20 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             if (requestType != null)
             {
                 ValidateRequestPayloadShape(context, requestType, methodLocation);
+                ValidateTransportStringBoundProperties(context, requestType, methodHttpEndpointAttrs, methodLocation);
 
-                var route = methodHttpEndpointAttr.ConstructorArguments.Length > 1
-                    ? methodHttpEndpointAttr.ConstructorArguments[1].Value as string
-                    : null;
-                if (string.IsNullOrWhiteSpace(route))
+                foreach (var methodHttpEndpointAttr in methodHttpEndpointAttrs)
                 {
-                    continue;
-                }
+                    var route = methodHttpEndpointAttr.ConstructorArguments.Length > 1
+                        ? methodHttpEndpointAttr.ConstructorArguments[1].Value as string
+                        : null;
+                    if (string.IsNullOrWhiteSpace(route))
+                    {
+                        continue;
+                    }
 
-                ValidateRoute(context, route!, methodLocation);
+                    ValidateRoute(context, route!, methodLocation);
+                }
             }
         }
 
@@ -228,6 +244,92 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             context.ReportDiagnostic(
                 Diagnostic.Create(RouteParametersNotSupported, location, route));
         }
+    }
+
+    private static void ValidateTransportStringBoundProperties(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol requestType,
+        IEnumerable<AttributeData> endpointAttributes,
+        Location location)
+    {
+        var hasQueryBinding = endpointAttributes.Any(static attr =>
+            attr.ConstructorArguments.Length > 0
+            && attr.ConstructorArguments[0].Value is int verb
+            && (verb == (int)HttpVerb.Get || verb == (int)HttpVerb.Delete));
+
+        foreach (var property in RpcServiceHelpers.GetAllPublicProperties(requestType))
+        {
+            var fromHeader = property.GetAttributes()
+                .Any(static attr => attr.AttributeClass?.ToDisplayString() == RpcServiceHelpers.FromHeaderAttributeFqn);
+            if (!fromHeader && !hasQueryBinding)
+            {
+                continue;
+            }
+
+            if (!IsTransportStringParsable(property.Type))
+            {
+                var source = fromHeader ? "header" : "query";
+                context.ReportDiagnostic(Diagnostic.Create(
+                    TransportStringPropertyMustBeParsable,
+                    property.Locations.FirstOrDefault() ?? location,
+                    property.Name,
+                    requestType.Name,
+                    source));
+            }
+        }
+    }
+
+    private static bool IsTransportStringParsable(ITypeSymbol type)
+    {
+        if (type.NullableAnnotation == NullableAnnotation.Annotated && type is INamedTypeSymbol nullableReference)
+        {
+            type = nullableReference;
+        }
+
+        if (type.SpecialType == SpecialType.System_String)
+        {
+            return true;
+        }
+
+        if (type is INamedTypeSymbol { IsGenericType: true } nullable
+            && nullable.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+        {
+            type = nullable.TypeArguments[0];
+        }
+
+        if (type.TypeKind == TypeKind.Enum)
+        {
+            return true;
+        }
+
+        if (type is INamedTypeSymbol namedType)
+        {
+            if (namedType.AllInterfaces.Any(static i =>
+                    i.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.TransportStringParsableFqn))
+            {
+                return true;
+            }
+
+            return namedType.GetMembers("TryParse")
+                .OfType<IMethodSymbol>()
+                .Any(method =>
+                {
+                    if (method.Parameters.Length < 2)
+                    {
+                        return false;
+                    }
+
+                    var resultParameter = method.Parameters[method.Parameters.Length - 1];
+                    return method.IsStatic
+                        && method.DeclaredAccessibility == Accessibility.Public
+                        && method.ReturnType.SpecialType == SpecialType.System_Boolean
+                        && method.Parameters[0].Type.SpecialType == SpecialType.System_String
+                        && resultParameter.RefKind == RefKind.Out
+                        && SymbolEqualityComparer.Default.Equals(resultParameter.Type, type);
+                });
+        }
+
+        return false;
     }
 
 }

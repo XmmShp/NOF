@@ -97,24 +97,7 @@ public sealed class HttpRequestInboundAdapter(
                 continue;
             }
 
-            value = TrimPrefix(value, attribute.Prefix);
-            if (property.PropertyType == typeof(string))
-            {
-                property.SetValue(request, value);
-            }
+            property.SetValue(request, TransportStringValueConverter.Convert(value, property.PropertyType));
         }
-    }
-
-    private static string TrimPrefix(string value, string? prefix)
-    {
-        if (string.IsNullOrWhiteSpace(prefix))
-        {
-            return value;
-        }
-
-        var expectedPrefix = prefix.Trim() + " ";
-        return value.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase)
-            ? value[expectedPrefix.Length..].TrimStart()
-            : value;
     }
 }

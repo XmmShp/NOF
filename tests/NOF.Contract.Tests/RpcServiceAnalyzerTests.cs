@@ -18,7 +18,9 @@ public class RpcServiceAnalyzerTests
         typeof(IRpcService),
         typeof(HttpVerb),
         typeof(Result),
-        typeof(Result<>)
+        typeof(Result<>),
+        typeof(FromHeaderAttribute),
+        typeof(ITransportStringParsable<>)
     ];
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
@@ -87,6 +89,94 @@ public class RpcServiceAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
         Assert.Contains(diagnostics, d => d.Id == "NOF202");
+    }
+
+    [Fact]
+    public async Task GetEndpoint_WithUnparsableQueryProperty_ReportsNOF203()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public sealed class QueryRequest
+            {
+                public ComplexValue Value { get; set; } = new();
+            }
+
+            public sealed class ComplexValue;
+
+            public partial interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Get, "/api/items")]
+                Result Get(QueryRequest request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Single(diagnostics, d => d.Id == "NOF203");
+    }
+
+    [Fact]
+    public async Task PostEndpoint_WithUnparsableHeaderProperty_ReportsNOF203()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public sealed class CommandRequest
+            {
+                [FromHeader("X-Value")]
+                public ComplexValue Value { get; set; } = new();
+            }
+
+            public sealed class ComplexValue;
+
+            public partial interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                Result Execute(CommandRequest request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Single(diagnostics, d => d.Id == "NOF203");
+    }
+
+    [Fact]
+    public async Task HeaderProperty_WithTransportStringParsableType_NoNOF203()
+    {
+        const string source = """
+            using NOF.Contract;
+            using System;
+
+            namespace App;
+
+            public sealed class CommandRequest
+            {
+                [FromHeader("X-Value")]
+                public StrongValue Value { get; set; }
+            }
+
+            public readonly record struct StrongValue(string Value) : ITransportStringParsable<StrongValue>
+            {
+                public static bool TryParse(string? value, IFormatProvider? provider, out StrongValue result)
+                {
+                    result = new StrongValue(value ?? string.Empty);
+                    return true;
+                }
+            }
+
+            public partial interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                Result Execute(CommandRequest request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF203");
     }
 
     [Fact]
