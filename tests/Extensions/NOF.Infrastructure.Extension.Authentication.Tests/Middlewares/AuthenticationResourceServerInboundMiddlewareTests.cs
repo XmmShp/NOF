@@ -5,7 +5,6 @@ using NOF.Abstraction;
 using NOF.Application;
 using System.Security.Cryptography;
 using Xunit;
-using TransparentInfos = NOF.Application.TransparentInfos;
 
 namespace NOF.Infrastructure.Extension.Authentication.Tests.Middlewares;
 
@@ -16,7 +15,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
-        var executionContext = new TransparentInfos();
+        var executionContext = new NOFContext();
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
         var nextCalled = false;
@@ -35,7 +34,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
-        var executionContext = new TransparentInfos();
+        var executionContext = new NOFContext();
         executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
@@ -64,7 +63,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             ActivatedAtUtc = DateTime.UtcNow
         };
         var jwksService = CreateJwksService([key]);
-        var executionContext = new TransparentInfos();
+        var executionContext = new NOFContext();
         executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
         var middleware = CreateMiddleware(userContext, jwksService, executionContext);
 
@@ -87,7 +86,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     private static AuthenticationResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
         ResourceServerJwksCacheService jwksCacheService,
-        ITransparentInfos executionContext)
+        NOFContext executionContext)
     {
         return new AuthenticationResourceServerInboundMiddleware(
             userContext,

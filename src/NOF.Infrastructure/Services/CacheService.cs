@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 
@@ -11,7 +12,7 @@ public sealed class CacheService : ICacheService
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
-    private readonly ITransparentInfos _executionContext;
+    private readonly NOFContext _contextAccessor;
     private readonly CacheServiceLocalLockState _localLockState;
     private readonly bool _ignoreQueryFilters;
 
@@ -20,13 +21,13 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
-        ITransparentInfos executionContext)
+        NOFContext contextAccessor)
         : this(
             rider,
             serializer,
             lockRetryStrategy,
             options?.Value ?? throw new ArgumentNullException(nameof(options)),
-            executionContext,
+            contextAccessor,
             new CacheServiceLocalLockState(),
             ignoreQueryFilters: false)
     {
@@ -37,14 +38,14 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
-        ITransparentInfos executionContext,
+        NOFContext contextAccessor,
         CacheServiceLocalLockState localLockState)
         : this(
             rider,
             serializer,
             lockRetryStrategy,
             options?.Value ?? throw new ArgumentNullException(nameof(options)),
-            executionContext,
+            contextAccessor,
             localLockState,
             ignoreQueryFilters: false)
     {
@@ -55,7 +56,7 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         CacheServiceOptions options,
-        ITransparentInfos executionContext,
+        NOFContext contextAccessor,
         CacheServiceLocalLockState localLockState,
         bool ignoreQueryFilters)
     {
@@ -63,14 +64,14 @@ public sealed class CacheService : ICacheService
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(executionContext);
+        ArgumentNullException.ThrowIfNull(contextAccessor);
         ArgumentNullException.ThrowIfNull(localLockState);
 
         _rider = rider;
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
         _options = options;
-        _executionContext = executionContext;
+        _contextAccessor = contextAccessor;
         _localLockState = localLockState;
         _ignoreQueryFilters = ignoreQueryFilters;
     }
@@ -78,7 +79,7 @@ public sealed class CacheService : ICacheService
     public ICacheService IgnoreQueryFilters()
         => _ignoreQueryFilters
             ? this
-            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _executionContext, _localLockState, ignoreQueryFilters: true);
+            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _contextAccessor, _localLockState, ignoreQueryFilters: true);
 
     private string ApplyKeyPrefix(string key)
     {
@@ -90,7 +91,7 @@ public sealed class CacheService : ICacheService
         var keyPrefixTemplate = _options.KeyPrefix ?? string.Empty;
         var keyPrefix = DbConnectionStringTemplateResolver.ResolveTenantId(
             keyPrefixTemplate,
-            _executionContext.TenantId);
+            _contextAccessor.TenantId);
 
         return keyPrefix + key;
     }

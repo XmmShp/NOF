@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Abstraction;
+using NOF.Application;
 
 namespace NOF.Sample.Application.EventHandlers;
 

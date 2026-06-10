@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
@@ -14,18 +15,20 @@ public class HandlerRegistrationGeneratorTests
     {
         const string source = """
             using NOF.Application;
+            using NOF.Abstraction;
             namespace App
             {
                 public record MyCommand;
                 public class MyCommandHandler : CommandHandler<MyCommand>
                 {
-                    public override System.Threading.Tasks.Task HandleAsync(MyCommand command, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyCommand command, NOFContext context, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
+            typeof(NOFContext),
             typeof(CommandHandler<>),
             typeof(CommandHandlerRegistration)
         );
@@ -45,18 +48,20 @@ public class HandlerRegistrationGeneratorTests
     {
         const string source = """
             using NOF.Application;
+            using NOF.Abstraction;
             namespace App
             {
                 public record MyNotification;
                 public class MyNotificationHandler : NotificationHandler<MyNotification>
                 {
-                    public override System.Threading.Tasks.Task HandleAsync(MyNotification notification, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyNotification notification, NOFContext context, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
+            typeof(NOFContext),
             typeof(NotificationHandler<>),
             typeof(NotificationHandlerRegistration)
         );

@@ -1,23 +1,24 @@
-using NOF.Application;
+using NOF.Abstraction;
 using NOF.Hosting;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Copies the current <see cref="ITransparentInfos"/> key-values into outbound headers
+/// Copies the current <see cref="NOFContext"/> headers into outbound headers
 /// so outbound operations can propagate tenant/tracing/auth without mutating the ambient execution context.
 /// </summary>
-public sealed class TransparentInfosHeadersOutboundMiddleware :
+public sealed class ContextHeadersOutboundMiddleware :
     ICommandOutboundMiddleware,
     INotificationOutboundMiddleware,
     IRequestOutboundMiddleware,
     IBefore<MessageIdOutboundMiddleware>
 {
-    private readonly ITransparentInfos _executionContext;
+    private readonly NOFContext _contextAccessor;
 
-    public TransparentInfosHeadersOutboundMiddleware(ITransparentInfos executionContext)
+    public ContextHeadersOutboundMiddleware(NOFContext contextAccessor)
     {
-        _executionContext = executionContext;
+        _contextAccessor = contextAccessor;
     }
 
     public ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -40,6 +41,6 @@ public sealed class TransparentInfosHeadersOutboundMiddleware :
 
     private void CopyHeaders(IDictionary<string, string?> headers)
     {
-        _executionContext.CopyHeadersTo(headers);
+        _contextAccessor.CopyHeadersTo(headers);
     }
 }

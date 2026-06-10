@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
+using NOF.Abstraction;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -18,7 +19,7 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         _cache = cache;
     }
 
-    public override async Task<Result> HandleAsync(DeleteConfigNodeRequest request, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(DeleteConfigNodeRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.Id);
         var node = await _dbContext.Set<ConfigNode>()

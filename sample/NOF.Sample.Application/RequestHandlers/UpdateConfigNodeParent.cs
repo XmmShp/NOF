@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
+using NOF.Abstraction;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -19,7 +20,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         _cache = cache;
     }
 
-    public override async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>()

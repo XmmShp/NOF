@@ -23,13 +23,13 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return Services.GetRequiredService<T>();
     }
 
-    public ITransparentInfos TransparentInfos => GetRequiredService<ITransparentInfos>();
+    public NOFContext Context => GetRequiredService<NOFContext>();
 
     public IUserContext UserContext => GetRequiredService<IUserContext>();
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        TransparentInfos.TenantId = TenantId.Normalize(tenantId);
+        Context.TenantId = TenantId.Normalize(tenantId);
         return this;
     }
 
@@ -37,7 +37,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     {
         if (traceId is not null && spanId is not null)
         {
-            TransparentInfos.TracingInfo = new TracingInfo(traceId, spanId);
+            Context.TracingInfo = new TracingInfo(traceId, spanId);
         }
         return this;
     }

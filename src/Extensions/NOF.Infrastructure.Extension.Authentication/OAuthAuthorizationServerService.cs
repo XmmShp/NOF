@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using static NOF.Infrastructure.Extension.Authentication.OAuthAuthorizationServerServiceHelpers;
+using NOF.Abstraction;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 
@@ -19,7 +20,7 @@ public sealed class GetRootHandler(IOptions<OAuthAuthorizationServerOptions> opt
 {
     public override Task<Result<OAuthServerRootDocument>> HandleAsync(
         Empty request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
     {
         var issuer = ResolveIssuer(options.Value);
         return Task.FromResult<Result<OAuthServerRootDocument>>(new OAuthServerRootDocument
@@ -35,7 +36,7 @@ public sealed class GetOpenIdConfigurationHandler(IOptions<OAuthAuthorizationSer
 {
     public override Task<Result<OAuthServerMetadata>> HandleAsync(
         Empty request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
         => Task.FromResult(BuildMetadata(options.Value));
 }
 
@@ -44,7 +45,7 @@ public sealed class GetAuthorizationServerMetadataHandler(IOptions<OAuthAuthoriz
 {
     public override Task<Result<OAuthServerMetadata>> HandleAsync(
         Empty request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
         => Task.FromResult(BuildMetadata(options.Value));
 }
 
@@ -53,7 +54,7 @@ public sealed class GetJwksHandler(IJwksService jwksService)
 {
     public override async Task<Result<JwksDocument>> HandleAsync(
         Empty request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
         => await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false);
 }
 
@@ -64,7 +65,7 @@ public sealed class AuthorizeHandler(
 {
     public override async Task<Result<OAuthAuthorizeResponse>> HandleAsync(
         OAuthAuthorizeRequest request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
     {
         var authorizationRequest = new OAuthAuthorizationRequest(
             ResponseType: request.ResponseType,
@@ -173,7 +174,7 @@ public sealed class TokenHandler(
 {
     public override async Task<Result<OAuthTokenEndpointResponse>> HandleAsync(
         OAuthTokenRequest request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
     {
         return request.GrantType switch
         {
@@ -426,7 +427,7 @@ public sealed class UserInfoHandler(
 {
     public override async Task<Result<IReadOnlyDictionary<string, object>>> HandleAsync(
         OAuthUserInfoRequest request,
-        CancellationToken cancellationToken)
+        NOFContext context, CancellationToken cancellationToken)
     {
         var principal = await ValidateAccessTokenAsync(
             request.AccessToken.Value,

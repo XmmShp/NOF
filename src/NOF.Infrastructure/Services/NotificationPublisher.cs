@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics;
 
@@ -8,7 +9,7 @@ public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
     private readonly NotificationOutboundPipelineExecutor _outboundPipeline;
-    private readonly ITransparentInfos _executionContext;
+    private readonly NOFContext _contextAccessor;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
@@ -16,14 +17,14 @@ public sealed class NotificationPublisher : INotificationPublisher
     public NotificationPublisher(
         INotificationRider rider,
         NotificationOutboundPipelineExecutor outboundPipeline,
-        ITransparentInfos executionContext,
+        NOFContext contextAccessor,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
-        _executionContext = executionContext;
+        _contextAccessor = contextAccessor;
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
         _typeResolver = typeResolver;
@@ -35,7 +36,7 @@ public sealed class NotificationPublisher : INotificationPublisher
         ArgumentNullException.ThrowIfNull(notificationTypes);
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        _executionContext.CopyHeadersTo(headers);
+        _contextAccessor.CopyHeadersTo(headers);
 
         var payloadTypeName = _typeResolver.Register(notification.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(

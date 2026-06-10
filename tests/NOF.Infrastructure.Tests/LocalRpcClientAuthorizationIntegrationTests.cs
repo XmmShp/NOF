@@ -50,8 +50,8 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddLogging();
 
         services.AddSingleton<IUserContext, UserContext>();
-        services.AddScoped<ITransparentInfos, TransparentInfos>();
-
+        services.AddScoped<NOFContext>();
+        
         services.AddSingleton<InvocationRecorder>();
         services.AddSingleton<ProtectedFleetServer>();
         services.AddTransient<GetFleetOverviewHandler>();
@@ -112,7 +112,7 @@ public sealed class ProtectedFleetServer : RpcServer<IProtectedFleetService>
 
 public sealed class GetFleetOverviewHandler(InvocationRecorder recorder) : RpcHandler<Empty, Result<GetFleetOverviewResponse>>
 {
-    public override Task<Result<GetFleetOverviewResponse>> HandleAsync(Empty request, CancellationToken cancellationToken)
+    public override Task<Result<GetFleetOverviewResponse>> HandleAsync(Empty request, NOFContext context, CancellationToken cancellationToken)
     {
         recorder.Count++;
         return Task.FromResult(Result.Success(new GetFleetOverviewResponse("fleet")));

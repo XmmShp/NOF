@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Contract;
+using NOF.Abstraction;
 using NOF.Sample.Application.Entities;
+using NOF.Application;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -13,7 +15,7 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
         _dbContext = dbContext;
     }
 
-    public override async Task<Result<GetConfigNodeChildrenResponse>> HandleAsync(GetConfigNodeChildrenRequest request, CancellationToken cancellationToken)
+    public override async Task<Result<GetConfigNodeChildrenResponse>> HandleAsync(GetConfigNodeChildrenRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.Id);
         var children = await _dbContext.Set<ConfigNodeChildren>()

@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -8,7 +9,7 @@ namespace NOF.Application;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public abstract class NotificationHandler
 {
-    public abstract Task HandleAsync(object notification, CancellationToken cancellationToken);
+    public abstract Task HandleAsync(object notification, NOFContext context, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -18,11 +19,12 @@ public abstract class NotificationHandler
 public abstract class NotificationHandler<TNotification> : NotificationHandler
 {
     /// <inheritdoc />
-    public sealed override Task HandleAsync(object notification, CancellationToken cancellationToken)
-        => HandleAsync((TNotification)notification, cancellationToken);
+    public sealed override Task HandleAsync(object notification, NOFContext context, CancellationToken cancellationToken)
+        => HandleAsync((TNotification)notification, context, cancellationToken);
 
     /// <summary>Handles the notification.</summary>
     /// <param name="notification">The notification to handle.</param>
+    /// <param name="context">Current NOF context.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public abstract Task HandleAsync(TNotification notification, CancellationToken cancellationToken);
+    public abstract Task HandleAsync(TNotification notification, NOFContext context, CancellationToken cancellationToken);
 }

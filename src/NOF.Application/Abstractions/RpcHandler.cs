@@ -1,3 +1,5 @@
+using NOF.Abstraction;
+
 namespace NOF.Application;
 
 /// <summary>
@@ -18,7 +20,7 @@ public abstract class RpcHandler
     /// <summary>
     /// Executes the handler using an untyped request instance.
     /// </summary>
-    public abstract Task<object?> HandleAsync(object request, CancellationToken cancellationToken);
+    public abstract Task<object?> HandleAsync(object request, NOFContext context, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -33,14 +35,14 @@ public abstract class RpcHandler<TRequest, TResponse> : RpcHandler
     public override Type ResponseType => typeof(TResponse);
 
     /// <inheritdoc />
-    public sealed override async Task<object?> HandleAsync(object request, CancellationToken cancellationToken)
+    public sealed override async Task<object?> HandleAsync(object request, NOFContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return await HandleAsync((TRequest)request, cancellationToken).ConfigureAwait(false);
+        return await HandleAsync((TRequest)request, context, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Executes the handler using the strongly typed request.
     /// </summary>
-    public abstract Task<TResponse> HandleAsync(TRequest request, CancellationToken cancellationToken);
+    public abstract Task<TResponse> HandleAsync(TRequest request, NOFContext context, CancellationToken cancellationToken);
 }

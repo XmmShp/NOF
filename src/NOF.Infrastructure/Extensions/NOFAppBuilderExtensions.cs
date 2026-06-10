@@ -31,6 +31,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+            builder.Services.TryAddSingleton<IContextAccessor, ContextAccessor>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
             builder.Environment.BindConfiguration(builder.Configuration);
@@ -42,12 +43,13 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<IObjectSerializer>(),
                 sp.GetRequiredService<ICacheLockRetryStrategy>(),
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheServiceOptions>>(),
-                sp.GetRequiredService<ITransparentInfos>(),
+                sp.GetRequiredService<NOFContext>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, ContextAmbientDaemonService>());
 
             builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
@@ -90,16 +92,16 @@ public static partial class NOFInfrastructureExtensions
 
             #region Application Services
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
-            builder.Services.TryAddScoped<ITransparentInfos, TransparentInfos>();
+            builder.Services.TryAddScoped<NOFContext>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
             #endregion
 
             #region Outbound Middlewares
-            builder.Services.AddCommandOutboundMiddleware<TransparentInfosHeadersOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<TransparentInfosHeadersOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<TransparentInfosHeadersOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<ContextHeadersOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<ContextHeadersOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<ContextHeadersOutboundMiddleware>();
             builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<MessageIdOutboundMiddleware>();

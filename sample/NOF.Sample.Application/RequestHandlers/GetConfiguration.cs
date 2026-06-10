@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
 using System.Text.Json.Nodes;
@@ -20,7 +21,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         _mapper = mapper;
     }
 
-    public override async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, CancellationToken cancellationToken)
+    public override async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);

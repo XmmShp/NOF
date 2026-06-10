@@ -1,7 +1,7 @@
 using NOF.Abstraction;
-using NOF.Application;
 using NOF.Hosting;
 using System.Diagnostics;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
@@ -11,11 +11,11 @@ public sealed class TenantInboundMiddleware :
     IRequestInboundMiddleware,
     IAfter<InboundExceptionMiddleware>
 {
-    private readonly ITransparentInfos _executionContext;
+    private readonly NOFContext _contextAccessor;
 
-    public TenantInboundMiddleware(ITransparentInfos executionContext)
+    public TenantInboundMiddleware(NOFContext contextAccessor)
     {
-        _executionContext = executionContext;
+        _contextAccessor = contextAccessor;
     }
 
     public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -38,11 +38,12 @@ public sealed class TenantInboundMiddleware :
 
     private void ApplyTenant()
     {
-        var tenantId = _executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
+        var context = _contextAccessor;
+        var tenantId = context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
             ? TenantId.Normalize(headerTenantId)
             : NOFAbstractionConstants.Tenant.HostId;
 
-        _executionContext.TenantId = tenantId;
+        context.TenantId = tenantId;
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
     }
 }

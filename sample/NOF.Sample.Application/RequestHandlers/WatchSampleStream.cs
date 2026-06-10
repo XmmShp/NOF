@@ -1,11 +1,13 @@
 using NOF.Contract;
 using System.Runtime.CompilerServices;
+using NOF.Abstraction;
+using NOF.Application;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public sealed class WatchSampleStream : NOFSampleService.WatchSampleStream
 {
-    public override Task<StreamingResult<SampleStreamEvent>> HandleAsync(WatchSampleStreamRequest request, CancellationToken cancellationToken)
+    public override Task<StreamingResult<SampleStreamEvent>> HandleAsync(WatchSampleStreamRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var count = Math.Clamp(request.Count, 1, 20);
         var intervalMilliseconds = Math.Clamp(request.IntervalMilliseconds, 100, 5000);

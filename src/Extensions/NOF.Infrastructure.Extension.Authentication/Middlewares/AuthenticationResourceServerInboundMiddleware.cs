@@ -2,11 +2,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
-using NOF.Application;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using NOF.Application;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 
@@ -19,21 +19,21 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
     private readonly AuthenticationResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<AuthenticationResourceServerInboundMiddleware> _logger;
-    private readonly ITransparentInfos _executionContext;
+    private readonly NOFContext _contextAccessor;
 
     public AuthenticationResourceServerInboundMiddleware(
         IUserContext userContext,
         ResourceServerJwksCacheService jwksCacheService,
         IOptions<AuthenticationResourceServerOptions> jwtOptions,
         ILogger<AuthenticationResourceServerInboundMiddleware> logger,
-        ITransparentInfos executionContext)
+        NOFContext contextAccessor)
     {
         _userContext = userContext;
         _jwksCacheService = jwksCacheService;
         _jwtOptions = jwtOptions.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
         _logger = logger;
-        _executionContext = executionContext;
+        _contextAccessor = contextAccessor;
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -87,7 +87,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
                             identity,
                             token,
                             downstreamPropagation: source.DownstreamPropagation));
-                    _executionContext.RemoveHeader(source.HeaderName);
+                    _contextAccessor.RemoveHeader(source.HeaderName);
                 }
                 catch (SecurityTokenExpiredException)
                 {
@@ -116,7 +116,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
     {
         token = string.Empty;
 
-        if (!_executionContext.TryGetHeader(source.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
+        if (!_contextAccessor.TryGetHeader(source.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
         {
             return false;
         }

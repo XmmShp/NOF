@@ -71,8 +71,8 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
         builder.WebHost.UseTestServer();
 
         builder.Services.AddRouting();
-        builder.Services.AddScoped<ITransparentInfos, TransparentInfos>();
-        builder.Services.AddSingleton(new RequestInboundPipelineTypes());
+        builder.Services.AddScoped<NOFContext>();
+                builder.Services.AddSingleton(new RequestInboundPipelineTypes());
         builder.Services.AddSingleton<RequestInboundPipelineExecutor>();
         builder.Services.AddScoped<RpcServerInvocationResolver>();
         builder.Services.AddScoped<HttpRequestInboundAdapter>();
@@ -151,13 +151,13 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
 
     public sealed class CreateUserHandler : RpcHandler<CreateUserRequest, Result<CreateUserResponse>>
     {
-        public override Task<Result<CreateUserResponse>> HandleAsync(CreateUserRequest request, CancellationToken cancellationToken)
+        public override Task<Result<CreateUserResponse>> HandleAsync(CreateUserRequest request, NOFContext context, CancellationToken cancellationToken)
             => Task.FromResult(Result.Success(new CreateUserResponse(request.Age)));
     }
 
     public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, Result<ReadTokenResponse>>
     {
-        public override Task<Result<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, CancellationToken cancellationToken)
+        public override Task<Result<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, NOFContext context, CancellationToken cancellationToken)
             => Task.FromResult(Result.Success(new ReadTokenResponse(request.Token.Value)));
     }
 }

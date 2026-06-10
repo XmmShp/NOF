@@ -4,10 +4,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NOF.Application;
+using NOF.Abstraction;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
@@ -47,27 +48,27 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     private static readonly ConcurrentDictionary<string, byte> MigratedContexts = new(StringComparer.Ordinal);
 
     private readonly IServiceProvider _serviceProvider;
-    private readonly ITransparentInfos _executionContext;
+    private readonly NOFContext _contextAccessor;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
     private readonly IEnumerable<INOFDbContextModelCreatingContributor> _modelCreatingContributors;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        ITransparentInfos executionContext,
+        NOFContext contextAccessor,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         IEnumerable<INOFDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
-        _executionContext = executionContext;
+        _contextAccessor = contextAccessor;
         _dbContextConfigurationOptions = dbContextConfigurationOptions.Value;
         _modelCreatingContributors = modelCreatingContributors;
         _logger = logger;
     }
 
     public TDbContext CreateDbContext()
-        => CreateDbContext(_executionContext.TenantId);
+        => CreateDbContext(_contextAccessor.TenantId);
 
     public TDbContext CreateDbContext(string tenantId)
     {

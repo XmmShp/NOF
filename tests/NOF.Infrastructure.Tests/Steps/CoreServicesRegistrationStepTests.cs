@@ -76,6 +76,21 @@ public class InfrastructureDefaultsTests
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IDaemonService) &&
             service.ImplementationType == typeof(IdGeneratorAmbientDaemonService));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IDaemonService) &&
+            service.ImplementationType == typeof(ContextAmbientDaemonService));
+    }
+
+    [Fact]
+    public void AddInfrastructureDefaults_ShouldRegisterContextAccessorAsSingleton()
+    {
+        var builder = new TestServiceRegistrationContext();
+
+        builder.AddInfrastructureDefaults();
+
+        var descriptor = Assert.Single(builder.Services, service => service.ServiceType == typeof(IContextAccessor));
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+        Assert.Equal(typeof(ContextAccessor), descriptor.ImplementationType);
     }
 
     [Fact]

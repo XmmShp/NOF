@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 
@@ -44,7 +45,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     }
 
     /// <inheritdoc />
-    public override async Task HandleAsync(TNotification notification, CancellationToken cancellationToken)
+    public override async Task HandleAsync(TNotification notification, NOFContext context, CancellationToken cancellationToken)
     {
         var bp = _stateMachineRegistry.GetBlueprint(
             typeof(TStateMachineDefinition),

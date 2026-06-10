@@ -18,6 +18,7 @@ public class RpcServerAutoInjectGeneratorTests
     {
         const string source = """
             using NOF.Application;
+            using NOF.Abstraction;
             using NOF.Contract;
             using System.Threading;
             using System.Threading.Tasks;
@@ -35,7 +36,7 @@ public class RpcServerAutoInjectGeneratorTests
 
                 public sealed class PingHandler : MyService.Ping
                 {
-                    public override Task<Result> HandleAsync(PingRequest request, CancellationToken cancellationToken)
+                    public override Task<Result> HandleAsync(PingRequest request, NOFContext context, CancellationToken cancellationToken)
                         => Task.FromResult(Result.Success());
                 }
             }
@@ -45,6 +46,7 @@ public class RpcServerAutoInjectGeneratorTests
             typeof(RpcServer<>),
             typeof(RpcHandler<,>),
             typeof(IRpcService),
+            typeof(NOFContext),
             typeof(Result),
             typeof(Result<>),
             typeof(Registry),

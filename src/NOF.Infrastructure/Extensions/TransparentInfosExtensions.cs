@@ -1,12 +1,12 @@
 using NOF.Abstraction;
-using NOF.Application;
 using System.Diagnostics;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
-public static partial class TransparentInfosExtensions
+public static partial class NOFContextTracingExtensions
 {
-    extension(ITransparentInfos context)
+    extension(NOFContext context)
     {
         public TracingInfo? TracingInfo
         {

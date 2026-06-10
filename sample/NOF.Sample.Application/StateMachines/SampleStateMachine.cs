@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NOF.Application;
+using NOF.Abstraction;
 
 namespace NOF.Sample;
 
@@ -35,7 +36,7 @@ public class StartProcessingCommandHandler : CommandHandler<StartProcessingComma
         _logger = logger;
     }
 
-    public override async Task HandleAsync(StartProcessingCommand command, CancellationToken cancellationToken)
+    public override async Task HandleAsync(StartProcessingCommand command, NOFContext context, CancellationToken cancellationToken)
     {
         await Task.Delay(1000, cancellationToken);
         var isSuccess = Random.Shared.Next(2) == 0;

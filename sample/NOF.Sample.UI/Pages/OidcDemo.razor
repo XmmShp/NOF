@@ -19,30 +19,31 @@
         white-space: pre-wrap;
         word-break: break-all;
     }
- </style>
+</style>
 
 <h3>OIDC Demo</h3>
 
-<Alert Type="AlertType.Info"
-       ShowIcon="true"
+<Alert Type="AlertType.Info" ShowIcon="true"
        Message="Sample server now exposes standard OAuth 2.1 / OpenID Connect endpoints."
        Description="The sample authorization handler auto-approves a fixed demo subject named demo-user so you can verify discovery, authorization-code + PKCE, token, userinfo, and JWKS end-to-end." />
 
 <Row Gutter="16" style="margin-top: 16px;">
     <Col Span="12">
-        <Card Title="Discovery Endpoints" Class="demo-section">
-            <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
-                <DescriptionsItem Title="Issuer">@Issuer</DescriptionsItem>
-                <DescriptionsItem Title="OpenID Configuration"><a href="@OpenIdConfigurationUrl" target="_blank">@OpenIdConfigurationUrl</a></DescriptionsItem>
-                <DescriptionsItem Title="Authorization Server Metadata"><a href="@AuthorizationMetadataUrl" target="_blank">@AuthorizationMetadataUrl</a></DescriptionsItem>
-                <DescriptionsItem Title="JWKS"><a href="@JwksUrl" target="_blank">@JwksUrl</a></DescriptionsItem>
-                <DescriptionsItem Title="Authorize">@AuthorizeEndpoint</DescriptionsItem>
-                <DescriptionsItem Title="Token">@TokenEndpoint</DescriptionsItem>
-                <DescriptionsItem Title="UserInfo">@UserInfoEndpoint</DescriptionsItem>
-            </Descriptions>
-        </Card>
-    </Col>
-    <Col Span="12">
+    <Card Title="Discovery Endpoints" Class="demo-section">
+        <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
+            <DescriptionsItem Title="Issuer">@Issuer</DescriptionsItem>
+            <DescriptionsItem Title="OpenID Configuration"><a href="@OpenIdConfigurationUrl"
+                                                                  target="_blank">@OpenIdConfigurationUrl</a></DescriptionsItem>
+                <DescriptionsItem Title="Authorization Server Metadata"><a href="@AuthorizationMetadataUrl"
+                                                                               target="_blank">@AuthorizationMetadataUrl</a></DescriptionsItem>
+                    <DescriptionsItem Title="JWKS"><a href="@JwksUrl" target="_blank">@JwksUrl</a></DescriptionsItem>
+                    <DescriptionsItem Title="Authorize">@AuthorizeEndpoint</DescriptionsItem>
+                    <DescriptionsItem Title="Token">@TokenEndpoint</DescriptionsItem>
+                    <DescriptionsItem Title="UserInfo">@UserInfoEndpoint</DescriptionsItem>
+                </Descriptions>
+            </Card>
+        </Col>
+        <Col Span="12">
         <Card Title="Authorize URL Builder" Class="demo-section">
             <Form Layout="@FormLayout.Vertical" TModel="OidcDemoModel">
                 <FormItem Label="Client ID">
@@ -62,40 +63,49 @@
                 </FormItem>
                 <FormItem>
                     <Button Type="@ButtonType.Default" OnClick="@GeneratePkce">Generate PKCE</Button>
-                    <Button Type="@ButtonType.Primary" Style="margin-left: 8px;" OnClick="@BuildAuthorizeUrl">Build URL</Button>
-                </FormItem>
-            </Form>
-        </Card>
-    </Col>
-</Row>
+                    <Button Type="@ButtonType.Primary" Style="margin-left: 8px;" OnClick="@BuildAuthorizeUrl">Build
+                        URL</Button>
+                    </FormItem>
+                </Form>
+            </Card>
+        </Col>
+    </Row>
 
-<Row Gutter="16">
-    <Col Span="12">
+    <Row Gutter="16">
+        <Col Span="12">
         <Card Title="PKCE" Class="demo-section">
             <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
-                <DescriptionsItem Title="Code Verifier"><div class="mono-block">@_model.CodeVerifier</div></DescriptionsItem>
-                <DescriptionsItem Title="Code Challenge"><div class="mono-block">@_model.CodeChallenge</div></DescriptionsItem>
+                <DescriptionsItem Title="Code Verifier">
+                    <div class="mono-block">@_model.CodeVerifier</div>
+                </DescriptionsItem>
+                <DescriptionsItem Title="Code Challenge">
+                    <div class="mono-block">@_model.CodeChallenge</div>
+                </DescriptionsItem>
                 <DescriptionsItem Title="Method">S256</DescriptionsItem>
             </Descriptions>
         </Card>
     </Col>
     <Col Span="12">
-        <Card Title="Authorization Request" Class="demo-section">
-            <div class="mono-block">@_authorizeUrl</div>
-        </Card>
-    </Col>
+    <Card Title="Authorization Request" Class="demo-section">
+        <div class="mono-block">@_authorizeUrl</div>
+    </Card>
+</Col>
 </Row>
 
 <Card Title="Try It" Class="demo-section">
     <Descriptions Column="1" Size="@DescriptionsSize.Small" Bordered>
         <DescriptionsItem Title="Step 1">Open the generated authorize URL in a new browser tab.</DescriptionsItem>
-        <DescriptionsItem Title="Step 2">The sample server redirects back with a standard authorization code.</DescriptionsItem>
-        <DescriptionsItem Title="Step 3">Exchange that code at the token endpoint with the code verifier shown above.</DescriptionsItem>
+        <DescriptionsItem Title="Step 2">The sample server redirects back with a standard authorization code.
+        </DescriptionsItem>
+        <DescriptionsItem Title="Step 3">Exchange that code at the token endpoint with the code verifier shown above.
+        </DescriptionsItem>
         <DescriptionsItem Title="Step 4">Call the userinfo endpoint with the returned bearer token.</DescriptionsItem>
     </Descriptions>
     <div class="mono-block" style="margin-top: 12px;">curl -X POST @TokenEndpoint \
-  -H \"Content-Type: application/x-www-form-urlencoded\" \
-  -d \"grant_type=authorization_code&client_id=@_model.ClientId&code=YOUR_CODE&redirect_uri=@Uri.EscapeDataString(_model.RedirectUri)&code_verifier=@_model.CodeVerifier\"</div>
+        -H \"Content-Type: application/x-www-form-urlencoded\" \
+        -d
+        \"grant_type=authorization_code&client_id=@_model.ClientId&code=YOUR_CODE&redirect_uri=@Uri.EscapeDataString(_model.RedirectUri)&code_verifier=@_model.CodeVerifier\"
+    </div>
 </Card>
 
 @code {

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
+using NOF.Abstraction;
 using NOF.Contract;
 
 namespace NOF.Sample.Application.RequestHandlers;
@@ -15,7 +16,7 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         _mapper = mapper;
     }
 
-    public override async Task<Result<GetRootConfigNodesResponse>> HandleAsync(GetRootConfigNodesRequest request, CancellationToken cancellationToken)
+    public override async Task<Result<GetRootConfigNodesResponse>> HandleAsync(GetRootConfigNodesRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var nodes = await _dbContext.Set<ConfigNode>().GetRootNodesAsync(cancellationToken);
 

@@ -59,6 +59,9 @@ public sealed class CacheServiceTests
         ICacheServiceRider rider,
         CacheServiceLocalLockState localLockState)
     {
+        var context = new NOFContext();
+        context.TenantId = TenantId.Normalize("tenant-a");
+
         return new CacheService(
             rider,
             new TestObjectSerializer(),
@@ -67,10 +70,7 @@ public sealed class CacheServiceTests
             {
                 KeyPrefix = "tenant:{tenantId}:"
             }),
-            new TransparentInfos
-            {
-                TenantId = TenantId.Normalize("tenant-a")
-            },
+            context,
             localLockState);
     }
 
