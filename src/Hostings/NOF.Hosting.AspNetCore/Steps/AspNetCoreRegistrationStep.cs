@@ -64,6 +64,7 @@ public class AspNetCoreRegistrationStep : IBaseSettingsServiceRegistrationStep
         {
             if (app is IApplicationBuilder actualApp)
             {
+                actualApp.UseMiddleware<DaemonServiceResolutionMiddleware>();
                 actualApp.UseMiddleware<NofRpcHttpResultWrappingMiddleware>();
             }
 

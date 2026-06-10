@@ -35,6 +35,7 @@ public sealed class CommandInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         scope.ServiceProvider.GetRequiredService<NOFContext>().CopyHeadersFrom(headers);
 
         var context = CreateContext(payload, payloadTypeName, handlerType);
@@ -113,6 +114,7 @@ public sealed class NotificationInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         scope.ServiceProvider.GetRequiredService<NOFContext>().CopyHeadersFrom(headers);
 
         var context = CreateContext(payload, payloadTypeName, handlerType);
@@ -184,6 +186,7 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         scope.ServiceProvider.GetRequiredService<NOFContext>().CopyHeadersFrom(headers);
 
         var context = CreateContext(request, handlerType, serviceType, methodName);

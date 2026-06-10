@@ -64,6 +64,7 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     private async Task CleanupOutboxAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
         var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.Set<NOFOutboxMessage>()

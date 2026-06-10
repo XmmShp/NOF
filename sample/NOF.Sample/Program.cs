@@ -63,6 +63,7 @@ builder.Services.AddHostedService(async (sp, ct) =>
     while (!ct.IsCancellationRequested)
     {
         await using var scope = sp.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
         var taskId = Random.Shared.Next().ToString();
         await publisher.PublishAsync(new TaskStarted(taskId), cancellationToken: ct);

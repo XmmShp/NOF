@@ -63,6 +63,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var pendingMessages = await AtomicClaimPendingMessagesAsync(dbContext, _options.BatchSize, _options.ClaimTimeout, cancellationToken)
@@ -160,6 +161,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private async Task MarkProcessedAsync(Guid messageId, string handlerType, CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
         var processedAt = DateTime.UtcNow;
 
@@ -177,6 +179,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private async Task MarkRetryAsync(Guid messageId, string handlerType, int retryCount, string error, CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         await dbContext.Set<NOFInboxMessage>()
@@ -197,6 +200,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private async Task MarkFailedAsync(Guid messageId, string handlerType, int retryCount, string error, CancellationToken cancellationToken, Exception? ex = null)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
         var failedAt = DateTime.UtcNow;
 

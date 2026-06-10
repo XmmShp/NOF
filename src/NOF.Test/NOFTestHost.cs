@@ -21,7 +21,9 @@ public sealed class NOFTestHost : IAsyncDisposable, IDisposable
 
     public NOFTestScope CreateScope()
     {
-        return new NOFTestScope(Services.CreateAsyncScope());
+        var scope = Services.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+        return new NOFTestScope(scope);
     }
 
     public async Task SendAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)

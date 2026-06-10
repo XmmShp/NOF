@@ -152,6 +152,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
     private async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var jwksService = scope.ServiceProvider.GetRequiredService<IJwksService>();
         return await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false);
     }

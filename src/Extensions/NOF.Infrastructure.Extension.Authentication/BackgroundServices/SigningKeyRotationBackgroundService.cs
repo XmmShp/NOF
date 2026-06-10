@@ -59,6 +59,7 @@ public sealed class SigningKeyRotationBackgroundService : BackgroundService
                 await Task.Delay(nextRotation, stoppingToken);
 
                 using var scope = _serviceScopeFactory.CreateScope();
+                scope.ServiceProvider.ResolveDaemonServices();
                 if (!_hostEnvironment.IsPrimaryNodeEnvironment)
                 {
                     _logger.LogDebug(
@@ -122,6 +123,7 @@ public sealed class SigningKeyRotationBackgroundService : BackgroundService
     private async Task<TimeSpan> ComputeNextRotationDelayAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceScopeFactory.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var signingKeyService = scope.ServiceProvider.GetRequiredService<ISigningKeyService>();
         var keyAge = DateTime.UtcNow - (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).ActivatedAtUtc;
         var remaining = _options.KeyRotationInterval - keyAge;

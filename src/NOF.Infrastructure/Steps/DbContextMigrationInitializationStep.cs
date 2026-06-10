@@ -11,6 +11,7 @@ internal sealed class DbContextMigrationInitializationStep(Type dbContextType) :
     public async Task ExecuteAsync(IHost app)
     {
         await using var scope = app.Services.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = (DbContext)scope.ServiceProvider.GetRequiredService(DbContextType);
         await dbContext.Database.MigrateAsync();
     }

@@ -63,6 +63,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
         var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
         var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();

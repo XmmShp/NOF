@@ -65,6 +65,7 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     private async Task CleanupInboxAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
         var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.NOFInboxMessages

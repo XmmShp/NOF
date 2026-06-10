@@ -27,6 +27,7 @@ public sealed class InboxMessageStore
         CancellationToken cancellationToken = default)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
 
         var inboxMessage = new NOFInboxMessage

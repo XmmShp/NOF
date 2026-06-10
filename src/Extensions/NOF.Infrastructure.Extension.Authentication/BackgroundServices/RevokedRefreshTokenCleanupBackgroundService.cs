@@ -62,6 +62,7 @@ public sealed class RevokedRefreshTokenCleanupBackgroundService : BackgroundServ
     private async Task CleanupAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceScopeFactory.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
         var now = DateTime.UtcNow;
         var deletedCount = await dbContext.Set<RevokedRefreshToken>()
