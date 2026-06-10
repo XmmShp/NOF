@@ -44,7 +44,7 @@ namespace NOF.Sample.Migrations
                     b.HasAnnotation("NOF:HostOnly", true);
                 });
 
-            modelBuilder.Entity("NOF.Infrastructure.Extension.Authorization.Jwt.PersistedSigningKey", b =>
+            modelBuilder.Entity("NOF.Infrastructure.Extension.Authentication.PersistedSigningKey", b =>
                 {
                     b.Property<string>("Kid")
                         .HasMaxLength(64)
@@ -81,7 +81,7 @@ namespace NOF.Sample.Migrations
                     b.HasAnnotation("NOF:HostOnly", true);
                 });
 
-            modelBuilder.Entity("NOF.Infrastructure.Extension.Authorization.Jwt.RevokedRefreshToken", b =>
+            modelBuilder.Entity("NOF.Infrastructure.Extension.Authentication.RevokedRefreshToken", b =>
                 {
                     b.Property<string>("TokenId")
                         .HasMaxLength(256)

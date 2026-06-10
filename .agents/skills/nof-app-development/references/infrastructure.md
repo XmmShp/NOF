@@ -42,13 +42,13 @@ builder.AddRabbitMQ(options =>
 Authority mode:
 
 ```csharp
-builder.AddJwtAuthority(o => o.Issuer = "MyApp");
+builder.AddAuthenticationAuthority(o => o.Issuer = "MyApp");
 ```
 
 Resource server mode:
 
 ```csharp
-builder.AddJwtResourceServer(o =>
+builder.AddAuthenticationResourceServer(o =>
 {
     o.Issuer = "MyApp";
     o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
@@ -59,7 +59,7 @@ builder.AddJwtResourceServer(o =>
 Authority HTTP endpoints stay explicit:
 
 ```csharp
-app.MapHttpEndpoint<JwtAuthorityService>();
+app.MapHttpEndpoint<TokenAuthorityService>();
 app.MapGet("/.well-known/jwks.json", async (IJwksService jwksService, CancellationToken cancellationToken) =>
 {
     var document = await jwksService.GetJwksAsync(cancellationToken);

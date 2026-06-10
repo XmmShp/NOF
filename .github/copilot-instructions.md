@@ -22,9 +22,9 @@ src/
     NOF.Hosting.Console/      - console host integration
     NOF.Hosting.Maui/         - MAUI host integration
   Extensions/
-    NOF.Contract.Extension.Authorization.Jwt/
-    NOF.Hosting.Extension.Authorization.Jwt/
-    NOF.Infrastructure.Extension.Authorization.Jwt/
+    NOF.Contract.Extension.Authentication/
+    NOF.Hosting.Extension.Authentication/
+    NOF.Infrastructure.Extension.Authentication/
   Infrastructures/
     NOF.Infrastructure.RabbitMQ/
     NOF.Infrastructure.StackExchangeRedis/

@@ -12,21 +12,21 @@ NOF supports two JWT modes:
 ## 1. Add Packages
 
 ```bash
-dotnet add package NOF.Infrastructure.Extension.Authorization.Jwt
-dotnet add package NOF.Contract.Extension.Authorization.Jwt
+dotnet add package NOF.Infrastructure.Extension.Authentication
+dotnet add package NOF.Contract.Extension.Authentication
 ```
 
 ## 2. Register in Program.cs
 
 ```csharp
-builder.AddJwtAuthority(o =>
+builder.AddAuthenticationAuthority(o =>
 {
     o.Issuer = "MyApp";
     o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
         ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
 });
 
-builder.AddJwtResourceServer(o =>
+builder.AddAuthenticationResourceServer(o =>
 {
     o.Issuer = "MyApp";
     o.RequireHttpsMetadata = false;
@@ -37,7 +37,7 @@ builder.AddJwtResourceServer(o =>
 ## 3. Expose HTTP Endpoints Explicitly
 
 ```csharp
-app.MapHttpEndpoint<JwtAuthorityService>();
+app.MapHttpEndpoint<TokenAuthorityService>();
 app.MapGet("/.well-known/jwks.json", async (IJwksService jwksService, CancellationToken cancellationToken) =>
 {
     var document = await jwksService.GetJwksAsync(cancellationToken);
@@ -54,6 +54,6 @@ Inject:
 
 ## Notes
 
-- `AddJwtAuthority(...)` automatically adds the authority assembly as an application part.
-- `AddJwtResourceServer(...)` also enables outbound token propagation.
+- `AddAuthenticationAuthority(...)` automatically adds the authority assembly as an application part.
+- `AddAuthenticationResourceServer(...)` also enables outbound token propagation.
 - Key rotation notifications use `JwtKeyRotationNotification`.

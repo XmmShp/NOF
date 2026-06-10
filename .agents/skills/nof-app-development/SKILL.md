@@ -57,7 +57,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | publish in-memory events | payload object + `PublishAsEvent()` / `PublishAsEvent(publisher)` / `IEventPublisher` |
 | persist application data | `DbContext` / `NOFDbContext` + `SaveChangesAsync()` |
 | cache data | `CacheKey<T>` + `ICacheService` |
-| add JWT auth | `AddJwtAuthority(...)` and/or `AddJwtResourceServer(...)` |
+| add JWT auth | `AddAuthenticationAuthority(...)` and/or `AddAuthenticationResourceServer(...)` |
 
 ## Conventions
 

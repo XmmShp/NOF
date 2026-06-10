@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- AOT Compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!-- NuGet Package Settings -->
+    <PackageId>NOF.Infrastructure.Extension.Authentication</PackageId>
+    <Description>JWT authorization extension for the NOF Framework — OIDC resource server, JWKS fetching, token validation, and identity resolution.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\NOF.Contract.Extension.Authentication\NOF.Contract.Extension.Authentication.csproj" />
+    <ProjectReference Include="..\NOF.Hosting.Extension.Authentication\NOF.Hosting.Extension.Authentication.csproj" />
+    <ProjectReference Include="..\..\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

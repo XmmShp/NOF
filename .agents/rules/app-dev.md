@@ -41,7 +41,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 using Microsoft.EntityFrameworkCore;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Infrastructure.Extension.Authentication;
 using NOF.Infrastructure.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 
@@ -51,13 +51,13 @@ builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
     ?? throw new InvalidOperationException("Connection string 'redis' not found."));
-builder.AddJwtAuthority(o =>
+builder.AddAuthenticationAuthority(o =>
 {
     o.Issuer = "MyApp";
     o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
         ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
 });
-builder.AddJwtResourceServer(o =>
+builder.AddAuthenticationResourceServer(o =>
 {
     o.Issuer = "MyApp";
     o.RequireHttpsMetadata = false;
@@ -83,10 +83,10 @@ await app.RunAsync();
 
 ## JWT Usage Notes
 
-- Authority mode: `AddJwtAuthority(...)`.
-- Resource server mode: `AddJwtResourceServer(...)`.
-- `AddJwtAuthority(...)` adds the authority assembly as an application part for you.
-- Expose authority HTTP endpoints explicitly with `app.MapHttpEndpoint<JwtAuthorityService>()` and a JWKS endpoint when needed.
+- Authority mode: `AddAuthenticationAuthority(...)`.
+- Resource server mode: `AddAuthenticationResourceServer(...)`.
+- `AddAuthenticationAuthority(...)` adds the authority assembly as an application part for you.
+- Expose authority HTTP endpoints explicitly with `app.MapHttpEndpoint<TokenAuthorityService>()` and a JWKS endpoint when needed.
 
 ## Important Convention
 

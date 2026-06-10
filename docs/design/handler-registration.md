@@ -25,7 +25,7 @@ This is the same pattern used by the sample app:
 
 ```csharp
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
-    .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
+    .AddApplicationPart(typeof(TokenAuthorityService).Assembly);
 ```
 
 ## Practical Guidance

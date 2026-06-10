@@ -6,7 +6,7 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Infrastructure.Extension.Authentication;
 using NOF.Infrastructure.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 
@@ -16,13 +16,13 @@ builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
     ?? throw new InvalidOperationException("Connection string 'redis' not found."));
-builder.AddJwtAuthority(o =>
+builder.AddAuthenticationAuthority(o =>
 {
     o.Issuer = "MyApp";
     o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
         ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
 });
-builder.AddJwtResourceServer(o =>
+builder.AddAuthenticationResourceServer(o =>
 {
     o.Issuer = "MyApp";
     o.RequireHttpsMetadata = false;

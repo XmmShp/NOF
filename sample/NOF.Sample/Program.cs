@@ -3,7 +3,7 @@ using NOF.Application;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
-using NOF.Infrastructure.Extension.Authorization.Jwt;
+using NOF.Infrastructure.Extension.Authentication;
 using NOF.Infrastructure.RabbitMQ;
 using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
@@ -12,23 +12,28 @@ using NOF.Sample.Services;
 
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddApplicationPart(typeof(NOFSampleService).Assembly)
-    .AddApplicationPart(typeof(JwtAuthorityService).Assembly);
+builder.AddApplicationPart(typeof(NOFSampleService).Assembly);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
-builder.AddJwtAuthority(o =>
+builder.AddAuthenticationAuthority(o =>
 {
-    o.Issuer = "NOF.Sample";
+    o.Issuer = "http://localhost/oauth2";
     o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
         ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
 });
 
-builder.AddJwtResourceServer(o =>
+builder.AddOAuthAuthorizationServer(o =>
 {
-    o.Issuer = "NOF.Sample";
+    o.Issuer = "http://localhost/oauth2";
+    o.AccessTokenAudience = "nof-sample";
+});
+
+builder.AddAuthenticationResourceServer(o =>
+{
+    o.Issuer = "http://localhost/oauth2";
     o.RequireHttpsMetadata = false;
-    o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
+    o.JwksEndpoint = "http://localhost/oauth2/.well-known/jwks.json";
 });
 
 builder.AddRabbitMQ(options =>
@@ -44,6 +49,8 @@ builder.UseDbContext<ConfigurationDbContext>()
     .MigrateOnInitialize();
 
 builder.Services.ReplaceOrAddScoped<INOFSampleServiceClient, LocalNOFSampleServiceClient>();
+builder.Services.AddScoped<IOAuthAuthorizationHandler, SampleOAuthAuthorizationHandler>();
+builder.Services.AddScoped<IOAuthSubjectService, SampleOAuthSubjectService>();
 
 builder.Services.AddAntDesign();
 
@@ -71,12 +78,7 @@ app.MapOpenApi();
 app.UseAntiforgery();
 
 app.MapHttpEndpoint<NOFSampleService>();
-app.MapHttpEndpoint<JwtAuthorityService>();
-app.MapGet("/.well-known/jwks.json", async (IJwksService jwksService, CancellationToken cancellationToken) =>
-{
-    var document = await jwksService.GetJwksAsync(cancellationToken);
-    return Results.Ok(document);
-});
+app.MapHttpEndpoint<OAuthAuthorizationServerService>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

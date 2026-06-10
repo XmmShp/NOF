@@ -1,0 +1,24 @@
+namespace NOF.Infrastructure.Extension.Authentication;
+
+/// <summary>
+/// Service for managing signing keys with rotation support.
+/// </summary>
+public interface ISigningKeyService
+{
+    /// <summary>
+    /// Gets the current active signing key used for signing new tokens.
+    /// </summary>
+    Task<ManagedSigningKey> GetCurrentSigningKeyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all published keys (current + next + retired) that can be used for token validation.
+    /// </summary>
+    Task<ManagedSigningKey[]> GetAllKeysAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rotates the signing key by promoting the prepared next key, generating a new next key,
+    /// and retiring the previous current key.
+    /// Retired keys are kept for validation up to the configured retention count.
+    /// </summary>
+    Task RotateKeyAsync(CancellationToken cancellationToken = default);
+}
