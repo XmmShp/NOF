@@ -9,28 +9,28 @@ public interface IOAuthAuthorizationServerService : IRpcService
     [Description("Returns the OAuth authorization server root document.")]
     [Category("OAuth Authorization Server")]
     [HttpEndpoint(HttpVerb.Get, "oauth2")]
-    Result<OAuthServerRootDocument> GetRoot(OAuthServerRootRequest request);
+    Result<OAuthServerRootDocument> GetRoot(Empty request);
 
     [Summary("OpenID Connect metadata")]
     [Description("Returns the OpenID Connect discovery metadata document.")]
     [Category("OAuth Authorization Server")]
     [HttpEndpoint(HttpVerb.Get, ".well-known/openid-configuration")]
     [HttpEndpoint(HttpVerb.Get, "oauth2/.well-known/openid-configuration")]
-    Result<OAuthServerMetadata> GetOpenIdConfiguration(OAuthServerMetadataRequest request);
+    Result<OAuthServerMetadata> GetOpenIdConfiguration(Empty request);
 
     [Summary("OAuth authorization server metadata")]
     [Description("Returns the OAuth authorization server metadata document.")]
     [Category("OAuth Authorization Server")]
     [HttpEndpoint(HttpVerb.Get, ".well-known/oauth-authorization-server")]
     [HttpEndpoint(HttpVerb.Get, "oauth2/.well-known/oauth-authorization-server")]
-    Result<OAuthServerMetadata> GetAuthorizationServerMetadata(OAuthServerMetadataRequest request);
+    Result<OAuthServerMetadata> GetAuthorizationServerMetadata(Empty request);
 
     [Summary("JSON Web Key Set")]
     [Description("Returns public signing keys as a JWKS document.")]
     [Category("OAuth Authorization Server")]
     [HttpEndpoint(HttpVerb.Get, ".well-known/jwks.json")]
     [HttpEndpoint(HttpVerb.Get, "oauth2/.well-known/jwks.json")]
-    Result<JwksDocument> GetJwks(OAuthJwksRequest request);
+    Result<JwksDocument> GetJwks(Empty request);
 
     [Summary("OAuth authorize")]
     [Description("Starts or completes an OAuth authorization-code request.")]

@@ -18,13 +18,15 @@ public sealed class GetRootHandler(IOptions<OAuthAuthorizationServerOptions> opt
     : OAuthAuthorizationServerService.GetRoot
 {
     public override Task<Result<OAuthServerRootDocument>> HandleAsync(
-        OAuthServerRootRequest request,
+        Empty request,
         CancellationToken cancellationToken)
     {
         var issuer = ResolveIssuer(options.Value);
-        return Task.FromResult<Result<OAuthServerRootDocument>>(new OAuthServerRootDocument(
-            Issuer: issuer,
-            Metadata: $"{issuer}/.well-known/oauth-authorization-server"));
+        return Task.FromResult<Result<OAuthServerRootDocument>>(new OAuthServerRootDocument
+        {
+            Issuer = issuer,
+            Metadata = $"{issuer}/.well-known/oauth-authorization-server"
+        });
     }
 }
 
@@ -32,7 +34,7 @@ public sealed class GetOpenIdConfigurationHandler(IOptions<OAuthAuthorizationSer
     : OAuthAuthorizationServerService.GetOpenIdConfiguration
 {
     public override Task<Result<OAuthServerMetadata>> HandleAsync(
-        OAuthServerMetadataRequest request,
+        Empty request,
         CancellationToken cancellationToken)
         => Task.FromResult(BuildMetadata(options.Value));
 }
@@ -41,7 +43,7 @@ public sealed class GetAuthorizationServerMetadataHandler(IOptions<OAuthAuthoriz
     : OAuthAuthorizationServerService.GetAuthorizationServerMetadata
 {
     public override Task<Result<OAuthServerMetadata>> HandleAsync(
-        OAuthServerMetadataRequest request,
+        Empty request,
         CancellationToken cancellationToken)
         => Task.FromResult(BuildMetadata(options.Value));
 }
@@ -50,7 +52,7 @@ public sealed class GetJwksHandler(IJwksService jwksService)
     : OAuthAuthorizationServerService.GetJwks
 {
     public override async Task<Result<JwksDocument>> HandleAsync(
-        OAuthJwksRequest request,
+        Empty request,
         CancellationToken cancellationToken)
         => await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false);
 }
@@ -152,7 +154,11 @@ public sealed class AuthorizeHandler(
         => new OAuthAuthorizeResponse
         {
             Type = OAuthAuthorizeResponseType.Error,
-            Error = new OAuthError(error, description)
+            Error = new OAuthError
+            {
+                Error = error,
+                ErrorDescription = description
+            }
         };
 }
 
@@ -354,13 +360,15 @@ public sealed class TokenHandler(
             nonce,
             cancellationToken).ConfigureAwait(false);
 
-        return new OAuthTokenEndpointResponse(
-            AccessToken: generateResult.Value.AccessToken,
-            TokenType: "Bearer",
-            ExpiresIn: (long)oauthOptions.Value.AccessTokenExpiration.TotalSeconds,
-            RefreshToken: generateResult.Value.RefreshToken.Token,
-            Scope: string.Join(' ', scopes),
-            IdToken: idToken);
+        return new OAuthTokenEndpointResponse
+        {
+            AccessToken = generateResult.Value.AccessToken,
+            TokenType = "Bearer",
+            ExpiresIn = (long)oauthOptions.Value.AccessTokenExpiration.TotalSeconds,
+            RefreshToken = generateResult.Value.RefreshToken.Token,
+            Scope = string.Join(' ', scopes),
+            IdToken = idToken
+        };
     }
 
     private async ValueTask<string?> GenerateIdTokenAsync(
@@ -457,20 +465,22 @@ internal static class OAuthAuthorizationServerServiceHelpers
     public static Result<OAuthServerMetadata> BuildMetadata(OAuthAuthorizationServerOptions options)
     {
         var issuer = ResolveIssuer(options);
-        return new OAuthServerMetadata(
-            Issuer: issuer,
-            AuthorizationEndpoint: $"{issuer}/authorize",
-            TokenEndpoint: $"{issuer}/token",
-            UserInfoEndpoint: $"{issuer}/userinfo",
-            JwksUri: $"{issuer}/.well-known/jwks.json",
-            ResponseTypesSupported: ["code"],
-            GrantTypesSupported: ["authorization_code", "refresh_token"],
-            TokenEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post", "none"],
-            SubjectTypesSupported: ["public"],
-            IdTokenSigningAlgValuesSupported: [SecurityAlgorithms.RsaSha256],
-            CodeChallengeMethodsSupported: ["plain", "S256"],
-            ScopesSupported: options.ScopesSupported,
-            ClaimsSupported: options.ClaimsSupported);
+        return new OAuthServerMetadata
+        {
+            Issuer = issuer,
+            AuthorizationEndpoint = $"{issuer}/authorize",
+            TokenEndpoint = $"{issuer}/token",
+            UserInfoEndpoint = $"{issuer}/userinfo",
+            JwksUri = $"{issuer}/.well-known/jwks.json",
+            ResponseTypesSupported = ["code"],
+            GrantTypesSupported = ["authorization_code", "refresh_token"],
+            TokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
+            SubjectTypesSupported = ["public"],
+            IdTokenSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256],
+            CodeChallengeMethodsSupported = ["plain", "S256"],
+            ScopesSupported = options.ScopesSupported,
+            ClaimsSupported = options.ClaimsSupported
+        };
     }
 
     public static string ResolveIssuer(OAuthAuthorizationServerOptions options)
