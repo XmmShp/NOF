@@ -28,7 +28,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 
         if (node is null)
         {
-            return Fail(404, "Node not found.");
+            return Response("Node not found.", HttpTransportMetadata.Create(404));
         }
 
         var newParentId = request.NewParentId.HasValue
@@ -42,13 +42,13 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
                 .FirstOrDefaultAsync(configNode => configNode.Id == newParentId.Value, cancellationToken);
             if (parentNode is null)
             {
-                return Fail(404, "Target parent node not found.");
+                return Response("Target parent node not found.", HttpTransportMetadata.Create(404));
             }
 
             // Prevent cyclic parent relationship.
             if (await IsDescendant(nodeId, newParentId.Value, cancellationToken))
             {
-                return Fail(400, "Cannot move a node under its descendant.");
+                return Response("Cannot move a node under its descendant.", HttpTransportMetadata.Create(400));
             }
         }
 

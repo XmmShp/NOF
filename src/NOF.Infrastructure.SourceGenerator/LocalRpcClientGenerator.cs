@@ -134,6 +134,8 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
             : method.Name;
         var operationNameExpression = $"nameof({serviceType}.{operationName})";
 
+        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC response projection may require generic instantiation at runtime.\")]");
+        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC response projection may require reflective access to generic result helpers.\")]");
         sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
         sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {operationNameExpression}, {requestParameter.Name}, cancellationToken).ConfigureAwait(false);");
@@ -182,19 +184,19 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 
             if (namedType.Name == "Result" && !namedType.IsGenericType)
             {
-                return $"global::NOF.Contract.Result.From({requiredResultExpression})";
+                return $"global::NOF.Contract.RpcResults.RequireBody<global::NOF.Contract.Result>({requiredResultExpression})";
             }
 
             if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
             {
                 var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.Result.From<{innerType}>({requiredResultExpression})";
+                return $"global::NOF.Contract.RpcResults.RequireBody<global::NOF.Contract.Result<{innerType}>>({requiredResultExpression})";
             }
 
             if (namedType.Name == "StreamingResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
             {
                 var itemType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"((global::NOF.Contract.StreamingResult<{itemType}>)({requiredResultExpression}))!";
+                return $"global::NOF.Contract.RpcResults.RequireBody<global::NOF.Contract.StreamingResult<{itemType}>>({requiredResultExpression})";
             }
         }
 

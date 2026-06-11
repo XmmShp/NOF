@@ -86,6 +86,7 @@ public sealed class HttpRpcTransportBoundaryTests
 
         Assert.Equal(HttpStatusCode.Found, response.StatusCode);
         Assert.Equal("https://example.com/callback", response.Headers.Location?.ToString());
+        Assert.Equal(bool.TrueString, response.Headers.GetValues(NOFAbstractionConstants.Transport.Headers.RpcSuccess).Single());
         Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
     }
 
@@ -98,6 +99,7 @@ public sealed class HttpRpcTransportBoundaryTests
         using var response = await client.GetAsync("/rpc/TokenFailure");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(bool.TrueString, response.Headers.GetValues(NOFAbstractionConstants.Transport.Headers.RpcSuccess).Single());
         Assert.Equal(
             "Bearer error=\"invalid_token\", error_description=\"access token expired.\"",
             response.Headers.WwwAuthenticate.ToString());
@@ -232,24 +234,24 @@ public sealed class HttpRpcTransportBoundaryTests
     public sealed class RedirectHandler : RpcHandler<RedirectRequest, Empty>
     {
         public override Task<RpcResult<Empty>> HandleAsync(RedirectRequest request, NOFContext context, CancellationToken cancellationToken)
-            => Task.FromResult(Success(statusCode: 302, headers: [new KeyValuePair<string, string?>("Location", request.Url)]));
+            => Task.FromResult(Success(HttpTransportMetadata.Create(302, [new KeyValuePair<string, string?>("Location", request.Url)])));
     }
 
     public sealed class TokenFailureHandler : RpcHandler<Empty, ReadTokenResponse>
     {
         public override Task<RpcResult<ReadTokenResponse>> HandleAsync(Empty request, NOFContext context, CancellationToken cancellationToken)
-            => Task.FromResult(Fail(
-                401,
+            => Task.FromResult(Response(
                 new TokenErrorBody
                 {
                     Error = "invalid_token",
                     ErrorDescription = "access token expired."
                 },
-                headers:
-                [
-                    new KeyValuePair<string, string?>(
-                        "WWW-Authenticate",
-                        "Bearer error=\"invalid_token\", error_description=\"access token expired.\"")
-                ]));
+                HttpTransportMetadata.Create(
+                    401,
+                    [
+                        new KeyValuePair<string, string?>(
+                            "WWW-Authenticate",
+                            "Bearer error=\"invalid_token\", error_description=\"access token expired.\"")
+                    ])));
     }
 }

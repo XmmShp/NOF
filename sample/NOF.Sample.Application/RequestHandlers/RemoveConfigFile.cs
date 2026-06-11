@@ -26,7 +26,7 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 
         if (node is null)
         {
-            return Fail(404, "Node not found.");
+            return Response("Node not found.", HttpTransportMetadata.Create(404));
         }
 
         var fileName = ConfigFileName.Of(request.FileName);

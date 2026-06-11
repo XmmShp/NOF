@@ -1,4 +1,3 @@
-using NOF.Abstraction;
 using NOF.Contract;
 
 namespace NOF.Application;
@@ -47,20 +46,27 @@ public abstract class RpcHandler<TRequest, TResponse> : RpcHandler
 
     protected RpcResult<TResponse> Success(
         TResponse value,
-        int? statusCode = null,
-        IEnumerable<KeyValuePair<string, string?>>? headers = null)
-        => RpcResults.Success(value, statusCode, headers);
+        IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
+        => RpcResults.Success(value, metadatas);
 
     protected RpcResult<TResponse> Success(
-        int? statusCode = null,
-        IEnumerable<KeyValuePair<string, string?>>? headers = null)
-        => RpcResults.Success<TResponse>(default!, statusCode, headers);
+        IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
+        => RpcResults.Response<TResponse>(true, null, metadatas);
+
+    protected RpcResult<TResponse> Response(
+        object? body = null,
+        IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
+        => RpcResults.Response<TResponse>(true, body, metadatas);
 
     protected RpcResult<TResponse> Fail(
-        int statusCode,
-        object? body = null,
-        IEnumerable<KeyValuePair<string, string?>>? headers = null)
-        => RpcResults.FromFailure<TResponse>(body, statusCode, headers);
+        IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
+        => RpcResults.FromFailure<TResponse>(metadatas);
+
+    protected RpcResult<TResponse> Fail(
+        string errorCode,
+        string message,
+        IDictionary<string, string>? extra = null)
+        => RpcResults.BusinessFailure<TResponse>(Result.Fail(errorCode, message, extra));
 
     /// <summary>
     /// Executes the handler using the strongly typed request.

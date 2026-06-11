@@ -26,7 +26,7 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
 
         if (node is null)
         {
-            return Fail(404, "Node not found.");
+            return Response("Node not found.", HttpTransportMetadata.Create(404));
         }
 
         var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);

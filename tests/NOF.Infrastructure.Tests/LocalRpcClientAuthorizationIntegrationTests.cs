@@ -18,11 +18,12 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         var client = provider.GetRequiredService<ProtectedFleetClient>();
         RpcResult<Result<GetFleetOverviewResponse>> result = await client.GetFleetOverviewAsync(new Empty());
         var recorder = provider.GetRequiredService<InvocationRecorder>();
+        var businessResult = RpcResults.RequireBody<Result<GetFleetOverviewResponse>>(result);
 
-        var fail = Assert.IsType<RpcResult<Result<GetFleetOverviewResponse>>>(result);
-        Assert.False(fail.IsSuccess);
-        Assert.Equal(401, fail.StatusCode);
-        Assert.Equal("Please login first", fail.Body);
+        Assert.True(result.IsSuccess);
+        Assert.False(businessResult.IsSuccess);
+        Assert.Equal("401", businessResult.ErrorCode);
+        Assert.Equal("Please login first", businessResult.Message);
         Assert.Equal(0, recorder.Count);
     }
 
@@ -37,12 +38,12 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         var client = provider.GetRequiredService<ProtectedFleetClient>();
         var result = await client.GetFleetOverviewAsync(new Empty());
         var recorder = provider.GetRequiredService<InvocationRecorder>();
+        var businessResult = RpcResults.RequireBody<Result<GetFleetOverviewResponse>>(result);
 
         Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Value);
-        Assert.True(result.Value.IsSuccess);
-        Assert.NotNull(result.Value.Value);
-        Assert.Equal("fleet", result.Value.Value.Name);
+        Assert.True(businessResult.IsSuccess);
+        Assert.NotNull(businessResult.Value);
+        Assert.Equal("fleet", businessResult.Value.Name);
         Assert.Equal(1, recorder.Count);
     }
 

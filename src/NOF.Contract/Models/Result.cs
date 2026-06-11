@@ -28,6 +28,9 @@ public interface IResult
     /// <summary>Human-readable message; empty when succeeded.</summary>
     string Message { get; }
 
+    /// <summary>The success payload when available; otherwise <see langword="null"/>.</summary>
+    object? Value { get; }
+
     /// <summary>
     /// Additional metadata to accompany the result.
     /// </summary>
@@ -71,6 +74,8 @@ public record Result : IResult
     /// Additional metadata to accompany the result.
     /// </summary>
     public IDictionary<string, string> Extra { get; }
+
+    object? IResult.Value => null;
 
     #region Static Helpers
 
@@ -122,43 +127,6 @@ public record Result : IResult
     {
         ArgumentNullException.ThrowIfNull(value);
         return new StreamingResult<T>(true, string.Empty, string.Empty, value, extra);
-    }
-
-    /// <summary>
-    /// Converts an <see cref="IResult"/> to <see cref="Result"/>.
-    /// Preserves failure details from any result implementation.
-    /// </summary>
-    /// <param name="result">The result to convert.</param>
-    /// <returns>A <see cref="Result"/> instance.</returns>
-    public static Result From(IResult result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-        return result is Result typedResult
-            ? typedResult
-            : new Result(result.IsSuccess, result.ErrorCode, result.Message, result.Extra);
-    }
-
-    /// <summary>
-    /// Converts an <see cref="IResult"/> to <see cref="Result{T}"/>.
-    /// Preserves failure details from any result implementation.
-    /// </summary>
-    /// <typeparam name="T">The expected response value type.</typeparam>
-    /// <param name="result">The result to convert.</param>
-    /// <returns>A <see cref="Result{T}"/> instance.</returns>
-    public static Result<T> From<T>(IResult result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-        if (result is Result<T> typedResult)
-        {
-            return typedResult;
-        }
-
-        if (!result.IsSuccess)
-        {
-            return new Result<T>(false, result.ErrorCode, result.Message, default, result.Extra);
-        }
-
-        throw new InvalidOperationException($"Cannot convert a successful '{result.GetType().FullName}' to '{typeof(Result<T>).FullName}'.");
     }
 
     #endregion
@@ -242,6 +210,8 @@ public record FailResult : IResult
     /// Additional metadata to accompany the result.
     /// </summary>
     public IDictionary<string, string> Extra { get; }
+
+    public object? Value => null;
 }
 
 /// <summary>
@@ -286,6 +256,8 @@ public record Result<T> : IResult
     /// May be <see langword="null"/> only if the operation failed.
     /// </summary>
     public T? Value { get; }
+
+    object? IResult.Value => Value;
 
     /// <summary>
     /// Additional metadata to accompany the result.
@@ -380,6 +352,8 @@ public sealed record StreamingResult<T> : IResult
     public string Message { get; }
 
     public IAsyncEnumerable<T>? Value { get; }
+
+    object? IResult.Value => Value;
 
     public IDictionary<string, string> Extra { get; }
 

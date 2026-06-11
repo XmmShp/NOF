@@ -31,6 +31,13 @@ public static class NOFAbstractionConstants
             public const string TraceId = "NOF.Message.TraceId";
             public const string SpanId = "NOF.Message.SpanId";
             public const string MessageId = "NOF.Message.MessageId";
+            public const string RpcSuccess = "NOF.Transport.Success";
+        }
+
+        public static class Metadatas
+        {
+            public const string HttpStatusCode = "NOF.Transport.Http.StatusCode";
+            public const string HttpHeaders = "NOF.Transport.Http.Headers";
         }
     }
 }

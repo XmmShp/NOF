@@ -1,4 +1,5 @@
 using AntDesign;
+using NOF.Abstraction;
 using NOF.Contract;
 using Result = NOF.Contract.Result;
 
@@ -71,7 +72,7 @@ public static class NOFSampleWebUIExtensions
                     messageService.Success(successMessage ?? "操作成功");
                 }
 
-                return result.Value;
+                return RpcResults.RequireBody<T>(result);
             }
 
             messageService.Error(GetRpcFailureMessage(result));
@@ -103,7 +104,7 @@ public static class NOFSampleWebUIExtensions
                 return default;
             }
 
-            return messageService.UnwrapWithMessage(result.Value!, successMessage, showSuccess);
+            return messageService.UnwrapWithMessage(RpcResults.RequireBody<Result<T>>(result), successMessage, showSuccess);
         }
 
         /// <summary>
@@ -143,13 +144,13 @@ public static class NOFSampleWebUIExtensions
 
             if (result.IsSuccess)
             {
-                var message = successMessageFactory(result.Value!);
+                var message = successMessageFactory(RpcResults.RequireBody<T>(result));
                 if (showSuccess)
                 {
                     messageService.Success(message);
                 }
 
-                return result.Value;
+                return RpcResults.RequireBody<T>(result);
             }
 
             messageService.Error(GetRpcFailureMessage(result));
@@ -183,7 +184,7 @@ public static class NOFSampleWebUIExtensions
                 return default;
             }
 
-            return messageService.UnwrapWithMessage(result.Value!, successMessageFactory, showSuccess);
+            return messageService.UnwrapWithMessage(RpcResults.RequireBody<Result<T>>(result), successMessageFactory, showSuccess);
         }
     }
 
@@ -196,7 +197,7 @@ public static class NOFSampleWebUIExtensions
             return text;
         }
 
-        return result.StatusCode is int statusCode
+        return HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode)
             ? $"请求失败，状态码: {statusCode}"
             : "请求失败";
     }

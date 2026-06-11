@@ -33,8 +33,10 @@ public sealed class AuthorizationInboundMiddlewareTests
         // Unauthenticated => 401
         var unauthContext = CreateContext(nameof(TestService.LoginOnlyMethod));
         await middleware.InvokeAsync(unauthContext, _ => ValueTask.CompletedTask, default);
-        Assert.Equal(401, unauthContext.Response!.StatusCode);
-        Assert.Equal("Please login first", unauthContext.Response.Body);
+        var unauthResult = Assert.IsAssignableFrom<IResult>(unauthContext.Response!.Body);
+        Assert.False(unauthResult.IsSuccess);
+        Assert.Equal("401", unauthResult.ErrorCode);
+        Assert.Equal("Please login first", unauthResult.Message);
 
         // Authenticated without permissions => allowed
         userContext.Logout();
@@ -60,8 +62,10 @@ public sealed class AuthorizationInboundMiddlewareTests
         // Authenticated but missing method permission => 403
         var deniedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
         await middleware.InvokeAsync(deniedContext, _ => ValueTask.CompletedTask, default);
-        Assert.Equal(403, deniedContext.Response!.StatusCode);
-        Assert.Equal("Insufficient permissions", deniedContext.Response.Body);
+        var deniedResult = Assert.IsAssignableFrom<IResult>(deniedContext.Response!.Body);
+        Assert.False(deniedResult.IsSuccess);
+        Assert.Equal("403", deniedResult.ErrorCode);
+        Assert.Equal("Insufficient permissions", deniedResult.Message);
 
         // With method permission => allowed
         userContext.Logout();
@@ -90,8 +94,10 @@ public sealed class AuthorizationInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
 
-        Assert.Equal(499, context.Response!.StatusCode);
-        Assert.Equal("custom policy denied", context.Response.Body);
+        var denied = Assert.IsAssignableFrom<IResult>(context.Response!.Body);
+        Assert.False(denied.IsSuccess);
+        Assert.Equal("499", denied.ErrorCode);
+        Assert.Equal("custom policy denied", denied.Message);
         Assert.False(nextCalled);
     }
 
@@ -126,17 +132,34 @@ public sealed class AuthorizationInboundMiddlewareTests
 
         await middleware.InvokeAsync(context, _ => ValueTask.CompletedTask, default);
 
-        Assert.Equal(498, context.Response!.StatusCode);
-        Assert.Equal("custom policy denied", context.Response.Body);
+        var denied = Assert.IsAssignableFrom<IResult>(context.Response!.Body);
+        Assert.False(denied.IsSuccess);
+        Assert.Equal("498", denied.ErrorCode);
+        Assert.Equal("custom policy denied", denied.Message);
     }
 
-    private static RequestInboundContext CreateContext(string methodName)
+    [Fact]
+    public async Task InvokeAsync_NonResultResponse_ShouldShortCircuitAsTransportFailure()
+    {
+        var userContext = new UserContext();
+        var middleware = CreateMiddleware(userContext);
+        var context = CreateContext(nameof(TestService.LoginOnlyMethod), typeof(Empty));
+
+        await middleware.InvokeAsync(context, _ => ValueTask.CompletedTask, default);
+
+        Assert.False(context.Response!.IsSuccess);
+        Assert.Null(context.Response.Body);
+        Assert.True(HttpTransportMetadata.TryGetStatusCode(context.Response.Metadatas, out var statusCode));
+        Assert.Equal(401, statusCode);
+    }
+
+    private static RequestInboundContext CreateContext(string methodName, Type? responseType = null)
     {
         return new RequestInboundContext
         {
             Message = new TestRequest(),
             HandlerType = typeof(TestService),
-            ResponseType = typeof(Result),
+            ResponseType = responseType ?? typeof(Result),
             ServiceType = typeof(TestService),
             MethodName = methodName
         };

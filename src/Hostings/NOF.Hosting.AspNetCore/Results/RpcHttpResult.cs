@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using NOF.Abstraction;
 using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 
@@ -14,7 +15,8 @@ internal sealed class RpcHttpResult(IRpcResult rpcResult) : Microsoft.AspNetCore
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        ApplyHeaders(httpContext.Response, _rpcResult.Headers);
+        ApplyHeaders(httpContext.Response, HttpTransportMetadata.GetHeaders(_rpcResult.Metadatas));
+        httpContext.Response.Headers[NOFAbstractionConstants.Transport.Headers.RpcSuccess] = _rpcResult.IsSuccess.ToString();
         httpContext.Response.StatusCode = ResolveStatusCode(_rpcResult);
 
         if (ShouldSkipBody(httpContext.Response.StatusCode) || _rpcResult.Body is null)
@@ -42,7 +44,14 @@ internal sealed class RpcHttpResult(IRpcResult rpcResult) : Microsoft.AspNetCore
     internal static int ResolveStatusCode(IRpcResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        return result.StatusCode ?? StatusCodes.Status200OK;
+        if (HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode))
+        {
+            return statusCode;
+        }
+
+        return result.IsSuccess
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status500InternalServerError;
     }
 
     internal static void ApplyHeaders(HttpResponse response, IReadOnlyDictionary<string, string?> headers)
@@ -88,14 +97,15 @@ internal sealed class RpcStreamingHttpResult<TItem>(RpcResult<StreamingResult<TI
             return new RpcHttpResult(_rpcResult).ExecuteAsync(httpContext);
         }
 
-        var streamingResult = _rpcResult.Value
-            ?? throw new InvalidOperationException($"HTTP RPC endpoint returned '{typeof(RpcResult<StreamingResult<TItem>>).FullName}' without a value.");
+        var streamingResult = _rpcResult.Body as StreamingResult<TItem>
+            ?? throw new InvalidOperationException($"HTTP RPC endpoint returned '{typeof(RpcResult<StreamingResult<TItem>>).FullName}' without a streaming body.");
         if (!streamingResult.IsSuccess)
         {
             return new RpcHttpResult(_rpcResult).ExecuteAsync(httpContext);
         }
 
-        RpcHttpResult.ApplyHeaders(httpContext.Response, _rpcResult.Headers);
+        RpcHttpResult.ApplyHeaders(httpContext.Response, HttpTransportMetadata.GetHeaders(_rpcResult.Metadatas));
+        httpContext.Response.Headers[NOFAbstractionConstants.Transport.Headers.RpcSuccess] = _rpcResult.IsSuccess.ToString();
         httpContext.Response.StatusCode = RpcHttpResult.ResolveStatusCode(_rpcResult);
         return TypedResults.ServerSentEvents(streamingResult.Value!).ExecuteAsync(httpContext);
     }

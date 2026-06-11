@@ -87,19 +87,23 @@ public sealed class AuthorizeHandler(
         return result switch
         {
             OAuthAuthorizationResult.Authorized authorized => Success(
-                statusCode: 302,
-                headers: CreateRedirectHeaders(await RedirectWithCodeAsync(
-                authorizationCodeService,
-                authorizationRequest,
-                authorized.Subject,
-                cancellationToken).ConfigureAwait(false))),
+                metadatas: CreateHttpMetadatas(
+                    302,
+                    CreateRedirectHeaders(await RedirectWithCodeAsync(
+                        authorizationCodeService,
+                        authorizationRequest,
+                        authorized.Subject,
+                        cancellationToken).ConfigureAwait(false)))),
             OAuthAuthorizationResult.Challenge challenge => Success(
-                statusCode: 302,
-                headers: CreateRedirectHeaders(challenge.RedirectUrl)),
+                metadatas: CreateHttpMetadatas(
+                    302,
+                    CreateRedirectHeaders(challenge.RedirectUrl))),
             OAuthAuthorizationResult.Failure failure => ToAuthorizeFailure(
                 authorizationRequest,
                 CreateOAuthError(failure.Error, failure.ErrorDescription)),
-            _ => Fail(500, CreateOAuthError("server_error", "Unsupported OAuth authorization result."))
+            _ => Response(
+                CreateOAuthError("server_error", "Unsupported OAuth authorization result."),
+                CreateHttpMetadatas(500))
         };
     }
 
@@ -156,18 +160,19 @@ public sealed class AuthorizeHandler(
             && Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
         {
             return Success(
-                statusCode: 302,
-                headers: CreateRedirectHeaders(AddQueryString(
+                metadatas: CreateHttpMetadatas(
+                302,
+                CreateRedirectHeaders(AddQueryString(
                 request.RedirectUri,
                 new Dictionary<string, string?>
                 {
                     ["error"] = error.Error,
                     ["error_description"] = error.ErrorDescription,
                     ["state"] = request.State
-                })));
+                }))));
         }
 
-        return Fail(400, error);
+        return Response(error, CreateHttpMetadatas(400));
     }
 }
 
@@ -188,7 +193,9 @@ public sealed class TokenHandler(
         {
             "authorization_code" => FromTokenResult(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false)),
             "refresh_token" => FromTokenResult(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false)),
-            _ => Fail(400, CreateOAuthError("unsupported_grant_type", "Only authorization_code and refresh_token are supported."))
+            _ => Response(
+                CreateOAuthError("unsupported_grant_type", "Only authorization_code and refresh_token are supported."),
+                CreateHttpMetadatas(400))
         };
     }
 
@@ -446,10 +453,11 @@ public sealed class UserInfoHandler(
             ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrWhiteSpace(subject))
         {
-            return Fail(
-                401,
+            return Response(
                 CreateOAuthError("invalid_token", "access token is invalid."),
-                headers: CreateBearerAuthenticateHeaders("invalid_token", "access token is invalid."));
+                CreateHttpMetadatas(
+                    401,
+                    CreateBearerAuthenticateHeaders("invalid_token", "access token is invalid.")));
         }
 
         var scope = principal!.FindFirst(OAuthClaimTypes.Scope)?.Value ?? string.Empty;
@@ -457,10 +465,11 @@ public sealed class UserInfoHandler(
         var profile = await subjectService.GetProfileAsync(subject, scopes, cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {
-            return Fail(
-                401,
+            return Response(
                 CreateOAuthError("invalid_token", "access token subject is invalid."),
-                headers: CreateBearerAuthenticateHeaders("invalid_token", "access token subject is invalid."));
+                CreateHttpMetadatas(
+                    401,
+                    CreateBearerAuthenticateHeaders("invalid_token", "access token subject is invalid.")));
         }
 
         IReadOnlyDictionary<string, object> claims = profile.IdentityClaims
@@ -608,9 +617,15 @@ internal static class OAuthAuthorizationServerServiceHelpers
     public static RpcResult<T> FromTokenResult<T>(Result<T> result)
         => result.IsSuccess
             ? RpcResults.Success(result.Value!)
-            : RpcResults.FromFailure<T>(
+            : RpcResults.Response<T>(
+                true,
                 CreateOAuthError(result.ErrorCode, result.Message),
-                400);
+                CreateHttpMetadatas(400));
+
+    public static IReadOnlyDictionary<string, string?> CreateHttpMetadatas(
+        int? statusCode = null,
+        IEnumerable<KeyValuePair<string, string?>>? headers = null)
+        => HttpTransportMetadata.Create(statusCode, headers);
 
     public static OAuthError CreateOAuthError(string error, string description)
         => new()

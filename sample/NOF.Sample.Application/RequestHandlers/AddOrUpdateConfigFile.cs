@@ -26,7 +26,7 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
 
         if (node is null)
         {
-            return Fail(404, "Node not found.");
+            return Response("Node not found.", HttpTransportMetadata.Create(404));
         }
 
         var fileName = ConfigFileName.Of(request.FileName);
@@ -45,6 +45,6 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
             cancellationToken);
 
-        return Success(new Empty());
+        return Success(Empty.Instance);
     }
 }
