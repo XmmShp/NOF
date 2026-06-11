@@ -12,7 +12,7 @@ public sealed class AccessTokenPropagationOutboundMiddleware : IRequestOutboundM
         _userContext = userContext;
     }
 
-    public ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
         foreach (var identity in _userContext.User.GetIdentities<AccessTokenIdentity>()
             .Where(identity => identity.DownstreamPropagation is not null)
@@ -22,6 +22,6 @@ public sealed class AccessTokenPropagationOutboundMiddleware : IRequestOutboundM
             context.Headers[propagation.HeaderName] = $"{propagation.TokenType} {identity.Token}";
         }
 
-        return next(cancellationToken);
+        return next(context, request, cancellationToken);
     }
 }

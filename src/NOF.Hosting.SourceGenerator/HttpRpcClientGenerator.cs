@@ -212,24 +212,17 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         }
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
-        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.RequestOutboundContext");
+        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.RequestOutboundContext(context)");
         sb.AppendLine("            {");
-        if (hasRequestParam)
-        {
-            sb.AppendLine("                Message = request,");
-        }
-        else
-        {
-            sb.AppendLine("                Message = null!,");
-        }
-        sb.AppendLine("                Context = context,");
         sb.AppendLine($"                ServiceType = typeof({serviceTypeName}),");
         sb.AppendLine($"                MethodName = {operationNameExpression}");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine($"            {clientResponseType}? result = default;");
         sb.AppendLine();
-        sb.AppendLine("            await _outboundPipeline.ExecuteAsync(outboundContext, async (ct) =>");
+        sb.AppendLine(hasRequestParam
+            ? "            await _outboundPipeline.ExecuteAsync(outboundContext, request, async (_, currentRequest, ct) =>"
+            : "            await _outboundPipeline.ExecuteAsync(outboundContext, null!, async (_, _, ct) =>");
         sb.AppendLine("            {");
 
         sb.AppendLine($"                var endpoint = \"{endpoint.Route}\";");
@@ -240,7 +233,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
             if (isBodyMethod)
             {
                 sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");
-                sb.AppendLine($"                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(request, GetJsonTypeInfo<{requestType}>());");
+                sb.AppendLine($"                httpRequest.Content = global::System.Net.Http.Json.JsonContent.Create(({requestType})currentRequest, GetJsonTypeInfo<{requestType}>());");
             }
             else
             {

@@ -6,23 +6,51 @@ using System.Diagnostics.CodeAnalysis;
 namespace NOF.Infrastructure;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class CommandOutboundContext
+public sealed class CommandOutboundContext : Context
 {
-    public required object Message { get; init; }
-
-    public Context Context { get; set; } = Context.Empty;
-
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    public CommandOutboundContext()
+    {
+    }
+
+    public CommandOutboundContext(Context context)
+        : base(context?.Items ?? throw new ArgumentNullException(nameof(context)))
+    {
+    }
+
+    private CommandOutboundContext(IReadOnlyDictionary<object, object?> items, CommandOutboundContext source)
+        : base(items)
+    {
+        Headers = new Dictionary<string, string?>(source.Headers, StringComparer.OrdinalIgnoreCase);
+    }
+
+    protected override Context Clone(IReadOnlyDictionary<object, object?> items)
+        => new CommandOutboundContext(items, this);
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public sealed class NotificationOutboundContext
+public sealed class NotificationOutboundContext : Context
 {
-    public required object Message { get; init; }
-
-    public Context Context { get; set; } = Context.Empty;
-
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    public NotificationOutboundContext()
+    {
+    }
+
+    public NotificationOutboundContext(Context context)
+        : base(context?.Items ?? throw new ArgumentNullException(nameof(context)))
+    {
+    }
+
+    private NotificationOutboundContext(IReadOnlyDictionary<object, object?> items, NotificationOutboundContext source)
+        : base(items)
+    {
+        Headers = new Dictionary<string, string?>(source.Headers, StringComparer.OrdinalIgnoreCase);
+    }
+
+    protected override Context Clone(IReadOnlyDictionary<object, object?> items)
+        => new NotificationOutboundContext(items, this);
 }
 
 public sealed class CommandOutboundPipelineTypes

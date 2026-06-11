@@ -1,4 +1,5 @@
 using NOF.Abstraction;
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
@@ -15,7 +16,7 @@ public interface INotificationPublisher
     void DeferPublish(object notification, Type[] notificationTypes);
 
     /// <summary>Publishes a notification.</summary>
-    Task PublishAsync(object notification, Type[] notificationTypes, CancellationToken cancellationToken = default);
+    Task PublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default);
 }
 
 public static class NotificationPublisherExtensions
@@ -25,12 +26,14 @@ public static class NotificationPublisherExtensions
         public Task PublishAsync(
             object notification,
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType,
+            Context context,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
             ArgumentNullException.ThrowIfNull(runtimeType);
-            return publisher.PublishAsync(notification, runtimeType.GetAllAssignableTypes(), cancellationToken);
+            ArgumentNullException.ThrowIfNull(context);
+            return publisher.PublishAsync(notification, runtimeType.GetAllAssignableTypes(), context, cancellationToken);
         }
 
         public void DeferPublish<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification)
@@ -50,11 +53,12 @@ public static class NotificationPublisherExtensions
             publisher.DeferPublish(notification, runtimeType.GetAllAssignableTypes());
         }
 
-        public Task PublishAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification, CancellationToken cancellationToken = default)
+        public Task PublishAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
-            return publisher.PublishAsync(notification, typeof(TNotification), cancellationToken);
+            ArgumentNullException.ThrowIfNull(context);
+            return publisher.PublishAsync(notification, typeof(TNotification), context, cancellationToken);
         }
     }
 }

@@ -56,7 +56,7 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("HttpMethod.Post", code);
         Assert.DoesNotContain("global::NOF.Application.ITransparentInfos", code);
         Assert.Contains("global::NOF.Contract.Context context", code);
-        Assert.Contains("Context = context,", code);
+        Assert.Contains("new global::NOF.Hosting.RequestOutboundContext(context)", code);
         Assert.Contains("foreach (var kvp in outboundContext.Headers)", code);
     }
 
@@ -114,7 +114,7 @@ public class HttpRpcClientGeneratorTests
 
         var runResult = RunGenerators(source);
         var code = GetGeneratedHttpClientCode(runResult);
-        Assert.Contains("Message = request,", code);
+        Assert.Contains("ExecuteAsync(outboundContext, request, async (_, currentRequest, ct) =>", code);
         Assert.Contains("GetDataAsync", code);
     }
 

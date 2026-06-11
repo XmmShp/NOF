@@ -15,7 +15,7 @@ public sealed class CommandOutboundPipelineExecutor
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(CommandOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
@@ -23,10 +23,10 @@ public sealed class CommandOutboundPipelineExecutor
         {
             var middleware = (ICommandOutboundMiddleware)_services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
-            pipeline = ct => middleware.InvokeAsync(context, next, ct);
+            pipeline = (currentContext, currentMessage, ct) => middleware.InvokeAsync(currentContext, currentMessage, next, ct);
         }
 
-        return pipeline(cancellationToken);
+        return pipeline(context, message, cancellationToken);
     }
 }
 
@@ -42,7 +42,7 @@ public sealed class NotificationOutboundPipelineExecutor
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(NotificationOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(NotificationOutboundContext context, object message, NotificationOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
@@ -50,9 +50,9 @@ public sealed class NotificationOutboundPipelineExecutor
         {
             var middleware = (INotificationOutboundMiddleware)_services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
-            pipeline = ct => middleware.InvokeAsync(context, next, ct);
+            pipeline = (currentContext, currentMessage, ct) => middleware.InvokeAsync(currentContext, currentMessage, next, ct);
         }
 
-        return pipeline(cancellationToken);
+        return pipeline(context, message, cancellationToken);
     }
 }

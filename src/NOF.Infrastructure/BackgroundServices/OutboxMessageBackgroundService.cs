@@ -131,12 +131,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             switch (message.MessageType)
             {
                 case OutboxMessageType.Command:
-                    await commandSender.SendAsync(payload, dispatchTypes[0], cancellationToken);
+                    await commandSender.SendAsync(payload, dispatchTypes[0], contextAccessor.Context, cancellationToken);
                     _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;
                 case OutboxMessageType.Notification:
-                    await notificationPublisher.PublishAsync(payload, dispatchTypes, cancellationToken);
+                    await notificationPublisher.PublishAsync(payload, dispatchTypes, contextAccessor.Context, cancellationToken);
                     _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;

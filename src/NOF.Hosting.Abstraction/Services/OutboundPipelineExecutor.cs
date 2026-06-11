@@ -14,7 +14,7 @@ public sealed class RequestOutboundPipelineExecutor
         _middlewareTypes.Freeze();
     }
 
-    public ValueTask ExecuteAsync(RequestOutboundContext context, HandlerDelegate dispatch, CancellationToken cancellationToken)
+    public ValueTask ExecuteAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
@@ -22,9 +22,9 @@ public sealed class RequestOutboundPipelineExecutor
         {
             var middleware = (IRequestOutboundMiddleware)_services.GetRequiredService(_middlewareTypes[i]);
             var next = pipeline;
-            pipeline = ct => middleware.InvokeAsync(context, next, ct);
+            pipeline = (currentContext, currentRequest, ct) => middleware.InvokeAsync(currentContext, currentRequest, next, ct);
         }
 
-        return pipeline(cancellationToken);
+        return pipeline(context, request, cancellationToken);
     }
 }

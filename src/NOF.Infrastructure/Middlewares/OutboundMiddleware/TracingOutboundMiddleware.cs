@@ -14,9 +14,9 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         _hostEnvironment = hostEnvironment;
     }
 
-    public async ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageType = context.Message.GetType();
+        var messageType = message.GetType();
         var messageTypeFullName = messageType.DisplayName;
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
@@ -29,7 +29,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
 
         try
         {
-            await next(cancellationToken);
+            await next(context, message, cancellationToken);
 
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
@@ -45,9 +45,9 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         }
     }
 
-    public async ValueTask InvokeAsync(NotificationOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(NotificationOutboundContext context, object message, NotificationOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageType = context.Message.GetType();
+        var messageType = message.GetType();
         var messageTypeFullName = messageType.DisplayName;
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {messageTypeFullName}",
@@ -60,7 +60,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
 
         try
         {
-            await next(cancellationToken);
+            await next(context, message, cancellationToken);
 
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);
@@ -76,7 +76,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         }
     }
 
-    public async ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
         var rpcMethod = $"{context.ServiceType.DisplayName}.{context.MethodName}";
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
@@ -90,7 +90,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
 
         try
         {
-            await next(cancellationToken);
+            await next(context, request, cancellationToken);
 
             context.Headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.MessageId, out var messageId);
             activity?.SetTag(NOFHostingConstants.Outbound.Tags.MessageId, messageId);

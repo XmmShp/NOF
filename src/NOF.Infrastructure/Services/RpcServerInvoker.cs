@@ -23,19 +23,17 @@ public static class RpcServerInvoker
         var resolution = invocationResolver.Resolve<TRpcService>(operationName);
 
         var outboundPipeline = rootServiceProvider.GetRequiredService<RequestOutboundPipelineExecutor>();
-        var outboundContext = new RequestOutboundContext
+        var outboundContext = new RequestOutboundContext(context)
         {
-            Message = request,
-            Context = context,
             ServiceType = typeof(TRpcService),
             MethodName = operationName
         };
 
-        await outboundPipeline.ExecuteAsync(outboundContext, async ct =>
+        await outboundPipeline.ExecuteAsync(outboundContext, request, async (_, currentRequest, ct) =>
         {
             var inboundPipeline = rootServiceProvider.GetRequiredService<RequestInboundPipelineExecutor>();
             outboundContext.Response = await inboundPipeline.ExecuteAsync(
-                request,
+                currentRequest,
                 resolution.HandlerMapping.HandlerType,
                 typeof(TRpcService),
                 operationName,

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Infrastructure;
 using Xunit;
 
@@ -53,7 +54,7 @@ public class NOFTestHostTests
         builder.Services.AddScoped<ICommandSender, FakeCommandSender>();
 
         await using var host = await builder.BuildTestHostAsync();
-        Func<Task> act = () => host.SendAsync(new TestCommand("do-it"));
+        Func<Task> act = () => host.SendAsync(new TestCommand("do-it"), Context.Empty);
 
         await Record.ExceptionAsync(act);
     }
@@ -65,7 +66,7 @@ public class NOFTestHostTests
         builder.Services.AddScoped<INotificationPublisher, FakeNotificationPublisher>();
 
         await using var host = await builder.BuildTestHostAsync();
-        Func<Task> act = () => host.PublishAsync(new TestNotification("evt"));
+        Func<Task> act = () => host.PublishAsync(new TestNotification("evt"), Context.Empty);
 
         await Record.ExceptionAsync(act);
     }
@@ -100,8 +101,9 @@ public class NOFTestHostTests
         {
         }
 
-        public Task SendAsync(object command, Type commandType, CancellationToken cancellationToken = default)
+        public Task SendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
         {
+            _ = context;
             return Task.CompletedTask;
         }
     }
@@ -112,8 +114,9 @@ public class NOFTestHostTests
         {
         }
 
-        public Task PublishAsync(object notification, Type[] notificationTypes, CancellationToken cancellationToken = default)
+        public Task PublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
         {
+            _ = context;
             return Task.CompletedTask;
         }
     }

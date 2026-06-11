@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -53,22 +54,19 @@ public sealed class CommandSender : ICommandSender
         });
     }
 
-    public async Task SendAsync(object command, Type commandType, CancellationToken cancellationToken = default)
+    public async Task SendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(commandType);
-        var context = new CommandOutboundContext
-        {
-            Message = command,
-            Context = _contextAccessor.Context
-        };
+        ArgumentNullException.ThrowIfNull(context);
+        var outboundContext = new CommandOutboundContext(context);
 
-        await _outboundPipeline.ExecuteAsync(context, async ct =>
+        await _outboundPipeline.ExecuteAsync(outboundContext, command, async (_, message, ct) =>
         {
-            var payload = _objectSerializer.Serialize(command, command.GetType());
-            var payloadTypeName = _typeResolver.Register(command.GetType());
+            var payload = _objectSerializer.Serialize(message, message.GetType());
+            var payloadTypeName = _typeResolver.Register(message.GetType());
             var commandTypeName = _typeResolver.Register(commandType);
-            await _rider.SendAsync(payload, payloadTypeName, commandTypeName, context.Headers, ct).ConfigureAwait(false);
+            await _rider.SendAsync(payload, payloadTypeName, commandTypeName, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 }

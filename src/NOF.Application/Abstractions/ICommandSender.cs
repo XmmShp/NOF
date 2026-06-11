@@ -1,3 +1,5 @@
+using NOF.Contract;
+
 namespace NOF.Application;
 
 /// <summary>
@@ -12,7 +14,7 @@ public interface ICommandSender
     void DeferSend(object command, Type commandType);
 
     /// <summary>Sends a command.</summary>
-    Task SendAsync(object command, Type commandType, CancellationToken cancellationToken = default);
+    Task SendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default);
 }
 
 public static class CommandSenderExtensions
@@ -26,11 +28,12 @@ public static class CommandSenderExtensions
             sender.DeferSend(command, typeof(TCommand));
         }
 
-        public Task SendAsync<TCommand>(TCommand command, CancellationToken cancellationToken = default)
+        public Task SendAsync<TCommand>(TCommand command, Context context, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(sender);
             ArgumentNullException.ThrowIfNull(command);
-            return sender.SendAsync(command, typeof(TCommand), cancellationToken);
+            ArgumentNullException.ThrowIfNull(context);
+            return sender.SendAsync(command, typeof(TCommand), context, cancellationToken);
         }
     }
 }

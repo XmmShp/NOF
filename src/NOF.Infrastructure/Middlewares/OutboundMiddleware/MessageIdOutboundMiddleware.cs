@@ -6,22 +6,22 @@ namespace NOF.Infrastructure;
 public sealed class MessageIdOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware
     , IRequestOutboundMiddleware
 {
-    public ValueTask InvokeAsync(CommandOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
         EnsureMessageId(context.Headers);
-        return next(cancellationToken);
+        return next(context, message, cancellationToken);
     }
 
-    public ValueTask InvokeAsync(NotificationOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(NotificationOutboundContext context, object message, NotificationOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
         EnsureMessageId(context.Headers);
-        return next(cancellationToken);
+        return next(context, message, cancellationToken);
     }
 
-    public ValueTask InvokeAsync(RequestOutboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
         EnsureMessageId(context.Headers);
-        return next(cancellationToken);
+        return next(context, request, cancellationToken);
     }
 
     private static void EnsureMessageId(IDictionary<string, string?> headers)

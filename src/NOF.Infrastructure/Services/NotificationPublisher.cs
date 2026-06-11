@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -55,22 +56,19 @@ public sealed class NotificationPublisher : INotificationPublisher
         });
     }
 
-    public async Task PublishAsync(object notification, Type[] notificationTypes, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
         ArgumentNullException.ThrowIfNull(notificationTypes);
-        var context = new NotificationOutboundContext
-        {
-            Message = notification,
-            Context = _contextAccessor.Context
-        };
+        ArgumentNullException.ThrowIfNull(context);
+        var outboundContext = new NotificationOutboundContext(context);
 
-        await _outboundPipeline.ExecuteAsync(context, async ct =>
+        await _outboundPipeline.ExecuteAsync(outboundContext, notification, async (_, message, ct) =>
         {
-            var payload = _objectSerializer.Serialize(notification, notification.GetType());
-            var payloadTypeName = _typeResolver.Register(notification.GetType());
+            var payload = _objectSerializer.Serialize(message, message.GetType());
+            var payloadTypeName = _typeResolver.Register(message.GetType());
             var notificationTypeNames = notificationTypes.Select(_typeResolver.Register).ToArray();
-            await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, context.Headers, ct).ConfigureAwait(false);
+            await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 }

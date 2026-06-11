@@ -18,7 +18,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
 
         var called = false;
         var outboundContext = CreateOutboundContext();
-        await middleware.InvokeAsync(outboundContext, _ =>
+        await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) =>
         {
             called = true;
             return ValueTask.CompletedTask;
@@ -50,7 +50,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
         var middleware = new AccessTokenPropagationOutboundMiddleware(userContext);
 
         var outboundContext = CreateOutboundContext();
-        await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
+        await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
         Assert.False(outboundContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.Authorization));
     }
 
@@ -70,7 +70,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
 
         var middleware = new AccessTokenPropagationOutboundMiddleware(userContext);
         var outboundContext = CreateOutboundContext();
-        await middleware.InvokeAsync(outboundContext, _ => ValueTask.CompletedTask, default);
+        await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
 
         Assert.Equal("Token " + token, outboundContext.Headers["X-Auth"]);
     }
@@ -79,7 +79,6 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
     {
         return new RequestOutboundContext
         {
-            Message = new object(),
             ServiceType = typeof(object),
             MethodName = nameof(CreateOutboundContext)
         };
