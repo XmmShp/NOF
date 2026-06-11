@@ -51,7 +51,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         });
         builder.Services.AddOptions<CorsSettingsOptions>();
         builder.Services.AddCors();
-        builder.AddInitializationStep(new CorsInitializationStep());
+        builder.Services.AddInitializationStep(new CorsInitializationStep());
         builder.Services.AddOpenApi(options =>
         {
             options.AddDocumentTransformer(static (document, _, _) =>

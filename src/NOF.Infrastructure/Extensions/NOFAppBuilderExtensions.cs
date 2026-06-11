@@ -174,8 +174,5 @@ public static partial class NOFInfrastructureExtensions
 
         public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
-
-        public INOFAppBuilder AddInitializationStep(Func<IHost, Task> func)
-            => builder.AddInitializationStep(new ApplicationInitializationStep(func));
     }
 }

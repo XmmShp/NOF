@@ -37,8 +37,8 @@ public class AspNetCoreRegistrationStep : IServiceRegistrationStep
                     && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
             ));
 
-        builder.AddInitializationStep(new RpcHttpEndpointResultWrappingInitializationStep());
-        builder.AddInitializationStep(new HealthCheckInitializationStep());
+        builder.Services.AddInitializationStep(new RpcHttpEndpointResultWrappingInitializationStep());
+        builder.Services.AddInitializationStep(new HealthCheckInitializationStep());
 
         return ValueTask.CompletedTask;
     }

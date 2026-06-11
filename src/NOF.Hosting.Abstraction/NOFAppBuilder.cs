@@ -38,8 +38,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 {
     protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs = [];
 
-    protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs = [];
-
     public Registry Registry { get; } = new();
 
     protected NOFAppBuilder()
@@ -60,26 +58,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         return this;
     }
 
-    public virtual INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
-    {
-        ArgumentNullException.ThrowIfNull(initializationStep);
-        ApplicationConfigs.Add(initializationStep);
-        return this;
-    }
-
-    public virtual INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-    {
-        ArgumentNullException.ThrowIfNull(predicate);
-        ApplicationConfigs.RemoveWhere(node => predicate(node));
-        return this;
-    }
-
-    IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
-        => AddInitializationStep(initializationStep);
-
-    IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-        => RemoveInitializationStep(predicate);
-
     public virtual async Task<THostApplication> BuildAsync()
     {
         AddRegistrationStep(new AutoInjectServiceRegistrationStep());
@@ -92,7 +70,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
         var app = await BuildApplicationAsync();
 
-        var startGraph = new DependencyGraph<IApplicationInitializationStep>(ApplicationConfigs);
+        var startGraph = new DependencyGraph<IApplicationInitializationStep>(
+            app.Services.GetServices<IApplicationInitializationStep>());
         foreach (var task in startGraph.GetExecutionOrder())
         {
             await task.ExecuteAsync(app).ConfigureAwait(false);

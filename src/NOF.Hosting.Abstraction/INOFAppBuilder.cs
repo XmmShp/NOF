@@ -8,10 +8,6 @@ public interface INOFAppBuilder : IServiceRegistrationContext
     INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep);
 
     INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate);
-
-    new INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep);
-
-    new INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate);
 }
 
 public static partial class NOFHostingExtensions
@@ -65,14 +61,6 @@ public static partial class NOFHostingExtensions
         public INOFAppBuilder TryAddRegistrationStep<T>() where T : IServiceRegistrationStep, new()
             => builder.TryAddRegistrationStep(new T());
 
-        public INOFAppBuilder RemoveInitializationStep<T>() where T : IApplicationInitializationStep
-            => builder.RemoveInitializationStep(t => t is T);
-
-        public INOFAppBuilder TryAddInitializationStep(IApplicationInitializationStep initializationStep)
-            => (INOFAppBuilder)((IServiceRegistrationContext)builder).TryAddInitializationStep(initializationStep);
-
-        public INOFAppBuilder TryAddInitializationStep<T>() where T : IApplicationInitializationStep, new()
-            => builder.TryAddInitializationStep(new T());
     }
 
     private static HashSet<Assembly> GetOrAddApplicationParts(INOFAppBuilder builder)

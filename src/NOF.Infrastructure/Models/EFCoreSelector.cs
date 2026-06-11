@@ -67,10 +67,9 @@ public readonly struct EFCoreSelector
     public EFCoreSelector MigrateOnInitialize()
     {
         var dbContextType = DbContextType;
-        Builder.RemoveInitializationStep(step =>
-            step is DbContextMigrationInitializationStep existing &&
+        Builder.Services.RemoveInitializationStep<DbContextMigrationInitializationStep>(existing =>
             existing.DbContextType == dbContextType);
-        Builder.AddInitializationStep(new DbContextMigrationInitializationStep(dbContextType));
+        Builder.Services.AddInitializationStep(new DbContextMigrationInitializationStep(dbContextType));
         return this;
     }
 }

@@ -137,7 +137,10 @@ public class InfrastructureDefaultsTests
 
         builder.UseDbContext<NOFDbContext>().MigrateOnInitialize();
 
-        Assert.Contains(builder.InitializationSteps, step => step is DbContextMigrationInitializationStep);
+        Assert.Contains(
+            builder.Services,
+            descriptor => descriptor.ServiceType == typeof(IApplicationInitializationStep)
+                && descriptor.ImplementationInstance is DbContextMigrationInitializationStep);
     }
 
     [Fact]
@@ -219,7 +222,6 @@ public class InfrastructureDefaultsTests
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
         private readonly List<IServiceRegistrationStep> _registrationSteps;
-        private readonly List<IApplicationInitializationStep> _initializationSteps;
         private readonly Registry _registry;
 
         public TestServiceRegistrationContext()
@@ -233,7 +235,6 @@ public class InfrastructureDefaultsTests
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
             _registrationSteps = [];
-            _initializationSteps = [];
             _registry = new Registry();
         }
 
@@ -246,7 +247,6 @@ public class InfrastructureDefaultsTests
             _metrics = other._metrics;
             _properties = other._properties;
             _registrationSteps = other._registrationSteps;
-            _initializationSteps = other._initializationSteps;
             _registry = other._registry;
         }
 
@@ -262,24 +262,6 @@ public class InfrastructureDefaultsTests
             return this;
         }
 
-        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
-        {
-            _initializationSteps.Add(initializationStep);
-            return this;
-        }
-
-        public INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-        {
-            _initializationSteps.RemoveAll(predicate);
-            return this;
-        }
-
-        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
-            => AddInitializationStep(initializationStep);
-
-        IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-            => RemoveInitializationStep(predicate);
-
         public IDictionary<object, object> Properties => _properties;
 
         public Registry Registry => _registry;
@@ -293,8 +275,6 @@ public class InfrastructureDefaultsTests
         public IMetricsBuilder Metrics => _metrics;
 
         public IServiceCollection Services => _services;
-
-        public IReadOnlyList<IApplicationInitializationStep> InitializationSteps => _initializationSteps;
 
         public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
             where TContainerBuilder : notnull

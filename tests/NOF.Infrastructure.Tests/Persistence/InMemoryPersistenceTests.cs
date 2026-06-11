@@ -2213,7 +2213,6 @@ public class SqliteInMemoryPersistenceTests
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
         private readonly List<IServiceRegistrationStep> _registrationSteps;
-        private readonly List<IApplicationInitializationStep> _initializationSteps;
         private readonly Registry _registry;
 
         public TestServiceRegistrationContext()
@@ -2227,7 +2226,6 @@ public class SqliteInMemoryPersistenceTests
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
             _registrationSteps = [];
-            _initializationSteps = [];
             _registry = new Registry();
         }
 
@@ -2242,24 +2240,6 @@ public class SqliteInMemoryPersistenceTests
             _registrationSteps.RemoveAll(predicate);
             return this;
         }
-
-        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
-        {
-            _initializationSteps.Add(initializationStep);
-            return this;
-        }
-
-        public INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-        {
-            _initializationSteps.RemoveAll(predicate);
-            return this;
-        }
-
-        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
-            => AddInitializationStep(initializationStep);
-
-        IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
-            => RemoveInitializationStep(predicate);
 
         public IDictionary<object, object> Properties => _properties;
 
