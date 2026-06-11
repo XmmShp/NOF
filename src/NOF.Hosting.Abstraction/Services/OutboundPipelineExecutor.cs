@@ -1,26 +1,21 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace NOF.Hosting;
 
 public sealed class RequestOutboundPipelineExecutor
 {
-    private readonly RequestOutboundPipelineTypes _middlewareTypes;
-    private readonly IServiceProvider _services;
+    private readonly IReadOnlyList<IRequestOutboundMiddleware> _middlewares;
 
-    public RequestOutboundPipelineExecutor(RequestOutboundPipelineTypes middlewareTypes, IServiceProvider services)
+    public RequestOutboundPipelineExecutor(IEnumerable<IRequestOutboundMiddleware> middlewares)
     {
-        _middlewareTypes = middlewareTypes;
-        _services = services;
-        _middlewareTypes.Freeze(services);
+        _middlewares = new DependencyGraph<IRequestOutboundMiddleware>(middlewares).GetExecutionOrder();
     }
 
     public ValueTask ExecuteAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)
     {
         var pipeline = dispatch;
 
-        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
+        for (var i = _middlewares.Count - 1; i >= 0; i--)
         {
-            var middleware = (IRequestOutboundMiddleware)_services.GetRequiredService(_middlewareTypes[i]);
+            var middleware = _middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentRequest, ct) => middleware.InvokeAsync(currentContext, currentRequest, next, ct);
         }

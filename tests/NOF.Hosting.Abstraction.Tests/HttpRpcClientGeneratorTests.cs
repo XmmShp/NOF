@@ -57,6 +57,8 @@ public class HttpRpcClientGeneratorTests
         Assert.DoesNotContain("global::NOF.Application.ITransparentInfos", code);
         Assert.Contains("global::NOF.Contract.Context context", code);
         Assert.Contains("new global::NOF.Hosting.RequestOutboundContext(context)", code);
+        Assert.Contains("private static readonly global::System.Reflection.MethodInfo __CreateUserMethodInfo_0 =", code);
+        Assert.Contains("MethodInfo = __CreateUserMethodInfo_0", code);
         Assert.Contains("foreach (var kvp in outboundContext.Headers)", code);
     }
 

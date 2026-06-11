@@ -84,7 +84,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
 
     public async ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var rpcMethod = $"{context.ServiceType.DisplayName}.{context.MethodName}";
+        var rpcMethod = $"{context.ServiceType.DisplayName}.{context.MethodInfo.Name}";
         using var activity = NOFHostingConstants.Outbound.Source.StartActivity(
             $"Outbound: {rpcMethod}",
             ActivityKind.Producer);

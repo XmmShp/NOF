@@ -117,7 +117,6 @@ public sealed class HttpRpcTransportBoundaryTests
 
         builder.Services.AddRouting();
         builder.Services.AddSingleton<IContextAccessor, ContextAccessor>();
-        builder.Services.AddSingleton(new RequestInboundPipelineTypes());
         builder.Services.AddSingleton<RequestInboundPipelineExecutor>();
         builder.Services.AddScoped<RpcServerInvocationResolver>();
         builder.Services.AddScoped<HttpRequestInboundAdapter>();

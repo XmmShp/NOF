@@ -1,5 +1,6 @@
 using NOF.Abstraction;
 using NOF.Test;
+using System.Reflection;
 using System.Security.Claims;
 using Xunit;
 
@@ -80,7 +81,8 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
         return new RequestOutboundContext
         {
             ServiceType = typeof(object),
-            MethodName = nameof(CreateOutboundContext)
+            MethodInfo = typeof(AccessTokenPropagationOutboundMiddlewareTests)
+                .GetMethod(nameof(CreateOutboundContext), BindingFlags.NonPublic | BindingFlags.Static)!
         };
     }
 

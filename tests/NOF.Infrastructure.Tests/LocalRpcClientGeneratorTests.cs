@@ -56,6 +56,8 @@ public class LocalRpcClientGeneratorTests
         Assert.Contains(
             "global::NOF.Contract.RpcResults.From<global::NOF.Contract.Result<global::MyApp.GetFleetOverviewResponse>>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
             code);
+        Assert.Contains("private static readonly global::System.Reflection.MethodInfo __GetFleetOverviewAsyncMethodInfo_0 =", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::MyApp.IDroneOpsService>(_serviceProvider, __GetFleetOverviewAsyncMethodInfo_0, request, context, cancellationToken)", code);
         Assert.DoesNotContain(
             "((global::NOF.Contract.IResult)result!)",
             code);

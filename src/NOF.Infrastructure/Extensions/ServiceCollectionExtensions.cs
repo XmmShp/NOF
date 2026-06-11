@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
@@ -14,40 +13,35 @@ public static partial class NOFInfrastructureExtensions
         public IServiceCollection AddCommandInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, ICommandInboundMiddleware
         {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<CommandInboundPipelineTypes>().Add<TMiddleware>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<ICommandInboundMiddleware, TMiddleware>());
             return services;
         }
 
         public IServiceCollection AddCommandOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, ICommandOutboundMiddleware
         {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<CommandOutboundPipelineTypes>().Add<TMiddleware>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<ICommandOutboundMiddleware, TMiddleware>());
             return services;
         }
 
         public IServiceCollection AddNotificationInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, INotificationInboundMiddleware
         {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<NotificationInboundPipelineTypes>().Add<TMiddleware>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationInboundMiddleware, TMiddleware>());
             return services;
         }
 
         public IServiceCollection AddNotificationOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, INotificationOutboundMiddleware
         {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<NotificationOutboundPipelineTypes>().Add<TMiddleware>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationOutboundMiddleware, TMiddleware>());
             return services;
         }
 
         public IServiceCollection AddRequestInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, IRequestInboundMiddleware
         {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<RequestInboundPipelineTypes>().Add<TMiddleware>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestInboundMiddleware, TMiddleware>());
             return services;
         }
 

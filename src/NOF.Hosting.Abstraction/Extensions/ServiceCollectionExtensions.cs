@@ -127,8 +127,7 @@ public static partial class NOFHostingExtensions
         public IServiceCollection AddRequestOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, IRequestOutboundMiddleware
         {
-            services.TryAddScoped<TMiddleware>();
-            services.GetOrAddSingleton<RequestOutboundPipelineTypes>().Add<TMiddleware>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestOutboundMiddleware, TMiddleware>());
             return services;
         }
     }

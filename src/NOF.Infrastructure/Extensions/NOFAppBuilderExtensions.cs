@@ -78,11 +78,6 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Pipelines
-            builder.Services.GetOrAddSingleton<CommandOutboundPipelineTypes>();
-            builder.Services.GetOrAddSingleton<NotificationOutboundPipelineTypes>();
-            builder.Services.GetOrAddSingleton<CommandInboundPipelineTypes>();
-            builder.Services.GetOrAddSingleton<NotificationInboundPipelineTypes>();
-            builder.Services.GetOrAddSingleton<RequestInboundPipelineTypes>();
             builder.Services.TryAddScoped<CommandOutboundPipelineExecutor>();
             builder.Services.TryAddScoped<NotificationOutboundPipelineExecutor>();
             builder.Services.TryAddSingleton<CommandInboundPipelineExecutor>();

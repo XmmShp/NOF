@@ -100,6 +100,12 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
         sb.AppendLine();
+        for (var i = 0; i < clientMethods.Count; i++)
+        {
+            EmitMethodInfoField(sb, clientMethods[i], serviceInterface, i);
+        }
+
+        sb.AppendLine();
         sb.AppendLine($"        public {targetClass.Name}(global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(serviceProvider);");
@@ -107,9 +113,9 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
 
-        foreach (var method in clientMethods)
+        for (var i = 0; i < clientMethods.Count; i++)
         {
-            EmitMethod(sb, method, serviceInterface);
+            EmitMethod(sb, clientMethods[i], serviceInterface, GetMethodInfoFieldName(clientMethods[i], i));
         }
 
         sb.AppendLine("    }");
@@ -118,7 +124,31 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         context.AddSource($"{targetClass.ToDisplayString().Replace('.', '_')}.LocalRpcClient.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
-    private static void EmitMethod(StringBuilder sb, IMethodSymbol method, INamedTypeSymbol serviceInterface)
+    private static void EmitMethodInfoField(StringBuilder sb, IMethodSymbol method, INamedTypeSymbol serviceInterface, int index)
+    {
+        var serviceType = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var operationName = method.Name.EndsWith("Async", System.StringComparison.Ordinal)
+            ? method.Name.Substring(0, method.Name.Length - 5)
+            : method.Name;
+        var operationNameExpression = $"nameof({serviceType}.{operationName})";
+        var fieldName = GetMethodInfoFieldName(method, index);
+        var parameterTypes = method.Parameters
+            .Take(1)
+            .Select(static parameter => $"typeof({parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})")
+            .ToArray();
+        var parameterTypesExpression = parameterTypes.Length == 0
+            ? "global::System.Type.EmptyTypes"
+            : $"[{string.Join(", ", parameterTypes)}]";
+
+        sb.AppendLine($"        private static readonly global::System.Reflection.MethodInfo {fieldName} =");
+        sb.AppendLine($"            typeof({serviceType}).GetMethod({operationNameExpression}, {parameterTypesExpression})");
+        sb.AppendLine($"            ?? throw new global::System.InvalidOperationException(\"Unable to resolve method '{serviceType}.{operationName}'.\");");
+    }
+
+    private static string GetMethodInfoFieldName(IMethodSymbol method, int index)
+        => $"__{method.Name}MethodInfo_{index}";
+
+    private static void EmitMethod(StringBuilder sb, IMethodSymbol method, INamedTypeSymbol serviceInterface, string methodInfoFieldName)
     {
         if (method.Parameters.Length == 0)
         {
@@ -129,17 +159,13 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         var requestType = requestParameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var serviceType = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var operationName = method.Name.EndsWith("Async", System.StringComparison.Ordinal)
-            ? method.Name.Substring(0, method.Name.Length - 5)
-            : method.Name;
-        var operationNameExpression = $"nameof({serviceType}.{operationName})";
 
         sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC response projection may require generic instantiation at runtime.\")]");
         sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC response projection may require reflective access to generic result helpers.\")]");
         sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
-        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {operationNameExpression}, {requestParameter.Name}, context, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {methodInfoFieldName}, {requestParameter.Name}, context, cancellationToken).ConfigureAwait(false);");
         if (method.ReturnType is INamedTypeSymbol { Name: "Task", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } taskType)
         {
             if (taskType.IsGenericType && taskType.TypeArguments.Length == 1)

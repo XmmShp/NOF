@@ -1,6 +1,7 @@
 using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace NOF.Hosting;
 
@@ -13,7 +14,7 @@ public sealed class RequestOutboundContext : Context
 
     public required Type ServiceType { get; init; }
 
-    public required string MethodName { get; init; }
+    public required MethodInfo MethodInfo { get; init; }
 
     public RequestOutboundContext()
     {
@@ -31,24 +32,9 @@ public sealed class RequestOutboundContext : Context
         Headers = new Dictionary<string, string?>(source.Headers, StringComparer.OrdinalIgnoreCase);
         Response = source.Response;
         ServiceType = source.ServiceType;
-        MethodName = source.MethodName;
+        MethodInfo = source.MethodInfo;
     }
 
     protected override Context Clone(IReadOnlyDictionary<object, object?> items)
         => new RequestOutboundContext(items, this);
-}
-
-public sealed class RequestOutboundPipelineTypes
-{
-    private readonly MessagePipelineTypes<IRequestOutboundMiddleware> _inner = new();
-
-    public int Count => _inner.Count;
-
-    public Type this[int index] => _inner[index];
-
-    public void Add<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-        where TMiddleware : class, IRequestOutboundMiddleware
-        => _inner.Add<TMiddleware>();
-
-    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }

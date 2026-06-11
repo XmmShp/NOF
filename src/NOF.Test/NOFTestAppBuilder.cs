@@ -16,7 +16,6 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
     {
         InnerBuilder = Host.CreateApplicationBuilder(args ?? []);
         ServiceConfigs.Clear();
-        ApplicationConfigs.Clear();
         ConfigureDefaultTestServices();
     }
 

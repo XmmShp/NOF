@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -9,18 +9,15 @@ namespace NOF.Infrastructure;
 
 public sealed class CommandInboundPipelineExecutor
 {
-    private readonly CommandInboundPipelineTypes _middlewareTypes;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IObjectSerializer _serializer;
     private readonly TypeResolver _typeResolver;
 
     public CommandInboundPipelineExecutor(
-        CommandInboundPipelineTypes middlewareTypes,
         IServiceScopeFactory scopeFactory,
         IObjectSerializer serializer,
         TypeResolver typeResolver)
     {
-        _middlewareTypes = middlewareTypes;
         _scopeFactory = scopeFactory;
         _serializer = serializer;
         _typeResolver = typeResolver;
@@ -34,19 +31,20 @@ public sealed class CommandInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        _middlewareTypes.Freeze(scope.ServiceProvider);
+        var middlewares = new DependencyGraph<ICommandInboundMiddleware>(
+            scope.ServiceProvider.GetServices<ICommandInboundMiddleware>()).GetExecutionOrder();
         var messageType = _typeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
         CommandHandlerDelegate terminal = (currentContext, currentMessage, ct)
             => ExecuteCommandHandlerAsync(scope.ServiceProvider, handlerType, currentContext, currentMessage, ct);
         CommandHandlerDelegate pipeline = terminal;
-        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
+        for (var i = middlewares.Count - 1; i >= 0; i--)
         {
-            var middlewareType = _middlewareTypes[i];
+            var middleware = middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentMessage, ct)
-                => ExecuteCommandMiddlewareAsync(scope.ServiceProvider, middlewareType, currentContext, currentMessage, next, ct);
+                => ExecuteCommandMiddlewareAsync(scope.ServiceProvider, middleware, currentContext, currentMessage, next, ct);
         }
 
         await pipeline(context, message, cancellationToken).ConfigureAwait(false);
@@ -90,7 +88,7 @@ public sealed class CommandInboundPipelineExecutor
 
     private static ValueTask ExecuteCommandMiddlewareAsync(
         IServiceProvider services,
-        Type middlewareType,
+        ICommandInboundMiddleware middleware,
         CommandInboundContext context,
         object message,
         CommandHandlerDelegate next,
@@ -98,7 +96,6 @@ public sealed class CommandInboundPipelineExecutor
     {
         return ExecuteWithAmbientContext(services, context, async () =>
         {
-            var middleware = (ICommandInboundMiddleware)services.GetRequiredService(middlewareType);
             await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
         });
     }
@@ -113,18 +110,15 @@ public sealed class CommandInboundPipelineExecutor
 
 public sealed class NotificationInboundPipelineExecutor
 {
-    private readonly NotificationInboundPipelineTypes _middlewareTypes;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IObjectSerializer _serializer;
     private readonly TypeResolver _typeResolver;
 
     public NotificationInboundPipelineExecutor(
-        NotificationInboundPipelineTypes middlewareTypes,
         IServiceScopeFactory scopeFactory,
         IObjectSerializer serializer,
         TypeResolver typeResolver)
     {
-        _middlewareTypes = middlewareTypes;
         _scopeFactory = scopeFactory;
         _serializer = serializer;
         _typeResolver = typeResolver;
@@ -138,19 +132,20 @@ public sealed class NotificationInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        _middlewareTypes.Freeze(scope.ServiceProvider);
+        var middlewares = new DependencyGraph<INotificationInboundMiddleware>(
+            scope.ServiceProvider.GetServices<INotificationInboundMiddleware>()).GetExecutionOrder();
         var messageType = _typeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
         NotificationHandlerDelegate terminal = (currentContext, currentMessage, ct)
             => ExecuteNotificationHandlerAsync(scope.ServiceProvider, handlerType, currentContext, currentMessage, ct);
         NotificationHandlerDelegate pipeline = terminal;
-        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
+        for (var i = middlewares.Count - 1; i >= 0; i--)
         {
-            var middlewareType = _middlewareTypes[i];
+            var middleware = middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentMessage, ct)
-                => ExecuteNotificationMiddlewareAsync(scope.ServiceProvider, middlewareType, currentContext, currentMessage, next, ct);
+                => ExecuteNotificationMiddlewareAsync(scope.ServiceProvider, middleware, currentContext, currentMessage, next, ct);
         }
 
         await pipeline(context, message, cancellationToken).ConfigureAwait(false);
@@ -194,7 +189,7 @@ public sealed class NotificationInboundPipelineExecutor
 
     private static ValueTask ExecuteNotificationMiddlewareAsync(
         IServiceProvider services,
-        Type middlewareType,
+        INotificationInboundMiddleware middleware,
         NotificationInboundContext context,
         object message,
         NotificationHandlerDelegate next,
@@ -202,7 +197,6 @@ public sealed class NotificationInboundPipelineExecutor
     {
         return ExecuteWithAmbientContext(services, context, async () =>
         {
-            var middleware = (INotificationInboundMiddleware)services.GetRequiredService(middlewareType);
             await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
         });
     }
@@ -217,12 +211,10 @@ public sealed class NotificationInboundPipelineExecutor
 
 public sealed class RequestInboundPipelineExecutor
 {
-    private readonly RequestInboundPipelineTypes _middlewareTypes;
     private readonly IServiceScopeFactory _scopeFactory;
 
-    public RequestInboundPipelineExecutor(RequestInboundPipelineTypes middlewareTypes, IServiceScopeFactory scopeFactory)
+    public RequestInboundPipelineExecutor(IServiceScopeFactory scopeFactory)
     {
-        _middlewareTypes = middlewareTypes;
         _scopeFactory = scopeFactory;
     }
 
@@ -235,17 +227,18 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        _middlewareTypes.Freeze(scope.ServiceProvider);
+        var middlewares = new DependencyGraph<IRequestInboundMiddleware>(
+            scope.ServiceProvider.GetServices<IRequestInboundMiddleware>()).GetExecutionOrder();
         var context = CreateContext(request, handlerType, serviceType, methodName, headers);
         RequestHandlerDelegate terminal = (currentContext, currentRequest, ct)
             => ExecuteRequestHandlerAsync(scope.ServiceProvider, handlerType, currentContext, currentRequest, ct);
         RequestHandlerDelegate pipeline = terminal;
-        for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
+        for (var i = middlewares.Count - 1; i >= 0; i--)
         {
-            var middlewareType = _middlewareTypes[i];
+            var middleware = middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentRequest, ct)
-                => ExecuteRequestMiddlewareAsync(scope.ServiceProvider, middlewareType, currentContext, currentRequest, next, ct);
+                => ExecuteRequestMiddlewareAsync(scope.ServiceProvider, middleware, currentContext, currentRequest, next, ct);
         }
 
         await pipeline(context, request, cancellationToken).ConfigureAwait(false);
@@ -302,7 +295,7 @@ public sealed class RequestInboundPipelineExecutor
 
     private static ValueTask ExecuteRequestMiddlewareAsync(
         IServiceProvider services,
-        Type middlewareType,
+        IRequestInboundMiddleware middleware,
         RequestInboundContext context,
         object request,
         RequestHandlerDelegate next,
@@ -310,7 +303,6 @@ public sealed class RequestInboundPipelineExecutor
     {
         return ExecuteWithAmbientContext(services, context, async () =>
         {
-            var middleware = (IRequestInboundMiddleware)services.GetRequiredService(middlewareType);
             await middleware.InvokeAsync(context, request, next, cancellationToken).ConfigureAwait(false);
         });
     }

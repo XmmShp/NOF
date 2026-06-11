@@ -92,6 +92,12 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
         sb.AppendLine("        private static readonly global::System.Text.Json.JsonSerializerOptions _jsonOptions = global::System.Text.Json.JsonSerializerOptions.NOF;");
         sb.AppendLine();
+        for (var i = 0; i < methods.Count; i++)
+        {
+            EmitMethodInfoField(sb, methods[i], i);
+        }
+
+        sb.AppendLine();
         sb.AppendLine($"        public {targetClass.Name}(global::System.Net.Http.HttpClient httpClient, global::NOF.Hosting.RequestOutboundPipelineExecutor outboundPipeline, global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(httpClient);");
@@ -106,10 +112,11 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine("            => _jsonOptions.GetRequiredTypeInfo<T>();");
         sb.AppendLine();
 
-        foreach (var method in methods)
+        for (var i = 0; i < methods.Count; i++)
         {
+            var method = methods[i];
             var endpointInfo = RpcServiceHelpers.ExtractEndpointInfo(method);
-            EmitHttpMethodBody(sb, method, endpointInfo);
+            EmitHttpMethodBody(sb, method, endpointInfo, GetMethodInfoFieldName(method, i));
         }
 
         sb.AppendLine("    }");
@@ -178,14 +185,33 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         return methods;
     }
 
-    private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint)
+    private static void EmitMethodInfoField(StringBuilder sb, ServiceMethodInfo method, int index)
+    {
+        var serviceTypeName = method.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var operationNameExpression = $"nameof({serviceTypeName}.{method.Method.Name})";
+        var fieldName = GetMethodInfoFieldName(method, index);
+        var parameterTypes = method.Method.Parameters
+            .Select(static parameter => $"typeof({parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})")
+            .ToArray();
+        var parameterTypesExpression = parameterTypes.Length == 0
+            ? "global::System.Type.EmptyTypes"
+            : $"[{string.Join(", ", parameterTypes)}]";
+
+        sb.AppendLine($"        private static readonly global::System.Reflection.MethodInfo {fieldName} =");
+        sb.AppendLine($"            typeof({serviceTypeName}).GetMethod({operationNameExpression}, {parameterTypesExpression})");
+        sb.AppendLine($"            ?? throw new global::System.InvalidOperationException(\"Unable to resolve method '{serviceTypeName}.{method.Method.Name}'.\");");
+    }
+
+    private static string GetMethodInfoFieldName(ServiceMethodInfo method, int index)
+        => $"__{method.Method.Name}MethodInfo_{index}";
+
+    private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint, string methodInfoFieldName)
     {
         var clientResponseType = endpoint.ReturnInfo.ClientResponseTypeDisplay;
         var responseBodyType = endpoint.ReturnInfo.ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var returnType = endpoint.ReturnInfo.ClientTaskReturnTypeDisplay;
         var methodName = method.Method.Name + "Async";
         var serviceTypeName = method.Method.ContainingType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var operationNameExpression = $"nameof({serviceTypeName}.{method.Method.Name})";
         var httpMethod = GetHttpMethod(endpoint.Method);
         var isBodyMethod = IsBodyMethod(endpoint.Method);
         var fqnHttpMethod = $"global::System.Net.Http.{httpMethod}";
@@ -215,7 +241,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine("            var outboundContext = new global::NOF.Hosting.RequestOutboundContext(context)");
         sb.AppendLine("            {");
         sb.AppendLine($"                ServiceType = typeof({serviceTypeName}),");
-        sb.AppendLine($"                MethodName = {operationNameExpression}");
+        sb.AppendLine($"                MethodInfo = {methodInfoFieldName}");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine($"            {clientResponseType}? result = default;");

@@ -52,33 +52,3 @@ public sealed class NotificationOutboundContext : Context
     protected override Context Clone(IReadOnlyDictionary<object, object?> items)
         => new NotificationOutboundContext(items, this);
 }
-
-public sealed class CommandOutboundPipelineTypes
-{
-    private readonly MessagePipelineTypes<ICommandOutboundMiddleware> _inner = new();
-
-    public int Count => _inner.Count;
-
-    public Type this[int index] => _inner[index];
-
-    public void Add<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-        where TMiddleware : class, ICommandOutboundMiddleware
-        => _inner.Add<TMiddleware>();
-
-    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
-}
-
-public sealed class NotificationOutboundPipelineTypes
-{
-    private readonly MessagePipelineTypes<INotificationOutboundMiddleware> _inner = new();
-
-    public int Count => _inner.Count;
-
-    public Type this[int index] => _inner[index];
-
-    public void Add<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
-        where TMiddleware : class, INotificationOutboundMiddleware
-        => _inner.Add<TMiddleware>();
-
-    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
-}
