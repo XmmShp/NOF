@@ -86,7 +86,7 @@ public sealed class RpcServiceClientGenerator : IIncrementalGenerator
         foreach (var method in methods)
         {
             var requestType = method.Request!.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            sb.AppendLine($"        {method.ReturnInfo.ClientTaskReturnTypeDisplay} {method.Method.Name}Async({requestType} request, global::System.Threading.CancellationToken cancellationToken = default);");
+            sb.AppendLine($"        {method.ReturnInfo.ClientTaskReturnTypeDisplay} {method.Method.Name}Async({requestType} request, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default);");
         }
 
         sb.AppendLine("    }");

@@ -12,7 +12,7 @@ public sealed class CacheService : ICacheService
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
-    private readonly NOFContext _contextAccessor;
+    private readonly IContextAccessor _contextAccessor;
     private readonly CacheServiceLocalLockState _localLockState;
     private readonly bool _ignoreQueryFilters;
 
@@ -21,7 +21,7 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
-        NOFContext contextAccessor)
+        IContextAccessor contextAccessor)
         : this(
             rider,
             serializer,
@@ -38,7 +38,7 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
-        NOFContext contextAccessor,
+        IContextAccessor contextAccessor,
         CacheServiceLocalLockState localLockState)
         : this(
             rider,
@@ -56,7 +56,7 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         CacheServiceOptions options,
-        NOFContext contextAccessor,
+        IContextAccessor contextAccessor,
         CacheServiceLocalLockState localLockState,
         bool ignoreQueryFilters)
     {
@@ -91,7 +91,7 @@ public sealed class CacheService : ICacheService
         var keyPrefixTemplate = _options.KeyPrefix ?? string.Empty;
         var keyPrefix = DbConnectionStringTemplateResolver.ResolveTenantId(
             keyPrefixTemplate,
-            _contextAccessor.TenantId);
+            _contextAccessor.Context.TenantId);
 
         return keyPrefix + key;
     }

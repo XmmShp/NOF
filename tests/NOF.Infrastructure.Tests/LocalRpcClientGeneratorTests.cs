@@ -41,6 +41,7 @@ public class LocalRpcClientGeneratorTests
                                   {
                                       global::System.Threading.Tasks.Task<RpcResult<Result<GetFleetOverviewResponse>>> GetFleetOverviewAsync(
                                           Empty request,
+                                          Context context,
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 
@@ -88,6 +89,7 @@ public class LocalRpcClientGeneratorTests
                                   {
                                       global::System.Threading.Tasks.Task<RpcResult<StreamingResult<DroneEvent>>> StreamEventsAsync(
                                           Empty request,
+                                          Context context,
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 
@@ -126,6 +128,7 @@ public class LocalRpcClientGeneratorTests
                                   {
                                       global::System.Threading.Tasks.Task<RpcResult<GetFleetOverviewResponse>> GetFleetOverviewAsync(
                                           Empty request,
+                                          Context context,
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 

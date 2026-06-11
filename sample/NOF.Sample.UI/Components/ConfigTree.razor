@@ -48,7 +48,7 @@
 
     private async Task LoadRootNodes()
     {
-        var result = await NOFService.GetRootConfigNodesAsync(new GetRootConfigNodesRequest());
+        var result = await NOFService.GetRootConfigNodesAsync(new GetRootConfigNodesRequest(), NOF.Contract.Context.Empty);
         var response = Message.UnwrapWithMessage(result);
         var rootNodes = response?.Nodes ?? [];
         _treeData = rootNodes.Select(node => new TreeNodeData
@@ -67,7 +67,7 @@
         var result = await NOFService.GetConfigNodeChildrenAsync(new GetConfigNodeChildrenRequest
         {
             Id = nodeId
-        });
+        }, NOF.Contract.Context.Empty);
         var children = Message.UnwrapWithMessage(result);
 
         if (children == null || children.ChildrenIds.Count == 0)
@@ -82,7 +82,7 @@
             var childResult = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest
             {
                 Id = childId
-            });
+            }, NOF.Contract.Context.Empty);
             var childNode = Message.UnwrapWithMessage(childResult)?.Node;
             if (childNode != null)
             {
@@ -146,7 +146,7 @@
             var getNodeResult = await NOFService.GetConfigNodeByIdAsync(new GetConfigNodeByIdRequest
             {
                 Id = dropNodeId
-            });
+            }, NOF.Contract.Context.Empty);
             var targetNode = Message.UnwrapWithMessage(getNodeResult)?.Node;
             newParentId = targetNode?.ParentId;
         }
@@ -156,8 +156,8 @@
         {
             NodeId = dragNodeId,
             NewParentId = newParentId
-        });
-        
+        }, NOF.Contract.Context.Empty);
+
         if (result.IsSuccess)
         {
             Message.Success("节点移动成功");

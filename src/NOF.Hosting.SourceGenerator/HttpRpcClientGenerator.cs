@@ -204,14 +204,15 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         if (hasRequestParam)
         {
             var requestType = endpoint.RequestType!.ToDisplayString();
-            sb.AppendLine($"        public virtual async {returnType} {methodName}({requestType} request, global::System.Threading.CancellationToken cancellationToken = default)");
+            sb.AppendLine($"        public virtual async {returnType} {methodName}({requestType} request, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
         }
         else
         {
-            sb.AppendLine($"        public virtual async {returnType} {methodName}(global::System.Threading.CancellationToken cancellationToken = default)");
+            sb.AppendLine($"        public virtual async {returnType} {methodName}(global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
         }
         sb.AppendLine("        {");
-        sb.AppendLine("            var context = new global::NOF.Hosting.RequestOutboundContext");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
+        sb.AppendLine("            var outboundContext = new global::NOF.Hosting.RequestOutboundContext");
         sb.AppendLine("            {");
         if (hasRequestParam)
         {
@@ -221,13 +222,14 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         {
             sb.AppendLine("                Message = null!,");
         }
+        sb.AppendLine("                Context = context,");
         sb.AppendLine($"                ServiceType = typeof({serviceTypeName}),");
         sb.AppendLine($"                MethodName = {operationNameExpression}");
         sb.AppendLine("            };");
         sb.AppendLine();
         sb.AppendLine($"            {clientResponseType}? result = default;");
         sb.AppendLine();
-        sb.AppendLine("            await _outboundPipeline.ExecuteAsync(context, async (ct) =>");
+        sb.AppendLine("            await _outboundPipeline.ExecuteAsync(outboundContext, async (ct) =>");
         sb.AppendLine("            {");
 
         sb.AppendLine($"                var endpoint = \"{endpoint.Route}\";");
@@ -268,7 +270,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         {
             sb.AppendLine("                httpRequest.Headers.Accept.Add(new global::System.Net.Http.Headers.MediaTypeWithQualityHeaderValue(\"text/event-stream\"));");
         }
-        sb.AppendLine("                foreach (var kvp in context.Headers)");
+        sb.AppendLine("                foreach (var kvp in outboundContext.Headers)");
         sb.AppendLine("                {");
         sb.AppendLine("                    if (kvp.Value != null)");
         sb.AppendLine("                    {");
@@ -309,7 +311,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine($"                result = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadAsync<{responseBodyType}>(response, GetJsonTypeInfo<{responseBodyType}>(), ct).ConfigureAwait(false);");
         }
-        sb.AppendLine("                context.Response = result;");
+        sb.AppendLine("                outboundContext.Response = result;");
         sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");
         sb.AppendLine();
         sb.AppendLine("            return result!;");

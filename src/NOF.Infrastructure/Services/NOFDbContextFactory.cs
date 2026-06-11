@@ -48,14 +48,14 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     private static readonly ConcurrentDictionary<string, byte> MigratedContexts = new(StringComparer.Ordinal);
 
     private readonly IServiceProvider _serviceProvider;
-    private readonly NOFContext _contextAccessor;
+    private readonly IContextAccessor _contextAccessor;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
     private readonly IEnumerable<INOFDbContextModelCreatingContributor> _modelCreatingContributors;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        NOFContext contextAccessor,
+        IContextAccessor contextAccessor,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         IEnumerable<INOFDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
@@ -68,7 +68,7 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     }
 
     public TDbContext CreateDbContext()
-        => CreateDbContext(_contextAccessor.TenantId);
+        => CreateDbContext(_contextAccessor.Context.TenantId);
 
     public TDbContext CreateDbContext(string tenantId)
     {

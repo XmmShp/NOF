@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Infrastructure;
 using System.Security.Claims;
 
@@ -22,13 +23,14 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return Services.GetRequiredService<T>();
     }
 
-    public NOFContext Context => GetRequiredService<NOFContext>();
+    public Context Context => GetRequiredService<IContextAccessor>().Context;
 
     public IUserContext UserContext => GetRequiredService<IUserContext>();
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        Context.TenantId = TenantId.Normalize(tenantId);
+        var accessor = GetRequiredService<IContextAccessor>();
+        accessor.Context = accessor.Context.WithTenantId(TenantId.Normalize(tenantId));
         return this;
     }
 
@@ -36,7 +38,8 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     {
         if (traceId is not null && spanId is not null)
         {
-            Context.TracingInfo = new TracingInfo(traceId, spanId);
+            var accessor = GetRequiredService<IContextAccessor>();
+            accessor.Context = accessor.Context.WithTracingInfo(new TracingInfo(traceId, spanId));
         }
         return this;
     }

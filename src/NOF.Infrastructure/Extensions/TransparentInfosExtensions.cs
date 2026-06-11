@@ -1,35 +1,30 @@
 using NOF.Abstraction;
 using System.Diagnostics;
 using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure;
 
-public static partial class NOFContextTracingExtensions
+public static partial class ContextTracingExtensions
 {
-    extension(NOFContext context)
+    extension(Context context)
     {
         public TracingInfo? TracingInfo
-        {
-            get
-            {
-                context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
-                context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
-                return (traceId is not null && spanId is not null) ? new TracingInfo(traceId, spanId) : null;
-            }
-            set
-            {
-                if (value is null)
-                {
-                    context.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
-                    context.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
-                }
-                else
-                {
-                    context.SetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, value.TraceId);
-                    context.SetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, value.SpanId);
-                }
-            }
-        }
+            => context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId)
+                && context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId)
+                && traceId is not null
+                && spanId is not null
+                ? new TracingInfo(traceId, spanId)
+                : null;
+
+        public Context WithTracingInfo(TracingInfo? value)
+            => value is null
+                ? context
+                    .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
+                    .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId)
+                : context
+                    .WithHeader(NOFAbstractionConstants.Transport.Headers.TraceId, value.TraceId)
+                    .WithHeader(NOFAbstractionConstants.Transport.Headers.SpanId, value.SpanId);
 
         public Activity? StartChildActivity(string name, ActivityKind kind, ActivitySource source)
         {
@@ -54,7 +49,7 @@ public static partial class NOFContextTracingExtensions
 
             if (activity is not null)
             {
-                context.TracingInfo = new TracingInfo(activity.TraceId.ToString(), activity.SpanId.ToString());
+                context = context.WithTracingInfo(new TracingInfo(activity.TraceId.ToString(), activity.SpanId.ToString()));
             }
             return activity;
         }

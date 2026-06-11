@@ -16,7 +16,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         using var provider = BuildServiceProvider();
 
         var client = provider.GetRequiredService<ProtectedFleetClient>();
-        RpcResult<Result<GetFleetOverviewResponse>> result = await client.GetFleetOverviewAsync(new Empty());
+        RpcResult<Result<GetFleetOverviewResponse>> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
         var businessResult = RpcResults.RequireBody<Result<GetFleetOverviewResponse>>(result);
 
@@ -36,7 +36,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         userContext.User.AddIdentity(TestPrincipalFactory.CreateAuthenticatedIdentity((ClaimTypes.Permission, "fleet.read")));
 
         var client = provider.GetRequiredService<ProtectedFleetClient>();
-        var result = await client.GetFleetOverviewAsync(new Empty());
+        var result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
         var businessResult = RpcResults.RequireBody<Result<GetFleetOverviewResponse>>(result);
 
@@ -53,7 +53,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddLogging();
 
         services.AddSingleton<IUserContext, UserContext>();
-        services.AddScoped<NOFContext>();
+        services.AddSingleton<IContextAccessor, ContextAccessor>();
 
         services.AddSingleton<InvocationRecorder>();
         services.AddSingleton<ProtectedFleetServer>();
@@ -91,7 +91,10 @@ public partial interface IProtectedFleetService : IRpcService
 
 public partial interface IProtectedFleetServiceClient : IRpcClient
 {
-    Task<RpcResult<Result<GetFleetOverviewResponse>>> GetFleetOverviewAsync(Empty request, CancellationToken cancellationToken = default);
+    Task<RpcResult<Result<GetFleetOverviewResponse>>> GetFleetOverviewAsync(
+        Empty request,
+        Context context,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record GetFleetOverviewResponse(string Name);
@@ -115,7 +118,7 @@ public sealed class ProtectedFleetServer : RpcServer<IProtectedFleetService>
 
 public sealed class GetFleetOverviewHandler(InvocationRecorder recorder) : RpcHandler<Empty, Result<GetFleetOverviewResponse>>
 {
-    public override Task<RpcResult<Result<GetFleetOverviewResponse>>> HandleAsync(Empty request, NOFContext context, CancellationToken cancellationToken)
+    public override Task<RpcResult<Result<GetFleetOverviewResponse>>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
     {
         recorder.Count++;
         return Task.FromResult(Success(Result.Success(new GetFleetOverviewResponse("fleet"))));

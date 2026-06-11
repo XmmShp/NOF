@@ -1,4 +1,5 @@
 using NOF.Hosting;
+using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
@@ -9,6 +10,8 @@ public sealed class CommandOutboundContext
 {
     public required object Message { get; init; }
 
+    public Context Context { get; set; } = Context.Empty;
+
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 }
 
@@ -16,6 +19,8 @@ public sealed class CommandOutboundContext
 public sealed class NotificationOutboundContext
 {
     public required object Message { get; init; }
+
+    public Context Context { get; set; } = Context.Empty;
 
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 }

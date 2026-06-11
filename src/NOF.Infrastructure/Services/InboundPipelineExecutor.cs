@@ -13,7 +13,6 @@ public sealed class CommandInboundPipelineExecutor
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IObjectSerializer _serializer;
     private readonly TypeResolver _typeResolver;
-
     public CommandInboundPipelineExecutor(
         CommandInboundPipelineTypes middlewareTypes,
         IServiceScopeFactory scopeFactory,
@@ -35,10 +34,7 @@ public sealed class CommandInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        scope.ServiceProvider.ResolveDaemonServices();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().CopyHeadersFrom(headers);
-
-        var context = CreateContext(payload, payloadTypeName, handlerType);
+        var context = CreateContext(payload, payloadTypeName, handlerType, headers);
         HandlerDelegate pipeline = ct => ExecuteCommandHandlerAsync(scope.ServiceProvider, handlerType, context, ct);
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
@@ -50,7 +46,11 @@ public sealed class CommandInboundPipelineExecutor
         await pipeline(cancellationToken).ConfigureAwait(false);
     }
 
-    private CommandInboundContext CreateContext(ReadOnlyMemory<byte> payload, string payloadTypeName, Type handlerType)
+    private CommandInboundContext CreateContext(
+        ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        Type handlerType,
+        IEnumerable<KeyValuePair<string, string?>>? headers)
     {
         var payloadType = _typeResolver.Resolve(payloadTypeName);
         var message = _serializer.Deserialize(payload, payloadType)
@@ -59,6 +59,7 @@ public sealed class CommandInboundPipelineExecutor
         return new CommandInboundContext
         {
             Message = message,
+            Context = Context.Empty.CopyHeadersFrom(headers),
             HandlerType = handlerType
         };
     }
@@ -69,9 +70,11 @@ public sealed class CommandInboundPipelineExecutor
         CommandInboundContext context,
         CancellationToken cancellationToken)
     {
-        var handler = (CommandHandler)services.GetRequiredService(handlerType);
-        var executionContext = services.GetRequiredService<NOFContext>();
-        return new ValueTask(handler.HandleAsync(context.Message, executionContext, cancellationToken));
+        return ExecuteWithAmbientContext(services, context.Context, async () =>
+        {
+            var handler = (CommandHandler)services.GetRequiredService(handlerType);
+            await handler.HandleAsync(context.Message, context.Context, cancellationToken).ConfigureAwait(false);
+        });
     }
 
     private static ValueTask ExecuteCommandMiddlewareAsync(
@@ -81,8 +84,18 @@ public sealed class CommandInboundPipelineExecutor
         HandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        var middleware = (ICommandInboundMiddleware)services.GetRequiredService(middlewareType);
-        return middleware.InvokeAsync(context, next, cancellationToken);
+        return ExecuteWithAmbientContext(services, context.Context, async () =>
+        {
+            var middleware = (ICommandInboundMiddleware)services.GetRequiredService(middlewareType);
+            await middleware.InvokeAsync(context, next, cancellationToken).ConfigureAwait(false);
+        });
+    }
+
+    private static ValueTask ExecuteWithAmbientContext(IServiceProvider services, Context context, Func<Task> action)
+    {
+        var accessor = services.GetRequiredService<IContextAccessor>();
+        using var scope = AmbientContext.PushCurrent(accessor, context);
+        return new ValueTask(action());
     }
 }
 
@@ -92,7 +105,6 @@ public sealed class NotificationInboundPipelineExecutor
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IObjectSerializer _serializer;
     private readonly TypeResolver _typeResolver;
-
     public NotificationInboundPipelineExecutor(
         NotificationInboundPipelineTypes middlewareTypes,
         IServiceScopeFactory scopeFactory,
@@ -114,10 +126,7 @@ public sealed class NotificationInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        scope.ServiceProvider.ResolveDaemonServices();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().CopyHeadersFrom(headers);
-
-        var context = CreateContext(payload, payloadTypeName, handlerType);
+        var context = CreateContext(payload, payloadTypeName, handlerType, headers);
         HandlerDelegate pipeline = ct => ExecuteNotificationHandlerAsync(scope.ServiceProvider, handlerType, context, ct);
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
@@ -129,7 +138,11 @@ public sealed class NotificationInboundPipelineExecutor
         await pipeline(cancellationToken).ConfigureAwait(false);
     }
 
-    private NotificationInboundContext CreateContext(ReadOnlyMemory<byte> payload, string payloadTypeName, Type handlerType)
+    private NotificationInboundContext CreateContext(
+        ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        Type handlerType,
+        IEnumerable<KeyValuePair<string, string?>>? headers)
     {
         var payloadType = _typeResolver.Resolve(payloadTypeName);
         var message = _serializer.Deserialize(payload, payloadType)
@@ -138,6 +151,7 @@ public sealed class NotificationInboundPipelineExecutor
         return new NotificationInboundContext
         {
             Message = message,
+            Context = Context.Empty.CopyHeadersFrom(headers),
             HandlerType = handlerType
         };
     }
@@ -148,9 +162,11 @@ public sealed class NotificationInboundPipelineExecutor
         NotificationInboundContext context,
         CancellationToken cancellationToken)
     {
-        var handler = (NotificationHandler)services.GetRequiredService(handlerType);
-        var executionContext = services.GetRequiredService<NOFContext>();
-        return new ValueTask(handler.HandleAsync(context.Message, executionContext, cancellationToken));
+        return ExecuteWithAmbientContext(services, context.Context, async () =>
+        {
+            var handler = (NotificationHandler)services.GetRequiredService(handlerType);
+            await handler.HandleAsync(context.Message, context.Context, cancellationToken).ConfigureAwait(false);
+        });
     }
 
     private static ValueTask ExecuteNotificationMiddlewareAsync(
@@ -160,8 +176,18 @@ public sealed class NotificationInboundPipelineExecutor
         HandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        var middleware = (INotificationInboundMiddleware)services.GetRequiredService(middlewareType);
-        return middleware.InvokeAsync(context, next, cancellationToken);
+        return ExecuteWithAmbientContext(services, context.Context, async () =>
+        {
+            var middleware = (INotificationInboundMiddleware)services.GetRequiredService(middlewareType);
+            await middleware.InvokeAsync(context, next, cancellationToken).ConfigureAwait(false);
+        });
+    }
+
+    private static ValueTask ExecuteWithAmbientContext(IServiceProvider services, Context context, Func<Task> action)
+    {
+        var accessor = services.GetRequiredService<IContextAccessor>();
+        using var scope = AmbientContext.PushCurrent(accessor, context);
+        return new ValueTask(action());
     }
 }
 
@@ -169,7 +195,6 @@ public sealed class RequestInboundPipelineExecutor
 {
     private readonly RequestInboundPipelineTypes _middlewareTypes;
     private readonly IServiceScopeFactory _scopeFactory;
-
     public RequestInboundPipelineExecutor(RequestInboundPipelineTypes middlewareTypes, IServiceScopeFactory scopeFactory)
     {
         _middlewareTypes = middlewareTypes;
@@ -186,10 +211,7 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
-        scope.ServiceProvider.ResolveDaemonServices();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().CopyHeadersFrom(headers);
-
-        var context = CreateContext(request, handlerType, serviceType, methodName);
+        var context = CreateContext(request, handlerType, serviceType, methodName, headers);
         HandlerDelegate pipeline = ct => ExecuteRequestHandlerAsync(scope.ServiceProvider, handlerType, context, ct);
         for (var i = _middlewareTypes.Count - 1; i >= 0; i--)
         {
@@ -202,7 +224,12 @@ public sealed class RequestInboundPipelineExecutor
         return context.Response;
     }
 
-    private static RequestInboundContext CreateContext(object request, Type handlerType, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType, string methodName)
+    private static RequestInboundContext CreateContext(
+        object request,
+        Type handlerType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
+        string methodName,
+        IEnumerable<KeyValuePair<string, string?>>? headers)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(handlerType);
@@ -212,6 +239,7 @@ public sealed class RequestInboundPipelineExecutor
         return new RequestInboundContext
         {
             Message = request,
+            Context = Context.Empty.CopyHeadersFrom(headers),
             HandlerType = handlerType,
             ResponseType = GetHandlerResponseType(handlerType),
             ServiceType = serviceType,
@@ -225,11 +253,13 @@ public sealed class RequestInboundPipelineExecutor
         RequestInboundContext context,
         CancellationToken cancellationToken)
     {
-        var handler = (RpcHandler)services.GetRequiredService(handlerType);
-        var executionContext = services.GetRequiredService<NOFContext>();
-        var response = await handler.HandleAsync(context.Message, executionContext, cancellationToken).ConfigureAwait(false);
-        context.Response = response
-            ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response.");
+        await ExecuteWithAmbientContext(services, context.Context, async () =>
+        {
+            var handler = (RpcHandler)services.GetRequiredService(handlerType);
+            var response = await handler.HandleAsync(context.Message, context.Context, cancellationToken).ConfigureAwait(false);
+            context.Response = response
+                ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response.");
+        }).ConfigureAwait(false);
     }
 
     private static ValueTask ExecuteRequestMiddlewareAsync(
@@ -239,8 +269,18 @@ public sealed class RequestInboundPipelineExecutor
         HandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        var middleware = (IRequestInboundMiddleware)services.GetRequiredService(middlewareType);
-        return middleware.InvokeAsync(context, next, cancellationToken);
+        return ExecuteWithAmbientContext(services, context.Context, async () =>
+        {
+            var middleware = (IRequestInboundMiddleware)services.GetRequiredService(middlewareType);
+            await middleware.InvokeAsync(context, next, cancellationToken).ConfigureAwait(false);
+        });
+    }
+
+    private static ValueTask ExecuteWithAmbientContext(IServiceProvider services, Context context, Func<Task> action)
+    {
+        var accessor = services.GetRequiredService<IContextAccessor>();
+        using var scope = AmbientContext.PushCurrent(accessor, context);
+        return new ValueTask(action());
     }
 
     private static Type GetHandlerResponseType(Type handlerType)

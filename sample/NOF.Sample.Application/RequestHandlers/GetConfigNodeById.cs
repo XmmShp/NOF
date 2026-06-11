@@ -20,7 +20,7 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
         _mapper = mapper;
     }
 
-    public override async Task<RpcResult<Result<GetConfigNodeByIdResponse>>> HandleAsync(GetConfigNodeByIdRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override async Task<RpcResult<Result<GetConfigNodeByIdResponse>>> HandleAsync(GetConfigNodeByIdRequest request, Context context, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.Id);
         var cacheKey = new ConfigNodeByIdCacheKey(nodeId);

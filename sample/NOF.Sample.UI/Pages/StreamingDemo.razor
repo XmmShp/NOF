@@ -97,7 +97,10 @@
 
         try
         {
-            var result = await NOFService.WatchSampleStreamAsync(_request, _streamCancellationTokenSource.Token);
+            var result = await NOFService.WatchSampleStreamAsync(
+                _request,
+                NOF.Contract.Context.Empty,
+                _streamCancellationTokenSource.Token);
             if (!result.IsSuccess)
             {
                 Message.Error(result.GetRpcFailureMessage());

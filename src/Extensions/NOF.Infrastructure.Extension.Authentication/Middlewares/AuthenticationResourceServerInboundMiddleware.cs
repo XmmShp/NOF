@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Hosting;
 using NOF.Hosting.Extension.Authentication;
+using NOF.Contract;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using NOF.Application;
@@ -19,21 +20,18 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
     private readonly AuthenticationResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<AuthenticationResourceServerInboundMiddleware> _logger;
-    private readonly NOFContext _contextAccessor;
 
     public AuthenticationResourceServerInboundMiddleware(
         IUserContext userContext,
         ResourceServerJwksCacheService jwksCacheService,
         IOptions<AuthenticationResourceServerOptions> jwtOptions,
-        ILogger<AuthenticationResourceServerInboundMiddleware> logger,
-        NOFContext contextAccessor)
+        ILogger<AuthenticationResourceServerInboundMiddleware> logger)
     {
         _userContext = userContext;
         _jwksCacheService = jwksCacheService;
         _jwtOptions = jwtOptions.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
         _logger = logger;
-        _contextAccessor = contextAccessor;
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
@@ -49,7 +47,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
         {
             foreach (var source in tokenSources)
             {
-                if (!TryGetToken(source, out var token))
+                if (!TryGetToken(context.Context, source, out var token))
                 {
                     continue;
                 }
@@ -87,7 +85,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
                             identity,
                             token,
                             downstreamPropagation: source.DownstreamPropagation));
-                    _contextAccessor.RemoveHeader(source.HeaderName);
+                    context.Context = context.Context.WithoutHeader(source.HeaderName);
                 }
                 catch (SecurityTokenExpiredException)
                 {
@@ -112,11 +110,11 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
         return _jwtOptions.Sources;
     }
 
-    private bool TryGetToken(AuthenticationTokenSourceOptions source, out string token)
+    private static bool TryGetToken(Context context, AuthenticationTokenSourceOptions source, out string token)
     {
         token = string.Empty;
 
-        if (!_contextAccessor.TryGetHeader(source.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
+        if (!context.TryGetHeader(source.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
         {
             return false;
         }

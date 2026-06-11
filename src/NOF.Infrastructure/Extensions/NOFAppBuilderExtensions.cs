@@ -43,7 +43,7 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<IObjectSerializer>(),
                 sp.GetRequiredService<ICacheLockRetryStrategy>(),
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheServiceOptions>>(),
-                sp.GetRequiredService<NOFContext>(),
+                sp.GetRequiredService<IContextAccessor>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
@@ -92,7 +92,6 @@ public static partial class NOFInfrastructureExtensions
 
             #region Application Services
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
-            builder.Services.TryAddScoped<NOFContext>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();

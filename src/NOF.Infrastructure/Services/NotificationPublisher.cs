@@ -9,7 +9,7 @@ public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
     private readonly NotificationOutboundPipelineExecutor _outboundPipeline;
-    private readonly NOFContext _contextAccessor;
+    private readonly IContextAccessor _contextAccessor;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
@@ -17,7 +17,7 @@ public sealed class NotificationPublisher : INotificationPublisher
     public NotificationPublisher(
         INotificationRider rider,
         NotificationOutboundPipelineExecutor outboundPipeline,
-        NOFContext contextAccessor,
+        IContextAccessor contextAccessor,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
@@ -36,7 +36,7 @@ public sealed class NotificationPublisher : INotificationPublisher
         ArgumentNullException.ThrowIfNull(notificationTypes);
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        _contextAccessor.CopyHeadersTo(headers);
+        _contextAccessor.Context.CopyHeadersTo(headers);
 
         var payloadTypeName = _typeResolver.Register(notification.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(
@@ -61,7 +61,8 @@ public sealed class NotificationPublisher : INotificationPublisher
         ArgumentNullException.ThrowIfNull(notificationTypes);
         var context = new NotificationOutboundContext
         {
-            Message = notification
+            Message = notification,
+            Context = _contextAccessor.Context
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>

@@ -16,7 +16,7 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         _mapper = mapper;
     }
 
-    public override async Task<RpcResult<Result<GetRootConfigNodesResponse>>> HandleAsync(GetRootConfigNodesRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override async Task<RpcResult<Result<GetRootConfigNodesResponse>>> HandleAsync(GetRootConfigNodesRequest request, Context context, CancellationToken cancellationToken)
     {
         var nodes = await _dbContext.Set<ConfigNode>().GetRootNodesAsync(cancellationToken);
 

@@ -17,11 +17,11 @@ public class NOFTestHostTests
 
         using var scope = host.CreateScope();
         Assert.NotNull(
-        scope.GetRequiredService<NOFContext>());
+        scope.GetRequiredService<IContextAccessor>().Context);
         Assert.NotNull(
         scope.GetRequiredService<IUserContext>());
         Assert.Same(
-            scope.GetRequiredService<NOFContext>(),
+            scope.GetRequiredService<IContextAccessor>().Context,
             scope.GetRequiredService<IContextAccessor>().Context);
     }
 

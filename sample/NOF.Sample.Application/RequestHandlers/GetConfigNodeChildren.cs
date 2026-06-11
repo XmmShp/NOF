@@ -15,7 +15,7 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
         _dbContext = dbContext;
     }
 
-    public override async Task<RpcResult<Result<GetConfigNodeChildrenResponse>>> HandleAsync(GetConfigNodeChildrenRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override async Task<RpcResult<Result<GetConfigNodeChildrenResponse>>> HandleAsync(GetConfigNodeChildrenRequest request, Context context, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.Id);
         var children = await _dbContext.Set<ConfigNodeChildren>()

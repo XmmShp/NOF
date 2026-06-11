@@ -20,7 +20,7 @@ public sealed class GetRootHandler(IOptions<OAuthAuthorizationServerOptions> opt
 {
     public override Task<RpcResult<OAuthServerRootDocument>> HandleAsync(
         Empty request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
     {
         var issuer = ResolveIssuer(options.Value);
         return Task.FromResult(Success(new OAuthServerRootDocument
@@ -36,7 +36,7 @@ public sealed class GetOpenIdConfigurationHandler(IOptions<OAuthAuthorizationSer
 {
     public override Task<RpcResult<OAuthServerMetadata>> HandleAsync(
         Empty request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
         => Task.FromResult(Success(BuildMetadata(options.Value)));
 }
 
@@ -45,7 +45,7 @@ public sealed class GetAuthorizationServerMetadataHandler(IOptions<OAuthAuthoriz
 {
     public override Task<RpcResult<OAuthServerMetadata>> HandleAsync(
         Empty request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
         => Task.FromResult(Success(BuildMetadata(options.Value)));
 }
 
@@ -54,7 +54,7 @@ public sealed class GetJwksHandler(IJwksService jwksService)
 {
     public override async Task<RpcResult<JwksDocument>> HandleAsync(
         Empty request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
         => Success(await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false));
 }
 
@@ -65,7 +65,7 @@ public sealed class AuthorizeHandler(
 {
     public override async Task<RpcResult<OAuthAuthorizeResponse>> HandleAsync(
         OAuthAuthorizeRequest request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
     {
         var authorizationRequest = new OAuthAuthorizationRequest(
             ResponseType: request.ResponseType,
@@ -187,7 +187,7 @@ public sealed class TokenHandler(
 {
     public override async Task<RpcResult<OAuthTokenEndpointResponse>> HandleAsync(
         OAuthTokenRequest request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
     {
         return request.GrantType switch
         {
@@ -442,7 +442,7 @@ public sealed class UserInfoHandler(
 {
     public override async Task<RpcResult<IReadOnlyDictionary<string, object>>> HandleAsync(
         OAuthUserInfoRequest request,
-        NOFContext context, CancellationToken cancellationToken)
+        Context context, CancellationToken cancellationToken)
     {
         var principal = await ValidateAccessTokenAsync(
             request.AccessToken.Value,

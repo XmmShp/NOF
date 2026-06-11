@@ -12,25 +12,24 @@ public sealed class TracingInboundMiddleware :
     IRequestInboundMiddleware,
     IAfter<TenantInboundMiddleware>
 {
-    private readonly NOFContext _contextAccessor;
     private readonly IHostEnvironment _hostEnvironment;
 
-    public TracingInboundMiddleware(NOFContext contextAccessor, IHostEnvironment hostEnvironment)
+    public TracingInboundMiddleware(IHostEnvironment hostEnvironment)
     {
-        _contextAccessor = contextAccessor;
         _hostEnvironment = hostEnvironment;
     }
 
     public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = _contextAccessor;
+        var executionContext = context.Context;
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         using var activity = CreateCommandActivity(context, traceId, spanId, _hostEnvironment);
 
-        executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
-        executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
+        context.Context = executionContext
+            .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
+            .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().DisplayName);
@@ -67,14 +66,15 @@ public sealed class TracingInboundMiddleware :
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = _contextAccessor;
+        var executionContext = context.Context;
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         using var activity = CreateNotificationActivity(context, traceId, spanId, _hostEnvironment);
 
-        executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
-        executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
+        context.Context = executionContext
+            .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
+            .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().DisplayName);
@@ -111,14 +111,15 @@ public sealed class TracingInboundMiddleware :
 
     public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = _contextAccessor;
+        var executionContext = context.Context;
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         using var activity = CreateRequestActivity(context, traceId, spanId, _hostEnvironment);
 
-        executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.TraceId);
-        executionContext.RemoveHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
+        context.Context = executionContext
+            .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
+            .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, $"{context.ServiceType.DisplayName}.{context.MethodName}");

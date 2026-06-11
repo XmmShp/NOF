@@ -7,9 +7,9 @@ public sealed class ContextAmbientDaemonService : IDaemonService, IDisposable
 {
     private readonly IDisposable _scope;
 
-    public ContextAmbientDaemonService(IContextAccessor accessor, NOFContext context)
+    public ContextAmbientDaemonService(IContextAccessor accessor)
     {
-        _scope = AmbientContext.PushCurrent(accessor, context);
+        _scope = AmbientContext.PushCurrent(accessor, accessor.Context);
     }
 
     public void Dispose()

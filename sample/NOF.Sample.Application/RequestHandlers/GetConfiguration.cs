@@ -21,7 +21,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         _mapper = mapper;
     }
 
-    public override async Task<RpcResult<Result<GetConfigurationResponse>>> HandleAsync(GetConfigurationRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override async Task<RpcResult<Result<GetConfigurationResponse>>> HandleAsync(GetConfigurationRequest request, Context context, CancellationToken cancellationToken)
     {
         var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);

@@ -11,12 +11,14 @@ public static class RpcServerInvoker
         IServiceProvider rootServiceProvider,
         string operationName,
         object request,
+        Context context,
         CancellationToken cancellationToken)
         where TRpcService : class, IRpcService
     {
         ArgumentNullException.ThrowIfNull(rootServiceProvider);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(context);
         var invocationResolver = rootServiceProvider.GetRequiredService<RpcServerInvocationResolver>();
         var resolution = invocationResolver.Resolve<TRpcService>(operationName);
 
@@ -24,6 +26,7 @@ public static class RpcServerInvoker
         var outboundContext = new RequestOutboundContext
         {
             Message = request,
+            Context = context,
             ServiceType = typeof(TRpcService),
             MethodName = operationName
         };

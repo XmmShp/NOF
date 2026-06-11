@@ -37,7 +37,7 @@ public static class NOFAbstractionConstants
         public static class Metadatas
         {
             public const string HttpStatusCode = "NOF.Transport.Http.StatusCode";
-            public const string HttpHeaders = "NOF.Transport.Http.Headers";
+            public const string HttpHeaderPrefix = "NOF.Transport.Http.Header.";
         }
     }
 }

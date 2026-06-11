@@ -31,7 +31,7 @@ public class SqliteInMemoryPersistenceTests
 
         using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
@@ -69,11 +69,11 @@ public class SqliteInMemoryPersistenceTests
             using var services = BuildServiceProvider(builder);
 
             using var tenantAScope = services.CreateScope();
-            tenantAScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenanta";
+            SetTenant(tenantAScope.ServiceProvider, "tenanta");
             var tenantADb = tenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
             using var tenantBScope = services.CreateScope();
-            tenantBScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenantb";
+            SetTenant(tenantBScope.ServiceProvider, "tenantb");
             var tenantBDb = tenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
             var tenantAConnectionString = tenantADb.Database.GetConnectionString();
@@ -105,7 +105,7 @@ public class SqliteInMemoryPersistenceTests
 
         using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
@@ -137,7 +137,7 @@ public class SqliteInMemoryPersistenceTests
 
         using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
 
@@ -175,11 +175,11 @@ public class SqliteInMemoryPersistenceTests
             });
 
         using var firstScope = firstServices.CreateScope();
-        firstScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(firstScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var firstDb = firstScope.ServiceProvider.GetRequiredService<NOFDbContext>();
 
         using var secondScope = secondServices.CreateScope();
-        secondScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(secondScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var secondDb = secondScope.ServiceProvider.GetRequiredService<NOFDbContext>();
 
         Assert.NotNull(firstDb.Model.FindEntityType(typeof(FirstDynamicEntry)));
@@ -205,7 +205,7 @@ public class SqliteInMemoryPersistenceTests
 
         using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
         var entityType = db.Model.FindEntityType(typeof(ModelConfiguredHostOnlyEntry));
@@ -232,7 +232,7 @@ public class SqliteInMemoryPersistenceTests
 
         using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
         var entityType = db.Model.FindEntityType(typeof(AttributeHostOnlyEntry));
@@ -259,7 +259,7 @@ public class SqliteInMemoryPersistenceTests
 
         using var services = BuildServiceProvider(builder);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
 
@@ -279,7 +279,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -289,7 +289,7 @@ public class SqliteInMemoryPersistenceTests
         await transaction.RollbackAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
         var tenant = await verifyDb.FindAsync<NOFTenant>([TenantId.Of("tenant1")]);
         Assert.Null(tenant);
@@ -300,7 +300,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -316,7 +316,7 @@ public class SqliteInMemoryPersistenceTests
         await outer.CommitAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
         Assert.NotNull(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("outer")]));
         Assert.Null(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("inner")]));
@@ -327,7 +327,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -338,7 +338,7 @@ public class SqliteInMemoryPersistenceTests
         }
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
         Assert.Null(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("tenantdispose")]));
     }
@@ -360,7 +360,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         ActivateDaemons(scope.ServiceProvider);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
@@ -380,7 +380,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -396,7 +396,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
         var entityType = db.Model.FindEntityType(typeof(TestOrder));
@@ -416,7 +416,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Null(await db.FindAsync<TestOrder>([10L]));
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         Assert.Null(await verifyDb.Set<TestOrder>().SingleOrDefaultAsync(e => e.Id == 10));
@@ -435,7 +435,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -456,7 +456,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Null(await db.Set<TestOrderWithOwned>().SingleOrDefaultAsync(e => e.Id == 12));
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var deletedOrder = await verifyDb.Set<TestOrderWithOwned>()
@@ -480,7 +480,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -505,7 +505,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -530,7 +530,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Null(await db.Set<TestOrderWithNestedOwned>().SingleOrDefaultAsync(e => e.Id == 13));
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var deletedOrder = await verifyDb.Set<TestOrderWithNestedOwned>()
@@ -572,7 +572,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -590,7 +590,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var visibleParent = await verifyDb.Set<TestIncludeParent>()
@@ -614,7 +614,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -631,7 +631,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var visibleChild = await verifyDb.Set<TestIncludeChild>()
@@ -659,7 +659,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -680,7 +680,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var parent = await verifyDb.Set<TestIncludeOwnedParent>()
@@ -705,7 +705,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -726,7 +726,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var parent = await verifyDb.Set<TestIncludeOwnedParent>()
@@ -751,7 +751,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -771,7 +771,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var child = await verifyDb.Set<TestIncludeOwnedChild>()
@@ -807,7 +807,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -833,7 +833,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var parent = await verifyDb.Set<TestIncludeOwnedParent>()
@@ -862,7 +862,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -877,7 +877,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var child = await verifyDb.Set<TestIncludeOwnedChild>()
@@ -901,7 +901,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -926,7 +926,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var parent = await verifyDb.Set<TestIncludeOwnedParent>()
@@ -950,7 +950,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -970,7 +970,7 @@ public class SqliteInMemoryPersistenceTests
         await db.SaveChangesAsync();
 
         using var verifyScope = services.CreateScope();
-        verifyScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var projection = await verifyDb.Set<TestIncludeOwnedParent>()
@@ -1012,7 +1012,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var tenantAScope = services.CreateScope())
         {
-            tenantAScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenanta";
+            SetTenant(tenantAScope.ServiceProvider, "tenanta");
             var tenantADb = tenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
             tenantADb.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
@@ -1034,7 +1034,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var tenantBScope = services.CreateScope())
         {
-            tenantBScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenantb";
+            SetTenant(tenantBScope.ServiceProvider, "tenantb");
             var tenantBDb = tenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
             tenantBDb.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
@@ -1049,7 +1049,7 @@ public class SqliteInMemoryPersistenceTests
         }
 
         using var verifyTenantAScope = services.CreateScope();
-        verifyTenantAScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenanta";
+        SetTenant(verifyTenantAScope.ServiceProvider, "tenanta");
         var verifyTenantADb = verifyTenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var tenantAParent = await verifyTenantADb.Set<TestIncludeOwnedParent>()
@@ -1069,7 +1069,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Null(await verifyTenantADb.Set<TestIncludeOwnedParent>().SingleOrDefaultAsync(p => p.Id == 42));
 
         using var verifyTenantBScope = services.CreateScope();
-        verifyTenantBScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenantb";
+        SetTenant(verifyTenantBScope.ServiceProvider, "tenantb");
         var verifyTenantBDb = verifyTenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var tenantBParent = await verifyTenantBDb.Set<TestIncludeOwnedParent>()
@@ -1094,7 +1094,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var tenantAScope = services.CreateScope())
         {
-            tenantAScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = "tenanta";
+            SetTenant(tenantAScope.ServiceProvider, "tenanta");
             var tenantADb = tenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
             tenantADb.Set<TestIncludeOwnedParent>().Add(TestIncludeOwnedParent.Create(
@@ -1115,7 +1115,7 @@ public class SqliteInMemoryPersistenceTests
         }
 
         using var hostScope = services.CreateScope();
-        hostScope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(hostScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var hostDb = hostScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         var tenantAProjection = await hostDb.Set<TestIncludeOwnedParent>()
@@ -1150,7 +1150,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider(softDeleteEnabled: false);
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -1171,7 +1171,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
         var message = new NOFInboxMessage
@@ -1198,7 +1198,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
@@ -1241,7 +1241,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var verify = services.CreateScope())
         {
-            verify.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+            SetTenant(verify.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
             var verifyDb = verify.ServiceProvider.GetRequiredService<TestDbContext>();
             var stored = await verifyDb.FindAsync<NOFOutboxMessage>([id]);
             Assert.NotNull(stored);
@@ -1258,7 +1258,7 @@ public class SqliteInMemoryPersistenceTests
             Outbox = new TransactionalMessageProcessorOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) }
         });
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -1312,7 +1312,7 @@ public class SqliteInMemoryPersistenceTests
             Outbox = new TransactionalMessageProcessorOptions { MaxRetryCount = 1, ClaimTimeout = TimeSpan.FromMinutes(1) }
         });
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -1339,7 +1339,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var verify = services.CreateScope())
         {
-            verify.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+            SetTenant(verify.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
             var verifyDb = verify.ServiceProvider.GetRequiredService<TestDbContext>();
             var stored = await verifyDb.FindAsync<NOFOutboxMessage>([id]);
             Assert.NotNull(stored);
@@ -1354,8 +1354,7 @@ public class SqliteInMemoryPersistenceTests
         using var services = CreateServiceProvider(tenantMode: TenantMode.DatabasePerTenant);
         using (var hostScope = services.CreateScope())
         {
-            var hostTransparentInfos = hostScope.ServiceProvider.GetRequiredService<NOFContext>();
-            hostTransparentInfos.TenantId = NOFAbstractionConstants.Tenant.HostId;
+            SetTenant(hostScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
             var hostDb = hostScope.ServiceProvider.GetRequiredService<TestDbContext>();
             hostDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 1 });
             await hostDb.SaveChangesAsync();
@@ -1363,8 +1362,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var tenantScope = services.CreateScope())
         {
-            var tenantTransparentInfos = tenantScope.ServiceProvider.GetRequiredService<NOFContext>();
-            tenantTransparentInfos.TenantId = "tenanta";
+            SetTenant(tenantScope.ServiceProvider, "tenanta");
             var tenantDb = tenantScope.ServiceProvider.GetRequiredService<TestDbContext>();
             tenantDb.Set<NOFStateMachineContext>().Add(new NOFStateMachineContext { CorrelationId = "corr", DefinitionTypeName = "def", State = 2 });
             await tenantDb.SaveChangesAsync();
@@ -1374,8 +1372,7 @@ public class SqliteInMemoryPersistenceTests
 
         using (var verifyHostScope = services.CreateScope())
         {
-            var verifyHostTransparentInfos = verifyHostScope.ServiceProvider.GetRequiredService<NOFContext>();
-            verifyHostTransparentInfos.TenantId = NOFAbstractionConstants.Tenant.HostId;
+            SetTenant(verifyHostScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
             var verifyHostDb = verifyHostScope.ServiceProvider.GetRequiredService<TestDbContext>();
             Assert.Equal(1,
             (await verifyHostDb.FindAsync<NOFStateMachineContext>(["corr", "def"]))!.State);
@@ -1387,7 +1384,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         ActivateDaemons(scope.ServiceProvider);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
@@ -1409,7 +1406,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         ActivateDaemons(scope.ServiceProvider);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
@@ -1434,7 +1431,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
@@ -1448,7 +1445,7 @@ public class SqliteInMemoryPersistenceTests
         // Query in a fresh scope to avoid first-level cache.
         using (var verify = services.CreateScope())
         {
-            verify.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+            SetTenant(verify.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
             var verifyDb = verify.ServiceProvider.GetRequiredService<TestDbContext>();
             Assert.Null(await verifyDb.FindAsync<TestOrder>([9L]));
         }
@@ -1459,7 +1456,7 @@ public class SqliteInMemoryPersistenceTests
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = NOFAbstractionConstants.Tenant.HostId;
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
         db.Set<NOFTenant>().Add(new NOFTenant
@@ -1570,7 +1567,7 @@ public class SqliteInMemoryPersistenceTests
     private static void EnsureCreated(IServiceProvider provider, string tenantId)
     {
         using var scope = provider.CreateScope();
-        scope.ServiceProvider.GetRequiredService<NOFContext>().TenantId = tenantId;
+        SetTenant(scope.ServiceProvider, tenantId);
         scope.ServiceProvider.GetRequiredService<TestDbContext>().Database.EnsureCreated();
     }
 
@@ -1587,6 +1584,12 @@ public class SqliteInMemoryPersistenceTests
             ValidateOnBuild = true,
             ValidateScopes = true
         });
+    }
+
+    private static void SetTenant(IServiceProvider services, string? tenantId)
+    {
+        var accessor = services.GetRequiredService<IContextAccessor>();
+        accessor.Context = accessor.Context.WithTenantId(tenantId);
     }
 
     private static void DeleteDirectoryWithRetry(string directory)

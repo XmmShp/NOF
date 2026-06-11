@@ -9,7 +9,7 @@ public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
     private readonly CommandOutboundPipelineExecutor _outboundPipeline;
-    private readonly NOFContext _contextAccessor;
+    private readonly IContextAccessor _contextAccessor;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
@@ -17,7 +17,7 @@ public sealed class CommandSender : ICommandSender
     public CommandSender(
         ICommandRider rider,
         CommandOutboundPipelineExecutor outboundPipeline,
-        NOFContext contextAccessor,
+        IContextAccessor contextAccessor,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
@@ -36,7 +36,7 @@ public sealed class CommandSender : ICommandSender
         ArgumentNullException.ThrowIfNull(commandType);
         var currentActivity = Activity.Current;
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        _contextAccessor.CopyHeadersTo(headers);
+        _contextAccessor.Context.CopyHeadersTo(headers);
 
         var payloadTypeName = _typeResolver.Register(command.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { _typeResolver.Register(commandType) }, typeof(string[]));
@@ -59,7 +59,8 @@ public sealed class CommandSender : ICommandSender
         ArgumentNullException.ThrowIfNull(commandType);
         var context = new CommandOutboundContext
         {
-            Message = command
+            Message = command,
+            Context = _contextAccessor.Context
         };
 
         await _outboundPipeline.ExecuteAsync(context, async ct =>

@@ -19,9 +19,9 @@ public static class HttpTransportMetadata
         }
 
         var normalizedHeaders = NormalizeHeaders(headers);
-        if (normalizedHeaders.Count > 0)
+        foreach (var (headerName, value) in normalizedHeaders)
         {
-            metadatas[NOFAbstractionConstants.Transport.Metadatas.HttpHeaders] = SerializeHeaders(normalizedHeaders);
+            metadatas[CreateHeaderMetadataKey(headerName)] = value;
         }
 
         return metadatas;
@@ -40,13 +40,21 @@ public static class HttpTransportMetadata
     {
         ArgumentNullException.ThrowIfNull(metadatas);
 
-        if (!metadatas.TryGetValue(NOFAbstractionConstants.Transport.Metadatas.HttpHeaders, out var rawValue)
-            || string.IsNullOrWhiteSpace(rawValue))
+        var headers = metadatas
+            .Where(static pair => pair.Key.StartsWith(
+                NOFAbstractionConstants.Transport.Metadatas.HttpHeaderPrefix,
+                StringComparison.OrdinalIgnoreCase))
+            .Select(static pair => new KeyValuePair<string, string?>(
+                pair.Key[NOFAbstractionConstants.Transport.Metadatas.HttpHeaderPrefix.Length..],
+                pair.Value));
+
+        var normalizedHeaders = NormalizeHeaders(headers);
+        if (normalizedHeaders.Count == 0)
         {
             return EmptyHeaders;
         }
 
-        return NormalizeHeaders(DeserializeHeaders(rawValue));
+        return normalizedHeaders;
     }
 
     private static IReadOnlyDictionary<string, string?> NormalizeHeaders(IEnumerable<KeyValuePair<string, string?>>? headers)
@@ -72,25 +80,6 @@ public static class HttpTransportMetadata
             : copied;
     }
 
-    private static string SerializeHeaders(IReadOnlyDictionary<string, string?> headers)
-        => string.Join(
-            '\n',
-            headers.Select(static pair =>
-                $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value ?? string.Empty)}"));
-
-    private static IEnumerable<KeyValuePair<string, string?>> DeserializeHeaders(string rawValue)
-    {
-        foreach (var entry in rawValue.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var separatorIndex = entry.IndexOf('=');
-            if (separatorIndex <= 0)
-            {
-                continue;
-            }
-
-            var key = Uri.UnescapeDataString(entry[..separatorIndex]);
-            var value = Uri.UnescapeDataString(entry[(separatorIndex + 1)..]);
-            yield return new KeyValuePair<string, string?>(key, value);
-        }
-    }
+    private static string CreateHeaderMetadataKey(string headerName)
+        => NOFAbstractionConstants.Transport.Metadatas.HttpHeaderPrefix + headerName;
 }

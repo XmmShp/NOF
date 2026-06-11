@@ -136,9 +136,10 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 
         sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC response projection may require generic instantiation at runtime.\")]");
         sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC response projection may require reflective access to generic result helpers.\")]");
-        sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::System.Threading.CancellationToken cancellationToken = default)");
+        sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
-        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {operationNameExpression}, {requestParameter.Name}, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
+        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {operationNameExpression}, {requestParameter.Name}, context, cancellationToken).ConfigureAwait(false);");
         if (method.ReturnType is INamedTypeSymbol { Name: "Task", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } taskType)
         {
             if (taskType.IsGenericType && taskType.TypeArguments.Length == 1)

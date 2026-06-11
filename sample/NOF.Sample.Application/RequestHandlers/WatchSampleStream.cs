@@ -7,7 +7,7 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public sealed class WatchSampleStream : NOFSampleService.WatchSampleStream
 {
-    public override Task<RpcResult<StreamingResult<SampleStreamEvent>>> HandleAsync(WatchSampleStreamRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override Task<RpcResult<StreamingResult<SampleStreamEvent>>> HandleAsync(WatchSampleStreamRequest request, Context context, CancellationToken cancellationToken)
     {
         var count = Math.Clamp(request.Count, 1, 20);
         var intervalMilliseconds = Math.Clamp(request.IntervalMilliseconds, 100, 5000);

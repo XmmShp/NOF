@@ -55,7 +55,9 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("CreateUserAsync", code);
         Assert.Contains("HttpMethod.Post", code);
         Assert.DoesNotContain("global::NOF.Application.ITransparentInfos", code);
-        Assert.Contains("foreach (var kvp in context.Headers)", code);
+        Assert.Contains("global::NOF.Contract.Context context", code);
+        Assert.Contains("Context = context,", code);
+        Assert.Contains("foreach (var kvp in outboundContext.Headers)", code);
     }
 
     [Fact]

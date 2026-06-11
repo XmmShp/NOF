@@ -116,7 +116,7 @@ public sealed class HttpRpcTransportBoundaryTests
         builder.WebHost.UseTestServer();
 
         builder.Services.AddRouting();
-        builder.Services.AddScoped<NOFContext>();
+        builder.Services.AddSingleton<IContextAccessor, ContextAccessor>();
         builder.Services.AddSingleton(new RequestInboundPipelineTypes());
         builder.Services.AddSingleton<RequestInboundPipelineExecutor>();
         builder.Services.AddScoped<RpcServerInvocationResolver>();
@@ -221,25 +221,25 @@ public sealed class HttpRpcTransportBoundaryTests
 
     public sealed class CreateUserHandler : RpcHandler<CreateUserRequest, Result<CreateUserResponse>>
     {
-        public override Task<RpcResult<Result<CreateUserResponse>>> HandleAsync(CreateUserRequest request, NOFContext context, CancellationToken cancellationToken)
+        public override Task<RpcResult<Result<CreateUserResponse>>> HandleAsync(CreateUserRequest request, Context context, CancellationToken cancellationToken)
             => Task.FromResult(Success(Result.Success(new CreateUserResponse(request.Age))));
     }
 
     public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, ReadTokenResponse>
     {
-        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, NOFContext context, CancellationToken cancellationToken)
+        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, Context context, CancellationToken cancellationToken)
             => Task.FromResult(Success(new ReadTokenResponse(request.Token.Value)));
     }
 
     public sealed class RedirectHandler : RpcHandler<RedirectRequest, Empty>
     {
-        public override Task<RpcResult<Empty>> HandleAsync(RedirectRequest request, NOFContext context, CancellationToken cancellationToken)
+        public override Task<RpcResult<Empty>> HandleAsync(RedirectRequest request, Context context, CancellationToken cancellationToken)
             => Task.FromResult(Success(HttpTransportMetadata.Create(302, [new KeyValuePair<string, string?>("Location", request.Url)])));
     }
 
     public sealed class TokenFailureHandler : RpcHandler<Empty, ReadTokenResponse>
     {
-        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(Empty request, NOFContext context, CancellationToken cancellationToken)
+        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
             => Task.FromResult(Response(
                 new TokenErrorBody
                 {

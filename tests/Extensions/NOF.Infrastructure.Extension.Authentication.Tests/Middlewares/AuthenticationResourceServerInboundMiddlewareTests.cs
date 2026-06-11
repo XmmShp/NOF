@@ -16,11 +16,11 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
-        var executionContext = new NOFContext();
-        var middleware = CreateMiddleware(userContext, jwksService, executionContext);
+        var middleware = CreateMiddleware(userContext, jwksService);
+        var inboundContext = CreateInboundContext();
 
         var nextCalled = false;
-        await middleware.InvokeAsync(CreateInboundContext(), _ =>
+        await middleware.InvokeAsync(inboundContext, _ =>
         {
             nextCalled = true;
             return ValueTask.CompletedTask;
@@ -35,18 +35,18 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     {
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
-        var executionContext = new NOFContext();
-        executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
-        var middleware = CreateMiddleware(userContext, jwksService, executionContext);
+        var middleware = CreateMiddleware(userContext, jwksService);
+        var inboundContext = CreateInboundContext(
+            Context.Empty.WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token"));
 
         var nextCalled = false;
-        await middleware.InvokeAsync(CreateInboundContext(), _ =>
+        await middleware.InvokeAsync(inboundContext, _ =>
         {
             nextCalled = true;
             return ValueTask.CompletedTask;
         }, default);
         Assert.True(nextCalled);
-        Assert.True(executionContext.ContainsHeader(NOFAbstractionConstants.Transport.Headers.Authorization));
+        Assert.True(inboundContext.Context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, out _));
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
     }
@@ -64,14 +64,14 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             ActivatedAtUtc = DateTime.UtcNow
         };
         var jwksService = CreateJwksService([key]);
-        var executionContext = new NOFContext();
-        executionContext.SetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
-        var middleware = CreateMiddleware(userContext, jwksService, executionContext);
+        var middleware = CreateMiddleware(userContext, jwksService);
+        var inboundContext = CreateInboundContext(
+            Context.Empty.WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt"));
 
         var nextCalled = false;
         async Task Act()
         {
-            await middleware.InvokeAsync(CreateInboundContext(), _ =>
+            await middleware.InvokeAsync(inboundContext, _ =>
             {
                 nextCalled = true;
                 return ValueTask.CompletedTask;
@@ -86,8 +86,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
 
     private static AuthenticationResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        ResourceServerJwksCacheService jwksCacheService,
-        NOFContext executionContext)
+        ResourceServerJwksCacheService jwksCacheService)
     {
         return new AuthenticationResourceServerInboundMiddleware(
             userContext,
@@ -105,8 +104,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
                     }
                 ]
             }),
-            NullLogger<AuthenticationResourceServerInboundMiddleware>.Instance,
-            executionContext);
+            NullLogger<AuthenticationResourceServerInboundMiddleware>.Instance);
     }
 
     private static ResourceServerJwksCacheService CreateJwksService(IReadOnlyList<ManagedSigningKey> keys)
@@ -121,10 +119,11 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             TimeProvider.System);
     }
 
-    private static RequestInboundContext CreateInboundContext()
+    private static RequestInboundContext CreateInboundContext(Context? context = null)
     {
         return new RequestInboundContext
         {
+            Context = context ?? Context.Empty,
             Message = new object(),
             HandlerType = typeof(object),
             ResponseType = typeof(Result),

@@ -5,12 +5,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting.AspNetCore;
 
-[RequiresUnreferencedCode("HTTP response writing may require runtime JSON serialization for transport bodies.")]
-[RequiresDynamicCode("HTTP response writing may require runtime JSON serialization for transport bodies.")]
 internal sealed class RpcHttpResult(IRpcResult rpcResult) : Microsoft.AspNetCore.Http.IResult
 {
     private readonly IRpcResult _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
 
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Transport response bodies are framework-controlled runtime payloads.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Transport response bodies are framework-controlled runtime payloads.")]
     public async Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
