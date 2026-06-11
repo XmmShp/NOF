@@ -10,7 +10,6 @@ public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
     private readonly CommandOutboundPipelineExecutor _outboundPipeline;
-    private readonly IContextAccessor _contextAccessor;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
@@ -18,26 +17,25 @@ public sealed class CommandSender : ICommandSender
     public CommandSender(
         ICommandRider rider,
         CommandOutboundPipelineExecutor outboundPipeline,
-        IContextAccessor contextAccessor,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
-        _contextAccessor = contextAccessor;
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
         _typeResolver = typeResolver;
     }
 
-    public void DeferSend(object command, Type commandType)
+    public async Task DeferSend(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(commandType);
-        var currentActivity = Activity.Current;
-        var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        _contextAccessor.Context.CopyHeadersTo(headers);
+        ArgumentNullException.ThrowIfNull(context);
+        var outboundContext = new CommandOutboundContext(context);
+
+        await _outboundPipeline.ExecuteAsync(outboundContext, command, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
         var payloadTypeName = _typeResolver.Register(command.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { _typeResolver.Register(commandType) }, typeof(string[]));
@@ -49,8 +47,8 @@ public sealed class CommandSender : ICommandSender
             PayloadType = payloadTypeName,
             DispatchTypes = dispatchTypeNames,
             Payload = _objectSerializer.Serialize(command).ToArray(),
-            Headers = _objectSerializer.SerializeToText(headers, typeof(Dictionary<string, string?>)),
-            ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
+            Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
+            ParentTracingInfo = Activity.Current is null ? null : new TracingInfo(Activity.Current.TraceId.ToString(), Activity.Current.SpanId.ToString())
         });
     }
 

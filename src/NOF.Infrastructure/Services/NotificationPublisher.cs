@@ -10,7 +10,6 @@ public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
     private readonly NotificationOutboundPipelineExecutor _outboundPipeline;
-    private readonly IContextAccessor _contextAccessor;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
@@ -18,26 +17,25 @@ public sealed class NotificationPublisher : INotificationPublisher
     public NotificationPublisher(
         INotificationRider rider,
         NotificationOutboundPipelineExecutor outboundPipeline,
-        IContextAccessor contextAccessor,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {
         _rider = rider;
         _outboundPipeline = outboundPipeline;
-        _contextAccessor = contextAccessor;
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
         _typeResolver = typeResolver;
     }
 
-    public void DeferPublish(object notification, Type[] notificationTypes)
+    public async Task DeferPublish(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
         ArgumentNullException.ThrowIfNull(notificationTypes);
-        var currentActivity = Activity.Current;
-        var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        _contextAccessor.Context.CopyHeadersTo(headers);
+        ArgumentNullException.ThrowIfNull(context);
+        var outboundContext = new NotificationOutboundContext(context);
+
+        await _outboundPipeline.ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
         var payloadTypeName = _typeResolver.Register(notification.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(
@@ -51,8 +49,8 @@ public sealed class NotificationPublisher : INotificationPublisher
             PayloadType = payloadTypeName,
             DispatchTypes = dispatchTypeNames,
             Payload = _objectSerializer.Serialize(notification).ToArray(),
-            Headers = _objectSerializer.SerializeToText(headers, typeof(Dictionary<string, string?>)),
-            ParentTracingInfo = currentActivity is null ? null : new TracingInfo(currentActivity.TraceId.ToString(), currentActivity.SpanId.ToString())
+            Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
+            ParentTracingInfo = Activity.Current is null ? null : new TracingInfo(Activity.Current.TraceId.ToString(), Activity.Current.SpanId.ToString())
         });
     }
 

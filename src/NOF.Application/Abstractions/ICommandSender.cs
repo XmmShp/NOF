@@ -11,7 +11,7 @@ public interface ICommandSender
     /// Adds a command to the transactional outbox context.
     /// The command will be persisted to the outbox when the active <see cref="Microsoft.EntityFrameworkCore.DbContext"/> saves changes.
     /// </summary>
-    void DeferSend(object command, Type commandType);
+    Task DeferSend(object command, Type commandType, Context context, CancellationToken cancellationToken = default);
 
     /// <summary>Sends a command.</summary>
     Task SendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default);
@@ -21,11 +21,12 @@ public static class CommandSenderExtensions
 {
     extension(ICommandSender sender)
     {
-        public void DeferSend<TCommand>(TCommand command)
+        public Task DeferSend<TCommand>(TCommand command, Context context, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(sender);
             ArgumentNullException.ThrowIfNull(command);
-            sender.DeferSend(command, typeof(TCommand));
+            ArgumentNullException.ThrowIfNull(context);
+            return sender.DeferSend(command, typeof(TCommand), context, cancellationToken);
         }
 
         public Task SendAsync<TCommand>(TCommand command, Context context, CancellationToken cancellationToken = default)

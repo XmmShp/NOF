@@ -13,7 +13,7 @@ public interface INotificationPublisher
     /// Adds a notification to the transactional outbox context.
     /// The notification will be persisted to the outbox when the active <see cref="Microsoft.EntityFrameworkCore.DbContext"/> saves changes.
     /// </summary>
-    void DeferPublish(object notification, Type[] notificationTypes);
+    Task DeferPublish(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default);
 
     /// <summary>Publishes a notification.</summary>
     Task PublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default);
@@ -36,21 +36,25 @@ public static class NotificationPublisherExtensions
             return publisher.PublishAsync(notification, runtimeType.GetAllAssignableTypes(), context, cancellationToken);
         }
 
-        public void DeferPublish<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification)
+        public Task DeferPublish<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
-            publisher.DeferPublish(notification, typeof(TNotification));
+            ArgumentNullException.ThrowIfNull(context);
+            return publisher.DeferPublish(notification, typeof(TNotification), context, cancellationToken);
         }
 
-        public void DeferPublish(
+        public Task DeferPublish(
             object notification,
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType)
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType,
+            Context context,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
             ArgumentNullException.ThrowIfNull(runtimeType);
-            publisher.DeferPublish(notification, runtimeType.GetAllAssignableTypes());
+            ArgumentNullException.ThrowIfNull(context);
+            return publisher.DeferPublish(notification, runtimeType.GetAllAssignableTypes(), context, cancellationToken);
         }
 
         public Task PublishAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)
