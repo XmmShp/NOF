@@ -21,7 +21,7 @@ public class LocalRpcClientGeneratorTests
     ];
 
     [Fact]
-    public void ResultT_ReturnType_UsesResultFromInsteadOfDirectCast()
+    public void ResultT_ReturnType_UsesOuterTransportResult()
     {
         const string source = """
                               using NOF.Contract;
@@ -39,7 +39,7 @@ public class LocalRpcClientGeneratorTests
 
                                   public partial interface IDroneOpsServiceClient : IRpcClient
                                   {
-                                      global::System.Threading.Tasks.Task<Result<GetFleetOverviewResponse>> GetFleetOverviewAsync(
+                                      global::System.Threading.Tasks.Task<RpcResult<Result<GetFleetOverviewResponse>>> GetFleetOverviewAsync(
                                           Empty request,
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
@@ -53,7 +53,7 @@ public class LocalRpcClientGeneratorTests
         var code = GetGeneratedCode(runResult);
 
         Assert.Contains(
-            "global::NOF.Contract.Result.From<global::MyApp.GetFleetOverviewResponse>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
+            "global::NOF.Contract.RpcResults.From<global::NOF.Contract.Result<global::MyApp.GetFleetOverviewResponse>>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
             code);
         Assert.DoesNotContain(
             "((global::NOF.Contract.IResult)result!)",
@@ -67,7 +67,7 @@ public class LocalRpcClientGeneratorTests
     }
 
     [Fact]
-    public void StreamingResult_ReturnType_UsesStreamingResultHelpers()
+    public void StreamingResult_ReturnType_UsesOuterTransportResult()
     {
         const string source = """
                               using NOF.Contract;
@@ -86,7 +86,7 @@ public class LocalRpcClientGeneratorTests
 
                                   public partial interface IDroneOpsServiceClient : IRpcClient
                                   {
-                                      global::System.Threading.Tasks.Task<StreamingResult<DroneEvent>> StreamEventsAsync(
+                                      global::System.Threading.Tasks.Task<RpcResult<StreamingResult<DroneEvent>>> StreamEventsAsync(
                                           Empty request,
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
@@ -99,19 +99,14 @@ public class LocalRpcClientGeneratorTests
         var runResult = new LocalRpcClientGenerator().GetResultPostGen(source, _extraRefs);
         var code = GetGeneratedCode(runResult);
 
+        Assert.Contains("Task<global::NOF.Contract.RpcResult<global::NOF.Contract.StreamingResult<global::MyApp.DroneEvent>>> StreamEventsAsync", code);
         Assert.Contains(
-            "Task<global::NOF.Contract.StreamingResult<global::MyApp.DroneEvent>> StreamEventsAsync",
-            code);
-        Assert.Contains(
-            "global::NOF.Contract.StreamingResult.From<global::MyApp.DroneEvent>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
-            code);
-        Assert.DoesNotContain(
-            "StreamingResult.Success<global::MyApp.DroneEvent>",
+            "global::NOF.Contract.RpcResults.From<global::NOF.Contract.StreamingResult<global::MyApp.DroneEvent>>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
             code);
     }
 
     [Fact]
-    public void BareReturnType_EmitsNOF030_AndSkipsGeneration()
+    public void BareReturnType_UsesTransportResultOfBarePayload()
     {
         const string source = """
                               using NOF.Contract;
@@ -129,7 +124,7 @@ public class LocalRpcClientGeneratorTests
 
                                   public partial interface IDroneOpsServiceClient : IRpcClient
                                   {
-                                      global::System.Threading.Tasks.Task<GetFleetOverviewResponse> GetFleetOverviewAsync(
+                                      global::System.Threading.Tasks.Task<RpcResult<GetFleetOverviewResponse>> GetFleetOverviewAsync(
                                           Empty request,
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
@@ -139,10 +134,13 @@ public class LocalRpcClientGeneratorTests
                               }
                               """;
 
-        var (runResult, diagnostics) = RunGeneratorWithDiagnostics(source);
+        var runResult = new LocalRpcClientGenerator().GetResultPostGen(source, _extraRefs);
+        var code = GetGeneratedCode(runResult);
 
-        Assert.Contains(diagnostics, d => d.Id == "NOF030");
-        Assert.Empty(runResult.GeneratedTrees);
+        Assert.Contains("Task<global::NOF.Contract.RpcResult<global::MyApp.GetFleetOverviewResponse>> GetFleetOverviewAsync", code);
+        Assert.Contains(
+            "global::NOF.Contract.RpcResults.From<global::MyApp.GetFleetOverviewResponse>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
+            code);
     }
 
     private static string GetGeneratedCode(Microsoft.CodeAnalysis.GeneratorDriverRunResult runResult)

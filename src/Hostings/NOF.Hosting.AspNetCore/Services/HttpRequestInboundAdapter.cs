@@ -20,7 +20,7 @@ public sealed class HttpRequestInboundAdapter(
 {
     private readonly HttpHeaderOutboundOptions _httpHeaderOptions = httpHeaderOptions.Value;
 
-    public async Task<NOF.Contract.IResult?> InvokeAsync<
+    public async Task<IRpcResult?> InvokeAsync<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
         HttpContext httpContext,

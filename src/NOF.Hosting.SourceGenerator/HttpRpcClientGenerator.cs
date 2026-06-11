@@ -180,7 +180,8 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
 
     private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint)
     {
-        var responseType = endpoint.ReturnInfo.NormalizedClientResponseTypeDisplay;
+        var clientResponseType = endpoint.ReturnInfo.ClientResponseTypeDisplay;
+        var responseBodyType = endpoint.ReturnInfo.ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var returnType = endpoint.ReturnInfo.ClientTaskReturnTypeDisplay;
         var methodName = method.Method.Name + "Async";
         var serviceTypeName = method.Method.ContainingType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -224,7 +225,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine($"                MethodName = {operationNameExpression}");
         sb.AppendLine("            };");
         sb.AppendLine();
-        sb.AppendLine($"            {responseType}? result = default;");
+        sb.AppendLine($"            {clientResponseType}? result = default;");
         sb.AppendLine();
         sb.AppendLine("            await _outboundPipeline.ExecuteAsync(context, async (ct) =>");
         sb.AppendLine("            {");
@@ -279,30 +280,34 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         if (isStream)
         {
             sb.AppendLine("                var response = await _httpClient.SendAsync(httpRequest, global::System.Net.Http.HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);");
-            sb.AppendLine("                response.EnsureSuccessStatusCode();");
             sb.AppendLine();
-            sb.AppendLine("                var contentType = response.Content.Headers.ContentType?.MediaType;");
-            sb.AppendLine("                if (string.Equals(contentType, \"text/event-stream\", global::System.StringComparison.OrdinalIgnoreCase))");
+            sb.AppendLine("                if (!response.IsSuccessStatusCode)");
             sb.AppendLine("                {");
-            sb.AppendLine($"                    var stream = global::NOF.Hosting.SseResponseReader.ReadAsync<{streamItemType}>(response, GetJsonTypeInfo<{streamItemType}>(), ct);");
-            sb.AppendLine($"                    result = global::NOF.Contract.Result.Stream<{streamItemType}>(stream);");
+            sb.AppendLine($"                    result = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadFailureAsync<global::NOF.Contract.StreamingResult<{streamItemType}>>(response, ct).ConfigureAwait(false);");
             sb.AppendLine("                }");
             sb.AppendLine("                else");
             sb.AppendLine("                {");
-            sb.AppendLine("                    using (response)");
+            sb.AppendLine("                    var contentType = response.Content.Headers.ContentType?.MediaType;");
+            sb.AppendLine("                    if (string.Equals(contentType, \"text/event-stream\", global::System.StringComparison.OrdinalIgnoreCase))");
             sb.AppendLine("                    {");
-            sb.AppendLine("                        var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.Result>(), ct);");
-            sb.AppendLine($"                        result = global::NOF.Contract.StreamingResult.From<{streamItemType}>(apiResponse!);");
+            sb.AppendLine($"                        var stream = global::NOF.Hosting.SseResponseReader.ReadAsync<{streamItemType}>(response, GetJsonTypeInfo<{streamItemType}>(), ct);");
+            sb.AppendLine($"                        result = global::NOF.Contract.RpcResults.Success(global::NOF.Contract.Result.Stream<{streamItemType}>(stream));");
+            sb.AppendLine("                    }");
+            sb.AppendLine("                    else");
+            sb.AppendLine("                    {");
+            sb.AppendLine("                        using (response)");
+            sb.AppendLine("                        {");
+            sb.AppendLine($"                            var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.StreamingResult<{streamItemType}>>(), ct);");
+            sb.AppendLine("                            result = global::NOF.Contract.RpcResults.Success(apiResponse!);");
+            sb.AppendLine("                        }");
             sb.AppendLine("                    }");
             sb.AppendLine("                }");
         }
         else
         {
             sb.AppendLine("                using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);");
-            sb.AppendLine("                response.EnsureSuccessStatusCode();");
             sb.AppendLine();
-            sb.AppendLine($"                var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<{responseType}>(), ct);");
-            sb.AppendLine("                result = apiResponse!;");
+            sb.AppendLine($"                result = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadAsync<{responseBodyType}>(response, GetJsonTypeInfo<{responseBodyType}>(), ct).ConfigureAwait(false);");
         }
         sb.AppendLine("                context.Response = result;");
         sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");

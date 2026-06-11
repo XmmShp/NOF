@@ -16,10 +16,6 @@ public class MapHttpEndpointReflectionTests
         .GetMethod("GetHttpEndpoints", BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("Method 'GetHttpEndpoints' not found.");
 
-    private static readonly MethodInfo GetNormalizedResponseTypeMethod = typeof(NOFHostingAspNetCoreExtensions)
-        .GetMethod("GetNormalizedResponseType", BindingFlags.NonPublic | BindingFlags.Static)
-        ?? throw new InvalidOperationException("Method 'GetNormalizedResponseType' not found.");
-
     public record GetUserRequest(string Name);
     public record CreateUserRequest(string Name);
     public record DeleteUserRequest(string Name);
@@ -47,20 +43,12 @@ public class MapHttpEndpointReflectionTests
     }
 
     [Fact]
-    public void GetNormalizedResponseType_WhenCalled_MapsToRpcResultConvention()
-    {
-        Assert.Equal(typeof(Result), GetNormalizedResponseType(typeof(Result)));
-        Assert.Equal(typeof(Result), GetNormalizedResponseType(typeof(Empty)));
-        Assert.Equal(typeof(Result<UserDto>), GetNormalizedResponseType(typeof(Result<UserDto>)));
-        Assert.Equal(typeof(Result<UserDto>), GetNormalizedResponseType(typeof(UserDto)));
-    }
-
-    [Fact]
     public void CreateEndpointHandler_WhenGet_UsesAsParametersBinding()
     {
         var handler = CreateHandler(nameof(IAppService.GetUser), HttpVerb.Get, typeof(GetUserRequest), typeof(UserDto));
         var requestParameter = handler.Method.GetParameters()[0];
 
+        Assert.Equal(typeof(Task<Microsoft.AspNetCore.Http.IResult>), handler.Method.ReturnType);
         Assert.NotNull(requestParameter.GetCustomAttribute<AsParametersAttribute>());
         Assert.Null(requestParameter.GetCustomAttribute<FromBodyAttribute>());
     }
@@ -71,6 +59,7 @@ public class MapHttpEndpointReflectionTests
         var handler = CreateHandler(nameof(IAppService.CreateUser), HttpVerb.Post, typeof(CreateUserRequest), typeof(Empty));
         var requestParameter = handler.Method.GetParameters()[0];
 
+        Assert.Equal(typeof(Task<Microsoft.AspNetCore.Http.IResult>), handler.Method.ReturnType);
         Assert.NotNull(requestParameter.GetCustomAttribute<FromBodyAttribute>());
         Assert.Null(requestParameter.GetCustomAttribute<AsParametersAttribute>());
     }
@@ -117,9 +106,6 @@ public class MapHttpEndpointReflectionTests
         Assert.IsType<InvalidOperationException>(exception.InnerException);
         Assert.Contains("Route parameters are not supported", exception.InnerException.Message);
     }
-
-    private static Type GetNormalizedResponseType(Type returnType)
-        => (Type)GetNormalizedResponseTypeMethod.Invoke(null, [returnType])!;
 
     private static Delegate CreateHandler(string operationName, HttpVerb verb, Type requestType, Type returnType)
         => (Delegate)CreateEndpointHandlerMethod.Invoke(null, [typeof(IAppService), requestType, operationName, verb, returnType])!;

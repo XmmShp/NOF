@@ -26,9 +26,11 @@ public sealed class RequestInboundContext
 {
     public required object Message { get; init; }
 
-    public IResult? Response { get; set; }
+    public IRpcResult? Response { get; set; }
 
     public required Type HandlerType { get; init; }
+
+    public required Type ResponseType { get; init; }
 
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     public required Type ServiceType { get; init; }

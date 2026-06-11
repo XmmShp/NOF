@@ -280,10 +280,10 @@
                 {
                     AppName = node.Node.Name
                 });
-
-                if (response.IsSuccess)
+                var configuration = Message.UnwrapWithMessage(response);
+                if (configuration != null)
                 {
-                    _previewContent = FormatJson(response.Value.Content);
+                    _previewContent = FormatJson(configuration.Content);
                 }
             }
         }

@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 
 public static class RpcServerInvoker
 {
-    public static async Task<IResult?> InvokeAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService>(
+    public static async Task<IRpcResult?> InvokeAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService>(
         IServiceProvider rootServiceProvider,
         string operationName,
         object request,

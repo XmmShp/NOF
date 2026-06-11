@@ -42,7 +42,7 @@ public interface IResult
 public record Result : IResult
 {
     [JsonConstructor]
-    private Result(bool isSuccess, string? errorCode, string? message, IDictionary<string, string>? extra = null)
+    internal Result(bool isSuccess, string? errorCode, string? message, IDictionary<string, string>? extra = null)
     {
         IsSuccess = isSuccess;
         ErrorCode = errorCode ?? string.Empty;

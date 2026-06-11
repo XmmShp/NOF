@@ -18,7 +18,7 @@ public class RpcServiceClientGeneratorTests
     ];
 
     [Fact]
-    public void GeneratesClientInterface_WithNormalizedResultTypes()
+    public void GeneratesClientInterface_WithTransportWrappedReturnTypes()
     {
         const string source = """
             using NOF.Contract;
@@ -42,9 +42,9 @@ public class RpcServiceClientGeneratorTests
         var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
 
         Assert.Contains("public interface IMyServiceClient : global::NOF.Contract.IRpcClient", code);
-        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> PingAsync", code);
-        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<global::App.Pong>> GetAsync", code);
-        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> ArchiveAsync", code);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.RpcResult<global::NOF.Contract.Result>> PingAsync", code);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.RpcResult<global::App.Pong>> GetAsync", code);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.RpcResult<global::NOF.Contract.Empty>> ArchiveAsync", code);
     }
 
     [Fact]
@@ -68,6 +68,6 @@ public class RpcServiceClientGeneratorTests
         var runResult = new RpcServiceClientGenerator().GetResult(source, _refs);
         var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.StreamingResult<global::App.StreamEvent>> StreamAsync", code);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.RpcResult<global::NOF.Contract.StreamingResult<global::App.StreamEvent>>> StreamAsync", code);
     }
 }

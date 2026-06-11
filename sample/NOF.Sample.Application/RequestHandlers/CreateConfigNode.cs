@@ -20,14 +20,14 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
         _cache = cache;
     }
 
-    public override async Task<Result> HandleAsync(CreateConfigNodeRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override async Task<RpcResult<Empty>> HandleAsync(CreateConfigNodeRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var name = ConfigNodeName.Of(request.Name);
         var parentId = request.ParentId.HasValue ? ConfigNodeId.Of(request.ParentId.Value) : (ConfigNodeId?)null;
 
         if (await _dbContext.Set<ConfigNode>().ExistsByNameAsync(name, cancellationToken))
         {
-            return Result.Fail("400", "Node with same name already exists.");
+            return Fail("400", "Node with same name already exists.");
         }
 
         var node = ConfigNode.Create(name, parentId);
@@ -42,7 +42,7 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
             cancellationToken);
 
-        return Result.Success();
+        return Success(new Empty());
     }
 }
 

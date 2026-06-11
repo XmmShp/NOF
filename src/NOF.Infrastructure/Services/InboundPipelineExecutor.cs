@@ -177,7 +177,7 @@ public sealed class RequestInboundPipelineExecutor
         _middlewareTypes.Freeze();
     }
 
-    public async ValueTask<IResult?> ExecuteAsync(
+    public async ValueTask<IRpcResult?> ExecuteAsync(
         object request,
         Type handlerType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
@@ -213,6 +213,7 @@ public sealed class RequestInboundPipelineExecutor
         {
             Message = request,
             HandlerType = handlerType,
+            ResponseType = GetHandlerResponseType(handlerType),
             ServiceType = serviceType,
             MethodName = methodName
         };
@@ -227,8 +228,8 @@ public sealed class RequestInboundPipelineExecutor
         var handler = (RpcHandler)services.GetRequiredService(handlerType);
         var executionContext = services.GetRequiredService<NOFContext>();
         var response = await handler.HandleAsync(context.Message, executionContext, cancellationToken).ConfigureAwait(false);
-        context.Response = response as IResult
-            ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a non-result response.");
+        context.Response = response
+            ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response.");
     }
 
     private static ValueTask ExecuteRequestMiddlewareAsync(
@@ -241,4 +242,18 @@ public sealed class RequestInboundPipelineExecutor
         var middleware = (IRequestInboundMiddleware)services.GetRequiredService(middlewareType);
         return middleware.InvokeAsync(context, next, cancellationToken);
     }
+
+    private static Type GetHandlerResponseType(Type handlerType)
+    {
+        for (var current = handlerType; current is not null; current = current.BaseType)
+        {
+            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(RpcHandler<,>))
+            {
+                return current.GetGenericArguments()[1];
+            }
+        }
+
+        throw new InvalidOperationException($"Unable to resolve RPC response type from handler '{handlerType.FullName}'.");
+    }
+
 }

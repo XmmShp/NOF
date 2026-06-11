@@ -20,6 +20,7 @@ public class HttpRpcClientGeneratorTests
         typeof(Result),
         typeof(Result<>),
         typeof(StreamingResult<>),
+        typeof(HttpRpcTransportResultReader),
         typeof(System.Text.Json.JsonSerializerOptions),
         typeof(System.Net.Http.Json.JsonContent),
         typeof(System.Net.Http.Json.HttpContentJsonExtensions)
@@ -174,13 +175,45 @@ public class HttpRpcClientGeneratorTests
         var runResult = RunGenerators(source);
         var code = GetGeneratedHttpClientCode(runResult);
 
-        Assert.Contains("Task<global::NOF.Contract.Result<global::MyApp.MyData>> GetDataAsync", code);
-        Assert.Contains("ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.Result<global::MyApp.MyData>>()", code);
+        Assert.Contains("Task<global::NOF.Contract.RpcResult<global::MyApp.MyData>> GetDataAsync", code);
+        Assert.Contains("HttpRpcTransportResultReader.ReadAsync<global::MyApp.MyData>", code);
+        Assert.Contains("GetJsonTypeInfo<global::MyApp.MyData>()", code);
         Assert.Contains("private static global::System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> GetJsonTypeInfo<T>()", code);
     }
 
     [Fact]
-    public void StreamReturnType_IsNormalizedToTaskOfStreamingResultAndUsesSse()
+    public void ResultOfT_ReturnType_IsWrappedAsTransportResultOfBusinessResult()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Hosting;
+                              namespace MyApp
+                              {
+                                  public record MyData(string Value);
+                                  public record GetDataRequest(string Key);
+
+                                  public partial interface IMyService : IRpcService
+                                  {
+                                      [HttpEndpoint(HttpVerb.Get, "/api/data")]
+                                      Result<MyData> GetData(GetDataRequest request);
+                                  }
+
+                                  public partial interface IMyServiceClient : IRpcClient;
+
+                                  [HttpRpcClient<IMyServiceClient>]
+                                  public partial class MyServiceClient;
+                              }
+                              """;
+
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
+
+        Assert.Contains("Task<global::NOF.Contract.RpcResult<global::NOF.Contract.Result<global::MyApp.MyData>>> GetDataAsync", code);
+        Assert.Contains("HttpRpcTransportResultReader.ReadAsync<global::NOF.Contract.Result<global::MyApp.MyData>>", code);
+    }
+
+    [Fact]
+    public void StreamReturnType_IsWrappedAsRpcResultOfStreamingResultAndUsesSse()
     {
         const string source = """
                               using NOF.Contract;
@@ -208,12 +241,13 @@ public class HttpRpcClientGeneratorTests
         var runResult = RunGenerators(source);
         var code = GetGeneratedHttpClientCode(runResult);
 
-        Assert.Contains("Task<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>> StreamDataAsync", code);
+        Assert.Contains("Task<global::NOF.Contract.RpcResult<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>> StreamDataAsync", code);
         Assert.Contains("text/event-stream", code);
         Assert.Contains("HttpCompletionOption.ResponseHeadersRead", code);
         Assert.Contains("SseResponseReader.ReadAsync<global::MyApp.StreamEvent>", code);
-        Assert.Contains("Result.Stream<global::MyApp.StreamEvent>(stream)", code);
-        Assert.Contains("StreamingResult.From<global::MyApp.StreamEvent>(apiResponse!)", code);
+        Assert.Contains("RpcResults.Success(global::NOF.Contract.Result.Stream<global::MyApp.StreamEvent>(stream))", code);
+        Assert.Contains("HttpRpcTransportResultReader.ReadFailureAsync<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>", code);
+        Assert.Contains("GetJsonTypeInfo<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>()", code);
     }
 
     private static Microsoft.CodeAnalysis.GeneratorDriverRunResult RunGenerators(string source)

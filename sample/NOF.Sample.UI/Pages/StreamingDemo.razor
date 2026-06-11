@@ -104,7 +104,13 @@
                 return;
             }
 
-            await foreach (var item in result.Value!.WithCancellation(_streamCancellationTokenSource.Token))
+            if (!result.Value!.IsSuccess)
+            {
+                Message.Error(result.Value.Message);
+                return;
+            }
+
+            await foreach (var item in result.Value.Value!.WithCancellation(_streamCancellationTokenSource.Token))
             {
                 _events.Add(item);
                 await InvokeAsync(StateHasChanged);

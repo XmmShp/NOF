@@ -32,7 +32,7 @@ public sealed class AuthorizationInboundMiddleware :
 
         if (firstFailure is not null)
         {
-            context.Response = firstFailure;
+            context.Response = RpcResults.Fail(firstFailure.ErrorCode, firstFailure.Message, firstFailure.Extra);
             return;
         }
 

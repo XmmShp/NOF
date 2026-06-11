@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using System.Security.Cryptography;
 using Xunit;
 
@@ -126,6 +127,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         {
             Message = new object(),
             HandlerType = typeof(object),
+            ResponseType = typeof(Result),
             ServiceType = typeof(object),
             MethodName = nameof(ToString)
         };

@@ -14,10 +14,10 @@ using Xunit;
 
 namespace NOF.Hosting.AspNetCore.Tests;
 
-public sealed class NofRpcHttpResultWrappingMiddlewareTests
+public sealed class HttpRpcTransportBoundaryTests
 {
     [Fact]
-    public async Task RpcHttpEndpoint_WhenModelBindingFails_WrapsNon200ResponseAsNofResult()
+    public async Task RpcHttpEndpoint_WhenModelBindingFails_PreservesHttpFailureStatus()
     {
         await using var app = await CreateAppAsync();
         using var client = app.GetTestClient();
@@ -26,13 +26,7 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
             "/rpc/CreateUser",
             new StringContent("""{"age":"invalid"}""", Encoding.UTF8, "application/json"));
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var result = await response.Content.ReadFromJsonAsync<Result<CreateUserResponse>>();
-        Assert.NotNull(result);
-        Assert.False(result.IsSuccess);
-        Assert.Equal("400", result.ErrorCode);
-        Assert.False(string.IsNullOrWhiteSpace(result.Message));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -49,7 +43,7 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
     }
 
     [Fact]
-    public async Task RpcHttpEndpoint_WhenRequestPropertyHasFromHeader_BindsHeaderValue()
+    public async Task RpcHttpEndpoint_WhenContractReturnsBareType_WritesRawBody()
     {
         await using var app = await CreateAppAsync();
         using var client = app.GetTestClient();
@@ -59,10 +53,26 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
         using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<Result<ReadTokenResponse>>();
+        var payload = await response.Content.ReadFromJsonAsync<ReadTokenResponse>();
+        Assert.NotNull(payload);
+        Assert.Equal("header-token", payload.Token);
+    }
+
+    [Fact]
+    public async Task RpcHttpEndpoint_WhenContractReturnsResultOfT_WritesBusinessResultBody()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/rpc/CreateUser",
+            new CreateUserRequest { Age = 18 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<Result<CreateUserResponse>>();
         Assert.NotNull(result);
         Assert.True(result.IsSuccess);
-        Assert.Equal("header-token", result.Value.Token);
+        Assert.Equal(18, result.Value.Age);
     }
 
     private static async Task<WebApplication> CreateAppAsync()
@@ -72,7 +82,7 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
 
         builder.Services.AddRouting();
         builder.Services.AddScoped<NOFContext>();
-                builder.Services.AddSingleton(new RequestInboundPipelineTypes());
+        builder.Services.AddSingleton(new RequestInboundPipelineTypes());
         builder.Services.AddSingleton<RequestInboundPipelineExecutor>();
         builder.Services.AddScoped<RpcServerInvocationResolver>();
         builder.Services.AddScoped<HttpRequestInboundAdapter>();
@@ -88,7 +98,6 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
         builder.Services.AddSingleton(registry.RpcServerRegistry);
 
         var app = builder.Build();
-        app.UseMiddleware<NofRpcHttpResultWrappingMiddleware>();
         app.MapHttpEndpoint<ValidationRpcServer>("/rpc");
         app.MapPost("/custom", ([FromBody] CreateUserRequest request) => Results.Ok(Result.Success(new CreateUserResponse(request.Age))));
         await app.StartAsync();
@@ -132,7 +141,7 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
         Result<CreateUserResponse> CreateUser(CreateUserRequest request);
 
         [HttpEndpoint(HttpVerb.Get, "/ReadToken")]
-        Result<ReadTokenResponse> ReadToken(ReadTokenRequest request);
+        ReadTokenResponse ReadToken(ReadTokenRequest request);
     }
 
     public sealed class ValidationRpcServer : RpcServer<IValidationRpcService>, IRpcServer
@@ -143,7 +152,7 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
                 [nameof(IValidationRpcService.CreateUser)] =
                     new(typeof(CreateUserHandler), typeof(CreateUserRequest), typeof(Result<CreateUserResponse>)),
                 [nameof(IValidationRpcService.ReadToken)] =
-                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(Result<ReadTokenResponse>))
+                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(ReadTokenResponse))
             };
 
         protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
@@ -151,13 +160,13 @@ public sealed class NofRpcHttpResultWrappingMiddlewareTests
 
     public sealed class CreateUserHandler : RpcHandler<CreateUserRequest, Result<CreateUserResponse>>
     {
-        public override Task<Result<CreateUserResponse>> HandleAsync(CreateUserRequest request, NOFContext context, CancellationToken cancellationToken)
-            => Task.FromResult(Result.Success(new CreateUserResponse(request.Age)));
+        public override Task<RpcResult<Result<CreateUserResponse>>> HandleAsync(CreateUserRequest request, NOFContext context, CancellationToken cancellationToken)
+            => Task.FromResult(Success(Result.Success(new CreateUserResponse(request.Age))));
     }
 
-    public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, Result<ReadTokenResponse>>
+    public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, ReadTokenResponse>
     {
-        public override Task<Result<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, NOFContext context, CancellationToken cancellationToken)
-            => Task.FromResult(Result.Success(new ReadTokenResponse(request.Token.Value)));
+        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, NOFContext context, CancellationToken cancellationToken)
+            => Task.FromResult(Success(new ReadTokenResponse(request.Token.Value)));
     }
 }

@@ -12,8 +12,8 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 {
     private static readonly DiagnosticDescriptor _unsupportedClientReturnType = new(
         id: "NOF030",
-        title: "Local RPC client method must use normalized contract return type",
-        messageFormat: "Local RPC client method '{0}' must return '{1}' to match the normalized contract signature",
+        title: "Local RPC client method must use RPC transport return type",
+        messageFormat: "Local RPC client method '{0}' must return '{1}' to match the RPC transport contract signature",
         category: "LocalRpcClientGenerator",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -174,9 +174,10 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         if (returnType is INamedTypeSymbol namedType
             && namedType.ContainingNamespace.ToDisplayString() == "NOF.Contract")
         {
-            if (namedType.Name == "IResult" && !namedType.IsGenericType)
+            if (namedType.Name == "RpcResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
             {
-                return requiredResultExpression;
+                var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                return $"global::NOF.Contract.RpcResults.From<{innerType}>({requiredResultExpression})";
             }
 
             if (namedType.Name == "Result" && !namedType.IsGenericType)
@@ -193,7 +194,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
             if (namedType.Name == "StreamingResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
             {
                 var itemType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.StreamingResult.From<{itemType}>({requiredResultExpression})";
+                return $"((global::NOF.Contract.StreamingResult<{itemType}>)({requiredResultExpression}))!";
             }
         }
 
@@ -229,37 +230,13 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 
     private static string BuildExpectedClientReturnTypeDisplay(IMethodSymbol serviceMethod)
     {
-        var normalizedResponseType = BuildNormalizedClientResponseTypeDisplay(serviceMethod.ReturnType);
-        return $"global::System.Threading.Tasks.Task<{normalizedResponseType}>";
+        var transportResponseType = BuildTransportClientResponseTypeDisplay(serviceMethod.ReturnType);
+        return $"global::System.Threading.Tasks.Task<{transportResponseType}>";
     }
 
-    private static string BuildNormalizedClientResponseTypeDisplay(ITypeSymbol returnType)
+    private static string BuildTransportClientResponseTypeDisplay(ITypeSymbol returnType)
     {
-        if (returnType is INamedTypeSymbol namedType
-            && namedType.ContainingNamespace.ToDisplayString() == "NOF.Contract")
-        {
-            if (namedType.Name == "StreamingResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
-            {
-                return namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            }
-
-            if (namedType.Name == "Result" && !namedType.IsGenericType)
-            {
-                return "global::NOF.Contract.Result";
-            }
-
-            if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
-            {
-                return namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            }
-
-            if (namedType.Name == "Empty" && !namedType.IsGenericType)
-            {
-                return "global::NOF.Contract.Result";
-            }
-        }
-
-        return $"global::NOF.Contract.Result<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
+        return $"global::NOF.Contract.RpcResult<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
     }
 
     private static bool TryGetRpcClientInterfaceFromLocalRpcClientAttribute(

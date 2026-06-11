@@ -11,7 +11,7 @@ public sealed class RequestOutboundContext
 
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-    public IResult? Response { get; set; }
+    public IRpcResult? Response { get; set; }
 
     public required Type ServiceType { get; init; }
 

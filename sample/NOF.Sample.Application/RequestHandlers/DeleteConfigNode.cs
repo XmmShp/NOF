@@ -19,14 +19,14 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         _cache = cache;
     }
 
-    public override async Task<Result> HandleAsync(DeleteConfigNodeRequest request, NOFContext context, CancellationToken cancellationToken)
+    public override async Task<RpcResult<Empty>> HandleAsync(DeleteConfigNodeRequest request, NOFContext context, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.Id);
         var node = await _dbContext.Set<ConfigNode>()
             .FirstOrDefaultAsync(configNode => configNode.Id == id, cancellationToken);
         if (node is null)
         {
-            return Result.Fail("404", "Node not found.");
+            return Fail("404", "Node not found.");
         }
 
         // 检查是否有子节点
@@ -36,7 +36,7 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         var hasChildren = children?.HasChildren() ?? false;
         if (hasChildren)
         {
-            return Result.Fail("400", "Cannot delete node with children.");
+            return Fail("400", "Cannot delete node with children.");
         }
 
         node.MarkAsDeleted();
@@ -47,6 +47,6 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
         await _cache.RemoveAsync(new ConfigNodeByNameCacheKey(node.Name), cancellationToken);
 
-        return Result.Success();
+        return Success(new Empty());
     }
 }

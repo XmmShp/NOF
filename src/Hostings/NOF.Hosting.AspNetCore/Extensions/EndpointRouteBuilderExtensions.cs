@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.WebUtilities;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
@@ -54,7 +55,7 @@ public static partial class NOFHostingAspNetCoreExtensions
                 var method = serviceType.GetMethod(operationName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
                     ?? throw new InvalidOperationException($"RPC contract method '{serviceType.FullName}.{operationName}' was not found.");
                 var isStream = TryGetStreamItemType(handlerMapping.ReturnType, out var streamItemType);
-                var responseType = isStream ? streamItemType : GetNormalizedResponseType(handlerMapping.ReturnType);
+                var responseType = isStream ? streamItemType : handlerMapping.ReturnType;
                 var endpoints = GetHttpEndpoints(method, operationName);
                 foreach (var (verb, route) in endpoints)
                 {
@@ -105,7 +106,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
                 ? RequestHasHeaderBindings(requestType) ? _createHeaderAwareQueryHandlerMethod : _createQueryHandlerMethod
                 : _createBodyHandlerMethod;
-            genericArguments = [serviceType, requestType];
+            genericArguments = [serviceType, requestType, returnType];
         }
 
         var genericMethod = templateMethod.MakeGenericMethod(genericArguments);
@@ -114,16 +115,18 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     private static Delegate CreateQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(string operationName)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
+        TResponse>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<object?> Handler(
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
             [AsParameters] TRequest request,
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
-            return await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return CreateHttpResponse<TResponse>(response);
         }
 
         return Handler;
@@ -131,16 +134,18 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     private static Delegate CreateBodyHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(string operationName)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
+        TResponse>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<object?> Handler(
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
             [FromBody] TRequest request,
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
-            return await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
+            return CreateHttpResponse<TResponse>(response);
         }
 
         return Handler;
@@ -148,16 +153,18 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     private static Delegate CreateHeaderAwareQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(string operationName)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
+        TResponse>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<object?> Handler(
+        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
         {
             var request = CreateRequestFromQuery<TRequest>(httpContext);
-            return await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
+            var response = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
+            return CreateHttpResponse<TResponse>(response);
         }
 
         return Handler;
@@ -220,40 +227,97 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
-    private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult<TItem>(object? response)
+    private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult<TItem>(IRpcResult? response)
     {
-        if (response is StreamingResult<TItem> streamingResult)
+        if (response is RpcResult<StreamingResult<TItem>> rpcResult)
         {
+            if (rpcResult.TryGetTransportFailure(out var transportFailure))
+            {
+                return CreateTransportFailureResult(transportFailure);
+            }
+
+            var streamingResult = rpcResult.Value
+                ?? throw new InvalidOperationException($"HTTP RPC endpoint returned '{typeof(RpcResult<StreamingResult<TItem>>).FullName}' without a value.");
             if (!streamingResult.IsSuccess)
             {
-                return TypedResults.Ok(Result.Fail(streamingResult.ErrorCode, streamingResult.Message, streamingResult.Extra));
+                return TypedResults.Ok(streamingResult);
             }
 
             return TypedResults.ServerSentEvents(streamingResult.Value!);
         }
 
-        if (response is NOF.Contract.IResult result)
+        if (response is not null && response.TryGetTransportFailure(out var result))
         {
-            return TypedResults.Ok(Result.From(result));
+            return CreateTransportFailureResult(result);
         }
 
-        throw new InvalidOperationException($"Streaming RPC endpoints must return '{typeof(StreamingResult<TItem>).FullName}'.");
+        throw new InvalidOperationException($"Streaming RPC endpoints must return '{typeof(RpcResult<StreamingResult<TItem>>).FullName}'.");
     }
 
-    [RequiresDynamicCode("Result type normalization may require runtime generic instantiation.")]
-    private static Type GetNormalizedResponseType(Type returnType)
+    private static Microsoft.AspNetCore.Http.IResult CreateHttpResponse<TResponse>(IRpcResult? transportResult)
     {
-        if (returnType == typeof(Empty) || returnType == typeof(Result))
+        if (transportResult is RpcResult<TResponse> result)
         {
-            return typeof(Result);
+            if (result.TryGetTransportFailure(out var transportFailure))
+            {
+                return CreateTransportFailureResult(transportFailure);
+            }
+
+            return TypedResults.Ok(result.Value);
         }
 
-        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Result<>))
+        if (transportResult is not null && transportResult.TryGetTransportFailure(out var fallbackFailure))
         {
-            return returnType;
+            return CreateTransportFailureResult(fallbackFailure);
         }
 
-        return typeof(Result<>).MakeGenericType(returnType);
+        throw new InvalidOperationException($"HTTP RPC endpoint returned '{transportResult?.GetType().FullName ?? "null"}' instead of '{typeof(RpcResult<TResponse>).FullName}'.");
+    }
+
+    private static Microsoft.AspNetCore.Http.IResult CreateTransportFailureResult(NOF.Contract.IResult result)
+    {
+        var statusCode = TryParseStatusCode(result.ErrorCode, out var parsedStatusCode)
+            ? parsedStatusCode
+            : StatusCodes.Status500InternalServerError;
+        var title = ReasonPhrases.GetReasonPhrase(statusCode);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            title = "Transport request failed.";
+        }
+
+        if (result.Extra.Count > 0)
+        {
+            var validationProblem = new HttpValidationProblemDetails(
+                result.Extra.ToDictionary(pair => pair.Key, pair => new[] { pair.Value }))
+            {
+                Status = statusCode,
+                Title = title,
+                Detail = result.Message
+            };
+            validationProblem.Extensions["errorCode"] = result.ErrorCode;
+            return TypedResults.Problem(validationProblem);
+        }
+
+        var problem = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = result.Message
+        };
+        problem.Extensions["errorCode"] = result.ErrorCode;
+        return TypedResults.Problem(problem);
+    }
+
+    private static bool TryParseStatusCode(string errorCode, out int statusCode)
+    {
+        if (int.TryParse(errorCode, NumberStyles.Integer, CultureInfo.InvariantCulture, out statusCode)
+            && statusCode is >= StatusCodes.Status100Continue and <= 999)
+        {
+            return true;
+        }
+
+        statusCode = default;
+        return false;
     }
 
     private static bool TryGetStreamItemType(Type returnType, [NotNullWhen(true)] out Type? streamItemType)

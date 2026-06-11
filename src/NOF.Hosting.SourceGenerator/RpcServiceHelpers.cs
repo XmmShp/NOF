@@ -279,44 +279,13 @@ internal readonly struct ServiceReturnInfo
             ? namedType.TypeArguments[0]
             : null;
 
-    public string NormalizedResultTypeDisplay
-    {
-        get
-        {
-            if (IsStream)
-            {
-                return ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            }
+    public string TransportResultTypeDisplay
+        => $"global::NOF.Contract.RpcResult<{ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
 
-            if (IsEmpty || IsNonGenericResult)
-            {
-                return "global::NOF.Contract.Result";
-            }
-
-            if (IsGenericResult)
-            {
-                return ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            }
-
-            return $"global::NOF.Contract.Result<{ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
-        }
-    }
-
-    public string NormalizedClientResponseTypeDisplay
-    {
-        get
-        {
-            if (!IsStream)
-            {
-                return NormalizedResultTypeDisplay;
-            }
-
-            return ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        }
-    }
+    public string ClientResponseTypeDisplay => TransportResultTypeDisplay;
 
     public string ClientTaskReturnTypeDisplay
-        => $"global::System.Threading.Tasks.Task<{NormalizedClientResponseTypeDisplay}>";
+        => $"global::System.Threading.Tasks.Task<{ClientResponseTypeDisplay}>";
 }
 
 internal enum HttpVerb

@@ -59,6 +59,26 @@ public static class NOFSampleWebUIExtensions
             return default;
         }
 
+        public T? UnwrapWithMessage<T>(RpcResult<T> result, string? successMessage = null, bool showSuccess = false)
+            => messageService.UnwrapWithMessage((Result<T>)result, successMessage, showSuccess);
+
+        public T? UnwrapWithMessage<T>(Result<Result<T>> result, string? successMessage = null, bool showSuccess = false)
+        {
+            ArgumentNullException.ThrowIfNull(messageService);
+            ArgumentNullException.ThrowIfNull(result);
+
+            if (!result.IsSuccess)
+            {
+                messageService.Error(result.Message);
+                return default;
+            }
+
+            return messageService.UnwrapWithMessage(result.Value, successMessage, showSuccess);
+        }
+
+        public T? UnwrapWithMessage<T>(RpcResult<Result<T>> result, string? successMessage = null, bool showSuccess = false)
+            => messageService.UnwrapWithMessage((Result<Result<T>>)result, successMessage, showSuccess);
+
         /// <summary>
         /// Displays a success message built from the result value (if successful), or an error message on failure,
         /// then returns the underlying value if successful, or <see langword="default"/> on failure.
@@ -87,5 +107,26 @@ public static class NOFSampleWebUIExtensions
             messageService.Error(result.Message);
             return default;
         }
+
+        public T? UnwrapWithMessage<T>(RpcResult<T> result, Func<T, string> successMessageFactory, bool showSuccess = false)
+            => messageService.UnwrapWithMessage((Result<T>)result, successMessageFactory, showSuccess);
+
+        public T? UnwrapWithMessage<T>(Result<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
+        {
+            ArgumentNullException.ThrowIfNull(messageService);
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentNullException.ThrowIfNull(successMessageFactory);
+
+            if (!result.IsSuccess)
+            {
+                messageService.Error(result.Message);
+                return default;
+            }
+
+            return messageService.UnwrapWithMessage(result.Value, successMessageFactory, showSuccess);
+        }
+
+        public T? UnwrapWithMessage<T>(RpcResult<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
+            => messageService.UnwrapWithMessage((Result<Result<T>>)result, successMessageFactory, showSuccess);
     }
 }

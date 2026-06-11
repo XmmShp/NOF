@@ -33,7 +33,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         // Unauthenticated => 401
         var unauthContext = CreateContext(nameof(TestService.LoginOnlyMethod));
         await middleware.InvokeAsync(unauthContext, _ => ValueTask.CompletedTask, default);
-        var unauthResult = Assert.IsType<FailResult>(unauthContext.Response);
+        var unauthResult = Assert.IsType<FailResult>(RpcResults.ToFailureResult(unauthContext.Response!));
         Assert.Equal("401", unauthResult.ErrorCode);
 
         // Authenticated without permissions => allowed
@@ -60,7 +60,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         // Authenticated but missing method permission => 403
         var deniedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
         await middleware.InvokeAsync(deniedContext, _ => ValueTask.CompletedTask, default);
-        var denied = Assert.IsType<FailResult>(deniedContext.Response);
+        var denied = Assert.IsType<FailResult>(RpcResults.ToFailureResult(deniedContext.Response!));
         Assert.Equal("403", denied.ErrorCode);
 
         // With method permission => allowed
@@ -90,7 +90,7 @@ public sealed class AuthorizationInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
 
-        var denied = Assert.IsType<FailResult>(context.Response);
+        var denied = Assert.IsType<FailResult>(RpcResults.ToFailureResult(context.Response!));
         Assert.Equal("499", denied.ErrorCode);
         Assert.False(nextCalled);
     }
@@ -126,7 +126,7 @@ public sealed class AuthorizationInboundMiddlewareTests
 
         await middleware.InvokeAsync(context, _ => ValueTask.CompletedTask, default);
 
-        var denied = Assert.IsType<FailResult>(context.Response);
+        var denied = Assert.IsType<FailResult>(RpcResults.ToFailureResult(context.Response!));
         Assert.Equal("498", denied.ErrorCode);
     }
 
@@ -136,6 +136,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         {
             Message = new TestRequest(),
             HandlerType = typeof(TestService),
+            ResponseType = typeof(Result),
             ServiceType = typeof(TestService),
             MethodName = methodName
         };
