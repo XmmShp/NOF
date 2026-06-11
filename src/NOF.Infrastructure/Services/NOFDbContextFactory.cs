@@ -68,7 +68,7 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     }
 
     public TDbContext CreateDbContext()
-        => CreateDbContext(_contextAccessor.Context.TenantId);
+        => CreateDbContext(TenantId.Normalize(_contextAccessor.Context.TenantId));
 
     public TDbContext CreateDbContext(string tenantId)
     {

@@ -25,6 +25,7 @@ public sealed class CommandInboundContext : Context
         HandlerType = source.HandlerType;
         MessageType = source.MessageType;
         Metadata = source.Metadata;
+        TenantId = source.TenantId;
     }
 
     public CommandInboundContext()
@@ -54,6 +55,7 @@ public sealed class NotificationInboundContext : Context
         HandlerType = source.HandlerType;
         MessageType = source.MessageType;
         Metadata = source.Metadata;
+        TenantId = source.TenantId;
     }
 
     public NotificationInboundContext()
@@ -96,6 +98,7 @@ public sealed class RequestInboundContext : Context
         RequestType = source.RequestType;
         ResponseType = source.ResponseType;
         Metadata = source.Metadata;
+        TenantId = source.TenantId;
     }
 
     public RequestInboundContext()

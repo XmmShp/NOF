@@ -33,7 +33,9 @@ public class TenantInboundMiddlewareTests
         var middleware = new TenantInboundMiddleware();
         var message = new object();
         var inboundContext = (CommandInboundContext)CreateContext(message.GetType())
-            .WithHeader(NOFAbstractionConstants.Transport.Headers.TenantId, "tenanta");
+            .CopyHeadersFrom([
+                new KeyValuePair<string, string?>(NOFAbstractionConstants.Transport.Headers.TenantId, "tenanta")
+            ]);
         var forwardedContext = Context.Empty;
 
         await middleware.InvokeAsync(inboundContext, message, CaptureNextContext, default);

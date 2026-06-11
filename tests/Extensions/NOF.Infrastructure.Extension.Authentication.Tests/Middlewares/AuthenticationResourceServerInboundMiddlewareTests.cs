@@ -47,14 +47,14 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var inboundMetadata = CreateInboundMetadata();
         var request = new object();
         var executionContext = (RequestInboundContext)inboundMetadata
-            .WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
+            .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
         var forwardedContext = Context.Empty;
 
         var nextCalled = false;
         await middleware.InvokeAsync(executionContext, request, CaptureNextContext, default);
 
         Assert.True(nextCalled);
-        Assert.True(forwardedContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, out _));
+        Assert.True(forwardedContext.TryGetItem(NOFAbstractionConstants.Transport.Headers.Authorization, out _));
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
 
@@ -85,7 +85,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var inboundMetadata = CreateInboundMetadata();
         var request = new object();
         var executionContext = (RequestInboundContext)inboundMetadata
-            .WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
+            .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
 
         var nextCalled = false;
         async Task Act()

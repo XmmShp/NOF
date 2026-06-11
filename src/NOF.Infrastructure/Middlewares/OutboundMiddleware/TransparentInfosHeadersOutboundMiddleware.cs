@@ -1,12 +1,11 @@
 using NOF.Abstraction;
 using NOF.Hosting;
-using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Copies the current <see cref="Context"/> headers into outbound headers
-/// so outbound operations can propagate tenant/tracing/auth without mutating the ambient execution context.
+/// Applies explicitly supported ambient context values to outbound transport headers.
 /// </summary>
 public sealed class ContextHeadersOutboundMiddleware :
     ICommandOutboundMiddleware,
@@ -24,19 +23,38 @@ public sealed class ContextHeadersOutboundMiddleware :
 
     public ValueTask InvokeAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        context.CopyHeadersTo(context.Headers);
+        ApplyTenantHeader(context);
         return next(context, message, cancellationToken);
     }
 
     public ValueTask InvokeAsync(NotificationOutboundContext context, object message, NotificationOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        context.CopyHeadersTo(context.Headers);
+        ApplyTenantHeader(context);
         return next(context, message, cancellationToken);
     }
 
     public ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        context.CopyHeadersTo(context.Headers);
+        ApplyTenantHeader(context);
         return next(context, request, cancellationToken);
+    }
+
+    private static void ApplyTenantHeader(Context context)
+    {
+        if (!string.IsNullOrWhiteSpace(context.TenantId))
+        {
+            switch (context)
+            {
+                case CommandOutboundContext commandContext when !commandContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.TenantId):
+                    commandContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = context.TenantId;
+                    break;
+                case NotificationOutboundContext notificationContext when !notificationContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.TenantId):
+                    notificationContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = context.TenantId;
+                    break;
+                case RequestOutboundContext requestContext when !requestContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.TenantId):
+                    requestContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = context.TenantId;
+                    break;
+            }
+        }
     }
 }

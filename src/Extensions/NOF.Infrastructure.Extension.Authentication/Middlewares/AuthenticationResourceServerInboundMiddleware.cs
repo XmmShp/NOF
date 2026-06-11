@@ -92,7 +92,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
                             identity,
                             token,
                             downstreamPropagation: source.DownstreamPropagation));
-                    executionContext = (RequestInboundContext)executionContext.WithoutHeader(source.HeaderName);
+                    executionContext = (RequestInboundContext)executionContext.WithoutItem(source.HeaderName);
                 }
                 catch (SecurityTokenExpiredException)
                 {
@@ -121,7 +121,9 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
     {
         token = string.Empty;
 
-        if (!context.TryGetHeader(source.HeaderName, out var authHeader) || string.IsNullOrEmpty(authHeader))
+        if (!context.TryGetItem(source.HeaderName, out var authHeaderObject)
+            || authHeaderObject is not string authHeader
+            || string.IsNullOrEmpty(authHeader))
         {
             return false;
         }

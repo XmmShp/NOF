@@ -1,7 +1,6 @@
 using NOF.Abstraction;
 using NOF.Hosting;
 using System.Diagnostics;
-using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Infrastructure;
@@ -41,9 +40,10 @@ public sealed class TenantInboundMiddleware :
     private static TContext ApplyTenant<TContext>(TContext context)
         where TContext : Context
     {
-        var tenantId = context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
-            ? TenantId.Normalize(headerTenantId)
-            : NOFAbstractionConstants.Tenant.HostId;
+        var tenantId = context.TryGetItem(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
+            && headerTenantId is string tenantIdValue
+            ? TenantId.Normalize(tenantIdValue)
+            : TenantId.Normalize(context.TenantId);
 
         context = (TContext)context.WithTenantId(tenantId);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);

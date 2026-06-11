@@ -89,9 +89,10 @@ public sealed class CacheService : ICacheService
         }
 
         var keyPrefixTemplate = _options.KeyPrefix ?? string.Empty;
+        var tenantId = TenantId.Normalize(_contextAccessor.Context.TenantId);
         var keyPrefix = DbConnectionStringTemplateResolver.ResolveTenantId(
             keyPrefixTemplate,
-            _contextAccessor.Context.TenantId);
+            tenantId);
 
         return keyPrefix + key;
     }
