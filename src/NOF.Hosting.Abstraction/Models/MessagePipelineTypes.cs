@@ -1,4 +1,4 @@
-using NOF.Abstraction;
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -8,9 +8,9 @@ namespace NOF.Hosting;
 /// Types can be added in arbitrary order and are frozen into dependency order on first execution.
 /// </summary>
 public class MessagePipelineTypes<TMiddlewareContract>
-    where TMiddlewareContract : class
+    where TMiddlewareContract : class, ITopologizable<TMiddlewareContract>
 {
-    private readonly List<DependencyNode> _nodes = [];
+    private readonly List<Type> _registeredTypes = [];
     private readonly List<Type> _orderedTypes = [];
     private bool _isFrozen;
 
@@ -27,23 +27,31 @@ public class MessagePipelineTypes<TMiddlewareContract>
         }
 
         var middlewareType = typeof(TMiddleware);
-        if (_nodes.Any(n => ReferenceEquals(n.ExtraInfo, middlewareType)))
+        if (_registeredTypes.Contains(middlewareType))
         {
             return;
         }
 
-        _nodes.Add(new DependencyNode(middlewareType, typeof(TMiddleware).GetAllAssignableTypes()));
+        _registeredTypes.Add(middlewareType);
     }
 
-    public void Freeze()
+    public void Freeze(IServiceProvider services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         if (_isFrozen)
         {
             return;
         }
 
-        var graph = new DependencyGraph<TMiddlewareContract>(_nodes);
-        var ordered = graph.GetExecutionOrder().Select(node => (Type)node.ExtraInfo).ToList();
+        var middlewares = new List<TMiddlewareContract>(_registeredTypes.Count);
+        foreach (var middlewareType in _registeredTypes)
+        {
+            middlewares.Add((TMiddlewareContract)services.GetRequiredService(middlewareType));
+        }
+
+        var graph = new DependencyGraph<TMiddlewareContract>(middlewares);
+        var ordered = graph.GetExecutionOrder().Select(middleware => middleware.GetType()).ToList();
 
         _orderedTypes.Clear();
         _orderedTypes.AddRange(ordered);

@@ -5,7 +5,7 @@ namespace NOF.Hosting;
 /// <summary>
 /// Defines an application-level configuration unit that runs after the host application has been fully constructed.
 /// </summary>
-public interface IApplicationInitializationStep
+public interface IApplicationInitializationStep : ITopologizable<IApplicationInitializationStep>
 {
     Task ExecuteAsync(IHost app);
 }

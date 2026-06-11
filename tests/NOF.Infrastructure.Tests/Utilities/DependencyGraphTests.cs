@@ -4,28 +4,49 @@ using Xunit;
 
 namespace NOF.Infrastructure.Tests.Utilities;
 
-public interface IStepA;
-public interface IStepB;
-public interface IStepC;
-public interface IStepD;
+public interface IStepNode : ITopologizable<IStepNode>;
 
-public class StepA : IStepA;
-public class StepB : IStepB, IAfter<IStepA>;
-public class StepC : IStepC, IAfter<IStepB>;
-public class StepD : IStepD, IAfter<IStepA>, IAfter<IStepC>;
+public class StepA : IStepNode
+{
+    public TopologyComparison Compare(IStepNode other) => TopologyComparison.DoesNotMatter;
+}
 
-public class CircularStepA : IAfter<CircularStepB>;
-public class CircularStepB : IAfter<CircularStepA>;
+public class StepB : IStepNode
+{
+    public TopologyComparison Compare(IStepNode other)
+        => other is StepA ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+}
 
-public interface IStepE;
-public class StepWithMissingDependency : IAfter<IStepE>;
+public class StepC : IStepNode
+{
+    public TopologyComparison Compare(IStepNode other)
+        => other is StepB ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+}
+
+public class StepRunsBeforeC : IStepNode
+{
+    public TopologyComparison Compare(IStepNode other)
+        => other is StepC ? TopologyComparison.Before : TopologyComparison.DoesNotMatter;
+}
+
+public class CircularStepA : IStepNode
+{
+    public TopologyComparison Compare(IStepNode other)
+        => other is CircularStepB ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+}
+
+public class CircularStepB : IStepNode
+{
+    public TopologyComparison Compare(IStepNode other)
+        => other is CircularStepA ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+}
 
 public class DependencyGraphTests
 {
     [Fact]
     public void Constructor_WithEmptyConfigurators_ShouldCreateEmptyGraph()
     {
-        var graph = new DependencyGraph<object>([]);
+        var graph = new DependencyGraph<IStepNode>([]);
         Assert.Empty(graph.GetExecutionOrder());
     }
 
@@ -34,40 +55,38 @@ public class DependencyGraphTests
     {
         var taskA = new StepA();
         var taskB = new StepB();
-        var graph = new DependencyGraph<object>([
-            new(taskB, typeof(StepB).GetAllAssignableTypes()),
-            new(taskA, typeof(StepA).GetAllAssignableTypes())
+        var graph = new DependencyGraph<IStepNode>([
+            taskB,
+            taskA
         ]);
 
-        var executionOrder = graph.GetExecutionOrder().Select(n => n.ExtraInfo).ToList();
+        var executionOrder = graph.GetExecutionOrder().ToList();
         Assert.True(executionOrder.IndexOf(taskA) < executionOrder.IndexOf(taskB));
+    }
+
+    [Fact]
+    public void GetExecutionOrder_WithBeforeRelation_ShouldOrderCorrectly()
+    {
+        var taskC = new StepC();
+        var taskBefore = new StepRunsBeforeC();
+        var graph = new DependencyGraph<IStepNode>([
+            taskC,
+            taskBefore
+        ]);
+
+        var executionOrder = graph.GetExecutionOrder().ToList();
+        Assert.True(executionOrder.IndexOf(taskBefore) < executionOrder.IndexOf(taskC));
     }
 
     [Fact]
     public void GetExecutionOrder_WithCircularDependency_ShouldThrowInvalidOperationException()
     {
-        var graph = new DependencyGraph<object>([
-            new(new CircularStepA(), typeof(CircularStepA).GetAllAssignableTypes()),
-            new(new CircularStepB(), typeof(CircularStepB).GetAllAssignableTypes())
+        var graph = new DependencyGraph<IStepNode>([
+            new CircularStepA(),
+            new CircularStepB()
         ]);
 
         var ex = Assert.Throws<InvalidOperationException>(() => graph.GetExecutionOrder());
         Assert.Contains("Circular dependency", ex.Message);
     }
-
-    [Fact]
-    public void GetExecutionOrder_WithMissingDependency_ShouldIgnoreMissingDependency()
-    {
-        var taskA = new StepA();
-        var taskWithMissingDep = new StepWithMissingDependency();
-        var graph = new DependencyGraph<object>([
-            new(taskWithMissingDep, typeof(StepWithMissingDependency).GetAllAssignableTypes()),
-            new(taskA, typeof(StepA).GetAllAssignableTypes())
-        ]);
-
-        var executionOrder = graph.GetExecutionOrder().Select(n => n.ExtraInfo).ToList();
-        Assert.Contains(taskA, executionOrder);
-        Assert.Contains(taskWithMissingDep, executionOrder);
-    }
-
 }

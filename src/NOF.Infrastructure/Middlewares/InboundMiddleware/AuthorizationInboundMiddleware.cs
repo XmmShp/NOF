@@ -4,9 +4,11 @@ using NOF.Hosting;
 namespace NOF.Infrastructure;
 
 public sealed class AuthorizationInboundMiddleware :
-    IRequestInboundMiddleware,
-    IAfter<TenantInboundMiddleware>
+    IRequestInboundMiddleware
 {
+    public TopologyComparison Compare(IRequestInboundMiddleware other)
+        => other is TenantInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+
     private readonly IReadOnlyList<IRequestAuthorizationPolicy> _authorizationPolicies;
 
     public AuthorizationInboundMiddleware(IEnumerable<IRequestAuthorizationPolicy> authorizationPolicies)

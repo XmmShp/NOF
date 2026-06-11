@@ -11,9 +11,17 @@ namespace NOF.Infrastructure;
 public sealed class ContextHeadersOutboundMiddleware :
     ICommandOutboundMiddleware,
     INotificationOutboundMiddleware,
-    IRequestOutboundMiddleware,
-    IBefore<MessageIdOutboundMiddleware>
+    IRequestOutboundMiddleware
 {
+    public TopologyComparison Compare(ICommandOutboundMiddleware other)
+        => other is MessageIdOutboundMiddleware ? TopologyComparison.Before : TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(INotificationOutboundMiddleware other)
+        => other is MessageIdOutboundMiddleware ? TopologyComparison.Before : TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(IRequestOutboundMiddleware other)
+        => other is MessageIdOutboundMiddleware ? TopologyComparison.Before : TopologyComparison.DoesNotMatter;
+
     public ValueTask InvokeAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
         context.CopyHeadersTo(context.Headers);

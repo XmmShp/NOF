@@ -4,8 +4,6 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 
 namespace NOF.Hosting;
 
@@ -26,7 +24,7 @@ namespace NOF.Hosting;
 /// </para>
 /// <para>
 /// Configuration units are executed in topological order based on declared dependencies
-/// (via <see cref="IAfter{T}"/>), enabling safe, composable module composition.
+/// (via <see cref="ITopologizable{TContract}"/>), enabling safe, composable module composition.
 /// </para>
 /// <para>
 /// Derived classes must implement <see cref="BuildApplicationAsync"/> to construct the concrete host using the configured service collection.
@@ -38,9 +36,9 @@ namespace NOF.Hosting;
 public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     where THostApplication : class, IHost
 {
-    protected readonly HashSet<DependencyNode> ServiceConfigs = [];
+    protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs = [];
 
-    protected readonly HashSet<DependencyNode> ApplicationConfigs = [];
+    protected readonly HashSet<IApplicationInitializationStep> ApplicationConfigs = [];
 
     public Registry Registry { get; } = new();
 
@@ -48,48 +46,36 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     {
     }
 
-    public virtual INOFAppBuilder AddRegistrationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep registrationStep, params Type[] allInterfaces)
-        where TStep : IServiceRegistrationStep
+    public virtual INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
     {
         ArgumentNullException.ThrowIfNull(registrationStep);
-        ArgumentNullException.ThrowIfNull(allInterfaces);
-
-        var interfaces = allInterfaces.Length == 0
-            ? typeof(TStep).GetAllAssignableTypes()
-            : allInterfaces;
-        ServiceConfigs.Add(new DependencyNode(registrationStep, interfaces));
+        ServiceConfigs.Add(registrationStep);
         return this;
     }
 
     public virtual INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        ServiceConfigs.RemoveWhere(node => predicate((IServiceRegistrationStep)node.ExtraInfo));
+        ServiceConfigs.RemoveWhere(node => predicate(node));
         return this;
     }
 
-    public virtual INOFAppBuilder AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep, params Type[] allInterfaces)
-        where TStep : IApplicationInitializationStep
+    public virtual INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
     {
         ArgumentNullException.ThrowIfNull(initializationStep);
-        ArgumentNullException.ThrowIfNull(allInterfaces);
-
-        var interfaces = allInterfaces.Length == 0
-            ? typeof(TStep).GetAllAssignableTypes()
-            : allInterfaces;
-        ApplicationConfigs.Add(new DependencyNode(initializationStep, interfaces));
+        ApplicationConfigs.Add(initializationStep);
         return this;
     }
 
     public virtual INOFAppBuilder RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        ApplicationConfigs.RemoveWhere(node => predicate((IApplicationInitializationStep)node.ExtraInfo));
+        ApplicationConfigs.RemoveWhere(node => predicate(node));
         return this;
     }
 
-    IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TStep>(TStep initializationStep, params Type[] allInterfaces)
-        => AddInitializationStep(initializationStep, allInterfaces);
+    IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
+        => AddInitializationStep(initializationStep);
 
     IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
         => RemoveInitializationStep(predicate);
@@ -99,18 +85,16 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
         AddRegistrationStep(new AutoInjectServiceRegistrationStep());
         this.AddHostingDefaults();
         var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
-        foreach (var node in regGraph.GetExecutionOrder())
+        foreach (var task in regGraph.GetExecutionOrder())
         {
-            var task = (IServiceRegistrationStep)node.ExtraInfo;
             await task.ExecuteAsync(this).ConfigureAwait(false);
         }
 
         var app = await BuildApplicationAsync();
 
         var startGraph = new DependencyGraph<IApplicationInitializationStep>(ApplicationConfigs);
-        foreach (var node in startGraph.GetExecutionOrder())
+        foreach (var task in startGraph.GetExecutionOrder())
         {
-            var task = (IApplicationInitializationStep)node.ExtraInfo;
             await task.ExecuteAsync(app).ConfigureAwait(false);
         }
 

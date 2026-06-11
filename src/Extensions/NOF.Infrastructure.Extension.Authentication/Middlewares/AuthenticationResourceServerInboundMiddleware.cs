@@ -11,10 +11,16 @@ using NOF.Application;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 
-public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInboundMiddleware,
-    IAfter<InboundExceptionMiddleware>,
-    IBefore<TenantInboundMiddleware>
+public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInboundMiddleware
 {
+    public TopologyComparison Compare(IRequestInboundMiddleware other)
+        => other switch
+        {
+            InboundExceptionMiddleware => TopologyComparison.After,
+            TenantInboundMiddleware => TopologyComparison.Before,
+            _ => TopologyComparison.DoesNotMatter
+        };
+
     private readonly IUserContext _userContext;
     private readonly ResourceServerJwksCacheService _jwksCacheService;
     private readonly AuthenticationResourceServerOptions _jwtOptions;

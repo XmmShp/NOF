@@ -7,6 +7,8 @@ namespace NOF.Infrastructure.Extension.Authentication;
 
 public sealed class RevokedRefreshTokenPersistenceRegistrationStep : IServiceRegistrationStep
 {
+    public TopologyComparison Compare(IServiceRegistrationStep other) => TopologyComparison.DoesNotMatter;
+
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         builder.Services.TryAddScoped<IRevokedRefreshTokenRepository, PersistenceRevokedRefreshTokenRepository>();

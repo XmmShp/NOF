@@ -11,7 +11,7 @@ public sealed class RequestOutboundPipelineExecutor
     {
         _middlewareTypes = middlewareTypes;
         _services = services;
-        _middlewareTypes.Freeze();
+        _middlewareTypes.Freeze(services);
     }
 
     public ValueTask ExecuteAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)

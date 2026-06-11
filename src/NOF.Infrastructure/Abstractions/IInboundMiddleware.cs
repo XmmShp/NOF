@@ -1,4 +1,5 @@
 using NOF.Contract;
+using NOF.Hosting;
 using System.ComponentModel;
 
 namespace NOF.Infrastructure;
@@ -21,18 +22,18 @@ public delegate ValueTask RequestHandlerDelegate(
     object request,
     CancellationToken cancellationToken);
 
-public interface ICommandInboundMiddleware
+public interface ICommandInboundMiddleware : ITopologizable<ICommandInboundMiddleware>
 {
     ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken);
 }
 
-public interface INotificationInboundMiddleware
+public interface INotificationInboundMiddleware : ITopologizable<INotificationInboundMiddleware>
 {
     ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken);
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRequestInboundMiddleware
+public interface IRequestInboundMiddleware : ITopologizable<IRequestInboundMiddleware>
 {
     ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken);
 }

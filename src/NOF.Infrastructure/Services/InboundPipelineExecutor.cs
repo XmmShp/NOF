@@ -24,7 +24,6 @@ public sealed class CommandInboundPipelineExecutor
         _scopeFactory = scopeFactory;
         _serializer = serializer;
         _typeResolver = typeResolver;
-        _middlewareTypes.Freeze();
     }
 
     public async ValueTask ExecuteAsync(
@@ -35,6 +34,7 @@ public sealed class CommandInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        _middlewareTypes.Freeze(scope.ServiceProvider);
         var messageType = _typeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
@@ -128,7 +128,6 @@ public sealed class NotificationInboundPipelineExecutor
         _scopeFactory = scopeFactory;
         _serializer = serializer;
         _typeResolver = typeResolver;
-        _middlewareTypes.Freeze();
     }
 
     public async ValueTask ExecuteAsync(
@@ -139,6 +138,7 @@ public sealed class NotificationInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        _middlewareTypes.Freeze(scope.ServiceProvider);
         var messageType = _typeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
@@ -224,7 +224,6 @@ public sealed class RequestInboundPipelineExecutor
     {
         _middlewareTypes = middlewareTypes;
         _scopeFactory = scopeFactory;
-        _middlewareTypes.Freeze();
     }
 
     public async ValueTask<IRpcResult?> ExecuteAsync(
@@ -236,6 +235,7 @@ public sealed class RequestInboundPipelineExecutor
         CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
+        _middlewareTypes.Freeze(scope.ServiceProvider);
         var context = CreateContext(request, handlerType, serviceType, methodName, headers);
         RequestHandlerDelegate terminal = (currentContext, currentRequest, ct)
             => ExecuteRequestHandlerAsync(scope.ServiceProvider, handlerType, currentContext, currentRequest, ct);

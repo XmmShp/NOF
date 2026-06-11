@@ -7,6 +7,12 @@ namespace NOF.Infrastructure;
 
 public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INotificationOutboundMiddleware, IRequestOutboundMiddleware
 {
+    public TopologyComparison Compare(ICommandOutboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(INotificationOutboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(IRequestOutboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
     private readonly IHostEnvironment _hostEnvironment;
 
     public TracingOutboundMiddleware(IHostEnvironment hostEnvironment)

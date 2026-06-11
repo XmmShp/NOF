@@ -12,7 +12,7 @@ public sealed class CommandOutboundPipelineExecutor
     {
         _middlewareTypes = middlewareTypes;
         _services = services;
-        _middlewareTypes.Freeze();
+        _middlewareTypes.Freeze(services);
     }
 
     public ValueTask ExecuteAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)
@@ -39,7 +39,7 @@ public sealed class NotificationOutboundPipelineExecutor
     {
         _middlewareTypes = middlewareTypes;
         _services = services;
-        _middlewareTypes.Freeze();
+        _middlewareTypes.Freeze(services);
     }
 
     public ValueTask ExecuteAsync(NotificationOutboundContext context, object message, NotificationOutboundHandlerDelegate dispatch, CancellationToken cancellationToken)

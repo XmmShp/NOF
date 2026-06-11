@@ -8,6 +8,12 @@ namespace NOF.Infrastructure;
 
 public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INotificationInboundMiddleware, IRequestInboundMiddleware
 {
+    public TopologyComparison Compare(ICommandInboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(INotificationInboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(IRequestInboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
     private readonly ILogger<InboundExceptionMiddleware> _logger;
 
     public InboundExceptionMiddleware(ILogger<InboundExceptionMiddleware> logger)

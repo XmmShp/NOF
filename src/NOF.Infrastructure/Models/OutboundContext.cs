@@ -65,7 +65,7 @@ public sealed class CommandOutboundPipelineTypes
         where TMiddleware : class, ICommandOutboundMiddleware
         => _inner.Add<TMiddleware>();
 
-    public void Freeze() => _inner.Freeze();
+    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }
 
 public sealed class NotificationOutboundPipelineTypes
@@ -80,5 +80,5 @@ public sealed class NotificationOutboundPipelineTypes
         where TMiddleware : class, INotificationOutboundMiddleware
         => _inner.Add<TMiddleware>();
 
-    public void Freeze() => _inner.Freeze();
+    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }

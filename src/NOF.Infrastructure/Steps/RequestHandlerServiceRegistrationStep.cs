@@ -7,8 +7,11 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Registers RPC request handlers discovered by source generators as transient services.
 /// </summary>
-public sealed class RequestHandlerServiceRegistrationStep : IDependentServiceRegistrationStep
+public sealed class RequestHandlerServiceRegistrationStep : IServiceRegistrationStep
 {
+    public TopologyComparison Compare(IServiceRegistrationStep other)
+        => other is OpenTelemetryRegistrationStep ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         foreach (var registration in builder.Registry.RequestHandlerRegistry.Freeze())

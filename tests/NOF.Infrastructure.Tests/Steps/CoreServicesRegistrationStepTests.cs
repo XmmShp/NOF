@@ -137,7 +137,7 @@ public class InfrastructureDefaultsTests
 
         builder.UseDbContext<NOFDbContext>().MigrateOnInitialize();
 
-        Assert.Contains(builder.InitializationSteps, step => step is IDatabaseMigrationInitializationStep);
+        Assert.Contains(builder.InitializationSteps, step => step is DbContextMigrationInitializationStep);
     }
 
     [Fact]
@@ -250,8 +250,7 @@ public class InfrastructureDefaultsTests
             _registry = other._registry;
         }
 
-        public INOFAppBuilder AddRegistrationStep<TStep>(TStep registrationStep, params Type[] allInterfaces)
-            where TStep : IServiceRegistrationStep
+        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
         {
             _registrationSteps.Add(registrationStep);
             return this;
@@ -263,8 +262,7 @@ public class InfrastructureDefaultsTests
             return this;
         }
 
-        public INOFAppBuilder AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
-            where TStep : IApplicationInitializationStep
+        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
         {
             _initializationSteps.Add(initializationStep);
             return this;
@@ -276,8 +274,8 @@ public class InfrastructureDefaultsTests
             return this;
         }
 
-        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
-            => AddInitializationStep(initializationStep, allInterfaces);
+        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
+            => AddInitializationStep(initializationStep);
 
         IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
             => RemoveInitializationStep(predicate);

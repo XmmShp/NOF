@@ -4,6 +4,8 @@ namespace NOF.Infrastructure;
 
 public class ServiceRegistrationStep : IServiceRegistrationStep
 {
+    public TopologyComparison Compare(IServiceRegistrationStep other) => TopologyComparison.DoesNotMatter;
+
     private readonly Func<IServiceRegistrationContext, ValueTask> _configurator;
 
     public ServiceRegistrationStep(Func<IServiceRegistrationContext, ValueTask> configurator)
@@ -15,4 +17,3 @@ public class ServiceRegistrationStep : IServiceRegistrationStep
         return _configurator(builder);
     }
 }
-

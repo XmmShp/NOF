@@ -15,12 +15,12 @@ public delegate ValueTask NotificationOutboundHandlerDelegate(
     object message,
     CancellationToken cancellationToken);
 
-public interface ICommandOutboundMiddleware
+public interface ICommandOutboundMiddleware : ITopologizable<ICommandOutboundMiddleware>
 {
     ValueTask InvokeAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate next, CancellationToken cancellationToken);
 }
 
-public interface INotificationOutboundMiddleware
+public interface INotificationOutboundMiddleware : ITopologizable<INotificationOutboundMiddleware>
 {
     ValueTask InvokeAsync(NotificationOutboundContext context, object message, NotificationOutboundHandlerDelegate next, CancellationToken cancellationToken);
 }

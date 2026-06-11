@@ -6,8 +6,11 @@ using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore;
 
-public class CorsInitializationStep : ISecurityInitializationStep
+public class CorsInitializationStep : IApplicationInitializationStep
 {
+    public TopologyComparison Compare(IApplicationInitializationStep other)
+        => TopologyComparison.DoesNotMatter;
+
     public Task ExecuteAsync(IHost app)
     {
         if (app is IApplicationBuilder actualApp)

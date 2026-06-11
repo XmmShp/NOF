@@ -50,5 +50,5 @@ public sealed class RequestOutboundPipelineTypes
         where TMiddleware : class, IRequestOutboundMiddleware
         => _inner.Add<TMiddleware>();
 
-    public void Freeze() => _inner.Freeze();
+    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }

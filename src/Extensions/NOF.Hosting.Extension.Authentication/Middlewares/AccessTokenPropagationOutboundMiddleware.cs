@@ -5,6 +5,8 @@ namespace NOF.Hosting.Extension.Authentication;
 /// <summary>Propagates access tokens to outbound RPC requests.</summary>
 public sealed class AccessTokenPropagationOutboundMiddleware : IRequestOutboundMiddleware
 {
+    public TopologyComparison Compare(IRequestOutboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
     private readonly IUserContext _userContext;
 
     public AccessTokenPropagationOutboundMiddleware(IUserContext userContext)

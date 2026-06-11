@@ -9,7 +9,7 @@ public delegate ValueTask RequestOutboundHandlerDelegate(
     CancellationToken cancellationToken);
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public interface IRequestOutboundMiddleware
+public interface IRequestOutboundMiddleware : ITopologizable<IRequestOutboundMiddleware>
 {
     ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken);
 }

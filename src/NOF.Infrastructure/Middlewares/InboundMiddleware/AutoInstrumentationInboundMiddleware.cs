@@ -10,9 +10,17 @@ namespace NOF.Infrastructure;
 public sealed class AutoInstrumentationInboundMiddleware :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
-    IRequestInboundMiddleware,
-    IAfter<TracingInboundMiddleware>
+    IRequestInboundMiddleware
 {
+    public TopologyComparison Compare(ICommandInboundMiddleware other)
+        => other is TracingInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(INotificationInboundMiddleware other)
+        => other is TracingInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+
+    public TopologyComparison Compare(IRequestInboundMiddleware other)
+        => other is TracingInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+
     private static readonly Counter<long> _executionCounter = NOFInfrastructureConstants.InboundPipeline.Meter.CreateCounter<long>(
         NOFInfrastructureConstants.InboundPipeline.Metrics.ExecutionCounter,
         description: NOFInfrastructureConstants.InboundPipeline.MetricDescriptions.ExecutionCounter);

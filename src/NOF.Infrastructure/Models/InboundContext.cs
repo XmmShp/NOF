@@ -118,7 +118,7 @@ public sealed class CommandInboundPipelineTypes
         where TMiddleware : class, ICommandInboundMiddleware
         => _inner.Add<TMiddleware>();
 
-    public void Freeze() => _inner.Freeze();
+    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }
 
 public sealed class NotificationInboundPipelineTypes
@@ -133,7 +133,7 @@ public sealed class NotificationInboundPipelineTypes
         where TMiddleware : class, INotificationInboundMiddleware
         => _inner.Add<TMiddleware>();
 
-    public void Freeze() => _inner.Freeze();
+    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }
 
 public sealed class RequestInboundPipelineTypes
@@ -148,5 +148,5 @@ public sealed class RequestInboundPipelineTypes
         where TMiddleware : class, IRequestInboundMiddleware
         => _inner.Add<TMiddleware>();
 
-    public void Freeze() => _inner.Freeze();
+    public void Freeze(IServiceProvider services) => _inner.Freeze(services);
 }

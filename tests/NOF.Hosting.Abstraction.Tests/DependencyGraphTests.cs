@@ -3,32 +3,63 @@ using Xunit;
 
 namespace NOF.Hosting.Abstraction.Tests;
 
-public interface IConcernA;
-public interface IConcernB;
+public interface IConcernNode : ITopologizable<IConcernNode>;
 
-public class ConcernAProvider : IConcernA;
-public class ConcernBIrrelevant : IConcernB, IAfter<IConcernA>;
-public class ConcernAFollowerWithOtherConcernDependency : IConcernA, IAfter<IConcernB>;
+public class ConcernAProvider : IConcernNode
+{
+    public TopologyComparison Compare(IConcernNode other) => TopologyComparison.DoesNotMatter;
+}
+
+public class ConcernBAfterA : IConcernNode
+{
+    public TopologyComparison Compare(IConcernNode other)
+        => other is ConcernAProvider ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+}
+
+public class ConcernCAfterB : IConcernNode
+{
+    public TopologyComparison Compare(IConcernNode other)
+        => other is ConcernBAfterA ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+}
 
 public class DependencyGraphTests
 {
     [Fact]
-    public void GetExecutionOrder_WithDifferentConcernTypes_ShouldIgnoreNonFocusedContracts()
+    public void GetExecutionOrder_WithUnrelatedNodes_ShouldIncludeAllNodes()
     {
-        var provider = new ConcernAProvider();
-        var irrelevant = new ConcernBIrrelevant();
-        var follower = new ConcernAFollowerWithOtherConcernDependency();
+        var first = new ConcernAProvider();
+        var second = new ConcernAProvider();
+        var third = new ConcernAProvider();
 
-        var graph = new DependencyGraph<IConcernA>([
-            new(provider, typeof(ConcernAProvider).GetAllAssignableTypes()),
-            new(irrelevant, typeof(ConcernBIrrelevant).GetAllAssignableTypes()),
-            new(follower, typeof(ConcernAFollowerWithOtherConcernDependency).GetAllAssignableTypes())
+        var graph = new DependencyGraph<IConcernNode>([
+            first,
+            second,
+            third
         ]);
 
-        var executionOrder = graph.GetExecutionOrder().Select(n => n.ExtraInfo).ToList();
+        var executionOrder = graph.GetExecutionOrder().ToList();
 
-        Assert.Contains(provider, executionOrder);
-        Assert.Contains(irrelevant, executionOrder);
-        Assert.Contains(follower, executionOrder);
+        Assert.Contains(first, executionOrder);
+        Assert.Contains(second, executionOrder);
+        Assert.Contains(third, executionOrder);
+    }
+
+    [Fact]
+    public void GetExecutionOrder_WithInstanceComparisons_ShouldHonorPartialOrder()
+    {
+        var provider = new ConcernAProvider();
+        var middle = new ConcernBAfterA();
+        var follower = new ConcernCAfterB();
+
+        var graph = new DependencyGraph<IConcernNode>([
+            follower,
+            middle,
+            provider
+        ]);
+
+        var executionOrder = graph.GetExecutionOrder().ToList();
+
+        Assert.True(executionOrder.IndexOf(provider) < executionOrder.IndexOf(middle));
+        Assert.True(executionOrder.IndexOf(middle) < executionOrder.IndexOf(follower));
     }
 }

@@ -6,10 +6,13 @@ namespace NOF.Infrastructure;
 
 /// <summary>
 /// Registers keyed transient services for all handler registries collected during base registration.
-/// Runs after all <see cref="IBaseSettingsServiceRegistrationStep"/>s so that handler registries are finalized.
+/// Runs after framework-host base registrations so handler registries are finalized.
 /// </summary>
-public class HandlerServiceRegistrationStep : IDependentServiceRegistrationStep
+public class HandlerServiceRegistrationStep : IServiceRegistrationStep
 {
+    public TopologyComparison Compare(IServiceRegistrationStep other)
+        => other is OpenTelemetryRegistrationStep ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
         var registry = builder.Registry;

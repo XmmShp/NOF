@@ -2231,8 +2231,7 @@ public class SqliteInMemoryPersistenceTests
             _registry = new Registry();
         }
 
-        public INOFAppBuilder AddRegistrationStep<TStep>(TStep registrationStep, params Type[] allInterfaces)
-            where TStep : IServiceRegistrationStep
+        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
         {
             _registrationSteps.Add(registrationStep);
             return this;
@@ -2244,8 +2243,7 @@ public class SqliteInMemoryPersistenceTests
             return this;
         }
 
-        public INOFAppBuilder AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
-            where TStep : IApplicationInitializationStep
+        public INOFAppBuilder AddInitializationStep(IApplicationInitializationStep initializationStep)
         {
             _initializationSteps.Add(initializationStep);
             return this;
@@ -2257,8 +2255,8 @@ public class SqliteInMemoryPersistenceTests
             return this;
         }
 
-        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep<TStep>(TStep initializationStep, params Type[] allInterfaces)
-            => AddInitializationStep(initializationStep, allInterfaces);
+        IServiceRegistrationContext IServiceRegistrationContext.AddInitializationStep(IApplicationInitializationStep initializationStep)
+            => AddInitializationStep(initializationStep);
 
         IServiceRegistrationContext IServiceRegistrationContext.RemoveInitializationStep(Predicate<IApplicationInitializationStep> predicate)
             => RemoveInitializationStep(predicate);
