@@ -14,7 +14,7 @@ public sealed class AuthorizationInboundMiddleware :
         _authorizationPolicies = [.. authorizationPolicies];
     }
 
-    public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
         IResult? firstFailure = null;
 
@@ -23,7 +23,7 @@ public sealed class AuthorizationInboundMiddleware :
             var authorizationResult = await authorizationPolicy.AuthorizeAsync(context, cancellationToken);
             if (authorizationResult is null)
             {
-                await next(cancellationToken);
+                await next(context, request, cancellationToken);
                 return;
             }
 
@@ -36,6 +36,6 @@ public sealed class AuthorizationInboundMiddleware :
             return;
         }
 
-        await next(cancellationToken);
+        await next(context, request, cancellationToken);
     }
 }

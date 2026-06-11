@@ -34,12 +34,13 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
         var tokenSources = GetTokenSources();
+        var executionContext = context;
         if (tokenSources.Count == 0)
         {
-            await next(cancellationToken);
+            await next(executionContext, request, cancellationToken);
             return;
         }
 
@@ -47,7 +48,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
         {
             foreach (var source in tokenSources)
             {
-                if (!TryGetToken(context.Context, source, out var token))
+                if (!TryGetToken(executionContext, source, out var token))
                 {
                     continue;
                 }
@@ -85,7 +86,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
                             identity,
                             token,
                             downstreamPropagation: source.DownstreamPropagation));
-                    context.Context = context.Context.WithoutHeader(source.HeaderName);
+                    executionContext = (RequestInboundContext)executionContext.WithoutHeader(source.HeaderName);
                 }
                 catch (SecurityTokenExpiredException)
                 {
@@ -102,7 +103,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
             _logger.LogWarning(ex, "Unexpected error during access token validation");
         }
 
-        await next(cancellationToken);
+        await next(executionContext, request, cancellationToken);
     }
 
     private List<AuthenticationTokenSourceOptions> GetTokenSources()

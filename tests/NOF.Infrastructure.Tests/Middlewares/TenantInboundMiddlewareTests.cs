@@ -11,29 +11,50 @@ public class TenantInboundMiddlewareTests
     public async Task InvokeAsync_WithoutIncomingTenantHeader_ShouldUseHostTenant()
     {
         var middleware = new TenantInboundMiddleware();
-        var inboundContext = CreateContext();
+        var message = new object();
+        var inboundContext = CreateContext(message.GetType());
+        var forwardedContext = Context.Empty;
 
-        await middleware.InvokeAsync(inboundContext, _ => ValueTask.CompletedTask, default);
-        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, inboundContext.Context.TenantId);
+        await middleware.InvokeAsync(inboundContext, message, CaptureNextContext, default);
+        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, forwardedContext.TenantId);
+
+        ValueTask CaptureNextContext(CommandInboundContext context, object forwardedMessage, CancellationToken cancellationToken)
+        {
+            _ = forwardedMessage;
+            _ = cancellationToken;
+            forwardedContext = context;
+            return ValueTask.CompletedTask;
+        }
     }
 
     [Fact]
     public async Task InvokeAsync_WithIncomingTenantHeader_ShouldUseIncomingTenantHeader()
     {
         var middleware = new TenantInboundMiddleware();
-        var inboundContext = CreateContext(Context.Empty.WithHeader(NOFAbstractionConstants.Transport.Headers.TenantId, "tenanta"));
+        var message = new object();
+        var inboundContext = (CommandInboundContext)CreateContext(message.GetType())
+            .WithHeader(NOFAbstractionConstants.Transport.Headers.TenantId, "tenanta");
+        var forwardedContext = Context.Empty;
 
-        await middleware.InvokeAsync(inboundContext, _ => ValueTask.CompletedTask, default);
-        Assert.Equal("tenanta", inboundContext.Context.TenantId);
+        await middleware.InvokeAsync(inboundContext, message, CaptureNextContext, default);
+        Assert.Equal("tenanta", forwardedContext.TenantId);
+
+        ValueTask CaptureNextContext(CommandInboundContext context, object forwardedMessage, CancellationToken cancellationToken)
+        {
+            _ = forwardedMessage;
+            _ = cancellationToken;
+            forwardedContext = context;
+            return ValueTask.CompletedTask;
+        }
     }
 
-    private static CommandInboundContext CreateContext(Context? context = null)
+    private static CommandInboundContext CreateContext(Type messageType)
     {
         return new CommandInboundContext
         {
-            Context = context ?? Context.Empty,
-            Message = new object(),
-            HandlerType = typeof(object)
+            MethodInfo = typeof(object).GetMethod(nameof(ToString))!,
+            HandlerType = typeof(object),
+            MessageType = messageType
         };
     }
 }

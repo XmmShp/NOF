@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
 using NOF.Annotation;
 using NOF.Contract;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 
 namespace NOF.Infrastructure;
 
@@ -25,14 +23,15 @@ public sealed class MetadataRequestAuthorizationPolicy : IRequestAuthorizationPo
 
     public ValueTask<IResult?> AuthorizeAsync(RequestInboundContext context, CancellationToken cancellationToken)
     {
-        var permission = GetApiPermission(context.ServiceType, context.MethodName);
+        _ = cancellationToken;
+        var permission = GetApiPermission(context.Metadata);
         if (permission is null)
         {
             return ValueTask.FromResult<IResult?>(null);
         }
 
         var handlerName = context.HandlerType.DisplayName;
-        var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
+        var requestName = $"{context.ServiceType.DisplayName}.{context.ServiceMethodInfo.Name}";
 
         if (!_userContext.User.IsAuthenticated)
         {
@@ -52,62 +51,20 @@ public sealed class MetadataRequestAuthorizationPolicy : IRequestAuthorizationPo
         return ValueTask.FromResult<IResult?>(null);
     }
 
-    private static string? GetApiPermission([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType, string methodName)
+    private static string? GetApiPermission(IEnumerable<object> metadata)
     {
-        var method = serviceType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-        if (TryGetApiPermissionValue(method, out var methodPermission))
-        {
-            return methodPermission;
-        }
-
-        if (TryGetApiPermissionValue(serviceType, out var servicePermission))
-        {
-            return servicePermission;
-        }
-
-        return null;
-    }
-
-    private static bool TryGetApiPermissionValue(MemberInfo? member, out string? permission)
-    {
-        permission = null;
-        if (member is null)
-        {
-            return false;
-        }
-
-        var attr = member
-            .GetCustomAttributes(true)
+        var attr = metadata
             .OfType<MetadataAttribute>()
             .LastOrDefault(a => string.Equals(a.Key, RequirePermissionAttribute.MetadataKey, StringComparison.OrdinalIgnoreCase));
 
         if (attr is null)
         {
-            return false;
+            return null;
         }
 
         // null  => allow anonymous
         // ""    => require authentication only
         // "xxx" => require permission
-        permission = attr.Value;
-        return true;
-    }
-
-    private static bool TryGetApiPermissionValue(Type type, out string? permission)
-    {
-        permission = null;
-
-        var attr = type
-            .GetCustomAttributes(true)
-            .OfType<MetadataAttribute>()
-            .LastOrDefault(a => string.Equals(a.Key, RequirePermissionAttribute.MetadataKey, StringComparison.OrdinalIgnoreCase));
-
-        if (attr is null)
-        {
-            return false;
-        }
-
-        permission = attr.Value;
-        return true;
+        return attr.Value;
     }
 }

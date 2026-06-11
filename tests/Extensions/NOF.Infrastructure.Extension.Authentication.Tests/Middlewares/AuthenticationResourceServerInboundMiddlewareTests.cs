@@ -17,17 +17,25 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
         var middleware = CreateMiddleware(userContext, jwksService);
-        var inboundContext = CreateInboundContext();
+        var inboundMetadata = CreateInboundMetadata();
+        var request = new object();
+        var forwardedContext = Context.Empty;
 
         var nextCalled = false;
-        await middleware.InvokeAsync(inboundContext, _ =>
-        {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
+        await middleware.InvokeAsync(inboundMetadata, request, CaptureNextContext, default);
+
         Assert.True(nextCalled);
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
+
+        ValueTask CaptureNextContext(RequestInboundContext context, object forwardedRequest, CancellationToken cancellationToken)
+        {
+            _ = forwardedRequest;
+            _ = cancellationToken;
+            nextCalled = true;
+            forwardedContext = context;
+            return ValueTask.CompletedTask;
+        }
     }
 
     [Fact]
@@ -36,19 +44,28 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
         var middleware = CreateMiddleware(userContext, jwksService);
-        var inboundContext = CreateInboundContext(
-            Context.Empty.WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token"));
+        var inboundMetadata = CreateInboundMetadata();
+        var request = new object();
+        var executionContext = (RequestInboundContext)inboundMetadata
+            .WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
+        var forwardedContext = Context.Empty;
 
         var nextCalled = false;
-        await middleware.InvokeAsync(inboundContext, _ =>
-        {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
+        await middleware.InvokeAsync(executionContext, request, CaptureNextContext, default);
+
         Assert.True(nextCalled);
-        Assert.True(inboundContext.Context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, out _));
+        Assert.True(forwardedContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.Authorization, out _));
         Assert.NotNull(userContext.User);
         Assert.False(userContext.User.IsAuthenticated);
+
+        ValueTask CaptureNextContext(RequestInboundContext context, object forwardedRequest, CancellationToken cancellationToken)
+        {
+            _ = forwardedRequest;
+            _ = cancellationToken;
+            nextCalled = true;
+            forwardedContext = context;
+            return ValueTask.CompletedTask;
+        }
     }
 
     [Fact]
@@ -65,13 +82,15 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         };
         var jwksService = CreateJwksService([key]);
         var middleware = CreateMiddleware(userContext, jwksService);
-        var inboundContext = CreateInboundContext(
-            Context.Empty.WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt"));
+        var inboundMetadata = CreateInboundMetadata();
+        var request = new object();
+        var executionContext = (RequestInboundContext)inboundMetadata
+            .WithHeader(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
 
         var nextCalled = false;
         async Task Act()
         {
-            await middleware.InvokeAsync(inboundContext, _ =>
+            await middleware.InvokeAsync(executionContext, request, (_, _, _) =>
             {
                 nextCalled = true;
                 return ValueTask.CompletedTask;
@@ -119,16 +138,18 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             TimeProvider.System);
     }
 
-    private static RequestInboundContext CreateInboundContext(Context? context = null)
+    private static RequestInboundContext CreateInboundMetadata()
     {
+        var serviceMethod = typeof(object).GetMethod(nameof(ToString))!;
         return new RequestInboundContext
         {
-            Context = context ?? Context.Empty,
-            Message = new object(),
-            HandlerType = typeof(object),
-            ResponseType = typeof(Result),
             ServiceType = typeof(object),
-            MethodName = nameof(ToString)
+            ServiceMethodInfo = serviceMethod,
+            HandlerType = typeof(object),
+            HandlerMethodInfo = serviceMethod,
+            RequestType = typeof(object),
+            ResponseType = typeof(Result),
+            Metadata = serviceMethod.GetCustomAttributes(inherit: true).ToArray()
         };
     }
 

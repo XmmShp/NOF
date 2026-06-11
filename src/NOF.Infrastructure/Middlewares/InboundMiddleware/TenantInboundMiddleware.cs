@@ -12,40 +12,32 @@ public sealed class TenantInboundMiddleware :
     IRequestInboundMiddleware,
     IAfter<InboundExceptionMiddleware>
 {
-    public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken)
     {
-        ApplyTenant(context);
-        await next(cancellationToken);
+        var executionContext = ApplyTenant(context);
+        await next(executionContext, message, cancellationToken);
     }
 
-    public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
     {
-        ApplyTenant(context);
-        await next(cancellationToken);
+        var executionContext = ApplyTenant(context);
+        await next(executionContext, message, cancellationToken);
     }
 
-    public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
-        ApplyTenant(context);
-        await next(cancellationToken);
+        var executionContext = ApplyTenant(context);
+        await next(executionContext, request, cancellationToken);
     }
 
-    private static void ApplyTenant(CommandInboundContext context)
-        => context.Context = ApplyTenant(context.Context);
-
-    private static void ApplyTenant(NotificationInboundContext context)
-        => context.Context = ApplyTenant(context.Context);
-
-    private static void ApplyTenant(RequestInboundContext context)
-        => context.Context = ApplyTenant(context.Context);
-
-    private static Context ApplyTenant(Context context)
+    private static TContext ApplyTenant<TContext>(TContext context)
+        where TContext : Context
     {
         var tenantId = context.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
             ? TenantId.Normalize(headerTenantId)
             : NOFAbstractionConstants.Tenant.HostId;
 
-        context = context.WithTenantId(tenantId);
+        context = (TContext)context.WithTenantId(tenantId);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
         return context;
     }

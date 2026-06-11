@@ -5,17 +5,22 @@ namespace NOF.Contract;
 /// <summary>
 /// Immutable execution context passed explicitly across RPC boundaries.
 /// </summary>
-public sealed class Context
+public class Context
 {
     private static readonly IReadOnlyDictionary<object, object?> EmptyItems =
         new ReadOnlyDictionary<object, object?>(new Dictionary<object, object?>());
 
-    private Context(IReadOnlyDictionary<object, object?> items)
+    protected Context()
+        : this(EmptyItems)
+    {
+    }
+
+    protected Context(IReadOnlyDictionary<object, object?> items)
     {
         Items = items;
     }
 
-    public static Context Empty { get; } = new(EmptyItems);
+    public static Context Empty { get; } = new();
 
     public static Context FromItems(IReadOnlyDictionary<object, object?> items)
     {
@@ -26,8 +31,7 @@ public sealed class Context
             return Empty;
         }
 
-        return new Context(new ReadOnlyDictionary<object, object?>(
-            new Dictionary<object, object?>(items)));
+        return new Context(CreateReadOnlyItems(items));
     }
 
     public IReadOnlyDictionary<object, object?> Items { get; }
@@ -51,7 +55,7 @@ public sealed class Context
         {
             [key] = value
         };
-        return FromItems(items);
+        return Clone(CreateReadOnlyItems(items));
     }
 
     public Context WithoutItem(object key)
@@ -64,6 +68,20 @@ public sealed class Context
 
         var items = new Dictionary<object, object?>(Items);
         items.Remove(key);
-        return FromItems(items);
+        return Clone(CreateReadOnlyItems(items));
+    }
+
+    protected virtual Context Clone(IReadOnlyDictionary<object, object?> items)
+        => new(items);
+
+    private static IReadOnlyDictionary<object, object?> CreateReadOnlyItems(IReadOnlyDictionary<object, object?> items)
+    {
+        if (items.Count == 0)
+        {
+            return EmptyItems;
+        }
+
+        return new ReadOnlyDictionary<object, object?>(
+            new Dictionary<object, object?>(items));
     }
 }

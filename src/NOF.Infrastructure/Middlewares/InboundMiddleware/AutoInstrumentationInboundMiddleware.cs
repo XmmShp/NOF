@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
+using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -32,9 +33,9 @@ public sealed class AutoInstrumentationInboundMiddleware :
         _logger = logger;
     }
 
-    public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageName = context.Message.GetType().DisplayName;
+        var messageName = context.MessageType.DisplayName;
         var tags = new KeyValuePair<string, object?>[]
         {
             new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName),
@@ -46,7 +47,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
 
         try
         {
-            await next(cancellationToken);
+            await next(context, message, cancellationToken);
 
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
@@ -65,9 +66,9 @@ public sealed class AutoInstrumentationInboundMiddleware :
         }
     }
 
-    public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageName = context.Message.GetType().DisplayName;
+        var messageName = context.MessageType.DisplayName;
         var tags = new KeyValuePair<string, object?>[]
         {
             new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName),
@@ -79,7 +80,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
 
         try
         {
-            await next(cancellationToken);
+            await next(context, message, cancellationToken);
 
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;
@@ -98,9 +99,9 @@ public sealed class AutoInstrumentationInboundMiddleware :
         }
     }
 
-    public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var messageName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
+        var messageName = $"{context.ServiceType.DisplayName}.{context.ServiceMethodInfo.Name}";
         var tags = new KeyValuePair<string, object?>[]
         {
             new(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName),
@@ -112,7 +113,7 @@ public sealed class AutoInstrumentationInboundMiddleware :
 
         try
         {
-            await next(cancellationToken);
+            await next(context, request, cancellationToken);
 
             stopwatch.Stop();
             var durationMs = stopwatch.Elapsed.TotalMilliseconds;

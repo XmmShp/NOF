@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using NOF.Abstraction;
+using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 using NOF.Application;
@@ -19,24 +20,24 @@ public sealed class TracingInboundMiddleware :
         _hostEnvironment = hostEnvironment;
     }
 
-    public async ValueTask InvokeAsync(CommandInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = context.Context;
+        var executionContext = context;
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         using var activity = CreateCommandActivity(context, traceId, spanId, _hostEnvironment);
 
-        context.Context = executionContext
+        executionContext = (CommandInboundContext)executionContext
             .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
             .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().DisplayName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageType.DisplayName);
 
         try
         {
-            await next(cancellationToken);
+            await next(executionContext, message, cancellationToken);
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (Exception ex)
@@ -56,7 +57,7 @@ public sealed class TracingInboundMiddleware :
             ? new TracingInfo(traceId, spanId)
             : null;
         var handlerName = context.HandlerType.DisplayName;
-        var messageName = context.Message.GetType().DisplayName;
+        var messageName = context.MessageType.DisplayName;
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
@@ -64,24 +65,24 @@ public sealed class TracingInboundMiddleware :
             hostEnvironment);
     }
 
-    public async ValueTask InvokeAsync(NotificationInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = context.Context;
+        var executionContext = context;
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         using var activity = CreateNotificationActivity(context, traceId, spanId, _hostEnvironment);
 
-        context.Context = executionContext
+        executionContext = (NotificationInboundContext)executionContext
             .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
             .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.Message.GetType().DisplayName);
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, context.MessageType.DisplayName);
 
         try
         {
-            await next(cancellationToken);
+            await next(executionContext, message, cancellationToken);
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (Exception ex)
@@ -101,7 +102,7 @@ public sealed class TracingInboundMiddleware :
             ? new TracingInfo(traceId, spanId)
             : null;
         var handlerName = context.HandlerType.DisplayName;
-        var messageName = context.Message.GetType().DisplayName;
+        var messageName = context.MessageType.DisplayName;
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {messageName}",
             ActivityKind.Consumer,
@@ -109,25 +110,25 @@ public sealed class TracingInboundMiddleware :
             hostEnvironment);
     }
 
-    public async ValueTask InvokeAsync(RequestInboundContext context, HandlerDelegate next, CancellationToken cancellationToken)
+    public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = context.Context;
+        var executionContext = context;
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.TraceId, out var traceId);
         executionContext.TryGetHeader(NOFAbstractionConstants.Transport.Headers.SpanId, out var spanId);
 
         using var activity = CreateRequestActivity(context, traceId, spanId, _hostEnvironment);
 
-        context.Context = executionContext
+        executionContext = (RequestInboundContext)executionContext
             .WithoutHeader(NOFAbstractionConstants.Transport.Headers.TraceId)
             .WithoutHeader(NOFAbstractionConstants.Transport.Headers.SpanId);
 
         activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.HandlerType, context.HandlerType.DisplayName);
-        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, $"{context.ServiceType.DisplayName}.{context.MethodName}");
-        activity?.SetTag("rpc.method", $"{context.ServiceType.DisplayName}.{context.MethodName}");
+        activity?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.MessageType, $"{context.ServiceType.DisplayName}.{context.ServiceMethodInfo.Name}");
+        activity?.SetTag("rpc.method", $"{context.ServiceType.DisplayName}.{context.ServiceMethodInfo.Name}");
 
         try
         {
-            await next(cancellationToken);
+            await next(executionContext, request, cancellationToken);
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (Exception ex)
@@ -147,7 +148,7 @@ public sealed class TracingInboundMiddleware :
             ? new TracingInfo(traceId, spanId)
             : null;
         var handlerName = context.HandlerType.DisplayName;
-        var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
+        var requestName = $"{context.ServiceType.DisplayName}.{context.ServiceMethodInfo.Name}";
         return NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
             $"{handlerName}.Handle: {requestName}",
             ActivityKind.Consumer,
