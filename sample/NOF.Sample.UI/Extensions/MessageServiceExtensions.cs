@@ -60,7 +60,23 @@ public static class NOFSampleWebUIExtensions
         }
 
         public T? UnwrapWithMessage<T>(RpcResult<T> result, string? successMessage = null, bool showSuccess = false)
-            => messageService.UnwrapWithMessage((Result<T>)result, successMessage, showSuccess);
+        {
+            ArgumentNullException.ThrowIfNull(messageService);
+            ArgumentNullException.ThrowIfNull(result);
+
+            if (result.IsSuccess)
+            {
+                if (showSuccess)
+                {
+                    messageService.Success(successMessage ?? "操作成功");
+                }
+
+                return result.Value;
+            }
+
+            messageService.Error(GetRpcFailureMessage(result));
+            return default;
+        }
 
         public T? UnwrapWithMessage<T>(Result<Result<T>> result, string? successMessage = null, bool showSuccess = false)
         {
@@ -77,7 +93,18 @@ public static class NOFSampleWebUIExtensions
         }
 
         public T? UnwrapWithMessage<T>(RpcResult<Result<T>> result, string? successMessage = null, bool showSuccess = false)
-            => messageService.UnwrapWithMessage((Result<Result<T>>)result, successMessage, showSuccess);
+        {
+            ArgumentNullException.ThrowIfNull(messageService);
+            ArgumentNullException.ThrowIfNull(result);
+
+            if (!result.IsSuccess)
+            {
+                messageService.Error(GetRpcFailureMessage(result));
+                return default;
+            }
+
+            return messageService.UnwrapWithMessage(result.Value!, successMessage, showSuccess);
+        }
 
         /// <summary>
         /// Displays a success message built from the result value (if successful), or an error message on failure,
@@ -109,7 +136,25 @@ public static class NOFSampleWebUIExtensions
         }
 
         public T? UnwrapWithMessage<T>(RpcResult<T> result, Func<T, string> successMessageFactory, bool showSuccess = false)
-            => messageService.UnwrapWithMessage((Result<T>)result, successMessageFactory, showSuccess);
+        {
+            ArgumentNullException.ThrowIfNull(messageService);
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentNullException.ThrowIfNull(successMessageFactory);
+
+            if (result.IsSuccess)
+            {
+                var message = successMessageFactory(result.Value!);
+                if (showSuccess)
+                {
+                    messageService.Success(message);
+                }
+
+                return result.Value;
+            }
+
+            messageService.Error(GetRpcFailureMessage(result));
+            return default;
+        }
 
         public T? UnwrapWithMessage<T>(Result<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
         {
@@ -127,6 +172,32 @@ public static class NOFSampleWebUIExtensions
         }
 
         public T? UnwrapWithMessage<T>(RpcResult<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
-            => messageService.UnwrapWithMessage((Result<Result<T>>)result, successMessageFactory, showSuccess);
+        {
+            ArgumentNullException.ThrowIfNull(messageService);
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentNullException.ThrowIfNull(successMessageFactory);
+
+            if (!result.IsSuccess)
+            {
+                messageService.Error(GetRpcFailureMessage(result));
+                return default;
+            }
+
+            return messageService.UnwrapWithMessage(result.Value!, successMessageFactory, showSuccess);
+        }
+    }
+
+    public static string GetRpcFailureMessage(this IRpcResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (result.Body is string text && !string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        return result.StatusCode is int statusCode
+            ? $"请求失败，状态码: {statusCode}"
+            : "请求失败";
     }
 }

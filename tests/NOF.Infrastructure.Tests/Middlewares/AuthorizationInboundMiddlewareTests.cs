@@ -33,8 +33,8 @@ public sealed class AuthorizationInboundMiddlewareTests
         // Unauthenticated => 401
         var unauthContext = CreateContext(nameof(TestService.LoginOnlyMethod));
         await middleware.InvokeAsync(unauthContext, _ => ValueTask.CompletedTask, default);
-        var unauthResult = Assert.IsType<FailResult>(RpcResults.ToFailureResult(unauthContext.Response!));
-        Assert.Equal("401", unauthResult.ErrorCode);
+        Assert.Equal(401, unauthContext.Response!.StatusCode);
+        Assert.Equal("Please login first", unauthContext.Response.Body);
 
         // Authenticated without permissions => allowed
         userContext.Logout();
@@ -60,8 +60,8 @@ public sealed class AuthorizationInboundMiddlewareTests
         // Authenticated but missing method permission => 403
         var deniedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
         await middleware.InvokeAsync(deniedContext, _ => ValueTask.CompletedTask, default);
-        var denied = Assert.IsType<FailResult>(RpcResults.ToFailureResult(deniedContext.Response!));
-        Assert.Equal("403", denied.ErrorCode);
+        Assert.Equal(403, deniedContext.Response!.StatusCode);
+        Assert.Equal("Insufficient permissions", deniedContext.Response.Body);
 
         // With method permission => allowed
         userContext.Logout();
@@ -90,8 +90,8 @@ public sealed class AuthorizationInboundMiddlewareTests
             return ValueTask.CompletedTask;
         }, default);
 
-        var denied = Assert.IsType<FailResult>(RpcResults.ToFailureResult(context.Response!));
-        Assert.Equal("499", denied.ErrorCode);
+        Assert.Equal(499, context.Response!.StatusCode);
+        Assert.Equal("custom policy denied", context.Response.Body);
         Assert.False(nextCalled);
     }
 
@@ -126,8 +126,8 @@ public sealed class AuthorizationInboundMiddlewareTests
 
         await middleware.InvokeAsync(context, _ => ValueTask.CompletedTask, default);
 
-        var denied = Assert.IsType<FailResult>(RpcResults.ToFailureResult(context.Response!));
-        Assert.Equal("498", denied.ErrorCode);
+        Assert.Equal(498, context.Response!.StatusCode);
+        Assert.Equal("custom policy denied", context.Response.Body);
     }
 
     private static RequestInboundContext CreateContext(string methodName)

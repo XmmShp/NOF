@@ -100,7 +100,7 @@
             var result = await NOFService.WatchSampleStreamAsync(_request, _streamCancellationTokenSource.Token);
             if (!result.IsSuccess)
             {
-                Message.Error(result.Message);
+                Message.Error(result.GetRpcFailureMessage());
                 return;
             }
 

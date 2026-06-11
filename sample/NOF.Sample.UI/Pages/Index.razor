@@ -254,7 +254,7 @@
             }
             else
             {
-                Message.Error($"保存失败: {result.Message}");
+                Message.Error($"保存失败: {result.GetRpcFailureMessage()}");
             }
         }
     }
@@ -342,7 +342,7 @@
         }
         else
         {
-            Message.Error($"创建失败: {result.Message}");
+            Message.Error($"创建失败: {result.GetRpcFailureMessage()}");
         }
     }
 
@@ -368,7 +368,7 @@
         }
         else
         {
-            Message.Error($"删除失败: {result.Message}");
+            Message.Error($"删除失败: {result.GetRpcFailureMessage()}");
         }
     }
 
@@ -412,7 +412,7 @@
             }
             else
             {
-                Message.Error($"保存失败: {result.Message}");
+                Message.Error($"保存失败: {result.GetRpcFailureMessage()}");
             }
         }
     }
@@ -438,7 +438,7 @@
             }
             else
             {
-                Message.Error($"删除失败: {result.Message}");
+                Message.Error($"删除失败: {result.GetRpcFailureMessage()}");
             }
         }
     }
@@ -459,7 +459,7 @@
             }
             else
             {
-                Message.Error($"设置失败: {result.Message}");
+                Message.Error($"设置失败: {result.GetRpcFailureMessage()}");
             }
         }
     }

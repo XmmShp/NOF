@@ -166,7 +166,7 @@
         }
         else
         {
-            Message.Error($"移动失败: {result.Message}");
+            Message.Error($"移动失败: {result.GetRpcFailureMessage()}");
         }
     }
 

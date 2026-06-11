@@ -45,11 +45,22 @@ public abstract class RpcHandler<TRequest, TResponse> : RpcHandler
     protected RpcResult<TResponse> Success(TResponse value)
         => RpcResults.Success(value);
 
-    protected RpcResult<TResponse> Fail(string errorCode, string message, IDictionary<string, string>? extra = null)
-        => RpcResults.FromFailure<TResponse>(Result.Fail(errorCode, message, extra));
+    protected RpcResult<TResponse> Success(
+        TResponse value,
+        int? statusCode = null,
+        IEnumerable<KeyValuePair<string, string?>>? headers = null)
+        => RpcResults.Success(value, statusCode, headers);
 
-    protected RpcResult<TResponse> Fail(IResult result)
-        => RpcResults.FromFailure<TResponse>(result);
+    protected RpcResult<TResponse> Success(
+        int? statusCode = null,
+        IEnumerable<KeyValuePair<string, string?>>? headers = null)
+        => RpcResults.Success<TResponse>(default!, statusCode, headers);
+
+    protected RpcResult<TResponse> Fail(
+        int statusCode,
+        object? body = null,
+        IEnumerable<KeyValuePair<string, string?>>? headers = null)
+        => RpcResults.FromFailure<TResponse>(body, statusCode, headers);
 
     /// <summary>
     /// Executes the handler using the strongly typed request.

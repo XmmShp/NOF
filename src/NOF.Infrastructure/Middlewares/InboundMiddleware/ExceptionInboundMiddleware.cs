@@ -71,7 +71,7 @@ public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INot
             var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
             _logger.LogWarning(ex, "Domain exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 requestName, handlerName, ex.Message);
-            context.Response = RpcResults.Fail(ex.ErrorCode, ex.Message);
+            context.Response = RpcResults.Fail(ParseStatusCode(ex.ErrorCode, 500), ex.Message);
         }
         catch (Exception ex)
         {
@@ -79,7 +79,10 @@ public sealed class InboundExceptionMiddleware : ICommandInboundMiddleware, INot
             var requestName = $"{context.ServiceType.DisplayName}.{context.MethodName}";
             _logger.LogError(ex, "Exception occurred while handling {MessageType} with {HandlerType}: {Message}",
                 requestName, handlerName, ex.Message);
-            context.Response = RpcResults.Fail("500", "Internal server error");
+            context.Response = RpcResults.Fail(500, "Internal server error");
         }
     }
+
+    private static int ParseStatusCode(string? errorCode, int fallbackStatusCode)
+        => int.TryParse(errorCode, out var statusCode) ? statusCode : fallbackStatusCode;
 }

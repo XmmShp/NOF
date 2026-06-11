@@ -26,7 +26,7 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
 
         if (node is null)
         {
-            return Fail("404", "Node not found.");
+            return Fail(404, "Node not found.");
         }
 
         var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);

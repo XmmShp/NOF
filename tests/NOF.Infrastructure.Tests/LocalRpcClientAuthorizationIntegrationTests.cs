@@ -21,8 +21,8 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
 
         var fail = Assert.IsType<RpcResult<Result<GetFleetOverviewResponse>>>(result);
         Assert.False(fail.IsSuccess);
-        Assert.Equal("401", fail.ErrorCode);
-        Assert.Equal("Please login first", fail.Message);
+        Assert.Equal(401, fail.StatusCode);
+        Assert.Equal("Please login first", fail.Body);
         Assert.Equal(0, recorder.Count);
     }
 

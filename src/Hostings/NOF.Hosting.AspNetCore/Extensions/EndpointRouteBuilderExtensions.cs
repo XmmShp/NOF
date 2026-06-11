@@ -2,17 +2,17 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.WebUtilities;
 using NOF.Annotation;
 using NOF.Application;
 using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Reflection;
 
 namespace NOF.Hosting.AspNetCore;
 
+[RequiresUnreferencedCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
+[RequiresDynamicCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
 public static partial class NOFHostingAspNetCoreExtensions
 {
     private static readonly MethodInfo _createQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
@@ -113,6 +113,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         return (Delegate)genericMethod.Invoke(null, [operationName])!;
     }
 
+    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -132,6 +134,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
+    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateBodyHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -151,6 +155,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
+    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateHeaderAwareQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -170,6 +176,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
+    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateStreamQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -189,6 +197,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
+    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateStreamBodyHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -208,6 +218,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
+    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateHeaderAwareStreamQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -227,97 +239,38 @@ public static partial class NOFHostingAspNetCoreExtensions
         return Handler;
     }
 
+    [RequiresUnreferencedCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult<TItem>(IRpcResult? response)
     {
         if (response is RpcResult<StreamingResult<TItem>> rpcResult)
         {
-            if (rpcResult.TryGetTransportFailure(out var transportFailure))
-            {
-                return CreateTransportFailureResult(transportFailure);
-            }
-
-            var streamingResult = rpcResult.Value
-                ?? throw new InvalidOperationException($"HTTP RPC endpoint returned '{typeof(RpcResult<StreamingResult<TItem>>).FullName}' without a value.");
-            if (!streamingResult.IsSuccess)
-            {
-                return TypedResults.Ok(streamingResult);
-            }
-
-            return TypedResults.ServerSentEvents(streamingResult.Value!);
+            return new RpcStreamingHttpResult<TItem>(rpcResult);
         }
 
-        if (response is not null && response.TryGetTransportFailure(out var result))
+        if (response is not null)
         {
-            return CreateTransportFailureResult(result);
+            return new RpcHttpResult(response);
         }
 
         throw new InvalidOperationException($"Streaming RPC endpoints must return '{typeof(RpcResult<StreamingResult<TItem>>).FullName}'.");
     }
 
+    [RequiresUnreferencedCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
+    [RequiresDynamicCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     private static Microsoft.AspNetCore.Http.IResult CreateHttpResponse<TResponse>(IRpcResult? transportResult)
     {
         if (transportResult is RpcResult<TResponse> result)
         {
-            if (result.TryGetTransportFailure(out var transportFailure))
-            {
-                return CreateTransportFailureResult(transportFailure);
-            }
-
-            return TypedResults.Ok(result.Value);
+            return new RpcHttpResult(result);
         }
 
-        if (transportResult is not null && transportResult.TryGetTransportFailure(out var fallbackFailure))
+        if (transportResult is not null)
         {
-            return CreateTransportFailureResult(fallbackFailure);
+            return new RpcHttpResult(transportResult);
         }
 
         throw new InvalidOperationException($"HTTP RPC endpoint returned '{transportResult?.GetType().FullName ?? "null"}' instead of '{typeof(RpcResult<TResponse>).FullName}'.");
-    }
-
-    private static Microsoft.AspNetCore.Http.IResult CreateTransportFailureResult(NOF.Contract.IResult result)
-    {
-        var statusCode = TryParseStatusCode(result.ErrorCode, out var parsedStatusCode)
-            ? parsedStatusCode
-            : StatusCodes.Status500InternalServerError;
-        var title = ReasonPhrases.GetReasonPhrase(statusCode);
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = "Transport request failed.";
-        }
-
-        if (result.Extra.Count > 0)
-        {
-            var validationProblem = new HttpValidationProblemDetails(
-                result.Extra.ToDictionary(pair => pair.Key, pair => new[] { pair.Value }))
-            {
-                Status = statusCode,
-                Title = title,
-                Detail = result.Message
-            };
-            validationProblem.Extensions["errorCode"] = result.ErrorCode;
-            return TypedResults.Problem(validationProblem);
-        }
-
-        var problem = new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = result.Message
-        };
-        problem.Extensions["errorCode"] = result.ErrorCode;
-        return TypedResults.Problem(problem);
-    }
-
-    private static bool TryParseStatusCode(string errorCode, out int statusCode)
-    {
-        if (int.TryParse(errorCode, NumberStyles.Integer, CultureInfo.InvariantCulture, out statusCode)
-            && statusCode is >= StatusCodes.Status100Continue and <= 999)
-        {
-            return true;
-        }
-
-        statusCode = default;
-        return false;
     }
 
     private static bool TryGetStreamItemType(Type returnType, [NotNullWhen(true)] out Type? streamItemType)

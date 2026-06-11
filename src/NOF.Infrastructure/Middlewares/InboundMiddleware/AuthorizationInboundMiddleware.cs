@@ -32,10 +32,13 @@ public sealed class AuthorizationInboundMiddleware :
 
         if (firstFailure is not null)
         {
-            context.Response = RpcResults.Fail(firstFailure.ErrorCode, firstFailure.Message, firstFailure.Extra);
+            context.Response = RpcResults.Fail(ParseStatusCode(firstFailure, 403), firstFailure.Message);
             return;
         }
 
         await next(cancellationToken);
     }
+
+    private static int ParseStatusCode(IResult result, int fallbackStatusCode)
+        => int.TryParse(result.ErrorCode, out var statusCode) ? statusCode : fallbackStatusCode;
 }

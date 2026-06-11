@@ -27,7 +27,7 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
 
         if (await _dbContext.Set<ConfigNode>().ExistsByNameAsync(name, cancellationToken))
         {
-            return Fail("400", "Node with same name already exists.");
+            return Fail(400, "Node with same name already exists.");
         }
 
         var node = ConfigNode.Create(name, parentId);

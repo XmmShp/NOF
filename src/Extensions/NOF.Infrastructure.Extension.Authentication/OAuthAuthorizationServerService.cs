@@ -80,24 +80,30 @@ public sealed class AuthorizeHandler(
         var validationError = ValidateAuthorizationRequest(authorizationRequest);
         if (validationError is not null)
         {
-            return Success(validationError);
+            return ToAuthorizeFailure(authorizationRequest, validationError);
         }
 
         var result = await authorizationHandler.AuthorizeAsync(authorizationRequest, cancellationToken).ConfigureAwait(false);
         return result switch
         {
-            OAuthAuthorizationResult.Authorized authorized => Success(await RedirectWithCodeAsync(
+            OAuthAuthorizationResult.Authorized authorized => Success(
+                statusCode: 302,
+                headers: CreateRedirectHeaders(await RedirectWithCodeAsync(
                 authorizationCodeService,
                 authorizationRequest,
                 authorized.Subject,
-                cancellationToken).ConfigureAwait(false)),
-            OAuthAuthorizationResult.Challenge challenge => Success(Redirect(challenge.RedirectUrl)),
-            OAuthAuthorizationResult.Failure failure => Success(Error(failure.Error, failure.ErrorDescription)),
-            _ => Fail("server_error", "Unsupported OAuth authorization result.")
+                cancellationToken).ConfigureAwait(false))),
+            OAuthAuthorizationResult.Challenge challenge => Success(
+                statusCode: 302,
+                headers: CreateRedirectHeaders(challenge.RedirectUrl)),
+            OAuthAuthorizationResult.Failure failure => ToAuthorizeFailure(
+                authorizationRequest,
+                CreateOAuthError(failure.Error, failure.ErrorDescription)),
+            _ => Fail(500, CreateOAuthError("server_error", "Unsupported OAuth authorization result."))
         };
     }
 
-    private static async ValueTask<OAuthAuthorizeResponse> RedirectWithCodeAsync(
+    private static async ValueTask<string> RedirectWithCodeAsync(
         IOAuthAuthorizationCodeService authorizationCodeService,
         OAuthAuthorizationRequest request,
         string subject,
@@ -114,53 +120,55 @@ public sealed class AuthorizeHandler(
                 NormalizeCodeChallengeMethod(request.CodeChallengeMethod)),
             cancellationToken).ConfigureAwait(false);
 
-        return Redirect(AddQueryString(
+        return AddQueryString(
             request.RedirectUri,
             new Dictionary<string, string?>
             {
                 ["code"] = code,
                 ["state"] = request.State
-            }));
+            });
     }
 
-    private static OAuthAuthorizeResponse? ValidateAuthorizationRequest(OAuthAuthorizationRequest request)
+    private static OAuthError? ValidateAuthorizationRequest(OAuthAuthorizationRequest request)
     {
         if (!string.Equals(request.ResponseType, "code", StringComparison.Ordinal))
         {
-            return Error("unsupported_response_type", "Only response_type=code is supported.");
+            return CreateOAuthError("unsupported_response_type", "Only response_type=code is supported.");
         }
 
         if (string.IsNullOrWhiteSpace(request.ClientId))
         {
-            return Error("invalid_request", "client_id is required.");
+            return CreateOAuthError("invalid_request", "client_id is required.");
         }
 
         if (!Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
         {
-            return Error("invalid_request", "redirect_uri must be an absolute URI.");
+            return CreateOAuthError("invalid_request", "redirect_uri must be an absolute URI.");
         }
 
         var pkceValidation = ValidateCodeChallenge(request.CodeChallenge, request.CodeChallengeMethod);
-        return pkceValidation is null ? null : Error("invalid_request", pkceValidation);
+        return pkceValidation is null ? null : CreateOAuthError("invalid_request", pkceValidation);
     }
 
-    private static OAuthAuthorizeResponse Redirect(string redirectUrl)
-        => new OAuthAuthorizeResponse
+    private RpcResult<OAuthAuthorizeResponse> ToAuthorizeFailure(OAuthAuthorizationRequest request, OAuthError error)
+    {
+        if (!string.IsNullOrWhiteSpace(request.ClientId)
+            && Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
         {
-            Type = OAuthAuthorizeResponseType.Redirect,
-            RedirectUrl = redirectUrl
-        };
+            return Success(
+                statusCode: 302,
+                headers: CreateRedirectHeaders(AddQueryString(
+                request.RedirectUri,
+                new Dictionary<string, string?>
+                {
+                    ["error"] = error.Error,
+                    ["error_description"] = error.ErrorDescription,
+                    ["state"] = request.State
+                })));
+        }
 
-    private static OAuthAuthorizeResponse Error(string error, string description)
-        => new OAuthAuthorizeResponse
-        {
-            Type = OAuthAuthorizeResponseType.Error,
-            Error = new OAuthError
-            {
-                Error = error,
-                ErrorDescription = description
-            }
-        };
+        return Fail(400, error);
+    }
 }
 
 public sealed class TokenHandler(
@@ -178,9 +186,9 @@ public sealed class TokenHandler(
     {
         return request.GrantType switch
         {
-            "authorization_code" => FromBusiness(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false)),
-            "refresh_token" => FromBusiness(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false)),
-            _ => Fail("unsupported_grant_type", "Only authorization_code and refresh_token are supported.")
+            "authorization_code" => FromTokenResult(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false)),
+            "refresh_token" => FromTokenResult(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false)),
+            _ => Fail(400, CreateOAuthError("unsupported_grant_type", "Only authorization_code and refresh_token are supported."))
         };
     }
 
@@ -438,7 +446,10 @@ public sealed class UserInfoHandler(
             ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrWhiteSpace(subject))
         {
-            return Fail("401", "access token is invalid.");
+            return Fail(
+                401,
+                CreateOAuthError("invalid_token", "access token is invalid."),
+                headers: CreateBearerAuthenticateHeaders("invalid_token", "access token is invalid."));
         }
 
         var scope = principal!.FindFirst(OAuthClaimTypes.Scope)?.Value ?? string.Empty;
@@ -446,7 +457,10 @@ public sealed class UserInfoHandler(
         var profile = await subjectService.GetProfileAsync(subject, scopes, cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {
-            return Fail("401", "access token subject is invalid.");
+            return Fail(
+                401,
+                CreateOAuthError("invalid_token", "access token subject is invalid."),
+                headers: CreateBearerAuthenticateHeaders("invalid_token", "access token subject is invalid."));
         }
 
         IReadOnlyDictionary<string, object> claims = profile.IdentityClaims
@@ -591,13 +605,38 @@ internal static class OAuthAuthorizationServerServiceHelpers
         }
     }
 
-    public static RpcResult<T> FromBusiness<T>(Result<T> result)
+    public static RpcResult<T> FromTokenResult<T>(Result<T> result)
         => result.IsSuccess
             ? RpcResults.Success(result.Value!)
-            : RpcResults.FromFailure<T>(result);
+            : RpcResults.FromFailure<T>(
+                CreateOAuthError(result.ErrorCode, result.Message),
+                400);
+
+    public static OAuthError CreateOAuthError(string error, string description)
+        => new()
+        {
+            Error = error,
+            ErrorDescription = description
+        };
+
+    public static IReadOnlyDictionary<string, string?> CreateRedirectHeaders(string redirectUrl)
+        => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Location"] = redirectUrl
+        };
+
+    public static IReadOnlyDictionary<string, string?> CreateBearerAuthenticateHeaders(string error, string description)
+        => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["WWW-Authenticate"] =
+                $"Bearer error=\"{EscapeHeaderValue(error)}\", error_description=\"{EscapeHeaderValue(description)}\""
+        };
 
     public static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    public static string EscapeHeaderValue(string value)
+        => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
     public static string AddQueryString(string uri, IReadOnlyDictionary<string, string?> query)
     {

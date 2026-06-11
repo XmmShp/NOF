@@ -10,6 +10,7 @@ using NOF.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json.Serialization;
 using Xunit;
 
 namespace NOF.Hosting.AspNetCore.Tests;
@@ -75,6 +76,38 @@ public sealed class HttpRpcTransportBoundaryTests
         Assert.Equal(18, result.Value.Age);
     }
 
+    [Fact]
+    public async Task RpcHttpEndpoint_WhenRpcResultCarriesRedirectMetadata_WritesRedirectResponse()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.GetAsync("/rpc/Redirect?url=https%3A%2F%2Fexample.com%2Fcallback");
+
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.Equal("https://example.com/callback", response.Headers.Location?.ToString());
+        Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task RpcHttpEndpoint_WhenRpcResultCarriesFailureBodyAndHeaders_WritesThemToHttpResponse()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.GetAsync("/rpc/TokenFailure");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(
+            "Bearer error=\"invalid_token\", error_description=\"access token expired.\"",
+            response.Headers.WwwAuthenticate.ToString());
+
+        var payload = await response.Content.ReadFromJsonAsync<TokenErrorBody>();
+        Assert.NotNull(payload);
+        Assert.Equal("invalid_token", payload.Error);
+        Assert.Equal("access token expired.", payload.ErrorDescription);
+    }
+
     private static async Task<WebApplication> CreateAppAsync()
     {
         var builder = WebApplication.CreateBuilder();
@@ -91,6 +124,8 @@ public sealed class HttpRpcTransportBoundaryTests
         builder.Services.AddSingleton<ValidationRpcServer>();
         builder.Services.AddTransient<CreateUserHandler>();
         builder.Services.AddTransient<ReadTokenHandler>();
+        builder.Services.AddTransient<RedirectHandler>();
+        builder.Services.AddTransient<TokenFailureHandler>();
 
         var registry = new Registry();
         registry.RpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
@@ -115,9 +150,23 @@ public sealed class HttpRpcTransportBoundaryTests
         public HeaderToken Token { get; set; }
     }
 
+    public sealed class RedirectRequest
+    {
+        public string Url { get; set; } = string.Empty;
+    }
+
     public sealed record CreateUserResponse(int Age);
 
     public sealed record ReadTokenResponse(string Token);
+
+    public sealed record TokenErrorBody
+    {
+        [JsonPropertyName("error")]
+        public required string Error { get; init; }
+
+        [JsonPropertyName("error_description")]
+        public required string ErrorDescription { get; init; }
+    }
 
     public readonly record struct HeaderToken(string Value) : ITransportStringParsable<HeaderToken>
     {
@@ -142,6 +191,12 @@ public sealed class HttpRpcTransportBoundaryTests
 
         [HttpEndpoint(HttpVerb.Get, "/ReadToken")]
         ReadTokenResponse ReadToken(ReadTokenRequest request);
+
+        [HttpEndpoint(HttpVerb.Get, "/Redirect")]
+        Empty Redirect(RedirectRequest request);
+
+        [HttpEndpoint(HttpVerb.Get, "/TokenFailure")]
+        ReadTokenResponse TokenFailure(Empty request);
     }
 
     public sealed class ValidationRpcServer : RpcServer<IValidationRpcService>, IRpcServer
@@ -152,7 +207,11 @@ public sealed class HttpRpcTransportBoundaryTests
                 [nameof(IValidationRpcService.CreateUser)] =
                     new(typeof(CreateUserHandler), typeof(CreateUserRequest), typeof(Result<CreateUserResponse>)),
                 [nameof(IValidationRpcService.ReadToken)] =
-                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(ReadTokenResponse))
+                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(ReadTokenResponse)),
+                [nameof(IValidationRpcService.Redirect)] =
+                    new(typeof(RedirectHandler), typeof(RedirectRequest), typeof(Empty)),
+                [nameof(IValidationRpcService.TokenFailure)] =
+                    new(typeof(TokenFailureHandler), typeof(Empty), typeof(ReadTokenResponse))
             };
 
         protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
@@ -168,5 +227,29 @@ public sealed class HttpRpcTransportBoundaryTests
     {
         public override Task<RpcResult<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, NOFContext context, CancellationToken cancellationToken)
             => Task.FromResult(Success(new ReadTokenResponse(request.Token.Value)));
+    }
+
+    public sealed class RedirectHandler : RpcHandler<RedirectRequest, Empty>
+    {
+        public override Task<RpcResult<Empty>> HandleAsync(RedirectRequest request, NOFContext context, CancellationToken cancellationToken)
+            => Task.FromResult(Success(statusCode: 302, headers: [new KeyValuePair<string, string?>("Location", request.Url)]));
+    }
+
+    public sealed class TokenFailureHandler : RpcHandler<Empty, ReadTokenResponse>
+    {
+        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(Empty request, NOFContext context, CancellationToken cancellationToken)
+            => Task.FromResult(Fail(
+                401,
+                new TokenErrorBody
+                {
+                    Error = "invalid_token",
+                    ErrorDescription = "access token expired."
+                },
+                headers:
+                [
+                    new KeyValuePair<string, string?>(
+                        "WWW-Authenticate",
+                        "Bearer error=\"invalid_token\", error_description=\"access token expired.\"")
+                ]));
     }
 }
