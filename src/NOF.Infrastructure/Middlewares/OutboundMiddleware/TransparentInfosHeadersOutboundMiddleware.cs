@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Applies explicitly supported ambient context values to outbound transport headers.
 /// </summary>
-public sealed class ContextHeadersOutboundMiddleware :
+public sealed class ContextHeadersOutboundMiddleware(ICurrentTenant currentTenant) :
     ICommandOutboundMiddleware,
     INotificationOutboundMiddleware,
     IRequestOutboundMiddleware
@@ -39,20 +39,21 @@ public sealed class ContextHeadersOutboundMiddleware :
         return next(context, request, cancellationToken);
     }
 
-    private static void ApplyTenantHeader(Context context)
+    private void ApplyTenantHeader(Context context)
     {
-        if (!string.IsNullOrWhiteSpace(context.TenantId))
+        var tenantId = TenantId.Normalize(currentTenant.TenantId);
+        if (!string.IsNullOrWhiteSpace(tenantId))
         {
             switch (context)
             {
                 case CommandOutboundContext commandContext when !commandContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.TenantId):
-                    commandContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = context.TenantId;
+                    commandContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = tenantId;
                     break;
                 case NotificationOutboundContext notificationContext when !notificationContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.TenantId):
-                    notificationContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = context.TenantId;
+                    notificationContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = tenantId;
                     break;
                 case RequestOutboundContext requestContext when !requestContext.Headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.TenantId):
-                    requestContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = context.TenantId;
+                    requestContext.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = tenantId;
                     break;
             }
         }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
@@ -33,8 +34,7 @@ public static partial class NOFApplicationExtensions
             return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
             {
                 var commandSender = sp.GetRequiredService<ICommandSender>();
-                var contextAccessor = sp.GetRequiredService<IContextAccessor>();
-                await commandSender.SendAsync(commandFactory(notification), contextAccessor.Context, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await commandSender.SendAsync(commandFactory(notification), Context.Empty, cancellationToken: cancellationToken).ConfigureAwait(false);
             });
         }
 
@@ -44,8 +44,7 @@ public static partial class NOFApplicationExtensions
             return clause.ExecuteAsync(async (notification, sp, cancellationToken) =>
             {
                 var notificationPublisher = sp.GetRequiredService<INotificationPublisher>();
-                var contextAccessor = sp.GetRequiredService<IContextAccessor>();
-                await notificationPublisher.PublishAsync(notificationFactory(notification), contextAccessor.Context, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await notificationPublisher.PublishAsync(notificationFactory(notification), Context.Empty, cancellationToken: cancellationToken).ConfigureAwait(false);
             });
         }
     }

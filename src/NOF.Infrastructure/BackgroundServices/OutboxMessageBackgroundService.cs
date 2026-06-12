@@ -116,14 +116,18 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         // Restore the ambient execution context for downstream components that rely on it.
         // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
         // and restore it when actually dispatching the outbox message.
-        var contextAccessor = scopedServiceProvider.GetRequiredService<IContextAccessor>();
-        contextAccessor.Context = Context.Empty.ReplaceHeadersFrom(headers);
+        var currentTenant = scopedServiceProvider.GetRequiredService<ICurrentTenant>();
+        var tenantId = headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
+            ? TenantId.Normalize(headerTenantId)
+            : TenantId.Normalize(null);
+        using var tenantScope = currentTenant.Push(tenantId);
+        var context = Context.Empty.ReplaceHeadersFrom(headers);
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, payload.GetType().Name);
-        if (headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var tenantId))
+        if (headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var activityTenantId))
         {
-            activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, tenantId);
+            activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, activityTenantId);
         }
 
         try
@@ -131,12 +135,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             switch (message.MessageType)
             {
                 case OutboxMessageType.Command:
-                    await commandSender.SendAsync(payload, dispatchTypes[0], contextAccessor.Context, cancellationToken);
+                    await commandSender.SendAsync(payload, dispatchTypes[0], context, cancellationToken);
                     _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;
                 case OutboxMessageType.Notification:
-                    await notificationPublisher.PublishAsync(payload, dispatchTypes, contextAccessor.Context, cancellationToken);
+                    await notificationPublisher.PublishAsync(payload, dispatchTypes, context, cancellationToken);
                     _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
                         message.Id, payload.GetType().Name, message.RetryCount);
                     break;
@@ -171,11 +175,10 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         var payloadType = _typeResolver.Resolve(message.PayloadType);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
-        var parent = message.ParentTracingInfo;
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
             ActivityKind.Producer,
-            parent,
+            message.TraceParent,
             _hostEnvironment);
     }
 

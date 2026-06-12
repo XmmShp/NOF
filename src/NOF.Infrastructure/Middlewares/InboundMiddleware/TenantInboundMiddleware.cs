@@ -5,7 +5,7 @@ using NOF.Contract;
 
 namespace NOF.Infrastructure;
 
-public sealed class TenantInboundMiddleware :
+public sealed class TenantInboundMiddleware(ICurrentTenant currentTenant) :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
     IRequestInboundMiddleware
@@ -21,32 +21,33 @@ public sealed class TenantInboundMiddleware :
 
     public async ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = ApplyTenant(context);
-        await next(executionContext, message, cancellationToken);
+        var tenantId = GetTenantId(context);
+        Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
+        using var _ = currentTenant.Push(tenantId);
+        await next(context, message, cancellationToken);
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = ApplyTenant(context);
-        await next(executionContext, message, cancellationToken);
+        var tenantId = GetTenantId(context);
+        Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
+        using var _ = currentTenant.Push(tenantId);
+        await next(context, message, cancellationToken);
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
-        var executionContext = ApplyTenant(context);
-        await next(executionContext, request, cancellationToken);
+        var tenantId = GetTenantId(context);
+        Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
+        using var _ = currentTenant.Push(tenantId);
+        await next(context, request, cancellationToken);
     }
 
-    private static TContext ApplyTenant<TContext>(TContext context)
-        where TContext : Context
+    private static string GetTenantId(Context context)
     {
-        var tenantId = context.TryGetItem(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
+        return context.TryGetItem(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
             && headerTenantId is string tenantIdValue
             ? TenantId.Normalize(tenantIdValue)
-            : TenantId.Normalize(context.TenantId);
-
-        context = (TContext)context.WithTenantId(tenantId);
-        Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        return context;
+            : TenantId.Normalize(null);
     }
 }

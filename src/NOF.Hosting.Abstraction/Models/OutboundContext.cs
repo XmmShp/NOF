@@ -23,7 +23,6 @@ public sealed class RequestOutboundContext : Context
     public RequestOutboundContext(Context context)
         : base(context?.Items ?? throw new ArgumentNullException(nameof(context)))
     {
-        TenantId = context.TenantId;
     }
 
     [SetsRequiredMembers]
@@ -34,7 +33,6 @@ public sealed class RequestOutboundContext : Context
         Response = source.Response;
         ServiceType = source.ServiceType;
         MethodInfo = source.MethodInfo;
-        TenantId = source.TenantId;
     }
 
     protected override Context Clone(IReadOnlyDictionary<object, object?> items)

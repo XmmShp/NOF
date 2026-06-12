@@ -27,9 +27,9 @@ public static class NOFAbstractionConstants
         public static class Headers
         {
             public const string Authorization = "Authorization";
-            public const string TenantId = "NOF.TenantId";
+            public const string TenantId = "X-Tenant-Id";
             public const string TraceParent = "traceparent";
-            public const string MessageId = "NOF.Message.MessageId";
+            public const string MessageId = "X-Message-Id";
         }
     }
 }

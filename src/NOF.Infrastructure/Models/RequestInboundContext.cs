@@ -56,7 +56,6 @@ public sealed class RequestInboundContext : Context
         RequestType = source.RequestType;
         ResponseType = source.ResponseType;
         Metadata = source.Metadata;
-        TenantId = source.TenantId;
     }
 
     public RequestInboundContext()

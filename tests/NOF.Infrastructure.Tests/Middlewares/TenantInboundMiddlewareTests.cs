@@ -10,19 +10,25 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithoutIncomingTenantHeader_ShouldUseHostTenant()
     {
-        var middleware = new TenantInboundMiddleware();
+        var currentTenant = new CurrentTenant
+        {
+            TenantId = "previous"
+        };
+        var middleware = new TenantInboundMiddleware(currentTenant);
         var message = new object();
         var inboundContext = CreateContext(message.GetType());
-        var forwardedContext = Context.Empty;
+        var tenantDuringNext = string.Empty;
 
         await middleware.InvokeAsync(inboundContext, message, CaptureNextContext, default);
-        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, forwardedContext.TenantId);
+        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, tenantDuringNext);
+        Assert.Equal("previous", currentTenant.TenantId);
 
         ValueTask CaptureNextContext(CommandInboundContext context, object forwardedMessage, CancellationToken cancellationToken)
         {
+            _ = context;
             _ = forwardedMessage;
             _ = cancellationToken;
-            forwardedContext = context;
+            tenantDuringNext = currentTenant.TenantId;
             return ValueTask.CompletedTask;
         }
     }
@@ -30,22 +36,28 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithIncomingTenantHeader_ShouldUseIncomingTenantHeader()
     {
-        var middleware = new TenantInboundMiddleware();
+        var currentTenant = new CurrentTenant
+        {
+            TenantId = "previous"
+        };
+        var middleware = new TenantInboundMiddleware(currentTenant);
         var message = new object();
         var inboundContext = (CommandInboundContext)CreateContext(message.GetType())
             .CopyHeadersFrom([
                 new KeyValuePair<string, string?>(NOFAbstractionConstants.Transport.Headers.TenantId, "tenanta")
             ]);
-        var forwardedContext = Context.Empty;
+        var tenantDuringNext = string.Empty;
 
         await middleware.InvokeAsync(inboundContext, message, CaptureNextContext, default);
-        Assert.Equal("tenanta", forwardedContext.TenantId);
+        Assert.Equal("tenanta", tenantDuringNext);
+        Assert.Equal("previous", currentTenant.TenantId);
 
         ValueTask CaptureNextContext(CommandInboundContext context, object forwardedMessage, CancellationToken cancellationToken)
         {
+            _ = context;
             _ = forwardedMessage;
             _ = cancellationToken;
-            forwardedContext = context;
+            tenantDuringNext = currentTenant.TenantId;
             return ValueTask.CompletedTask;
         }
     }

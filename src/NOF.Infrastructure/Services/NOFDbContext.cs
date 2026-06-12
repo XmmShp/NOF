@@ -71,12 +71,8 @@ public class NOFDbContext : DbContext
             entity.Property(e => e.Headers).IsRequired();
             entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
             entity.Property(e => e.ClaimedBy).HasMaxLength(256);
-            entity.OwnsOne(e => e.ParentTracingInfo, b =>
-            {
-                b.Property(p => p.TraceId).HasMaxLength(128).HasColumnName("TraceId");
-                b.Property(p => p.SpanId).HasMaxLength(128).HasColumnName("SpanId");
-                b.HasIndex(p => p.TraceId);
-            });
+            entity.Property(e => e.TraceParent).HasMaxLength(128);
+            entity.HasIndex(e => e.TraceParent);
         });
 
         modelBuilder.Entity<NOFStateMachineContext>(entity =>

@@ -35,19 +35,10 @@ public class ContextExtensionsTests
     }
 
     [Fact]
-    public void WithTenantId_ShouldSetTenantIdWithoutChangingItems()
-    {
-        var context = Context.Empty.WithTenantId("tenant-a");
-
-        Assert.Equal("tenant-a", context.TenantId);
-        Assert.Empty(context.Items);
-    }
-
-    [Fact]
-    public void WithItem_ShouldNotAffectTenantId()
+    public void WithItem_ShouldStoreItemWithoutSpecialTenantSemantics()
     {
         var context = Context.Empty.WithItem("NOF.TenantId", "tenant-a");
 
-        Assert.Equal(string.Empty, context.TenantId);
+        Assert.Equal("tenant-a", context["NOF.TenantId"]);
     }
 }

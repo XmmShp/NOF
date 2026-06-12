@@ -33,7 +33,7 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
                 builder.Environment.ApplicationId,
                 builder.Environment.InstanceId));
-            builder.Services.TryAddSingleton<IContextAccessor, ContextAccessor>();
+            builder.Services.TryAddSingleton<ICurrentTenant, CurrentTenant>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
             builder.Environment.BindConfiguration(builder.Configuration);
@@ -45,13 +45,12 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<IObjectSerializer>(),
                 sp.GetRequiredService<ICacheLockRetryStrategy>(),
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheServiceOptions>>(),
-                sp.GetRequiredService<IContextAccessor>(),
+                sp.GetRequiredService<ICurrentTenant>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, ContextAmbientDaemonService>());
 
             builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());

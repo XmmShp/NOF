@@ -24,8 +24,6 @@ public class Context
 
     public IReadOnlyDictionary<object, object?> Items { get; }
 
-    public string TenantId { get; protected set; } = string.Empty;
-
     public object? this[object key]
         => TryGetItem(key, out var value)
             ? value
@@ -65,13 +63,6 @@ public class Context
         return Clone(CreateReadOnlyItems(merged));
     }
 
-    public Context WithTenantId(string? tenantId)
-    {
-        var cloned = Clone(Items);
-        cloned.TenantId = tenantId ?? string.Empty;
-        return cloned;
-    }
-
     public Context WithoutItem(object key)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -86,10 +77,7 @@ public class Context
     }
 
     protected virtual Context Clone(IReadOnlyDictionary<object, object?> items)
-        => new(items)
-        {
-            TenantId = TenantId
-        };
+        => new(items);
 
     private static IReadOnlyDictionary<object, object?> CreateReadOnlyItems(IReadOnlyDictionary<object, object?> items)
     {
@@ -101,4 +89,5 @@ public class Context
         return new ReadOnlyDictionary<object, object?>(
             new Dictionary<object, object?>(items));
     }
+
 }

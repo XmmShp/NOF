@@ -25,7 +25,7 @@ public class NOFOutboxMessage
     public DateTime? ClaimExpiresAtUtc { get; set; }
     public OutboxMessageStatus Status { get; set; } = OutboxMessageStatus.Pending;
 
-    public TracingInfo? ParentTracingInfo { get; set; }
+    public string? TraceParent { get; set; }
 }
 
 public enum OutboxMessageType

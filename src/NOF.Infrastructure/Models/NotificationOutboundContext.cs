@@ -15,14 +15,12 @@ public sealed class NotificationOutboundContext : Context
     public NotificationOutboundContext(Context context)
         : base(context?.Items ?? throw new ArgumentNullException(nameof(context)))
     {
-        TenantId = context.TenantId;
     }
 
     private NotificationOutboundContext(IReadOnlyDictionary<object, object?> items, NotificationOutboundContext source)
         : base(items)
     {
         Headers = new Dictionary<string, string?>(source.Headers, StringComparer.OrdinalIgnoreCase);
-        TenantId = source.TenantId;
     }
 
     protected override Context Clone(IReadOnlyDictionary<object, object?> items)

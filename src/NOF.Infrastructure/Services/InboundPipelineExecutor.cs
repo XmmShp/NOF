@@ -72,21 +72,18 @@ public sealed class CommandInboundPipelineExecutor
         }.CopyHeadersFrom(headers);
     }
 
-    private static ValueTask ExecuteCommandHandlerAsync(
+    private static async ValueTask ExecuteCommandHandlerAsync(
         IServiceProvider services,
         Type handlerType,
         CommandInboundContext context,
         object message,
         CancellationToken cancellationToken)
     {
-        return ExecuteWithAmbientContext(services, context, async () =>
-        {
-            var handler = (CommandHandler)services.GetRequiredService(handlerType);
-            await handler.HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
-        });
+        var handler = (CommandHandler)services.GetRequiredService(handlerType);
+        await handler.HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
     }
 
-    private static ValueTask ExecuteCommandMiddlewareAsync(
+    private static async ValueTask ExecuteCommandMiddlewareAsync(
         IServiceProvider services,
         ICommandInboundMiddleware middleware,
         CommandInboundContext context,
@@ -94,17 +91,7 @@ public sealed class CommandInboundPipelineExecutor
         CommandHandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        return ExecuteWithAmbientContext(services, context, async () =>
-        {
-            await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
-        });
-    }
-
-    private static ValueTask ExecuteWithAmbientContext(IServiceProvider services, Context context, Func<Task> action)
-    {
-        var accessor = services.GetRequiredService<IContextAccessor>();
-        using var scope = AmbientContext.PushCurrent(accessor, context);
-        return new ValueTask(action());
+        await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -173,21 +160,18 @@ public sealed class NotificationInboundPipelineExecutor
         }.CopyHeadersFrom(headers);
     }
 
-    private static ValueTask ExecuteNotificationHandlerAsync(
+    private static async ValueTask ExecuteNotificationHandlerAsync(
         IServiceProvider services,
         Type handlerType,
         NotificationInboundContext context,
         object message,
         CancellationToken cancellationToken)
     {
-        return ExecuteWithAmbientContext(services, context, async () =>
-        {
-            var handler = (NotificationHandler)services.GetRequiredService(handlerType);
-            await handler.HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
-        });
+        var handler = (NotificationHandler)services.GetRequiredService(handlerType);
+        await handler.HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
     }
 
-    private static ValueTask ExecuteNotificationMiddlewareAsync(
+    private static async ValueTask ExecuteNotificationMiddlewareAsync(
         IServiceProvider services,
         INotificationInboundMiddleware middleware,
         NotificationInboundContext context,
@@ -195,17 +179,7 @@ public sealed class NotificationInboundPipelineExecutor
         NotificationHandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        return ExecuteWithAmbientContext(services, context, async () =>
-        {
-            await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
-        });
-    }
-
-    private static ValueTask ExecuteWithAmbientContext(IServiceProvider services, Context context, Func<Task> action)
-    {
-        var accessor = services.GetRequiredService<IContextAccessor>();
-        using var scope = AmbientContext.PushCurrent(accessor, context);
-        return new ValueTask(action());
+        await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -284,17 +258,14 @@ public sealed class RequestInboundPipelineExecutor
         object request,
         CancellationToken cancellationToken)
     {
-        await ExecuteWithAmbientContext(services, context, async () =>
-        {
-            var handler = (RpcHandler)services.GetRequiredService(handlerType);
-            var response = await handler.HandleAsync(request, context, cancellationToken).ConfigureAwait(false);
-            context.SetResponse(
-                response
-                ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response."));
-        }).ConfigureAwait(false);
+        var handler = (RpcHandler)services.GetRequiredService(handlerType);
+        var response = await handler.HandleAsync(request, context, cancellationToken).ConfigureAwait(false);
+        context.SetResponse(
+            response
+            ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response."));
     }
 
-    private static ValueTask ExecuteRequestMiddlewareAsync(
+    private static async ValueTask ExecuteRequestMiddlewareAsync(
         IServiceProvider services,
         IRequestInboundMiddleware middleware,
         RequestInboundContext context,
@@ -302,17 +273,7 @@ public sealed class RequestInboundPipelineExecutor
         RequestHandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        return ExecuteWithAmbientContext(services, context, async () =>
-        {
-            await middleware.InvokeAsync(context, request, next, cancellationToken).ConfigureAwait(false);
-        });
-    }
-
-    private static ValueTask ExecuteWithAmbientContext(IServiceProvider services, Context context, Func<Task> action)
-    {
-        var accessor = services.GetRequiredService<IContextAccessor>();
-        using var scope = AmbientContext.PushCurrent(accessor, context);
-        return new ValueTask(action());
+        await middleware.InvokeAsync(context, request, next, cancellationToken).ConfigureAwait(false);
     }
 }
 

@@ -21,7 +21,7 @@ public static class ActivityExtensions
         {
             ArgumentNullException.ThrowIfNull(activity);
 
-            return $"00-{activity.TraceId}-{activity.SpanId}-{((byte)activity.ActivityTraceFlags):x2}";
+            return $"00-{activity.TraceId}-{activity.SpanId}-{(byte)activity.ActivityTraceFlags:x2}";
         }
     }
 
@@ -57,38 +57,5 @@ public static class ActivityExtensions
             return startedActivity;
         }
 
-        public Activity? StartActivityWithParent(string name, ActivityKind kind, TracingInfo? parent, IHostEnvironment? hostEnvironment = null)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-
-            if (parent is not null &&
-                !string.IsNullOrEmpty(parent.TraceId) &&
-                !string.IsNullOrEmpty(parent.SpanId))
-            {
-                var activityId = ActivityTraceId.CreateFromString(parent.TraceId.AsSpan());
-                var parentSpanId = ActivitySpanId.CreateFromString(parent.SpanId.AsSpan());
-                var parentContext = new ActivityContext(activityId, parentSpanId, ActivityTraceFlags.Recorded);
-                var activity = source.StartActivity(name, kind, parentContext);
-                if (hostEnvironment is not null)
-                {
-                    activity?.SetServiceDeploymentTags(hostEnvironment);
-                }
-
-                return activity;
-            }
-
-            var randomParent = new ActivityContext(
-                ActivityTraceId.CreateRandom(),
-                ActivitySpanId.CreateRandom(),
-                ActivityTraceFlags.Recorded,
-                isRemote: true);
-            var startedActivity = source.StartActivity(name, kind, randomParent);
-            if (hostEnvironment is not null)
-            {
-                startedActivity?.SetServiceDeploymentTags(hostEnvironment);
-            }
-
-            return startedActivity;
-        }
     }
 }

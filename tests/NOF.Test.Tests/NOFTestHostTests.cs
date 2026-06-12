@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Infrastructure;
 using System.Diagnostics;
 using Xunit;
 
@@ -17,13 +18,8 @@ public class NOFTestHostTests
         await using var host = await builder.BuildTestHostAsync();
 
         using var scope = host.CreateScope();
-        Assert.NotNull(
-        scope.GetRequiredService<IContextAccessor>().Context);
-        Assert.NotNull(
-        scope.GetRequiredService<IUserContext>());
-        Assert.Same(
-            scope.GetRequiredService<IContextAccessor>().Context,
-            scope.GetRequiredService<IContextAccessor>().Context);
+        Assert.NotNull(scope.GetRequiredService<IUserContext>());
+        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, scope.GetRequiredService<ICurrentTenant>().TenantId);
     }
 
     [Fact]
@@ -39,7 +35,7 @@ public class NOFTestHostTests
         scope.SetTenant("tenanta")
             .SetTracing(traceId, spanId)
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
-        Assert.Equal("tenanta", scope.Context.TenantId);
+        Assert.Equal("tenanta", scope.GetRequiredService<ICurrentTenant>().TenantId);
         Assert.NotNull(Activity.Current);
         Assert.Equal(traceId, Activity.Current.TraceId.ToString());
         Assert.Equal(spanId, Activity.Current.ParentSpanId.ToString());

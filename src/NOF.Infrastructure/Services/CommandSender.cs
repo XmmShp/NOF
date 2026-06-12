@@ -48,7 +48,7 @@ public sealed class CommandSender : ICommandSender
             DispatchTypes = dispatchTypeNames,
             Payload = _objectSerializer.Serialize(command).ToArray(),
             Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
-            ParentTracingInfo = Activity.Current is null ? null : new TracingInfo(Activity.Current.TraceId.ToString(), Activity.Current.SpanId.ToString())
+            TraceParent = Activity.Current?.ToTraceParent()
         });
     }
 

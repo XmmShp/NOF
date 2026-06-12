@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using NOF.Application;
 
 namespace NOF.Infrastructure;
 
@@ -47,27 +46,27 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     private static readonly ConcurrentDictionary<string, byte> MigratedContexts = new(StringComparer.Ordinal);
 
     private readonly IServiceProvider _serviceProvider;
-    private readonly IContextAccessor _contextAccessor;
+    private readonly ICurrentTenant _currentTenant;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
     private readonly IEnumerable<INOFDbContextModelCreatingContributor> _modelCreatingContributors;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        IContextAccessor contextAccessor,
+        ICurrentTenant currentTenant,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         IEnumerable<INOFDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
-        _contextAccessor = contextAccessor;
+        _currentTenant = currentTenant;
         _dbContextConfigurationOptions = dbContextConfigurationOptions.Value;
         _modelCreatingContributors = modelCreatingContributors;
         _logger = logger;
     }
 
     public TDbContext CreateDbContext()
-        => CreateDbContext(TenantId.Normalize(_contextAccessor.Context.TenantId));
+        => CreateDbContext(TenantId.Normalize(_currentTenant.TenantId));
 
     public TDbContext CreateDbContext(string tenantId)
     {

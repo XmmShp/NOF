@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
@@ -64,12 +65,11 @@ builder.Services.AddHostedService(async (sp, ct) =>
     {
         await using var scope = sp.CreateAsyncScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var context = scope.ServiceProvider.GetRequiredService<IContextAccessor>().Context;
         var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
         var taskId = Random.Shared.Next().ToString();
-        await publisher.PublishAsync(new TaskStarted(taskId), context, ct);
+        await publisher.PublishAsync(new TaskStarted(taskId), Context.Empty, ct);
         await Task.Delay(TimeSpan.FromSeconds(3), ct);
-        await publisher.PublishAsync(new TaskContinued(taskId), context, ct);
+        await publisher.PublishAsync(new TaskContinued(taskId), Context.Empty, ct);
         await Task.Delay(TimeSpan.FromSeconds(5), ct);
     }
 });

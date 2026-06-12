@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Application;
 using NOF.Contract;
 using System.Text.Json;
 using Xunit;
@@ -59,9 +58,9 @@ public sealed class CacheServiceTests
         ICacheServiceRider rider,
         CacheServiceLocalLockState localLockState)
     {
-        var contextAccessor = new ContextAccessor
+        var currentTenant = new CurrentTenant
         {
-            Context = Context.Empty.WithTenantId(TenantId.Normalize("tenant-a"))
+            TenantId = TenantId.Normalize("tenant-a")
         };
 
         return new CacheService(
@@ -72,7 +71,7 @@ public sealed class CacheServiceTests
             {
                 KeyPrefix = "tenant:{tenantId}:"
             }),
-            contextAccessor,
+            currentTenant,
             localLockState);
     }
 

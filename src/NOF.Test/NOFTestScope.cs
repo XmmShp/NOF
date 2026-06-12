@@ -25,14 +25,13 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return Services.GetRequiredService<T>();
     }
 
-    public Context Context => GetRequiredService<IContextAccessor>().Context;
+    public Context Context => Context.Empty;
 
     public IUserContext UserContext => GetRequiredService<IUserContext>();
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        var accessor = GetRequiredService<IContextAccessor>();
-        accessor.Context = accessor.Context.WithTenantId(TenantId.Normalize(tenantId));
+        GetRequiredService<ICurrentTenant>().TenantId = TenantId.Normalize(tenantId);
         return this;
     }
 
