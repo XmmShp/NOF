@@ -1,9 +1,10 @@
 using NOF.Abstraction;
+using Microsoft.Extensions.Hosting;
 using System.Reflection;
 
 namespace NOF.Hosting;
 
-public interface INOFAppBuilder : IServiceRegistrationContext
+public interface INOFAppBuilder : IHostApplicationBuilder
 {
     INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep);
 

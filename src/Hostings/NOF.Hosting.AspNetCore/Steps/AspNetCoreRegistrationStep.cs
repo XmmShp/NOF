@@ -21,7 +21,7 @@ public class AspNetCoreRegistrationStep : IServiceRegistrationStep
     private const string AlivenessEndpointPath = "/alive";
     private const string Tag = "live";
 
-    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
+    public ValueTask ExecuteAsync(IHostApplicationBuilder builder)
     {
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), [Tag]);
         builder.Services.AddHttpContextAccessor();

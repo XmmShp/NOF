@@ -9,7 +9,7 @@ public sealed class RevokedRefreshTokenPersistenceRegistrationStep : IServiceReg
 {
     public TopologyComparison Compare(IServiceRegistrationStep other) => TopologyComparison.DoesNotMatter;
 
-    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
+    public ValueTask ExecuteAsync(IHostApplicationBuilder builder)
     {
         builder.Services.TryAddScoped<IRevokedRefreshTokenRepository, PersistenceRevokedRefreshTokenRepository>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<INOFDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());

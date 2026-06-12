@@ -1,15 +1,7 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
-
-/// <summary>
-/// Context available during service registration steps.
-/// </summary>
-public interface IServiceRegistrationContext : IHostApplicationBuilder
-{
-}
 
 public static partial class NOFHostingExtensions
 {

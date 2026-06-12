@@ -163,7 +163,7 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddRegistrationStep(Func<IServiceRegistrationContext, ValueTask> func)
+        public INOFAppBuilder AddRegistrationStep(Func<IHostApplicationBuilder, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
     }
 }

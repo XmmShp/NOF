@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Hosting;
 using OpenTelemetry;
@@ -15,7 +16,7 @@ public class OpenTelemetryRegistrationStep : IServiceRegistrationStep
 {
     public TopologyComparison Compare(IServiceRegistrationStep other) => TopologyComparison.DoesNotMatter;
 
-    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
+    public ValueTask ExecuteAsync(IHostApplicationBuilder builder)
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {

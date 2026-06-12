@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Hosting;
@@ -14,7 +15,7 @@ public class HandlerServiceRegistrationStep : IServiceRegistrationStep
     public TopologyComparison Compare(IServiceRegistrationStep other)
         => other is OpenTelemetryRegistrationStep ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
 
-    public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
+    public ValueTask ExecuteAsync(IHostApplicationBuilder builder)
     {
         var typeResolver = builder.Services.GetOrAddSingleton<TypeResolver>();
         var commandHandlerRegistry = builder.Services.GetOrAddSingleton<CommandHandlerRegistry>();

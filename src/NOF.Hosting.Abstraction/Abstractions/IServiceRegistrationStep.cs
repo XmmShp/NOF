@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Hosting;
+
 namespace NOF.Hosting;
 
 /// <summary>
@@ -5,5 +7,5 @@ namespace NOF.Hosting;
 /// </summary>
 public interface IServiceRegistrationStep : ITopologizable<IServiceRegistrationStep>
 {
-    ValueTask ExecuteAsync(IServiceRegistrationContext builder);
+    ValueTask ExecuteAsync(IHostApplicationBuilder builder);
 }
