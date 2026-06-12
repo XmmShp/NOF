@@ -19,6 +19,22 @@ public class ContextExtensionsTests
     }
 
     [Fact]
+    public void WithItems_ShouldMergeWithExistingItems()
+    {
+        var context = Context.Empty
+            .WithItem("existing", "before")
+            .WithItems(new Dictionary<object, object?>
+            {
+                ["existing"] = "after",
+                ["added"] = 42
+            });
+
+        Assert.Equal("after", context["existing"]);
+        Assert.Equal(42, context["added"]);
+        Assert.Equal(2, context.Items.Count);
+    }
+
+    [Fact]
     public void WithTenantId_ShouldSetTenantIdWithoutChangingItems()
     {
         var context = Context.Empty.WithTenantId("tenant-a");

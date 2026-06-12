@@ -22,18 +22,6 @@ public class Context
 
     public static Context Empty { get; } = new();
 
-    public static Context FromItems(IReadOnlyDictionary<object, object?> items)
-    {
-        ArgumentNullException.ThrowIfNull(items);
-
-        if (items.Count == 0)
-        {
-            return Empty;
-        }
-
-        return new Context(CreateReadOnlyItems(items));
-    }
-
     public IReadOnlyDictionary<object, object?> Items { get; }
 
     public string TenantId { get; protected set; } = string.Empty;
@@ -63,7 +51,18 @@ public class Context
     public Context WithItems(IReadOnlyDictionary<object, object?> items)
     {
         ArgumentNullException.ThrowIfNull(items);
-        return Clone(CreateReadOnlyItems(items));
+        if (items.Count == 0)
+        {
+            return this;
+        }
+
+        var merged = new Dictionary<object, object?>(Items);
+        foreach (var item in items)
+        {
+            merged[item.Key] = item.Value;
+        }
+
+        return Clone(CreateReadOnlyItems(merged));
     }
 
     public Context WithTenantId(string? tenantId)

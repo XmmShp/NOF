@@ -11,11 +11,13 @@ public record PaginatedRequest
     /// The page number (1-based).
     /// </summary>
     [Required]
+    [Range(1, int.MaxValue)]
     public required int PageNumber { get; init; }
 
     /// <summary>
     /// The page size.
     /// </summary>
     [Required]
+    [Range(1, int.MaxValue)]
     public required int PageSize { get; init; }
 }

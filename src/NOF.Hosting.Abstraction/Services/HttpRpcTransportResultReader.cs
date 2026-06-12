@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
 using NOF.Contract;
@@ -6,7 +7,7 @@ namespace NOF.Hosting;
 
 public static class HttpRpcTransportResultReader
 {
-    public static async Task<T> ReadAsync<T>(
+    public static async Task<T> ReadAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(
         HttpResponseMessage response,
         JsonTypeInfo<T> successTypeInfo,
         CancellationToken cancellationToken)
@@ -30,7 +31,7 @@ public static class HttpRpcTransportResultReader
         return await ReadFailureAsync<T>(response, cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task<T> ReadFailureAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    public static async Task<T> ReadFailureAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(HttpResponseMessage response, CancellationToken cancellationToken)
         where T : IResult
     {
         ArgumentNullException.ThrowIfNull(response);
@@ -61,7 +62,7 @@ public static class HttpRpcTransportResultReader
         return Result.Fail(((int)response.StatusCode).ToString(), message);
     }
 
-    private static T ConvertResult<T>(IResult result)
+    private static T ConvertResult<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(IResult result)
         where T : IResult
     {
         ArgumentNullException.ThrowIfNull(result);

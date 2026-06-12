@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using NOF.Contract;
 
 namespace NOF.Application;
@@ -26,7 +27,7 @@ public abstract class RpcHandler
 /// <summary>
 /// Typed base class for one split RPC handler.
 /// </summary>
-public abstract class RpcHandler<TRequest, TResponse> : RpcHandler
+public abstract class RpcHandler<TRequest, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TResponse> : RpcHandler
     where TResponse : IResult
 {
     /// <inheritdoc />

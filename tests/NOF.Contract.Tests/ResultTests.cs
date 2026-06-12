@@ -174,7 +174,7 @@ public class ResultTests
     {
         IResult response = Result.Fail("500", "Internal server error");
 
-        var result = StreamingResult.From<string>(response);
+        var result = StreamingResult<string>.From(response);
         Assert.False(result.IsSuccess);
         Assert.Equal("500", result.ErrorCode);
         Assert.Equal("Internal server error", result.Message);
@@ -191,12 +191,96 @@ public class ResultTests
         var json = JsonSerializer.Serialize(original);
         IResult response = JsonSerializer.Deserialize<Result>(json)!;
 
-        var result = StreamingResult.From<string>(response);
+        var result = StreamingResult<string>.From(response);
         Assert.False(result.IsSuccess);
         Assert.Equal("409", result.ErrorCode);
         Assert.Equal("Conflict", result.Message);
         Assert.Equal("abc", result.Extra["requestId"]);
         Assert.Null(result.Value);
+    }
+
+    [Fact]
+    public void RequireCompatible_WithFailResult_UsesStaticFromProjection()
+    {
+        IResult response = Result.Fail("422", "Validation failed", new Dictionary<string, string>
+        {
+            ["field"] = "name"
+        });
+
+        var result = ResultProjection.RequireCompatible<CustomProjectedResult>(response);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("422", result.ErrorCode);
+        Assert.Equal("Validation failed", result.Message);
+        Assert.Equal("name", result.Extra["field"]);
+    }
+
+    [Fact]
+    public void PaginatedResultFrom_WithFailResult_ReturnsFailedPaginatedResult()
+    {
+        IResult response = Result.Fail("409", "Conflict", new Dictionary<string, string>
+        {
+            ["requestId"] = "abc"
+        });
+
+        var result = PaginatedResult<string>.From(response);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("409", result.ErrorCode);
+        Assert.Equal("Conflict", result.Message);
+        Assert.Equal("abc", result.Extra["requestId"]);
+        Assert.NotNull(result.Value);
+        Assert.Empty(result.Value);
+    }
+
+    [Fact]
+    public void RequireCompatible_WithPaginatedArrayPayload_ProjectsToPaginatedResult()
+    {
+        var result = ResultProjection.RequireCompatible<PaginatedResult<int>>(
+            Result.Success(new[] { 11, 12 }, new Dictionary<string, string> { ["totalCount"] = "25" }));
+        Assert.True(result.IsSuccess);
+        Assert.Equal(25, result.TotalCount);
+        Assert.Equal([11, 12], result.Value);
+    }
+
+    [Fact]
+    public void PaginatedResultFrom_WithEnumerablePayload_ProjectsToPaginatedResult()
+    {
+        IResult response = new CustomPayloadResult<IEnumerable<int>>([1, 2, 3]);
+
+        var result = PaginatedResult<int>.From(response);
+        Assert.True(result.IsSuccess);
+        Assert.Equal([1, 2, 3], result.Value);
+    }
+
+    [Fact]
+    public void PaginatedResultFrom_WithSingleValuePayload_ProjectsToPaginatedResult()
+    {
+        IResult response = new CustomPayloadResult<int>(7);
+
+        var result = PaginatedResult<int>.From(response);
+        Assert.True(result.IsSuccess);
+        Assert.Equal([7], result.Value);
+    }
+
+    [Fact]
+    public void PaginatedResultSuccess_WithTotalCount_WritesMetadataToExtra()
+    {
+        var result = PaginatedResult.Success(["a", "b"], 88);
+
+        Assert.Equal("88", result.Extra["totalCount"]);
+        Assert.Equal(88, result.TotalCount);
+        Assert.NotNull(result.Value);
+        Assert.Equal(["a", "b"], result.Value);
+    }
+
+    [Fact]
+    public void PaginatedResult_Serialization_DoesNotEmitComputedTotalCountProperty()
+    {
+        var result = PaginatedResult.Success(["a", "b"], 88);
+
+        var json = JsonSerializer.Serialize(result);
+        Assert.Contains("\"Extra\":", json);
+        Assert.Contains("\"totalCount\":\"88\"", json);
+        Assert.DoesNotContain("\"TotalCount\":", json);
     }
 
     #endregion
@@ -394,11 +478,63 @@ public class ResultTests
         result.Message);
     }
 
+    [Fact]
+    public void ResultFrom_WithFailResult_ReturnsFailedResult()
+    {
+        IResult response = Result.Fail("401", "Unauthorized");
+
+        var result = Result.From(response);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("401", result.ErrorCode);
+        Assert.Equal("Unauthorized", result.Message);
+    }
+
+    [Fact]
+    public void ResultTFrom_WithSuccessPayload_ProjectsValue()
+    {
+        IResult response = new CustomPayloadResult<int>(7);
+
+        var result = Result<int>.From(response);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(7, result.Value);
+    }
+
     #endregion
 
     private class TestDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed record CustomProjectedResult(
+        bool IsSuccess,
+        string ErrorCode,
+        string Message,
+        object? Value,
+        IDictionary<string, string> Extra) : IResult<CustomProjectedResult>
+    {
+        public static CustomProjectedResult From(IResult other)
+        {
+            return new CustomProjectedResult(other.IsSuccess, other.ErrorCode, other.Message, other.Value, new Dictionary<string, string>(other.Extra));
+        }
+    }
+
+    private sealed record CustomPayloadResult<T>(T Payload) : IResult<CustomPayloadResult<T>>
+    {
+        public bool IsSuccess => true;
+
+        public string ErrorCode => string.Empty;
+
+        public string Message => string.Empty;
+
+        public object? Value => Payload;
+
+        public IDictionary<string, string> Extra { get; } = new Dictionary<string, string>();
+
+        public static CustomPayloadResult<T> From(IResult other)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

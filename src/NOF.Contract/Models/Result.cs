@@ -4,46 +4,12 @@ using System.Text.Json.Serialization;
 
 namespace NOF.Contract;
 
-internal static class ResultExtra
-{
-    public static Dictionary<string, string> Create(IDictionary<string, string>? extra)
-    {
-        return extra is null
-            ? new Dictionary<string, string>()
-            : new Dictionary<string, string>(extra);
-    }
-}
-
-/// <summary>
-/// Marker interface for result types that represent the outcome of an operation,
-/// either success or failure.
-/// </summary>
-public interface IResult
-{
-    /// <summary>Indicates whether the operation succeeded.</summary>
-    bool IsSuccess { get; }
-
-    /// <summary>Error code when failed; empty when succeeded.</summary>
-    string ErrorCode { get; }
-
-    /// <summary>Human-readable message; empty when succeeded.</summary>
-    string Message { get; }
-
-    /// <summary>The success payload when available; otherwise <see langword="null"/>.</summary>
-    object? Value { get; }
-
-    /// <summary>
-    /// Additional metadata to accompany the result.
-    /// </summary>
-    IDictionary<string, string> Extra { get; }
-}
-
 /// <summary>
 /// Represents the result of an operation that does not return a value.
 /// Contains information about whether the operation succeeded and, if not, the error details.
 /// Instances must be created via <see cref="Success()"/>, <see cref="Success{T}(T)"/>, or <see cref="Fail(string, string)"/>.
 /// </summary>
-public record Result : IResult
+public record Result : IResult<Result>
 {
     [JsonConstructor]
     internal Result(bool isSuccess, string? errorCode, string? message, IDictionary<string, string>? extra = null)
@@ -51,7 +17,7 @@ public record Result : IResult
         IsSuccess = isSuccess;
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
-        Extra = ResultExtra.Create(extra);
+        Extra = extra.CreateOrCopy();
     }
 
     /// <summary>
@@ -108,6 +74,19 @@ public record Result : IResult
     public static Result Success(IDictionary<string, string>? extra = null)
     {
         return new Result(true, string.Empty, string.Empty, extra);
+    }
+
+    public static Result From(IResult other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        if (other is Result typed)
+        {
+            return typed;
+        }
+
+        return other.IsSuccess
+            ? Success(other.Extra)
+            : new Result(false, other.ErrorCode, other.Message, other.Extra);
     }
 
     /// <summary>
@@ -183,13 +162,13 @@ public record Result : IResult
 /// Not intended for direct use in application logic—prefer <see cref="Result"/> or <see cref="Result{T}"/>.
 /// Instances must be created via <see cref="Result.Fail(string, string)"/>.
 /// </summary>
-public record FailResult : IResult
+public record FailResult : IResult<FailResult>
 {
     internal FailResult(string errorCode, string message, IDictionary<string, string>? extra = null)
     {
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
-        Extra = ResultExtra.Create(extra);
+        Extra = extra.CreateOrCopy();
     }
 
     /// <summary>
@@ -213,6 +192,23 @@ public record FailResult : IResult
     public IDictionary<string, string> Extra { get; }
 
     public object? Value => null;
+
+    public static FailResult From(IResult other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        if (other is FailResult typed)
+        {
+            return typed;
+        }
+
+        if (other.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $"Cannot convert a successful '{other.GetType().FullName}' to '{typeof(FailResult).FullName}'.");
+        }
+
+        return Result.Fail(other.ErrorCode, other.Message, other.Extra);
+    }
 }
 
 /// <summary>
@@ -221,7 +217,7 @@ public record FailResult : IResult
 /// Instances must be created via <see cref="Result.Success{T}(T)"/> or <see cref="Result.Fail(string, string)"/>.
 /// </summary>
 /// <typeparam name="T">The type of the value returned on success.</typeparam>
-public record Result<T> : IResult
+public record Result<T> : IResult<Result<T>>
 {
     [JsonConstructor]
     internal Result(bool isSuccess, string? errorCode, string? message, T? value, IDictionary<string, string>? extra = null)
@@ -230,7 +226,7 @@ public record Result<T> : IResult
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;
         Value = value;
-        Extra = ResultExtra.Create(extra);
+        Extra = extra.CreateOrCopy();
     }
 
     /// <summary>
@@ -283,6 +279,28 @@ public record Result<T> : IResult
     public static implicit operator Result<T>(T value)
         => Result.Success(value);
 
+    public static Result<T> From(IResult other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        if (other is Result<T> typed)
+        {
+            return typed;
+        }
+
+        if (!other.IsSuccess)
+        {
+            return new Result<T>(false, other.ErrorCode, other.Message, default, other.Extra);
+        }
+
+        if (other.Value is T value)
+        {
+            return Result.Success(value, other.Extra);
+        }
+
+        throw new InvalidOperationException(
+            $"Cannot convert a successful '{other.GetType().FullName}' to '{typeof(Result<T>).FullName}'.");
+    }
+
     /// <summary>
     /// Pattern-matches on a <see cref="Result{T}"/>, invoking the appropriate delegate based on success or failure.
     /// On success, the contained value is passed to <paramref name="onSuccess"/>.
@@ -331,64 +349,11 @@ public record Result<T> : IResult
     }
 }
 
-/// <summary>
-/// Represents the outcome of a streaming RPC operation.
-/// </summary>
-public sealed record StreamingResult<T> : IResult
-{
-    internal StreamingResult(bool isSuccess, string? errorCode, string? message, IAsyncEnumerable<T>? value, IDictionary<string, string>? extra = null)
-    {
-        IsSuccess = isSuccess;
-        ErrorCode = errorCode ?? string.Empty;
-        Message = message ?? string.Empty;
-        Value = value;
-        Extra = ResultExtra.Create(extra);
-    }
-
-    [MemberNotNullWhen(true, nameof(Value))]
-    public bool IsSuccess { get; }
-
-    public string ErrorCode { get; }
-
-    public string Message { get; }
-
-    public IAsyncEnumerable<T>? Value { get; }
-
-    object? IResult.Value => Value;
-
-    public IDictionary<string, string> Extra { get; }
-
-    public static implicit operator StreamingResult<T>(FailResult result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-        return new StreamingResult<T>(false, result.ErrorCode, result.Message, null, result.Extra);
-    }
-}
-
-public static class StreamingResult
-{
-    public static StreamingResult<T> From<T>(IResult result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-        if (result is StreamingResult<T> typedResult)
-        {
-            return typedResult;
-        }
-
-        if (!result.IsSuccess)
-        {
-            return new StreamingResult<T>(false, result.ErrorCode, result.Message, null, result.Extra);
-        }
-
-        throw new InvalidOperationException($"Cannot convert a successful '{result.GetType().FullName}' to '{typeof(StreamingResult<T>).FullName}'.");
-    }
-}
-
 public static class ResultProjection
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Result projection is limited to NOF known result shapes.")]
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Result projection is limited to NOF known result shapes.")]
-    public static IResult CreateFailure(Type resultType, IResult failure)
+    public static IResult CreateFailure([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type resultType, IResult failure)
     {
         ArgumentNullException.ThrowIfNull(resultType);
         ArgumentNullException.ThrowIfNull(failure);
@@ -404,73 +369,75 @@ public static class ResultProjection
             return failure;
         }
 
-        if (resultType == typeof(Result))
+        if (TryInvokeStaticFrom(resultType, failure, out var projected))
         {
-            return new Result(false, failure.ErrorCode, failure.Message, failure.Extra);
-        }
-
-        if (resultType == typeof(FailResult))
-        {
-            return Result.Fail(failure.ErrorCode, failure.Message, failure.Extra);
-        }
-
-        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Result<>))
-        {
-            var method = typeof(ResultProjection)
-                .GetMethod(nameof(CreateTypedFailureResult), BindingFlags.NonPublic | BindingFlags.Static)!
-                .MakeGenericMethod(resultType.GetGenericArguments()[0]);
-            return (IResult)method.Invoke(null, [failure])!;
-        }
-
-        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(StreamingResult<>))
-        {
-            var method = typeof(ResultProjection)
-                .GetMethod(nameof(CreateTypedStreamingFailureResult), BindingFlags.NonPublic | BindingFlags.Static)!
-                .MakeGenericMethod(resultType.GetGenericArguments()[0]);
-            return (IResult)method.Invoke(null, [failure])!;
+            return projected;
         }
 
         throw new InvalidOperationException(
-            $"Result type '{resultType.FullName}' implements '{typeof(IResult).FullName}' but is not supported for failure projection.");
+            $"Result type '{resultType.FullName}' implements '{typeof(IResult).FullName}' but does not declare a compatible public static From(IResult) method.");
     }
 
-    public static T Require<T>(IResult result)
+    public static T Require<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(IResult result)
         where T : class, IResult
     {
         ArgumentNullException.ThrowIfNull(result);
         return result is T typed ? typed : (T)CreateFailure(typeof(T), result);
     }
 
-    public static T RequireStruct<T>(IResult result)
+    public static T RequireStruct<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(IResult result)
         where T : struct, IResult
     {
         ArgumentNullException.ThrowIfNull(result);
         return result is T typed ? typed : (T)CreateFailure(typeof(T), result);
     }
 
-    public static T RequireCompatible<T>(IResult result)
+    public static T RequireCompatible<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(IResult result)
         where T : IResult
     {
         ArgumentNullException.ThrowIfNull(result);
         return result is T typed ? typed : (T)CreateFailure(typeof(T), result);
     }
 
-    public static IResult CreateSuccess(Type resultType)
+    public static IResult CreateSuccess([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type resultType)
     {
         ArgumentNullException.ThrowIfNull(resultType);
 
-        if (resultType == typeof(Result))
+        if (TryInvokeStaticFrom(resultType, Result.Success(), out var projected))
         {
-            return Result.Success();
+            return projected;
         }
 
         throw new InvalidOperationException(
             $"Result type '{resultType.FullName}' requires a payload and cannot be created from metadata-only success.");
     }
 
-    private static Result<TItem> CreateTypedFailureResult<TItem>(IResult failure)
-        => new(false, failure.ErrorCode, failure.Message, default, failure.Extra);
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Result projection only probes the result type for a NOF static From(IResult) entry point.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Result projection only probes the result type for a NOF static From(IResult) entry point.")]
+    private static bool TryInvokeStaticFrom([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type resultType, IResult source, [NotNullWhen(true)] out IResult? projected)
+    {
+        var fromMethod = resultType.GetMethod(
+            nameof(Result.From),
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(IResult)],
+            modifiers: null);
 
-    private static StreamingResult<TItem> CreateTypedStreamingFailureResult<TItem>(IResult failure)
-        => new(false, failure.ErrorCode, failure.Message, null, failure.Extra);
+        if (fromMethod is null
+            || !typeof(IResult).IsAssignableFrom(fromMethod.ReturnType)
+            || !resultType.IsAssignableFrom(fromMethod.ReturnType))
+        {
+            projected = null;
+            return false;
+        }
+
+        projected = (IResult?)fromMethod.Invoke(null, [source]);
+        if (projected is null)
+        {
+            throw new InvalidOperationException(
+                $"Result type '{resultType.FullName}' returned null from public static From(IResult).");
+        }
+
+        return true;
+    }
 }

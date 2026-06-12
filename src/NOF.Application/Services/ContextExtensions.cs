@@ -47,7 +47,7 @@ public static partial class ContextExtensions
                 items[headerKey] = value;
             }
 
-            return Context.FromItems(items);
+            return Context.Empty.WithItems(items);
         }
     }
 }
