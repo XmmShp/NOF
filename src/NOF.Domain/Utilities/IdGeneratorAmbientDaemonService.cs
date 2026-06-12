@@ -1,7 +1,6 @@
 using NOF.Abstraction;
-using NOF.Domain;
 
-namespace NOF.Infrastructure;
+namespace NOF.Domain;
 
 public sealed class IdGeneratorAmbientDaemonService : IDaemonService, IDisposable
 {

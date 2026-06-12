@@ -18,7 +18,7 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
         _cache = cache;
     }
 
-    public override async Task<RpcResult<Empty>> HandleAsync(AddOrUpdateConfigFileRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(AddOrUpdateConfigFileRequest request, Context context, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>()
@@ -26,7 +26,8 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
 
         if (node is null)
         {
-            return Response("Node not found.", HttpTransportMetadata.Create(404));
+            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
+            return Result.Fail("404", "Node not found.");
         }
 
         var fileName = ConfigFileName.Of(request.FileName);
@@ -45,6 +46,6 @@ public class AddOrUpdateConfigFile : NOFSampleService.AddOrUpdateConfigFile
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
             cancellationToken);
 
-        return Success(Empty.Instance);
+        return Result.Success();
     }
 }

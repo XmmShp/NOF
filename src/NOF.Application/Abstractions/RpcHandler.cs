@@ -20,13 +20,14 @@ public abstract class RpcHandler
     /// <summary>
     /// Executes the handler using an untyped request instance.
     /// </summary>
-    public abstract Task<IRpcResult> HandleAsync(object request, Context context, CancellationToken cancellationToken);
+    public abstract Task<IResult> HandleAsync(object request, Context context, CancellationToken cancellationToken);
 }
 
 /// <summary>
 /// Typed base class for one split RPC handler.
 /// </summary>
 public abstract class RpcHandler<TRequest, TResponse> : RpcHandler
+    where TResponse : IResult
 {
     /// <inheritdoc />
     public override Type RequestType => typeof(TRequest);
@@ -35,41 +36,60 @@ public abstract class RpcHandler<TRequest, TResponse> : RpcHandler
     public override Type ResponseType => typeof(TResponse);
 
     /// <inheritdoc />
-    public sealed override async Task<IRpcResult> HandleAsync(object request, Context context, CancellationToken cancellationToken)
+    public sealed override async Task<IResult> HandleAsync(object request, Context context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         return await HandleAsync((TRequest)request, context, cancellationToken).ConfigureAwait(false);
     }
 
-    protected RpcResult<TResponse> Success(TResponse value)
-        => RpcResults.Success(value);
+    protected TResponse Success(TResponse value)
+        => value;
 
-    protected RpcResult<TResponse> Success(
+    protected TResponse Success(
+        Context context,
         TResponse value,
         IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
-        => RpcResults.Success(value, metadatas);
+    {
+        ApplyResponseMetadatas(context, metadatas);
+        return value;
+    }
 
-    protected RpcResult<TResponse> Success(
+    protected TResponse Success(
+        Context context,
         IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
-        => RpcResults.Response<TResponse>(true, null, metadatas);
+    {
+        ApplyResponseMetadatas(context, metadatas);
+        return (TResponse)ResultProjection.CreateSuccess(typeof(TResponse));
+    }
 
-    protected RpcResult<TResponse> Response(
-        object? body = null,
+    protected TResponse Response(
+        Context context,
+        TResponse body,
         IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
-        => RpcResults.Response<TResponse>(true, body, metadatas);
+    {
+        ApplyResponseMetadatas(context, metadatas);
+        return body;
+    }
 
-    protected RpcResult<TResponse> Fail(
+    protected TResponse Fail(
+        Context context,
         IEnumerable<KeyValuePair<string, string?>>? metadatas = null)
-        => RpcResults.FromFailure<TResponse>(metadatas);
+    {
+        ApplyResponseMetadatas(context, metadatas);
+        return (TResponse)ResultProjection.CreateFailure(typeof(TResponse), Result.Fail("500", "RPC call failed."));
+    }
 
-    protected RpcResult<TResponse> Fail(
+    protected TResponse Fail(
         string errorCode,
         string message,
         IDictionary<string, string>? extra = null)
-        => RpcResults.BusinessFailure<TResponse>(Result.Fail(errorCode, message, extra));
+        => (TResponse)ResultProjection.CreateFailure(typeof(TResponse), Result.Fail(errorCode, message, extra));
+
+    private static void ApplyResponseMetadatas(Context context, IEnumerable<KeyValuePair<string, string?>>? metadatas)
+        => context.SetResponseMetadatas(metadatas);
 
     /// <summary>
     /// Executes the handler using the strongly typed request.
     /// </summary>
-    public abstract Task<RpcResult<TResponse>> HandleAsync(TRequest request, Context context, CancellationToken cancellationToken);
+    public abstract Task<TResponse> HandleAsync(TRequest request, Context context, CancellationToken cancellationToken);
 }

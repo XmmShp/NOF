@@ -267,7 +267,7 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
-    public async Task ServiceMethod_WithCustomReturnAndSingleRequest_NoSignatureDiagnostics()
+    public async Task ServiceMethod_WithCustomReturnAndSingleRequest_ReportsNOF210()
     {
         const string source = """
             using NOF.Contract;
@@ -284,7 +284,7 @@ public class RpcServiceAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.DoesNotContain(diagnostics, d => d.Id is "NOF207" or "NOF209");
+        Assert.Contains(diagnostics, d => d.Id == "NOF210");
     }
 
     [Fact]
@@ -305,6 +305,29 @@ public class RpcServiceAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
         Assert.DoesNotContain(diagnostics, d => d.Id is "NOF207" or "NOF209");
+    }
+
+    [Fact]
+    public async Task ServiceMethod_WithCustomResultImplementation_NoNOF210()
+    {
+        const string source = """
+            using NOF.Contract;
+            using System.Collections.Generic;
+
+            namespace App;
+
+            public record Query(string Value);
+
+            public sealed record CustomResult(bool IsSuccess, string ErrorCode, string Message, object? Value, IDictionary<string, string> Extra) : IResult;
+
+            public partial interface IMyService : IRpcService
+            {
+                CustomResult Execute(Query request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF210");
     }
 
     [Fact]

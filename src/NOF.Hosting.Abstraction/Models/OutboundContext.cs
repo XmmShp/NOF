@@ -10,7 +10,7 @@ public sealed class RequestOutboundContext : Context
 {
     public IDictionary<string, string?> Headers { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-    public IRpcResult? Response { get; set; }
+    public IResult? Response { get; set; }
 
     public required Type ServiceType { get; init; }
 

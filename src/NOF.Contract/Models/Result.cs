@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace NOF.Contract;
@@ -381,4 +382,95 @@ public static class StreamingResult
 
         throw new InvalidOperationException($"Cannot convert a successful '{result.GetType().FullName}' to '{typeof(StreamingResult<T>).FullName}'.");
     }
+}
+
+public static class ResultProjection
+{
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Result projection is limited to NOF known result shapes.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Result projection is limited to NOF known result shapes.")]
+    public static IResult CreateFailure(Type resultType, IResult failure)
+    {
+        ArgumentNullException.ThrowIfNull(resultType);
+        ArgumentNullException.ThrowIfNull(failure);
+
+        if (!typeof(IResult).IsAssignableFrom(resultType))
+        {
+            throw new InvalidOperationException(
+                $"Cannot create a failure result for non-result type '{resultType.FullName}'.");
+        }
+
+        if (resultType.IsInstanceOfType(failure))
+        {
+            return failure;
+        }
+
+        if (resultType == typeof(Result))
+        {
+            return new Result(false, failure.ErrorCode, failure.Message, failure.Extra);
+        }
+
+        if (resultType == typeof(FailResult))
+        {
+            return Result.Fail(failure.ErrorCode, failure.Message, failure.Extra);
+        }
+
+        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Result<>))
+        {
+            var method = typeof(ResultProjection)
+                .GetMethod(nameof(CreateTypedFailureResult), BindingFlags.NonPublic | BindingFlags.Static)!
+                .MakeGenericMethod(resultType.GetGenericArguments()[0]);
+            return (IResult)method.Invoke(null, [failure])!;
+        }
+
+        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(StreamingResult<>))
+        {
+            var method = typeof(ResultProjection)
+                .GetMethod(nameof(CreateTypedStreamingFailureResult), BindingFlags.NonPublic | BindingFlags.Static)!
+                .MakeGenericMethod(resultType.GetGenericArguments()[0]);
+            return (IResult)method.Invoke(null, [failure])!;
+        }
+
+        throw new InvalidOperationException(
+            $"Result type '{resultType.FullName}' implements '{typeof(IResult).FullName}' but is not supported for failure projection.");
+    }
+
+    public static T Require<T>(IResult result)
+        where T : class, IResult
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result is T typed ? typed : (T)CreateFailure(typeof(T), result);
+    }
+
+    public static T RequireStruct<T>(IResult result)
+        where T : struct, IResult
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result is T typed ? typed : (T)CreateFailure(typeof(T), result);
+    }
+
+    public static T RequireCompatible<T>(IResult result)
+        where T : IResult
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return result is T typed ? typed : (T)CreateFailure(typeof(T), result);
+    }
+
+    public static IResult CreateSuccess(Type resultType)
+    {
+        ArgumentNullException.ThrowIfNull(resultType);
+
+        if (resultType == typeof(Result))
+        {
+            return Result.Success();
+        }
+
+        throw new InvalidOperationException(
+            $"Result type '{resultType.FullName}' requires a payload and cannot be created from metadata-only success.");
+    }
+
+    private static Result<TItem> CreateTypedFailureResult<TItem>(IResult failure)
+        => new(false, failure.ErrorCode, failure.Message, default, failure.Extra);
+
+    private static StreamingResult<TItem> CreateTypedStreamingFailureResult<TItem>(IResult failure)
+        => new(false, failure.ErrorCode, failure.Message, null, failure.Extra);
 }

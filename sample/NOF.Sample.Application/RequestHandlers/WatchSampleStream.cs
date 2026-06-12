@@ -7,13 +7,13 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public sealed class WatchSampleStream : NOFSampleService.WatchSampleStream
 {
-    public override Task<RpcResult<StreamingResult<SampleStreamEvent>>> HandleAsync(WatchSampleStreamRequest request, Context context, CancellationToken cancellationToken)
+    public override Task<StreamingResult<SampleStreamEvent>> HandleAsync(WatchSampleStreamRequest request, Context context, CancellationToken cancellationToken)
     {
         var count = Math.Clamp(request.Count, 1, 20);
         var intervalMilliseconds = Math.Clamp(request.IntervalMilliseconds, 100, 5000);
         var topic = string.IsNullOrWhiteSpace(request.Topic) ? "NOF Streaming Demo" : request.Topic.Trim();
 
-        return Task.FromResult(Success(Result.Stream(Stream(topic, count, intervalMilliseconds, cancellationToken))));
+        return Task.FromResult(Result.Stream(Stream(topic, count, intervalMilliseconds, cancellationToken)));
     }
 
     private static async IAsyncEnumerable<SampleStreamEvent> Stream(

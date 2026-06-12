@@ -8,7 +8,7 @@ namespace NOF.Infrastructure;
 
 public static class RpcServerInvoker
 {
-    public static async Task<IRpcResult?> InvokeAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService>(
+    public static async Task<IResult?> InvokeAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TRpcService>(
         IServiceProvider rootServiceProvider,
         MethodInfo serviceMethodInfo,
         object request,
@@ -34,13 +34,15 @@ public static class RpcServerInvoker
         await outboundPipeline.ExecuteAsync(outboundContext, request, async (_, currentRequest, ct) =>
         {
             var inboundPipeline = rootServiceProvider.GetRequiredService<RequestInboundPipelineExecutor>();
-            outboundContext.Response = await inboundPipeline.ExecuteAsync(
+            var inboundContext = await inboundPipeline.ExecuteAsync(
                 currentRequest,
                 resolution.HandlerMapping.HandlerType,
                 typeof(TRpcService),
                 operationName,
                 outboundContext.Headers,
                 ct).ConfigureAwait(false);
+            outboundContext.Response = inboundContext.Response;
+            outboundContext.SetResponseMetadatas(inboundContext.ResponseMetadatas);
         }, cancellationToken).ConfigureAwait(false);
 
         return outboundContext.Response;

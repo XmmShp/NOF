@@ -18,7 +18,7 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
         _cache = cache;
     }
 
-    public override async Task<RpcResult<Empty>> HandleAsync(SetActiveFileRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(SetActiveFileRequest request, Context context, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>()
@@ -26,7 +26,8 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
 
         if (node is null)
         {
-            return Response("Node not found.", HttpTransportMetadata.Create(404));
+            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
+            return Result.Fail("404", "Node not found.");
         }
 
         var fileName = string.IsNullOrEmpty(request.FileName) ? (ConfigFileName?)null : ConfigFileName.Of(request.FileName);
@@ -43,6 +44,6 @@ public class SetActiveFile : NOFSampleService.SetActiveFile
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
             cancellationToken);
 
-        return Success(new Empty());
+        return Result.Success();
     }
 }

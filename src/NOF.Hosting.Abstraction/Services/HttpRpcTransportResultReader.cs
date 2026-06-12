@@ -10,60 +10,52 @@ namespace NOF.Hosting;
 
 public static class HttpRpcTransportResultReader
 {
-    public static async Task<RpcResult<T>> ReadAsync<T>(
+    public static async Task<(T Response, IReadOnlyDictionary<string, string?> Metadatas)> ReadAsync<T>(
         HttpResponseMessage response,
         JsonTypeInfo<T> successTypeInfo,
         CancellationToken cancellationToken)
+        where T : IResult
     {
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(successTypeInfo);
 
+        var metadatas = ReadMetadatas(response);
         if (ReadTransportSuccess(response))
         {
-            var metadatas = ReadMetadatas(response);
             if (IsBodyEmpty(response))
             {
-                return RpcResults.Response<T>(true, metadatas: metadatas);
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var fallbackBody = await ReadTransportBodyAsync(response, cancellationToken).ConfigureAwait(false);
-                return RpcResults.Response<T>(true, fallbackBody, metadatas);
+                return (ConvertResult<T>(ResultProjection.CreateSuccess(typeof(T))), metadatas);
             }
 
             try
             {
-                var payload = await HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, successTypeInfo, cancellationToken).ConfigureAwait(false);
-                return RpcResults.Response<T>(true, payload, metadatas);
+                var payload = await HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, successTypeInfo, cancellationToken).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException($"HTTP RPC response body for '{typeof(T).FullName}' is empty.");
+                return (payload, metadatas);
             }
-            catch (JsonException)
+            catch (JsonException) when (!response.IsSuccessStatusCode)
             {
-                var fallbackBody = await ReadTransportBodyAsync(response, cancellationToken).ConfigureAwait(false);
-                return RpcResults.Response<T>(true, fallbackBody, metadatas);
+                var failure = await CreateTransportFailureAsync(response, cancellationToken).ConfigureAwait(false);
+                return (ConvertResult<T>(failure), metadatas);
             }
-            catch (NotSupportedException)
+            catch (NotSupportedException) when (!response.IsSuccessStatusCode)
             {
-                var fallbackBody = await ReadTransportBodyAsync(response, cancellationToken).ConfigureAwait(false);
-                return RpcResults.Response<T>(true, fallbackBody, metadatas);
+                var failure = await CreateTransportFailureAsync(response, cancellationToken).ConfigureAwait(false);
+                return (ConvertResult<T>(failure), metadatas);
             }
         }
 
         return await ReadFailureAsync<T>(response, cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task<IRpcResult> ReadFailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    public static async Task<(T Response, IReadOnlyDictionary<string, string?> Metadatas)> ReadFailureAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+        where T : IResult
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        _ = cancellationToken;
-        return RpcResults.Fail(ReadMetadatas(response));
-    }
-
-    public static async Task<RpcResult<T>> ReadFailureAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        var envelope = await ReadFailureAsync(response, cancellationToken).ConfigureAwait(false);
-        return RpcResults.From<T>(envelope);
+        var metadatas = ReadMetadatas(response);
+        var failure = await CreateTransportFailureAsync(response, cancellationToken).ConfigureAwait(false);
+        return (ConvertResult<T>(failure), metadatas);
     }
 
     private static bool ReadTransportSuccess(HttpResponseMessage response)
@@ -110,30 +102,28 @@ public static class HttpRpcTransportResultReader
             .SelectMany(static header => header.Value.Select(value => new KeyValuePair<string, string?>(header.Key, value)))
             .ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 
-    private static async Task<object?> ReadTransportBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private static async Task<string?> ReadTransportBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (response.Content is null)
         {
             return null;
         }
 
-        var mediaType = response.Content.Headers.ContentType?.MediaType;
-        if (string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(mediaType, "text/json", StringComparison.OrdinalIgnoreCase)
-            || mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                return null;
-            }
-
-            using var document = JsonDocument.Parse(json);
-            return document.RootElement.Clone();
-        }
-
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         return string.IsNullOrWhiteSpace(body) ? null : body;
     }
 
+    private static async Task<IResult> CreateTransportFailureAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var body = await ReadTransportBodyAsync(response, cancellationToken).ConfigureAwait(false);
+        var message = body ?? response.ReasonPhrase ?? "HTTP RPC transport failure.";
+        return Result.Fail(((int)response.StatusCode).ToString(), message);
+    }
+
+    private static T ConvertResult<T>(IResult result)
+        where T : IResult
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return ResultProjection.RequireCompatible<T>(result);
+    }
 }

@@ -25,13 +25,13 @@ public class MapHttpEndpointReflectionTests
     private interface IAppService : IRpcService
     {
         [HttpEndpoint(HttpVerb.Get, "/rpc/GetUser")]
-        UserDto GetUser(GetUserRequest request);
+        Result<UserDto> GetUser(GetUserRequest request);
 
         [HttpEndpoint(HttpVerb.Post, "/rpc/CreateUser")]
-        Empty CreateUser(CreateUserRequest request);
+        Result CreateUser(CreateUserRequest request);
 
         [HttpEndpoint(HttpVerb.Delete, "/rpc/DeleteUser")]
-        Empty DeleteUser(DeleteUserRequest request);
+        Result DeleteUser(DeleteUserRequest request);
 
         [HttpEndpoint(HttpVerb.Get, "/rpc/StreamUsers")]
         StreamingResult<UserDto> StreamUsers(StreamUsersRequest request);
@@ -45,7 +45,7 @@ public class MapHttpEndpointReflectionTests
     [Fact]
     public void CreateEndpointHandler_WhenGet_UsesAsParametersBinding()
     {
-        var handler = CreateHandler(nameof(IAppService.GetUser), HttpVerb.Get, typeof(GetUserRequest), typeof(UserDto));
+        var handler = CreateHandler(nameof(IAppService.GetUser), HttpVerb.Get, typeof(GetUserRequest), typeof(Result<UserDto>));
         var requestParameter = handler.Method.GetParameters()[0];
 
         Assert.Equal(typeof(Task<Microsoft.AspNetCore.Http.IResult>), handler.Method.ReturnType);
@@ -56,7 +56,7 @@ public class MapHttpEndpointReflectionTests
     [Fact]
     public void CreateEndpointHandler_WhenPost_UsesFromBodyBinding()
     {
-        var handler = CreateHandler(nameof(IAppService.CreateUser), HttpVerb.Post, typeof(CreateUserRequest), typeof(Empty));
+        var handler = CreateHandler(nameof(IAppService.CreateUser), HttpVerb.Post, typeof(CreateUserRequest), typeof(Result));
         var requestParameter = handler.Method.GetParameters()[0];
 
         Assert.Equal(typeof(Task<Microsoft.AspNetCore.Http.IResult>), handler.Method.ReturnType);
@@ -77,7 +77,7 @@ public class MapHttpEndpointReflectionTests
     [Fact]
     public void CreateEndpointHandler_WhenDelete_UsesAsParametersBinding()
     {
-        var handler = CreateHandler(nameof(IAppService.DeleteUser), HttpVerb.Delete, typeof(DeleteUserRequest), typeof(Empty));
+        var handler = CreateHandler(nameof(IAppService.DeleteUser), HttpVerb.Delete, typeof(DeleteUserRequest), typeof(Result));
         var requestParameter = handler.Method.GetParameters()[0];
 
         Assert.NotNull(requestParameter.GetCustomAttribute<AsParametersAttribute>());

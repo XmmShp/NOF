@@ -16,17 +16,16 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         _mapper = mapper;
     }
 
-    public override async Task<RpcResult<Result<GetRootConfigNodesResponse>>> HandleAsync(GetRootConfigNodesRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result<GetRootConfigNodesResponse>> HandleAsync(GetRootConfigNodesRequest request, Context context, CancellationToken cancellationToken)
     {
         var nodes = await _dbContext.Set<ConfigNode>().GetRootNodesAsync(cancellationToken);
 
         var response = nodes.Select(node => _mapper.Map<ConfigNode, ConfigNodeDto>(node)).ToList();
 
-        return Success((Result<GetRootConfigNodesResponse>)new GetRootConfigNodesResponse
+        return new GetRootConfigNodesResponse
         {
             Nodes = response
-        });
+        };
     }
 }
-
 

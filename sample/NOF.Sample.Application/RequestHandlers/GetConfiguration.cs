@@ -21,7 +21,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         _mapper = mapper;
     }
 
-    public override async Task<RpcResult<Result<GetConfigurationResponse>>> HandleAsync(GetConfigurationRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, Context context, CancellationToken cancellationToken)
     {
         var appNameStr = request.AppName;
         var appCacheKey = new ConfigResultCacheKey(appNameStr);
@@ -32,7 +32,7 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
 
         if (appNodeDto is null)
         {
-            return Success((Result<GetConfigurationResponse>)Result.Fail("404", "Config node not found."));
+            return Result.Fail("404", "Config node not found.");
         }
 
         // 2. Expand Path to Root
@@ -55,10 +55,10 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         var cachedResult = await _cache.GetAsync(appCacheKey, cancellationToken: cancellationToken);
         if (cachedResult.HasValue && cachedResult.Value.Version >= maxVersion)
         {
-            return Success((Result<GetConfigurationResponse>)new GetConfigurationResponse
+            return new GetConfigurationResponse
             {
                 Content = cachedResult.Value.Content
-            });
+            };
         }
 
 
@@ -74,10 +74,10 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) },
             cancellationToken);
 
-        return Success((Result<GetConfigurationResponse>)new GetConfigurationResponse
+        return new GetConfigurationResponse
         {
             Content = jsonString
-        });
+        };
     }
 
     private async Task<ConfigNodeDto?> GetNodeByNameAsync(ConfigNodeName name, CancellationToken cancellationToken)
@@ -197,6 +197,5 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         }
     }
 }
-
 
 

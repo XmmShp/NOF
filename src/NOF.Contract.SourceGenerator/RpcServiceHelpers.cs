@@ -13,6 +13,7 @@ internal static class RpcServiceHelpers
     public const string TransportStringParsableFqn = "NOF.Contract.ITransportStringParsable<TSelf>";
     public const string SummaryAttributeFqn = "NOF.Contract.SummaryAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
+    public const string ResultInterfaceFqn = "NOF.Contract.IResult";
     public const string StreamingResultFqn = "NOF.Contract.StreamingResult<T>";
     public const string ResultFqn = "NOF.Contract.Result";
     public const string GenericResultFqn = "NOF.Contract.Result<T>";
@@ -118,8 +119,20 @@ internal static class RpcServiceHelpers
             return false;
         }
 
+        if (!ImplementsResultContract(returnType))
+        {
+            returnInfo = default;
+            return false;
+        }
+
         returnInfo = new ServiceReturnInfo(returnType);
         return true;
+    }
+
+    public static bool ImplementsResultContract(ITypeSymbol type)
+    {
+        return type.ToDisplayString() == ResultInterfaceFqn
+               || type.AllInterfaces.Any(i => i.ToDisplayString() == ResultInterfaceFqn);
     }
 
     public static string GetFullNamespace(INamespaceSymbol ns)
@@ -236,10 +249,8 @@ internal readonly struct ServiceReturnInfo
             ? namedType.TypeArguments[0]
             : null;
 
-    public string TransportResultTypeDisplay
-        => $"global::NOF.Contract.RpcResult<{ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
-
-    public string ClientResponseTypeDisplay => TransportResultTypeDisplay;
+    public string ClientResponseTypeDisplay
+        => ValueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
     public string ClientTaskReturnTypeDisplay
         => $"global::System.Threading.Tasks.Task<{ClientResponseTypeDisplay}>";

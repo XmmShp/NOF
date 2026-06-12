@@ -12,8 +12,8 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 {
     private static readonly DiagnosticDescriptor _unsupportedClientReturnType = new(
         id: "NOF030",
-        title: "Local RPC client method must use RPC transport return type",
-        messageFormat: "Local RPC client method '{0}' must return '{1}' to match the RPC transport contract signature",
+        title: "Local RPC client method must return the RPC result type",
+        messageFormat: "Local RPC client method '{0}' must return '{1}' to match the RPC service contract signature",
         category: "LocalRpcClientGenerator",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -160,8 +160,8 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var serviceType = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC response projection may require generic instantiation at runtime.\")]");
-        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC response projection may require reflective access to generic result helpers.\")]");
+        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC failure projection may require generic instantiation at runtime.\")]");
+        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC failure projection may require reflective access to generic result helpers.\")]");
         sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
         sb.AppendLine("        {");
         sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
@@ -198,39 +198,12 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 
     private static string BuildResponseConversionExpression(ITypeSymbol returnType, string valueExpression)
     {
-        var requiredResultExpression = BuildRequiredRpcResultExpression(valueExpression);
-
-        if (returnType is INamedTypeSymbol namedType
-            && namedType.ContainingNamespace.ToDisplayString() == "NOF.Contract")
-        {
-            if (namedType.Name == "RpcResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
-            {
-                var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.RpcResults.From<{innerType}>({requiredResultExpression})";
-            }
-
-            if (namedType.Name == "Result" && !namedType.IsGenericType)
-            {
-                return $"global::NOF.Contract.RpcResults.RequireBody<global::NOF.Contract.Result>({requiredResultExpression})";
-            }
-
-            if (namedType.Name == "Result" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
-            {
-                var innerType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.RpcResults.RequireBody<global::NOF.Contract.Result<{innerType}>>({requiredResultExpression})";
-            }
-
-            if (namedType.Name == "StreamingResult" && namedType.IsGenericType && namedType.TypeArguments.Length == 1)
-            {
-                var itemType = namedType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                return $"global::NOF.Contract.RpcResults.RequireBody<global::NOF.Contract.StreamingResult<{itemType}>>({requiredResultExpression})";
-            }
-        }
-
-        throw new global::System.InvalidOperationException($"Unsupported local RPC client return type '{returnType.ToDisplayString()}'.");
+        var requiredResultExpression = BuildRequiredResultExpression(valueExpression);
+        var returnTypeDisplay = returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return $"global::NOF.Contract.ResultProjection.RequireCompatible<{returnTypeDisplay}>({requiredResultExpression})";
     }
 
-    private static string BuildRequiredRpcResultExpression(string valueExpression)
+    private static string BuildRequiredResultExpression(string valueExpression)
     {
         return $"{valueExpression} ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\")";
     }
@@ -259,13 +232,7 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 
     private static string BuildExpectedClientReturnTypeDisplay(IMethodSymbol serviceMethod)
     {
-        var transportResponseType = BuildTransportClientResponseTypeDisplay(serviceMethod.ReturnType);
-        return $"global::System.Threading.Tasks.Task<{transportResponseType}>";
-    }
-
-    private static string BuildTransportClientResponseTypeDisplay(ITypeSymbol returnType)
-    {
-        return $"global::NOF.Contract.RpcResult<{returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
+        return $"global::System.Threading.Tasks.Task<{serviceMethod.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
     }
 
     private static bool TryGetRpcClientInterfaceFromLocalRpcClientAttribute(

@@ -218,7 +218,7 @@ public sealed class RequestInboundPipelineExecutor
         _scopeFactory = scopeFactory;
     }
 
-    public async ValueTask<IRpcResult?> ExecuteAsync(
+    public async ValueTask<RequestInboundContext> ExecuteAsync(
         object request,
         Type handlerType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
@@ -242,7 +242,7 @@ public sealed class RequestInboundPipelineExecutor
         }
 
         await pipeline(context, request, cancellationToken).ConfigureAwait(false);
-        return context.Response;
+        return context;
     }
 
     private static RequestInboundContext CreateContext(

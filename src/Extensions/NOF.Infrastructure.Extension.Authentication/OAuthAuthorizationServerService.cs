@@ -18,12 +18,12 @@ public sealed partial class OAuthAuthorizationServerService : RpcServer<IOAuthAu
 public sealed class GetRootHandler(IOptions<OAuthAuthorizationServerOptions> options)
     : OAuthAuthorizationServerService.GetRoot
 {
-    public override Task<RpcResult<OAuthServerRootDocument>> HandleAsync(
+    public override Task<Result<OAuthServerRootDocument>> HandleAsync(
         Empty request,
         Context context, CancellationToken cancellationToken)
     {
         var issuer = ResolveIssuer(options.Value);
-        return Task.FromResult(Success(new OAuthServerRootDocument
+        return Task.FromResult(Result.Success(new OAuthServerRootDocument
         {
             Issuer = issuer,
             Metadata = $"{issuer}/.well-known/oauth-authorization-server"
@@ -34,28 +34,28 @@ public sealed class GetRootHandler(IOptions<OAuthAuthorizationServerOptions> opt
 public sealed class GetOpenIdConfigurationHandler(IOptions<OAuthAuthorizationServerOptions> options)
     : OAuthAuthorizationServerService.GetOpenIdConfiguration
 {
-    public override Task<RpcResult<OAuthServerMetadata>> HandleAsync(
+    public override Task<Result<OAuthServerMetadata>> HandleAsync(
         Empty request,
         Context context, CancellationToken cancellationToken)
-        => Task.FromResult(Success(BuildMetadata(options.Value)));
+        => Task.FromResult(Result.Success(BuildMetadata(options.Value)));
 }
 
 public sealed class GetAuthorizationServerMetadataHandler(IOptions<OAuthAuthorizationServerOptions> options)
     : OAuthAuthorizationServerService.GetAuthorizationServerMetadata
 {
-    public override Task<RpcResult<OAuthServerMetadata>> HandleAsync(
+    public override Task<Result<OAuthServerMetadata>> HandleAsync(
         Empty request,
         Context context, CancellationToken cancellationToken)
-        => Task.FromResult(Success(BuildMetadata(options.Value)));
+        => Task.FromResult(Result.Success(BuildMetadata(options.Value)));
 }
 
 public sealed class GetJwksHandler(IJwksService jwksService)
     : OAuthAuthorizationServerService.GetJwks
 {
-    public override async Task<RpcResult<JwksDocument>> HandleAsync(
+    public override async Task<Result<JwksDocument>> HandleAsync(
         Empty request,
         Context context, CancellationToken cancellationToken)
-        => Success(await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false));
+        => Result.Success(await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false));
 }
 
 public sealed class AuthorizeHandler(
@@ -63,7 +63,7 @@ public sealed class AuthorizeHandler(
     IOAuthAuthorizationCodeService authorizationCodeService)
     : OAuthAuthorizationServerService.Authorize
 {
-    public override async Task<RpcResult<OAuthAuthorizeResponse>> HandleAsync(
+    public override async Task<Result<OAuthAuthorizeResponse>> HandleAsync(
         OAuthAuthorizeRequest request,
         Context context, CancellationToken cancellationToken)
     {
@@ -80,30 +80,29 @@ public sealed class AuthorizeHandler(
         var validationError = ValidateAuthorizationRequest(authorizationRequest);
         if (validationError is not null)
         {
-            return ToAuthorizeFailure(authorizationRequest, validationError);
+            return ToAuthorizeFailure(context, authorizationRequest, validationError);
         }
 
         var result = await authorizationHandler.AuthorizeAsync(authorizationRequest, cancellationToken).ConfigureAwait(false);
         return result switch
         {
-            OAuthAuthorizationResult.Authorized authorized => Success(
-                metadatas: CreateHttpMetadatas(
-                    302,
-                    CreateRedirectHeaders(await RedirectWithCodeAsync(
-                        authorizationCodeService,
-                        authorizationRequest,
-                        authorized.Subject,
-                        cancellationToken).ConfigureAwait(false)))),
-            OAuthAuthorizationResult.Challenge challenge => Success(
-                metadatas: CreateHttpMetadatas(
-                    302,
-                    CreateRedirectHeaders(challenge.RedirectUrl))),
+            OAuthAuthorizationResult.Authorized authorized => CreateRedirectResult(
+                context,
+                await RedirectWithCodeAsync(
+                    authorizationCodeService,
+                    authorizationRequest,
+                    authorized.Subject,
+                    cancellationToken).ConfigureAwait(false),
+                error: null),
+            OAuthAuthorizationResult.Challenge challenge => CreateRedirectResult(context, challenge.RedirectUrl, error: null),
             OAuthAuthorizationResult.Failure failure => ToAuthorizeFailure(
+                context,
                 authorizationRequest,
                 CreateOAuthError(failure.Error, failure.ErrorDescription)),
-            _ => Response(
-                CreateOAuthError("server_error", "Unsupported OAuth authorization result."),
-                CreateHttpMetadatas(500))
+            _ => CreateErrorResult(
+                context,
+                500,
+                CreateOAuthError("server_error", "Unsupported OAuth authorization result."))
         };
     }
 
@@ -154,25 +153,25 @@ public sealed class AuthorizeHandler(
         return pkceValidation is null ? null : CreateOAuthError("invalid_request", pkceValidation);
     }
 
-    private RpcResult<OAuthAuthorizeResponse> ToAuthorizeFailure(OAuthAuthorizationRequest request, OAuthError error)
+    private static Result<OAuthAuthorizeResponse> ToAuthorizeFailure(Context context, OAuthAuthorizationRequest request, OAuthError error)
     {
         if (!string.IsNullOrWhiteSpace(request.ClientId)
             && Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
         {
-            return Success(
-                metadatas: CreateHttpMetadatas(
-                302,
-                CreateRedirectHeaders(AddQueryString(
-                request.RedirectUri,
-                new Dictionary<string, string?>
-                {
-                    ["error"] = error.Error,
-                    ["error_description"] = error.ErrorDescription,
-                    ["state"] = request.State
-                }))));
+            return CreateRedirectResult(
+                context,
+                AddQueryString(
+                    request.RedirectUri,
+                    new Dictionary<string, string?>
+                    {
+                        ["error"] = error.Error,
+                        ["error_description"] = error.ErrorDescription,
+                        ["state"] = request.State
+                    }),
+                error);
         }
 
-        return Response(error, CreateHttpMetadatas(400));
+        return CreateErrorResult(context, 400, error);
     }
 }
 
@@ -185,17 +184,18 @@ public sealed class TokenHandler(
     IOptions<OAuthAuthorizationServerOptions> oauthOptions)
     : OAuthAuthorizationServerService.Token
 {
-    public override async Task<RpcResult<OAuthTokenEndpointResponse>> HandleAsync(
+    public override async Task<Result<OAuthTokenEndpointResponse>> HandleAsync(
         OAuthTokenRequest request,
         Context context, CancellationToken cancellationToken)
     {
         return request.GrantType switch
         {
-            "authorization_code" => FromTokenResult(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false)),
-            "refresh_token" => FromTokenResult(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false)),
-            _ => Response(
-                CreateOAuthError("unsupported_grant_type", "Only authorization_code and refresh_token are supported."),
-                CreateHttpMetadatas(400))
+            "authorization_code" => FromTokenResult(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false), context),
+            "refresh_token" => FromTokenResult(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false), context),
+            _ => WithHttpFailure<OAuthTokenEndpointResponse>(
+                context,
+                Result.Fail("unsupported_grant_type", "Only authorization_code and refresh_token are supported."),
+                400)
         };
     }
 
@@ -440,7 +440,7 @@ public sealed class UserInfoHandler(
     IOptions<AuthenticationAuthorityOptions> authorityOptions)
     : OAuthAuthorizationServerService.UserInfo
 {
-    public override async Task<RpcResult<IReadOnlyDictionary<string, object>>> HandleAsync(
+    public override async Task<Result<IReadOnlyDictionary<string, object>>> HandleAsync(
         OAuthUserInfoRequest request,
         Context context, CancellationToken cancellationToken)
     {
@@ -453,11 +453,10 @@ public sealed class UserInfoHandler(
             ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrWhiteSpace(subject))
         {
-            return Response(
-                CreateOAuthError("invalid_token", "access token is invalid."),
-                CreateHttpMetadatas(
-                    401,
-                    CreateBearerAuthenticateHeaders("invalid_token", "access token is invalid.")));
+            context.SetResponseMetadatas(CreateHttpMetadatas(
+                401,
+                CreateBearerAuthenticateHeaders("invalid_token", "access token is invalid.")));
+            return Result.Fail("invalid_token", "access token is invalid.");
         }
 
         var scope = principal!.FindFirst(OAuthClaimTypes.Scope)?.Value ?? string.Empty;
@@ -465,11 +464,10 @@ public sealed class UserInfoHandler(
         var profile = await subjectService.GetProfileAsync(subject, scopes, cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {
-            return Response(
-                CreateOAuthError("invalid_token", "access token subject is invalid."),
-                CreateHttpMetadatas(
-                    401,
-                    CreateBearerAuthenticateHeaders("invalid_token", "access token subject is invalid.")));
+            context.SetResponseMetadatas(CreateHttpMetadatas(
+                401,
+                CreateBearerAuthenticateHeaders("invalid_token", "access token subject is invalid.")));
+            return Result.Fail("invalid_token", "access token subject is invalid.");
         }
 
         IReadOnlyDictionary<string, object> claims = profile.IdentityClaims
@@ -482,7 +480,7 @@ public sealed class UserInfoHandler(
                     : group.Select(static claim => claim.Value).ToArray(),
                 StringComparer.Ordinal);
 
-        return Success(claims);
+        return Result.Success(claims);
     }
 }
 
@@ -614,13 +612,48 @@ internal static class OAuthAuthorizationServerServiceHelpers
         }
     }
 
-    public static RpcResult<T> FromTokenResult<T>(Result<T> result)
-        => result.IsSuccess
-            ? RpcResults.Success(result.Value!)
-            : RpcResults.Response<T>(
-                true,
-                CreateOAuthError(result.ErrorCode, result.Message),
-                CreateHttpMetadatas(400));
+    public static Result<T> FromTokenResult<T>(Result<T> result, Context context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (!result.IsSuccess)
+        {
+            context.SetResponseMetadatas(CreateHttpMetadatas(400));
+        }
+
+        return result;
+    }
+
+    public static Result<T> WithHttpFailure<T>(Context context, FailResult failure, int statusCode)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(failure);
+        context.SetResponseMetadatas(CreateHttpMetadatas(statusCode));
+        return failure;
+    }
+
+    public static Result<OAuthAuthorizeResponse> CreateRedirectResult(Context context, string redirectUrl, OAuthError? error)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.SetResponseMetadatas(CreateHttpMetadatas(302, CreateRedirectHeaders(redirectUrl)));
+        return Result.Success(new OAuthAuthorizeResponse
+        {
+            Type = OAuthAuthorizeResponseType.Redirect,
+            RedirectUrl = redirectUrl,
+            Error = error
+        });
+    }
+
+    public static Result<OAuthAuthorizeResponse> CreateErrorResult(Context context, int statusCode, OAuthError error)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(error);
+        context.SetResponseMetadatas(CreateHttpMetadatas(statusCode));
+        return Result.Success(new OAuthAuthorizeResponse
+        {
+            Type = OAuthAuthorizeResponseType.Error,
+            Error = error
+        });
+    }
 
     public static IReadOnlyDictionary<string, string?> CreateHttpMetadatas(
         int? statusCode = null,

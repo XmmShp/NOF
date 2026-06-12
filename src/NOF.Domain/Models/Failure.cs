@@ -11,6 +11,6 @@ public record Failure(string Message, string ErrorCode)
 {
     /// <summary>Throws a <see cref="DomainException"/> from this failure.</summary>
     [DoesNotReturn]
-    public void ThrowAsDomainException()
+    public void Throw()
         => throw new DomainException(this);
 }

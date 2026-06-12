@@ -9,6 +9,8 @@ public class Context
 {
     private static readonly IReadOnlyDictionary<object, object?> EmptyItems =
         new ReadOnlyDictionary<object, object?>(new Dictionary<object, object?>());
+    private static readonly IReadOnlyDictionary<string, string?> EmptyResponseMetadatas =
+        new ReadOnlyDictionary<string, string?>(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase));
 
     protected Context()
         : this(EmptyItems)
@@ -37,6 +39,8 @@ public class Context
     public IReadOnlyDictionary<object, object?> Items { get; }
 
     public string TenantId { get; protected set; } = string.Empty;
+
+    public IReadOnlyDictionary<string, string?> ResponseMetadatas { get; private set; } = EmptyResponseMetadatas;
 
     public object? this[object key]
         => TryGetItem(key, out var value)
@@ -86,10 +90,35 @@ public class Context
         return Clone(CreateReadOnlyItems(items));
     }
 
+    public void SetResponseMetadatas(IEnumerable<KeyValuePair<string, string?>>? metadatas)
+    {
+        if (metadatas is null)
+        {
+            ResponseMetadatas = EmptyResponseMetadatas;
+            return;
+        }
+
+        var copied = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in metadatas)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                continue;
+            }
+
+            copied[key] = value;
+        }
+
+        ResponseMetadatas = copied.Count == 0
+            ? EmptyResponseMetadatas
+            : new ReadOnlyDictionary<string, string?>(copied);
+    }
+
     protected virtual Context Clone(IReadOnlyDictionary<object, object?> items)
         => new(items)
         {
-            TenantId = TenantId
+            TenantId = TenantId,
+            ResponseMetadatas = ResponseMetadatas
         };
 
     private static IReadOnlyDictionary<object, object?> CreateReadOnlyItems(IReadOnlyDictionary<object, object?> items)

@@ -3,7 +3,7 @@ namespace NOF.Domain;
 /// <summary>
 /// Provides extension members for collection types.
 /// </summary>
-public static class CollectionExtensions
+public static class EnumerableExtensions
 {
     extension<T>(IEnumerable<T> source)
     {

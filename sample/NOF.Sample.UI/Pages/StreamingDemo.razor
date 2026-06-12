@@ -107,14 +107,7 @@
                 return;
             }
 
-            var streamResult = NOF.Contract.RpcResults.RequireBody<NOF.Contract.StreamingResult<SampleStreamEvent>>(result);
-            if (!streamResult.IsSuccess)
-            {
-                Message.Error(streamResult.Message);
-                return;
-            }
-
-            await foreach (var item in streamResult.Value!.WithCancellation(_streamCancellationTokenSource.Token))
+            await foreach (var item in result.Value!.WithCancellation(_streamCancellationTokenSource.Token))
             {
                 _events.Add(item);
                 await InvokeAsync(StateHasChanged);

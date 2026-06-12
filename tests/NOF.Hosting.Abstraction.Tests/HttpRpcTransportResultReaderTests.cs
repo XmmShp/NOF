@@ -21,16 +21,17 @@ public sealed class HttpRpcTransportResultReaderTests
         };
         response.Headers.TryAddWithoutValidation("X-Trace-Id", "trace-1");
 
-        var result = await HttpRpcTransportResultReader.ReadAsync(
+        var transportResult = await HttpRpcTransportResultReader.ReadAsync(
             response,
-            CreateTypeInfo<TokenResponse>(),
+            CreateTypeInfo<Result<TokenResponse>>(),
             CancellationToken.None);
 
+        var result = transportResult.Response;
         Assert.True(result.IsSuccess);
-        Assert.Equal("abc", RpcResults.RequireBody<TokenResponse>(result).Token);
-        Assert.True(HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode));
+        Assert.Equal("abc", result.Value!.Token);
+        Assert.True(HttpTransportMetadata.TryGetStatusCode(transportResult.Metadatas, out var statusCode));
         Assert.Equal(200, statusCode);
-        Assert.Equal("trace-1", HttpTransportMetadata.GetHeaders(result.Metadatas)["X-Trace-Id"]);
+        Assert.Equal("trace-1", HttpTransportMetadata.GetHeaders(transportResult.Metadatas)["X-Trace-Id"]);
     }
 
     [Fact]
@@ -47,15 +48,15 @@ public sealed class HttpRpcTransportResultReaderTests
             "WWW-Authenticate",
             "Bearer error=\"invalid_token\", error_description=\"access token expired.\"");
 
-        var result = await HttpRpcTransportResultReader.ReadFailureAsync<TokenResponse>(response, CancellationToken.None);
+        var transportResult = await HttpRpcTransportResultReader.ReadFailureAsync<Result<TokenResponse>>(response, CancellationToken.None);
 
+        var result = transportResult.Response;
         Assert.False(result.IsSuccess);
-        Assert.Null(result.Body);
-        Assert.True(HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode));
+        Assert.True(HttpTransportMetadata.TryGetStatusCode(transportResult.Metadatas, out var statusCode));
         Assert.Equal(401, statusCode);
         Assert.Equal(
             "Bearer error=\"invalid_token\", error_description=\"access token expired.\"",
-            HttpTransportMetadata.GetHeaders(result.Metadatas)["WWW-Authenticate"]);
+            HttpTransportMetadata.GetHeaders(transportResult.Metadatas)["WWW-Authenticate"]);
     }
 
     [Fact]
@@ -65,16 +66,16 @@ public sealed class HttpRpcTransportResultReaderTests
         response.Headers.Location = new Uri("https://example.com/callback");
         response.Headers.TryAddWithoutValidation(NOFAbstractionConstants.Transport.Headers.RpcSuccess, bool.TrueString);
 
-        var result = await HttpRpcTransportResultReader.ReadAsync(
+        var transportResult = await HttpRpcTransportResultReader.ReadAsync(
             response,
-            CreateTypeInfo<Empty>(),
+            CreateTypeInfo<Result>(),
             CancellationToken.None);
 
+        var result = transportResult.Response;
         Assert.True(result.IsSuccess);
-        Assert.True(HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode));
+        Assert.True(HttpTransportMetadata.TryGetStatusCode(transportResult.Metadatas, out var statusCode));
         Assert.Equal(302, statusCode);
-        Assert.Equal("https://example.com/callback", HttpTransportMetadata.GetHeaders(result.Metadatas)["Location"]);
-        Assert.Null(result.Body);
+        Assert.Equal("https://example.com/callback", HttpTransportMetadata.GetHeaders(transportResult.Metadatas)["Location"]);
     }
 
     [Fact]
@@ -89,15 +90,15 @@ public sealed class HttpRpcTransportResultReaderTests
         };
         response.Headers.TryAddWithoutValidation(NOFAbstractionConstants.Transport.Headers.RpcSuccess, bool.TrueString);
 
-        var result = await HttpRpcTransportResultReader.ReadAsync(
+        var transportResult = await HttpRpcTransportResultReader.ReadAsync(
             response,
-            CreateTypeInfo<TokenResponse>(),
+            CreateTypeInfo<Result<TokenResponse>>(),
             CancellationToken.None);
 
+        var result = transportResult.Response;
         Assert.True(result.IsSuccess);
-        var payload = Assert.IsType<JsonElement>(result.Body);
-        Assert.Equal("invalid_token", payload.GetProperty("error").GetString());
-        Assert.True(HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode));
+        Assert.Null(result.Value);
+        Assert.True(HttpTransportMetadata.TryGetStatusCode(transportResult.Metadatas, out var statusCode));
         Assert.Equal(401, statusCode);
     }
 

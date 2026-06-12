@@ -66,6 +66,14 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor ReturnTypeMustImplementIResult = new(
+        "NOF210",
+        "RPC return type must implement IResult",
+        "Method '{0}' on service interface '{1}' must return a type that implements IResult",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
@@ -74,7 +82,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         TransportStringPropertyMustBeParsable,
         InvalidServiceMethodSignature,
         ServiceMethodOverloadsNotSupported,
-        VoidReturnNotSupported
+        VoidReturnNotSupported,
+        ReturnTypeMustImplementIResult
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -157,12 +166,23 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             }
 
             var validRequestParameter = RpcServiceHelpers.TryGetRequestParameter(method, out var requestParameter);
-            var validReturnType = RpcServiceHelpers.TryGetServiceReturnInfo(method, out _);
+            var validReturnType = IsNonTaskReturnType(method);
             var validMethodName = !method.Name.EndsWith("Async", StringComparison.Ordinal);
             if (!validRequestParameter || !validReturnType || !validMethodName)
             {
                 context.ReportDiagnostic(
                     Diagnostic.Create(InvalidServiceMethodSignature, method.Locations.FirstOrDefault() ?? attrLocation, method.Name, typeSymbol.Name));
+            }
+
+            if (!RpcServiceHelpers.ImplementsResultContract(method.ReturnType)
+                && !method.ReturnsVoid)
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(ReturnTypeMustImplementIResult, method.Locations.FirstOrDefault() ?? attrLocation, method.Name, typeSymbol.Name));
+            }
+
+            if (!validRequestParameter || !validReturnType || !validMethodName)
+            {
                 continue;
             }
 
@@ -330,6 +350,25 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         }
 
         return false;
+    }
+
+    private static bool IsNonTaskReturnType(IMethodSymbol method)
+    {
+        if (method.ReturnsVoid)
+        {
+            return false;
+        }
+
+        var returnType = method.ReturnType;
+        if (returnType.ToDisplayString() is "System.Threading.Tasks.Task"
+            or "System.Threading.Tasks.ValueTask")
+        {
+            return false;
+        }
+
+        return returnType is not INamedTypeSymbol { IsGenericType: true } namedType
+               || (namedType.OriginalDefinition.ToDisplayString() != "System.Threading.Tasks.Task<T>"
+                   && namedType.OriginalDefinition.ToDisplayString() != "System.Threading.Tasks.ValueTask<T>");
     }
 
 }

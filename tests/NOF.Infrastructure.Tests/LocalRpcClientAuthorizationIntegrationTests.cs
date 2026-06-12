@@ -16,14 +16,12 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         using var provider = BuildServiceProvider();
 
         var client = provider.GetRequiredService<ProtectedFleetClient>();
-        RpcResult<Result<GetFleetOverviewResponse>> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
+        Result<GetFleetOverviewResponse> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
-        var businessResult = RpcResults.RequireBody<Result<GetFleetOverviewResponse>>(result);
 
-        Assert.True(result.IsSuccess);
-        Assert.False(businessResult.IsSuccess);
-        Assert.Equal("401", businessResult.ErrorCode);
-        Assert.Equal("Please login first", businessResult.Message);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("401", result.ErrorCode);
+        Assert.Equal("Please login first", result.Message);
         Assert.Equal(0, recorder.Count);
     }
 
@@ -36,14 +34,12 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         userContext.User.AddIdentity(TestPrincipalFactory.CreateAuthenticatedIdentity((ClaimTypes.Permission, "fleet.read")));
 
         var client = provider.GetRequiredService<ProtectedFleetClient>();
-        var result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
+        Result<GetFleetOverviewResponse> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
-        var businessResult = RpcResults.RequireBody<Result<GetFleetOverviewResponse>>(result);
 
         Assert.True(result.IsSuccess);
-        Assert.True(businessResult.IsSuccess);
-        Assert.NotNull(businessResult.Value);
-        Assert.Equal("fleet", businessResult.Value.Name);
+        Assert.NotNull(result.Value);
+        Assert.Equal("fleet", result.Value.Name);
         Assert.Equal(1, recorder.Count);
     }
 
@@ -87,7 +83,7 @@ public partial interface IProtectedFleetService : IRpcService
 
 public partial interface IProtectedFleetServiceClient : IRpcClient
 {
-    Task<RpcResult<Result<GetFleetOverviewResponse>>> GetFleetOverviewAsync(
+    Task<Result<GetFleetOverviewResponse>> GetFleetOverviewAsync(
         Empty request,
         Context context,
         CancellationToken cancellationToken = default);
@@ -114,10 +110,10 @@ public sealed class ProtectedFleetServer : RpcServer<IProtectedFleetService>
 
 public sealed class GetFleetOverviewHandler(InvocationRecorder recorder) : RpcHandler<Empty, Result<GetFleetOverviewResponse>>
 {
-    public override Task<RpcResult<Result<GetFleetOverviewResponse>>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
+    public override Task<Result<GetFleetOverviewResponse>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
     {
         recorder.Count++;
-        return Task.FromResult(Success(Result.Success(new GetFleetOverviewResponse("fleet"))));
+        return Task.FromResult(Result.Success(new GetFleetOverviewResponse("fleet")));
     }
 }
 

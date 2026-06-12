@@ -304,22 +304,24 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
             sb.AppendLine();
             sb.AppendLine("                if (!response.IsSuccessStatusCode)");
             sb.AppendLine("                {");
-            sb.AppendLine($"                    result = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadFailureAsync<global::NOF.Contract.StreamingResult<{streamItemType}>>(response, ct).ConfigureAwait(false);");
+            sb.AppendLine($"                    var transportResult = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadFailureAsync<global::NOF.Contract.StreamingResult<{streamItemType}>>(response, ct).ConfigureAwait(false);");
+            sb.AppendLine("                    result = transportResult.Response;");
+            sb.AppendLine("                    outboundContext.SetResponseMetadatas(transportResult.Metadatas);");
             sb.AppendLine("                }");
             sb.AppendLine("                else");
             sb.AppendLine("                {");
+            sb.AppendLine("                    outboundContext.SetResponseMetadatas(global::NOF.Abstraction.HttpTransportMetadata.Create((int)response.StatusCode));");
             sb.AppendLine("                    var contentType = response.Content.Headers.ContentType?.MediaType;");
             sb.AppendLine("                    if (string.Equals(contentType, \"text/event-stream\", global::System.StringComparison.OrdinalIgnoreCase))");
             sb.AppendLine("                    {");
             sb.AppendLine($"                        var stream = global::NOF.Hosting.SseResponseReader.ReadAsync<{streamItemType}>(response, GetJsonTypeInfo<{streamItemType}>(), ct);");
-            sb.AppendLine($"                        result = global::NOF.Contract.RpcResults.Success(global::NOF.Contract.Result.Stream<{streamItemType}>(stream));");
+            sb.AppendLine($"                        result = global::NOF.Contract.Result.Stream<{streamItemType}>(stream);");
             sb.AppendLine("                    }");
             sb.AppendLine("                    else");
             sb.AppendLine("                    {");
             sb.AppendLine("                        using (response)");
             sb.AppendLine("                        {");
-            sb.AppendLine($"                            var apiResponse = await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.StreamingResult<{streamItemType}>>(), ct);");
-            sb.AppendLine("                            result = global::NOF.Contract.RpcResults.Success(apiResponse!);");
+            sb.AppendLine($"                            result = (await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.StreamingResult<{streamItemType}>>(), ct).ConfigureAwait(false))!;");
             sb.AppendLine("                        }");
             sb.AppendLine("                    }");
             sb.AppendLine("                }");
@@ -328,7 +330,9 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         {
             sb.AppendLine("                using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);");
             sb.AppendLine();
-            sb.AppendLine($"                result = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadAsync<{responseBodyType}>(response, GetJsonTypeInfo<{responseBodyType}>(), ct).ConfigureAwait(false);");
+            sb.AppendLine($"                var transportResult = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadAsync<{responseBodyType}>(response, GetJsonTypeInfo<{responseBodyType}>(), ct).ConfigureAwait(false);");
+            sb.AppendLine("                result = transportResult.Response;");
+            sb.AppendLine("                outboundContext.SetResponseMetadatas(transportResult.Metadatas);");
         }
         sb.AppendLine("                outboundContext.Response = result;");
         sb.AppendLine("            }, cancellationToken).ConfigureAwait(false);");

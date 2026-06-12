@@ -19,14 +19,15 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         _cache = cache;
     }
 
-    public override async Task<RpcResult<Empty>> HandleAsync(DeleteConfigNodeRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(DeleteConfigNodeRequest request, Context context, CancellationToken cancellationToken)
     {
         var id = ConfigNodeId.Of(request.Id);
         var node = await _dbContext.Set<ConfigNode>()
             .FirstOrDefaultAsync(configNode => configNode.Id == id, cancellationToken);
         if (node is null)
         {
-            return Response("Node not found.", HttpTransportMetadata.Create(404));
+            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
+            return Result.Fail("404", "Node not found.");
         }
 
         // 检查是否有子节点
@@ -36,7 +37,8 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         var hasChildren = children?.HasChildren() ?? false;
         if (hasChildren)
         {
-            return Response("Cannot delete node with children.", HttpTransportMetadata.Create(400));
+            context.SetResponseMetadatas(HttpTransportMetadata.Create(400));
+            return Result.Fail("400", "Cannot delete node with children.");
         }
 
         node.MarkAsDeleted();
@@ -47,6 +49,6 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         await _cache.RemoveAsync(new ConfigNodeByIdCacheKey(id), cancellationToken);
         await _cache.RemoveAsync(new ConfigNodeByNameCacheKey(node.Name), cancellationToken);
 
-        return Success(new Empty());
+        return Result.Success();
     }
 }

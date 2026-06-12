@@ -1,5 +1,4 @@
 using AntDesign;
-using NOF.Abstraction;
 using NOF.Contract;
 using Result = NOF.Contract.Result;
 
@@ -60,25 +59,6 @@ public static class NOFSampleWebUIExtensions
             return default;
         }
 
-        public T? UnwrapWithMessage<T>(RpcResult<T> result, string? successMessage = null, bool showSuccess = false)
-        {
-            ArgumentNullException.ThrowIfNull(messageService);
-            ArgumentNullException.ThrowIfNull(result);
-
-            if (result.IsSuccess)
-            {
-                if (showSuccess)
-                {
-                    messageService.Success(successMessage ?? "操作成功");
-                }
-
-                return RpcResults.RequireBody<T>(result);
-            }
-
-            messageService.Error(GetRpcFailureMessage(result));
-            return default;
-        }
-
         public T? UnwrapWithMessage<T>(Result<Result<T>> result, string? successMessage = null, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
@@ -91,20 +71,6 @@ public static class NOFSampleWebUIExtensions
             }
 
             return messageService.UnwrapWithMessage(result.Value, successMessage, showSuccess);
-        }
-
-        public T? UnwrapWithMessage<T>(RpcResult<Result<T>> result, string? successMessage = null, bool showSuccess = false)
-        {
-            ArgumentNullException.ThrowIfNull(messageService);
-            ArgumentNullException.ThrowIfNull(result);
-
-            if (!result.IsSuccess)
-            {
-                messageService.Error(GetRpcFailureMessage(result));
-                return default;
-            }
-
-            return messageService.UnwrapWithMessage(RpcResults.RequireBody<Result<T>>(result), successMessage, showSuccess);
         }
 
         /// <summary>
@@ -136,27 +102,6 @@ public static class NOFSampleWebUIExtensions
             return default;
         }
 
-        public T? UnwrapWithMessage<T>(RpcResult<T> result, Func<T, string> successMessageFactory, bool showSuccess = false)
-        {
-            ArgumentNullException.ThrowIfNull(messageService);
-            ArgumentNullException.ThrowIfNull(result);
-            ArgumentNullException.ThrowIfNull(successMessageFactory);
-
-            if (result.IsSuccess)
-            {
-                var message = successMessageFactory(RpcResults.RequireBody<T>(result));
-                if (showSuccess)
-                {
-                    messageService.Success(message);
-                }
-
-                return RpcResults.RequireBody<T>(result);
-            }
-
-            messageService.Error(GetRpcFailureMessage(result));
-            return default;
-        }
-
         public T? UnwrapWithMessage<T>(Result<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
@@ -172,32 +117,18 @@ public static class NOFSampleWebUIExtensions
             return messageService.UnwrapWithMessage(result.Value, successMessageFactory, showSuccess);
         }
 
-        public T? UnwrapWithMessage<T>(RpcResult<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
-        {
-            ArgumentNullException.ThrowIfNull(messageService);
-            ArgumentNullException.ThrowIfNull(result);
-            ArgumentNullException.ThrowIfNull(successMessageFactory);
-
-            if (!result.IsSuccess)
-            {
-                messageService.Error(GetRpcFailureMessage(result));
-                return default;
-            }
-
-            return messageService.UnwrapWithMessage(RpcResults.RequireBody<Result<T>>(result), successMessageFactory, showSuccess);
-        }
     }
 
-    public static string GetRpcFailureMessage(this IRpcResult result)
+    public static string GetRpcFailureMessage(this IResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        if (result.Body is string text && !string.IsNullOrWhiteSpace(text))
+        if (!string.IsNullOrWhiteSpace(result.Message))
         {
-            return text;
+            return result.Message;
         }
 
-        return HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode)
+        return int.TryParse(result.ErrorCode, out var statusCode)
             ? $"请求失败，状态码: {statusCode}"
             : "请求失败";
     }

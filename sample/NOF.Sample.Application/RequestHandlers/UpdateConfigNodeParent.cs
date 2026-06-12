@@ -20,7 +20,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
         _cache = cache;
     }
 
-    public override async Task<RpcResult<Empty>> HandleAsync(UpdateConfigNodeParentRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(UpdateConfigNodeParentRequest request, Context context, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.NodeId);
         var node = await _dbContext.Set<ConfigNode>()
@@ -28,7 +28,8 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 
         if (node is null)
         {
-            return Response("Node not found.", HttpTransportMetadata.Create(404));
+            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
+            return Result.Fail("404", "Node not found.");
         }
 
         var newParentId = request.NewParentId.HasValue
@@ -42,13 +43,15 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
                 .FirstOrDefaultAsync(configNode => configNode.Id == newParentId.Value, cancellationToken);
             if (parentNode is null)
             {
-                return Response("Target parent node not found.", HttpTransportMetadata.Create(404));
+                context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
+                return Result.Fail("404", "Target parent node not found.");
             }
 
             // Prevent cyclic parent relationship.
             if (await IsDescendant(nodeId, newParentId.Value, cancellationToken))
             {
-                return Response("Cannot move a node under its descendant.", HttpTransportMetadata.Create(400));
+                context.SetResponseMetadatas(HttpTransportMetadata.Create(400));
+                return Result.Fail("400", "Cannot move a node under its descendant.");
             }
         }
 
@@ -64,7 +67,7 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(30) },
             cancellationToken);
 
-        return Success(new Empty());
+        return Result.Success();
     }
 
     private async Task<bool> IsDescendant(ConfigNodeId ancestorId, ConfigNodeId nodeId, CancellationToken cancellationToken)

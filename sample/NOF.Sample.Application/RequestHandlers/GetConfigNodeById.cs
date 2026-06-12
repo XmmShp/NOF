@@ -20,7 +20,7 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
         _mapper = mapper;
     }
 
-    public override async Task<RpcResult<Result<GetConfigNodeByIdResponse>>> HandleAsync(GetConfigNodeByIdRequest request, Context context, CancellationToken cancellationToken)
+    public override async Task<Result<GetConfigNodeByIdResponse>> HandleAsync(GetConfigNodeByIdRequest request, Context context, CancellationToken cancellationToken)
     {
         var nodeId = ConfigNodeId.Of(request.Id);
         var cacheKey = new ConfigNodeByIdCacheKey(nodeId);
@@ -28,17 +28,17 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
         var cachedValue = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
         if (cachedValue.HasValue)
         {
-            return Success((Result<GetConfigNodeByIdResponse>)new GetConfigNodeByIdResponse
+            return new GetConfigNodeByIdResponse
             {
                 Node = cachedValue.Value
-            });
+            };
         }
 
         var node = await _dbContext.Set<ConfigNode>().GetNodeByIdAsync(nodeId, cancellationToken);
 
         if (node is null)
         {
-            return Success((Result<GetConfigNodeByIdResponse>)Result.Fail("404", "Config node not found."));
+            return Result.Fail("404", "Config node not found.");
         }
 
         var dto = _mapper.Map<ConfigNode, ConfigNodeDto>(node);
@@ -48,11 +48,10 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) },
             cancellationToken);
 
-        return Success((Result<GetConfigNodeByIdResponse>)new GetConfigNodeByIdResponse
+        return new GetConfigNodeByIdResponse
         {
             Node = dto
-        });
+        };
     }
 }
-
 

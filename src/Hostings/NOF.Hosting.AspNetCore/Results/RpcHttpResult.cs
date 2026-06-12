@@ -5,9 +5,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting.AspNetCore;
 
-internal sealed class RpcHttpResult(IRpcResult rpcResult) : Microsoft.AspNetCore.Http.IResult
+internal sealed class RpcHttpResult(
+    NOF.Contract.IResult rpcResult,
+    IReadOnlyDictionary<string, string?> metadatas) : Microsoft.AspNetCore.Http.IResult
 {
-    private readonly IRpcResult _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
+    private readonly NOF.Contract.IResult _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
+    private readonly IReadOnlyDictionary<string, string?> _metadatas = metadatas ?? throw new ArgumentNullException(nameof(metadatas));
 
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Transport response bodies are framework-controlled runtime payloads.")]
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Transport response bodies are framework-controlled runtime payloads.")]
@@ -15,36 +18,26 @@ internal sealed class RpcHttpResult(IRpcResult rpcResult) : Microsoft.AspNetCore
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        ApplyHeaders(httpContext.Response, HttpTransportMetadata.GetHeaders(_rpcResult.Metadatas));
-        httpContext.Response.Headers[NOFAbstractionConstants.Transport.Headers.RpcSuccess] = _rpcResult.IsSuccess.ToString();
-        httpContext.Response.StatusCode = ResolveStatusCode(_rpcResult);
+        ApplyHeaders(httpContext.Response, HttpTransportMetadata.GetHeaders(_metadatas));
+        httpContext.Response.Headers[NOFAbstractionConstants.Transport.Headers.RpcSuccess] = bool.TrueString;
+        httpContext.Response.StatusCode = ResolveStatusCode(_rpcResult, _metadatas);
 
-        if (ShouldSkipBody(httpContext.Response.StatusCode) || _rpcResult.Body is null)
+        if (ShouldSkipBody(httpContext.Response.StatusCode))
         {
-            return;
-        }
-
-        if (_rpcResult.Body is string textBody)
-        {
-            if (string.IsNullOrWhiteSpace(httpContext.Response.ContentType))
-            {
-                httpContext.Response.ContentType = "text/plain; charset=utf-8";
-            }
-
-            await httpContext.Response.WriteAsync(textBody, httpContext.RequestAborted).ConfigureAwait(false);
             return;
         }
 
         await httpContext.Response.WriteAsJsonAsync(
-            _rpcResult.Body,
-            _rpcResult.Body.GetType(),
+            _rpcResult,
+            _rpcResult.GetType(),
             cancellationToken: httpContext.RequestAborted).ConfigureAwait(false);
     }
 
-    internal static int ResolveStatusCode(IRpcResult result)
+    internal static int ResolveStatusCode(NOF.Contract.IResult result, IReadOnlyDictionary<string, string?> metadatas)
     {
         ArgumentNullException.ThrowIfNull(result);
-        if (HttpTransportMetadata.TryGetStatusCode(result.Metadatas, out var statusCode))
+        ArgumentNullException.ThrowIfNull(metadatas);
+        if (HttpTransportMetadata.TryGetStatusCode(metadatas, out var statusCode))
         {
             return statusCode;
         }
@@ -84,9 +77,12 @@ internal sealed class RpcHttpResult(IRpcResult rpcResult) : Microsoft.AspNetCore
 
 [RequiresUnreferencedCode("Streaming HTTP response writing may require runtime JSON serialization for transport bodies.")]
 [RequiresDynamicCode("Streaming HTTP response writing may require runtime JSON serialization for transport bodies.")]
-internal sealed class RpcStreamingHttpResult<TItem>(RpcResult<StreamingResult<TItem>> rpcResult) : Microsoft.AspNetCore.Http.IResult
+internal sealed class RpcStreamingHttpResult<TItem>(
+    StreamingResult<TItem> rpcResult,
+    IReadOnlyDictionary<string, string?> metadatas) : Microsoft.AspNetCore.Http.IResult
 {
-    private readonly RpcResult<StreamingResult<TItem>> _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
+    private readonly StreamingResult<TItem> _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
+    private readonly IReadOnlyDictionary<string, string?> _metadatas = metadatas ?? throw new ArgumentNullException(nameof(metadatas));
 
     public Task ExecuteAsync(HttpContext httpContext)
     {
@@ -94,19 +90,12 @@ internal sealed class RpcStreamingHttpResult<TItem>(RpcResult<StreamingResult<TI
 
         if (!_rpcResult.IsSuccess)
         {
-            return new RpcHttpResult(_rpcResult).ExecuteAsync(httpContext);
+            return new RpcHttpResult(_rpcResult, _metadatas).ExecuteAsync(httpContext);
         }
 
-        var streamingResult = _rpcResult.Body as StreamingResult<TItem>
-            ?? throw new InvalidOperationException($"HTTP RPC endpoint returned '{typeof(RpcResult<StreamingResult<TItem>>).FullName}' without a streaming body.");
-        if (!streamingResult.IsSuccess)
-        {
-            return new RpcHttpResult(_rpcResult).ExecuteAsync(httpContext);
-        }
-
-        RpcHttpResult.ApplyHeaders(httpContext.Response, HttpTransportMetadata.GetHeaders(_rpcResult.Metadatas));
-        httpContext.Response.Headers[NOFAbstractionConstants.Transport.Headers.RpcSuccess] = _rpcResult.IsSuccess.ToString();
-        httpContext.Response.StatusCode = RpcHttpResult.ResolveStatusCode(_rpcResult);
-        return TypedResults.ServerSentEvents(streamingResult.Value!).ExecuteAsync(httpContext);
+        RpcHttpResult.ApplyHeaders(httpContext.Response, HttpTransportMetadata.GetHeaders(_metadatas));
+        httpContext.Response.Headers[NOFAbstractionConstants.Transport.Headers.RpcSuccess] = bool.TrueString;
+        httpContext.Response.StatusCode = RpcHttpResult.ResolveStatusCode(_rpcResult, _metadatas);
+        return TypedResults.ServerSentEvents(_rpcResult.Value!).ExecuteAsync(httpContext);
     }
 }

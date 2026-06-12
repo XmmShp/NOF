@@ -54,9 +54,10 @@ public sealed class HttpRpcTransportBoundaryTests
         using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<ReadTokenResponse>();
+        var payload = await response.Content.ReadFromJsonAsync<Result<ReadTokenResponse>>();
         Assert.NotNull(payload);
-        Assert.Equal("header-token", payload.Token);
+        Assert.True(payload.IsSuccess);
+        Assert.Equal("header-token", payload.Value!.Token);
     }
 
     [Fact]
@@ -104,10 +105,11 @@ public sealed class HttpRpcTransportBoundaryTests
             "Bearer error=\"invalid_token\", error_description=\"access token expired.\"",
             response.Headers.WwwAuthenticate.ToString());
 
-        var payload = await response.Content.ReadFromJsonAsync<TokenErrorBody>();
+        var payload = await response.Content.ReadFromJsonAsync<Result<ReadTokenResponse>>();
         Assert.NotNull(payload);
-        Assert.Equal("invalid_token", payload.Error);
-        Assert.Equal("access token expired.", payload.ErrorDescription);
+        Assert.False(payload.IsSuccess);
+        Assert.Equal("invalid_token", payload.ErrorCode);
+        Assert.Equal("access token expired.", payload.Message);
     }
 
     private static async Task<WebApplication> CreateAppAsync()
@@ -191,13 +193,13 @@ public sealed class HttpRpcTransportBoundaryTests
         Result<CreateUserResponse> CreateUser(CreateUserRequest request);
 
         [HttpEndpoint(HttpVerb.Get, "/ReadToken")]
-        ReadTokenResponse ReadToken(ReadTokenRequest request);
+        Result<ReadTokenResponse> ReadToken(ReadTokenRequest request);
 
         [HttpEndpoint(HttpVerb.Get, "/Redirect")]
-        Empty Redirect(RedirectRequest request);
+        Result Redirect(RedirectRequest request);
 
         [HttpEndpoint(HttpVerb.Get, "/TokenFailure")]
-        ReadTokenResponse TokenFailure(Empty request);
+        Result<ReadTokenResponse> TokenFailure(Empty request);
     }
 
     public sealed class ValidationRpcServer : RpcServer<IValidationRpcService>, IRpcServer
@@ -208,11 +210,11 @@ public sealed class HttpRpcTransportBoundaryTests
                 [nameof(IValidationRpcService.CreateUser)] =
                     new(typeof(CreateUserHandler), typeof(CreateUserRequest), typeof(Result<CreateUserResponse>)),
                 [nameof(IValidationRpcService.ReadToken)] =
-                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(ReadTokenResponse)),
+                    new(typeof(ReadTokenHandler), typeof(ReadTokenRequest), typeof(Result<ReadTokenResponse>)),
                 [nameof(IValidationRpcService.Redirect)] =
-                    new(typeof(RedirectHandler), typeof(RedirectRequest), typeof(Empty)),
+                    new(typeof(RedirectHandler), typeof(RedirectRequest), typeof(Result)),
                 [nameof(IValidationRpcService.TokenFailure)] =
-                    new(typeof(TokenFailureHandler), typeof(Empty), typeof(ReadTokenResponse))
+                    new(typeof(TokenFailureHandler), typeof(Empty), typeof(Result<ReadTokenResponse>))
             };
 
         protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
@@ -220,37 +222,38 @@ public sealed class HttpRpcTransportBoundaryTests
 
     public sealed class CreateUserHandler : RpcHandler<CreateUserRequest, Result<CreateUserResponse>>
     {
-        public override Task<RpcResult<Result<CreateUserResponse>>> HandleAsync(CreateUserRequest request, Context context, CancellationToken cancellationToken)
-            => Task.FromResult(Success(Result.Success(new CreateUserResponse(request.Age))));
+        public override Task<Result<CreateUserResponse>> HandleAsync(CreateUserRequest request, Context context, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new CreateUserResponse(request.Age)));
     }
 
-    public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, ReadTokenResponse>
+    public sealed class ReadTokenHandler : RpcHandler<ReadTokenRequest, Result<ReadTokenResponse>>
     {
-        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, Context context, CancellationToken cancellationToken)
-            => Task.FromResult(Success(new ReadTokenResponse(request.Token.Value)));
+        public override Task<Result<ReadTokenResponse>> HandleAsync(ReadTokenRequest request, Context context, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new ReadTokenResponse(request.Token.Value)));
     }
 
-    public sealed class RedirectHandler : RpcHandler<RedirectRequest, Empty>
+    public sealed class RedirectHandler : RpcHandler<RedirectRequest, Result>
     {
-        public override Task<RpcResult<Empty>> HandleAsync(RedirectRequest request, Context context, CancellationToken cancellationToken)
-            => Task.FromResult(Success(HttpTransportMetadata.Create(302, [new KeyValuePair<string, string?>("Location", request.Url)])));
+        public override Task<Result> HandleAsync(RedirectRequest request, Context context, CancellationToken cancellationToken)
+        {
+            context.SetResponseMetadatas(HttpTransportMetadata.Create(302, [new KeyValuePair<string, string?>("Location", request.Url)]));
+            return Task.FromResult(Result.Success());
+        }
     }
 
-    public sealed class TokenFailureHandler : RpcHandler<Empty, ReadTokenResponse>
+    public sealed class TokenFailureHandler : RpcHandler<Empty, Result<ReadTokenResponse>>
     {
-        public override Task<RpcResult<ReadTokenResponse>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
-            => Task.FromResult(Response(
-                new TokenErrorBody
-                {
-                    Error = "invalid_token",
-                    ErrorDescription = "access token expired."
-                },
+        public override Task<Result<ReadTokenResponse>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
+        {
+            context.SetResponseMetadatas(
                 HttpTransportMetadata.Create(
                     401,
                     [
                         new KeyValuePair<string, string?>(
-                            "WWW-Authenticate",
-                            "Bearer error=\"invalid_token\", error_description=\"access token expired.\"")
-                    ])));
+                        "WWW-Authenticate",
+                        "Bearer error=\"invalid_token\", error_description=\"access token expired.\"")
+                    ]));
+            return Task.FromResult((Result<ReadTokenResponse>)Result.Fail("invalid_token", "access token expired."));
+        }
     }
 }

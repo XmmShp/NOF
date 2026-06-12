@@ -35,7 +35,7 @@ public sealed class AuthorizationInboundMiddleware :
 
         if (firstFailure is not null)
         {
-            context.SetResponse(EnsureStatusCode(firstFailure, 403));
+            context.SetResponse(EnsureStatusCode(firstFailure, 403), ignoreResultResponseType: false);
             return;
         }
 

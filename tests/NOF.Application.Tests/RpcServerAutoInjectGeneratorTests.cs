@@ -36,8 +36,8 @@ public class RpcServerAutoInjectGeneratorTests
 
                 public sealed class PingHandler : MyService.Ping
                 {
-                    public override Task<RpcResult<Result>> HandleAsync(PingRequest request, Context context, CancellationToken cancellationToken)
-                        => Task.FromResult(Success(Result.Success()));
+                    public override Task<Result> HandleAsync(PingRequest request, Context context, CancellationToken cancellationToken)
+                        => Task.FromResult(Result.Success());
                 }
             }
             """;
