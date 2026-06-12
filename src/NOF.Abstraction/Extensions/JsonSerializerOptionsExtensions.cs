@@ -20,8 +20,7 @@ public static partial class NOFAbstractionExtensions
             DefaultIgnoreCondition = JsonIgnoreCondition.Never,
             ReferenceHandler = ReferenceHandler.IgnoreCycles,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            TypeInfoResolver = NOFJsonSerializerContext.Default,
-            IgnoreReadOnlyProperties = true
+            TypeInfoResolver = NOFJsonSerializerContext.Default
         };
 
         if (JsonSerializer.IsReflectionEnabledByDefault)

@@ -87,7 +87,13 @@ public class InfrastructureDefaultsTests
 
         var descriptor = Assert.Single(builder.Services, service => service.ServiceType == typeof(ICurrentTenant));
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
-        Assert.Equal(typeof(CurrentTenant), descriptor.ImplementationType);
+        Assert.NotNull(descriptor.ImplementationFactory);
+        var mutableDescriptor = Assert.Single(builder.Services, service => service.ServiceType == typeof(IMutableCurrentTenant));
+        Assert.Equal(ServiceLifetime.Scoped, mutableDescriptor.Lifetime);
+        Assert.NotNull(mutableDescriptor.ImplementationFactory);
+        var implementationDescriptor = Assert.Single(builder.Services, service => service.ServiceType == typeof(CurrentTenant));
+        Assert.Equal(ServiceLifetime.Scoped, implementationDescriptor.Lifetime);
+        Assert.Equal(typeof(CurrentTenant), implementationDescriptor.ImplementationType);
     }
 
     [Fact]

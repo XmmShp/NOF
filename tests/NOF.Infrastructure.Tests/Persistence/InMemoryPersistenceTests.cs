@@ -1587,7 +1587,7 @@ public class SqliteInMemoryPersistenceTests
 
     private static void SetTenant(IServiceProvider services, string? tenantId)
     {
-        services.GetRequiredService<ICurrentTenant>().TenantId = TenantId.Normalize(tenantId);
+        _ = services.GetRequiredService<IMutableCurrentTenant>().PushTenant(TenantId.Normalize(tenantId));
     }
 
     private static void DeleteDirectoryWithRetry(string directory)

@@ -10,10 +10,8 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithoutIncomingTenantHeader_ShouldUseHostTenant()
     {
-        var currentTenant = new CurrentTenant
-        {
-            TenantId = "previous"
-        };
+        var currentTenant = new CurrentTenant();
+        using var previousTenantScope = currentTenant.PushTenant("previous");
         var middleware = new TenantInboundMiddleware(currentTenant);
         var message = new object();
         var inboundContext = CreateContext(message.GetType());
@@ -36,10 +34,8 @@ public class TenantInboundMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithIncomingTenantHeader_ShouldUseIncomingTenantHeader()
     {
-        var currentTenant = new CurrentTenant
-        {
-            TenantId = "previous"
-        };
+        var currentTenant = new CurrentTenant();
+        using var previousTenantScope = currentTenant.PushTenant("previous");
         var middleware = new TenantInboundMiddleware(currentTenant);
         var message = new object();
         var inboundContext = (CommandInboundContext)CreateContext(message.GetType())

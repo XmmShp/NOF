@@ -12,7 +12,7 @@ namespace NOF.Infrastructure;
 
 public sealed class AuthorizationInboundMiddleware(
     IUserContext userContext,
-    ICurrentTenant currentTenant,
+    IMutableCurrentTenant currentTenant,
     IOptions<AuthenticationResourceServerOptions> options,
     ILogger<AuthorizationInboundMiddleware> logger) :
     ICommandInboundMiddleware,
@@ -39,7 +39,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
-        ApplyTrustedTenant();
+        using var trustedTenantScope = PushTrustedTenant();
         await next(context, message, cancellationToken);
     }
 
@@ -51,7 +51,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
-        ApplyTrustedTenant();
+        using var trustedTenantScope = PushTrustedTenant();
         await next(context, message, cancellationToken);
     }
 
@@ -74,7 +74,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
-        ApplyTrustedTenant();
+        using var trustedTenantScope = PushTrustedTenant();
         await next(context, request, cancellationToken);
     }
 
@@ -207,23 +207,22 @@ public sealed class AuthorizationInboundMiddleware(
     private static string EscapeChallengeValue(string value)
         => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
-    private void ApplyTrustedTenant()
+    private IDisposable? PushTrustedTenant()
     {
         if (!userContext.User.IsAuthenticated)
         {
-            return;
+            return null;
         }
 
-        var trustedTenantId = userContext.User.FindFirst("nof.tenant_id")?.Value
-            ?? userContext.User.TenantId;
+        var trustedTenantId = userContext.User.TenantId;
         if (string.IsNullOrWhiteSpace(trustedTenantId))
         {
-            return;
+            return null;
         }
 
         var tenantId = TenantId.Normalize(trustedTenantId);
-        currentTenant.TenantId = tenantId;
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
+        return currentTenant.PushTenant(tenantId);
     }
 
     private readonly record struct PermissionRequirement(string? Permission, bool RequiresAllPermissions);

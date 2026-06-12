@@ -112,11 +112,9 @@ public sealed class AuthorizationInboundMiddlewareTests
         var userContext = new UserContext();
         userContext.User.AddIdentity(CreateAuthenticatedIdentity(
             ClaimTypes.Permission, "input-method",
-            "nof.tenant_id", "tenantb"));
-        var currentTenant = new CurrentTenant
-        {
-            TenantId = "tenanta"
-        };
+            ClaimTypes.TenantId, "tenantb"));
+        var currentTenant = new CurrentTenant();
+        using var tenantScope = currentTenant.PushTenant("tenanta");
         var middleware = CreateMiddleware(userContext, currentTenant);
         var context = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.AllowAnonymousHandler));
 
@@ -128,7 +126,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         }, default);
 
         Assert.Equal("tenantb", tenantDuringNext);
-        Assert.Equal("tenantb", currentTenant.TenantId);
+        Assert.Equal("tenanta", currentTenant.TenantId);
     }
 
     [Fact]
@@ -215,7 +213,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         };
     }
 
-    private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext, ICurrentTenant? currentTenant = null)
+    private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext, IMutableCurrentTenant? currentTenant = null)
         => new(
             userContext,
             currentTenant ?? new CurrentTenant(),

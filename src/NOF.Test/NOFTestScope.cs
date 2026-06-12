@@ -12,6 +12,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 {
     private readonly AsyncServiceScope _scope;
     private Activity? _tracingActivity;
+    private IDisposable? _tenantScope;
 
     public NOFTestScope(AsyncServiceScope scope)
     {
@@ -31,7 +32,8 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        GetRequiredService<ICurrentTenant>().TenantId = TenantId.Normalize(tenantId);
+        _tenantScope?.Dispose();
+        _tenantScope = GetRequiredService<IMutableCurrentTenant>().PushTenant(TenantId.Normalize(tenantId));
         return this;
     }
 
@@ -92,12 +94,14 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public void Dispose()
     {
+        _tenantScope?.Dispose();
         _tracingActivity?.Dispose();
         _scope.Dispose();
     }
 
     public ValueTask DisposeAsync()
     {
+        _tenantScope?.Dispose();
         _tracingActivity?.Dispose();
         return _scope.DisposeAsync();
     }

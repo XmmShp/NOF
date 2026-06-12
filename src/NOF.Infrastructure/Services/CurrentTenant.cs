@@ -2,24 +2,18 @@ using NOF.Abstraction;
 
 namespace NOF.Infrastructure;
 
-public sealed class CurrentTenant : ICurrentTenant
+public sealed class CurrentTenant : IMutableCurrentTenant
 {
-    private string _tenantId = NOFAbstractionConstants.Tenant.HostId;
+    public string TenantId { get; private set; } = NOFAbstractionConstants.Tenant.HostId;
 
-    public string TenantId
+    public IDisposable PushTenant(string tenantId)
     {
-        get => _tenantId;
-        set => _tenantId = Infrastructure.TenantId.Normalize(value);
+        var previousTenantId = TenantId;
+        TenantId = Infrastructure.TenantId.Normalize(tenantId);
+        return new CurrentTenantScope(this, previousTenantId);
     }
 
-    public IDisposable Push(string tenantId)
-    {
-        var previous = TenantId;
-        TenantId = tenantId;
-        return new CurrentTenantScope(this, previous);
-    }
-
-    private sealed class CurrentTenantScope(ICurrentTenant currentTenant, string previousTenantId) : IDisposable
+    private sealed class CurrentTenantScope(CurrentTenant currentTenant, string previousTenantId) : IDisposable
     {
         private bool _disposed;
 

@@ -5,7 +5,7 @@ using NOF.Contract;
 
 namespace NOF.Infrastructure;
 
-public sealed class TenantInboundMiddleware(ICurrentTenant currentTenant) :
+public sealed class TenantInboundMiddleware(IMutableCurrentTenant currentTenant) :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
     IRequestInboundMiddleware
@@ -23,24 +23,27 @@ public sealed class TenantInboundMiddleware(ICurrentTenant currentTenant) :
     {
         var tenantId = GetTenantId(context);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        using var _ = currentTenant.Push(tenantId);
-        await next(context, message, cancellationToken);
+        await InvokeWithTenantAsync(tenantId, () => next(context, message, cancellationToken));
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
     {
         var tenantId = GetTenantId(context);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        using var _ = currentTenant.Push(tenantId);
-        await next(context, message, cancellationToken);
+        await InvokeWithTenantAsync(tenantId, () => next(context, message, cancellationToken));
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
         var tenantId = GetTenantId(context);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        using var _ = currentTenant.Push(tenantId);
-        await next(context, request, cancellationToken);
+        await InvokeWithTenantAsync(tenantId, () => next(context, request, cancellationToken));
+    }
+
+    private async ValueTask InvokeWithTenantAsync(string tenantId, Func<ValueTask> next)
+    {
+        using var _ = currentTenant.PushTenant(tenantId);
+        await next();
     }
 
     private static string GetTenantId(Context context)

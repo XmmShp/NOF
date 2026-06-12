@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Options;
-using NOF.Abstraction;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace NOF.Infrastructure;
 
@@ -22,7 +20,7 @@ public sealed class HttpJwksService(HttpClient httpClient, IOptions<Authenticati
 
         var jwksEndpoint = ResolveEndpoint(BuildMetadataEndpoint(), metadata.JwksUri);
         return await httpClient
-            .GetFromJsonAsync(jwksEndpoint, JsonSerializerOptions.NOF.GetRequiredTypeInfo<JwksDocument>(), cancellationToken)
+            .GetFromJsonAsync(jwksEndpoint, NOFAuthenticationJsonSerializerContext.Default.JwksDocument, cancellationToken)
             .ConfigureAwait(false)
             ?? new JwksDocument();
     }
@@ -33,7 +31,7 @@ public sealed class HttpJwksService(HttpClient httpClient, IOptions<Authenticati
         var metadata = await httpClient
             .GetFromJsonAsync(
                 metadataEndpoint,
-                JsonSerializerOptions.NOF.GetRequiredTypeInfo<OAuthAuthorizationServerMetadataDocument>(),
+                NOFAuthenticationJsonSerializerContext.Default.OAuthAuthorizationServerMetadataDocument,
                 cancellationToken)
             .ConfigureAwait(false);
         var expectedIssuer = OAuthAuthorizationServerMetadataUris.NormalizeIssuer(options.Value.AuthorizationServer);

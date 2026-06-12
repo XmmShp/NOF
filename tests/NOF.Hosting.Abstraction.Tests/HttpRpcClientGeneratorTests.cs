@@ -167,7 +167,7 @@ public class HttpRpcClientGeneratorTests
                                       public bool IsSuccess => true;
                                       public string ErrorCode => string.Empty;
                                       public string Message => string.Empty;
-                                      public object? Value => this.Value;
+                                      object? IResult.Value => Value;
                                       public IDictionary<string, string> Extra { get; } = new Dictionary<string, string>();
                                   }
 

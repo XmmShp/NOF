@@ -48,11 +48,13 @@ public readonly struct Optional<T>
     /// <exception cref="InvalidOperationException">
     /// Thrown when <see cref="HasValue"/> is <c>false</c>, indicating no value is present.
     /// </exception>
+    [JsonInclude]
     public T Value { get; }
 
     /// <summary>
     /// Gets a value indicating whether this instance contains a valid value.
     /// </summary>
+    [JsonInclude]
     public bool HasValue { get; }
 
     /// <summary>

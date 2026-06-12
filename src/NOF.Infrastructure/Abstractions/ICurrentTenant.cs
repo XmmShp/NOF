@@ -2,7 +2,10 @@ namespace NOF.Infrastructure;
 
 public interface ICurrentTenant
 {
-    string TenantId { get; set; }
+    string TenantId { get; }
+}
 
-    IDisposable Push(string tenantId);
+public interface IMutableCurrentTenant : ICurrentTenant
+{
+    IDisposable PushTenant(string tenantId);
 }

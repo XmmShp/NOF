@@ -116,11 +116,11 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         // Restore the ambient execution context for downstream components that rely on it.
         // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
         // and restore it when actually dispatching the outbox message.
-        var currentTenant = scopedServiceProvider.GetRequiredService<ICurrentTenant>();
+        var currentTenant = scopedServiceProvider.GetRequiredService<IMutableCurrentTenant>();
         var tenantId = headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
             ? TenantId.Normalize(headerTenantId)
             : TenantId.Normalize(null);
-        using var tenantScope = currentTenant.Push(tenantId);
+        using var _ = currentTenant.PushTenant(tenantId);
         var context = Context.Empty.ReplaceHeadersFrom(headers);
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());

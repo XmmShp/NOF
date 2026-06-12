@@ -58,10 +58,8 @@ public sealed class CacheServiceTests
         ICacheServiceRider rider,
         CacheServiceLocalLockState localLockState)
     {
-        var currentTenant = new CurrentTenant
-        {
-            TenantId = TenantId.Normalize("tenant-a")
-        };
+        var currentTenant = new CurrentTenant();
+        _ = currentTenant.PushTenant(TenantId.Normalize("tenant-a"));
 
         return new CacheService(
             rider,
