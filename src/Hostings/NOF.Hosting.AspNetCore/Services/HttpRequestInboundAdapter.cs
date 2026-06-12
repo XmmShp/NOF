@@ -78,6 +78,16 @@ public sealed class HttpRequestInboundAdapter(
                 continue;
             }
 
+            if (string.Equals(name, NOFInfrastructureConstants.Transport.Headers.HttpStatusCode, StringComparison.OrdinalIgnoreCase))
+            {
+                if (int.TryParse(value, out var statusCode))
+                {
+                    httpContext.Items[NOFInfrastructureConstants.Transport.Headers.HttpStatusCode] = statusCode;
+                }
+
+                continue;
+            }
+
             httpContext.Response.Headers[name] = value;
         }
     }

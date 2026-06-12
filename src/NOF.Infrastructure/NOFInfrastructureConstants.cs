@@ -8,6 +8,14 @@ namespace NOF.Infrastructure;
 /// </summary>
 public static class NOFInfrastructureConstants
 {
+    public static class Transport
+    {
+        public static class Headers
+        {
+            public const string HttpStatusCode = "X-NOF-Http-Status-Code";
+        }
+    }
+
     public static class Deployment
     {
         public static class ConfigurationKeys

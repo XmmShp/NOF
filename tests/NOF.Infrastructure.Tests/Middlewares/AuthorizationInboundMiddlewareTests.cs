@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Contract;
 using System.Security.Claims;
@@ -38,7 +39,10 @@ public sealed class AuthorizationInboundMiddlewareTests
         Assert.False(response.IsSuccess);
         Assert.Equal("401", response.ErrorCode);
         Assert.Equal("Please login first", response.Message);
-        Assert.Equal("Bearer error=\"invalid_token\"", context.ResponseHeaders["WWW-Authenticate"]);
+        Assert.Equal("401", context.ResponseHeaders[NOFInfrastructureConstants.Transport.Headers.HttpStatusCode]);
+        Assert.Equal(
+            "Bearer error=\"invalid_token\", authorization_server=\"https://auth.local/oauth2\"",
+            context.ResponseHeaders["WWW-Authenticate"]);
     }
 
     [Fact]
@@ -53,6 +57,10 @@ public sealed class AuthorizationInboundMiddlewareTests
 
         var denied = Assert.IsAssignableFrom<IResult>(deniedContext.Response);
         Assert.Equal("403", denied.ErrorCode);
+        Assert.Equal("403", deniedContext.ResponseHeaders[NOFInfrastructureConstants.Transport.Headers.HttpStatusCode]);
+        Assert.Equal(
+            "Bearer error=\"insufficient_scope\", authorization_server=\"https://auth.local/oauth2\", scope=\"input-method\"",
+            deniedContext.ResponseHeaders["WWW-Authenticate"]);
 
         userContext.Logout();
         userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "input-method"));
@@ -79,6 +87,9 @@ public sealed class AuthorizationInboundMiddlewareTests
 
         var denied = Assert.IsAssignableFrom<IResult>(deniedContext.Response);
         Assert.Equal("403", denied.ErrorCode);
+        Assert.Equal(
+            "Bearer error=\"insufficient_scope\", authorization_server=\"https://auth.local/oauth2\", scope=\"execute-method\"",
+            deniedContext.ResponseHeaders["WWW-Authenticate"]);
 
         userContext.Logout();
         userContext.User.AddIdentity(CreateAuthenticatedIdentity(
@@ -180,7 +191,13 @@ public sealed class AuthorizationInboundMiddlewareTests
     }
 
     private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext)
-        => new(userContext, NullLogger<AuthorizationInboundMiddleware>.Instance);
+        => new(
+            userContext,
+            Options.Create(new AuthenticationResourceServerOptions
+            {
+                AuthorizationServer = "https://auth.local/oauth2"
+            }),
+            NullLogger<AuthorizationInboundMiddleware>.Instance);
 
     private static ClaimsIdentity CreateAuthenticatedIdentity(params string[] permissionClaims)
     {

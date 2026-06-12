@@ -5,7 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 namespace NOF.Hosting.AspNetCore;
 
 internal sealed class RpcHttpResult(
-    NOF.Contract.IResult rpcResult) : Microsoft.AspNetCore.Http.IResult
+    NOF.Contract.IResult rpcResult,
+    int statusCode = StatusCodes.Status200OK) : Microsoft.AspNetCore.Http.IResult
 {
     private readonly NOF.Contract.IResult _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
 
@@ -15,7 +16,7 @@ internal sealed class RpcHttpResult(
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        httpContext.Response.StatusCode = StatusCodes.Status200OK;
+        httpContext.Response.StatusCode = statusCode;
 
         await httpContext.Response.WriteAsJsonAsync(
             _rpcResult,

@@ -1,20 +1,23 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
+using System.Globalization;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
 
 public sealed class AuthorizationInboundMiddleware(
     IUserContext userContext,
+    IOptions<AuthenticationResourceServerOptions> options,
     ILogger<AuthorizationInboundMiddleware> logger) :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
     IRequestInboundMiddleware
 {
     private const string WwwAuthenticateHeader = "WWW-Authenticate";
-    private const string BearerChallenge = "Bearer error=\"invalid_token\"";
+    private readonly AuthenticationResourceServerOptions _options = options.Value;
 
     public TopologyComparison Compare(ICommandInboundMiddleware other)
         => other is TenantInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
@@ -113,7 +116,7 @@ public sealed class AuthorizationInboundMiddleware(
             : new PermissionRequirement(attr.Value, RequiresAllPermissions: false);
     }
 
-    private IResult? Authorize(PermissionRequirement? requirement, string handlerName, string messageName)
+    private AuthorizationFailure? Authorize(PermissionRequirement? requirement, string handlerName, string messageName)
     {
         if (requirement is null || requirement.Value.Permission is null)
         {
@@ -123,7 +126,10 @@ public sealed class AuthorizationInboundMiddleware(
         if (!userContext.User.IsAuthenticated)
         {
             logger.LogWarning("Unauthenticated access to {HandlerType}/{MessageType}", handlerName, messageName);
-            return Result.Fail("401", "Please login first");
+            return new AuthorizationFailure(
+                Result.Fail("401", "Please login first"),
+                StatusCode: 401,
+                RequiredPermissions: GetPermissions(requirement.Value));
         }
 
         if (requirement.Value.Permission.Length == 0)
@@ -142,7 +148,10 @@ public sealed class AuthorizationInboundMiddleware(
             {
                 logger.LogWarning("Access denied to {HandlerType}/{MessageType} for user without permission {Permission}",
                     handlerName, messageName, permission);
-                return Result.Fail("403", "Insufficient permissions");
+                return new AuthorizationFailure(
+                    Result.Fail("403", "Insufficient permissions"),
+                    StatusCode: 403,
+                    RequiredPermissions: permissions);
             }
         }
 
@@ -150,15 +159,49 @@ public sealed class AuthorizationInboundMiddleware(
         return null;
     }
 
-    private static void ApplyFailure(RequestInboundContext context, IResult failure)
+    private void ApplyFailure(RequestInboundContext context, AuthorizationFailure failure)
     {
-        if (failure.ErrorCode == "401")
-        {
-            context.ResponseHeaders[WwwAuthenticateHeader] = BearerChallenge;
-        }
-
-        context.SetResponse(failure, ignoreResultResponseType: false);
+        context.ResponseHeaders[NOFInfrastructureConstants.Transport.Headers.HttpStatusCode] =
+            failure.StatusCode.ToString(CultureInfo.InvariantCulture);
+        context.ResponseHeaders[WwwAuthenticateHeader] = CreateBearerChallenge(failure);
+        context.SetResponse(failure.Result, ignoreResultResponseType: false);
     }
 
+    private string CreateBearerChallenge(AuthorizationFailure failure)
+    {
+        var parameters = new List<string>
+        {
+            failure.StatusCode == 403
+                ? "error=\"insufficient_scope\""
+                : "error=\"invalid_token\""
+        };
+
+        if (!string.IsNullOrWhiteSpace(_options.AuthorizationServer))
+        {
+            parameters.Add($"authorization_server=\"{EscapeChallengeValue(_options.AuthorizationServer)}\"");
+        }
+
+        if (failure.StatusCode == 403)
+        {
+            var scope = string.Join(' ', failure.RequiredPermissions.Where(static permission => !string.IsNullOrWhiteSpace(permission)));
+            if (!string.IsNullOrWhiteSpace(scope))
+            {
+                parameters.Add($"scope=\"{EscapeChallengeValue(scope)}\"");
+            }
+        }
+
+        return $"Bearer {string.Join(", ", parameters)}";
+    }
+
+    private static IReadOnlyList<string> GetPermissions(PermissionRequirement requirement)
+        => requirement.RequiresAllPermissions
+            ? requirement.Permission?.Split('\u001f', StringSplitOptions.RemoveEmptyEntries) ?? []
+            : string.IsNullOrEmpty(requirement.Permission) ? [] : [requirement.Permission];
+
+    private static string EscapeChallengeValue(string value)
+        => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+
     private readonly record struct PermissionRequirement(string? Permission, bool RequiresAllPermissions);
+
+    private sealed record AuthorizationFailure(IResult Result, int StatusCode, IReadOnlyList<string> RequiredPermissions);
 }

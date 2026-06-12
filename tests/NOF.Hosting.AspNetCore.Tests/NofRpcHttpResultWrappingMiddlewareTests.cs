@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 using NOF.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -107,6 +108,25 @@ public sealed class HttpRpcTransportBoundaryTests
         Assert.Equal("access token expired.", payload.Message);
     }
 
+    [Fact]
+    public async Task RpcHttpEndpoint_WhenInboundMiddlewareSetsInternalStatusHeader_WritesHttpStatusAndDoesNotExposeHeader()
+    {
+        await using var app = await CreateAppAsync();
+        using var client = app.GetTestClient();
+
+        using var response = await client.GetAsync("/rpc/OAuthFailure");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.False(response.Headers.Contains(NOFInfrastructureConstants.Transport.Headers.HttpStatusCode));
+        Assert.Contains(response.Headers.WwwAuthenticate, value =>
+            value.ToString().Contains("insufficient_scope", StringComparison.Ordinal) &&
+            value.ToString().Contains("scope=\"sample.permission\"", StringComparison.Ordinal));
+        var payload = await response.Content.ReadFromJsonAsync<Result>();
+        Assert.NotNull(payload);
+        Assert.False(payload.IsSuccess);
+        Assert.Equal("403", payload.ErrorCode);
+    }
+
     private static async Task<WebApplication> CreateAppAsync()
     {
         var builder = WebApplication.CreateBuilder();
@@ -116,6 +136,7 @@ public sealed class HttpRpcTransportBoundaryTests
         builder.Services.AddSingleton<RequestInboundPipelineExecutor>();
         builder.Services.AddScoped<RpcServerInvocationResolver>();
         builder.Services.AddScoped<HttpRequestInboundAdapter>();
+        builder.Services.AddScoped<IRequestInboundMiddleware, OAuthStatusInboundMiddleware>();
         builder.Services.AddOptions<HttpHeaderOutboundOptions>();
 
         builder.Services.AddSingleton<ValidationRpcServer>();
@@ -123,6 +144,7 @@ public sealed class HttpRpcTransportBoundaryTests
         builder.Services.AddTransient<ReadTokenHandler>();
         builder.Services.AddTransient<RedirectHandler>();
         builder.Services.AddTransient<TokenFailureHandler>();
+        builder.Services.AddTransient<OAuthFailureHandler>();
 
         var rpcServerRegistry = new RpcServerRegistry();
         rpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
@@ -193,6 +215,9 @@ public sealed class HttpRpcTransportBoundaryTests
 
         [HttpEndpoint(HttpVerb.Get, "/TokenFailure")]
         Result<ReadTokenResponse> TokenFailure(Empty request);
+
+        [HttpEndpoint(HttpVerb.Get, "/OAuthFailure")]
+        Result OAuthFailure(Empty request);
     }
 
     public sealed class ValidationRpcServer : RpcServer<IValidationRpcService>, IRpcServer
@@ -207,7 +232,9 @@ public sealed class HttpRpcTransportBoundaryTests
                 [nameof(IValidationRpcService.Redirect)] =
                     new(typeof(RedirectHandler), typeof(RedirectRequest), typeof(Result)),
                 [nameof(IValidationRpcService.TokenFailure)] =
-                    new(typeof(TokenFailureHandler), typeof(Empty), typeof(Result<ReadTokenResponse>))
+                    new(typeof(TokenFailureHandler), typeof(Empty), typeof(Result<ReadTokenResponse>)),
+                [nameof(IValidationRpcService.OAuthFailure)] =
+                    new(typeof(OAuthFailureHandler), typeof(Empty), typeof(Result))
             };
 
         protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
@@ -235,5 +262,30 @@ public sealed class HttpRpcTransportBoundaryTests
     {
         public override Task<Result<ReadTokenResponse>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
             => Task.FromResult((Result<ReadTokenResponse>)Result.Fail("invalid_token", "access token expired."));
+    }
+
+    public sealed class OAuthFailureHandler : RpcHandler<Empty, Result>
+    {
+        public override Task<Result> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success());
+    }
+
+    private sealed class OAuthStatusInboundMiddleware : IRequestInboundMiddleware
+    {
+        public TopologyComparison Compare(IRequestInboundMiddleware other) => TopologyComparison.DoesNotMatter;
+
+        public ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
+        {
+            if (context.ServiceMethodInfo.Name == nameof(IValidationRpcService.OAuthFailure))
+            {
+                context.ResponseHeaders[NOFInfrastructureConstants.Transport.Headers.HttpStatusCode] = "403";
+                context.ResponseHeaders["WWW-Authenticate"] =
+                    "Bearer error=\"insufficient_scope\", authorization_server=\"https://auth.local/oauth2\", scope=\"sample.permission\"";
+                context.SetResponse(Result.Fail("403", "Insufficient permissions"), ignoreResultResponseType: false);
+                return ValueTask.CompletedTask;
+            }
+
+            return next(context, request, cancellationToken);
+        }
     }
 }
