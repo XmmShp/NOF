@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure;
 using NOF.Infrastructure.Extension.Authentication;
 using NOF.Infrastructure.RabbitMQ;
@@ -23,7 +24,7 @@ builder.AddAuthenticationAuthority(o =>
         ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
 });
 
-builder.AddOAuthAuthorizationServer(o =>
+builder.AddOidcServer(o =>
 {
     o.Issuer = "http://localhost/oauth2";
     o.AccessTokenAudience = "nof-sample";
@@ -80,7 +81,7 @@ app.MapOpenApi();
 app.UseAntiforgery();
 
 app.MapHttpEndpoint<NOFSampleService>();
-app.MapHttpEndpoint<OAuthAuthorizationServerService>();
+app.MapOidcServer();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

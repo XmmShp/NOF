@@ -1,6 +1,15 @@
 using System.Text.Json.Serialization;
 
-namespace NOF.Contract.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
+
+public sealed record OAuthError
+{
+    [JsonPropertyName("error")]
+    public required string Error { get; init; }
+
+    [JsonPropertyName("error_description")]
+    public required string ErrorDescription { get; init; }
+}
 
 public sealed record OAuthServerMetadata
 {
@@ -42,4 +51,34 @@ public sealed record OAuthServerMetadata
 
     [JsonPropertyName("claims_supported")]
     public required IReadOnlyList<string> ClaimsSupported { get; init; }
+}
+
+public sealed record OAuthServerRootDocument
+{
+    [JsonPropertyName("issuer")]
+    public required string Issuer { get; init; }
+
+    [JsonPropertyName("metadata")]
+    public required string Metadata { get; init; }
+}
+
+public sealed record OAuthTokenEndpointResponse
+{
+    [JsonPropertyName("access_token")]
+    public required string AccessToken { get; init; }
+
+    [JsonPropertyName("token_type")]
+    public required string TokenType { get; init; }
+
+    [JsonPropertyName("expires_in")]
+    public required long ExpiresIn { get; init; }
+
+    [JsonPropertyName("refresh_token")]
+    public required string RefreshToken { get; init; }
+
+    [JsonPropertyName("scope")]
+    public required string Scope { get; init; }
+
+    [JsonPropertyName("id_token")]
+    public string? IdToken { get; init; }
 }

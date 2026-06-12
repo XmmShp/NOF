@@ -42,14 +42,6 @@ public static partial class NOFAuthenticationExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddOAuthAuthorizationServer(Action<OAuthAuthorizationServerOptions> configureOptions)
-        {
-            EnsureJsonRegistered();
-            builder.Services.Configure(configureOptions);
-            builder.AddApplicationPart(typeof(OAuthAuthorizationServerService).Assembly);
-            builder.Services.TryAddScoped<IOAuthAuthorizationCodeService, OAuthAuthorizationCodeService>();
-            return builder;
-        }
     }
 
     private static void EnsureJsonRegistered()

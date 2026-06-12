@@ -26,7 +26,7 @@ Provides JWT infrastructure for NOF applications as a resource server (token val
 
 ### OAuth 2.0 / OpenID Connect Server
 
-- **Contract Mapped Endpoints** - exposes standard OAuth/OIDC operations through `IOAuthAuthorizationServerService` and `[HttpEndpoint]`
+- **Authority Core** - issues JWTs, rotates signing keys, stores authorization codes, and manages refresh-token revocation
 - **Discovery Documents** - publishes OAuth authorization server and OIDC metadata
 - **JWKS Endpoint** - reuses the JWT authority signing keys
 - **Authorization Code Flow** - validates authorization requests, issues cache-backed authorization codes, and redirects with standard OAuth errors
@@ -141,7 +141,7 @@ builder
         options.Issuer = "https://auth.example.com/oauth2";
         options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
     })
-    .AddOAuthAuthorizationServer(options =>
+    .AddOidcServer(options =>
     {
         options.Issuer = "https://auth.example.com/oauth2";
         options.AccessTokenAudience = "your-app";
@@ -150,18 +150,18 @@ builder
 builder.Services.AddScoped<IOAuthAuthorizationHandler, YourAuthorizationHandler>();
 builder.Services.AddScoped<IOAuthSubjectService, YourSubjectService>();
 
-app.MapHttpEndpoint<OAuthAuthorizationServerService>();
+app.MapOidcServer();
 ```
 
-NOF owns the protocol surface: discovery, `oauth2/authorize`, `oauth2/token`, `oauth2/userinfo`, authorization-code storage, PKCE, refresh-token rotation, JWT access tokens, OIDC `id_token`, and JWKS publishing. The HTTP routes are declared on `IOAuthAuthorizationServerService` in `NOF.Contract.Extension.Authentication`; hosting packages map them with the existing NOF `MapHttpEndpoint<TServer>()` mechanism.
+NOF owns the authority core: authorization-code storage, PKCE validation, refresh-token rotation, JWT access tokens, OIDC `id_token`, and JWKS publishing.
+
+The standard HTTP protocol surface now lives in `NOF.Hosting.AspNetCore.Extension.OidcServer` and is mapped with `app.MapOidcServer()`.
 
 Your application owns the business surface:
 
 - `IOAuthAuthorizationHandler` decides whether the request is already authenticated, must redirect to login/consent, or fails by business policy.
 - `IOAuthAuthorizationCodeService` can be injected into your login callback to issue a code after your own login flow succeeds.
 - `IOAuthSubjectService` maps an OAuth subject to access-token and identity claims, and can reject refresh-token reuse when your domain session is revoked.
-
-`userinfo` is exposed as a contract operation that accepts `OAuthUserInfoRequest.AccessToken`. A hosting adapter can map the standard `Authorization: Bearer` header into that request without adding an ASP.NET Core dependency to this package.
 
 The Koala user service should keep DingTalk/ZJU bridge logic, identity binding, email binding, user creation, role lookup, and session revocation in its own application layer, then adapt those behaviors through the interfaces above. Those concerns are Koala business policy, while NOF keeps only the reusable OAuth/OIDC protocol machinery.
 

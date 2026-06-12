@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <PackageId>NOF.Hosting.AspNetCore.Extension.OidcServer</PackageId>
+    <Description>ASP.NET Core OIDC server endpoints for the NOF Framework.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
+    <ProjectReference Include="..\NOF.Infrastructure.Extension.Authentication\NOF.Infrastructure.Extension.Authentication.csproj" />
+    <ProjectReference Include="..\..\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

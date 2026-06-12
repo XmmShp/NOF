@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 
-internal sealed class OAuthAuthorizationCodeService(
+public sealed class OAuthAuthorizationCodeService(
     ICacheService cacheService,
     IOptions<OAuthAuthorizationServerOptions> options) : IOAuthAuthorizationCodeService
 {

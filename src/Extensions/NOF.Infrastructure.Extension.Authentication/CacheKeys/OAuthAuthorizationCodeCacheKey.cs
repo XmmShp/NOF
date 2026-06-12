@@ -1,5 +1,4 @@
 using NOF.Application;
-using NOF.Contract.Extension.Authentication;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 
@@ -23,16 +22,4 @@ internal sealed record OAuthAuthorizationCodeCacheValue
     public string? CodeChallengeMethod { get; init; }
 
     public required DateTime ExpiresAtUtc { get; init; }
-}
-
-internal sealed record OAuthRedeemedAuthorizationCodeCacheKey(string Code)
-    : CacheKey<OAuthRedeemedAuthorizationCodeCacheValue>($"nof:oauth:auth-code:redeemed:{Code}");
-
-internal sealed record OAuthRedeemedAuthorizationCodeCacheValue
-{
-    public required string ClientId { get; init; }
-
-    public required string RedirectUri { get; init; }
-
-    public required OAuthTokenEndpointResponse Response { get; init; }
 }

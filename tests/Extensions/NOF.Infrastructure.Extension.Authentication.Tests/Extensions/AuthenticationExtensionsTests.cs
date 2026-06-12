@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Hosting.Extension.Authentication;
 using NOF.Test;
 using System.Security.Claims;
@@ -58,10 +59,10 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddOAuthAuthorizationServer_ShouldRegisterProtocolServicesOnly()
+    public async Task AddOidcServer_ShouldRegisterProtocolServicesOnly()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddOAuthAuthorizationServer(options =>
+        builder.AddOidcServer(options =>
         {
             options.Issuer = "https://issuer.local/oauth2";
             options.AccessTokenAudience = "nof-tests";
