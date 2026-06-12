@@ -1,7 +1,5 @@
 using NOF.Contract;
 using System.Runtime.CompilerServices;
-using NOF.Abstraction;
-using NOF.Application;
 
 namespace NOF.Sample.Application.RequestHandlers;
 

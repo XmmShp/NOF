@@ -1,4 +1,3 @@
-using NOF.Abstraction;
 using NOF.Hosting;
 using Xunit;
 

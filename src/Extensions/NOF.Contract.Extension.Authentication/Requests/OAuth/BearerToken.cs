@@ -1,5 +1,3 @@
-using NOF.Contract;
-
 namespace NOF.Contract.Extension.Authentication;
 
 public readonly record struct BearerToken(string Value) : ITransportStringParsable<BearerToken>

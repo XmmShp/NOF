@@ -3,7 +3,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
-using NOF.Abstraction;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -26,7 +25,6 @@ public class RemoveConfigFile : NOFSampleService.RemoveConfigFile
 
         if (node is null)
         {
-            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
             return Result.Fail("404", "Node not found.");
         }
 

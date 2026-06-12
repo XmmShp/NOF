@@ -1,8 +1,6 @@
-using NOF.Abstraction;
 using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
@@ -43,7 +41,6 @@ public sealed class RequestInboundContext : Context
             return;
         }
 
-        SetResponseMetadatas(HttpTransportMetadata.Create(ParseStatusCode(failure.ErrorCode, 500)));
         Response = ResultProjection.CreateFailure(typeof(Result), failure);
     }
 
@@ -71,9 +68,4 @@ public sealed class RequestInboundContext : Context
 
     private static bool CreatesBusinessResult(Type responseType)
         => typeof(IResult).IsAssignableFrom(responseType);
-
-    private static int ParseStatusCode(string? errorCode, int fallbackStatusCode)
-        => int.TryParse(errorCode, NumberStyles.Integer, CultureInfo.InvariantCulture, out var statusCode)
-            ? statusCode
-            : fallbackStatusCode;
 }

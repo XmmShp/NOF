@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Abstraction;
-using NOF.Contract.Extension.Authentication;
 using NOF.Hosting;
 using System.Text.Json;
 

@@ -42,7 +42,6 @@ public static class RpcServerInvoker
                 outboundContext.Headers,
                 ct).ConfigureAwait(false);
             outboundContext.Response = inboundContext.Response;
-            outboundContext.SetResponseMetadatas(inboundContext.ResponseMetadatas);
         }, cancellationToken).ConfigureAwait(false);
 
         return outboundContext.Response;

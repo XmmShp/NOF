@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace NOF.Hosting.Extension.Authentication;
 
 public static partial class NOFAuthenticationExtensions

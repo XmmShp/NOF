@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using NOF.Contract.Extension.Authentication;
 using NOF.Hosting.Extension.Authentication;
 using NOF.Test;
 using System.Security.Claims;

@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
-using NOF.Application;
 using NOF.Contract;
 using System.Security.Cryptography;
 using Xunit;

@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Contract;
-using NOF.Abstraction;
 using NOF.Sample.Application.Entities;
-using NOF.Application;
 
 namespace NOF.Sample.Application.RequestHandlers;
 

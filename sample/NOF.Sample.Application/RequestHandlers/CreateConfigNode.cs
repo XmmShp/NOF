@@ -3,7 +3,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
-using NOF.Abstraction;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -27,7 +26,6 @@ public class CreateConfigNode : NOFSampleService.CreateConfigNode
 
         if (await _dbContext.Set<ConfigNode>().ExistsByNameAsync(name, cancellationToken))
         {
-            context.SetResponseMetadatas(HttpTransportMetadata.Create(400));
             return Result.Fail("400", "Node with same name already exists.");
         }
 

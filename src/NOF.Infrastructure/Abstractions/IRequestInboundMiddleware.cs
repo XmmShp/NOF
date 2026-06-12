@@ -1,4 +1,3 @@
-using NOF.Contract;
 using NOF.Hosting;
 using System.ComponentModel;
 

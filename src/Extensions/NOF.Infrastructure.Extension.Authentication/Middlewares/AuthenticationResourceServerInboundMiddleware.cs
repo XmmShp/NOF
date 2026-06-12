@@ -7,7 +7,6 @@ using NOF.Hosting.Extension.Authentication;
 using NOF.Contract;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using NOF.Application;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 

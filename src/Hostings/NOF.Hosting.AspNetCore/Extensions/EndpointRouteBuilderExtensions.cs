@@ -128,7 +128,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             CancellationToken cancellationToken)
         {
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
-            return CreateHttpResponse<TResponse>(execution.Response, execution.ResponseMetadatas);
+            return CreateHttpResponse<TResponse>(execution.Response);
         }
 
         return Handler;
@@ -149,7 +149,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             CancellationToken cancellationToken)
         {
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
-            return CreateHttpResponse<TResponse>(execution.Response, execution.ResponseMetadatas);
+            return CreateHttpResponse<TResponse>(execution.Response);
         }
 
         return Handler;
@@ -170,7 +170,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         {
             var request = CreateRequestFromQuery<TRequest>(httpContext);
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
-            return CreateHttpResponse<TResponse>(execution.Response, execution.ResponseMetadatas);
+            return CreateHttpResponse<TResponse>(execution.Response);
         }
 
         return Handler;
@@ -191,7 +191,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             CancellationToken cancellationToken)
         {
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
-            return CreateStreamingResult<TItem>(execution.Response, execution.ResponseMetadatas);
+            return CreateStreamingResult<TItem>(execution.Response);
         }
 
         return Handler;
@@ -212,7 +212,7 @@ public static partial class NOFHostingAspNetCoreExtensions
             CancellationToken cancellationToken)
         {
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
-            return CreateStreamingResult<TItem>(execution.Response, execution.ResponseMetadatas);
+            return CreateStreamingResult<TItem>(execution.Response);
         }
 
         return Handler;
@@ -233,7 +233,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         {
             var request = CreateRequestFromQuery<TRequest>(httpContext);
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
-            return CreateStreamingResult<TItem>(execution.Response, execution.ResponseMetadatas);
+            return CreateStreamingResult<TItem>(execution.Response);
         }
 
         return Handler;
@@ -242,17 +242,16 @@ public static partial class NOFHostingAspNetCoreExtensions
     [RequiresUnreferencedCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     [RequiresDynamicCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult<TItem>(
-        NOF.Contract.IResult? response,
-        IReadOnlyDictionary<string, string?> metadatas)
+        NOF.Contract.IResult? response)
     {
         if (response is StreamingResult<TItem> streamingResult)
         {
-            return new RpcStreamingHttpResult<TItem>(streamingResult, metadatas);
+            return new RpcStreamingHttpResult<TItem>(streamingResult);
         }
 
         if (response is not null)
         {
-            return new RpcHttpResult(response, metadatas);
+            return new RpcHttpResult(response);
         }
 
         throw new InvalidOperationException($"Streaming RPC endpoints must return '{typeof(StreamingResult<TItem>).FullName}'.");
@@ -261,17 +260,16 @@ public static partial class NOFHostingAspNetCoreExtensions
     [RequiresUnreferencedCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     [RequiresDynamicCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     private static Microsoft.AspNetCore.Http.IResult CreateHttpResponse<TResponse>(
-        NOF.Contract.IResult? transportResult,
-        IReadOnlyDictionary<string, string?> metadatas)
+        NOF.Contract.IResult? transportResult)
     {
         if (transportResult is TResponse result)
         {
-            return new RpcHttpResult((NOF.Contract.IResult)(object)result!, metadatas);
+            return new RpcHttpResult((NOF.Contract.IResult)(object)result!);
         }
 
         if (transportResult is not null)
         {
-            return new RpcHttpResult(transportResult, metadatas);
+            return new RpcHttpResult(transportResult);
         }
 
         throw new InvalidOperationException($"HTTP RPC endpoint returned '{transportResult?.GetType().FullName ?? "null"}' instead of '{typeof(TResponse).FullName}'.");

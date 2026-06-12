@@ -1,4 +1,3 @@
-using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Contract.Extension.Authentication;

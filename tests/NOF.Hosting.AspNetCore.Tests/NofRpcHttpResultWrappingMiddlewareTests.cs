@@ -78,33 +78,28 @@ public sealed class HttpRpcTransportBoundaryTests
     }
 
     [Fact]
-    public async Task RpcHttpEndpoint_WhenRpcResultCarriesRedirectMetadata_WritesRedirectResponse()
+    public async Task RpcHttpEndpoint_WhenRpcResultCarriesRedirectBody_WritesOkResponse()
     {
         await using var app = await CreateAppAsync();
         using var client = app.GetTestClient();
 
         using var response = await client.GetAsync("/rpc/Redirect?url=https%3A%2F%2Fexample.com%2Fcallback");
 
-        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
-        Assert.Equal("https://example.com/callback", response.Headers.Location?.ToString());
-        Assert.Equal(bool.TrueString, response.Headers.GetValues(NOFAbstractionConstants.Transport.Headers.RpcSuccess).Single());
-        Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<Result>();
+        Assert.NotNull(payload);
+        Assert.True(payload.IsSuccess);
     }
 
     [Fact]
-    public async Task RpcHttpEndpoint_WhenRpcResultCarriesFailureBodyAndHeaders_WritesThemToHttpResponse()
+    public async Task RpcHttpEndpoint_WhenRpcResultCarriesFailureBody_WritesOkResponse()
     {
         await using var app = await CreateAppAsync();
         using var client = app.GetTestClient();
 
         using var response = await client.GetAsync("/rpc/TokenFailure");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        Assert.Equal(bool.TrueString, response.Headers.GetValues(NOFAbstractionConstants.Transport.Headers.RpcSuccess).Single());
-        Assert.Equal(
-            "Bearer error=\"invalid_token\", error_description=\"access token expired.\"",
-            response.Headers.WwwAuthenticate.ToString());
-
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<Result<ReadTokenResponse>>();
         Assert.NotNull(payload);
         Assert.False(payload.IsSuccess);
@@ -235,25 +230,12 @@ public sealed class HttpRpcTransportBoundaryTests
     public sealed class RedirectHandler : RpcHandler<RedirectRequest, Result>
     {
         public override Task<Result> HandleAsync(RedirectRequest request, Context context, CancellationToken cancellationToken)
-        {
-            context.SetResponseMetadatas(HttpTransportMetadata.Create(302, [new KeyValuePair<string, string?>("Location", request.Url)]));
-            return Task.FromResult(Result.Success());
-        }
+            => Task.FromResult(Result.Success());
     }
 
     public sealed class TokenFailureHandler : RpcHandler<Empty, Result<ReadTokenResponse>>
     {
         public override Task<Result<ReadTokenResponse>> HandleAsync(Empty request, Context context, CancellationToken cancellationToken)
-        {
-            context.SetResponseMetadatas(
-                HttpTransportMetadata.Create(
-                    401,
-                    [
-                        new KeyValuePair<string, string?>(
-                        "WWW-Authenticate",
-                        "Bearer error=\"invalid_token\", error_description=\"access token expired.\"")
-                    ]));
-            return Task.FromResult((Result<ReadTokenResponse>)Result.Fail("invalid_token", "access token expired."));
-        }
+            => Task.FromResult((Result<ReadTokenResponse>)Result.Fail("invalid_token", "access token expired."));
     }
 }

@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
-using NOF.Abstraction;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -26,7 +25,6 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
             .FirstOrDefaultAsync(configNode => configNode.Id == id, cancellationToken);
         if (node is null)
         {
-            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
             return Result.Fail("404", "Node not found.");
         }
 
@@ -37,7 +35,6 @@ public class DeleteConfigNode : NOFSampleService.DeleteConfigNode
         var hasChildren = children?.HasChildren() ?? false;
         if (hasChildren)
         {
-            context.SetResponseMetadatas(HttpTransportMetadata.Create(400));
             return Result.Fail("400", "Cannot delete node with children.");
         }
 

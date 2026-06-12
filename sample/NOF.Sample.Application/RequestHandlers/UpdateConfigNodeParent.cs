@@ -3,7 +3,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
-using NOF.Abstraction;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
@@ -28,7 +27,6 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 
         if (node is null)
         {
-            context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
             return Result.Fail("404", "Node not found.");
         }
 
@@ -43,14 +41,12 @@ public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
                 .FirstOrDefaultAsync(configNode => configNode.Id == newParentId.Value, cancellationToken);
             if (parentNode is null)
             {
-                context.SetResponseMetadatas(HttpTransportMetadata.Create(404));
                 return Result.Fail("404", "Target parent node not found.");
             }
 
             // Prevent cyclic parent relationship.
             if (await IsDescendant(nodeId, newParentId.Value, cancellationToken))
             {
-                context.SetResponseMetadatas(HttpTransportMetadata.Create(400));
                 return Result.Fail("400", "Cannot move a node under its descendant.");
             }
         }

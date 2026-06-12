@@ -9,7 +9,6 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using static NOF.Infrastructure.Extension.Authentication.OAuthAuthorizationServerServiceHelpers;
-using NOF.Abstraction;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 
@@ -87,22 +86,18 @@ public sealed class AuthorizeHandler(
         return result switch
         {
             OAuthAuthorizationResult.Authorized authorized => CreateRedirectResult(
-                context,
                 await RedirectWithCodeAsync(
                     authorizationCodeService,
                     authorizationRequest,
                     authorized.Subject,
                     cancellationToken).ConfigureAwait(false),
                 error: null),
-            OAuthAuthorizationResult.Challenge challenge => CreateRedirectResult(context, challenge.RedirectUrl, error: null),
+            OAuthAuthorizationResult.Challenge challenge => CreateRedirectResult(challenge.RedirectUrl, error: null),
             OAuthAuthorizationResult.Failure failure => ToAuthorizeFailure(
                 context,
                 authorizationRequest,
                 CreateOAuthError(failure.Error, failure.ErrorDescription)),
-            _ => CreateErrorResult(
-                context,
-                500,
-                CreateOAuthError("server_error", "Unsupported OAuth authorization result."))
+            _ => CreateErrorResult(CreateOAuthError("server_error", "Unsupported OAuth authorization result."))
         };
     }
 
@@ -159,7 +154,6 @@ public sealed class AuthorizeHandler(
             && Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
         {
             return CreateRedirectResult(
-                context,
                 AddQueryString(
                     request.RedirectUri,
                     new Dictionary<string, string?>
@@ -171,7 +165,7 @@ public sealed class AuthorizeHandler(
                 error);
         }
 
-        return CreateErrorResult(context, 400, error);
+        return CreateErrorResult(error);
     }
 }
 
@@ -190,12 +184,9 @@ public sealed class TokenHandler(
     {
         return request.GrantType switch
         {
-            "authorization_code" => FromTokenResult(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false), context),
-            "refresh_token" => FromTokenResult(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false), context),
-            _ => WithHttpFailure<OAuthTokenEndpointResponse>(
-                context,
-                Result.Fail("unsupported_grant_type", "Only authorization_code and refresh_token are supported."),
-                400)
+            "authorization_code" => FromTokenResult(await TokenFromAuthorizationCodeAsync(request, cancellationToken).ConfigureAwait(false)),
+            "refresh_token" => FromTokenResult(await TokenFromRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false)),
+            _ => WithFailure<OAuthTokenEndpointResponse>(Result.Fail("unsupported_grant_type", "Only authorization_code and refresh_token are supported."))
         };
     }
 
@@ -453,9 +444,6 @@ public sealed class UserInfoHandler(
             ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrWhiteSpace(subject))
         {
-            context.SetResponseMetadatas(CreateHttpMetadatas(
-                401,
-                CreateBearerAuthenticateHeaders("invalid_token", "access token is invalid.")));
             return Result.Fail("invalid_token", "access token is invalid.");
         }
 
@@ -464,9 +452,6 @@ public sealed class UserInfoHandler(
         var profile = await subjectService.GetProfileAsync(subject, scopes, cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {
-            context.SetResponseMetadatas(CreateHttpMetadatas(
-                401,
-                CreateBearerAuthenticateHeaders("invalid_token", "access token subject is invalid.")));
             return Result.Fail("invalid_token", "access token subject is invalid.");
         }
 
@@ -612,29 +597,17 @@ internal static class OAuthAuthorizationServerServiceHelpers
         }
     }
 
-    public static Result<T> FromTokenResult<T>(Result<T> result, Context context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        if (!result.IsSuccess)
-        {
-            context.SetResponseMetadatas(CreateHttpMetadatas(400));
-        }
+    public static Result<T> FromTokenResult<T>(Result<T> result)
+        => result;
 
-        return result;
-    }
-
-    public static Result<T> WithHttpFailure<T>(Context context, FailResult failure, int statusCode)
+    public static Result<T> WithFailure<T>(FailResult failure)
     {
-        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(failure);
-        context.SetResponseMetadatas(CreateHttpMetadatas(statusCode));
         return failure;
     }
 
-    public static Result<OAuthAuthorizeResponse> CreateRedirectResult(Context context, string redirectUrl, OAuthError? error)
+    public static Result<OAuthAuthorizeResponse> CreateRedirectResult(string redirectUrl, OAuthError? error)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        context.SetResponseMetadatas(CreateHttpMetadatas(302, CreateRedirectHeaders(redirectUrl)));
         return Result.Success(new OAuthAuthorizeResponse
         {
             Type = OAuthAuthorizeResponseType.Redirect,
@@ -643,22 +616,15 @@ internal static class OAuthAuthorizationServerServiceHelpers
         });
     }
 
-    public static Result<OAuthAuthorizeResponse> CreateErrorResult(Context context, int statusCode, OAuthError error)
+    public static Result<OAuthAuthorizeResponse> CreateErrorResult(OAuthError error)
     {
-        ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(error);
-        context.SetResponseMetadatas(CreateHttpMetadatas(statusCode));
         return Result.Success(new OAuthAuthorizeResponse
         {
             Type = OAuthAuthorizeResponseType.Error,
             Error = error
         });
     }
-
-    public static IReadOnlyDictionary<string, string?> CreateHttpMetadatas(
-        int? statusCode = null,
-        IEnumerable<KeyValuePair<string, string?>>? headers = null)
-        => HttpTransportMetadata.Create(statusCode, headers);
 
     public static OAuthError CreateOAuthError(string error, string description)
         => new()
@@ -667,24 +633,8 @@ internal static class OAuthAuthorizationServerServiceHelpers
             ErrorDescription = description
         };
 
-    public static IReadOnlyDictionary<string, string?> CreateRedirectHeaders(string redirectUrl)
-        => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Location"] = redirectUrl
-        };
-
-    public static IReadOnlyDictionary<string, string?> CreateBearerAuthenticateHeaders(string error, string description)
-        => new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["WWW-Authenticate"] =
-                $"Bearer error=\"{EscapeHeaderValue(error)}\", error_description=\"{EscapeHeaderValue(description)}\""
-        };
-
     public static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
-
-    public static string EscapeHeaderValue(string value)
-        => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
     public static string AddQueryString(string uri, IReadOnlyDictionary<string, string?> query)
     {

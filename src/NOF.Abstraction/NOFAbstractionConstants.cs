@@ -30,13 +30,6 @@ public static class NOFAbstractionConstants
             public const string TenantId = "NOF.TenantId";
             public const string TraceParent = "traceparent";
             public const string MessageId = "NOF.Message.MessageId";
-            public const string RpcSuccess = "NOF.Transport.Success";
-        }
-
-        public static class Metadatas
-        {
-            public const string HttpStatusCode = "NOF.Transport.Http.StatusCode";
-            public const string HttpHeaderPrefix = "NOF.Transport.Http.Header.";
         }
     }
 }

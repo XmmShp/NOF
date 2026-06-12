@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
-using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;

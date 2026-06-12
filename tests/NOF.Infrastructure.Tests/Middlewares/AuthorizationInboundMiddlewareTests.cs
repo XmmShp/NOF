@@ -152,8 +152,6 @@ public sealed class AuthorizationInboundMiddlewareTests
         Assert.False(response.IsSuccess);
         Assert.Equal("401", response.ErrorCode);
         Assert.Equal("Please login first", response.Message);
-        Assert.True(HttpTransportMetadata.TryGetStatusCode(context.ResponseMetadatas, out var statusCode));
-        Assert.Equal(401, statusCode);
     }
 
     private static RequestInboundContext CreateContext(string methodName, Type? responseType = null)
