@@ -1,7 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using NOF.Infrastructure;
-
 namespace NOF.Domain;
 
 /// <summary>
@@ -32,41 +28,48 @@ public sealed class SnowflakeIdGenerator : IIdGenerator
     private long _sequence = 0L;
 
     /// <summary>
+    /// Initializes a new instance with default options and deployment identifiers.
+    /// </summary>
+    public SnowflakeIdGenerator()
+        : this(new SnowflakeIdGeneratorOptions())
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance from <see cref="SnowflakeIdGeneratorOptions"/>.
     /// </summary>
-    public SnowflakeIdGenerator(IOptions<SnowflakeIdGeneratorOptions> options, IHostEnvironment hostEnvironment)
+    public SnowflakeIdGenerator(
+        SnowflakeIdGeneratorOptions options,
+        uint applicationId = 0,
+        uint instanceId = 1)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(hostEnvironment);
 
-        var optionsValue = options.Value;
-        ArgumentNullException.ThrowIfNull(optionsValue);
-
-        _maxSequence = (1L << optionsValue.SequenceBits) - 1;
-        _instanceIdShift = optionsValue.SequenceBits;
-        _applicationIdShift = optionsValue.InstanceIdBits + optionsValue.SequenceBits;
-        _timestampShift = optionsValue.ApplicationIdBits + optionsValue.InstanceIdBits + optionsValue.SequenceBits;
+        _maxSequence = (1L << options.SequenceBits) - 1;
+        _instanceIdShift = options.SequenceBits;
+        _applicationIdShift = options.InstanceIdBits + options.SequenceBits;
+        _timestampShift = options.ApplicationIdBits + options.InstanceIdBits + options.SequenceBits;
 
         if (_timestampShift >= 63)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "The total number of ApplicationIdBits, InstanceIdBits, and SequenceBits must be less than 63.");
         }
 
-        var maxApplicationId = (1u << optionsValue.ApplicationIdBits) - 1;
-        var maxInstanceId = (1u << optionsValue.InstanceIdBits) - 1;
-        if (hostEnvironment.ApplicationId > maxApplicationId)
+        var maxApplicationId = (1L << options.ApplicationIdBits) - 1;
+        var maxInstanceId = (1L << options.InstanceIdBits) - 1;
+        if (applicationId > maxApplicationId)
         {
-            throw new ArgumentOutOfRangeException(nameof(hostEnvironment), $"ApplicationId must be in range [0, {maxApplicationId}].");
+            throw new ArgumentOutOfRangeException(nameof(applicationId), $"ApplicationId must be in range [0, {maxApplicationId}].");
         }
 
-        if (hostEnvironment.InstanceId > maxInstanceId)
+        if (instanceId > maxInstanceId)
         {
-            throw new ArgumentOutOfRangeException(nameof(hostEnvironment), $"InstanceId must be in range [0, {maxInstanceId}].");
+            throw new ArgumentOutOfRangeException(nameof(instanceId), $"InstanceId must be in range [0, {maxInstanceId}].");
         }
 
-        _applicationId = hostEnvironment.ApplicationId;
-        _instanceId = hostEnvironment.InstanceId;
-        _epochMs = optionsValue.Epoch.ToUnixTimeMilliseconds();
+        _applicationId = applicationId;
+        _instanceId = instanceId;
+        _epochMs = options.Epoch.ToUnixTimeMilliseconds();
     }
 
     /// <summary>Generates the next unique snowflake ID.</summary>

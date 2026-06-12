@@ -1,6 +1,3 @@
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using NOF.Domain;
 using System.ComponentModel.DataAnnotations;
 using Xunit;
@@ -16,17 +13,7 @@ public class SnowflakeIdGeneratorTests
         SnowflakeIdGeneratorOptions? options = null,
         uint applicationId = 0,
         uint instanceId = 0)
-    {
-        var hostEnvironment = new TestHostEnvironment
-        {
-            ApplicationName = "NOF.Infrastructure.Tests"
-        };
-        hostEnvironment.ApplicationId = applicationId;
-        hostEnvironment.InstanceId = instanceId;
-        return new SnowflakeIdGenerator(
-            Options.Create(options ?? new SnowflakeIdGeneratorOptions()),
-            hostEnvironment);
-    }
+        => new(options ?? new SnowflakeIdGeneratorOptions(), applicationId, instanceId);
 
     // -----------------------------------------------------------------------
     // Basic generation
@@ -245,16 +232,5 @@ public class SnowflakeIdGeneratorTests
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(options, new ValidationContext(options), results, validateAllProperties: true);
         return results;
-    }
-
-    private sealed class TestHostEnvironment : IHostEnvironment
-    {
-        public string EnvironmentName { get; set; } = Environments.Development;
-
-        public string ApplicationName { get; set; } = "NOF.Infrastructure.Tests";
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 }

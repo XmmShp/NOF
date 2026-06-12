@@ -30,7 +30,10 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
-            builder.Services.TryAddSingleton<IIdGenerator, SnowflakeIdGenerator>();
+            builder.Services.TryAddSingleton<IIdGenerator>(sp => new SnowflakeIdGenerator(
+                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
+                builder.Environment.ApplicationId,
+                builder.Environment.InstanceId));
             builder.Services.TryAddSingleton<IContextAccessor, ContextAccessor>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
