@@ -1,7 +1,8 @@
+using NOF.Abstraction;
 using NOF.Contract;
-using NOF.Hosting;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
@@ -69,7 +70,7 @@ public sealed class NotificationInboundContext : Context
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class RequestInboundContext : Context
 {
-    public IRpcResult? Response { get; set; }
+    public IRpcResult? Response { get; private set; }
 
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     public required Type ServiceType { get; init; }
@@ -85,6 +86,25 @@ public sealed class RequestInboundContext : Context
     public required Type ResponseType { get; init; }
 
     public IReadOnlyList<object> Metadata { get; init; } = Array.Empty<object>();
+
+    public void SetResponse(IRpcResult response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        Response = response;
+    }
+
+    public void SetResponse(IResult failure, bool ignoreResultResponseType = false)
+    {
+        ArgumentNullException.ThrowIfNull(failure);
+
+        if (!ignoreResultResponseType && CreatesBusinessResult(ResponseType))
+        {
+            Response = RpcResults.BusinessFailure(ResponseType, failure);
+            return;
+        }
+
+        Response = RpcResults.Fail(HttpTransportMetadata.Create(ParseStatusCode(failure.ErrorCode, 500)));
+    }
 
     [SetsRequiredMembers]
     private RequestInboundContext(IReadOnlyDictionary<object, object?> items, RequestInboundContext source)
@@ -107,4 +127,12 @@ public sealed class RequestInboundContext : Context
 
     protected override Context Clone(IReadOnlyDictionary<object, object?> items)
         => new RequestInboundContext(items, this);
+
+    private static bool CreatesBusinessResult(Type responseType)
+        => typeof(IResult).IsAssignableFrom(responseType);
+
+    private static int ParseStatusCode(string? errorCode, int fallbackStatusCode)
+        => int.TryParse(errorCode, NumberStyles.Integer, CultureInfo.InvariantCulture, out var statusCode)
+            ? statusCode
+            : fallbackStatusCode;
 }

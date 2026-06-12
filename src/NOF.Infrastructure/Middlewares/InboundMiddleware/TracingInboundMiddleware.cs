@@ -196,10 +196,7 @@ public sealed class TracingInboundMiddleware(
                 requestName,
                 handlerName,
                 domainException.Message);
-            context.Response = RequestInboundResponseFactory.CreateFailure(
-                context,
-                Result.Fail(domainException.ErrorCode, domainException.Message),
-                500);
+            context.SetResponse(Result.Fail(domainException.ErrorCode, domainException.Message));
             return;
         }
 
@@ -209,8 +206,6 @@ public sealed class TracingInboundMiddleware(
             requestName,
             handlerName,
             exception.Message);
-        context.Response = RequestInboundResponseFactory.CreateFailure(
-            context,
-            Result.Fail("500", "Internal server error"));
+        context.SetResponse(Result.Fail("500", "Internal server error"));
     }
 }

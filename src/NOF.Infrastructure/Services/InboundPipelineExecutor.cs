@@ -288,8 +288,9 @@ public sealed class RequestInboundPipelineExecutor
         {
             var handler = (RpcHandler)services.GetRequiredService(handlerType);
             var response = await handler.HandleAsync(request, context, cancellationToken).ConfigureAwait(false);
-            context.Response = response
-                ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response.");
+            context.SetResponse(
+                response
+                ?? throw new InvalidOperationException($"RPC handler '{handlerType.FullName}' returned a null response."));
         }).ConfigureAwait(false);
     }
 

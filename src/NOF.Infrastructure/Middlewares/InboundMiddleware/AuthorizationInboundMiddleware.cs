@@ -1,5 +1,6 @@
 using NOF.Contract;
 using NOF.Hosting;
+using System.Globalization;
 
 namespace NOF.Infrastructure;
 
@@ -34,10 +35,15 @@ public sealed class AuthorizationInboundMiddleware :
 
         if (firstFailure is not null)
         {
-            context.Response = RequestInboundResponseFactory.CreateFailure(context, firstFailure, 403);
+            context.SetResponse(EnsureStatusCode(firstFailure, 403));
             return;
         }
 
         await next(context, request, cancellationToken);
     }
+
+    private static IResult EnsureStatusCode(IResult failure, int fallbackStatusCode)
+        => int.TryParse(failure.ErrorCode, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
+            ? failure
+            : Result.Fail(fallbackStatusCode.ToString(CultureInfo.InvariantCulture), failure.Message, failure.Extra);
 }
