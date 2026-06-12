@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Contract;
-using NOF.Contract.Extension.Authentication;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 

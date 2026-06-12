@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Xunit;
-using NOF.Contract.Extension.Authentication;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 namespace NOF.Infrastructure.Extension.Authentication.Tests.HttpClients;
 

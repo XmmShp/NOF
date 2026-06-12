@@ -1,6 +1,6 @@
 using NOF.Application;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 internal sealed record OAuthAuthorizationCodeCacheKey(string Code)
     : CacheKey<OAuthAuthorizationCodeCacheValue>($"nof:oauth:auth-code:{Code}");

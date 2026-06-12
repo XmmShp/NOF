@@ -4,7 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
 using System.Security.Cryptography;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed class OAuthAuthorizationCodeService(
     ICacheService cacheService,

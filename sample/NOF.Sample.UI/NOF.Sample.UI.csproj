@@ -17,7 +17,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\NOF.UI\NOF.UI.csproj" />
-		<ProjectReference Include="..\..\src\Extensions\NOF.Contract.Extension.Authentication\NOF.Contract.Extension.Authentication.csproj" />
 		<ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
 	</ItemGroup>
 

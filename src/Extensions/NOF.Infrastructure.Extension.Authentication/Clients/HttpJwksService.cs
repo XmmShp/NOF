@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using System.Net.Http.Json;
 using System.Text.Json;
-using NOF.Contract.Extension.Authentication;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 

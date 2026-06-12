@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using NOF.Contract.Extension.Authentication;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 

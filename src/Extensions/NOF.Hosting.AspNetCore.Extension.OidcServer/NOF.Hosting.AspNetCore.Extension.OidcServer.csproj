@@ -10,8 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
-    <ProjectReference Include="..\NOF.Infrastructure.Extension.Authentication\NOF.Infrastructure.Extension.Authentication.csproj" />
     <ProjectReference Include="..\..\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

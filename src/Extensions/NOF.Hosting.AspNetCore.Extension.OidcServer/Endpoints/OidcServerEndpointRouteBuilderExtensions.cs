@@ -8,8 +8,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Contract.Extension.Authentication;
-using NOF.Infrastructure.Extension.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;

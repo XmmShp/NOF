@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.BlazorWebAssembly\NOF.Hosting.BlazorWebAssembly.csproj" />
-    <ProjectReference Include="..\..\src\Extensions\NOF.Contract.Extension.Authentication\NOF.Contract.Extension.Authentication.csproj" />
     <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
     <ProjectReference Include="..\NOF.Sample.UI\NOF.Sample.UI.csproj" />
   </ItemGroup>

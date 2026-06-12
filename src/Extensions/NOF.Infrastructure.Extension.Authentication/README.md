@@ -4,7 +4,7 @@ JWT authorization and authority extension for the [NOF Framework](https://github
 
 ## Overview
 
-Provides JWT infrastructure for NOF applications as a resource server (token validation), as an optional JWT authority (token issuance), and as an OAuth 2.0 / OpenID Connect authorization server implemented through NOF RPC contracts. Outbound token propagation is provided separately by `NOF.Hosting.Extension.Authentication`.
+Provides JWT infrastructure for NOF applications as a resource server (token validation) and as an optional JWT authority (token issuance). The ASP.NET Core OAuth 2.0 / OpenID Connect protocol surface is provided separately by `NOF.Hosting.AspNetCore.Extension.OidcServer`. Outbound token propagation is provided separately by `NOF.Hosting.Extension.Authentication`.
 
 ## Features
 
@@ -167,7 +167,7 @@ The Koala user service should keep DingTalk/ZJU bridge logic, identity binding, 
 
 ## Dependencies
 
-- [`NOF.Contract.Extension.Authentication`](https://www.nuget.org/packages/NOF.Contract.Extension.Authentication) - JWT contract definitions
+- [`NOF.Hosting.AspNetCore.Extension.OidcServer`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore.Extension.OidcServer) - OIDC service contracts and ASP.NET Core endpoints
 - [`NOF.Hosting.Extension.Authentication`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authentication) - outbound access token propagation
 - [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)
 - [`System.IdentityModel.Tokens.Jwt`](https://www.nuget.org/packages/System.IdentityModel.Tokens.Jwt)

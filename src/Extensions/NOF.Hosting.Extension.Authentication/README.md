@@ -18,7 +18,7 @@ Downstream propagation settings are taken from each `AccessTokenIdentity` instan
 
 ## When To Use
 
-- Use `NOF.Contract.Extension.Authentication` for pure JWT service contracts
+- Use `NOF.Hosting.AspNetCore.Extension.OidcServer` for OIDC service contracts and ASP.NET Core endpoints
 - Use `NOF.Hosting.Extension.Authentication` for outbound token propagation only
 - Use `NOF.Infrastructure.Extension.Authentication` for resource server inbound validation and optional authority services
 

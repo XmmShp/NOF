@@ -1,4 +1,4 @@
-using NOF.Contract.Extension.Authentication;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure.Extension.Authentication;
 using System.Security.Claims;
 
