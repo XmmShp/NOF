@@ -49,6 +49,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddLogging();
 
         services.AddSingleton<IUserContext, UserContext>();
+        services.AddScoped<ICurrentTenant, CurrentTenant>();
         services.AddSingleton<InvocationRecorder>();
         services.AddSingleton<ProtectedFleetServer>();
         services.AddTransient<GetFleetOverviewHandler>();

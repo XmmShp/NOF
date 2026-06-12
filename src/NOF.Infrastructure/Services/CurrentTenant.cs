@@ -4,18 +4,12 @@ namespace NOF.Infrastructure;
 
 public sealed class CurrentTenant : ICurrentTenant
 {
-    private static readonly AsyncLocal<TenantHolder?> Current = new();
+    private string _tenantId = NOFAbstractionConstants.Tenant.HostId;
 
     public string TenantId
     {
-        get => Current.Value?.TenantId ?? NOFAbstractionConstants.Tenant.HostId;
-        set
-        {
-            Current.Value = new TenantHolder
-            {
-                TenantId = NOF.Infrastructure.TenantId.Normalize(value)
-            };
-        }
+        get => _tenantId;
+        set => _tenantId = Infrastructure.TenantId.Normalize(value);
     }
 
     public IDisposable Push(string tenantId)
@@ -23,11 +17,6 @@ public sealed class CurrentTenant : ICurrentTenant
         var previous = TenantId;
         TenantId = tenantId;
         return new CurrentTenantScope(this, previous);
-    }
-
-    private sealed class TenantHolder
-    {
-        public string? TenantId { get; set; }
     }
 
     private sealed class CurrentTenantScope(ICurrentTenant currentTenant, string previousTenantId) : IDisposable

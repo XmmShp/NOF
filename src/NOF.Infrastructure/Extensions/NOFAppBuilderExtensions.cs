@@ -18,6 +18,7 @@ public static partial class NOFInfrastructureExtensions
     {
         public INOFAppBuilder AddInfrastructureDefaults()
         {
+            JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
             builder.Services.GetOrAddSingleton<EventHandlerRegistry>();
             builder.Services.GetOrAddSingleton<MapperRegistry>();
             builder.Services.GetOrAddSingleton<CommandHandlerRegistry>();
@@ -33,7 +34,7 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
                 builder.Environment.ApplicationId,
                 builder.Environment.InstanceId));
-            builder.Services.TryAddSingleton<ICurrentTenant, CurrentTenant>();
+            builder.Services.TryAddScoped<ICurrentTenant, CurrentTenant>();
             builder.Services.TryAddSingleton<InboxMessageStore>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
             builder.Environment.BindConfiguration(builder.Configuration);
@@ -91,12 +92,11 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Outbound Middlewares
-            builder.Services.AddCommandOutboundMiddleware<ContextHeadersOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<ContextHeadersOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<ContextHeadersOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<TenantHeaderOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<TenantHeaderOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<TenantHeaderOutboundMiddleware>();
             builder.Services.AddCommandOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<MessageIdOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<MessageIdOutboundMiddleware>();
             builder.Services.AddCommandOutboundMiddleware<TracingOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<TracingOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<TracingOutboundMiddleware>();
@@ -165,5 +165,11 @@ public static partial class NOFInfrastructureExtensions
 
         public INOFAppBuilder AddRegistrationStep(Func<IHostApplicationBuilder, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
+    }
+
+    private static void AddInfrastructureJwtPropagation(INOFAppBuilder builder)
+    {
+        builder.Services.AddCommandOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
+        builder.Services.AddNotificationOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
     }
 }

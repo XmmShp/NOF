@@ -30,10 +30,9 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddRequestInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
             builder.Services.AddCommandInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
-            builder.Services.AddCommandOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
             return builder;
         }
+
     }
 
     private static void EnsureAuthenticationJsonRegistered()

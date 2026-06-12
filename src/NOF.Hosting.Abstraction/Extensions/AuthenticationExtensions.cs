@@ -7,6 +7,7 @@ public static partial class NOFHostingExtensions
         public INOFAppBuilder AddJwtPropagation()
         {
             builder.Services.AddRequestOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
+            JwtPropagationRegistrationHooks.Invoke(builder);
             return builder;
         }
     }

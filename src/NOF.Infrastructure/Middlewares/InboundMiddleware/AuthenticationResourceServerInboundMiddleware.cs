@@ -118,7 +118,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
                     };
 
                     var principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
-                    var identity = principal.Identities.OfType<ClaimsIdentity>().FirstOrDefault();
+                    var identity = principal.Identities.FirstOrDefault();
                     _userContext.User.AddIdentity(identity is null
                         ? new JwtClaimsIdentity(
                             CreateIdentity(token),

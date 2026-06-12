@@ -107,6 +107,31 @@ public sealed class AuthorizationInboundMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WhenAuthenticatedUserHasTenant_ShouldOverrideCurrentTenant()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(
+            ClaimTypes.Permission, "input-method",
+            "nof.tenant_id", "tenantb"));
+        var currentTenant = new CurrentTenant
+        {
+            TenantId = "tenanta"
+        };
+        var middleware = CreateMiddleware(userContext, currentTenant);
+        var context = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.AllowAnonymousHandler));
+
+        var tenantDuringNext = string.Empty;
+        await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) =>
+        {
+            tenantDuringNext = currentTenant.TenantId;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.Equal("tenantb", tenantDuringNext);
+        Assert.Equal("tenantb", currentTenant.TenantId);
+    }
+
+    [Fact]
     public async Task InvokeAsync_Command_ShouldRequireMessageAndHandlerPermissions()
     {
         var userContext = new UserContext();
@@ -190,9 +215,10 @@ public sealed class AuthorizationInboundMiddlewareTests
         };
     }
 
-    private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext)
+    private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext, ICurrentTenant? currentTenant = null)
         => new(
             userContext,
+            currentTenant ?? new CurrentTenant(),
             Options.Create(new AuthenticationResourceServerOptions
             {
                 AuthorizationServer = "https://auth.local/oauth2"

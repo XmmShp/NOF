@@ -3,13 +3,16 @@ using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Security.Claims;
 
 namespace NOF.Infrastructure;
 
 public sealed class AuthorizationInboundMiddleware(
     IUserContext userContext,
+    ICurrentTenant currentTenant,
     IOptions<AuthenticationResourceServerOptions> options,
     ILogger<AuthorizationInboundMiddleware> logger) :
     ICommandInboundMiddleware,
@@ -36,6 +39,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
+        ApplyTrustedTenant();
         await next(context, message, cancellationToken);
     }
 
@@ -47,6 +51,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
+        ApplyTrustedTenant();
         await next(context, message, cancellationToken);
     }
 
@@ -69,6 +74,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
+        ApplyTrustedTenant();
         await next(context, request, cancellationToken);
     }
 
@@ -200,6 +206,25 @@ public sealed class AuthorizationInboundMiddleware(
 
     private static string EscapeChallengeValue(string value)
         => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+
+    private void ApplyTrustedTenant()
+    {
+        if (!userContext.User.IsAuthenticated)
+        {
+            return;
+        }
+
+        var trustedTenantId = userContext.User.FindFirst("nof.tenant_id")?.Value
+            ?? userContext.User.TenantId;
+        if (string.IsNullOrWhiteSpace(trustedTenantId))
+        {
+            return;
+        }
+
+        var tenantId = TenantId.Normalize(trustedTenantId);
+        currentTenant.TenantId = tenantId;
+        Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
+    }
 
     private readonly record struct PermissionRequirement(string? Permission, bool RequiresAllPermissions);
 

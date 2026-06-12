@@ -214,7 +214,7 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationResourceServer_Only_ShouldRegisterMessageTokenPropagation()
+    public async Task AddAuthenticationResourceServer_Only_ShouldRegisterInboundResourceServer()
     {
         var builder = NOFTestAppBuilder.Create();
         builder.AddAuthenticationResourceServer(options =>
@@ -240,6 +240,24 @@ public sealed class AuthenticationExtensionsTests
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(INotificationInboundMiddleware) &&
             descriptor.ImplementationType == typeof(AuthenticationResourceServerInboundMiddleware));
+        Assert.DoesNotContain(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+        Assert.DoesNotContain(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+    }
+
+    [Fact]
+    public void AddJwtPropagation_WithInfrastructureDefaults_ShouldRegisterRequestCommandAndNotificationOutboundMiddleware()
+    {
+        var builder = NOFTestAppBuilder.Create();
+
+        builder.AddJwtPropagation();
+
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(NOF.Hosting.JwtTokenPropagationOutboundMiddleware));
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
             descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));

@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Applies explicitly supported ambient context values to outbound transport headers.
 /// </summary>
-public sealed class ContextHeadersOutboundMiddleware(ICurrentTenant currentTenant) :
+public sealed class TenantHeaderOutboundMiddleware(ICurrentTenant currentTenant) :
     ICommandOutboundMiddleware,
     INotificationOutboundMiddleware,
     IRequestOutboundMiddleware
@@ -19,7 +19,7 @@ public sealed class ContextHeadersOutboundMiddleware(ICurrentTenant currentTenan
         => other is MessageIdOutboundMiddleware ? TopologyComparison.Before : TopologyComparison.DoesNotMatter;
 
     public TopologyComparison Compare(IRequestOutboundMiddleware other)
-        => other is MessageIdOutboundMiddleware ? TopologyComparison.Before : TopologyComparison.DoesNotMatter;
+        => TopologyComparison.DoesNotMatter;
 
     public ValueTask InvokeAsync(CommandOutboundContext context, object message, CommandOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {

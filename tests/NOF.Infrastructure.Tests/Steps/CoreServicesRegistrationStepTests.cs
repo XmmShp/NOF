@@ -79,14 +79,14 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void AddInfrastructureDefaults_ShouldRegisterCurrentTenantAsSingleton()
+    public void AddInfrastructureDefaults_ShouldRegisterCurrentTenantAsScoped()
     {
         var builder = new TestServiceRegistrationContext();
 
         builder.AddInfrastructureDefaults();
 
         var descriptor = Assert.Single(builder.Services, service => service.ServiceType == typeof(ICurrentTenant));
-        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
         Assert.Equal(typeof(CurrentTenant), descriptor.ImplementationType);
     }
 
