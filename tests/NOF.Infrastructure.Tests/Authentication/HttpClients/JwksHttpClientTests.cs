@@ -1,11 +1,12 @@
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
+using NOF.Infrastructure;
 using NOF.Test;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Xunit;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-namespace NOF.Infrastructure.Extension.Authentication.Tests.HttpClients;
+namespace NOF.Infrastructure.Tests.Authentication.HttpClients;
 
 public sealed class JwtJwksHttpClientTests
 {

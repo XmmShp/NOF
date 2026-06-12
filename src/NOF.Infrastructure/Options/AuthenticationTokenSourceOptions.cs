@@ -1,7 +1,7 @@
 using NOF.Abstraction;
 using NOF.Hosting;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Configuration for one access token source header accepted by the resource server.

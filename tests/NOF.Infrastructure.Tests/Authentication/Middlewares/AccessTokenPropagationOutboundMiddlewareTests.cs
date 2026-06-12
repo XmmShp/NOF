@@ -1,10 +1,11 @@
+using MessageAccessTokenPropagationOutboundMiddleware = NOF.Infrastructure.JwtTokenPropagationOutboundMiddleware;
 using NOF.Abstraction;
 using NOF.Hosting;
+using NOF.Infrastructure;
 using System.Security.Claims;
 using Xunit;
-using MessageAccessTokenPropagationOutboundMiddleware = NOF.Infrastructure.Extension.Authentication.AccessTokenPropagationOutboundMiddleware;
 
-namespace NOF.Infrastructure.Extension.Authentication.Tests.Middlewares;
+namespace NOF.Infrastructure.Tests.Authentication.Middlewares;
 
 public sealed class AccessTokenPropagationOutboundMiddlewareTests
 {

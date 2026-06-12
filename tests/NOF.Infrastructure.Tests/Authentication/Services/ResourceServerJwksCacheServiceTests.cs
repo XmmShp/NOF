@@ -1,11 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
+using NOF.Infrastructure;
 using System.Security.Cryptography;
 using Xunit;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-namespace NOF.Infrastructure.Extension.Authentication.Tests.Services;
+namespace NOF.Infrastructure.Tests.Authentication.Services;
 
 public sealed class ResourceServerJwksCacheServiceTests
 {

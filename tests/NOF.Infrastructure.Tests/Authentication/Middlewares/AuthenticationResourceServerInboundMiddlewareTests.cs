@@ -3,10 +3,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Contract;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
+using NOF.Infrastructure;
 using System.Security.Cryptography;
 using Xunit;
 
-namespace NOF.Infrastructure.Extension.Authentication.Tests.Middlewares;
+namespace NOF.Infrastructure.Tests.Authentication.Middlewares;
 
 public sealed class AuthenticationResourceServerInboundMiddlewareTests
 {

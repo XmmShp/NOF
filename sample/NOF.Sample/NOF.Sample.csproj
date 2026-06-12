@@ -14,7 +14,6 @@
         <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.RabbitMQ\NOF.Infrastructure.RabbitMQ.csproj" />
         <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />
-        <ProjectReference Include="..\..\src\Extensions\NOF.Infrastructure.Extension.Authentication\NOF.Infrastructure.Extension.Authentication.csproj" />
         <ProjectReference Include="..\NOF.Sample.Application\NOF.Sample.Application.csproj" />
         <ProjectReference Include="..\NOF.Sample.Domain\NOF.Sample.Domain.csproj" />
         <ProjectReference Include="..\NOF.Sample.UI\NOF.Sample.UI.csproj" />

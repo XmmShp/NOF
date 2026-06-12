@@ -1,7 +1,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 
-namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
+namespace NOF.Infrastructure;
 
 public static class JwksSecurityKeyConverter
 {

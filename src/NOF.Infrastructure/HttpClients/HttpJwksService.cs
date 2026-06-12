@@ -2,9 +2,8 @@ using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using System.Net.Http.Json;
 using System.Text.Json;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Default HTTP-based JWKS client that fetches the well-known JWKS document directly.

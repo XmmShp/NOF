@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Configuration options for JWT resource server validation.

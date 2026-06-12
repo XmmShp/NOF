@@ -17,8 +17,7 @@
             "src/Hostings/NOF.Hosting.BlazorWebAssembly/bin/Release/net10.0/NOF.Hosting.BlazorWebAssembly.dll",
             "src/Hostings/NOF.Hosting.Console/bin/Release/net10.0/NOF.Hosting.Console.dll",
             "src/Hostings/NOF.Hosting.Maui/bin/Release/net10.0/NOF.Hosting.Maui.dll",
-            "src/Extensions/NOF.Contract.Extension.Authentication/bin/Release/net10.0/NOF.Contract.Extension.Authentication.dll",
-            "src/Extensions/NOF.Infrastructure.Extension.Authentication/bin/Release/net10.0/NOF.Infrastructure.Extension.Authentication.dll",
+            "src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/bin/Release/net10.0/NOF.Hosting.AspNetCore.Extension.OidcServer.dll",
             "src/Infrastructures/NOF.Infrastructure.RabbitMQ/bin/Release/net10.0/NOF.Infrastructure.RabbitMQ.dll",
             "src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/bin/Release/net10.0/NOF.Infrastructure.StackExchangeRedis.dll"
           ]

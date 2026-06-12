@@ -1,5 +1,5 @@
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Infrastructure.Extension.Authentication;
+using NOF.Infrastructure;
 using System.Security.Claims;
 
 namespace NOF.Sample.Services;

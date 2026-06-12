@@ -40,7 +40,6 @@
   </Folder>
   <Folder Name="/src/Extensions/">
     <Project Path="src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/NOF.Hosting.AspNetCore.Extension.OidcServer.csproj" />
-    <Project Path="src/Extensions/NOF.Infrastructure.Extension.Authentication/NOF.Infrastructure.Extension.Authentication.csproj" />
   </Folder>
   <Folder Name="/src/Infrastructures/">
     <Project Path="src/Infrastructures/NOF.Infrastructure.RabbitMQ/NOF.Infrastructure.RabbitMQ.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
@@ -56,9 +55,6 @@
     <Project Path="tests/NOF.Infrastructure.Tests/NOF.Infrastructure.Tests.csproj" />
     <Project Path="tests/NOF.Test.Tests/NOF.Test.Tests.csproj" />
     <Project Path="tests/NOF.UI.Tests/NOF.UI.Tests.csproj" />
-  </Folder>
-  <Folder Name="/tests/Extensions/">
-    <Project Path="tests/Extensions/NOF.Infrastructure.Extension.Authentication.Tests/NOF.Infrastructure.Extension.Authentication.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Infrastructures/">
     <Project Path="tests/Infrastructures/NOF.Infrastructure.RabbitMQ.Tests/NOF.Infrastructure.RabbitMQ.Tests.csproj" />

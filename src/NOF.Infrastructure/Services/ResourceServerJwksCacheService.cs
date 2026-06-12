@@ -1,9 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
 /// <summary>
 /// Caches resource-server validation keys and refreshes them on demand.

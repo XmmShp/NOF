@@ -4,17 +4,17 @@ using NOF.Abstraction;
 using NOF.Hosting;
 using System.Text.Json;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
-public static partial class NOFAuthenticationExtensions
+public static partial class NOFInfrastructureExtensions
 {
-    private static int _jsonInitialized;
+    private static int _authenticationJsonInitialized;
 
     extension(INOFAppBuilder builder)
     {
         public INOFAppBuilder AddAuthenticationResourceServer(Action<AuthenticationResourceServerOptions> configureOptions)
         {
-            EnsureJsonRegistered();
+            EnsureAuthenticationJsonRegistered();
             builder.Services.Configure(configureOptions);
 
             builder.Services.AddHttpClient<HttpJwksService>();
@@ -22,15 +22,17 @@ public static partial class NOFAuthenticationExtensions
                 serviceProvider.GetRequiredService<HttpJwksService>());
             builder.Services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
             builder.Services.AddRequestInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
-            builder.Services.AddCommandOutboundMiddleware<AccessTokenPropagationOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<AccessTokenPropagationOutboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
             return builder;
         }
     }
 
-    private static void EnsureJsonRegistered()
+    private static void EnsureAuthenticationJsonRegistered()
     {
-        if (Interlocked.Exchange(ref _jsonInitialized, 1) == 1)
+        if (Interlocked.Exchange(ref _authenticationJsonInitialized, 1) == 1)
         {
             return;
         }

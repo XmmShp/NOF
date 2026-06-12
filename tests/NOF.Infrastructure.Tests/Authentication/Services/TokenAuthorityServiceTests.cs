@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
+using NOF.Infrastructure;
 using NOF.Test;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 
-namespace NOF.Infrastructure.Extension.Authentication.Tests.Services;
+namespace NOF.Infrastructure.Tests.Authentication.Services;
 
 public sealed class TokenAuthorityServiceTests
 {

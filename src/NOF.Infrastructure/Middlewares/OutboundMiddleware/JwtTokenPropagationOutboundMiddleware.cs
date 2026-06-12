@@ -1,10 +1,10 @@
 using NOF.Abstraction;
 using NOF.Hosting;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
 /// <summary>Propagates access tokens to outbound commands and notifications.</summary>
-public sealed class AccessTokenPropagationOutboundMiddleware :
+public sealed class JwtTokenPropagationOutboundMiddleware :
     ICommandOutboundMiddleware,
     INotificationOutboundMiddleware
 {
@@ -13,7 +13,7 @@ public sealed class AccessTokenPropagationOutboundMiddleware :
 
     private readonly IUserContext _userContext;
 
-    public AccessTokenPropagationOutboundMiddleware(IUserContext userContext)
+    public JwtTokenPropagationOutboundMiddleware(IUserContext userContext)
     {
         _userContext = userContext;
     }

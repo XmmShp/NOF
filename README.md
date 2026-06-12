@@ -33,14 +33,13 @@
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract)                                                                     | Contract layer - RPC contracts, request/response models, `Result<T>`, `StreamingResult<T>`, `Optional<T>`, HTTP endpoint attributes |
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application)                                                               | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts                   |
 | [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)                                               | Hosting abstractions - builder contracts, step contracts, dependency ordering, and JWT outbound propagation             |
-| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, and runtime wiring |
+| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, auth resource server, and runtime wiring |
 | [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)                                                                                 | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers             |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore)                                                 | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, JSON configuration, and SSE streaming |
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly)                                   | Blazor WebAssembly hosting - host builder integration for browser apps                                                  |
 | [`NOF.Hosting.Console`](https://www.nuget.org/packages/NOF.Hosting.Console)                                                       | Console hosting - Microsoft.Extensions.Hosting integration with the NOF pipeline                                        |
 | [`NOF.Hosting.Maui`](https://www.nuget.org/packages/NOF.Hosting.Maui)                                                             | .NET MAUI hosting - MAUI app builder integration for cross-platform applications                                        |
 | [`NOF.Hosting.AspNetCore.Extension.OidcServer`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore.Extension.OidcServer) | OIDC service definitions and ASP.NET Core endpoints for the authentication authority                                   |
-| [`NOF.Infrastructure.Extension.Authentication`](https://www.nuget.org/packages/NOF.Infrastructure.Extension.Authentication) | JWT authority and resource server integration - token issuance, validation, key rotation, and JWKS                      |
 | [`NOF.Infrastructure.RabbitMQ`](https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ)                                       | RabbitMQ transport for NOF command and notification dispatch                                                            |
 | [`NOF.Infrastructure.StackExchangeRedis`](https://www.nuget.org/packages/NOF.Infrastructure.StackExchangeRedis)                   | Redis-backed cache infrastructure via StackExchange.Redis                                                               |
 | [`NOF.Test`](https://www.nuget.org/packages/NOF.Test)                                                                             | Test host helpers for NOF applications                                                                                  |
@@ -118,16 +117,13 @@ NOF.Domain                     <- Value objects, failures, domain utilities
 NOF.Contract                   <- RPC contracts, payload models, endpoint metadata
 NOF.Application                <- RPC servers, handlers, state machines, mapping, caching
 NOF.Hosting.Abstraction        <- Host builder and step contracts
-NOF.Infrastructure             <- Builder defaults and shared runtime pipeline
+NOF.Infrastructure             <- Builder defaults, shared runtime pipeline, and auth resource server
 NOF.UI                         <- Shared UI components and browser client primitives
 NOF.Test                       <- Test host helpers for application and integration testing
 NOF.Hosting.AspNetCore         <- ASP.NET Core host integration
 NOF.Hosting.BlazorWebAssembly  <- Blazor WebAssembly host integration
 NOF.Hosting.Console            <- Console host integration
 NOF.Hosting.Maui               <- .NET MAUI host integration
-NOF.Contract.Extension.*       <- Optional contract extensions (for example JWT)
-NOF.Hosting.Extension.*        <- Optional hosting extensions (for example outbound JWT propagation)
-NOF.Infrastructure.Extension.* <- Optional infrastructure extensions (for example JWT authority/resource server)
 NOF.Infrastructure.*           <- Messaging and caching providers
 ```
 

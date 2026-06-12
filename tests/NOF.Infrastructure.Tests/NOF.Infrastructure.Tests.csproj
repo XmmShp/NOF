@@ -28,6 +28,8 @@
     <ProjectReference Include="..\..\src\NOF.Domain\NOF.Domain.csproj" />
     <ProjectReference Include="..\..\src\NOF.Contract\NOF.Contract.csproj" />
     <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
+    <ProjectReference Include="..\..\src\NOF.Test\NOF.Test.csproj" />
+    <ProjectReference Include="..\..\src\Extensions\NOF.Hosting.AspNetCore.Extension.OidcServer\NOF.Hosting.AspNetCore.Extension.OidcServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

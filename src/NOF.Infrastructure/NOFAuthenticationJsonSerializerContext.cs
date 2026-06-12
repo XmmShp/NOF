@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
 [JsonSerializable(typeof(JwksDocument))]
 [JsonSerializable(typeof(JwkKeyDocument))]

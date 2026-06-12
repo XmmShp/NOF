@@ -10,6 +10,7 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 - in-memory cache and messaging riders
 - EF Core integration through `UseDbContext<TDbContext>()`
 - OpenTelemetry registration and transport middleware
+- JWT resource server validation and command/notification token propagation
 - tenant-aware `NOFDbContext` support
 - builder-scoped `TypeResolver`
 - ambient `IMapper` / `IIdGenerator` activation through scoped `IDaemonService`
@@ -34,6 +35,7 @@ This package includes:
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-process event publisher (`IEventPublisher`)
 - EF Core infrastructure primitives (`NOFDbContext`, outbox/inbox entities, tenant-aware model customization, `NOFDbContextFactory`)
+- JWT resource server primitives (`AddAuthenticationResourceServer`, JWKS fetching/cache, inbound token validation)
 - SQLite-based default persistence used by infrastructure defaults
 
 The default in-memory cache implementation is isolated per NOF host:

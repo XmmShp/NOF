@@ -2,16 +2,35 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
-using NOF.Hosting;
 using NOF.Contract;
+using NOF.Hosting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Infrastructure;
 
-public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInboundMiddleware
+public sealed class AuthenticationResourceServerInboundMiddleware :
+    IRequestInboundMiddleware,
+    ICommandInboundMiddleware,
+    INotificationInboundMiddleware
 {
     public TopologyComparison Compare(IRequestInboundMiddleware other)
+        => other switch
+        {
+            TracingInboundMiddleware => TopologyComparison.After,
+            TenantInboundMiddleware => TopologyComparison.Before,
+            _ => TopologyComparison.DoesNotMatter
+        };
+
+    public TopologyComparison Compare(ICommandInboundMiddleware other)
+        => other switch
+        {
+            TracingInboundMiddleware => TopologyComparison.After,
+            TenantInboundMiddleware => TopologyComparison.Before,
+            _ => TopologyComparison.DoesNotMatter
+        };
+
+    public TopologyComparison Compare(INotificationInboundMiddleware other)
         => other switch
         {
             TracingInboundMiddleware => TopologyComparison.After,
@@ -40,12 +59,30 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
 
     public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
+        var executionContext = await AuthenticateAsync(context, cancellationToken).ConfigureAwait(false);
+        await next(executionContext, request, cancellationToken);
+    }
+
+    public async ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        var executionContext = await AuthenticateAsync(context, cancellationToken).ConfigureAwait(false);
+        await next(executionContext, message, cancellationToken);
+    }
+
+    public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
+    {
+        var executionContext = await AuthenticateAsync(context, cancellationToken).ConfigureAwait(false);
+        await next(executionContext, message, cancellationToken);
+    }
+
+    private async ValueTask<TContext> AuthenticateAsync<TContext>(TContext context, CancellationToken cancellationToken)
+        where TContext : Context
+    {
         var tokenSources = GetTokenSources();
         var executionContext = context;
         if (tokenSources.Count == 0)
         {
-            await next(executionContext, request, cancellationToken);
-            return;
+            return executionContext;
         }
 
         try
@@ -90,7 +127,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
                             identity,
                             token,
                             downstreamPropagation: source.DownstreamPropagation));
-                    executionContext = (RequestInboundContext)executionContext.WithoutItem(source.HeaderName);
+                    executionContext = (TContext)executionContext.WithoutItem(source.HeaderName);
                 }
                 catch (SecurityTokenExpiredException)
                 {
@@ -107,7 +144,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
             _logger.LogWarning(ex, "Unexpected error during access token validation");
         }
 
-        await next(executionContext, request, cancellationToken);
+        return executionContext;
     }
 
     private List<AuthenticationTokenSourceOptions> GetTokenSources()
@@ -126,7 +163,9 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
             return false;
         }
 
-        var prefix = source.TokenType + " ";
+        var prefix = string.IsNullOrEmpty(source.TokenType)
+            ? string.Empty
+            : source.TokenType + " ";
         token = authHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             ? authHeader[prefix.Length..]
             : authHeader;

@@ -1,4 +1,4 @@
-namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
+namespace NOF.Infrastructure;
 
 public interface IJwksService
 {
