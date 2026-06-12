@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -9,33 +9,33 @@ namespace NOF.Infrastructure;
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
-    private readonly CommandOutboundPipelineExecutor _outboundPipeline;
+    private readonly IReadOnlyList<ICommandOutboundMiddleware> _middlewares;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
 
     public CommandSender(
         ICommandRider rider,
-        CommandOutboundPipelineExecutor outboundPipeline,
+        IEnumerable<ICommandOutboundMiddleware> middlewares,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {
         _rider = rider;
-        _outboundPipeline = outboundPipeline;
+        _middlewares = new DependencyGraph<ICommandOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
         _typeResolver = typeResolver;
     }
 
-    public async Task DeferSend(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
+    public async Task DeferSendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(commandType);
         ArgumentNullException.ThrowIfNull(context);
         var outboundContext = new CommandOutboundContext(context);
 
-        await _outboundPipeline.ExecuteAsync(outboundContext, command, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
+        await ExecuteAsync(outboundContext, command, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
         var payloadTypeName = _typeResolver.Register(command.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { _typeResolver.Register(commandType) }, typeof(string[]));
@@ -59,12 +59,30 @@ public sealed class CommandSender : ICommandSender
         ArgumentNullException.ThrowIfNull(context);
         var outboundContext = new CommandOutboundContext(context);
 
-        await _outboundPipeline.ExecuteAsync(outboundContext, command, async (_, message, ct) =>
+        await ExecuteAsync(outboundContext, command, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
             var payloadTypeName = _typeResolver.Register(message.GetType());
             var commandTypeName = _typeResolver.Register(commandType);
             await _rider.SendAsync(payload, payloadTypeName, commandTypeName, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
+    }
+
+    private ValueTask ExecuteAsync(
+        CommandOutboundContext context,
+        object message,
+        CommandOutboundHandlerDelegate dispatch,
+        CancellationToken cancellationToken)
+    {
+        var pipeline = dispatch;
+
+        for (var i = _middlewares.Count - 1; i >= 0; i--)
+        {
+            var middleware = _middlewares[i];
+            var next = pipeline;
+            pipeline = (currentContext, currentMessage, ct) => middleware.InvokeAsync(currentContext, currentMessage, next, ct);
+        }
+
+        return pipeline(context, message, cancellationToken);
     }
 }

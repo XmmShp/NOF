@@ -99,7 +99,7 @@ public class NOFTestHostTests
 
     private sealed class FakeCommandSender : ICommandSender
     {
-        public Task DeferSend(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
+        public Task DeferSendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
         {
             _ = context;
             return Task.CompletedTask;
@@ -114,7 +114,7 @@ public class NOFTestHostTests
 
     private sealed class FakeNotificationPublisher : INotificationPublisher
     {
-        public Task DeferPublish(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
+        public Task DeferPublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
         {
             _ = context;
             return Task.CompletedTask;

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -9,33 +9,33 @@ namespace NOF.Infrastructure;
 public sealed class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationRider _rider;
-    private readonly NotificationOutboundPipelineExecutor _outboundPipeline;
+    private readonly IReadOnlyList<INotificationOutboundMiddleware> _middlewares;
     private readonly DbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
 
     public NotificationPublisher(
         INotificationRider rider,
-        NotificationOutboundPipelineExecutor outboundPipeline,
+        IEnumerable<INotificationOutboundMiddleware> middlewares,
         DbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {
         _rider = rider;
-        _outboundPipeline = outboundPipeline;
+        _middlewares = new DependencyGraph<INotificationOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
         _typeResolver = typeResolver;
     }
 
-    public async Task DeferPublish(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
+    public async Task DeferPublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
         ArgumentNullException.ThrowIfNull(notificationTypes);
         ArgumentNullException.ThrowIfNull(context);
         var outboundContext = new NotificationOutboundContext(context);
 
-        await _outboundPipeline.ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
+        await ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
         var payloadTypeName = _typeResolver.Register(notification.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(
@@ -61,12 +61,30 @@ public sealed class NotificationPublisher : INotificationPublisher
         ArgumentNullException.ThrowIfNull(context);
         var outboundContext = new NotificationOutboundContext(context);
 
-        await _outboundPipeline.ExecuteAsync(outboundContext, notification, async (_, message, ct) =>
+        await ExecuteAsync(outboundContext, notification, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
             var payloadTypeName = _typeResolver.Register(message.GetType());
             var notificationTypeNames = notificationTypes.Select(_typeResolver.Register).ToArray();
             await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
+    }
+
+    private ValueTask ExecuteAsync(
+        NotificationOutboundContext context,
+        object message,
+        NotificationOutboundHandlerDelegate dispatch,
+        CancellationToken cancellationToken)
+    {
+        var pipeline = dispatch;
+
+        for (var i = _middlewares.Count - 1; i >= 0; i--)
+        {
+            var middleware = _middlewares[i];
+            var next = pipeline;
+            pipeline = (currentContext, currentMessage, ct) => middleware.InvokeAsync(currentContext, currentMessage, next, ct);
+        }
+
+        return pipeline(context, message, cancellationToken);
     }
 }

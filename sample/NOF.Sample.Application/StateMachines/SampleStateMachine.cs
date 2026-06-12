@@ -44,12 +44,12 @@ public class StartProcessingCommandHandler : CommandHandler<StartProcessingComma
         if (isSuccess)
         {
             _logger.LogInformation("Processing {Id} Succeeded", command.TaskId);
-            await _notificationPublisher.DeferPublish(new ProcessingSucceeded(command.TaskId), context, cancellationToken);
+            await _notificationPublisher.DeferPublishAsync(new ProcessingSucceeded(command.TaskId), context, cancellationToken);
         }
         else
         {
             _logger.LogError("Processing {Id} Failed", command.TaskId);
-            await _notificationPublisher.DeferPublish(
+            await _notificationPublisher.DeferPublishAsync(
                 new ProcessingFailed(command.TaskId, "An error occurred during processing."),
                 context,
                 cancellationToken);
