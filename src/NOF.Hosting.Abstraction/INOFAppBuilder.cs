@@ -1,5 +1,5 @@
-using NOF.Abstraction;
 using Microsoft.Extensions.Hosting;
+using NOF.Abstraction;
 using System.Reflection;
 
 namespace NOF.Hosting;

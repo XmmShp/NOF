@@ -1,7 +1,7 @@
 using NOF.Abstraction;
+using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
-using NOF.Contract;
 
 namespace NOF.Infrastructure;
 

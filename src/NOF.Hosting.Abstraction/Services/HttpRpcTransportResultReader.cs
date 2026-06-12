@@ -1,7 +1,7 @@
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
-using NOF.Contract;
 
 namespace NOF.Hosting;
 

@@ -1,5 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using NOF.Contract;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Application;
 

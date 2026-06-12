@@ -1,5 +1,5 @@
-using NOF.Contract;
 using Microsoft.EntityFrameworkCore;
+using NOF.Contract;
 using System.ComponentModel;
 
 namespace NOF.Application;
