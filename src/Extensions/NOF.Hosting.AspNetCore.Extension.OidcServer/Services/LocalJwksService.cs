@@ -1,7 +1,6 @@
 using Microsoft.IdentityModel.Tokens;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 /// <summary>
 /// In-process JWKS service backed by the current local signing key store.
@@ -23,7 +22,7 @@ public sealed class LocalJwksService(ISigningKeyService signingKeyService) : IJw
         {
             Kty = "RSA",
             Use = "sig",
-            Alg = NOFAuthenticationConstants.Jwt.Algorithm,
+            Alg = SecurityAlgorithms.RsaSha256,
             Kid = managedKey.Kid,
             N = Base64UrlEncoder.Encode(parameters.Modulus ?? throw new InvalidOperationException("RSA modulus cannot be null")),
             E = Base64UrlEncoder.Encode(parameters.Exponent ?? throw new InvalidOperationException("RSA exponent cannot be null"))

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using NOF.Infrastructure;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed class RevokedRefreshToken
 {

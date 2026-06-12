@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 /// <summary>
 /// JWT-specific claim type extensions for <see cref="ClaimTypes"/>.

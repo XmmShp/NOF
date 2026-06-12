@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <PackageId>NOF.Hosting.AspNetCore.Extension.OidcServer</PackageId>
-    <Description>ASP.NET Core OIDC server endpoints for the NOF Framework.</Description>
+    <Description>Authentication authority core and ASP.NET Core OIDC server endpoints for the NOF Framework.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
     <ProjectReference Include="..\..\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

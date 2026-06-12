@@ -10,7 +10,7 @@
 
     <!-- NuGet Package Settings -->
     <PackageId>NOF.Infrastructure.Extension.Authentication</PackageId>
-    <Description>JWT authorization extension for the NOF Framework — OIDC resource server, JWKS fetching, token validation, and identity resolution.</Description>
+    <Description>JWT resource server extension for the NOF Framework — JWKS fetching, token validation, and identity resolution.</Description>
   </PropertyGroup>
 
   <ItemGroup>

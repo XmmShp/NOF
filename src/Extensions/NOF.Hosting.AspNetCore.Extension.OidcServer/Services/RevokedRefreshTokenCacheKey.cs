@@ -1,6 +1,6 @@
 using NOF.Application;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 /// <summary>
 /// Cache key for revoked refresh tokens.

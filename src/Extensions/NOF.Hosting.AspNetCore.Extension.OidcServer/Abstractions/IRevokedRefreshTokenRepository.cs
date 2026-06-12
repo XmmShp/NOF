@@ -1,4 +1,4 @@
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 /// <summary>
 /// Repository for managing revoked refresh tokens.

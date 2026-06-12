@@ -13,7 +13,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
     {
         var userContext = new UserContext();
         var token = CreateUnsignedToken();
-        userContext.User.AddIdentity(new AccessTokenIdentity(token));
+        userContext.User.AddIdentity(new JwtClaimsIdentity(token));
 
         var middleware = new AccessTokenPropagationOutboundMiddleware(userContext);
 
@@ -60,10 +60,10 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
     {
         var userContext = new UserContext();
         var token = CreateUnsignedToken();
-        userContext.User.AddIdentity(new AccessTokenIdentity(
+        userContext.User.AddIdentity(new JwtClaimsIdentity(
             new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "jwt"),
             token,
-            new AccessTokenPropagation
+            new JwtPropagation
             {
                 HeaderName = "X-Auth",
                 TokenType = "Token"

@@ -3,8 +3,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Infrastructure;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 /// <summary>
 /// Background service that periodically rotates the JWT signing key
@@ -95,11 +96,6 @@ public sealed class SigningKeyRotationBackgroundService : BackgroundService
                 }
 
                 await signingKeyService.RotateKeyAsync(stoppingToken).ConfigureAwait(false);
-                var jwksCacheService = scope.ServiceProvider.GetService<ResourceServerJwksCacheService>();
-                if (jwksCacheService is not null)
-                {
-                    await jwksCacheService.RefreshNowAsync(stoppingToken).ConfigureAwait(false);
-                }
                 _logger.LogInformation("Signing key rotated successfully. New kid: {Kid}",
                     (await signingKeyService.GetCurrentSigningKeyAsync(stoppingToken).ConfigureAwait(false)).Kid);
             }

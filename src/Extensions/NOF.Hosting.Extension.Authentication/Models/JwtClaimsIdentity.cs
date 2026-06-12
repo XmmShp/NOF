@@ -6,7 +6,7 @@ namespace NOF.Hosting.Extension.Authentication;
 /// <summary>
 /// A <see cref="ClaimsIdentity"/> that also carries the raw access token string.
 /// </summary>
-public sealed class AccessTokenIdentity : ClaimsIdentity
+public sealed class JwtClaimsIdentity : ClaimsIdentity
 {
     /// <summary>
     /// The raw access token string.
@@ -16,28 +16,28 @@ public sealed class AccessTokenIdentity : ClaimsIdentity
     /// <summary>
     /// Downstream propagation settings for this identity. Null means do not propagate.
     /// </summary>
-    public AccessTokenPropagation? DownstreamPropagation { get; }
+    public JwtPropagation? DownstreamPropagation { get; }
 
-    public AccessTokenIdentity(string token)
+    public JwtClaimsIdentity(string token)
         : this(
             CreateIdentity(token),
             token,
-            downstreamPropagation: new AccessTokenPropagation())
+            downstreamPropagation: new JwtPropagation())
     {
     }
 
-    public AccessTokenIdentity(ClaimsIdentity identity, string token)
+    public JwtClaimsIdentity(ClaimsIdentity identity, string token)
         : this(
             identity,
             token,
-            downstreamPropagation: new AccessTokenPropagation())
+            downstreamPropagation: new JwtPropagation())
     {
     }
 
-    public AccessTokenIdentity(
+    public JwtClaimsIdentity(
         ClaimsIdentity identity,
         string token,
-        AccessTokenPropagation? downstreamPropagation)
+        JwtPropagation? downstreamPropagation)
         : base(identity)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);

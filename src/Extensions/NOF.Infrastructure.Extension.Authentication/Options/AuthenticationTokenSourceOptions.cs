@@ -10,7 +10,7 @@ public class AuthenticationTokenSourceOptions
 {
     private string _headerName = NOFAbstractionConstants.Transport.Headers.Authorization;
     private string _tokenType = "Bearer";
-    private AccessTokenPropagation? _downstreamPropagation = new()
+    private JwtPropagation? _downstreamPropagation = new()
     {
         HeaderName = NOFAbstractionConstants.Transport.Headers.Authorization,
         TokenType = "Bearer"
@@ -56,7 +56,7 @@ public class AuthenticationTokenSourceOptions
     /// Null means do not propagate downstream. By default, it follows the inbound
     /// <see cref="HeaderName"/> and <see cref="TokenType"/>.
     /// </summary>
-    public AccessTokenPropagation? DownstreamPropagation
+    public JwtPropagation? DownstreamPropagation
     {
         get => _downstreamPropagation;
         set

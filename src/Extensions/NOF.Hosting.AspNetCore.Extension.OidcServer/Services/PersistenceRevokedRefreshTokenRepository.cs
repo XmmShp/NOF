@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
 {

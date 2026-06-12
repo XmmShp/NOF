@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 /// <summary>
 /// <see cref="IRevokedRefreshTokenRepository"/> implementation backed by <see cref="ICacheService"/>.

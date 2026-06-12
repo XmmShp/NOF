@@ -83,11 +83,11 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
                     var principal = _tokenHandler.ValidateToken(token, validationParameters, out _);
                     var identity = principal.Identities.OfType<ClaimsIdentity>().FirstOrDefault();
                     _userContext.User.AddIdentity(identity is null
-                        ? new AccessTokenIdentity(
+                        ? new JwtClaimsIdentity(
                             CreateIdentity(token),
                             token,
                             downstreamPropagation: source.DownstreamPropagation)
-                        : new AccessTokenIdentity(
+                        : new JwtClaimsIdentity(
                             identity,
                             token,
                             downstreamPropagation: source.DownstreamPropagation));

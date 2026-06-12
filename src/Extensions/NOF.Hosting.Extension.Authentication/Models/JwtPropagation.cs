@@ -5,7 +5,7 @@ namespace NOF.Hosting.Extension.Authentication;
 /// <summary>
 /// Downstream propagation settings for one JWT identity.
 /// </summary>
-public sealed class AccessTokenPropagation
+public sealed class JwtPropagation
 {
     /// <summary>
     /// The header name used to propagate the token downstream.

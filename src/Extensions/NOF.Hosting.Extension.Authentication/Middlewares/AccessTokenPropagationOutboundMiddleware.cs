@@ -16,7 +16,7 @@ public sealed class AccessTokenPropagationOutboundMiddleware : IRequestOutboundM
 
     public ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        foreach (var identity in _userContext.User.GetIdentities<AccessTokenIdentity>()
+        foreach (var identity in _userContext.User.GetIdentities<JwtClaimsIdentity>()
             .Where(identity => identity.DownstreamPropagation is not null)
             .Where(identity => identity.Token.Length > 0))
         {

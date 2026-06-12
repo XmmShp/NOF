@@ -1,11 +1,10 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Contract;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace NOF.Infrastructure.Extension.Authentication;
+namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed partial class TokenAuthorityService : ITokenService
 {
@@ -45,8 +44,8 @@ public sealed partial class TokenAuthorityService : ITokenService
         if (request.RefreshToken is not null)
         {
             var refreshClaims = CreateClaims(request.RefreshToken.Claims);
-            refreshClaims.RemoveAll(claim => claim.Type == ClaimTypes.JwtId);
-            refreshClaims.Insert(0, new Claim(ClaimTypes.JwtId, Guid.NewGuid().ToString("N")));
+            refreshClaims.RemoveAll(claim => claim.Type == JwtRegisteredClaimNames.Jti);
+            refreshClaims.Insert(0, new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")));
 
             var refreshTokenExpiresAtUtc = now.Add(request.RefreshToken.Expiration);
             var refreshTokenValue = tokenHandler.WriteToken(new JwtSecurityToken(
@@ -90,7 +89,7 @@ public sealed partial class TokenAuthorityService : ITokenService
             };
 
             var principal = tokenHandler.ValidateToken(request.RefreshToken, validationParameters, out _);
-            var tokenId = principal.FindFirst(ClaimTypes.JwtId)?.Value;
+            var tokenId = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 
             if (string.IsNullOrWhiteSpace(tokenId))
             {
