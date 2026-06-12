@@ -11,13 +11,13 @@ public sealed class TenantInboundMiddleware :
     IRequestInboundMiddleware
 {
     public TopologyComparison Compare(ICommandInboundMiddleware other)
-        => other is InboundExceptionMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+        => other is TracingInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
 
     public TopologyComparison Compare(INotificationInboundMiddleware other)
-        => other is InboundExceptionMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+        => other is TracingInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
 
     public TopologyComparison Compare(IRequestInboundMiddleware other)
-        => other is InboundExceptionMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
+        => other is TracingInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
 
     public async ValueTask InvokeAsync(CommandInboundContext context, object message, CommandHandlerDelegate next, CancellationToken cancellationToken)
     {

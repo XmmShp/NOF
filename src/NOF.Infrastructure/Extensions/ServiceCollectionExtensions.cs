@@ -10,35 +10,35 @@ public static partial class NOFInfrastructureExtensions
     /// <param name="services">The <see cref="IServiceCollection"/> to add the service to.</param>
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddCommandInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+        public IServiceCollection AddCommandInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, ICommandInboundMiddleware
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<ICommandInboundMiddleware, TMiddleware>());
             return services;
         }
 
-        public IServiceCollection AddCommandOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+        public IServiceCollection AddCommandOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, ICommandOutboundMiddleware
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<ICommandOutboundMiddleware, TMiddleware>());
             return services;
         }
 
-        public IServiceCollection AddNotificationInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+        public IServiceCollection AddNotificationInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, INotificationInboundMiddleware
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationInboundMiddleware, TMiddleware>());
             return services;
         }
 
-        public IServiceCollection AddNotificationOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+        public IServiceCollection AddNotificationOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, INotificationOutboundMiddleware
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationOutboundMiddleware, TMiddleware>());
             return services;
         }
 
-        public IServiceCollection AddRequestInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
+        public IServiceCollection AddRequestInboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, IRequestInboundMiddleware
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestInboundMiddleware, TMiddleware>());
@@ -58,6 +58,5 @@ public static partial class NOFInfrastructureExtensions
         /// </summary>
         public IServiceCollection AddHostedService(Action<IServiceProvider, CancellationToken> startAction)
             => services.AddHostedService((sp, ct) => { startAction(sp, ct); return Task.CompletedTask; });
-
     }
 }

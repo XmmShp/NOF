@@ -105,9 +105,6 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Inbound Middlewares
-            builder.Services.AddCommandInboundMiddleware<InboundExceptionMiddleware>();
-            builder.Services.AddNotificationInboundMiddleware<InboundExceptionMiddleware>();
-            builder.Services.AddRequestInboundMiddleware<InboundExceptionMiddleware>();
             builder.Services.AddCommandInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<TenantInboundMiddleware>();

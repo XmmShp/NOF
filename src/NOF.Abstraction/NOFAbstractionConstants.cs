@@ -28,8 +28,7 @@ public static class NOFAbstractionConstants
         {
             public const string Authorization = "Authorization";
             public const string TenantId = "NOF.TenantId";
-            public const string TraceId = "NOF.Message.TraceId";
-            public const string SpanId = "NOF.Message.SpanId";
+            public const string TraceParent = "traceparent";
             public const string MessageId = "NOF.Message.MessageId";
             public const string RpcSuccess = "NOF.Transport.Success";
         }

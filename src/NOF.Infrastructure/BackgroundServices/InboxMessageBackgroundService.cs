@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Abstraction;
+using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
@@ -111,10 +113,14 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         }
 
         var headers = DeserializeHeaders(message.Headers);
+        var traceParent = ExtractTraceParent(headers);
+        var processingHeaders = RemoveTraceParent(headers);
         var handlerType = _typeResolver.Resolve(message.HandlerType);
 
         try
         {
+            using var activity = StartBoundaryActivity(message, traceParent);
+
             switch (message.MessageType)
             {
                 case InboxMessageType.Command:
@@ -123,7 +129,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                             message.Payload,
                             message.PayloadType,
                             handlerType,
-                            headers,
+                            processingHeaders,
                             cancellationToken);
                         break;
                     }
@@ -133,7 +139,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                             message.Payload,
                             message.PayloadType,
                             handlerType,
-                            headers,
+                            processingHeaders,
                             cancellationToken);
                         break;
                     }
@@ -286,4 +292,19 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var dict = _objectSerializer.Deserialize<Dictionary<string, string?>>(raw) ?? new Dictionary<string, string?>();
         return dict;
     }
+
+    private static string? ExtractTraceParent(IEnumerable<KeyValuePair<string, string?>> headers)
+        => headers.FirstOrDefault(static kvp => kvp.Key == NOFAbstractionConstants.Transport.Headers.TraceParent).Value;
+
+    private static IReadOnlyCollection<KeyValuePair<string, string?>> RemoveTraceParent(IEnumerable<KeyValuePair<string, string?>> headers)
+        => [.. headers.Where(static kvp => !string.Equals(
+            kvp.Key,
+            NOFAbstractionConstants.Transport.Headers.TraceParent,
+            StringComparison.OrdinalIgnoreCase))];
+
+    private static Activity? StartBoundaryActivity(NOFInboxMessage message, string? traceParent)
+        => NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
+            $"InboundTransport: {message.PayloadType}",
+            ActivityKind.Consumer,
+            traceParent);
 }

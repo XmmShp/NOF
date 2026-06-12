@@ -16,7 +16,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware : IRequestInbo
     public TopologyComparison Compare(IRequestInboundMiddleware other)
         => other switch
         {
-            InboundExceptionMiddleware => TopologyComparison.After,
+            TracingInboundMiddleware => TopologyComparison.After,
             TenantInboundMiddleware => TopologyComparison.Before,
             _ => TopologyComparison.DoesNotMatter
         };

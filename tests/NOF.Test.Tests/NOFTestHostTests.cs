@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Infrastructure;
+using System.Diagnostics;
 using Xunit;
 
 namespace NOF.Test.Tests;
@@ -30,17 +30,19 @@ public class NOFTestHostTests
     public async Task Scope_ShouldAllowSettingTenantAndUser()
     {
         var builder = NOFTestAppBuilder.Create();
+        const string traceId = "0123456789abcdef0123456789abcdef";
+        const string spanId = "0123456789abcdef";
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
 
         scope.SetTenant("tenanta")
-            .SetTracing("trace-1", "span-1")
+            .SetTracing(traceId, spanId)
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
         Assert.Equal("tenanta", scope.Context.TenantId);
-        Assert.NotNull(scope.Context.TracingInfo);
-        Assert.Equal("trace-1", scope.Context.TracingInfo!.TraceId);
-        Assert.Equal("span-1", scope.Context.TracingInfo!.SpanId);
+        Assert.NotNull(Activity.Current);
+        Assert.Equal(traceId, Activity.Current.TraceId.ToString());
+        Assert.Equal(spanId, Activity.Current.ParentSpanId.ToString());
         Assert.Equal("user-1", scope.UserContext.User.Id);
         Assert.Equal("Alice", scope.UserContext.User.Name);
         Assert.Contains("orders.read", scope.UserContext.User.Permissions);

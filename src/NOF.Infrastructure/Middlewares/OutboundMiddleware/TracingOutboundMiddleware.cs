@@ -30,8 +30,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         activity?.SetServiceDeploymentTags(_hostEnvironment);
 
         var currentActivity = Activity.Current;
-        context.Headers[NOFAbstractionConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
-        context.Headers[NOFAbstractionConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+        context.Headers[NOFAbstractionConstants.Transport.Headers.TraceParent] = currentActivity?.ToTraceParent();
 
         try
         {
@@ -61,8 +60,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         activity?.SetServiceDeploymentTags(_hostEnvironment);
 
         var currentActivity = Activity.Current;
-        context.Headers[NOFAbstractionConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
-        context.Headers[NOFAbstractionConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+        context.Headers[NOFAbstractionConstants.Transport.Headers.TraceParent] = currentActivity?.ToTraceParent();
 
         try
         {
@@ -91,8 +89,7 @@ public sealed class TracingOutboundMiddleware : ICommandOutboundMiddleware, INot
         activity?.SetServiceDeploymentTags(_hostEnvironment);
 
         var currentActivity = Activity.Current;
-        context.Headers[NOFAbstractionConstants.Transport.Headers.TraceId] = currentActivity?.TraceId.ToString();
-        context.Headers[NOFAbstractionConstants.Transport.Headers.SpanId] = currentActivity?.SpanId.ToString();
+        context.Headers[NOFAbstractionConstants.Transport.Headers.TraceParent] = currentActivity?.ToTraceParent();
 
         try
         {

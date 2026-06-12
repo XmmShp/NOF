@@ -3,6 +3,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
+using System.Diagnostics;
 using System.Security.Claims;
 
 namespace NOF.Test;
@@ -10,6 +11,7 @@ namespace NOF.Test;
 public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 {
     private readonly AsyncServiceScope _scope;
+    private Activity? _tracingActivity;
 
     public NOFTestScope(AsyncServiceScope scope)
     {
@@ -38,8 +40,8 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     {
         if (traceId is not null && spanId is not null)
         {
-            var accessor = GetRequiredService<IContextAccessor>();
-            accessor.Context = accessor.Context.WithTracingInfo(new TracingInfo(traceId, spanId));
+            _tracingActivity?.Dispose();
+            _tracingActivity = CreateTracingActivity(traceId, spanId);
         }
         return this;
     }
@@ -91,11 +93,22 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public void Dispose()
     {
+        _tracingActivity?.Dispose();
         _scope.Dispose();
     }
 
     public ValueTask DisposeAsync()
     {
+        _tracingActivity?.Dispose();
         return _scope.DisposeAsync();
+    }
+
+    private static Activity CreateTracingActivity(string traceId, string spanId)
+    {
+        var activity = new Activity("NOF.Test.Scope");
+        activity.SetIdFormat(ActivityIdFormat.W3C);
+        activity.SetParentId($"00-{traceId}-{spanId}-01");
+        activity.Start();
+        return activity;
     }
 }

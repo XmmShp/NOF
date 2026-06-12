@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Infrastructure;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -50,7 +49,8 @@ public sealed class HttpRequestInboundAdapter(
         var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         foreach (var header in httpContext.Request.Headers)
         {
-            if (IsAllowed(header.Key))
+            if (!string.Equals(header.Key, NOFAbstractionConstants.Transport.Headers.TraceParent, StringComparison.OrdinalIgnoreCase)
+                && IsAllowed(header.Key))
             {
                 headers[header.Key] = header.Value.ToString();
             }
@@ -59,13 +59,6 @@ public sealed class HttpRequestInboundAdapter(
         if (!headers.ContainsKey(NOFAbstractionConstants.Transport.Headers.MessageId))
         {
             headers[NOFAbstractionConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString();
-        }
-
-        var currentActivity = Activity.Current;
-        if (currentActivity is not null)
-        {
-            headers.TryAdd(NOFAbstractionConstants.Transport.Headers.TraceId, currentActivity.TraceId.ToString());
-            headers.TryAdd(NOFAbstractionConstants.Transport.Headers.SpanId, currentActivity.SpanId.ToString());
         }
 
         return headers;
