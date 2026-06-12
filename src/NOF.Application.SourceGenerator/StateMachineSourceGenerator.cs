@@ -173,7 +173,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
 
         var sanitizedName = assemblyName.Replace(".", "");
         var initializerTypeName = $"__{sanitizedName}StateMachineHandlerAssemblyInitializer";
-        sb.AppendLine("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::" + assemblyName + "." + initializerTypeName + ">]");
+        sb.AppendLine("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::" + assemblyName + "." + initializerTypeName + ">]");
         sb.AppendLine();
 
         sb.AppendLine($"namespace {assemblyName}");
@@ -210,18 +210,18 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
             }
         }
 
-        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
+        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Abstraction.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
+        sb.AppendLine("        public static void Initialize(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
-        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
+        sb.AppendLine($"            if (!services.InitializedTypes.Add(typeof({initializerTypeName})))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
         sb.AppendLine();
         foreach (var (handlerClassName, notificationFullName) in handlerPairs)
         {
-            sb.AppendLine($"            registry.NotificationHandlerRegistry.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName})));");
+            sb.AppendLine($"            global::NOF.Abstraction.AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>(services).Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName})));");
         }
         sb.AppendLine("        }");
         sb.AppendLine("    }");

@@ -114,15 +114,15 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("#nullable enable");
         sb.AppendLine("using NOF.Abstraction;");
         sb.AppendLine();
-        sb.AppendLine("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::" + assemblyName + "." + initializerTypeName + ">]");
+        sb.AppendLine("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::" + assemblyName + "." + initializerTypeName + ">]");
         sb.AppendLine();
         sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
-        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Annotation.IAssemblyInitializer");
+        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Abstraction.IAssemblyInitializer");
         sb.AppendLine("    {");
-        sb.AppendLine("        public static void Initialize(global::NOF.Abstraction.Registry registry)");
+        sb.AppendLine("        public static void Initialize(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
-        sb.AppendLine($"            if (!registry.IsInitialized.TryAdd(typeof({initializerTypeName}), true))");
+        sb.AppendLine($"            if (!services.InitializedTypes.Add(typeof({initializerTypeName})))");
         sb.AppendLine("            {");
         sb.AppendLine("                return;");
         sb.AppendLine("            }");
@@ -150,13 +150,13 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.CommandHandler<TCommand>", out var commandType))
         {
             var messageType = commandType!.ToDisplayString(typeFormat);
-            registrations.Add($"registry.CommandHandlerRegistry.Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            registrations.Add($"global::NOF.Abstraction.AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>(services).Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
         }
 
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.NotificationHandler<TNotification>", out var notificationType))
         {
             var messageType = notificationType!.ToDisplayString(typeFormat);
-            registrations.Add($"registry.NotificationHandlerRegistry.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            registrations.Add($"global::NOF.Abstraction.AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>(services).Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
         }
     }
 

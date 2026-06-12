@@ -6,74 +6,42 @@ namespace NOF.Abstraction.Tests;
 public class AutoInjectRegistryTests
 {
     [Fact]
-    public void RegistryStorage_ShouldExposeSameAutoInjectRegistryInstance()
+    public void GetOrAddSingleton_ShouldReuseExistingSingletonInstance()
     {
-        var registry = new Registry();
-        registry.AutoInjectRegistry.Add(ServiceDescriptor.Scoped<IFoo, Foo>());
+        var services = new ServiceCollection();
+        var existing = new Foo();
+        services.AddSingleton(existing);
 
-        Assert.Contains(registry.AutoInjectRegistry.Freeze(), r =>
-            r.ServiceType == typeof(IFoo) &&
-            r.ImplementationType == typeof(Foo));
+        var resolved = AssemblyInitializationServices.GetOrAddSingleton<Foo>(services);
+
+        Assert.Same(existing, resolved);
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Foo));
     }
 
     [Fact]
-    public void RegistryCtor_ShouldAutoRegisterAutoInjectRegistryAsSameSingletonInstance()
+    public void GetOrAddSingleton_ShouldCreateAndRegisterSingletonInstance()
     {
-        var registry = new Registry();
+        var services = new ServiceCollection();
 
-        var registration = Assert.Single(
-            registry.AutoInjectRegistry.Freeze(),
-            r => r.ServiceType == typeof(AutoInjectRegistry));
+        var created = AssemblyInitializationServices.GetOrAddSingleton<Foo>(services);
 
-        Assert.Same(registry.AutoInjectRegistry, registration.ImplementationInstance);
-        Assert.Null(registration.ImplementationType);
-        Assert.Equal(ServiceLifetime.Singleton, registration.Lifetime);
+        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(Foo));
+        Assert.Same(created, descriptor.ImplementationInstance);
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
 
     [Fact]
-    public void GetOrAdd_ShouldAutoRegisterCreatedRegistryAsSameSingletonInstance()
+    public void InitializedTypes_ShouldTrackInitializedTypesPerServiceCollection()
     {
-        var registry = new Registry();
+        var services = new ServiceCollection();
+        var state = services.InitializedTypes;
 
-        var eventHandlerRegistry = registry.EventHandlerRegistry;
-        var registration = Assert.Single(
-            registry.AutoInjectRegistry.Freeze(),
-            r => r.ServiceType == typeof(EventHandlerRegistry));
+        var first = state.Add(typeof(Foo));
+        var second = state.Add(typeof(Foo));
 
-        Assert.Same(eventHandlerRegistry, registration.ImplementationInstance);
-        Assert.Null(registration.ImplementationType);
-        Assert.Equal(ServiceLifetime.Singleton, registration.Lifetime);
+        Assert.True(first);
+        Assert.False(second);
     }
 
-    [Fact]
-    public void Registrations_FirstReadShouldFreezeRegistry()
-    {
-        var registry = new AutoInjectRegistry();
-        registry.Add(ServiceDescriptor.Scoped<IFoo, Foo>());
-
-        _ = registry.Freeze();
-
-        Assert.Throws<InvalidOperationException>(() =>
-            registry.Add(ServiceDescriptor.Singleton<IFoo, Foo>()));
-    }
-
-    [Fact]
-    public void RemoveAndRemoveWhere_ShouldRemoveMatchingRegistrations()
-    {
-        var first = ServiceDescriptor.Scoped<IFoo, Foo>();
-        var second = ServiceDescriptor.Singleton<IFoo, Foo>();
-        var registry = new AutoInjectRegistry();
-        registry.Add(first);
-        registry.Add(second);
-
-        var removed = registry.Remove(first);
-        var removedCount = registry.RemoveWhere(static registration => registration.Lifetime == ServiceLifetime.Singleton);
-
-        Assert.True(removed);
-        Assert.Equal(1, removedCount);
-        Assert.Empty(registry.Freeze());
-    }
-
-    private interface IFoo;
-    private sealed class Foo : IFoo;
+    private sealed class Foo;
 }

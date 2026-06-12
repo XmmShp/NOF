@@ -18,12 +18,11 @@ public static partial class NOFInfrastructureExtensions
     {
         public INOFAppBuilder AddInfrastructureDefaults()
         {
-            _ = builder.Registry.EventHandlerRegistry;
-            _ = builder.Registry.MapperRegistry;
-            _ = builder.Registry.CommandHandlerRegistry;
-            _ = builder.Registry.NotificationHandlerRegistry;
-            _ = builder.Registry.RequestHandlerRegistry;
-            _ = builder.Registry.RpcServerRegistry;
+            builder.Services.GetOrAddSingleton<EventHandlerRegistry>();
+            builder.Services.GetOrAddSingleton<MapperRegistry>();
+            builder.Services.GetOrAddSingleton<CommandHandlerRegistry>();
+            builder.Services.GetOrAddSingleton<NotificationHandlerRegistry>();
+            builder.Services.GetOrAddSingleton<RpcServerRegistry>();
             builder.Services.GetOrAddSingleton<TypeResolver>();
 
             #region Core Services
@@ -120,7 +119,6 @@ public static partial class NOFInfrastructureExtensions
 
             #region Registration & Initialization Steps
             builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
-                .TryAddRegistrationStep<RequestHandlerServiceRegistrationStep>()
                 .TryAddRegistrationStep<HandlerServiceRegistrationStep>();
             #endregion
 

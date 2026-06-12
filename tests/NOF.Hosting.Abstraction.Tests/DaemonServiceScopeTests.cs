@@ -18,7 +18,6 @@ public class DaemonServiceScopeTests
         var builder = new TestAppBuilder();
 
         builder.AddHostingDefaults();
-        await new AutoInjectServiceRegistrationStep().ExecuteAsync(builder);
 
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IDaemonService)

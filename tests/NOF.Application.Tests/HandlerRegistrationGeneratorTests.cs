@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.Contract;
@@ -29,6 +30,8 @@ public class HandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
+            typeof(AssemblyInitializationServices),
+            typeof(InitializedTypes),
             typeof(Context),
             typeof(CommandHandler<>),
             typeof(CommandHandlerRegistration)
@@ -37,9 +40,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
-        Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppHandlerAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.CommandHandlerRegistry.Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
+        Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
+        Assert.Contains("services.InitializedTypes.Add(typeof(__AppHandlerAssemblyInitializer))", generatedCode);
+        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>(services).Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
 
     }
@@ -63,6 +66,8 @@ public class HandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
+            typeof(AssemblyInitializationServices),
+            typeof(InitializedTypes),
             typeof(Context),
             typeof(NotificationHandler<>),
             typeof(NotificationHandlerRegistration)
@@ -71,9 +76,9 @@ public class HandlerRegistrationGeneratorTests
         var result = new HandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
-        Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppHandlerAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.NotificationHandlerRegistry.Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
+        Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
+        Assert.Contains("services.InitializedTypes.Add(typeof(__AppHandlerAssemblyInitializer))", generatedCode);
+        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>(services).Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

@@ -1,5 +1,3 @@
-using NOF.Annotation;
-
 namespace NOF.Contract;
 
 /// <summary>

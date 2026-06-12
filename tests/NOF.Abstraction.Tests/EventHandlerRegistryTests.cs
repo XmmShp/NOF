@@ -32,12 +32,12 @@ public class EventHandlerRegistryTests
     }
 
     [Fact]
-    public void RegistryStorage_ShouldExposeSameEventHandlerRegistryInstance()
+    public void EventHandlerRegistry_ShouldStoreRegistrations()
     {
-        var registry = new Registry();
-        registry.EventHandlerRegistry.Add(new EventHandlerRegistration(typeof(RegistryHandler), typeof(RegistryEvent)));
+        var registry = new EventHandlerRegistry();
+        registry.Add(new EventHandlerRegistration(typeof(RegistryHandler), typeof(RegistryEvent)));
 
-        Assert.Contains(registry.EventHandlerRegistry.Freeze(), registration =>
+        Assert.Contains(registry.Freeze(), registration =>
             registration.HandlerType == typeof(RegistryHandler) &&
             registration.EventType == typeof(RegistryEvent));
     }

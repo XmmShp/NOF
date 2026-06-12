@@ -1,4 +1,4 @@
-using NOF.Annotation;
+using NOF.Abstraction;
 using Xunit;
 
 namespace NOF.Contract.Tests;

@@ -1,4 +1,4 @@
-using NOF.Annotation;
+using NOF.Abstraction;
 using System.Reflection;
 
 namespace NOF.Hosting;
@@ -28,7 +28,7 @@ public static partial class NOFHostingExtensions
 
             foreach (var attribute in assembly.GetCustomAttributes<AssemblyInitializeAttribute>())
             {
-                attribute.Initialize(builder.Registry);
+                attribute.Initialize(builder.Services);
             }
 
             return builder;

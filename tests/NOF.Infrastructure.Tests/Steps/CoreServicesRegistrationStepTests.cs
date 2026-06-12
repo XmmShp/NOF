@@ -222,7 +222,6 @@ public class InfrastructureDefaultsTests
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
         private readonly List<IServiceRegistrationStep> _registrationSteps;
-        private readonly Registry _registry;
 
         public TestServiceRegistrationContext()
         {
@@ -235,7 +234,6 @@ public class InfrastructureDefaultsTests
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
             _registrationSteps = [];
-            _registry = new Registry();
         }
 
         public TestServiceRegistrationContext(TestServiceRegistrationContext other)
@@ -247,7 +245,6 @@ public class InfrastructureDefaultsTests
             _metrics = other._metrics;
             _properties = other._properties;
             _registrationSteps = other._registrationSteps;
-            _registry = other._registry;
         }
 
         public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
@@ -263,8 +260,6 @@ public class InfrastructureDefaultsTests
         }
 
         public IDictionary<object, object> Properties => _properties;
-
-        public Registry Registry => _registry;
 
         public IConfigurationManager Configuration => _configuration;
 
@@ -321,7 +316,6 @@ public class InfrastructureDefaultsTests
 
     private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)
     {
-        new AutoInjectServiceRegistrationStep().ExecuteAsync(builder).GetAwaiter().GetResult();
         return builder.Services.BuildServiceProvider();
     }
 

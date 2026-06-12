@@ -125,10 +125,9 @@ public sealed class HttpRpcTransportBoundaryTests
         builder.Services.AddTransient<RedirectHandler>();
         builder.Services.AddTransient<TokenFailureHandler>();
 
-        var registry = new Registry();
-        registry.RpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
-        builder.Services.AddSingleton(registry);
-        builder.Services.AddSingleton(registry.RpcServerRegistry);
+        var rpcServerRegistry = new RpcServerRegistry();
+        rpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
+        builder.Services.AddSingleton(rpcServerRegistry);
 
         var app = builder.Build();
         app.MapHttpEndpoint<ValidationRpcServer>("/rpc");

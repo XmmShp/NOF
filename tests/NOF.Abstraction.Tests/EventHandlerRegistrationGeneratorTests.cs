@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Abstraction.SourceGenerator;
 using NOF.SourceGenerator.Tests;
 using NOF.SourceGenerator.Tests.Extensions;
@@ -26,15 +27,17 @@ public class EventHandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
+            typeof(AssemblyInitializationServices),
+            typeof(InitializedTypes),
             typeof(InMemoryEventHandler<>),
             typeof(EventHandlerRegistration));
 
         var result = new EventHandlerRegistrationGenerator().GetResult(comp);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("[assembly: global::NOF.Annotation.AssemblyInitializeAttribute<global::App.__AppEventHandlerAssemblyInitializer>]", generatedCode);
-        Assert.Contains("registry.IsInitialized.TryAdd(typeof(__AppEventHandlerAssemblyInitializer), true)", generatedCode);
-        Assert.Contains("registry.EventHandlerRegistry.Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
+        Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppEventHandlerAssemblyInitializer>]", generatedCode);
+        Assert.Contains("services.InitializedTypes.Add(typeof(__AppEventHandlerAssemblyInitializer))", generatedCode);
+        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>(services).Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

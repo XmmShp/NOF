@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
@@ -15,22 +16,24 @@ public class HandlerServiceRegistrationStep : IServiceRegistrationStep
 
     public ValueTask ExecuteAsync(IServiceRegistrationContext builder)
     {
-        var registry = builder.Registry;
         var typeResolver = builder.Services.GetOrAddSingleton<TypeResolver>();
+        var commandHandlerRegistry = builder.Services.GetOrAddSingleton<CommandHandlerRegistry>();
+        var eventHandlerRegistry = builder.Services.GetOrAddSingleton<EventHandlerRegistry>();
+        var notificationHandlerRegistry = builder.Services.GetOrAddSingleton<NotificationHandlerRegistry>();
 
-        foreach (var info in registry.CommandHandlerRegistry.Freeze())
+        foreach (var info in commandHandlerRegistry.Freeze())
         {
             typeResolver.Register(info.CommandType);
             typeResolver.Register(info.HandlerType);
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
-        foreach (var info in registry.EventHandlerRegistry.Freeze())
+        foreach (var info in eventHandlerRegistry.Freeze())
         {
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Transient(info.HandlerType, info.HandlerType));
         }
 
-        foreach (var info in registry.NotificationHandlerRegistry.Freeze())
+        foreach (var info in notificationHandlerRegistry.Freeze())
         {
             typeResolver.Register(info.NotificationType);
             typeResolver.Register(info.HandlerType);

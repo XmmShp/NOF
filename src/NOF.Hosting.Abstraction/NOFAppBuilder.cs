@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.Abstraction;
 
 namespace NOF.Hosting;
 
@@ -38,8 +37,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 {
     protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs = [];
 
-    public Registry Registry { get; } = new();
-
     protected NOFAppBuilder()
     {
     }
@@ -60,7 +57,6 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     public virtual async Task<THostApplication> BuildAsync()
     {
-        AddRegistrationStep(new AutoInjectServiceRegistrationStep());
         this.AddHostingDefaults();
         var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
         foreach (var task in regGraph.GetExecutionOrder())

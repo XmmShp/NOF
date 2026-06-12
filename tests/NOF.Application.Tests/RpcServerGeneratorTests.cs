@@ -1,4 +1,4 @@
-using NOF.Annotation;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.Contract;

@@ -1,6 +1,6 @@
-using NOF.Abstraction;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace NOF.Annotation;
+namespace NOF.Abstraction;
 
 /// <summary>
 /// Provides a static assembly-level initialization entry point that can be invoked at runtime.
@@ -10,5 +10,5 @@ public interface IAssemblyInitializer
     /// <summary>
     /// Initializes assembly-level runtime registrations.
     /// </summary>
-    static abstract void Initialize(Registry registry);
+    static abstract void Initialize(IServiceCollection services);
 }

@@ -1,4 +1,4 @@
-using NOF.Annotation;
+using NOF.Abstraction;
 
 namespace NOF.Contract;
 

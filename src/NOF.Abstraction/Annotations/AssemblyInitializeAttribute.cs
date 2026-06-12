@@ -1,6 +1,6 @@
-using NOF.Abstraction;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace NOF.Annotation;
+namespace NOF.Abstraction;
 
 /// <summary>
 /// Represents an assembly-level runtime initialization hook.
@@ -8,9 +8,9 @@ namespace NOF.Annotation;
 public abstract class AssemblyInitializeAttribute : Attribute
 {
     /// <summary>
-    /// Runs the assembly initializer against the provided registry.
+    /// Runs the assembly initializer against the provided service collection.
     /// </summary>
-    public abstract void Initialize(Registry registry);
+    public abstract void Initialize(IServiceCollection services);
 }
 
 /// <summary>
@@ -20,8 +20,8 @@ public abstract class AssemblyInitializeAttribute : Attribute
 public sealed class AssemblyInitializeAttribute<TInitializer> : AssemblyInitializeAttribute
     where TInitializer : IAssemblyInitializer
 {
-    public override void Initialize(Registry registry)
+    public override void Initialize(IServiceCollection services)
     {
-        TInitializer.Initialize(registry);
+        TInitializer.Initialize(services);
     }
 }

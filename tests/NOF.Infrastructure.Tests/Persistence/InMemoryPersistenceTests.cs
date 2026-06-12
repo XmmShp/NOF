@@ -1578,7 +1578,6 @@ public class SqliteInMemoryPersistenceTests
 
     private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)
     {
-        new AutoInjectServiceRegistrationStep().ExecuteAsync(builder).GetAwaiter().GetResult();
         return builder.Services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
@@ -2213,7 +2212,6 @@ public class SqliteInMemoryPersistenceTests
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
         private readonly List<IServiceRegistrationStep> _registrationSteps;
-        private readonly Registry _registry;
 
         public TestServiceRegistrationContext()
         {
@@ -2226,7 +2224,6 @@ public class SqliteInMemoryPersistenceTests
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
             _registrationSteps = [];
-            _registry = new Registry();
         }
 
         public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
@@ -2242,8 +2239,6 @@ public class SqliteInMemoryPersistenceTests
         }
 
         public IDictionary<object, object> Properties => _properties;
-
-        public Registry Registry => _registry;
 
         public IConfigurationManager Configuration => _configuration;
 

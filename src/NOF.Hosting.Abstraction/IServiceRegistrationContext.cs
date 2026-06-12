@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -10,7 +9,6 @@ namespace NOF.Hosting;
 /// </summary>
 public interface IServiceRegistrationContext : IHostApplicationBuilder
 {
-    Registry Registry { get; }
 }
 
 public static partial class NOFHostingExtensions

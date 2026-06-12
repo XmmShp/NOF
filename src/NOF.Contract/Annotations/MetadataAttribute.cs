@@ -1,4 +1,4 @@
-namespace NOF.Annotation;
+namespace NOF.Contract;
 
 /// <summary>
 /// Attaches a simple key-value metadata pair to a program element.

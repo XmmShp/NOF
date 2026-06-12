@@ -18,10 +18,11 @@ public class MappableGeneratorTests
 
     private static readonly Type[] _extraRefs =
     [
+        typeof(AssemblyInitializationServices),
+        typeof(InitializedTypes),
         typeof(MappableAttribute),
         typeof(IMapper),
         typeof(MapperRegistration),
-        typeof(Registry),
         typeof(Contract.Optional<>),
         typeof(Result),
         typeof(IValueObject<>),
@@ -69,8 +70,8 @@ public class MappableGeneratorTests
         Assert.Single(result.GeneratedTrees);
 
         var code = result.GeneratedTrees.Single().GetText().ToString();
-        Assert.Contains("registry.IsInitialized.TryAdd(typeof(", code);
-        Assert.Contains("registry.MapperRegistry.Add(global::NOF.Application.MapperRegistration.Of<", code);
+        Assert.Contains("services.InitializedTypes.Add(typeof(", code);
+        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.MapperRegistry>(services).Add(global::NOF.Application.MapperRegistration.Of<", code);
         Assert.Contains("MapperAssemblyInitializer", code);
         Assert.Contains("Id = src.Id", code);
         Assert.Contains("Name = src.Name", code);
