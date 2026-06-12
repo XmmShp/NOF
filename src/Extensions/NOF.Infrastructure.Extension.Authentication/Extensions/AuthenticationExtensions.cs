@@ -22,6 +22,8 @@ public static partial class NOFAuthenticationExtensions
                 serviceProvider.GetRequiredService<HttpJwksService>());
             builder.Services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
             builder.Services.AddRequestInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<AccessTokenPropagationOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<AccessTokenPropagationOutboundMiddleware>();
             return builder;
         }
     }

@@ -1,5 +1,5 @@
 using NOF.Abstraction;
-using NOF.Hosting.Extension.Authentication;
+using NOF.Hosting;
 
 namespace NOF.Infrastructure.Extension.Authentication;
 

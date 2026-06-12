@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace NOF.Hosting.Extension.Authentication;
+namespace NOF.Hosting;
 
 /// <summary>
 /// A <see cref="ClaimsIdentity"/> that also carries the raw access token string.
@@ -44,7 +44,7 @@ public sealed class JwtClaimsIdentity : ClaimsIdentity
         if (downstreamPropagation is not null)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(downstreamPropagation.HeaderName);
-            ArgumentException.ThrowIfNullOrWhiteSpace(downstreamPropagation.TokenType);
+            ArgumentNullException.ThrowIfNull(downstreamPropagation.TokenType);
         }
 
         Token = token;

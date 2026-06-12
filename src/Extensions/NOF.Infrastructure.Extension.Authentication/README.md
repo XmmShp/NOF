@@ -6,7 +6,7 @@ JWT resource server extension for the [NOF Framework](https://github.com/XmmShp/
 
 Provides JWT resource-server infrastructure for NOF applications: JWKS fetching, local validation-key caching, inbound token validation, identity resolution, and downstream access-token propagation.
 
-Authority/token-issuing capabilities live in `NOF.Hosting.AspNetCore.Extension.OidcServer`. Outbound-only token propagation lives in `NOF.Hosting.Extension.Authentication`.
+Authority/token-issuing capabilities live in `NOF.Hosting.AspNetCore.Extension.OidcServer`. Outbound-only token propagation lives in `NOF.Hosting`.
 
 ## Features
 
@@ -43,7 +43,7 @@ If a source does not explicitly configure `DownstreamPropagation`, downstream pr
 ## Dependencies
 
 - [`NOF.Hosting.AspNetCore.Extension.OidcServer`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore.Extension.OidcServer) - OIDC service contracts and JWKS models
-- [`NOF.Hosting.Extension.Authentication`](https://www.nuget.org/packages/NOF.Hosting.Extension.Authentication) - outbound access token propagation
+- [`NOF.Hosting`](https://www.nuget.org/packages/NOF.Hosting) - outbound access token propagation
 - [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)
 - [`System.IdentityModel.Tokens.Jwt`](https://www.nuget.org/packages/System.IdentityModel.Tokens.Jwt)
 

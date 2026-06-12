@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using NOF.Hosting.Extension.Authentication;
+using NOF.Hosting;
 using NOF.Hosting.Maui;
 using NOF.Sample.Maui.Services;
 
@@ -22,7 +22,7 @@ public static class MauiProgram
         builder.Services.AddAntDesign();
         builder.Services.AddScoped<MauiHttpNOFSampleService>();
         builder.Services.AddScoped<INOFSampleServiceClient>(sp => sp.GetRequiredService<MauiHttpNOFSampleService>());
-        builder.AddAccessTokenPropagation();
+        builder.AddJwtPropagation();
         builder.Services.AddScoped(_ => new HttpClient
         {
             BaseAddress = new Uri(builder.Configuration["SampleApiBaseAddress"] ?? "https://localhost:5001/")

@@ -8,10 +8,11 @@
     <IsAotCompatible>true</IsAotCompatible>
 
     <PackageId>NOF.Hosting.Abstraction</PackageId>
-    <Description>Hosting abstractions for the NOF Framework — host builder interfaces and step contracts shared by different hosting environments.</Description>
+    <Description>Hosting abstractions for the NOF Framework — host builder contracts, step contracts, and baseline JWT propagation.</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>

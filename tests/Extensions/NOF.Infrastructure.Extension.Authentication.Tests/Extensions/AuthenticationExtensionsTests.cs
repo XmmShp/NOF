@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Hosting.Extension.Authentication;
+using NOF.Hosting;
 using NOF.Test;
 using System.Security.Claims;
 using Xunit;
@@ -162,7 +162,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task AddAuthenticationResourceServer_WithExplicitTokenPropagation_ShouldRegisterSeparately()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAccessTokenPropagation();
+        builder.AddJwtPropagation();
         builder.AddAuthenticationResourceServer(options =>
         {
             options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
@@ -213,7 +213,7 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationResourceServer_Only_ShouldNotRegisterTokenPropagation()
+    public async Task AddAuthenticationResourceServer_Only_ShouldRegisterMessageTokenPropagation()
     {
         var builder = NOFTestAppBuilder.Create();
         builder.AddAuthenticationResourceServer(options =>
@@ -227,7 +227,15 @@ public sealed class AuthenticationExtensionsTests
         });
 
         await using var host = await builder.BuildTestHostAsync();
-        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(AccessTokenPropagationOutboundMiddleware));
+        Assert.DoesNotContain(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
+            descriptor.ImplementationType?.FullName == "NOF.Hosting.AccessTokenPropagationOutboundMiddleware");
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(AccessTokenPropagationOutboundMiddleware));
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(AccessTokenPropagationOutboundMiddleware));
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 using NOF.Abstraction;
 
-namespace NOF.Hosting.Extension.Authentication;
+namespace NOF.Hosting;
 
 /// <summary>
 /// Downstream propagation settings for one JWT identity.

@@ -64,7 +64,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Hostings\NOF.Hosting.Maui\NOF.Hosting.Maui.csproj" />
-        <ProjectReference Include="..\..\src\Extensions\NOF.Hosting.Extension.Authentication\NOF.Hosting.Extension.Authentication.csproj" />
+        <ProjectReference Include="..\..\src\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
         <ProjectReference Include="..\NOF.Sample.Contract\NOF.Sample.Contract.csproj" />
         <ProjectReference Include="..\NOF.Sample.UI\NOF.Sample.UI.csproj" />
     </ItemGroup>

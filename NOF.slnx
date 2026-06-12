@@ -40,7 +40,6 @@
   </Folder>
   <Folder Name="/src/Extensions/">
     <Project Path="src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/NOF.Hosting.AspNetCore.Extension.OidcServer.csproj" />
-    <Project Path="src/Extensions/NOF.Hosting.Extension.Authentication/NOF.Hosting.Extension.Authentication.csproj" />
     <Project Path="src/Extensions/NOF.Infrastructure.Extension.Authentication/NOF.Infrastructure.Extension.Authentication.csproj" />
   </Folder>
   <Folder Name="/src/Infrastructures/">
@@ -59,7 +58,6 @@
     <Project Path="tests/NOF.UI.Tests/NOF.UI.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Extensions/">
-    <Project Path="tests/Extensions/NOF.Hosting.Extension.Authentication.Tests/NOF.Hosting.Extension.Authentication.Tests.csproj" />
     <Project Path="tests/Extensions/NOF.Infrastructure.Extension.Authentication.Tests/NOF.Infrastructure.Extension.Authentication.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Infrastructures/">

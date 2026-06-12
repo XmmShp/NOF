@@ -4,7 +4,7 @@ Hosting abstraction package for the [NOF Framework](https://github.com/XmmShp/NO
 
 ## Overview
 
-Provides the core host-builder abstraction contracts used by NOF hosting implementations:
+Provides the core host-builder abstraction contracts and baseline hosting capabilities used by NOF hosting implementations:
 
 - `INOFAppBuilder`
 - `IServiceRegistrationContext`
@@ -12,6 +12,7 @@ Provides the core host-builder abstraction contracts used by NOF hosting impleme
 - `IServiceRegistrationStep`
 - `IApplicationInitializationStep`
 - `DependencyGraph` (dependency-aware topological ordering)
+- `JwtClaimsIdentity`, `JwtPropagation`, and `AddJwtPropagation()` for outbound JWT propagation
 
 This package enables host scenarios that do not require the full application/infrastructure stack.
 

@@ -19,9 +19,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\NOF.Hosting.AspNetCore.Extension.OidcServer\NOF.Hosting.AspNetCore.Extension.OidcServer.csproj" />
-    <ProjectReference Include="..\NOF.Hosting.Extension.Authentication\NOF.Hosting.Extension.Authentication.csproj" />
     <ProjectReference Include="..\..\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

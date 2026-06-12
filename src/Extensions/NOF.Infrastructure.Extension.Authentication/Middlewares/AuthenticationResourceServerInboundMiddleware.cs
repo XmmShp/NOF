@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Hosting;
-using NOF.Hosting.Extension.Authentication;
 using NOF.Contract;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
