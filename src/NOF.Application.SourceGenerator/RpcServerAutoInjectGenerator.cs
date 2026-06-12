@@ -120,7 +120,7 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
             if (registration.Kind == RegistrationKind.Server)
             {
                 sb.AppendLine($"            services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(typeof({registration.ServiceType}), typeof({registration.ImplementationType})));");
-                sb.AppendLine($"            global::NOF.Abstraction.AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.RpcServerRegistry>(services).Add(new global::NOF.Application.RpcServerRegistration(typeof({registration.ServiceContractType}), typeof({registration.ImplementationType})));");
+                sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Application.RpcServerRegistry>().Add(new global::NOF.Application.RpcServerRegistration(typeof({registration.ServiceContractType}), typeof({registration.ImplementationType})));");
                 continue;
             }
 

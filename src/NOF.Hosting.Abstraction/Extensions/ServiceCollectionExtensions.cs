@@ -92,38 +92,6 @@ public static partial class NOFHostingExtensions
             return services.ReplaceOrAdd(ServiceDescriptor.Transient(implementationFactory));
         }
 
-        /// <summary>
-        /// Retrieves the singleton instance of <typeparamref name="T"/> already registered in the service collection,
-        /// or creates a new instance using the parameterless constructor, registers it, and returns it.
-        /// </summary>
-        public T GetOrAddSingleton<T>() where T : class, new()
-        {
-            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
-            if (descriptor?.ImplementationInstance is T existing)
-            {
-                return existing;
-            }
-
-            var instance = new T();
-            services.AddSingleton(instance);
-            return instance;
-        }
-
-        public T GetOrAddSingleton<T>(Func<T> factory) where T : class
-        {
-            ArgumentNullException.ThrowIfNull(factory);
-
-            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
-            if (descriptor?.ImplementationInstance is T existing)
-            {
-                return existing;
-            }
-
-            var instance = factory();
-            services.AddSingleton(instance);
-            return instance;
-        }
-
         public IServiceCollection AddRequestOutboundMiddleware<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces | DynamicallyAccessedMemberTypes.PublicConstructors)] TMiddleware>()
             where TMiddleware : class, IRequestOutboundMiddleware
         {

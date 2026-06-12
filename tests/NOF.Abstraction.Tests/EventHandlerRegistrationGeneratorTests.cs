@@ -27,7 +27,6 @@ public class EventHandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(AssemblyInitializationServices),
             typeof(InitializedTypes),
             typeof(InMemoryEventHandler<>),
             typeof(EventHandlerRegistration));
@@ -37,7 +36,7 @@ public class EventHandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppEventHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppEventHandlerAssemblyInitializer))", generatedCode);
-        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>(services).Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
+        Assert.Contains("services.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>().Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof(global::App.MyEventHandler), typeof(global::App.MyEvent)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

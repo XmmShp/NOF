@@ -135,7 +135,7 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
-            sb.AppendLine($"            global::NOF.Abstraction.AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>(services).Add({registration});");
+            sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>().Add({registration});");
         }
 
         sb.AppendLine("        }");

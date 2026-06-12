@@ -30,7 +30,6 @@ public class HandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(AssemblyInitializationServices),
             typeof(InitializedTypes),
             typeof(Context),
             typeof(CommandHandler<>),
@@ -42,7 +41,7 @@ public class HandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppHandlerAssemblyInitializer))", generatedCode);
-        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>(services).Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
+        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>().Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
 
     }
@@ -66,7 +65,6 @@ public class HandlerRegistrationGeneratorTests
 
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true,
             typeof(IServiceCollection),
-            typeof(AssemblyInitializationServices),
             typeof(InitializedTypes),
             typeof(Context),
             typeof(NotificationHandler<>),
@@ -78,7 +76,7 @@ public class HandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppHandlerAssemblyInitializer))", generatedCode);
-        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>(services).Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
+        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

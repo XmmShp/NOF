@@ -28,7 +28,6 @@ public class AutoInjectGeneratorTests
         {
             typeof(IServiceCollection).ToMetadataReference(),
             typeof(AutoInjectAttribute).ToMetadataReference(),
-            typeof(AssemblyInitializationServices).ToMetadataReference(),
             typeof(InitializedTypes).ToMetadataReference()
         };
         var libComp = CSharpCompilation.CreateCompilation("App.Lib", libSource, isDll: true, depRefs);
@@ -80,7 +79,6 @@ public class AutoInjectGeneratorTests
         {
             typeof(IServiceCollection).ToMetadataReference(),
             typeof(AutoInjectAttribute).ToMetadataReference(),
-            typeof(AssemblyInitializationServices).ToMetadataReference(),
             typeof(InitializedTypes).ToMetadataReference()
         };
         var compilation = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);
@@ -119,7 +117,6 @@ public class AutoInjectGeneratorTests
         {
             typeof(IServiceCollection).ToMetadataReference(),
             typeof(AutoInjectAttribute).ToMetadataReference(),
-            typeof(AssemblyInitializationServices).ToMetadataReference(),
             typeof(InitializedTypes).ToMetadataReference()
         };
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);
@@ -150,7 +147,6 @@ public class AutoInjectGeneratorTests
         {
             typeof(IServiceCollection).ToMetadataReference(),
             typeof(AutoInjectAttribute).ToMetadataReference(),
-            typeof(AssemblyInitializationServices).ToMetadataReference(),
             typeof(InitializedTypes).ToMetadataReference()
         };
         var comp = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);

@@ -51,7 +51,6 @@ public class RpcServerAutoInjectGeneratorTests
             typeof(ServiceDescriptor),
             typeof(AssemblyInitializeAttribute),
             typeof(RpcServerRegistration),
-            typeof(AssemblyInitializationServices),
             typeof(InitializedTypes));
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create([
@@ -67,7 +66,7 @@ public class RpcServerAutoInjectGeneratorTests
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcServerAutoInjectAssemblyInitializer>", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppRpcServerAutoInjectAssemblyInitializer))", generatedCode);
         Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(typeof(global::App.MyService), typeof(global::App.MyService)));", generatedCode);
-        Assert.Contains("AssemblyInitializationServices.GetOrAddSingleton<global::NOF.Application.RpcServerRegistry>(services).Add(new global::NOF.Application.RpcServerRegistration(typeof(global::App.IMyService), typeof(global::App.MyService)));", generatedCode);
+        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.RpcServerRegistry>().Add(new global::NOF.Application.RpcServerRegistration(typeof(global::App.IMyService), typeof(global::App.MyService)));", generatedCode);
         Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler)));", generatedCode);
     }
 
@@ -110,7 +109,6 @@ public class RpcServerAutoInjectGeneratorTests
             typeof(ServiceDescriptor),
             typeof(AssemblyInitializeAttribute),
             typeof(RpcServerRegistration),
-            typeof(AssemblyInitializationServices),
             typeof(InitializedTypes));
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create([

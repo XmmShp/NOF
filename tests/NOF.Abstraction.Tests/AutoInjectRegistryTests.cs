@@ -12,7 +12,7 @@ public class AutoInjectRegistryTests
         var existing = new Foo();
         services.AddSingleton(existing);
 
-        var resolved = AssemblyInitializationServices.GetOrAddSingleton<Foo>(services);
+        var resolved = services.GetOrAddSingleton<Foo>();
 
         Assert.Same(existing, resolved);
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(Foo));
@@ -23,7 +23,7 @@ public class AutoInjectRegistryTests
     {
         var services = new ServiceCollection();
 
-        var created = AssemblyInitializationServices.GetOrAddSingleton<Foo>(services);
+        var created = services.GetOrAddSingleton<Foo>();
 
         var descriptor = Assert.Single(services, item => item.ServiceType == typeof(Foo));
         Assert.Same(created, descriptor.ImplementationInstance);
