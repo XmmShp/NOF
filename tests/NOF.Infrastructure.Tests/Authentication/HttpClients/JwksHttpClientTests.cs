@@ -11,24 +11,16 @@ namespace NOF.Infrastructure.Tests.Authentication.HttpClients;
 public sealed class JwtJwksHttpClientTests
 {
     [Fact]
-    public async Task GetJwksAsync_ShouldUseConfiguredEndpoint()
+    public async Task GetJwksAsync_ShouldDiscoverJwksEndpointFromAuthorizationServerMetadata()
     {
-        var expected = new JwksDocument
+        var handler = new CaptureHttpMessageHandler(static (request, _) => request.RequestUri?.PathAndQuery switch
         {
-            Keys =
-            [
-                new JwkKeyDocument
-                {
-                    Kid = "kid-1",
-                    Kty = "RSA",
-                    Use = "sig",
-                    N = "abc",
-                    E = "AQAB"
-                }
-            ]
-        };
-
-        var handler = new CaptureHttpMessageHandler((_, _) => CreateJsonResponse(expected));
+            "/.well-known/oauth-authorization-server/oauth2" => CreateJsonResponse(
+                """{"issuer":"https://auth.local/oauth2","jwks_uri":"https://auth.local/oauth2/.well-known/jwks.json"}"""),
+            "/oauth2/.well-known/jwks.json" => CreateJsonResponse(
+                """{"keys":[{"kid":"kid-1","kty":"RSA","use":"sig","n":"abc","e":"AQAB"}]}"""),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        });
         var httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://auth.local")
@@ -37,30 +29,64 @@ public sealed class JwtJwksHttpClientTests
         var builder = NOFTestAppBuilder.Create();
         builder.AddAuthenticationResourceServer(options =>
         {
-            options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
+            options.AuthorizationServer = "https://auth.local/oauth2";
         });
 
         var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
-            JwksEndpoint = "https://auth.local/.well-known/jwks.json"
+            AuthorizationServer = "https://auth.local/oauth2"
         }));
 
         var result = await service.GetJwksAsync();
         Assert.Single(result.Keys, k => k.Kid == "kid-1");
-        Assert.NotNull(handler.LastRequest);
-        Assert.Equal(HttpMethod.Get, handler.LastRequest.Method);
-        Assert.Equal("/.well-known/jwks.json", handler.LastRequest.PathAndQuery);
-        Assert.Empty(handler.LastRequest.Headers);
+        Assert.Equal(
+            ["/.well-known/oauth-authorization-server/oauth2", "/oauth2/.well-known/jwks.json"],
+            handler.Requests.Select(request => request.PathAndQuery));
+        Assert.All(handler.Requests, request =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Empty(request.Headers);
+        });
     }
 
-    private static HttpResponseMessage CreateJsonResponse<T>(T payload)
+    [Fact]
+    public async Task GetJwksAsync_ShouldRejectMetadataWhenIssuerDoesNotMatchAuthorizationServer()
     {
-        Assert.IsType<JwksDocument>(payload);
+        var handler = new CaptureHttpMessageHandler(static (_, _) => CreateJsonResponse(
+            """{"issuer":"https://other.local/oauth2","jwks_uri":"https://auth.local/oauth2/.well-known/jwks.json"}"""));
+        var httpClient = new HttpClient(handler);
+        var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
+        {
+            AuthorizationServer = "https://auth.local/oauth2"
+        }));
 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetJwksAsync());
+        Assert.Equal("Authentication resource server metadata issuer does not match the configured authorization server.", exception.Message);
+        Assert.Equal("/.well-known/oauth-authorization-server/oauth2", Assert.Single(handler.Requests).PathAndQuery);
+    }
+
+    [Fact]
+    public async Task GetJwksAsync_ShouldRejectHttpMetadataWhenHttpsMetadataIsRequired()
+    {
+        var handler = new CaptureHttpMessageHandler(static (_, _) => new HttpResponseMessage(HttpStatusCode.OK));
+        var httpClient = new HttpClient(handler);
+        var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
+        {
+            AuthorizationServer = "http://auth.local",
+            RequireHttpsMetadata = true
+        }));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetJwksAsync());
+        Assert.Equal("Authentication resource server authorization server metadata must use HTTPS.", exception.Message);
+        Assert.Empty(handler.Requests);
+    }
+
+    private static HttpResponseMessage CreateJsonResponse(string json)
+    {
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(
-                """{"keys":[{"kid":"kid-1","kty":"RSA","use":"sig","n":"abc","e":"AQAB"}]}""",
+                json,
                 Encoding.UTF8,
                 new MediaTypeHeaderValue("application/json"))
         };
@@ -69,11 +95,11 @@ public sealed class JwtJwksHttpClientTests
     private sealed class CaptureHttpMessageHandler(
         Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> responseFactory) : HttpMessageHandler
     {
-        public CapturedRequest? LastRequest { get; private set; }
+        public List<CapturedRequest> Requests { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            LastRequest = new CapturedRequest
+            Requests.Add(new CapturedRequest
             {
                 Method = request.Method,
                 PathAndQuery = request.RequestUri?.PathAndQuery ?? string.Empty,
@@ -81,7 +107,7 @@ public sealed class JwtJwksHttpClientTests
                     ? null
                     : await request.Content.ReadAsStringAsync(cancellationToken),
                 Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray(), StringComparer.OrdinalIgnoreCase)
-            };
+            });
 
             return responseFactory(request, cancellationToken);
         }

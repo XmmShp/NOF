@@ -48,7 +48,6 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<ICurrentTenant>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestAuthorizationPolicy, MetadataRequestAuthorizationPolicy>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
 
@@ -108,6 +107,8 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddNotificationInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddCommandInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddNotificationInboundMiddleware<AuthorizationInboundMiddleware>();
             builder.Services.AddCommandInboundMiddleware<TracingInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<TracingInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<TracingInboundMiddleware>();

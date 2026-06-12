@@ -14,8 +14,6 @@ public sealed class NotificationInboundContext : Context
 
     public required Type MessageType { get; init; }
 
-    public IReadOnlyList<object> Metadata { get; init; } = Array.Empty<object>();
-
     [SetsRequiredMembers]
     private NotificationInboundContext(IReadOnlyDictionary<object, object?> items, NotificationInboundContext source)
         : base(items)
@@ -23,7 +21,6 @@ public sealed class NotificationInboundContext : Context
         MethodInfo = source.MethodInfo;
         HandlerType = source.HandlerType;
         MessageType = source.MessageType;
-        Metadata = source.Metadata;
     }
 
     public NotificationInboundContext()

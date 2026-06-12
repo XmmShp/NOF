@@ -12,9 +12,11 @@ public sealed class ResourceServerJwksCacheService : IDisposable
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _minimumRefreshInterval;
+    private readonly string? _configuredIssuer;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     private IReadOnlyList<SecurityKey> _cachedKeys = [];
+    private OAuthAuthorizationServerMetadataDocument? _cachedMetadata;
     private DateTimeOffset? _lastSuccessfulRefreshAtUtc;
 
     public ResourceServerJwksCacheService(
@@ -35,6 +37,9 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
         _scopeFactory = scopeFactory;
         _timeProvider = timeProvider;
+        _configuredIssuer = string.IsNullOrWhiteSpace(options.Value.Issuer)
+            ? null
+            : options.Value.Issuer;
         _minimumRefreshInterval = options.Value.JwksRefreshInterval > TimeSpan.Zero
             ? options.Value.JwksRefreshInterval
             : TimeSpan.FromMinutes(10);
@@ -64,9 +69,27 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         return await RefreshRequiredAsync(requiredKid, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<string?> GetIssuerAsync(CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrWhiteSpace(_configuredIssuer))
+        {
+            return _configuredIssuer;
+        }
+
+        var snapshot = CreateSnapshot();
+        if (snapshot.Metadata?.Issuer is { Length: > 0 } issuer && snapshot.Age < _minimumRefreshInterval)
+        {
+            return issuer;
+        }
+
+        await RefreshRequiredAsync(cancellationToken).ConfigureAwait(false);
+        return _cachedMetadata?.Issuer;
+    }
+
     public void Invalidate()
     {
         _cachedKeys = [];
+        _cachedMetadata = null;
         _lastSuccessfulRefreshAtUtc = null;
     }
 
@@ -130,6 +153,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
         try
         {
+            var metadata = await GetMetadataAsync(cancellationToken).ConfigureAwait(false);
             var document = await GetJwksAsync(cancellationToken).ConfigureAwait(false);
             var keys = JwksSecurityKeyConverter.ToSecurityKeys(document.Keys);
 
@@ -139,6 +163,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
             }
 
             _cachedKeys = keys;
+            _cachedMetadata = metadata;
             _lastSuccessfulRefreshAtUtc = _timeProvider.GetUtcNow();
             return _cachedKeys;
         }
@@ -156,6 +181,16 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         return await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    private async Task<OAuthAuthorizationServerMetadataDocument?> GetMetadataAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+        var metadataService = scope.ServiceProvider.GetService<IAuthorizationServerMetadataService>();
+        return metadataService is null
+            ? null
+            : await metadataService.GetMetadataAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private CacheSnapshot CreateSnapshot()
     {
         var lastSuccessfulRefreshAtUtc = _lastSuccessfulRefreshAtUtc;
@@ -163,7 +198,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
             ? TimeSpan.MaxValue
             : _timeProvider.GetUtcNow() - lastSuccessfulRefreshAtUtc.Value;
 
-        return new CacheSnapshot(_cachedKeys, age);
+        return new CacheSnapshot(_cachedKeys, _cachedMetadata, age);
     }
 
     private bool CanUseSnapshot(CacheSnapshot snapshot, string? requiredKid)
@@ -193,6 +228,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
     private readonly record struct CacheSnapshot(
         IReadOnlyList<SecurityKey> Keys,
+        OAuthAuthorizationServerMetadataDocument? Metadata,
         TimeSpan Age)
     {
         public bool HasUsableKeys => Keys.Count > 0;

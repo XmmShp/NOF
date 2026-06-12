@@ -14,8 +14,6 @@ public sealed class CommandInboundContext : Context
 
     public required Type MessageType { get; init; }
 
-    public IReadOnlyList<object> Metadata { get; init; } = Array.Empty<object>();
-
     [SetsRequiredMembers]
     private CommandInboundContext(IReadOnlyDictionary<object, object?> items, CommandInboundContext source)
         : base(items)
@@ -23,7 +21,6 @@ public sealed class CommandInboundContext : Context
         MethodInfo = source.MethodInfo;
         HandlerType = source.HandlerType;
         MessageType = source.MessageType;
-        Metadata = source.Metadata;
     }
 
     public CommandInboundContext()

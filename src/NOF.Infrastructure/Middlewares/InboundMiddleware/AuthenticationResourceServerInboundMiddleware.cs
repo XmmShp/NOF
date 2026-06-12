@@ -105,10 +105,11 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
 
                 try
                 {
+                    var validIssuer = await GetValidIssuerAsync(cancellationToken).ConfigureAwait(false);
                     var validationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuer = !string.IsNullOrEmpty(_jwtOptions.Issuer),
-                        ValidIssuer = _jwtOptions.Issuer,
+                        ValidateIssuer = !string.IsNullOrEmpty(validIssuer),
+                        ValidIssuer = validIssuer,
                         ValidateAudience = !string.IsNullOrEmpty(_jwtOptions.Audience),
                         ValidAudience = _jwtOptions.Audience,
                         ValidateLifetime = true,
@@ -151,6 +152,11 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
     {
         return _jwtOptions.Sources;
     }
+
+    private Task<string?> GetValidIssuerAsync(CancellationToken cancellationToken)
+        => string.IsNullOrWhiteSpace(_jwtOptions.Issuer)
+            ? _jwksCacheService.GetIssuerAsync(cancellationToken)
+            : Task.FromResult<string?>(_jwtOptions.Issuer);
 
     private static bool TryGetToken(Context context, AuthenticationTokenSourceOptions source, out string token)
     {

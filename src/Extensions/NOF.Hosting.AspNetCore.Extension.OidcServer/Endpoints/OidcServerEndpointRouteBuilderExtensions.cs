@@ -35,7 +35,7 @@ public static partial class NOFOidcServerExtensions
                 return Results.Json(new OAuthServerRootDocument
                 {
                     Issuer = issuer,
-                    Metadata = $"{issuer}/.well-known/oauth-authorization-server"
+                    Metadata = OAuthAuthorizationServerMetadataUris.BuildMetadataEndpoint(issuer, requireHttps: false).ToString()
                 });
             });
 
@@ -59,7 +59,7 @@ public static partial class NOFOidcServerExtensions
 
         app.MapGet(CombineRoute(prefix, "/.well-known/oauth-authorization-server"),
             static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) => Results.Json(BuildMetadata(oidcOptions.Value)));
-        app.MapGet(CombineRoute(prefix, $"{pathBase}/.well-known/oauth-authorization-server"),
+        app.MapGet(CombineRoute(prefix, BuildOAuthAuthorizationServerMetadataRoute(pathBase)),
             static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) => Results.Json(BuildMetadata(oidcOptions.Value)));
 
         app.MapGet(CombineRoute(prefix, "/.well-known/jwks.json"),
@@ -584,6 +584,14 @@ public static partial class NOFOidcServerExtensions
         return pathBase.StartsWith("/", StringComparison.Ordinal)
             ? pathBase.TrimEnd('/')
             : $"/{pathBase.TrimEnd('/')}";
+    }
+
+    private static string BuildOAuthAuthorizationServerMetadataRoute(string pathBase)
+    {
+        var issuerPath = pathBase.TrimEnd('/');
+        return string.IsNullOrEmpty(issuerPath) || issuerPath == "/"
+            ? "/.well-known/oauth-authorization-server"
+            : $"/.well-known/oauth-authorization-server{issuerPath}";
     }
 
     private static string CombineRoute(string? prefix, string route)

@@ -34,7 +34,7 @@ builder.AddAuthenticationResourceServer(o =>
 {
     o.Issuer = "http://localhost/oauth2";
     o.RequireHttpsMetadata = false;
-    o.JwksEndpoint = "http://localhost/oauth2/.well-known/jwks.json";
+    o.AuthorizationServer = "http://localhost/oauth2";
 });
 
 builder.AddRabbitMQ(options =>

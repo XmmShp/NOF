@@ -115,7 +115,7 @@
     private string BaseUri => NavigationManager.BaseUri.TrimEnd('/');
     private string Issuer => $"{BaseUri}/oauth2";
     private string OpenIdConfigurationUrl => $"{Issuer}/.well-known/openid-configuration";
-    private string AuthorizationMetadataUrl => $"{Issuer}/.well-known/oauth-authorization-server";
+    private string AuthorizationMetadataUrl => $"{BaseUri}/.well-known/oauth-authorization-server/oauth2";
     private string JwksUrl => $"{Issuer}/.well-known/jwks.json";
     private string AuthorizeEndpoint => $"{Issuer}/authorize";
     private string TokenEndpoint => $"{Issuer}/token";

@@ -35,13 +35,15 @@ public sealed class HttpRequestInboundAdapter(
 
         BindHeaderProperties(httpContext, request);
         var headers = CreateInboundHeaders(httpContext);
-        return await inboundPipeline.ExecuteAsync(
+        var execution = await inboundPipeline.ExecuteAsync(
             request,
             resolution.HandlerMapping.HandlerType,
             typeof(TRpcService),
             operationName,
             headers,
             cancellationToken).ConfigureAwait(false);
+        ApplyResponseHeaders(httpContext, execution.ResponseHeaders);
+        return execution;
     }
 
     private Dictionary<string, string?> CreateInboundHeaders(HttpContext httpContext)
@@ -66,6 +68,19 @@ public sealed class HttpRequestInboundAdapter(
 
     private bool IsAllowed(string headerName)
         => _httpHeaderOptions.AllowedHeaders.Any(pattern => headerName.MatchWildcard(pattern, StringComparison.OrdinalIgnoreCase));
+
+    private static void ApplyResponseHeaders(HttpContext httpContext, IEnumerable<KeyValuePair<string, string?>> headers)
+    {
+        foreach (var (name, value) in headers)
+        {
+            if (string.IsNullOrWhiteSpace(name) || value is null)
+            {
+                continue;
+            }
+
+            httpContext.Response.Headers[name] = value;
+        }
+    }
 
     private static void BindHeaderProperties<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
         HttpContext httpContext,

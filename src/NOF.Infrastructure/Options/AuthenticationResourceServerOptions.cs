@@ -17,12 +17,12 @@ public class AuthenticationResourceServerOptions
     public TimeSpan JwksRefreshInterval { get; set; } = TimeSpan.FromHours(24);
 
     /// <summary>
-    /// Gets or sets the JWKS endpoint used to fetch signing keys for token validation.
+    /// Gets or sets the authorization server used to discover signing keys for token validation.
     /// </summary>
-    public string JwksEndpoint { get; set; } = string.Empty;
+    public string AuthorizationServer { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets whether the configured JWKS endpoint must use HTTPS.
+    /// Gets or sets whether the configured authorization server metadata endpoint must use HTTPS.
     /// Default is true.
     /// </summary>
     public bool RequireHttpsMetadata { get; set; } = true;

@@ -67,8 +67,7 @@ public sealed class CommandInboundPipelineExecutor
         {
             MethodInfo = methodInfo,
             HandlerType = handlerType,
-            MessageType = messageType,
-            Metadata = InboundContextReflection.BuildMetadata(handlerType, methodInfo)
+            MessageType = messageType
         }.CopyHeadersFrom(headers);
     }
 
@@ -155,8 +154,7 @@ public sealed class NotificationInboundPipelineExecutor
         {
             MethodInfo = methodInfo,
             HandlerType = handlerType,
-            MessageType = messageType,
-            Metadata = InboundContextReflection.BuildMetadata(handlerType, methodInfo)
+            MessageType = messageType
         }.CopyHeadersFrom(headers);
     }
 
@@ -246,8 +244,7 @@ public sealed class RequestInboundPipelineExecutor
             HandlerType = handlerType,
             HandlerMethodInfo = handlerMethodInfo,
             RequestType = requestType,
-            ResponseType = InboundContextReflection.GetHandlerResponseType(handlerType),
-            Metadata = InboundContextReflection.BuildMetadata(serviceType, serviceMethodInfo, handlerType, handlerMethodInfo)
+            ResponseType = InboundContextReflection.GetHandlerResponseType(handlerType)
         }.CopyHeadersFrom(headers);
     }
 
@@ -338,14 +335,4 @@ internal static class InboundContextReflection
         throw new InvalidOperationException($"Unable to resolve RPC response type from handler '{handlerType.FullName}'.");
     }
 
-    public static IReadOnlyList<object> BuildMetadata(params MemberInfo[] members)
-    {
-        var metadata = new List<object>();
-        foreach (var member in members)
-        {
-            metadata.AddRange(member.GetCustomAttributes(inherit: true));
-        }
-
-        return metadata;
-    }
 }

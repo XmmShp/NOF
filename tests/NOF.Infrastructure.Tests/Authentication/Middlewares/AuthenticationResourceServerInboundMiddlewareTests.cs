@@ -5,6 +5,8 @@ using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Xunit;
 
@@ -18,12 +20,12 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
         var middleware = CreateMiddleware(userContext, jwksService);
-        var inboundMetadata = CreateInboundMetadata();
+        var inboundContext = CreateInboundContext();
         var request = new object();
         var forwardedContext = Context.Empty;
 
         var nextCalled = false;
-        await middleware.InvokeAsync(inboundMetadata, request, CaptureNextContext, default);
+        await middleware.InvokeAsync(inboundContext, request, CaptureNextContext, default);
 
         Assert.True(nextCalled);
         Assert.NotNull(userContext.User);
@@ -45,9 +47,9 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var userContext = new UserContext();
         var jwksService = CreateJwksService([]);
         var middleware = CreateMiddleware(userContext, jwksService);
-        var inboundMetadata = CreateInboundMetadata();
+        var inboundContext = CreateInboundContext();
         var request = new object();
-        var executionContext = (RequestInboundContext)inboundMetadata
+        var executionContext = (RequestInboundContext)inboundContext
             .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer invalid-token");
         var forwardedContext = Context.Empty;
 
@@ -83,9 +85,9 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         };
         var jwksService = CreateJwksService([key]);
         var middleware = CreateMiddleware(userContext, jwksService);
-        var inboundMetadata = CreateInboundMetadata();
+        var inboundContext = CreateInboundContext();
         var request = new object();
-        var executionContext = (RequestInboundContext)inboundMetadata
+        var executionContext = (RequestInboundContext)inboundContext
             .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, "Bearer not-a-jwt");
 
         var nextCalled = false;
@@ -104,6 +106,35 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         Assert.False(userContext.User.IsAuthenticated);
     }
 
+    [Fact]
+    public async Task InvokeAsync_WhenIssuerNotConfigured_ShouldValidateTokenWithDiscoveredIssuer()
+    {
+        var userContext = new UserContext();
+        using var rsa = RSA.Create(2048);
+        var key = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        var token = CreateToken(key.Key, "https://auth.local");
+        var jwksService = CreateJwksService([key], "https://auth.local");
+        var middleware = CreateMiddleware(userContext, jwksService);
+        var inboundContext = (RequestInboundContext)CreateInboundContext()
+            .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, $"Bearer {token}");
+
+        var nextCalled = false;
+        await middleware.InvokeAsync(inboundContext, new object(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.True(nextCalled);
+        Assert.True(userContext.User.IsAuthenticated);
+    }
+
     private static AuthenticationResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
         ResourceServerJwksCacheService jwksCacheService)
@@ -113,7 +144,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             jwksCacheService,
             Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
             {
-                JwksEndpoint = "https://auth.local/.well-known/jwks.json",
+                AuthorizationServer = "https://auth.local",
                 RequireHttpsMetadata = true,
                 Sources =
                 [
@@ -127,11 +158,16 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             NullLogger<AuthenticationResourceServerInboundMiddleware>.Instance);
     }
 
-    private static ResourceServerJwksCacheService CreateJwksService(IReadOnlyList<ManagedSigningKey> keys)
+    private static ResourceServerJwksCacheService CreateJwksService(IReadOnlyList<ManagedSigningKey> keys, string? issuer = null)
     {
         var signingKeyService = new FakeSigningKeyService([.. keys]);
         var services = new ServiceCollection();
         services.AddScoped<IJwksService>(_ => new LocalJwksService(signingKeyService));
+        if (!string.IsNullOrWhiteSpace(issuer))
+        {
+            services.AddScoped<IAuthorizationServerMetadataService>(_ => new FakeAuthorizationServerMetadataService(issuer));
+        }
+
         var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
         return new ResourceServerJwksCacheService(
             scopeFactory,
@@ -139,7 +175,20 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             TimeProvider.System);
     }
 
-    private static RequestInboundContext CreateInboundMetadata()
+    private static string CreateToken(SecurityKey key, string issuer)
+    {
+        var now = DateTime.UtcNow;
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: null,
+            claims: [new Claim(ClaimTypes.NameIdentifier, "user-1")],
+            notBefore: now.AddMinutes(-1),
+            expires: now.AddMinutes(5),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.RsaSha256));
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static RequestInboundContext CreateInboundContext()
     {
         var serviceMethod = typeof(object).GetMethod(nameof(ToString))!;
         return new RequestInboundContext
@@ -149,8 +198,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             HandlerType = typeof(object),
             HandlerMethodInfo = serviceMethod,
             RequestType = typeof(object),
-            ResponseType = typeof(Result),
-            Metadata = serviceMethod.GetCustomAttributes(inherit: true).ToArray()
+            ResponseType = typeof(Result)
         };
     }
 
@@ -175,4 +223,16 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         }
     }
 
+    private sealed class FakeAuthorizationServerMetadataService(string issuer) : IAuthorizationServerMetadataService
+    {
+        public Task<OAuthAuthorizationServerMetadataDocument?> GetMetadataAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            return Task.FromResult<OAuthAuthorizationServerMetadataDocument?>(new OAuthAuthorizationServerMetadataDocument
+            {
+                Issuer = issuer,
+                JwksUri = $"{issuer}/.well-known/jwks.json"
+            });
+        }
+    }
 }

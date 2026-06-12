@@ -162,6 +162,25 @@ public sealed class ResourceServerJwksCacheServiceTests
         Assert.Equal(1, jwksService.RefreshCallCount);
     }
 
+    [Fact]
+    public async Task GetIssuerAsync_WhenIssuerNotConfigured_ShouldUseDiscoveredMetadataIssuer()
+    {
+        var jwksService = new FakeJwksService(
+            [_ => Task.FromResult(CreateJwksDocument("kid-1"))],
+            [_ => Task.FromResult<OAuthAuthorizationServerMetadataDocument?>(new OAuthAuthorizationServerMetadataDocument
+            {
+                Issuer = "https://issuer.local/oauth2",
+                JwksUri = "https://issuer.local/oauth2/.well-known/jwks.json"
+            })]);
+        var service = CreateService(jwksService);
+
+        var issuer = await service.GetIssuerAsync();
+
+        Assert.Equal("https://issuer.local/oauth2", issuer);
+        Assert.Equal(1, jwksService.MetadataCallCount);
+        Assert.Equal(1, jwksService.RefreshCallCount);
+    }
+
     private static ResourceServerJwksCacheService CreateService(FakeJwksService jwksService, TimeProvider? timeProvider = null, TimeSpan? minimumRefreshInterval = null)
         => new(
             CreateScopeFactory(jwksService),
@@ -175,6 +194,11 @@ public sealed class ResourceServerJwksCacheServiceTests
     {
         var services = new ServiceCollection();
         services.AddScoped(_ => jwksService);
+        if (jwksService is IAuthorizationServerMetadataService metadataService)
+        {
+            services.AddScoped(_ => metadataService);
+        }
+
         return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
     }
 
@@ -200,18 +224,38 @@ public sealed class ResourceServerJwksCacheServiceTests
         };
     }
 
-    private sealed class FakeJwksService(IEnumerable<Func<CancellationToken, Task<JwksDocument>>> factories) : IJwksService
+    private sealed class FakeJwksService(
+        IEnumerable<Func<CancellationToken, Task<JwksDocument>>> factories,
+        IEnumerable<Func<CancellationToken, Task<OAuthAuthorizationServerMetadataDocument?>>>? metadataFactories = null) :
+        IJwksService,
+        IAuthorizationServerMetadataService
     {
         private readonly Queue<Func<CancellationToken, Task<JwksDocument>>> _factories = new(factories);
+        private readonly Queue<Func<CancellationToken, Task<OAuthAuthorizationServerMetadataDocument?>>> _metadataFactories = new(metadataFactories ?? []);
         private Func<CancellationToken, Task<JwksDocument>>? _lastFactory;
 
         public int RefreshCallCount { get; private set; }
+
+        public int MetadataCallCount { get; private set; }
 
         public async Task<JwksDocument> GetJwksAsync(CancellationToken cancellationToken = default)
         {
             RefreshCallCount++;
             _lastFactory = _factories.Count > 1 ? _factories.Dequeue() : _factories.Peek();
             return await _lastFactory(cancellationToken).ConfigureAwait(false);
+        }
+
+        public Task<OAuthAuthorizationServerMetadataDocument?> GetMetadataAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            MetadataCallCount++;
+            if (_metadataFactories.Count == 0)
+            {
+                return Task.FromResult<OAuthAuthorizationServerMetadataDocument?>(null);
+            }
+
+            var factory = _metadataFactories.Count > 1 ? _metadataFactories.Dequeue() : _metadataFactories.Peek();
+            return factory(cancellationToken);
         }
     }
 

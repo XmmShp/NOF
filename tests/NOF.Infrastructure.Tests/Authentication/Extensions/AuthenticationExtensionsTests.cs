@@ -166,7 +166,7 @@ public sealed class AuthenticationExtensionsTests
         builder.AddJwtPropagation();
         builder.AddAuthenticationResourceServer(options =>
         {
-            options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
+            options.AuthorizationServer = "https://auth.local";
             options.RequireHttpsMetadata = true;
             options.Sources.Add(new AuthenticationTokenSourceOptions
             {
@@ -179,7 +179,7 @@ public sealed class AuthenticationExtensionsTests
         using var scope = host.CreateScope();
 
         var resourceOptions = scope.GetRequiredService<IOptions<AuthenticationResourceServerOptions>>().Value;
-        Assert.Equal("https://auth.local/.well-known/jwks.json", resourceOptions.JwksEndpoint);
+        Assert.Equal("https://auth.local", resourceOptions.AuthorizationServer);
         Assert.Equal(2, resourceOptions.Sources.Count);
         Assert.Contains(resourceOptions.Sources, source =>
             source.HeaderName == "Authorization" &&
@@ -201,7 +201,7 @@ public sealed class AuthenticationExtensionsTests
         var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
         builder.AddAuthenticationResourceServer(options =>
         {
-            options.JwksEndpoint = "https://issuer.local/.well-known/jwks.json";
+            options.AuthorizationServer = "https://issuer.local";
             options.Issuer = "https://issuer.local";
         });
 
@@ -219,7 +219,7 @@ public sealed class AuthenticationExtensionsTests
         var builder = NOFTestAppBuilder.Create();
         builder.AddAuthenticationResourceServer(options =>
         {
-            options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
+            options.AuthorizationServer = "https://auth.local";
             options.Sources.Add(new AuthenticationTokenSourceOptions
             {
                 HeaderName = "X-Authorization",
@@ -254,7 +254,7 @@ public sealed class AuthenticationExtensionsTests
         var builder = NOFTestAppBuilder.Create();
         builder.AddAuthenticationResourceServer(options =>
         {
-            options.JwksEndpoint = "https://auth.local/.well-known/jwks.json";
+            options.AuthorizationServer = "https://auth.local";
         });
 
         await using var host = await builder.BuildTestHostAsync();

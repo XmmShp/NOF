@@ -16,7 +16,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         var request = new TestRequest();
 
         var nextCalled = false;
-        await middleware.InvokeAsync(CreateContext(nameof(TestService.AllowAnonymousMethod)), request, (_, _, _) =>
+        await middleware.InvokeAsync(CreateRequestContext(nameof(TestService.AllowAnonymousMethod)), request, (_, _, _) =>
         {
             nextCalled = true;
             return ValueTask.CompletedTask;
@@ -26,160 +26,161 @@ public sealed class AuthorizationInboundMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_EmptyPermission_ShouldRequireAuthentication_ButNotSpecificPermission()
+    public async Task InvokeAsync_EmptyPermission_ShouldRequireAuthentication_AndSetAuthenticateHeader()
     {
         var userContext = new UserContext();
         var middleware = CreateMiddleware(userContext);
 
-        // Unauthenticated => 401
-        var unauthContext = CreateContext(nameof(TestService.LoginOnlyMethod));
-        await middleware.InvokeAsync(unauthContext, new TestRequest(), (_, _, _) => ValueTask.CompletedTask, default);
-        var unauthResult = Assert.IsAssignableFrom<IResult>(unauthContext.Response);
-        Assert.False(unauthResult.IsSuccess);
-        Assert.Equal("401", unauthResult.ErrorCode);
-        Assert.Equal("Please login first", unauthResult.Message);
-
-        // Authenticated without permissions => allowed
-        userContext.Logout();
-        userContext.User.AddIdentity(CreateAuthenticatedIdentity());
-        var authContext = CreateContext(nameof(TestService.LoginOnlyMethod));
-        var nextCalled = false;
-        await middleware.InvokeAsync(authContext, new TestRequest(), (_, _, _) =>
-        {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
-        Assert.True(nextCalled);
-        Assert.Null(authContext.Response);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_MethodPermission_ShouldOverrideClassPermission()
-    {
-        var userContext = new UserContext();
-        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "permclass"));
-        var middleware = CreateMiddleware(userContext);
-
-        // Authenticated but missing method permission => 403
-        var deniedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
-        await middleware.InvokeAsync(deniedContext, new TestRequest(), (_, _, _) => ValueTask.CompletedTask, default);
-        var deniedResult = Assert.IsAssignableFrom<IResult>(deniedContext.Response);
-        Assert.False(deniedResult.IsSuccess);
-        Assert.Equal("403", deniedResult.ErrorCode);
-        Assert.Equal("Insufficient permissions", deniedResult.Message);
-
-        // With method permission => allowed
-        userContext.Logout();
-        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "permmethod"));
-        var allowedContext = CreateContext(nameof(TestService.OverridePermissionMethod));
-        var nextCalled = false;
-        await middleware.InvokeAsync(allowedContext, new TestRequest(), (_, _, _) =>
-        {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
-        Assert.True(nextCalled);
-        Assert.Null(allowedContext.Response);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_CustomPolicy_ShouldShortCircuitWithPolicyResponse()
-    {
-        var middleware = new AuthorizationInboundMiddleware([new DenyAllAuthorizationPolicy("499")]);
-        var context = CreateContext(nameof(TestService.AllowAnonymousMethod));
-        var nextCalled = false;
-
-        await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) =>
-        {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
-
-        var denied = Assert.IsAssignableFrom<IResult>(context.Response);
-        Assert.False(denied.IsSuccess);
-        Assert.Equal("499", denied.ErrorCode);
-        Assert.Equal("custom policy denied", denied.Message);
-        Assert.False(nextCalled);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_MultiplePolicies_ShouldAllowWhenAnyPolicyAllows()
-    {
-        var middleware = new AuthorizationInboundMiddleware([
-            new DenyAllAuthorizationPolicy("498"),
-            new AllowAllAuthorizationPolicy()
-        ]);
-        var context = CreateContext(nameof(TestService.LoginOnlyMethod));
-        var nextCalled = false;
-
-        await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) =>
-        {
-            nextCalled = true;
-            return ValueTask.CompletedTask;
-        }, default);
-
-        Assert.True(nextCalled);
-        Assert.Null(context.Response);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_MultiplePolicies_ShouldUseFirstFailureWhenAllPoliciesDeny()
-    {
-        var middleware = new AuthorizationInboundMiddleware([
-            new DenyAllAuthorizationPolicy("498"),
-            new DenyAllAuthorizationPolicy("499")
-        ]);
-        var context = CreateContext(nameof(TestService.LoginOnlyMethod));
-
-        await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) => ValueTask.CompletedTask, default);
-
-        var denied = Assert.IsAssignableFrom<IResult>(context.Response);
-        Assert.False(denied.IsSuccess);
-        Assert.Equal("498", denied.ErrorCode);
-        Assert.Equal("custom policy denied", denied.Message);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_NonResultResponse_ShouldShortCircuitAsTransportFailure()
-    {
-        var userContext = new UserContext();
-        var middleware = CreateMiddleware(userContext);
-        var context = CreateContext(nameof(TestService.LoginOnlyMethod), typeof(Empty));
-
+        var context = CreateRequestContext(nameof(TestService.LoginOnlyMethod));
         await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) => ValueTask.CompletedTask, default);
 
         var response = Assert.IsAssignableFrom<IResult>(context.Response);
         Assert.False(response.IsSuccess);
         Assert.Equal("401", response.ErrorCode);
         Assert.Equal("Please login first", response.Message);
+        Assert.Equal("Bearer error=\"invalid_token\"", context.ResponseHeaders["WWW-Authenticate"]);
     }
 
-    private static RequestInboundContext CreateContext(string methodName, Type? responseType = null)
+    [Fact]
+    public async Task InvokeAsync_RequestInputMethodPermission_ShouldOverrideInputTypePermission()
     {
-        var serviceMethod = typeof(TestService).GetMethod(methodName)!;
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "input-type"));
+        var middleware = CreateMiddleware(userContext);
+
+        var deniedContext = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.AllowAnonymousHandler));
+        await middleware.InvokeAsync(deniedContext, new TestRequest(), (_, _, _) => ValueTask.CompletedTask, default);
+
+        var denied = Assert.IsAssignableFrom<IResult>(deniedContext.Response);
+        Assert.Equal("403", denied.ErrorCode);
+
+        userContext.Logout();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "input-method"));
+        var allowedContext = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.AllowAnonymousHandler));
+        var nextCalled = false;
+        await middleware.InvokeAsync(allowedContext, new TestRequest(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Request_ShouldRequireInputAndExecutionPermissions()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "input-method"));
+        var middleware = CreateMiddleware(userContext);
+
+        var deniedContext = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.ExecutePermissionHandler));
+        await middleware.InvokeAsync(deniedContext, new TestRequest(), (_, _, _) => ValueTask.CompletedTask, default);
+
+        var denied = Assert.IsAssignableFrom<IResult>(deniedContext.Response);
+        Assert.Equal("403", denied.ErrorCode);
+
+        userContext.Logout();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(
+            ClaimTypes.Permission, "input-method",
+            ClaimTypes.Permission, "execute-method"));
+        var allowedContext = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.ExecutePermissionHandler));
+        var nextCalled = false;
+        await middleware.InvokeAsync(allowedContext, new TestRequest(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Command_ShouldRequireMessageAndHandlerPermissions()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "message"));
+        var middleware = CreateMiddleware(userContext);
+        var context = CreateCommandContext(typeof(ProtectedCommand), typeof(CommandHandlerWithPermission), nameof(CommandHandlerWithPermission.Handle));
+
+        var nextCalled = false;
+        await middleware.InvokeAsync(context, new ProtectedCommand(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+        Assert.False(nextCalled);
+
+        userContext.Logout();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(
+            ClaimTypes.Permission, "message",
+            ClaimTypes.Permission, "handler"));
+        await middleware.InvokeAsync(context, new ProtectedCommand(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Notification_ShouldRequireMessageAndHandlerPermissions()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(
+            ClaimTypes.Permission, "message",
+            ClaimTypes.Permission, "handler"));
+        var middleware = CreateMiddleware(userContext);
+        var context = CreateNotificationContext(typeof(ProtectedNotification), typeof(NotificationHandlerWithPermission), nameof(NotificationHandlerWithPermission.Handle));
+
+        var nextCalled = false;
+        await middleware.InvokeAsync(context, new ProtectedNotification(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.True(nextCalled);
+    }
+
+    private static RequestInboundContext CreateRequestContext(string serviceMethodName, Type? responseType = null, string? handlerMethodName = null)
+    {
+        var serviceMethod = typeof(TestService).GetMethod(serviceMethodName)!;
+        var handlerMethod = typeof(TestHandler).GetMethod(handlerMethodName ?? nameof(TestHandler.AllowAnonymousHandler))!;
         return new RequestInboundContext
         {
             ServiceType = typeof(TestService),
             ServiceMethodInfo = serviceMethod,
-            HandlerType = typeof(TestService),
-            HandlerMethodInfo = serviceMethod,
+            HandlerType = typeof(TestHandler),
+            HandlerMethodInfo = handlerMethod,
             RequestType = typeof(TestRequest),
-            ResponseType = responseType ?? typeof(Result),
-            Metadata =
-            [
-                .. typeof(TestService).GetCustomAttributes(inherit: true),
-                .. serviceMethod.GetCustomAttributes(inherit: true)
-            ]
+            ResponseType = responseType ?? typeof(Result)
+        };
+    }
+
+    private static CommandInboundContext CreateCommandContext(Type messageType, Type handlerType, string methodName)
+    {
+        return new CommandInboundContext
+        {
+            MethodInfo = handlerType.GetMethod(methodName)!,
+            HandlerType = handlerType,
+            MessageType = messageType
+        };
+    }
+
+    private static NotificationInboundContext CreateNotificationContext(Type messageType, Type handlerType, string methodName)
+    {
+        return new NotificationInboundContext
+        {
+            MethodInfo = handlerType.GetMethod(methodName)!,
+            HandlerType = handlerType,
+            MessageType = messageType
         };
     }
 
     private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext)
-    {
-        var policy = new MetadataRequestAuthorizationPolicy(
-            userContext,
-            NullLogger<MetadataRequestAuthorizationPolicy>.Instance);
-        return new AuthorizationInboundMiddleware([policy]);
-    }
+        => new(userContext, NullLogger<AuthorizationInboundMiddleware>.Instance);
 
     private static ClaimsIdentity CreateAuthenticatedIdentity(params string[] permissionClaims)
     {
@@ -194,7 +195,7 @@ public sealed class AuthorizationInboundMiddlewareTests
         return identity;
     }
 
-    [RequirePermission("permclass")]
+    [RequirePermission("input-type")]
     private sealed class TestService
     {
         [AllowAnonymous]
@@ -203,29 +204,36 @@ public sealed class AuthorizationInboundMiddlewareTests
         [RequirePermission]
         public void LoginOnlyMethod(TestRequest request) { }
 
-        [RequirePermission("permmethod")]
+        [RequirePermission("input-method")]
         public void OverridePermissionMethod(TestRequest request) { }
+    }
+
+    private sealed class TestHandler
+    {
+        [AllowAnonymous]
+        public void AllowAnonymousHandler(TestRequest request) { }
+
+        [RequirePermission("execute-method")]
+        public void ExecutePermissionHandler(TestRequest request) { }
     }
 
     private sealed class TestRequest;
 
-    private sealed class AllowAllAuthorizationPolicy : IRequestAuthorizationPolicy
+    [RequirePermission("message")]
+    private sealed class ProtectedCommand;
+
+    [RequirePermission("message")]
+    private sealed class ProtectedNotification;
+
+    private sealed class CommandHandlerWithPermission
     {
-        public ValueTask<IResult?> AuthorizeAsync(RequestInboundContext context, CancellationToken cancellationToken)
-        {
-            _ = context;
-            _ = cancellationToken;
-            return ValueTask.FromResult<IResult?>(null);
-        }
+        [RequirePermission("handler")]
+        public void Handle(ProtectedCommand command) { }
     }
 
-    private sealed class DenyAllAuthorizationPolicy(string errorCode) : IRequestAuthorizationPolicy
+    private sealed class NotificationHandlerWithPermission
     {
-        public ValueTask<IResult?> AuthorizeAsync(RequestInboundContext context, CancellationToken cancellationToken)
-        {
-            _ = context;
-            _ = cancellationToken;
-            return ValueTask.FromResult<IResult?>(Result.Fail(errorCode, "custom policy denied"));
-        }
+        [RequirePermission("handler")]
+        public void Handle(ProtectedNotification notification) { }
     }
 }

@@ -10,6 +10,8 @@ public sealed class RequestInboundContext : Context
 {
     public IResult? Response { get; private set; }
 
+    public IDictionary<string, string?> ResponseHeaders { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     public required Type ServiceType { get; init; }
 
@@ -22,8 +24,6 @@ public sealed class RequestInboundContext : Context
     public required Type RequestType { get; init; }
 
     public required Type ResponseType { get; init; }
-
-    public IReadOnlyList<object> Metadata { get; init; } = Array.Empty<object>();
 
     public void SetResponse(IResult response)
     {
@@ -49,13 +49,13 @@ public sealed class RequestInboundContext : Context
         : base(items)
     {
         Response = source.Response;
+        ResponseHeaders = new Dictionary<string, string?>(source.ResponseHeaders, StringComparer.OrdinalIgnoreCase);
         ServiceType = source.ServiceType;
         ServiceMethodInfo = source.ServiceMethodInfo;
         HandlerType = source.HandlerType;
         HandlerMethodInfo = source.HandlerMethodInfo;
         RequestType = source.RequestType;
         ResponseType = source.ResponseType;
-        Metadata = source.Metadata;
     }
 
     public RequestInboundContext()
