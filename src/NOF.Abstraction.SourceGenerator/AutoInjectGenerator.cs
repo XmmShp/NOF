@@ -64,10 +64,13 @@ public class AutoInjectGenerator : IIncrementalGenerator
         });
     }
 
-    private const string AutoInjectAttributeFullName = "NOF.Abstraction.AutoInjectAttribute";
+    private const string AutoInjectAttributeFullName = "Microsoft.Extensions.DependencyInjection.AutoInjectAttribute";
 
     private static bool HasAutoInjectAttribute(ISymbol symbol)
-        => symbol.GetAttributes().Any(attr => attr.AttributeClass?.ToDisplayString() == AutoInjectAttributeFullName);
+        => symbol.GetAttributes().Any(IsAutoInjectAttribute);
+
+    private static bool IsAutoInjectAttribute(AttributeData attribute)
+        => attribute.AttributeClass?.ToDisplayString() == AutoInjectAttributeFullName;
 
     private static string GenerateServiceRegistrationExtension(string assemblyName, ImmutableArray<INamedTypeSymbol> serviceClasses)
     {
@@ -110,10 +113,7 @@ public class AutoInjectGenerator : IIncrementalGenerator
 
     private static void GenerateRegistryRegistration(StringBuilder sb, INamedTypeSymbol serviceClass)
     {
-        var attribute = serviceClass.GetAttributes()
-            .FirstOrDefault(attr
-                => attr.AttributeClass is not null
-                   && attr.AttributeClass.ToDisplayString().Equals(AutoInjectAttributeFullName));
+        var attribute = serviceClass.GetAttributes().FirstOrDefault(IsAutoInjectAttribute);
 
         if (attribute is null)
         {

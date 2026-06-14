@@ -1,10 +1,11 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Abstraction;
 using NOF.Abstraction.SourceGenerator;
 using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
+using AutoInjectAttribute = Microsoft.Extensions.DependencyInjection.AutoInjectAttribute;
+using InitializedTypes = NOF.Abstraction.InitializedTypes;
 
 namespace NOF.SourceGenerator.Tests;
 
@@ -15,7 +16,6 @@ public class AutoInjectGeneratorTests
     {
         const string libSource = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF.Abstraction;
             namespace App.Lib
             {
                 public interface ILibSvc { }
@@ -35,7 +35,6 @@ public class AutoInjectGeneratorTests
 
         const string mainSource = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF.Abstraction;
             namespace App
             {
                 public interface IAppSvc { }
@@ -66,7 +65,6 @@ public class AutoInjectGeneratorTests
     {
         const string source = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF.Abstraction;
             namespace App
             {
                 public interface IAppSvc { }
@@ -104,7 +102,6 @@ public class AutoInjectGeneratorTests
     {
         const string source = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF.Abstraction;
             namespace App
             {
                 public interface IMyService { }
@@ -133,7 +130,6 @@ public class AutoInjectGeneratorTests
     {
         const string source = """
             using Microsoft.Extensions.DependencyInjection;
-            using NOF.Abstraction;
             namespace App
             {
                 public interface IFoo { }

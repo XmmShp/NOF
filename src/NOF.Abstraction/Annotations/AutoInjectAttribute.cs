@@ -1,6 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-
-namespace NOF.Abstraction;
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Attribute for marking service classes that should be auto-registered in the DI container.

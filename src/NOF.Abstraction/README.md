@@ -6,7 +6,7 @@ Cross-cutting abstractions package for the [NOF Framework](https://github.com/Xm
 
 Provides shared contracts and annotations intended for use across layers:
 
-- `[AutoInject]`
+- `[AutoInject]` via `Microsoft.Extensions.DependencyInjection`
 - `InMemoryEventHandler<TEvent>` / `IEventPublisher`
 - ambient event publishing helpers via `EventPublisher` and `PublishAsEvent(...)`
 
@@ -30,6 +30,17 @@ For convenience, NOF also exposes an ambient publisher facade:
 
 ```shell
 dotnet add package NOF.Abstraction
+```
+
+## Auto Injection
+
+`[AutoInject]` lives in the official dependency injection namespace so it can be used with `ServiceLifetime` from a single using:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+
+[AutoInject(ServiceLifetime.Scoped)]
+public sealed class MyService : IMyService;
 ```
 
 ## JSON And AOT
