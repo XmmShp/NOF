@@ -77,6 +77,8 @@ public record RevokeRefreshTokenRequest
 public record ValidateRefreshTokenRequest
 {
     public required string RefreshToken { get; set; }
+
+    public string? Audience { get; set; }
 }
 
 public record ValidateRefreshTokenResponse

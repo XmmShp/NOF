@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>${NoWarn};NU1608;CS8620;</NoWarn>
+    <NoWarn>$(NoWarn);NU1608;CS8620</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,8 @@
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>  </ItemGroup>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Application\NOF.Application.csproj" />

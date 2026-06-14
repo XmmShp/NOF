@@ -52,6 +52,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize RabbitMQ consumers");
+            throw;
         }
     }
 
@@ -191,7 +192,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             var messageTypeName = args.BasicProperties.Type;
             if (string.IsNullOrWhiteSpace(messageTypeName))
             {
-                throw new InvalidOperationException("RabbitMQ message type was missing in BasicProperties.Type.");
+                throw new RabbitMQConsumerMessageException(
+                    "RabbitMQ message type was missing in BasicProperties.Type.",
+                    requeue: false);
             }
 
             Dictionary<string, string?>? headers = null;
@@ -221,10 +224,11 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             }
             else
             {
-                var commandType = _typeResolver.Resolve(queueName);
+                var commandType = ResolveCommandType(queueName);
                 var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
-                    ?? throw new InvalidOperationException(
-                        $"Cannot route command '{commandType.Name}'. No matching handler registered.");
+                    ?? throw new RabbitMQConsumerMessageException(
+                        $"Cannot route command '{commandType.Name}'. No matching handler registered.",
+                        requeue: false);
 
                 var messageId = ResolveMessageId(headers);
                 await _inboxMessageStore.EnqueueAsync(
@@ -241,16 +245,46 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling message from queue {QueueName}", queueName);
+            var requeue = ShouldRequeue(ex, _options.Value);
+            _logger.LogError(
+                ex,
+                "Error handling message from queue {QueueName}. Requeue: {Requeue}",
+                queueName,
+                requeue);
             try
             {
-                await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, false);
+                await consumer.Channel.BasicNackAsync(args.DeliveryTag, false, requeue);
             }
             catch
             {
                 // Ignore
             }
         }
+    }
+
+    private Type ResolveCommandType(string queueName)
+    {
+        try
+        {
+            return _typeResolver.Resolve(queueName);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            throw new RabbitMQConsumerMessageException(
+                $"Cannot route command queue '{queueName}'. No matching command type registered.",
+                requeue: false,
+                ex);
+        }
+    }
+
+    internal static bool ShouldRequeue(Exception exception, RabbitMQOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(options);
+
+        return exception is RabbitMQConsumerMessageException messageException
+            ? messageException.Requeue
+            : options.RequeueOnConsumerFailure;
     }
 
     private static string GetMessageExchangeName(Type messageType)

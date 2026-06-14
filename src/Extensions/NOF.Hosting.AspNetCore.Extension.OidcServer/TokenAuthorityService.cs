@@ -83,7 +83,8 @@ public sealed partial class TokenAuthorityService : ITokenService
                 IssuerSigningKeys = (await _signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(static key => key.Key),
                 ValidateIssuer = true,
                 ValidIssuer = _options.Issuer,
-                ValidateAudience = false,
+                ValidateAudience = !string.IsNullOrWhiteSpace(request.Audience),
+                ValidAudience = request.Audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };

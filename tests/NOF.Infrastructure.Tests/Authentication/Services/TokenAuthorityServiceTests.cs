@@ -131,6 +131,43 @@ public sealed class TokenAuthorityServiceTests
         Assert.Equal(JsonValueKind.Number, payload.RootElement.GetProperty("auth_time").ValueKind);
     }
 
+    [Fact]
+    public async Task ValidateRefreshToken_ShouldFail_WhenAudienceDoesNotMatch()
+    {
+        var builder = CreateAuthorityBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims = [new(ClaimTypes.NameIdentifier, "user-1")],
+                RefreshToken = new RefreshTokenOptions
+                {
+                    Expiration = TimeSpan.FromMinutes(10),
+                    Claims = [new(ClaimTypes.NameIdentifier, "user-1")]
+                }
+            },
+            CancellationToken.None);
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+        Assert.NotNull(generateResult.Value.RefreshToken);
+
+        var validateResult = await tokenService.ValidateRefreshTokenAsync(
+            new ValidateRefreshTokenRequest
+            {
+                RefreshToken = generateResult.Value.RefreshToken.Token,
+                Audience = "other-audience"
+            },
+            CancellationToken.None);
+
+        Assert.False(validateResult.IsSuccess);
+    }
+
     private static byte[] Base64UrlDecode(string value)
     {
         var padded = value.Replace('-', '+').Replace('_', '/');

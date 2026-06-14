@@ -57,6 +57,7 @@ public class RabbitMQOptions
     public bool Durable { get; set; } = true;
     public bool AutoDelete { get; set; } = false;
     public ushort PrefetchCount { get; set; } = 1;
+    public bool RequeueOnConsumerFailure { get; set; } = true;
 
     private void ParseConnectionString(string connectionString)
     {

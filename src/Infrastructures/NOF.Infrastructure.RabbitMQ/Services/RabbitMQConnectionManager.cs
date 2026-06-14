@@ -3,7 +3,7 @@ using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
 
-public class RabbitMQConnectionManager : IDisposable
+public class RabbitMQConnectionManager : IDisposable, IAsyncDisposable
 {
     private readonly ConnectionFactory _connectionFactory;
     private readonly SemaphoreSlim _connectionSemaphore = new(1, 1);
@@ -66,6 +66,32 @@ public class RabbitMQConnectionManager : IDisposable
         }
 
         _connectionSemaphore.Wait();
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _connection?.Dispose();
+            _connection = null;
+            _disposed = true;
+        }
+        finally
+        {
+            _connectionSemaphore.Release();
+            _connectionSemaphore.Dispose();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        await _connectionSemaphore.WaitAsync().ConfigureAwait(false);
         try
         {
             if (_disposed)

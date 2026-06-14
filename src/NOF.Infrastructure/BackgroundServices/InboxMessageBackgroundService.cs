@@ -254,6 +254,12 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var now = DateTime.UtcNow;
         var expiresAt = now.Add(claimTimeout);
 
+        await TransactionalMessageRecovery.MarkExpiredExhaustedInboxMessagesAsFailedAsync(
+            dbContext,
+            _options.MaxRetryCount,
+            now,
+            cancellationToken);
+
         var rowsUpdated = await dbContext.Set<NOFInboxMessage>()
             .Where(m => m.Status == InboxMessageStatus.Pending &&
                         m.RetryCount < _options.MaxRetryCount &&

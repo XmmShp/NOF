@@ -1349,6 +1349,143 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public async Task OutboxRecovery_ShouldMarkExpiredExhaustedPendingMessagesAsFailed()
+    {
+        using var services = CreateServiceProvider(new TransactionalMessageOptions
+        {
+            Outbox = new TransactionalMessageProcessorOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) }
+        });
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var expiredId = Guid.NewGuid();
+        var futureId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        db.Set<NOFOutboxMessage>().AddRange(
+            new NOFOutboxMessage
+            {
+                Id = expiredId,
+                RetryCount = 2,
+                PayloadType = typeof(string).AssemblyQualifiedName!,
+                DispatchTypes = "[\"System.String\"]",
+                Payload = System.Text.Encoding.UTF8.GetBytes("expired"),
+                Headers = "{}",
+                MessageType = OutboxMessageType.Command,
+                ClaimedBy = "expired-claim",
+                ClaimExpiresAtUtc = now.AddSeconds(-1)
+            },
+            new NOFOutboxMessage
+            {
+                Id = futureId,
+                RetryCount = 2,
+                PayloadType = typeof(string).AssemblyQualifiedName!,
+                DispatchTypes = "[\"System.String\"]",
+                Payload = System.Text.Encoding.UTF8.GetBytes("future"),
+                Headers = "{}",
+                MessageType = OutboxMessageType.Command,
+                ClaimedBy = "future-claim",
+                ClaimExpiresAtUtc = now.AddMinutes(5)
+            });
+        await db.SaveChangesAsync();
+
+        var changed = await TransactionalMessageRecovery.MarkExpiredExhaustedOutboxMessagesAsFailedAsync(
+            db,
+            maxRetryCount: 2,
+            now,
+            CancellationToken.None);
+
+        Assert.Equal(1, changed);
+
+        using var verify = services.CreateScope();
+        SetTenant(verify.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+        var verifyDb = verify.ServiceProvider.GetRequiredService<TestDbContext>();
+        var expired = await verifyDb.FindAsync<NOFOutboxMessage>([expiredId]);
+        var future = await verifyDb.FindAsync<NOFOutboxMessage>([futureId]);
+
+        Assert.NotNull(expired);
+        Assert.Equal(OutboxMessageStatus.Failed, expired.Status);
+        Assert.Equal("Exceeded max retry count", expired.ErrorMessage);
+        Assert.Null(expired.ClaimedBy);
+        Assert.Null(expired.ClaimExpiresAtUtc);
+        Assert.NotNull(expired.FailedAtUtc);
+
+        Assert.NotNull(future);
+        Assert.Equal(OutboxMessageStatus.Pending, future.Status);
+        Assert.Equal("future-claim", future.ClaimedBy);
+        Assert.NotNull(future.ClaimExpiresAtUtc);
+    }
+
+    [Fact]
+    public async Task InboxRecovery_ShouldMarkExpiredExhaustedPendingMessagesAsFailed()
+    {
+        using var services = CreateServiceProvider(new TransactionalMessageOptions
+        {
+            Inbox = new TransactionalMessageProcessorOptions { MaxRetryCount = 2, ClaimTimeout = TimeSpan.FromMinutes(1) }
+        });
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var expiredId = Guid.NewGuid();
+        var futureId = Guid.NewGuid();
+        var handlerType = typeof(SqliteInMemoryPersistenceTests).AssemblyQualifiedName!;
+        var now = DateTime.UtcNow;
+        db.Set<NOFInboxMessage>().AddRange(
+            new NOFInboxMessage
+            {
+                Id = expiredId,
+                RetryCount = 2,
+                HandlerType = handlerType,
+                PayloadType = typeof(string).AssemblyQualifiedName!,
+                Payload = System.Text.Encoding.UTF8.GetBytes("expired"),
+                Headers = "{}",
+                MessageType = InboxMessageType.Command,
+                ClaimedBy = "expired-claim",
+                ClaimExpiresAtUtc = now.AddSeconds(-1)
+            },
+            new NOFInboxMessage
+            {
+                Id = futureId,
+                RetryCount = 2,
+                HandlerType = handlerType,
+                PayloadType = typeof(string).AssemblyQualifiedName!,
+                Payload = System.Text.Encoding.UTF8.GetBytes("future"),
+                Headers = "{}",
+                MessageType = InboxMessageType.Command,
+                ClaimedBy = "future-claim",
+                ClaimExpiresAtUtc = now.AddMinutes(5)
+            });
+        await db.SaveChangesAsync();
+
+        var changed = await TransactionalMessageRecovery.MarkExpiredExhaustedInboxMessagesAsFailedAsync(
+            db,
+            maxRetryCount: 2,
+            now,
+            CancellationToken.None);
+
+        Assert.Equal(1, changed);
+
+        using var verify = services.CreateScope();
+        SetTenant(verify.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+        var verifyDb = verify.ServiceProvider.GetRequiredService<TestDbContext>();
+        var expired = await verifyDb.FindAsync<NOFInboxMessage>([expiredId, handlerType]);
+        var future = await verifyDb.FindAsync<NOFInboxMessage>([futureId, handlerType]);
+
+        Assert.NotNull(expired);
+        Assert.Equal(InboxMessageStatus.Failed, expired.Status);
+        Assert.Equal("Exceeded max retry count", expired.ErrorMessage);
+        Assert.Null(expired.ClaimedBy);
+        Assert.Null(expired.ClaimExpiresAtUtc);
+        Assert.NotNull(expired.FailedAtUtc);
+
+        Assert.NotNull(future);
+        Assert.Equal(InboxMessageStatus.Pending, future.Status);
+        Assert.Equal("future-claim", future.ClaimedBy);
+        Assert.NotNull(future.ClaimExpiresAtUtc);
+    }
+
+    [Fact]
     public async Task StateMachineRepository_ShouldIsolateDataByTenant()
     {
         using var services = CreateServiceProvider(tenantMode: TenantMode.DatabasePerTenant);

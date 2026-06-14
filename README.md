@@ -158,7 +158,7 @@ If metadata is missing, NOF now throws a framework-specific error that includes 
 The test layout is organized by package category:
 
 - Core and host package tests: `tests/NOF.*.Tests`
-- Extension package tests: `tests/Extensions/NOF.*.Tests`
+- Extension package tests: currently colocated with the closest infrastructure or host package tests
 - Infrastructure provider tests: `tests/Infrastructures/NOF.*.Tests`
 - Shared test utilities: `tests/Common/*`
 - Source generator tests are colocated with parent package tests when practical

@@ -20,10 +20,13 @@ builder.AddRabbitMQ(options =>
 {
     options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
     options.PrefetchCount = 8;
+    options.RequeueOnConsumerFailure = true;
 });
 ```
 
 You can configure RabbitMQ either through `ConnectionString` or the individual `HostName`, `Port`, `UserName`, `Password`, and `VirtualHost` properties on `RabbitMQOptions`.
+
+Consumer failures caused by transient infrastructure errors are requeued by default. Poison messages that cannot be routed by NOF, such as messages missing type metadata, are rejected without requeueing.
 
 ## Dependencies
 

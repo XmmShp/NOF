@@ -11,6 +11,7 @@ This package provides NOF authentication authority capabilities and exposes them
 - `AddAuthenticationAuthority(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, and key rotation
 - `AddOidcServer(...)` registers the OIDC protocol services required by the HTTP surface
 - `MapOidcServer()` exposes discovery, authorization, token, userinfo, and JWKS endpoints
+- Supports `authorization_code`, `refresh_token`, and `client_credentials` grants
 - Uses standard ASP.NET Core HTTP behavior for redirects, form posts, status codes, and JSON responses
 
 ## Usage
@@ -35,11 +36,14 @@ builder.AddOidcServer(options =>
 
 builder.Services.AddScoped<IOAuthAuthorizationHandler, YourAuthorizationHandler>();
 builder.Services.AddScoped<IOAuthSubjectService, YourSubjectService>();
+builder.Services.AddScoped<IOAuthClientStore, YourOAuthClientStore>();
 
 var app = await builder.BuildAsync();
 app.MapOidcServer();
 await app.RunAsync();
 ```
+
+Register `IOAuthClientStore` when using the `client_credentials` grant. The store validates `client_secret_basic` or `client_secret_post` credentials and returns the allowed scopes and access-token claims for the client.
 
 ## License
 

@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>${NoWarn};NU1608;CS8620;</NoWarn>
+    <NoWarn>$(NoWarn);NU1608;CS8620</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +18,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Moq" />  </ItemGroup>
+    <PackageReference Include="Moq" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />

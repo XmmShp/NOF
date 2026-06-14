@@ -255,6 +255,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         var now = DateTime.UtcNow;
         var expiresAt = now.Add(timeout);
 
+        await TransactionalMessageRecovery.MarkExpiredExhaustedOutboxMessagesAsFailedAsync(
+            dbContext,
+            _options.MaxRetryCount,
+            now,
+            cancellationToken);
+
         var rowsUpdated = await dbContext.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Pending &&
                         m.RetryCount < _options.MaxRetryCount &&

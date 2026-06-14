@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure;
@@ -76,6 +78,48 @@ public sealed class AuthenticationExtensionsTests
         Assert.Equal("https://issuer.local/oauth2", scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value.Issuer);
         Assert.Null(scope.Services.GetService<IOAuthAuthorizationHandler>());
         Assert.Null(scope.Services.GetService<IOAuthSubjectService>());
+    }
+
+    [Fact]
+    public async Task ClientCredentialsGrant_ShouldIssueAccessTokenWithoutRefreshToken()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientStore>(new TestOAuthClientStore())
+            .BuildServiceProvider();
+        var tokenService = new TestTokenService();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = "client_credentials",
+            ClientId = "service-a",
+            ClientSecret = "secret-a",
+            Scope = "jobs.read jobs.write"
+        };
+
+        var result = await NOFOidcServerExtensions.TokenFromClientCredentialsAsync(
+            httpContext.Request,
+            request,
+            services,
+            tokenService,
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal("access-token", result.Value.AccessToken);
+        Assert.Null(result.Value.RefreshToken);
+        Assert.Equal("jobs.read jobs.write", result.Value.Scope);
+        Assert.Equal("jobs-api", tokenService.LastRequest?.Audience);
+        Assert.Null(tokenService.LastRequest?.RefreshToken);
+        Assert.Contains(tokenService.LastRequest!.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Subject && claim.Value == "service-a");
+        Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == "client_id" && claim.Value == "service-a");
     }
 
     [Fact]
@@ -297,5 +341,46 @@ public sealed class AuthenticationExtensionsTests
             .WithOptions(static (optionsBuilder, databaseConnectionString) => optionsBuilder.UseSqlite(databaseConnectionString));
 
         return builder;
+    }
+
+    private sealed class TestOAuthClientStore : IOAuthClientStore
+    {
+        public ValueTask<OAuthClientCredentialsValidationResult> ValidateClientCredentialsAsync(
+            OAuthClientCredentialsValidationRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (request is { ClientId: "service-a", ClientSecret: "secret-a" })
+            {
+                return ValueTask.FromResult<OAuthClientCredentialsValidationResult>(
+                    new OAuthClientCredentialsValidationResult.Success(
+                        request.ClientId,
+                        request.RequestedScopes,
+                        [new("client_id", request.ClientId)]));
+            }
+
+            return ValueTask.FromResult<OAuthClientCredentialsValidationResult>(
+                new OAuthClientCredentialsValidationResult.Failure("invalid_client", "client credentials are invalid."));
+        }
+    }
+
+    private sealed class TestTokenService : ITokenService
+    {
+        public IssueTokenRequest? LastRequest { get; private set; }
+
+        public Task<Result<IssueTokenResponse>> IssueTokenAsync(IssueTokenRequest request, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return Task.FromResult(Result.Success(new IssueTokenResponse
+            {
+                AccessToken = "access-token",
+                AccessTokenExpiresAtUtc = DateTime.UtcNow.Add(request.AccessTokenExpiration)
+            }));
+        }
+
+        public Task<Result<ValidateRefreshTokenResponse>> ValidateRefreshTokenAsync(ValidateRefreshTokenRequest request, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<Result> RevokeRefreshTokenAsync(RevokeRefreshTokenRequest request, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
     }
 }

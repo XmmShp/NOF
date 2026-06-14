@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="NOF.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />

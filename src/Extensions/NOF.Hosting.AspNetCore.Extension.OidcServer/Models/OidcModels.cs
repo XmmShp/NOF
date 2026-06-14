@@ -74,7 +74,7 @@ public sealed record OAuthTokenEndpointResponse
     public required long ExpiresIn { get; init; }
 
     [JsonPropertyName("refresh_token")]
-    public required string RefreshToken { get; init; }
+    public string? RefreshToken { get; init; }
 
     [JsonPropertyName("scope")]
     public required string Scope { get; init; }

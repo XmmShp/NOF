@@ -108,7 +108,9 @@ public static partial class NOFOidcServerExtensions
     }
 
     private static async Task<AspNetResult> TokenAsync(
+        HttpRequest httpRequest,
         [FromForm] OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
         ICacheService cacheService,
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
@@ -128,6 +130,13 @@ public static partial class NOFOidcServerExtensions
                 authorityOptions.Value,
                 oauthOptions.Value,
                 cancellationToken).ConfigureAwait(false),
+            "client_credentials" => await TokenFromClientCredentialsAsync(
+                httpRequest,
+                request,
+                serviceProvider,
+                tokenService,
+                oauthOptions.Value,
+                cancellationToken).ConfigureAwait(false),
             "refresh_token" => await TokenFromRefreshTokenAsync(
                 request,
                 subjectService,
@@ -136,7 +145,7 @@ public static partial class NOFOidcServerExtensions
                 authorityOptions.Value,
                 oauthOptions.Value,
                 cancellationToken).ConfigureAwait(false),
-            _ => Fail("unsupported_grant_type", "Only authorization_code and refresh_token are supported.")
+            _ => Fail("unsupported_grant_type", "Only authorization_code, client_credentials, and refresh_token are supported.")
         };
 
         return result.IsSuccess
@@ -149,6 +158,7 @@ public static partial class NOFOidcServerExtensions
         IOAuthSubjectService subjectService,
         ISigningKeyService signingKeyService,
         IOptions<AuthenticationAuthorityOptions> authorityOptions,
+        IOptions<OAuthAuthorizationServerOptions> oauthOptions,
         CancellationToken cancellationToken)
     {
         var accessToken = await ResolveBearerTokenAsync(httpRequest, cancellationToken).ConfigureAwait(false);
@@ -156,6 +166,7 @@ public static partial class NOFOidcServerExtensions
             accessToken,
             signingKeyService,
             authorityOptions.Value,
+            oauthOptions.Value.AccessTokenAudience,
             cancellationToken).ConfigureAwait(false);
         var subject = principal?.FindFirst(OAuthClaimTypes.Subject)?.Value
             ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -284,7 +295,11 @@ public static partial class NOFOidcServerExtensions
         }
 
         var validateResult = await tokenService.ValidateRefreshTokenAsync(
-            new ValidateRefreshTokenRequest { RefreshToken = request.RefreshToken },
+            new ValidateRefreshTokenRequest
+            {
+                RefreshToken = request.RefreshToken,
+                Audience = oauthOptions.AccessTokenAudience
+            },
             cancellationToken).ConfigureAwait(false);
         if (!validateResult.IsSuccess)
         {
@@ -402,6 +417,78 @@ public static partial class NOFOidcServerExtensions
         };
     }
 
+    internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromClientCredentialsAsync(
+        HttpRequest httpRequest,
+        OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
+        ITokenService tokenService,
+        OAuthAuthorizationServerOptions oauthOptions,
+        CancellationToken cancellationToken)
+    {
+        var clientStore = serviceProvider.GetService<IOAuthClientStore>();
+        if (clientStore is null)
+        {
+            return Fail("server_error", "OAuth client credentials store is not registered.");
+        }
+
+        var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (string.IsNullOrWhiteSpace(clientCredentials.ClientId))
+        {
+            return Fail("invalid_client", "client_id is required.");
+        }
+
+        var requestedScopes = ParseScopes(request.Scope);
+        var validation = await clientStore.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                clientCredentials.ClientId,
+                clientCredentials.ClientSecret,
+                requestedScopes,
+                clientCredentials.AuthenticationMethod),
+            cancellationToken).ConfigureAwait(false);
+
+        if (validation is OAuthClientCredentialsValidationResult.Failure failure)
+        {
+            return Fail(failure.Error, failure.ErrorDescription);
+        }
+
+        if (validation is not OAuthClientCredentialsValidationResult.Success success)
+        {
+            return Fail("invalid_client", "client credentials are invalid.");
+        }
+
+        var scopes = success.Scopes.Count == 0 ? requestedScopes : success.Scopes;
+        var scopeText = string.Join(' ', scopes.OrderBy(static value => value, StringComparer.Ordinal));
+        var accessClaims = success.AccessTokenClaims
+            .Select(static claim => new TokenClaim(claim.Key, claim.Value))
+            .ToList();
+        if (accessClaims.All(static claim => claim.Type != OAuthClaimTypes.Subject))
+        {
+            accessClaims.Insert(0, new TokenClaim(OAuthClaimTypes.Subject, success.Subject));
+        }
+        accessClaims.Add(new TokenClaim(OAuthClaimTypes.Scope, scopeText));
+
+        var issueResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = oauthOptions.AccessTokenAudience,
+                AccessTokenExpiration = oauthOptions.AccessTokenExpiration,
+                AccessClaims = accessClaims.ToArray()
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (!issueResult.IsSuccess)
+        {
+            return Fail(issueResult.ErrorCode, issueResult.Message);
+        }
+
+        return Result.Success(new OAuthTokenEndpointResponse
+        {
+            AccessToken = issueResult.Value.AccessToken,
+            TokenType = "Bearer",
+            ExpiresIn = (long)oauthOptions.AccessTokenExpiration.TotalSeconds,
+            Scope = scopeText
+        });
+    }
+
     private static async ValueTask<string?> GenerateIdTokenAsync(
         ISigningKeyService signingKeyService,
         AuthenticationAuthorityOptions authorityOptions,
@@ -455,6 +542,7 @@ public static partial class NOFOidcServerExtensions
         string token,
         ISigningKeyService signingKeyService,
         AuthenticationAuthorityOptions options,
+        string audience,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -472,7 +560,8 @@ public static partial class NOFOidcServerExtensions
                     IssuerSigningKeys = (await signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(static key => key.Key),
                     ValidateIssuer = !string.IsNullOrWhiteSpace(options.Issuer),
                     ValidIssuer = options.Issuer,
-                    ValidateAudience = false,
+                    ValidateAudience = !string.IsNullOrWhiteSpace(audience),
+                    ValidAudience = audience,
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30)
                 },
@@ -561,7 +650,7 @@ public static partial class NOFOidcServerExtensions
             UserInfoEndpoint = $"{issuer}/userinfo",
             JwksUri = $"{issuer}/.well-known/jwks.json",
             ResponseTypesSupported = ["code"],
-            GrantTypesSupported = ["authorization_code", "refresh_token"],
+            GrantTypesSupported = ["authorization_code", "client_credentials", "refresh_token"],
             TokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
             SubjectTypesSupported = ["public"],
             IdTokenSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256],
@@ -696,6 +785,50 @@ public static partial class NOFOidcServerExtensions
 
     private static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static (string ClientId, string? ClientSecret, string AuthenticationMethod) ResolveClientCredentials(
+        HttpRequest httpRequest,
+        OAuthTokenRequest request)
+    {
+        if (TryResolveBasicClientCredentials(httpRequest.Headers.Authorization.ToString(), out var basicCredentials))
+        {
+            return (basicCredentials.ClientId, basicCredentials.ClientSecret, "client_secret_basic");
+        }
+
+        return (request.ClientId, EmptyToNull(request.ClientSecret), "client_secret_post");
+    }
+
+    private static bool TryResolveBasicClientCredentials(
+        string authorization,
+        out (string ClientId, string? ClientSecret) credentials)
+    {
+        credentials = default;
+        const string prefix = "Basic ";
+        if (string.IsNullOrWhiteSpace(authorization)
+            || !authorization.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(authorization[prefix.Length..].Trim()));
+            var separatorIndex = decoded.IndexOf(':', StringComparison.Ordinal);
+            if (separatorIndex < 0)
+            {
+                return false;
+            }
+
+            credentials = (
+                Uri.UnescapeDataString(decoded[..separatorIndex]),
+                Uri.UnescapeDataString(decoded[(separatorIndex + 1)..]));
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
 
     private static string AddQueryString(string uri, IReadOnlyDictionary<string, string?> query)
     {

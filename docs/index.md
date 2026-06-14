@@ -14,6 +14,9 @@
 - **Modular Pipeline** - Dependency-aware registration and initialization steps.
 - **OpenTelemetry** - Built-in tracing, metrics, and logging integration.
 - **Redis Cache** - Optional Redis-backed `ICacheService` via `NOF.Infrastructure.StackExchangeRedis`.
+- **RabbitMQ Transport** - Optional command and notification transport via `NOF.Infrastructure.RabbitMQ`.
+- **OIDC Server** - Optional authorization server endpoints with authorization code, refresh token, and client credentials grants.
+- **UI & Test Helpers** - Blazor UI primitives and test-host utilities for application integration tests.
 
 ## Getting Started
 
@@ -23,6 +26,16 @@ Install the core packages from NuGet:
 dotnet add package NOF.Hosting.AspNetCore
 dotnet add package NOF.Infrastructure
 dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+```
+
+Optional packages include:
+
+```bash
+dotnet add package NOF.Hosting.AspNetCore.Extension.OidcServer
+dotnet add package NOF.Infrastructure.RabbitMQ
+dotnet add package NOF.Infrastructure.StackExchangeRedis
+dotnet add package NOF.UI
+dotnet add package NOF.Test
 ```
 
 ## API Reference

@@ -20,8 +20,23 @@ public sealed class TypeResolver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
 
-        return _types.TryGetValue(typeName, out var type)
-            ? type
-            : throw new InvalidOperationException($"type '{typeName}' is not registered.");
+        if (_types.TryGetValue(typeName, out var type))
+        {
+            return type;
+        }
+
+        type = Type.GetType(typeName, throwOnError: false)
+            ?? AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Select(assembly => assembly.GetType(typeName, throwOnError: false))
+                .FirstOrDefault(static resolvedType => resolvedType is not null);
+        if (type is not null)
+        {
+            Register(type);
+            _types.TryAdd(typeName, type);
+            return type;
+        }
+
+        throw new InvalidOperationException($"type '{typeName}' is not registered.");
     }
 }
