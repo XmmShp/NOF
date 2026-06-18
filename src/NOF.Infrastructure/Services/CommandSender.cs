@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
@@ -10,14 +9,14 @@ public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
     private readonly IReadOnlyList<ICommandOutboundMiddleware> _middlewares;
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
 
     public CommandSender(
         ICommandRider rider,
         IEnumerable<ICommandOutboundMiddleware> middlewares,
-        DbContext dbContext,
+        IDbContext dbContext,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {

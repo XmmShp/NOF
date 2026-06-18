@@ -6,12 +6,12 @@ namespace NOF.Infrastructure;
 public sealed class MemoryNotificationRider : INotificationRider
 {
     private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
-    private readonly InboxMessageStore _inboxMessageStore;
+    private readonly IInboxMessageStore _inboxMessageStore;
     private readonly TypeResolver _typeResolver;
 
     public MemoryNotificationRider(
         NotificationHandlerRegistry notificationHandlerRegistry,
-        InboxMessageStore inboxMessageStore,
+        IInboxMessageStore inboxMessageStore,
         TypeResolver typeResolver)
     {
         _notificationHandlerRegistry = notificationHandlerRegistry;

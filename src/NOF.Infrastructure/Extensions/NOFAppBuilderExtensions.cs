@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -8,7 +7,6 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
 
@@ -37,7 +35,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<CurrentTenant>();
             builder.Services.TryAddScoped<ICurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
             builder.Services.TryAddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
-            builder.Services.TryAddSingleton<InboxMessageStore>();
+            builder.Services.TryAddSingleton<IInboxMessageStore, NoOpInboxMessageStore>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
             builder.Environment.BindConfiguration(builder.Configuration);
 
@@ -54,10 +52,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
 
-            builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
-            builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
-            builder.Services.TryAddScoped<IDbContext>(sp => new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
-
             #endregion
 
             #region Options
@@ -70,7 +64,6 @@ public static partial class NOFInfrastructureExtensions
                         null,
                         validateAllProperties: true),
                     "SnowflakeIdGeneratorOptions is invalid.");
-            builder.Services.AddOptions<DbContextConfigurationOptions>();
             builder.Services.AddOptions<TransactionalMessageOptions>();
             #endregion
 
@@ -130,42 +123,8 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<MemoryCacheServiceRiderState>()));
             builder.Services.TryAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
-            builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();
-
-
-            builder.UseDbContext<NOFDbContext>()
-                .WithConnectionString("Data Source=nof-sqlite-memory-{tenantId};Mode=Memory;Cache=Shared")
-                .WithTenantMode(TenantMode.DatabasePerTenant)
-                .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
-
             #endregion
 
-            return builder;
-        }
-
-        public EFCoreSelector UseDbContext<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>()
-            where TDbContext : NOFDbContext
-        {
-            builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>();
-            builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, DbContextFactory<TDbContext>>();
-            builder.Services.ReplaceOrAddScoped<INOFDbContextFactory>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
-            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
-            builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
-            builder.Services.ReplaceOrAddScoped<IDbContext>(sp => new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
-            if (typeof(TDbContext) != typeof(NOFDbContext))
-            {
-                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
-            }
-
-            return new EFCoreSelector(builder, typeof(TDbContext));
-        }
-
-        public INOFAppBuilder AddDbContextModelCreating(Action<ModelBuilder> configure)
-        {
-            ArgumentNullException.ThrowIfNull(configure);
-
-            builder.Services.AddSingleton<INOFDbContextModelCreatingContributor>(
-                new DelegateDbContextModelCreatingContributor(configure));
             return builder;
         }
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace NOF.Infrastructure;
 
@@ -72,8 +73,31 @@ internal sealed class EfCoreDbSetAdapter<TEntity> : AsyncQueryable<TEntity>, IDb
 
 internal sealed class EfCoreAsyncQueryExecutor : IAsyncQueryExecutor
 {
+    private static readonly MethodInfo ApplyConstantSetPropertyMethod = typeof(EfCoreAsyncQueryExecutor)
+        .GetMethod(nameof(ApplyConstantSetProperty), BindingFlags.NonPublic | BindingFlags.Static)!;
+    private static readonly MethodInfo ApplyComputedSetPropertyMethod = typeof(EfCoreAsyncQueryExecutor)
+        .GetMethod(nameof(ApplyComputedSetProperty), BindingFlags.NonPublic | BindingFlags.Static)!;
+
     public IAsyncEnumerable<TSource> AsAsyncEnumerable<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
         => source.AsAsyncEnumerable();
+
+    public Task<int> ExecuteDeleteAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+        => EntityFrameworkQueryableExtensions.ExecuteDeleteAsync(source, cancellationToken);
+
+    public Task<int> ExecuteUpdateAsync<TSource>(IQueryable<TSource> source, IUpdateSetters<TSource> setters, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(setters);
+
+        if (setters.SetPropertyCalls.Count == 0)
+        {
+            throw new InvalidOperationException("At least one property assignment is required for batch update operations.");
+        }
+
+        return EntityFrameworkQueryableExtensions.ExecuteUpdateAsync(
+            source,
+            efSetters => ApplySetters(efSetters, setters),
+            cancellationToken);
+    }
 
     public Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
         => EntityFrameworkQueryableExtensions.ToListAsync(source, cancellationToken);
@@ -150,4 +174,50 @@ internal sealed class EfCoreAsyncQueryExecutor : IAsyncQueryExecutor
     public Task<double?> AverageAsync(IQueryable<double?> source, CancellationToken cancellationToken = default) => EntityFrameworkQueryableExtensions.AverageAsync(source, cancellationToken);
     public Task<decimal> AverageAsync(IQueryable<decimal> source, CancellationToken cancellationToken = default) => EntityFrameworkQueryableExtensions.AverageAsync(source, cancellationToken);
     public Task<decimal?> AverageAsync(IQueryable<decimal?> source, CancellationToken cancellationToken = default) => EntityFrameworkQueryableExtensions.AverageAsync(source, cancellationToken);
+
+    private static Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> ApplySetters<TSource>(
+        Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> efSetters,
+        IUpdateSetters<TSource> setters)
+    {
+        foreach (var setPropertyCall in setters.SetPropertyCalls)
+        {
+            efSetters = ApplySetPropertyCall(efSetters, setPropertyCall);
+        }
+
+        return efSetters;
+    }
+
+    private static Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> ApplySetPropertyCall<TSource>(
+        Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> efSetters,
+        UpdateSetPropertyCall<TSource> setPropertyCall)
+    {
+        ArgumentNullException.ThrowIfNull(setPropertyCall);
+
+        var propertyType = setPropertyCall.PropertyExpression.ReturnType;
+
+        return setPropertyCall switch
+        {
+            ConstantUpdateSetPropertyCall<TSource> constant => (Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource>)ApplyConstantSetPropertyMethod
+                .MakeGenericMethod(typeof(TSource), propertyType)
+                .Invoke(null, [efSetters, constant.PropertyExpression, constant.Value])!,
+            ComputedUpdateSetPropertyCall<TSource> computed => (Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource>)ApplyComputedSetPropertyMethod
+                .MakeGenericMethod(typeof(TSource), propertyType)
+                .Invoke(null, [efSetters, computed.PropertyExpression, computed.ValueExpression])!,
+            _ => throw new NotSupportedException($"Unsupported update setter type '{setPropertyCall.GetType().FullName}'.")
+        };
+    }
+
+    private static Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> ApplyConstantSetProperty<TSource, TProperty>(
+        Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> efSetters,
+        LambdaExpression propertyExpression,
+        object? value)
+        => efSetters.SetProperty((Expression<Func<TSource, TProperty>>)propertyExpression, value is null ? default! : (TProperty)value);
+
+    private static Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> ApplyComputedSetProperty<TSource, TProperty>(
+        Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<TSource> efSetters,
+        LambdaExpression propertyExpression,
+        LambdaExpression valueExpression)
+        => efSetters.SetProperty(
+            (Expression<Func<TSource, TProperty>>)propertyExpression,
+            (Expression<Func<TSource, TProperty>>)valueExpression);
 }

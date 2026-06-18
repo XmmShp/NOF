@@ -66,9 +66,10 @@ public sealed class RevokedRefreshTokenCleanupBackgroundService : BackgroundServ
         scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
         var now = DateTime.UtcNow;
-        var deletedCount = await dbContext.Set<RevokedRefreshToken>()
+        var expiredTokens = dbContext.Set<RevokedRefreshToken>()
             .Where(token => token.ExpiresAtUtc <= now)
-            .ExecuteDeleteAsync(cancellationToken);
+            ;
+        var deletedCount = await EntityFrameworkQueryableExtensions.ExecuteDeleteAsync(expiredTokens, cancellationToken);
 
         if (deletedCount > 0)
         {

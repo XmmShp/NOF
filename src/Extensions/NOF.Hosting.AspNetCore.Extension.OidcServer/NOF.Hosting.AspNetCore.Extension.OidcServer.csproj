@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\Hostings\NOF.Hosting.AspNetCore\NOF.Hosting.AspNetCore.csproj" />
     <ProjectReference Include="..\..\NOF.Hosting.SourceGenerator\NOF.Hosting.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

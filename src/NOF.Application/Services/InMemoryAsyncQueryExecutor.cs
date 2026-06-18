@@ -21,6 +21,19 @@ public sealed class InMemoryAsyncQueryExecutor : IAsyncQueryExecutor
         return EnumerateSync(source, cancellationToken);
     }
 
+    public Task<int> ExecuteDeleteAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        throw new NotSupportedException("The current query provider does not support set-based delete operations.");
+    }
+
+    public Task<int> ExecuteUpdateAsync<TSource>(IQueryable<TSource> source, IUpdateSetters<TSource> setters, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(setters);
+        throw new NotSupportedException("The current query provider does not support set-based update operations.");
+    }
+
     public async Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
         var result = new List<TSource>();

@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
@@ -66,9 +66,14 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+        var dbContext = scope.ServiceProvider.GetService<IDbContext>();
+        if (dbContext is null)
+        {
+            _logger.LogDebug("Skipping inbox cleanup because no IDbContext provider is registered.");
+            return;
+        }
         var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
-        var deletedCount = await dbContext.NOFInboxMessages
+        var deletedCount = await dbContext.Set<NOFInboxMessage>()
             .Where(m => m.Status == InboxMessageStatus.Processed)
             .Where(m => m.ProcessedAtUtc != null && m.ProcessedAtUtc < olderThan)
             .ExecuteDeleteAsync(cancellationToken);

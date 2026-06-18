@@ -53,11 +53,12 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
     public async Task RotateKeyAsync(CancellationToken cancellationToken = default)
     {
         var cutoff = DateTime.UtcNow - _options.RevokedSigningKeyRetention;
-        await _dbContext.Set<PersistedSigningKey>()
+        var revokedKeys = _dbContext.Set<PersistedSigningKey>()
             .Where(key => key.Status == PersistedSigningKeyStatus.Revoked
                 && key.InvalidatedAtUtc != null
                 && key.InvalidatedAtUtc <= cutoff)
-            .ExecuteDeleteAsync(cancellationToken)
+            ;
+        await EntityFrameworkQueryableExtensions.ExecuteDeleteAsync(revokedKeys, cancellationToken)
             .ConfigureAwait(false);
 
         await EnsurePrimaryKeysPersistedAsync(cancellationToken).ConfigureAwait(false);
@@ -65,12 +66,13 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
         EnsureEncryptionKeyInitialized();
 
         var now = DateTime.UtcNow;
-        var activeAndPublished = await _dbContext.Set<PersistedSigningKey>()
+        var activeAndPublishedQuery = _dbContext.Set<PersistedSigningKey>()
             .Where(key => key.Status == PersistedSigningKeyStatus.Active
                 || key.Status == PersistedSigningKeyStatus.NextActive
                 || key.Status == PersistedSigningKeyStatus.Retired)
             .OrderByDescending(key => key.CreatedAtUtc)
-            .ToListAsync(cancellationToken)
+            ;
+        var activeAndPublished = await EntityFrameworkQueryableExtensions.ToListAsync(activeAndPublishedQuery, cancellationToken)
             .ConfigureAwait(false);
 
         EnsurePrimaryKeys(activeAndPublished, now);
@@ -111,7 +113,7 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
     {
         EnsureEncryptionKeyInitialized();
 
-        var persistedKeys = await _dbContext.Set<PersistedSigningKey>()
+        var persistedKeysQuery = _dbContext.Set<PersistedSigningKey>()
             .AsNoTracking()
             .Where(key => key.Status == PersistedSigningKeyStatus.Active
                 || key.Status == PersistedSigningKeyStatus.NextActive
@@ -119,7 +121,8 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
             .OrderBy(key => key.Status == PersistedSigningKeyStatus.Active ? 0 :
                 key.Status == PersistedSigningKeyStatus.NextActive ? 1 : 2)
             .ThenByDescending(key => key.CreatedAtUtc)
-            .ToListAsync(cancellationToken)
+            ;
+        var persistedKeys = await EntityFrameworkQueryableExtensions.ToListAsync(persistedKeysQuery, cancellationToken)
             .ConfigureAwait(false);
 
         if (persistedKeys.Count == 0)
@@ -141,12 +144,13 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
         EnsureEncryptionKeyInitialized();
 
         var now = DateTime.UtcNow;
-        var keys = await _dbContext.Set<PersistedSigningKey>()
+        var keysQuery = _dbContext.Set<PersistedSigningKey>()
             .Where(key => key.Status == PersistedSigningKeyStatus.Active
                 || key.Status == PersistedSigningKeyStatus.NextActive
                 || key.Status == PersistedSigningKeyStatus.Retired)
             .OrderByDescending(key => key.CreatedAtUtc)
-            .ToListAsync(cancellationToken)
+            ;
+        var keys = await EntityFrameworkQueryableExtensions.ToListAsync(keysQuery, cancellationToken)
             .ConfigureAwait(false);
         var hasChanges = EnsurePrimaryKeys(keys, now);
         if (!hasChanges)
@@ -162,13 +166,17 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
         {
             _dbContext.ChangeTracker.Clear();
 
-            var initialized = await _dbContext.Set<PersistedSigningKey>()
+            var initializedQuery = _dbContext.Set<PersistedSigningKey>()
                 .AsNoTracking()
-                .AnyAsync(key => key.Status == PersistedSigningKeyStatus.Active, cancellationToken)
+                .Where(key => key.Status == PersistedSigningKeyStatus.Active)
+                ;
+            var initialized = await EntityFrameworkQueryableExtensions.AnyAsync(initializedQuery, cancellationToken)
                 .ConfigureAwait(false);
-            var prepared = await _dbContext.Set<PersistedSigningKey>()
+            var preparedQuery = _dbContext.Set<PersistedSigningKey>()
                 .AsNoTracking()
-                .AnyAsync(key => key.Status == PersistedSigningKeyStatus.NextActive, cancellationToken)
+                .Where(key => key.Status == PersistedSigningKeyStatus.NextActive)
+                ;
+            var prepared = await EntityFrameworkQueryableExtensions.AnyAsync(preparedQuery, cancellationToken)
                 .ConfigureAwait(false);
             if (initialized && prepared)
             {

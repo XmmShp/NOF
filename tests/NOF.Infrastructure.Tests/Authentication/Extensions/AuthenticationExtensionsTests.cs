@@ -137,14 +137,14 @@ public sealed class AuthenticationExtensionsTests
             var dbContext = scope.GetRequiredService<NOFDbContext>();
 
             firstKid = (await signingKeyService.GetCurrentSigningKeyAsync()).Kid;
-            var initializedKeys = await dbContext.Set<PersistedSigningKey>().AsNoTracking().ToListAsync();
+            var initializedKeys = await EntityFrameworkQueryableExtensions.ToListAsync(dbContext.Set<PersistedSigningKey>().AsNoTracking());
 
             Assert.Single(initializedKeys, key => key.Status == PersistedSigningKeyStatus.Active);
             Assert.Single(initializedKeys, key => key.Status == PersistedSigningKeyStatus.NextActive);
 
             await signingKeyService.RotateKeyAsync();
             rotatedKid = (await signingKeyService.GetCurrentSigningKeyAsync()).Kid;
-            var rotatedKeys = await dbContext.Set<PersistedSigningKey>().AsNoTracking().ToListAsync();
+            var rotatedKeys = await EntityFrameworkQueryableExtensions.ToListAsync(dbContext.Set<PersistedSigningKey>().AsNoTracking());
 
             Assert.NotEqual(firstKid, rotatedKid);
             Assert.Contains(dbContext.Set<PersistedSigningKey>(), key => !string.IsNullOrWhiteSpace(key.PublicKey));
@@ -159,7 +159,7 @@ public sealed class AuthenticationExtensionsTests
             var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
             var dbContext = scope.GetRequiredService<NOFDbContext>();
             var allKeys = await signingKeyService.GetAllKeysAsync();
-            var persistedKeys = await dbContext.Set<PersistedSigningKey>().AsNoTracking().ToListAsync();
+            var persistedKeys = await EntityFrameworkQueryableExtensions.ToListAsync(dbContext.Set<PersistedSigningKey>().AsNoTracking());
 
             Assert.Equal(rotatedKid, (await signingKeyService.GetCurrentSigningKeyAsync()).Kid);
             Assert.Contains(allKeys, key => key.Kid == firstKid);

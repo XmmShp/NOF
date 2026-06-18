@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,8 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using HostOnlyAttribute = NOF.Application.HostOnlyAttribute;
+using EFQuery = Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
@@ -16,6 +19,28 @@ namespace NOF.Infrastructure.Tests.Persistence;
 
 public class SqliteInMemoryPersistenceTests
 {
+    private static Task<TSource> SingleAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
+        => EFQuery.SingleAsync(source, cancellationToken);
+
+    private static Task<TSource> SingleAsync<TSource>(
+        IQueryable<TSource> source,
+        Expression<Func<TSource, bool>> predicate,
+        CancellationToken cancellationToken = default)
+        => EFQuery.SingleAsync(source, predicate, cancellationToken);
+
+    private static Task<TSource?> SingleOrDefaultAsync<TSource>(
+        IQueryable<TSource> source,
+        Expression<Func<TSource, bool>> predicate,
+        CancellationToken cancellationToken = default)
+        => EFQuery.SingleOrDefaultAsync(source, predicate, cancellationToken);
+
+    private static Task<List<TSource>> ToListAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
+        => EFQuery.ToListAsync(source, cancellationToken);
+
     [Fact]
     public async Task UseDbContext_NonGeneric_ShouldRegisterDefaultNOFDbContext()
     {
@@ -149,7 +174,7 @@ public class SqliteInMemoryPersistenceTests
         });
         await db.SaveChangesAsync();
 
-        var stored = await db.Set<DynamicAuditEntry>().SingleAsync(e => e.Id == 1);
+        var stored = await SingleAsync(db.Set<DynamicAuditEntry>(), e => e.Id == 1);
         Assert.Equal("created from options", stored.Message);
     }
 
@@ -271,7 +296,7 @@ public class SqliteInMemoryPersistenceTests
         });
         await db.SaveChangesAsync();
 
-        var stored = await db.Set<DynamicAuditEntry>().SingleAsync(e => e.Id == 2);
+        var stored = await SingleAsync(db.Set<DynamicAuditEntry>(), e => e.Id == 2);
         Assert.Equal("created from contributor", stored.Message);
     }
 
@@ -420,13 +445,13 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        Assert.Null(await verifyDb.Set<TestOrder>().SingleOrDefaultAsync(e => e.Id == 10));
+        Assert.Null(await SingleOrDefaultAsync(verifyDb.Set<TestOrder>(), e => e.Id == 10));
 
-        var deletedAtUtc = await verifyDb.Set<TestOrder>()
-            .IgnoreQueryFilters()
-            .Where(e => e.Id == 10)
-            .Select(e => EF.Property<DateTime?>(e, "__DeletedAtUtc"))
-            .SingleAsync();
+        var deletedAtUtc = await SingleAsync(
+            verifyDb.Set<TestOrder>()
+                .IgnoreQueryFilters()
+                .Where(e => e.Id == 10)
+                .Select(e => EF.Property<DateTime?>(e, "__DeletedAtUtc")));
 
         Assert.NotNull(deletedAtUtc);
     }
@@ -448,28 +473,27 @@ public class SqliteInMemoryPersistenceTests
             "item-b"));
         await db.SaveChangesAsync();
 
-        var order = await db.Set<TestOrderWithOwned>()
-            .SingleAsync(e => e.Id == 12);
+        var order = await SingleAsync(db.Set<TestOrderWithOwned>(), e => e.Id == 12);
 
         db.Remove(order);
         await db.SaveChangesAsync();
 
-        Assert.Null(await db.Set<TestOrderWithOwned>().SingleOrDefaultAsync(e => e.Id == 12));
+        Assert.Null(await SingleOrDefaultAsync(db.Set<TestOrderWithOwned>(), e => e.Id == 12));
 
         using var verifyScope = services.CreateScope();
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var deletedOrder = await verifyDb.Set<TestOrderWithOwned>()
-            .IgnoreQueryFilters()
-            .Where(e => e.Id == 12)
-            .Select(e => new
-            {
-                DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
-                DetailCode = e.RequiredDetail.Code,
-                ItemNames = e.Items.OrderBy(i => i.Id).Select(i => i.Name).ToList()
-            })
-            .SingleAsync();
+        var deletedOrder = await SingleAsync(
+            verifyDb.Set<TestOrderWithOwned>()
+                .IgnoreQueryFilters()
+                .Where(e => e.Id == 12)
+                .Select(e => new
+                {
+                    DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
+                    DetailCode = e.RequiredDetail.Code,
+                    ItemNames = e.Items.OrderBy(i => i.Id).Select(i => i.Name).ToList()
+                }));
 
         Assert.NotNull(deletedOrder.DeletedAtUtc);
         Assert.Equal("required-detail", deletedOrder.DetailCode);
@@ -522,38 +546,37 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var order = await db.Set<TestOrderWithNestedOwned>()
-            .SingleAsync(e => e.Id == 13);
+        var order = await SingleAsync(db.Set<TestOrderWithNestedOwned>(), e => e.Id == 13);
 
         db.Remove(order);
         await db.SaveChangesAsync();
 
-        Assert.Null(await db.Set<TestOrderWithNestedOwned>().SingleOrDefaultAsync(e => e.Id == 13));
+        Assert.Null(await SingleOrDefaultAsync(db.Set<TestOrderWithNestedOwned>(), e => e.Id == 13));
 
         using var verifyScope = services.CreateScope();
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var deletedOrder = await verifyDb.Set<TestOrderWithNestedOwned>()
-            .IgnoreQueryFilters()
-            .Where(e => e.Id == 13)
-            .Select(e => new
-            {
-                DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
-                DetailCode = e.RequiredDetail.Code,
-                DetailLeafCode = e.RequiredDetail.RequiredLeaf.Code,
-                DetailNotes = e.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
-                Items = e.Items
-                    .OrderBy(i => i.Id)
-                    .Select(i => new
-                    {
-                        i.Name,
-                        SnapshotCode = i.Snapshot.Code,
-                        Tags = i.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
-                    })
-                    .ToList()
-            })
-            .SingleAsync();
+        var deletedOrder = await SingleAsync(
+            verifyDb.Set<TestOrderWithNestedOwned>()
+                .IgnoreQueryFilters()
+                .Where(e => e.Id == 13)
+                .Select(e => new
+                {
+                    DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
+                    DetailCode = e.RequiredDetail.Code,
+                    DetailLeafCode = e.RequiredDetail.RequiredLeaf.Code,
+                    DetailNotes = e.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
+                    Items = e.Items
+                        .OrderBy(i => i.Id)
+                        .Select(i => new
+                        {
+                            i.Name,
+                            SnapshotCode = i.Snapshot.Code,
+                            Tags = i.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
+                        })
+                        .ToList()
+                }));
 
         Assert.NotNull(deletedOrder.DeletedAtUtc);
         Assert.Equal("detail-code", deletedOrder.DetailCode);
@@ -585,8 +608,7 @@ public class SqliteInMemoryPersistenceTests
         db.Set<TestIncludeParent>().Add(parent);
         await db.SaveChangesAsync();
 
-        var childToDelete = await db.Set<TestIncludeChild>()
-            .SingleAsync(c => c.Id == 202);
+        var childToDelete = await SingleAsync(db.Set<TestIncludeChild>(), c => c.Id == 202);
         db.Remove(childToDelete);
         await db.SaveChangesAsync();
 
@@ -594,18 +616,19 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var visibleParent = await verifyDb.Set<TestIncludeParent>()
-            .Include(p => p.Children)
-            .SingleAsync(p => p.Id == 20);
+        var visibleParent = await SingleAsync(
+            verifyDb.Set<TestIncludeParent>()
+                .Include(p => p.Children),
+            p => p.Id == 20);
 
         Assert.Single(visibleParent.Children);
         Assert.Equal("child-active", visibleParent.Children[0].Name);
 
-        var allChildren = await verifyDb.Set<TestIncludeParent>()
-            .IgnoreQueryFilters()
-            .Include(p => p.Children)
-            .Where(p => p.Id == 20)
-            .SingleAsync();
+        var allChildren = await SingleAsync(
+            verifyDb.Set<TestIncludeParent>()
+                .IgnoreQueryFilters()
+                .Include(p => p.Children)
+                .Where(p => p.Id == 20));
 
         Assert.Equal(["child-active", "child-deleted"], allChildren.Children.OrderBy(c => c.Id).Select(c => c.Name).ToList());
     }
@@ -626,8 +649,7 @@ public class SqliteInMemoryPersistenceTests
         db.Set<TestIncludeParent>().Add(parent);
         await db.SaveChangesAsync();
 
-        var parentToDelete = await db.Set<TestIncludeParent>()
-            .SingleAsync(p => p.Id == 21);
+        var parentToDelete = await SingleAsync(db.Set<TestIncludeParent>(), p => p.Id == 21);
         db.Remove(parentToDelete);
         await db.SaveChangesAsync();
 
@@ -635,19 +657,20 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var visibleChild = await verifyDb.Set<TestIncludeChild>()
-            .Include(c => c.Parent)
-            .SingleAsync(c => c.Id == 211);
+        var visibleChild = await SingleAsync(
+            verifyDb.Set<TestIncludeChild>()
+                .Include(c => c.Parent),
+            c => c.Id == 211);
 
-        var deletedParent = await verifyDb.Set<TestIncludeParent>()
-            .IgnoreQueryFilters()
-            .Where(p => p.Id == 21)
-            .Select(p => new
-            {
-                DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
-                p.Name
-            })
-            .SingleAsync();
+        var deletedParent = await SingleAsync(
+            verifyDb.Set<TestIncludeParent>()
+                .IgnoreQueryFilters()
+                .Where(p => p.Id == 21)
+                .Select(p => new
+                {
+                    DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                    p.Name
+                }));
 
         Assert.Equal(21, visibleChild.ParentId);
         Assert.Null(visibleChild.Parent);
@@ -675,8 +698,7 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var childToDelete = await db.Set<TestIncludeOwnedChild>()
-            .SingleAsync(c => c.Id == 302);
+        var childToDelete = await SingleAsync(db.Set<TestIncludeOwnedChild>(), c => c.Id == 302);
         db.Remove(childToDelete);
         await db.SaveChangesAsync();
 
@@ -684,13 +706,14 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
-            .Include(p => p.Children)
-                .ThenInclude(c => c.RequiredProfile)
-                    .ThenInclude(p => p.RequiredLeaf)
-            .Include(p => p.Children)
-                .ThenInclude(c => c.Tags)
-            .SingleAsync(p => p.Id == 30);
+        var parent = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedParent>()
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.RequiredProfile)
+                        .ThenInclude(p => p.RequiredLeaf)
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.Tags),
+            p => p.Id == 30);
 
         Assert.Equal("parent-detail-30", parent.RequiredDetail.Code);
         Assert.Equal(["parent-note-30-a", "parent-note-30-b"], parent.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList());
@@ -721,8 +744,7 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var childToDelete = await db.Set<TestIncludeOwnedChild>()
-            .SingleAsync(c => c.Id == 312);
+        var childToDelete = await SingleAsync(db.Set<TestIncludeOwnedChild>(), c => c.Id == 312);
         db.Remove(childToDelete);
         await db.SaveChangesAsync();
 
@@ -730,14 +752,15 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
-            .IgnoreQueryFilters()
-            .Include(p => p.Children)
-                .ThenInclude(c => c.RequiredProfile)
-                    .ThenInclude(p => p.RequiredLeaf)
-            .Include(p => p.Children)
-                .ThenInclude(c => c.Tags)
-            .SingleAsync(p => p.Id == 31);
+        var parent = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedParent>()
+                .IgnoreQueryFilters()
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.RequiredProfile)
+                        .ThenInclude(p => p.RequiredLeaf)
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.Tags),
+            p => p.Id == 31);
 
         Assert.Equal("parent-detail-31", parent.RequiredDetail.Code);
         Assert.Equal(["parent-note-31"], parent.RequiredDetail.Notes.Select(n => n.Message).ToList());
@@ -766,8 +789,7 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
-            .SingleAsync(p => p.Id == 32);
+        var parentToDelete = await SingleAsync(db.Set<TestIncludeOwnedParent>(), p => p.Id == 32);
         db.Remove(parentToDelete);
         await db.SaveChangesAsync();
 
@@ -775,23 +797,24 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var child = await verifyDb.Set<TestIncludeOwnedChild>()
-            .Include(c => c.Parent)
-            .Include(c => c.RequiredProfile)
-                .ThenInclude(p => p.RequiredLeaf)
-            .Include(c => c.Tags)
-            .SingleAsync(c => c.Id == 321);
+        var child = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedChild>()
+                .Include(c => c.Parent)
+                .Include(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf)
+                .Include(c => c.Tags),
+            c => c.Id == 321);
 
-        var deletedParent = await verifyDb.Set<TestIncludeOwnedParent>()
-            .IgnoreQueryFilters()
-            .Where(p => p.Id == 32)
-            .Select(p => new
-            {
-                DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
-                DetailCode = p.RequiredDetail.Code,
-                Notes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList()
-            })
-            .SingleAsync();
+        var deletedParent = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedParent>()
+                .IgnoreQueryFilters()
+                .Where(p => p.Id == 32)
+                .Select(p => new
+                {
+                    DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                    DetailCode = p.RequiredDetail.Code,
+                    Notes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList()
+                }));
 
         Assert.Equal(32, child.ParentId);
         Assert.Null(child.Parent);
@@ -823,13 +846,11 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var childToDelete = await db.Set<TestIncludeOwnedChild>()
-            .SingleAsync(c => c.Id == 332);
+        var childToDelete = await SingleAsync(db.Set<TestIncludeOwnedChild>(), c => c.Id == 332);
         db.Remove(childToDelete);
         await db.SaveChangesAsync();
 
-        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
-            .SingleAsync(p => p.Id == 33);
+        var parentToDelete = await SingleAsync(db.Set<TestIncludeOwnedParent>(), p => p.Id == 33);
         db.Remove(parentToDelete);
         await db.SaveChangesAsync();
 
@@ -837,15 +858,16 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .Include(p => p.Children)
-                .ThenInclude(c => c.RequiredProfile)
-                    .ThenInclude(p => p.RequiredLeaf)
-            .Include(p => p.Children)
-                .ThenInclude(c => c.Tags)
-            .SingleAsync(p => p.Id == 33);
+        var parent = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedParent>()
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.RequiredProfile)
+                        .ThenInclude(p => p.RequiredLeaf)
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.Tags),
+            p => p.Id == 33);
 
         Assert.Equal("parent-detail-33", parent.RequiredDetail.Code);
         Assert.Equal(["parent-note-33-a", "parent-note-33-b"], parent.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList());
@@ -881,13 +903,14 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var child = await verifyDb.Set<TestIncludeOwnedChild>()
-            .Include(c => c.Parent)
-                .ThenInclude(p => p!.RequiredDetail)
-                    .ThenInclude(d => d.Notes)
-            .Include(c => c.RequiredProfile)
-                .ThenInclude(p => p.RequiredLeaf)
-            .SingleAsync(c => c.Id == 341);
+        var child = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedChild>()
+                .Include(c => c.Parent)
+                    .ThenInclude(p => p!.RequiredDetail)
+                        .ThenInclude(d => d.Notes)
+                .Include(c => c.RequiredProfile)
+                    .ThenInclude(p => p.RequiredLeaf),
+            c => c.Id == 341);
 
         Assert.NotNull(child.Parent);
         Assert.Equal("parent-34", child.Parent.Name);
@@ -917,12 +940,10 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var childToDelete = await db.Set<TestIncludeOwnedChild>()
-            .SingleAsync(c => c.Id == 352);
+        var childToDelete = await SingleAsync(db.Set<TestIncludeOwnedChild>(), c => c.Id == 352);
         db.Remove(childToDelete);
 
-        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
-            .SingleAsync(p => p.Id == 35);
+        var parentToDelete = await SingleAsync(db.Set<TestIncludeOwnedParent>(), p => p.Id == 35);
         db.Remove(parentToDelete);
         await db.SaveChangesAsync();
 
@@ -930,15 +951,16 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var parent = await verifyDb.Set<TestIncludeOwnedParent>()
-            .IgnoreQueryFilters()
-            .AsSplitQuery()
-            .Include(p => p.Children)
-                .ThenInclude(c => c.RequiredProfile)
-                    .ThenInclude(p => p.RequiredLeaf)
-            .Include(p => p.Children)
-                .ThenInclude(c => c.Tags)
-            .SingleAsync(p => p.Id == 35);
+        var parent = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedParent>()
+                .IgnoreQueryFilters()
+                .AsSplitQuery()
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.RequiredProfile)
+                        .ThenInclude(p => p.RequiredLeaf)
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.Tags),
+            p => p.Id == 35);
 
         Assert.Equal("parent-detail-35", parent.RequiredDetail.Code);
         Assert.Equal(["child-351", "child-352"], parent.Children.OrderBy(c => c.Id).Select(c => c.Name).ToList());
@@ -965,8 +987,7 @@ public class SqliteInMemoryPersistenceTests
             ]));
         await db.SaveChangesAsync();
 
-        var parentToDelete = await db.Set<TestIncludeOwnedParent>()
-            .SingleAsync(p => p.Id == 36);
+        var parentToDelete = await SingleAsync(db.Set<TestIncludeOwnedParent>(), p => p.Id == 36);
         db.Remove(parentToDelete);
         await db.SaveChangesAsync();
 
@@ -974,27 +995,27 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var projection = await verifyDb.Set<TestIncludeOwnedParent>()
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .Where(p => p.Id == 36)
-            .Select(p => new
-            {
-                DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
-                DetailCode = p.RequiredDetail.Code,
-                ParentNotes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
-                Children = p.Children
-                    .OrderBy(c => c.Id)
-                    .Select(c => new
-                    {
-                        c.Name,
-                        ProfileCode = c.RequiredProfile.Code,
-                        LeafCode = c.RequiredProfile.RequiredLeaf.Code,
-                        Tags = c.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
-                    })
-                    .ToList()
-            })
-            .SingleAsync();
+        var projection = await SingleAsync(
+            verifyDb.Set<TestIncludeOwnedParent>()
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(p => p.Id == 36)
+                .Select(p => new
+                {
+                    DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                    DetailCode = p.RequiredDetail.Code,
+                    ParentNotes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
+                    Children = p.Children
+                        .OrderBy(c => c.Id)
+                        .Select(c => new
+                        {
+                            c.Name,
+                            ProfileCode = c.RequiredProfile.Code,
+                            LeafCode = c.RequiredProfile.RequiredLeaf.Code,
+                            Tags = c.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
+                        })
+                        .ToList()
+                }));
 
         Assert.NotNull(projection.DeletedAtUtc);
         Assert.Equal("parent-detail-36", projection.DetailCode);
@@ -1027,8 +1048,7 @@ public class SqliteInMemoryPersistenceTests
                 ]));
             await tenantADb.SaveChangesAsync();
 
-            var childToDelete = await tenantADb.Set<TestIncludeOwnedChild>()
-                .SingleAsync(c => c.Id == 412);
+            var childToDelete = await SingleAsync(tenantADb.Set<TestIncludeOwnedChild>(), c => c.Id == 412);
             tenantADb.Remove(childToDelete);
             await tenantADb.SaveChangesAsync();
         }
@@ -1053,13 +1073,14 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(verifyTenantAScope.ServiceProvider, "tenanta");
         var verifyTenantADb = verifyTenantAScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var tenantAParent = await verifyTenantADb.Set<TestIncludeOwnedParent>()
-            .Include(p => p.Children)
-                .ThenInclude(c => c.RequiredProfile)
-                    .ThenInclude(p => p.RequiredLeaf)
-            .Include(p => p.Children)
-                .ThenInclude(c => c.Tags)
-            .SingleAsync(p => p.Id == 41);
+        var tenantAParent = await SingleAsync(
+            verifyTenantADb.Set<TestIncludeOwnedParent>()
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.RequiredProfile)
+                        .ThenInclude(p => p.RequiredLeaf)
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.Tags),
+            p => p.Id == 41);
 
         Assert.Equal("tenant-a-detail", tenantAParent.RequiredDetail.Code);
         Assert.Single(tenantAParent.Children);
@@ -1067,25 +1088,26 @@ public class SqliteInMemoryPersistenceTests
         Assert.Equal("tenant-a-profile-active", tenantAParent.Children[0].RequiredProfile.Code);
         Assert.Equal("tenant-a-leaf-active", tenantAParent.Children[0].RequiredProfile.RequiredLeaf.Code);
         Assert.Equal(["tenant-a-tag-active"], tenantAParent.Children[0].Tags.Select(t => t.Name).ToList());
-        Assert.Null(await verifyTenantADb.Set<TestIncludeOwnedParent>().SingleOrDefaultAsync(p => p.Id == 42));
+        Assert.Null(await SingleOrDefaultAsync(verifyTenantADb.Set<TestIncludeOwnedParent>(), p => p.Id == 42));
 
         using var verifyTenantBScope = services.CreateScope();
         SetTenant(verifyTenantBScope.ServiceProvider, "tenantb");
         var verifyTenantBDb = verifyTenantBScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var tenantBParent = await verifyTenantBDb.Set<TestIncludeOwnedParent>()
-            .Include(p => p.Children)
-                .ThenInclude(c => c.RequiredProfile)
-                    .ThenInclude(p => p.RequiredLeaf)
-            .Include(p => p.Children)
-                .ThenInclude(c => c.Tags)
-            .SingleAsync(p => p.Id == 42);
+        var tenantBParent = await SingleAsync(
+            verifyTenantBDb.Set<TestIncludeOwnedParent>()
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.RequiredProfile)
+                        .ThenInclude(p => p.RequiredLeaf)
+                .Include(p => p.Children)
+                    .ThenInclude(c => c.Tags),
+            p => p.Id == 42);
 
         Assert.Equal("tenant-b-detail", tenantBParent.RequiredDetail.Code);
         Assert.Single(tenantBParent.Children);
         Assert.Equal("tenant-b-child", tenantBParent.Children[0].Name);
         Assert.Equal("tenant-b-profile", tenantBParent.Children[0].RequiredProfile.Code);
-        Assert.Null(await verifyTenantBDb.Set<TestIncludeOwnedParent>().SingleOrDefaultAsync(p => p.Id == 41));
+        Assert.Null(await SingleOrDefaultAsync(verifyTenantBDb.Set<TestIncludeOwnedParent>(), p => p.Id == 41));
     }
 
     [Fact]
@@ -1109,8 +1131,7 @@ public class SqliteInMemoryPersistenceTests
                 ]));
             await tenantADb.SaveChangesAsync();
 
-            var childToDelete = await tenantADb.Set<TestIncludeOwnedChild>()
-                .SingleAsync(c => c.Id == 432);
+            var childToDelete = await SingleAsync(tenantADb.Set<TestIncludeOwnedChild>(), c => c.Id == 432);
             tenantADb.Remove(childToDelete);
             await tenantADb.SaveChangesAsync();
         }
@@ -1119,25 +1140,25 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(hostScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var hostDb = hostScope.ServiceProvider.GetRequiredService<TestDbContext>();
 
-        var tenantAProjection = await hostDb.Set<TestIncludeOwnedParent>()
-            .IgnoreQueryFilters()
-            .AsSplitQuery()
-            .Where(p => p.Id == 43)
-            .Select(p => new
-            {
-                DetailCode = p.RequiredDetail.Code,
-                Children = p.Children
-                    .OrderBy(c => c.Id)
-                    .Select(c => new
-                    {
-                        c.Name,
-                        ProfileCode = c.RequiredProfile.Code,
-                        LeafCode = c.RequiredProfile.RequiredLeaf.Code,
-                        Tags = c.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
-                    })
-                    .ToList()
-            })
-            .SingleAsync();
+        var tenantAProjection = await SingleAsync(
+            hostDb.Set<TestIncludeOwnedParent>()
+                .IgnoreQueryFilters()
+                .AsSplitQuery()
+                .Where(p => p.Id == 43)
+                .Select(p => new
+                {
+                    DetailCode = p.RequiredDetail.Code,
+                    Children = p.Children
+                        .OrderBy(c => c.Id)
+                        .Select(c => new
+                        {
+                            c.Name,
+                            ProfileCode = c.RequiredProfile.Code,
+                            LeafCode = c.RequiredProfile.RequiredLeaf.Code,
+                            Tags = c.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList()
+                        })
+                        .ToList()
+                }));
 
         Assert.Equal("tenant-a-detail-43", tenantAProjection.DetailCode);
         Assert.Equal(["tenant-a-child-431", "tenant-a-child-432"], tenantAProjection.Children.Select(c => c.Name).ToList());
@@ -1164,7 +1185,7 @@ public class SqliteInMemoryPersistenceTests
         db.Set<TestOrder>().Remove(order);
         await db.SaveChangesAsync();
 
-        Assert.Null(await db.Set<TestOrder>().IgnoreQueryFilters().SingleOrDefaultAsync(e => e.Id == 11));
+        Assert.Null(await SingleOrDefaultAsync(db.Set<TestOrder>().IgnoreQueryFilters(), e => e.Id == 11));
     }
 
     [Fact]
@@ -1218,11 +1239,11 @@ public class SqliteInMemoryPersistenceTests
 
         var claimLockId = Guid.NewGuid().ToString();
         var claimExpiresAt = DateTime.UtcNow.AddMinutes(1);
-        var claimed = await db.Set<NOFOutboxMessage>()
-            .Where(m => m.Status == OutboxMessageStatus.Pending && m.RetryCount < 100)
-            .OrderBy(m => m.CreatedAtUtc)
-            .Take(100)
-            .ToListAsync();
+        var claimed = await ToListAsync(
+            db.Set<NOFOutboxMessage>()
+                .Where(m => m.Status == OutboxMessageStatus.Pending && m.RetryCount < 100)
+                .OrderBy(m => m.CreatedAtUtc)
+                .Take(100));
         foreach (var message in claimed)
         {
             message.RetryCount++;
@@ -1297,11 +1318,11 @@ public class SqliteInMemoryPersistenceTests
 
         await db.SaveChangesAsync();
 
-        var claimed = await db.Set<NOFOutboxMessage>()
-            .Where(m => m.Status == OutboxMessageStatus.Pending &&
-                        m.RetryCount < 2 &&
-                        (m.ClaimedBy == null || m.ClaimExpiresAtUtc == null || m.ClaimExpiresAtUtc <= DateTime.UtcNow))
-            .ToListAsync();
+        var claimed = await ToListAsync(
+            db.Set<NOFOutboxMessage>()
+                .Where(m => m.Status == OutboxMessageStatus.Pending &&
+                            m.RetryCount < 2 &&
+                            (m.ClaimedBy == null || m.ClaimExpiresAtUtc == null || m.ClaimExpiresAtUtc <= DateTime.UtcNow)));
         Assert.Empty(claimed);
     }
 
@@ -1329,7 +1350,7 @@ public class SqliteInMemoryPersistenceTests
         });
         await db.SaveChangesAsync();
 
-        var claimed = await db.Set<NOFOutboxMessage>().ToListAsync();
+        var claimed = await ToListAsync(db.Set<NOFOutboxMessage>());
         claimed[0].RetryCount++;
         claimed[0].ErrorMessage = "boom";
         claimed[0].FailedAtUtc = DateTime.UtcNow;
@@ -1390,8 +1411,9 @@ public class SqliteInMemoryPersistenceTests
             });
         await db.SaveChangesAsync();
 
+        var appDb = scope.ServiceProvider.GetRequiredService<NOF.Application.IDbContext>();
         var changed = await TransactionalMessageRecovery.MarkExpiredExhaustedOutboxMessagesAsFailedAsync(
-            db,
+            appDb,
             maxRetryCount: 2,
             now,
             CancellationToken.None);
@@ -1459,8 +1481,9 @@ public class SqliteInMemoryPersistenceTests
             });
         await db.SaveChangesAsync();
 
+        var appDb = scope.ServiceProvider.GetRequiredService<NOF.Application.IDbContext>();
         var changed = await TransactionalMessageRecovery.MarkExpiredExhaustedInboxMessagesAsFailedAsync(
-            db,
+            appDb,
             maxRetryCount: 2,
             now,
             CancellationToken.None);
@@ -1530,7 +1553,7 @@ public class SqliteInMemoryPersistenceTests
         db.Set<TestOrder>().Add(TestOrder.Create(7, "before"));
         await db.SaveChangesAsync();
 
-        var tracked = await db.Set<TestOrder>().SingleAsync(order => order.Id == 7);
+        var tracked = await SingleAsync(db.Set<TestOrder>(), order => order.Id == 7);
         tracked.Raise(new TestEvent("tracked-query"));
 
         var changeCount = await db.SaveChangesAsync();
@@ -1553,7 +1576,7 @@ public class SqliteInMemoryPersistenceTests
         db.Set<TestOrder>().Add(TestOrder.Create(8, "before"));
         await db.SaveChangesAsync();
 
-        var detached = await db.Set<TestOrder>().AsNoTracking().SingleAsync(order => order.Id == 8);
+        var detached = await SingleAsync(db.Set<TestOrder>().AsNoTracking(), order => order.Id == 8);
         detached.Raise(new TestEvent("detached-query"));
 
         var changeCount = await db.SaveChangesAsync();

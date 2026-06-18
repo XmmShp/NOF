@@ -8,10 +8,8 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 
 - builder defaults and step orchestration
 - in-memory cache and messaging riders
-- EF Core integration through `UseDbContext<TDbContext>()`
 - OpenTelemetry registration and transport middleware
 - JWT resource server validation and command/notification token propagation
-- tenant-aware `NOFDbContext` support
 - builder-scoped `TypeResolver`
 - ambient `IMapper` / `IIdGenerator` activation through scoped `IDaemonService`
 
@@ -34,9 +32,9 @@ This package includes:
 - in-memory cache (`ICacheService` + `MemoryCacheServiceRider`)
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-process event publisher (`IEventPublisher`)
-- EF Core infrastructure primitives (`NOFDbContext`, outbox/inbox entities, tenant-aware model customization, `NOFDbContextFactory`)
+- database-agnostic persistence abstractions (`IDbContext`, `IDbSet<T>`, async query extensions)
+- outbox / inbox entities and transactional message background services
 - JWT resource server primitives (`AddAuthenticationResourceServer`, JWKS fetching/cache, inbound token validation)
-- SQLite-based default persistence used by infrastructure defaults
 
 The default in-memory cache implementation is isolated per NOF host:
 
@@ -44,9 +42,11 @@ The default in-memory cache implementation is isolated per NOF host:
 - local `GetOrSetAsync(...)` locks live in `CacheServiceLocalLockState`
 - both are registered as DI singletons instead of process-wide `static` state
 
-## EF Core
+## Persistence Providers
 
-Built-in EF Core support is configured through `UseDbContext<TDbContext>()` and `EFCoreSelector`:
+`NOF.Infrastructure` no longer ships a built-in EF Core implementation. Database persistence is provided by adapter packages such as `NOF.Infrastructure.EntityFrameworkCore`.
+
+After adding the EF Core package, persistence is configured through `UseDbContext<TDbContext>()` and `EFCoreSelector`:
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
@@ -85,8 +85,7 @@ builder.UseDbContext<AppDbContext>()
 
 ## In-Memory SQLite
 
-For tests or lightweight local scenarios, you can use the built-in default SQLite memory configuration that ships with `AddInfrastructureDefaults()`.
-If you need a custom app `DbContext`, configure it explicitly with `UseDbContext<TDbContext>()`.
+For tests or lightweight local scenarios, `NOF.Infrastructure.EntityFrameworkCore` provides `AddEntityFrameworkCoreDefaults()` to register the default SQLite in-memory persistence.
 
 ## License
 

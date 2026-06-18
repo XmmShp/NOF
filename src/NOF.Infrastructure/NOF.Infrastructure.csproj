@@ -5,7 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <!-- EFCore is not AOT-compatible today; keep AOT claims off for NOF.Infrastructure once integrated. -->
     <IsAotCompatible>false</IsAotCompatible>
 
     <PackageId>NOF.Infrastructure</PackageId>
@@ -13,9 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />

@@ -14,7 +14,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly IOptions<RabbitMQOptions> _options;
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
     private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
-    private readonly InboxMessageStore _inboxMessageStore;
+    private readonly IInboxMessageStore _inboxMessageStore;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly TypeResolver _typeResolver;
@@ -28,7 +28,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         CommandHandlerRegistry commandHandlerRegistry,
         NotificationHandlerRegistry notificationHandlerRegistry,
         IHostEnvironment hostEnvironment,
-        InboxMessageStore inboxMessageStore,
+        IInboxMessageStore inboxMessageStore,
         TypeResolver typeResolver,
         ILogger<RabbitMQConsumerHostedService> logger)
     {

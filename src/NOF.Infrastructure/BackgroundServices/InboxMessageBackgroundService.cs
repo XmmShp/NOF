@@ -1,9 +1,9 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
+using NOF.Application;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -66,7 +66,12 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var dbContext = scope.ServiceProvider.GetService<IDbContext>();
+        if (dbContext is null)
+        {
+            _logger.LogDebug("Skipping inbox processing because no IDbContext provider is registered.");
+            return;
+        }
 
         var pendingMessages = await AtomicClaimPendingMessagesAsync(dbContext, _options.BatchSize, _options.ClaimTimeout, cancellationToken)
             .ToListAsync(cancellationToken);
@@ -168,7 +173,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
         var processedAt = DateTime.UtcNow;
 
         await dbContext.Set<NOFInboxMessage>()
@@ -186,7 +191,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
 
         await dbContext.Set<NOFInboxMessage>()
             .Where(m => m.Id == messageId && m.HandlerType == handlerType && m.Status == InboxMessageStatus.Pending)
@@ -207,7 +212,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
         var failedAt = DateTime.UtcNow;
 
         await dbContext.Set<NOFInboxMessage>()
@@ -240,7 +245,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     }
 
     private async IAsyncEnumerable<NOFInboxMessage> AtomicClaimPendingMessagesAsync(
-        DbContext dbContext,
+        IDbContext dbContext,
         int batchSize,
         TimeSpan claimTimeout,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -277,10 +282,10 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             yield break;
         }
 
-        var claimedQuery = dbContext.Set<NOFInboxMessage>()
+        var claimed = await dbContext.Set<NOFInboxMessage>()
             .AsNoTracking()
-            .Where(m => m.ClaimedBy == lockId);
-        var claimed = await EntityFrameworkQueryableExtensions.ToListAsync(claimedQuery, cancellationToken);
+            .Where(m => m.ClaimedBy == lockId)
+            .ToListAsync(cancellationToken);
 
         foreach (var msgFromDb in claimed)
         {

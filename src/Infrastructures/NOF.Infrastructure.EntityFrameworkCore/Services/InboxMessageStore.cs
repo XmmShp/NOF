@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
-public sealed class InboxMessageStore
+public sealed class InboxMessageStore : IInboxMessageStore
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<InboxMessageStore> _logger;
@@ -28,7 +29,7 @@ public sealed class InboxMessageStore
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
 
         var inboxMessage = new NOFInboxMessage
         {

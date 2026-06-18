@@ -5,6 +5,7 @@ namespace NOF.Application.Tests;
 public class QueryableAsyncExtensionsTests
 {
     private sealed record Order(int Id, decimal Amount);
+    private sealed record Product(int Id, string Name);
 
     [Fact]
     public async Task ToListAsync_ShouldFallbackToSyncQueryable()
@@ -84,5 +85,30 @@ public class QueryableAsyncExtensionsTests
         var result = await query.AllAsync(value => value > 0);
 
         Assert.True(result);
+    }
+
+    [Fact]
+    public async Task ExecuteDeleteAsync_ShouldThrow_WhenProviderDoesNotSupportSetBasedDelete()
+    {
+        var query = new[]
+        {
+            new Product(1, "A"),
+            new Product(2, "B")
+        }.AsQueryable();
+
+        await Assert.ThrowsAsync<NotSupportedException>(() => query.ExecuteDeleteAsync());
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_ShouldThrow_WhenProviderDoesNotSupportSetBasedUpdate()
+    {
+        var query = new[]
+        {
+            new Product(1, "A"),
+            new Product(2, "B")
+        }.AsQueryable();
+
+        await Assert.ThrowsAsync<NotSupportedException>(() => query.ExecuteUpdateAsync(
+            setters => setters.SetProperty(product => product.Name, "Updated")));
     }
 }

@@ -6,12 +6,12 @@ namespace NOF.Infrastructure;
 public sealed class MemoryCommandRider : ICommandRider
 {
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
-    private readonly InboxMessageStore _inboxMessageStore;
+    private readonly IInboxMessageStore _inboxMessageStore;
     private readonly TypeResolver _typeResolver;
 
     public MemoryCommandRider(
         CommandHandlerRegistry commandHandlerRegistry,
-        InboxMessageStore inboxMessageStore,
+        IInboxMessageStore inboxMessageStore,
         TypeResolver typeResolver)
     {
         _commandHandlerRegistry = commandHandlerRegistry;

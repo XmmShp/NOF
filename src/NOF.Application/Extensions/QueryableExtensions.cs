@@ -21,6 +21,23 @@ public static class QueryableAsyncExtensions
             CancellationToken cancellationToken = default)
             => source.AsAsyncQueryable().AsyncExecutor.AsAsyncEnumerable(source, cancellationToken);
 
+        public Task<int> ExecuteDeleteAsync(
+            CancellationToken cancellationToken = default)
+            => source.AsAsyncQueryable().AsyncExecutor.ExecuteDeleteAsync(source, cancellationToken);
+
+        public Task<int> ExecuteUpdateAsync(
+            Func<UpdateSetters<TSource>, UpdateSetters<TSource>> setPropertyCalls,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(setPropertyCalls);
+
+            var setters = setPropertyCalls(new UpdateSetters<TSource>())
+                ?? throw new InvalidOperationException("The batch update setter builder cannot be null.");
+
+            return source.AsAsyncQueryable().AsyncExecutor.ExecuteUpdateAsync(source, setters, cancellationToken);
+        }
+
         public Task<List<TSource>> ToListAsync(
             CancellationToken cancellationToken = default)
             => source.AsAsyncQueryable().AsyncExecutor.ToListAsync(source, cancellationToken);

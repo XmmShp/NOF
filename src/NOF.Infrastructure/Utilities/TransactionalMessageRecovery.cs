@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application;
 
 namespace NOF.Infrastructure;
 
@@ -7,7 +7,7 @@ internal static class TransactionalMessageRecovery
     private const string MaxRetryExceededError = "Exceeded max retry count";
 
     public static Task<int> MarkExpiredExhaustedInboxMessagesAsFailedAsync(
-        DbContext dbContext,
+        IDbContext dbContext,
         int maxRetryCount,
         DateTime now,
         CancellationToken cancellationToken)
@@ -28,7 +28,7 @@ internal static class TransactionalMessageRecovery
     }
 
     public static Task<int> MarkExpiredExhaustedOutboxMessagesAsFailedAsync(
-        DbContext dbContext,
+        IDbContext dbContext,
         int maxRetryCount,
         DateTime now,
         CancellationToken cancellationToken)

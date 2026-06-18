@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Application;
 namespace NOF.Infrastructure;
 
 /// <summary>
@@ -65,7 +65,12 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+        var dbContext = scope.ServiceProvider.GetService<IDbContext>();
+        if (dbContext is null)
+        {
+            _logger.LogDebug("Skipping outbox cleanup because no IDbContext provider is registered.");
+            return;
+        }
         var olderThan = DateTime.UtcNow - _options.RetentionPeriod;
         var deletedCount = await dbContext.Set<NOFOutboxMessage>()
             .Where(m => m.Status == OutboxMessageStatus.Sent)
