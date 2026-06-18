@@ -28,6 +28,7 @@ public static partial class NOFInfrastructureExtensions
             where TDbContext : NOFDbContext
         {
             builder.Services.AddOptions<DbContextConfigurationOptions>();
+            builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped<NOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>());
             builder.Services.ReplaceOrAddScoped<IDbContextFactory>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>());
             builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, TypedDbContextFactory<TDbContext>>();

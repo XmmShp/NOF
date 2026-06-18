@@ -282,7 +282,9 @@ internal static class InboundContextReflection
         => serviceType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
             ?? throw new InvalidOperationException($"Unable to resolve service method '{serviceType.FullName}.{methodName}'.");
 
-    public static MethodInfo ResolveHandlerMethodInfo(Type handlerType, Type messageType)
+    public static MethodInfo ResolveHandlerMethodInfo(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] Type handlerType,
+        Type messageType)
     {
         var methods = handlerType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         foreach (var method in methods)

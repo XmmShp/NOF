@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Infrastructure;
 using Xunit;
 
 namespace NOF.Infrastructure.RabbitMQ.Tests.Services;
@@ -48,6 +49,7 @@ public class RabbitMQConsumerHostedServiceTests
             new TestHostEnvironment(),
             null!,
             new TypeResolver(),
+            new JsonObjectSerializer(),
             NullLogger<RabbitMQConsumerHostedService>.Instance);
 
         await Assert.ThrowsAsync<ObjectDisposedException>(() => service.StartAsync(CancellationToken.None));
