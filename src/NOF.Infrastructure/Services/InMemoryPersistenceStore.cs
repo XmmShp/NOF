@@ -1,9 +1,12 @@
 using NOF.Application;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 
 namespace NOF.Infrastructure;
 
+[RequiresUnreferencedCode("The in-memory persistence store snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
+[RequiresDynamicCode("The in-memory persistence store compiles update expressions and is intended for tests/development, not Native AOT.")]
 public sealed class InMemoryPersistenceStore
 {
     private readonly object _gate = new();

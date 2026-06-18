@@ -81,12 +81,17 @@ public static class HostEnvironmentExtensions
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
-            environment.ApplicationName = configuration.GetValue<string>(
-                NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationName) ?? environment.ApplicationName;
-            environment.ApplicationId = configuration.GetValue<uint?>(
-                NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationId) ?? environment.ApplicationId;
-            environment.InstanceId = configuration.GetValue<uint?>(
-                NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId) ?? environment.InstanceId;
+            environment.ApplicationName = configuration[NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationName]
+                ?? environment.ApplicationName;
+            if (uint.TryParse(configuration[NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationId], out var applicationId))
+            {
+                environment.ApplicationId = applicationId;
+            }
+
+            if (uint.TryParse(configuration[NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId], out var instanceId))
+            {
+                environment.InstanceId = instanceId;
+            }
         }
     }
 }

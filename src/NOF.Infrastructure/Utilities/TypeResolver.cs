@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
@@ -24,7 +25,33 @@ public sealed class TypeResolver
             return type;
         }
 
-        type = Type.GetType(typeName, throwOnError: false)
+        throw new InvalidOperationException($"type '{typeName}' is not registered.");
+    }
+
+    [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
+    public Type ResolveHandler(string typeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+
+        if (_types.TryGetValue(typeName, out var type))
+        {
+            return type;
+        }
+
+        throw new InvalidOperationException($"type '{typeName}' is not registered.");
+    }
+
+    [RequiresUnreferencedCode("Resolving arbitrary type names from loaded assemblies is not trim-safe. Register types explicitly for AOT-compatible applications.")]
+    public Type ResolveFromLoadedAssemblies(string typeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+
+        if (_types.TryGetValue(typeName, out var registeredType))
+        {
+            return registeredType;
+        }
+
+        var type = Type.GetType(typeName, throwOnError: false)
             ?? AppDomain.CurrentDomain
                 .GetAssemblies()
                 .Select(assembly => assembly.GetType(typeName, throwOnError: false))

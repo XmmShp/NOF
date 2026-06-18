@@ -6,7 +6,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure;
-using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
 
@@ -60,13 +60,12 @@ public static partial class NOFInfrastructureExtensions
             #region Options
             builder.Services.AddOptions<CacheServiceOptions>();
             builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()
-                .Validate(options =>
-                    Validator.TryValidateObject(
-                        options,
-                        new ValidationContext(options),
-                        null,
-                        validateAllProperties: true),
-                    "SnowflakeIdGeneratorOptions is invalid.");
+                .Validate(static options => options.ApplicationIdBits > 0, "ApplicationIdBits must be greater than zero.")
+                .Validate(static options => options.InstanceIdBits > 0, "InstanceIdBits must be greater than zero.")
+                .Validate(static options => options.SequenceBits > 0, "SequenceBits must be greater than zero.")
+                .Validate(
+                    static options => options.ApplicationIdBits + options.InstanceIdBits + options.SequenceBits <= 22,
+                    "The sum of ApplicationIdBits, InstanceIdBits, and SequenceBits must be less than or equal to 22.");
             builder.Services.AddOptions<TransactionalMessageOptions>();
             #endregion
 
@@ -134,6 +133,8 @@ public static partial class NOFInfrastructureExtensions
         public INOFAppBuilder AddRegistrationStep(Func<IHostApplicationBuilder, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
 
+        [RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
+        [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
         public INOFAppBuilder AddInMemoryPersistence()
         {
             builder.Services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();

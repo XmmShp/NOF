@@ -143,6 +143,7 @@ public class InfrastructureDefaultsTests
         await executor.ExecuteAsync(
             new ScopedRequest(),
             typeof(ScopedRequestHandler),
+            typeof(Result),
             typeof(IScopedRpcService),
             nameof(IScopedRpcService.Check),
             headers: null,

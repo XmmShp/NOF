@@ -20,8 +20,13 @@ public interface IRpcServer : IRpcServerServiceType
 /// One RPC operation mapping entry.
 /// </summary>
 public sealed record RpcHandlerMapping(
+    [property: DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicConstructors
+        | DynamicallyAccessedMemberTypes.PublicMethods
+        | DynamicallyAccessedMemberTypes.NonPublicMethods)]
     Type HandlerType,
     Type RequestType,
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     Type ReturnType);
 
 /// <summary>

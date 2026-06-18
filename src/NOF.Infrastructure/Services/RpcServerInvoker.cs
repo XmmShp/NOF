@@ -37,6 +37,7 @@ public static class RpcServerInvoker
             var inboundContext = await inboundPipeline.ExecuteAsync(
                 currentRequest,
                 resolution.HandlerMapping.HandlerType,
+                resolution.HandlerMapping.ReturnType,
                 typeof(TRpcService),
                 operationName,
                 outboundContext.Headers,

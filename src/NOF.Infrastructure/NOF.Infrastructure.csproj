@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <IsAotCompatible>false</IsAotCompatible>
+    <IsAotCompatible>true</IsAotCompatible>
 
     <PackageId>NOF.Infrastructure</PackageId>
     <Description>Unified infrastructure package for the NOF Framework — abstractions, core pipeline, OpenTelemetry integration, and service wiring.</Description>

@@ -5,21 +5,22 @@ namespace NOF.Infrastructure.Tests.Utilities;
 public sealed class TypeResolverTests
 {
     [Fact]
-    public void Resolve_ShouldFallbackToLoadedAssemblyTypeByFullName()
+    public void Resolve_ShouldReturnRegisteredType()
     {
         var resolver = new TypeResolver();
+        var typeName = resolver.Register(typeof(LoadedAssemblyPayload));
 
-        var type = resolver.Resolve(typeof(LoadedAssemblyPayload).FullName!);
+        var type = resolver.Resolve(typeName);
 
         Assert.Equal(typeof(LoadedAssemblyPayload), type);
     }
 
     [Fact]
-    public void Resolve_ShouldFallbackToTypeGetTypeForAssemblyQualifiedName()
+    public void ResolveFromLoadedAssemblies_ShouldFallbackToLoadedAssemblyTypeByFullName()
     {
         var resolver = new TypeResolver();
 
-        var type = resolver.Resolve(typeof(LoadedAssemblyPayload).AssemblyQualifiedName!);
+        var type = resolver.ResolveFromLoadedAssemblies(typeof(LoadedAssemblyPayload).FullName!);
 
         Assert.Equal(typeof(LoadedAssemblyPayload), type);
     }

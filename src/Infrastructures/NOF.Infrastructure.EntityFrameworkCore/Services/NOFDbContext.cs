@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using NOF.Abstraction;
-using NOF.Application;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;

@@ -26,6 +26,7 @@ public sealed class CommandInboundPipelineExecutor
     public async ValueTask ExecuteAsync(
         ReadOnlyMemory<byte> payload,
         string payloadTypeName,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         Type handlerType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
@@ -57,6 +58,7 @@ public sealed class CommandInboundPipelineExecutor
             ?? throw new InvalidOperationException($"Failed to deserialize command payload as '{payloadTypeName}'.");
 
     private static CommandInboundContext CreateContext(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         Type handlerType,
         Type messageType,
         IEnumerable<KeyValuePair<string, string?>>? headers)
@@ -112,6 +114,7 @@ public sealed class NotificationInboundPipelineExecutor
     public async ValueTask ExecuteAsync(
         ReadOnlyMemory<byte> payload,
         string payloadTypeName,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         Type handlerType,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
@@ -143,6 +146,7 @@ public sealed class NotificationInboundPipelineExecutor
             ?? throw new InvalidOperationException($"Failed to deserialize notification payload as '{payloadTypeName}'.");
 
     private static NotificationInboundContext CreateContext(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         Type handlerType,
         Type messageType,
         IEnumerable<KeyValuePair<string, string?>>? headers)
@@ -190,7 +194,10 @@ public sealed class RequestInboundPipelineExecutor
 
     public async ValueTask<RequestInboundContext> ExecuteAsync(
         object request,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         Type handlerType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        Type responseType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
         string methodName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
@@ -198,7 +205,7 @@ public sealed class RequestInboundPipelineExecutor
     {
         var middlewares = new DependencyGraph<IRequestInboundMiddleware>(
             _serviceProvider.GetServices<IRequestInboundMiddleware>()).GetExecutionOrder();
-        var context = CreateContext(request, handlerType, serviceType, methodName, headers);
+        var context = CreateContext(request, handlerType, responseType, serviceType, methodName, headers);
         RequestHandlerDelegate terminal = (currentContext, currentRequest, ct)
             => ExecuteRequestHandlerAsync(_serviceProvider, handlerType, currentContext, currentRequest, ct);
         RequestHandlerDelegate pipeline = terminal;
@@ -216,13 +223,17 @@ public sealed class RequestInboundPipelineExecutor
 
     private static RequestInboundContext CreateContext(
         object request,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         Type handlerType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        Type responseType,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
         string methodName,
         IEnumerable<KeyValuePair<string, string?>>? headers)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(handlerType);
+        ArgumentNullException.ThrowIfNull(responseType);
         ArgumentNullException.ThrowIfNull(serviceType);
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
 
@@ -241,7 +252,7 @@ public sealed class RequestInboundPipelineExecutor
             HandlerType = handlerType,
             HandlerMethodInfo = handlerMethodInfo,
             RequestType = requestType,
-            ResponseType = InboundContextReflection.GetHandlerResponseType(handlerType)
+            ResponseType = responseType
         }.CopyHeadersFrom(headers);
     }
 
@@ -320,18 +331,4 @@ internal static class InboundContextReflection
 
         throw new InvalidOperationException($"Unable to resolve RPC request type from handler '{handlerType.FullName}'.");
     }
-
-    public static Type GetHandlerResponseType(Type handlerType)
-    {
-        for (var current = handlerType; current is not null; current = current.BaseType)
-        {
-            if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(RpcHandler<,>))
-            {
-                return current.GetGenericArguments()[1];
-            }
-        }
-
-        throw new InvalidOperationException($"Unable to resolve RPC response type from handler '{handlerType.FullName}'.");
-    }
-
 }

@@ -38,6 +38,7 @@ public sealed class HttpRequestInboundAdapter(
         var execution = await inboundPipeline.ExecuteAsync(
             request,
             resolution.HandlerMapping.HandlerType,
+            resolution.HandlerMapping.ReturnType,
             typeof(TRpcService),
             operationName,
             headers,

@@ -1,7 +1,10 @@
 using NOF.Application;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
 
+[RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
+[RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
 internal sealed class InMemoryDbContext(InMemoryPersistenceStore store) : IDbContext
 {
     private readonly List<InMemoryPersistenceChange> _changes = [];
@@ -150,6 +153,8 @@ internal sealed class InMemoryDbContext(InMemoryPersistenceStore store) : IDbCon
     }
 }
 
+[RequiresDynamicCode("The in-memory persistence provider snapshots arbitrary entity types and is intended for tests/development, not Native AOT.")]
+[RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
 internal sealed class TrackedInMemoryEntity(object entity, object original)
 {
     public object Entity { get; } = entity;

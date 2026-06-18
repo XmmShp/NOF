@@ -17,12 +17,14 @@ public sealed class RequestInboundContext : Context
 
     public required MethodInfo ServiceMethodInfo { get; init; }
 
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
     public required Type HandlerType { get; init; }
 
     public required MethodInfo HandlerMethodInfo { get; init; }
 
     public required Type RequestType { get; init; }
 
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     public required Type ResponseType { get; init; }
 
     public void SetResponse(IResult response)
