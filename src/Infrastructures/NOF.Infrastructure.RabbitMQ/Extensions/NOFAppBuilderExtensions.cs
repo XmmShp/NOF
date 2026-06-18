@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Hosting;
+using NOF.Infrastructure;
+using NOF.Infrastructure.RabbitMQ;
 
-namespace NOF.Infrastructure.RabbitMQ;
+namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureRabbitMQExtensions
 {

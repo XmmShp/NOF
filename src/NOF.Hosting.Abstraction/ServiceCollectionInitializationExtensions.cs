@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
+using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Hosting;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static partial class NOFHostingExtensions
 {
@@ -12,7 +12,7 @@ public static partial class NOFHostingExtensions
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(initializationStep);
 
-            services.AddSingleton<IApplicationInitializationStep>(initializationStep);
+            services.AddSingleton(initializationStep);
             return services;
         }
 

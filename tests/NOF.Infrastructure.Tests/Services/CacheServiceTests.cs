@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using NOF.Contract;
 using System.Text.Json;
 using Xunit;
 

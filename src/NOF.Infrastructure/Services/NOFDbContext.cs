@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics.CodeAnalysis;

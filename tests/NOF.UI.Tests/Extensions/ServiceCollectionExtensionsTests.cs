@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.UI;
 using System.Reflection;
 using Xunit;
 

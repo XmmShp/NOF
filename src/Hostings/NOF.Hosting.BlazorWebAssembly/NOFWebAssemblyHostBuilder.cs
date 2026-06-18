@@ -5,7 +5,6 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NOF.UI;
 using System.Reflection;
 
 namespace NOF.Hosting.BlazorWebAssembly;

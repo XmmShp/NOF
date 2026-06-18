@@ -1,6 +1,4 @@
-using NOF.Contract;
-
-namespace NOF.Application;
+namespace NOF.Contract;
 
 public static partial class ContextExtensions
 {

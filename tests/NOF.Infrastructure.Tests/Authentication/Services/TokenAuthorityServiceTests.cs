@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using NOF.Hosting;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Infrastructure;
 using NOF.Test;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

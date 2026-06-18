@@ -1,9 +1,8 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
 using Xunit;
 
-namespace NOF.SourceGenerator.Tests.Extensions;
+namespace Microsoft.CodeAnalysis.CSharp;
 
 public static class CSharpCompilationExtensions
 {

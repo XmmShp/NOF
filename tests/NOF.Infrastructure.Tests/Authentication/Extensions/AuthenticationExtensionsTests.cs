@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Infrastructure;
 using NOF.Test;
 using System.Security.Claims;
 using Xunit;
@@ -99,7 +98,7 @@ public sealed class AuthenticationExtensionsTests
             Scope = "jobs.read jobs.write"
         };
 
-        var result = await NOFOidcServerExtensions.TokenFromClientCredentialsAsync(
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromClientCredentialsAsync(
             httpContext.Request,
             request,
             services,
@@ -301,7 +300,7 @@ public sealed class AuthenticationExtensionsTests
 
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(NOF.Hosting.JwtTokenPropagationOutboundMiddleware));
+            descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
             descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));

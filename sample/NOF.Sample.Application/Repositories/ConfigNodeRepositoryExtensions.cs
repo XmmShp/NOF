@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Sample;
 
-namespace NOF.Sample.Application;
+namespace Microsoft.EntityFrameworkCore;
 
 public static class ConfigNodeRepositoryExtensions
 {

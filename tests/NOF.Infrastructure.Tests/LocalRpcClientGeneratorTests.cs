@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
 using NOF.Infrastructure;
 using NOF.Infrastructure.SourceGenerator;
-using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -156,7 +155,7 @@ public class LocalRpcClientGeneratorTests
             code);
     }
 
-    private static string GetGeneratedCode(Microsoft.CodeAnalysis.GeneratorDriverRunResult runResult)
+    private static string GetGeneratedCode(GeneratorDriverRunResult runResult)
         => runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())
             .Single(code => code.Contains("partial class LocalDroneOpsClient"));

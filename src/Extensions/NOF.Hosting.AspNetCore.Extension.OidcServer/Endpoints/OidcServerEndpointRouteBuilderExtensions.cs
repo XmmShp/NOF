@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -15,7 +16,7 @@ using System.Security.Cryptography;
 using System.Text;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 
-namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
+namespace Microsoft.AspNetCore.Routing;
 
 public static partial class NOFOidcServerExtensions
 {

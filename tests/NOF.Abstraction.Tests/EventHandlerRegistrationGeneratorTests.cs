@@ -1,9 +1,7 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Abstraction;
 using NOF.Abstraction.SourceGenerator;
-using NOF.SourceGenerator.Tests;
-using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
 namespace NOF.Abstraction.Tests;

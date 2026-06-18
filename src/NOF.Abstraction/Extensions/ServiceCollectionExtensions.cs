@@ -1,6 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 
-namespace NOF.Abstraction;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static partial class NOFAbstractionExtensions
 {

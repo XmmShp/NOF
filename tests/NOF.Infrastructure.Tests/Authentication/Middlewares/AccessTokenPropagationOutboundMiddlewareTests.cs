@@ -1,6 +1,5 @@
 using NOF.Abstraction;
 using NOF.Hosting;
-using NOF.Infrastructure;
 using System.Security.Claims;
 using Xunit;
 using MessageAccessTokenPropagationOutboundMiddleware = NOF.Infrastructure.JwtTokenPropagationOutboundMiddleware;

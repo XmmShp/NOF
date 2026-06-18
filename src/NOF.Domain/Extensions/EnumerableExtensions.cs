@@ -1,4 +1,4 @@
-namespace NOF.Domain;
+namespace System.Collections.Generic;
 
 /// <summary>
 /// Provides extension members for collection types.

@@ -1,5 +1,5 @@
+using Microsoft.CodeAnalysis;
 using NOF.Contract.SourceGenerator;
-using NOF.SourceGenerator.Tests;
 using Xunit;
 
 namespace NOF.Contract.Tests;

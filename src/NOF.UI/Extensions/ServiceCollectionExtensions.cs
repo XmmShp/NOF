@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.UI;
 
-namespace NOF.UI;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static partial class NOFUIExtensions
 {

@@ -1,4 +1,4 @@
-namespace NOF.Abstraction;
+namespace System;
 
 /// <summary>
 /// Extension methods for the NOF.Abstraction layer.

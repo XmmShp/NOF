@@ -5,8 +5,6 @@ using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure;
-using NOF.Infrastructure.RabbitMQ;
-using NOF.Infrastructure.StackExchangeRedis;
 using NOF.Sample;
 using NOF.Sample.Application;
 using NOF.Sample.Services;

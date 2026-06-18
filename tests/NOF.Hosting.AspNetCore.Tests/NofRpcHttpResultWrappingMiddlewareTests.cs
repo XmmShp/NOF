@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Hosting;
 using NOF.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -164,7 +164,7 @@ public sealed class HttpRpcTransportBoundaryTests
 
     public sealed class ReadTokenRequest
     {
-        [NOF.Contract.FromHeader(NOFAbstractionConstants.Transport.Headers.Authorization)]
+        [Contract.FromHeader(NOFAbstractionConstants.Transport.Headers.Authorization)]
         public HeaderToken Token { get; set; }
     }
 

@@ -4,7 +4,6 @@ using Microsoft.IdentityModel.Tokens;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Infrastructure;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;

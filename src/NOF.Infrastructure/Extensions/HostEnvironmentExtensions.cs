@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+using NOF.Infrastructure;
 using System.Runtime.CompilerServices;
 
-namespace NOF.Infrastructure;
+namespace Microsoft.Extensions.Hosting;
 
 internal static class HostEnvironmentExtensionBag
 {

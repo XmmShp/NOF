@@ -2,15 +2,15 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
-namespace NOF.Hosting.AspNetCore;
+namespace Microsoft.AspNetCore.Routing;
 
 [RequiresUnreferencedCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
 [RequiresDynamicCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
@@ -122,7 +122,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         TResponse>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+        async Task<Http.IResult> Handler(
             [AsParameters] TRequest request,
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
@@ -143,7 +143,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         TResponse>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+        async Task<Http.IResult> Handler(
             [FromBody] TRequest request,
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
@@ -164,7 +164,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         TResponse>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+        async Task<Http.IResult> Handler(
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
@@ -185,7 +185,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         TItem>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+        async Task<Http.IResult> Handler(
             [AsParameters] TRequest request,
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
@@ -206,7 +206,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         TItem>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+        async Task<Http.IResult> Handler(
             [FromBody] TRequest request,
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
@@ -227,7 +227,7 @@ public static partial class NOFHostingAspNetCoreExtensions
         TItem>(string operationName)
         where TService : class, IRpcService
     {
-        async Task<Microsoft.AspNetCore.Http.IResult> Handler(
+        async Task<Http.IResult> Handler(
             HttpContext httpContext,
             [FromServices] HttpRequestInboundAdapter adapter,
             CancellationToken cancellationToken)
@@ -242,7 +242,7 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     [RequiresUnreferencedCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     [RequiresDynamicCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
-    private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult<TItem>(
+    private static Http.IResult CreateStreamingResult<TItem>(
         NOF.Contract.IResult? response,
         HttpContext httpContext)
     {
@@ -261,7 +261,7 @@ public static partial class NOFHostingAspNetCoreExtensions
 
     [RequiresUnreferencedCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
     [RequiresDynamicCode("HTTP transport response writing may require runtime JSON serialization for transport bodies.")]
-    private static Microsoft.AspNetCore.Http.IResult CreateHttpResponse<TResponse>(
+    private static Http.IResult CreateHttpResponse<TResponse>(
         NOF.Contract.IResult? transportResult,
         HttpContext httpContext)
     {

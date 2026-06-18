@@ -1,8 +1,8 @@
-using System.Text.Json;
+using NOF.Abstraction;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-namespace NOF.Abstraction;
+namespace System.Text.Json;
 
 /// <summary>
 /// Extension methods for the NOF.Abstraction layer.

@@ -170,6 +170,15 @@ public static partial class NOFApplicationExtensions
     extension(ICacheService cacheService)
     {
         /// <summary>
+        /// Removes a cached value by key.
+        /// </summary>
+        /// <typeparam name="TValue">The type of the cached value.</typeparam>
+        /// <param name="key">The cache key.</param>
+        public async ValueTask RemoveAsync<TValue>(CacheKey<TValue> key,
+            CancellationToken cancellationToken = default)
+            => await cacheService.RemoveAsync(key.Key, cancellationToken);
+
+        /// <summary>
         /// Gets a cached value by key.
         /// </summary>
         /// <typeparam name="TValue">The type of the cached value.</typeparam>

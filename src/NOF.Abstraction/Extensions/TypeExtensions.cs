@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Abstraction;
+namespace System;
 
 public static partial class NOFAbstractionExtensions
 {

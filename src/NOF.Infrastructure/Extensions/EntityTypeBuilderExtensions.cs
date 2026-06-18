@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NOF.Infrastructure;
 
-namespace NOF.Infrastructure;
+namespace Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 public static class EntityTypeBuilderExtensions
 {

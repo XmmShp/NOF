@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Domain;
 using NOF.Domain.SourceGenerator;
-using NOF.SourceGenerator.Tests.Extensions;
 using System.Text.Json.Serialization;
 using Xunit;
 

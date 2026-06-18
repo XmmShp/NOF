@@ -1,4 +1,4 @@
-namespace NOF.Contract;
+namespace System.Collections.Generic;
 
 public static class DictionaryExtensions
 {

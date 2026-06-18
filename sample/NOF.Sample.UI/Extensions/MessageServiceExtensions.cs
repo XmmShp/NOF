@@ -1,8 +1,4 @@
-using AntDesign;
-using NOF.Contract;
-using Result = NOF.Contract.Result;
-
-namespace NOF.Sample.UI;
+namespace AntDesign;
 
 public static class NOFSampleWebUIExtensions
 {
@@ -10,10 +6,10 @@ public static class NOFSampleWebUIExtensions
     extension(IMessageService messageService)
     {
         /// <summary>
-        /// Displays a success or error message based on the outcome of a <see cref="Result"/>.
+        /// Displays a success or error message based on the outcome of a <see cref="NOF.Contract.Result"/>.
         /// Failure messages are always shown. Success messages can be suppressed.
         /// </summary>
-        public void ShowMessage(Result result, string? successMessage = null, bool showSuccess = false)
+        public void ShowMessage(NOF.Contract.Result result, string? successMessage = null, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
             ArgumentNullException.ThrowIfNull(result);
@@ -32,7 +28,7 @@ public static class NOFSampleWebUIExtensions
         }
 
         /// <summary>
-        /// Displays a success or error message based on the outcome of a <see cref="Result{T}"/>,
+        /// Displays a success or error message based on the outcome of a <see cref="NOF.Contract.Result{T}"/>,
         /// then returns the underlying value if successful, or <see langword="default"/> on failure.
         /// Failure messages are always shown. Success messages can be suppressed.
         /// </summary>
@@ -41,7 +37,7 @@ public static class NOFSampleWebUIExtensions
         /// <param name="successMessage">Optional custom success message.</param>
         /// <param name="showSuccess">If <see langword="false"/>, success message is not displayed.</param>
         /// <returns>The value if successful; otherwise, <see langword="default(T)"/>.</returns>
-        public T? UnwrapWithMessage<T>(Result<T> result, string? successMessage = null, bool showSuccess = false)
+        public T? UnwrapWithMessage<T>(NOF.Contract.Result<T> result, string? successMessage = null, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
             ArgumentNullException.ThrowIfNull(result);
@@ -59,7 +55,7 @@ public static class NOFSampleWebUIExtensions
             return default;
         }
 
-        public T? UnwrapWithMessage<T>(Result<Result<T>> result, string? successMessage = null, bool showSuccess = false)
+        public T? UnwrapWithMessage<T>(NOF.Contract.Result<NOF.Contract.Result<T>> result, string? successMessage = null, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
             ArgumentNullException.ThrowIfNull(result);
@@ -82,7 +78,7 @@ public static class NOFSampleWebUIExtensions
         /// <param name="successMessageFactory">Function to generate a success message from the result value.</param>
         /// <param name="showSuccess">If <see langword="false"/>, success message is not displayed.</param>
         /// <returns>The value if successful; otherwise, <see langword="default(T)"/>.</returns>
-        public T? UnwrapWithMessage<T>(Result<T> result, Func<T, string> successMessageFactory, bool showSuccess = false)
+        public T? UnwrapWithMessage<T>(NOF.Contract.Result<T> result, Func<T, string> successMessageFactory, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
             ArgumentNullException.ThrowIfNull(result);
@@ -102,7 +98,7 @@ public static class NOFSampleWebUIExtensions
             return default;
         }
 
-        public T? UnwrapWithMessage<T>(Result<Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
+        public T? UnwrapWithMessage<T>(NOF.Contract.Result<NOF.Contract.Result<T>> result, Func<T, string> successMessageFactory, bool showSuccess = false)
         {
             ArgumentNullException.ThrowIfNull(messageService);
             ArgumentNullException.ThrowIfNull(result);
@@ -116,20 +112,5 @@ public static class NOFSampleWebUIExtensions
 
             return messageService.UnwrapWithMessage(result.Value, successMessageFactory, showSuccess);
         }
-
-    }
-
-    public static string GetRpcFailureMessage(this IResult result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-
-        if (!string.IsNullOrWhiteSpace(result.Message))
-        {
-            return result.Message;
-        }
-
-        return int.TryParse(result.ErrorCode, out var statusCode)
-            ? $"请求失败，状态码: {statusCode}"
-            : "请求失败";
     }
 }

@@ -1,8 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace Microsoft.Extensions.DependencyInjection;
 
 // ReSharper disable once InconsistentNaming
 public static partial class NOFInfrastructureExtensions

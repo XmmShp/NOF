@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using NOF.Hosting;
+using NOF.Infrastructure;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureExtensions
 {
@@ -15,7 +15,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddHttpClient<HttpJwksService>();
             builder.Services.TryAddScoped<IJwksService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<HttpJwksService>());
-            builder.Services.TryAddScoped<IAuthorizationServerMetadataService>(static serviceProvider =>
+            builder.Services.TryAddScoped(static serviceProvider =>
             {
                 var jwksService = serviceProvider.GetRequiredService<IJwksService>();
                 return jwksService as IAuthorizationServerMetadataService

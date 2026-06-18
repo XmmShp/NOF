@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace NOF.Hosting;
 
 public static partial class NOFHostingExtensions

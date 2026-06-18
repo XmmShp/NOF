@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NOF.Application.SourceGenerator;
-using NOF.SourceGenerator.Tests.Extensions;
 using System.Collections.Immutable;
 using Xunit;
 

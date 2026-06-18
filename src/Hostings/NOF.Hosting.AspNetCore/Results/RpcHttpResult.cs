@@ -5,10 +5,10 @@ using System.Diagnostics.CodeAnalysis;
 namespace NOF.Hosting.AspNetCore;
 
 internal sealed class RpcHttpResult(
-    NOF.Contract.IResult rpcResult,
+    Contract.IResult rpcResult,
     int statusCode = StatusCodes.Status200OK) : Microsoft.AspNetCore.Http.IResult
 {
-    private readonly NOF.Contract.IResult _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
+    private readonly Contract.IResult _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
 
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Transport response bodies are framework-controlled runtime payloads.")]
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Transport response bodies are framework-controlled runtime payloads.")]

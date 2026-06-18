@@ -5,7 +5,6 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.Contract;
-using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;

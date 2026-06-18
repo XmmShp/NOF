@@ -1,8 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Hosting;
+using NOF.Infrastructure;
+using NOF.Infrastructure.StackExchangeRedis;
 using StackExchange.Redis;
 
-namespace NOF.Infrastructure.StackExchangeRedis;
+namespace NOF.Hosting;
 
 public static class NOFInfrastructureExtensions
 {

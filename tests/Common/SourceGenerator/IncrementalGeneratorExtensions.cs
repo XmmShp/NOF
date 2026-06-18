@@ -1,9 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
-namespace NOF.SourceGenerator.Tests;
+namespace Microsoft.CodeAnalysis;
 
 internal static class IncrementalGeneratorExtensions
 {

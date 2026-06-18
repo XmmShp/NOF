@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace NOF.SourceGenerator.Tests.Extensions;
+namespace System;
 
 public static class TypeExtensions
 {

@@ -1,5 +1,4 @@
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Infrastructure;
+using NOF.Hosting;
 using NOF.Test;
 using System.Net;
 using System.Net.Http.Headers;

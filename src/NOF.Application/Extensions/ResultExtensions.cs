@@ -1,7 +1,6 @@
-using NOF.Contract;
 using NOF.Domain;
 
-namespace NOF.Application;
+namespace NOF.Contract;
 
 /// <summary>
 /// Extension methods for the NOF.Application layer.

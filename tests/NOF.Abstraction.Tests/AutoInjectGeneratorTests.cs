@@ -1,8 +1,8 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction.SourceGenerator;
-using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 using AutoInjectAttribute = Microsoft.Extensions.DependencyInjection.AutoInjectAttribute;
 using InitializedTypes = NOF.Abstraction.InitializedTypes;
@@ -79,17 +79,16 @@ public class AutoInjectGeneratorTests
             typeof(AutoInjectAttribute).ToMetadataReference(),
             typeof(InitializedTypes).ToMetadataReference()
         };
-        var compilation = CSharpCompilation.CreateCompilation("App", source, isDll: true, depRefs);
-
-        var result = new AutoInjectGenerator().GetResult(compilation);
+        var result = new AutoInjectGenerator().GetResultPostGen(source, typeof(IServiceCollection), typeof(AutoInjectAttribute), typeof(InitializedTypes));
         var trees = result.GeneratedTrees;
         Assert.Single(trees);
 
         var generatedCode = trees.Single().GetRoot().ToFullString();
         const string scopedInterfaceDescriptor = "services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Describe(typeof(global::App.IAppSvc), typeof(global::App.AppService), global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped));";
 
-        Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppAutoInjectAssemblyInitializer>]", generatedCode);
-        Assert.Contains("services.InitializedTypes.Add(typeof(__AppAutoInjectAssemblyInitializer))", generatedCode);
+        Assert.Contains("using Microsoft.Extensions.DependencyInjection;", generatedCode);
+        Assert.Contains("AssemblyInitializeAttribute<global::TestAssembly.__TestAssemblyAutoInjectAssemblyInitializer>", generatedCode);
+        Assert.Contains("services.InitializedTypes.Add(typeof(__TestAssemblyAutoInjectAssemblyInitializer))", generatedCode);
         Assert.Contains(scopedInterfaceDescriptor, generatedCode);
         Assert.DoesNotContain("AutoInjectServiceRegistration", generatedCode);
         Assert.DoesNotContain("ServiceProviderServiceExtensions.GetRequiredService(sp, typeof(global::App.AppService))", generatedCode);

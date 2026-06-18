@@ -1,5 +1,5 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
 using NOF.Contract;

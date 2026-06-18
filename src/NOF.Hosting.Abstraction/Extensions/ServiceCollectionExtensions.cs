@@ -1,8 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Hosting;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static partial class NOFHostingExtensions
 {

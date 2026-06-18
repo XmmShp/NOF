@@ -1,6 +1,4 @@
-using System.Security.Claims;
-
-namespace NOF.Abstraction;
+namespace System.Security.Claims;
 
 public static partial class NOFAbstractionExtensions
 {

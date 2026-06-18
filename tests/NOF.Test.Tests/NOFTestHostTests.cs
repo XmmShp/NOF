@@ -4,6 +4,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
 using System.Diagnostics;
+using System.Security.Claims;
 using Xunit;
 
 namespace NOF.Test.Tests;

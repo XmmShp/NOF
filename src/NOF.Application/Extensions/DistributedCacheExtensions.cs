@@ -1,6 +1,6 @@
-using Microsoft.Extensions.Caching.Distributed;
+using NOF.Application;
 
-namespace NOF.Application;
+namespace Microsoft.Extensions.Caching.Distributed;
 
 /// <summary>
 /// Extension methods for the NOF.Application layer.

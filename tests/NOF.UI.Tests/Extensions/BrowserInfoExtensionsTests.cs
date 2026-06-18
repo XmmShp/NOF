@@ -1,4 +1,3 @@
-using NOF.UI;
 using Xunit;
 
 namespace NOF.UI.Tests.Extensions;

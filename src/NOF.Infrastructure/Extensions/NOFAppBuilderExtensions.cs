@@ -6,11 +6,11 @@ using Microsoft.Extensions.Hosting;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
-using NOF.Hosting;
+using NOF.Infrastructure;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureExtensions
 {
@@ -171,7 +171,7 @@ public static partial class NOFInfrastructureExtensions
 
     private static void AddInfrastructureJwtPropagation(INOFAppBuilder builder)
     {
-        builder.Services.AddCommandOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
-        builder.Services.AddNotificationOutboundMiddleware<JwtTokenPropagationOutboundMiddleware>();
+        builder.Services.AddCommandOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
+        builder.Services.AddNotificationOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
     }
 }

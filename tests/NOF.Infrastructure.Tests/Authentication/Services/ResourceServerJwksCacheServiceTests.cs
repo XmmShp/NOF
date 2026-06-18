@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Hosting.AspNetCore.Extension.OidcServer;
-using NOF.Infrastructure;
 using System.Security.Cryptography;
 using Xunit;
 

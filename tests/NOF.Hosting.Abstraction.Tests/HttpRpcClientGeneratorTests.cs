@@ -1,7 +1,7 @@
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Contract;
 using NOF.Hosting;
-using NOF.SourceGenerator.Tests.Extensions;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
@@ -10,7 +10,7 @@ public class HttpRpcClientGeneratorTests
 {
     private static readonly Type[] _extraRefs =
     [
-        typeof(Abstraction.NOFAbstractionExtensions),
+        typeof(System.Text.Json.NOFAbstractionExtensions),
         typeof(HttpEndpointAttribute),
         typeof(IRpcClient),
         typeof(HttpRpcClientAttribute<>),
@@ -262,7 +262,7 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("GetJsonTypeInfo<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>()", code);
     }
 
-    private static Microsoft.CodeAnalysis.GeneratorDriverRunResult RunGenerators(string source)
+    private static GeneratorDriverRunResult RunGenerators(string source)
     {
         var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
@@ -271,14 +271,14 @@ public class HttpRpcClientGeneratorTests
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
 
         var diagnostics = outputCompilation.GetDiagnostics()
-            .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
             .ToList();
         Assert.Empty(diagnostics);
 
         return driver.GetRunResult();
     }
 
-    private static string GetGeneratedHttpClientCode(Microsoft.CodeAnalysis.GeneratorDriverRunResult runResult)
+    private static string GetGeneratedHttpClientCode(GeneratorDriverRunResult runResult)
         => runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())
             .Single(code => code.Contains("partial class MyServiceClient"));

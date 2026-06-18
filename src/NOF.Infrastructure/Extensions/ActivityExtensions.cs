@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
-using System.Diagnostics;
+using NOF.Infrastructure;
 
-namespace NOF.Infrastructure;
+namespace System.Diagnostics;
 
 public static class ActivityExtensions
 {
