@@ -1,18 +1,19 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
+using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
     private readonly IMapper _mapper;
 
-    public GetConfigNodeById(DbContext dbContext, ICacheService cache, IMapper mapper)
+    public GetConfigNodeById(IDbContext dbContext, ICacheService cache, IMapper mapper)
     {
         _dbContext = dbContext;
         _cache = cache;
@@ -53,4 +54,3 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
         };
     }
 }
-

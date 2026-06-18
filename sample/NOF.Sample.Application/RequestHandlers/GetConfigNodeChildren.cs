@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.Entities;
 
@@ -6,9 +7,9 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
 
-    public GetConfigNodeChildren(DbContext dbContext)
+    public GetConfigNodeChildren(IDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -32,4 +33,3 @@ public class GetConfigNodeChildren : NOFSampleService.GetConfigNodeChildren
         };
     }
 }
-

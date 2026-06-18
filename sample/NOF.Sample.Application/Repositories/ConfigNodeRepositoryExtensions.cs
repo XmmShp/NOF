@@ -1,10 +1,12 @@
 using NOF.Sample;
+using NOF.Application;
+using NOF.Application.Data;
 
-namespace Microsoft.EntityFrameworkCore;
+namespace NOF.Sample.Application.Repositories;
 
 public static class ConfigNodeRepositoryExtensions
 {
-    extension(DbSet<ConfigNode> set)
+    extension(IDbSet<ConfigNode> set)
     {
         public Task<List<ConfigNode>> GetRootNodesAsync(CancellationToken cancellationToken = default)
         {

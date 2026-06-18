@@ -1,18 +1,19 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
+using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class CreateConfigNode : NOFSampleService.CreateConfigNode
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
 
     public CreateConfigNode(
-        DbContext dbContext,
+        IDbContext dbContext,
         ICacheService cache)
     {
         _dbContext = dbContext;

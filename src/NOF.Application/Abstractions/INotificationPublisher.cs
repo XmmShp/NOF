@@ -10,7 +10,7 @@ public interface INotificationPublisher
 {
     /// <summary>
     /// Adds a notification to the transactional outbox context.
-    /// The notification will be persisted to the outbox when the active <see cref="Microsoft.EntityFrameworkCore.DbContext"/> saves changes.
+    /// The notification will be persisted to the outbox when the active <see cref="IDbContext"/> saves changes.
     /// </summary>
     Task DeferPublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default);
 

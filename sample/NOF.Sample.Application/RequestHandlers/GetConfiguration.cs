@@ -1,19 +1,20 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;
+using NOF.Sample.Application.Repositories;
 using System.Text.Json.Nodes;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetConfiguration : NOFSampleService.GetConfiguration
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
     private readonly IMapper _mapper;
 
-    public GetConfiguration(DbContext dbContext, ICacheService cache, IMapper mapper)
+    public GetConfiguration(IDbContext dbContext, ICacheService cache, IMapper mapper)
     {
         _dbContext = dbContext;
         _cache = cache;
@@ -196,5 +197,4 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         }
     }
 }
-
 

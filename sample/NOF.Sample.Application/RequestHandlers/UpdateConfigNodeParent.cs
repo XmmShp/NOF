@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
@@ -8,11 +8,11 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public class UpdateConfigNodeParent : NOFSampleService.UpdateConfigNodeParent
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
 
     public UpdateConfigNodeParent(
-        DbContext dbContext,
+        IDbContext dbContext,
         ICacheService cache)
     {
         _dbContext = dbContext;

@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using NOF.Contract;
+using NOF.Application.Data;
 using System.ComponentModel;
 
 namespace NOF.Application;
@@ -17,7 +17,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     where TState : struct, Enum
     where TNotification : class
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly IServiceProvider _serviceProvider;
     private readonly IStateMachineRegistry _stateMachineRegistry;
 
@@ -26,7 +26,7 @@ public abstract class StateMachineNotificationHandler<TStateMachineDefinition, T
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="stateMachineRegistry">The state machine registry.</param>
     protected StateMachineNotificationHandler(
-        DbContext dbContext,
+        IDbContext dbContext,
         IServiceProvider serviceProvider,
         IStateMachineRegistry stateMachineRegistry)
     {

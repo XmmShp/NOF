@@ -9,7 +9,7 @@ public interface ICommandSender
 {
     /// <summary>
     /// Adds a command to the transactional outbox context.
-    /// The command will be persisted to the outbox when the active <see cref="Microsoft.EntityFrameworkCore.DbContext"/> saves changes.
+    /// The command will be persisted to the outbox when the active <see cref="IDbContext"/> saves changes.
     /// </summary>
     Task DeferSendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default);
 

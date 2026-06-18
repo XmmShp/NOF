@@ -19,9 +19,9 @@ public partial class OrderService : RpcServer<IOrderService>;
 
 public sealed class GetOrder : OrderService.GetOrder
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
 
-    public GetOrder(DbContext dbContext)
+    public GetOrder(IDbContext dbContext)
     {
         _dbContext = dbContext;
     }

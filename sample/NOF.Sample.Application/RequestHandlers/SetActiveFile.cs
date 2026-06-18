@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;
@@ -8,10 +8,10 @@ namespace NOF.Sample.Application.RequestHandlers;
 
 public class SetActiveFile : NOFSampleService.SetActiveFile
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
 
-    public SetActiveFile(DbContext dbContext, ICacheService cache)
+    public SetActiveFile(IDbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;

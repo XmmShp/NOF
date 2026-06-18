@@ -22,12 +22,12 @@ public record StartProcessingCommand(string TaskId);
 
 public class StartProcessingCommandHandler : CommandHandler<StartProcessingCommand>
 {
-    private readonly Microsoft.EntityFrameworkCore.DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly ILogger<StartProcessingCommandHandler> _logger;
 
     public StartProcessingCommandHandler(
-        Microsoft.EntityFrameworkCore.DbContext dbContext,
+        IDbContext dbContext,
         INotificationPublisher notificationPublisher,
         ILogger<StartProcessingCommandHandler> logger)
     {

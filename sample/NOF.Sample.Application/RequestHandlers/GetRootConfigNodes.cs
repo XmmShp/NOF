@@ -1,15 +1,16 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Sample.Application.Repositories;
 
 namespace NOF.Sample.Application.RequestHandlers;
 
 public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly IMapper _mapper;
 
-    public GetRootConfigNodes(DbContext dbContext, IMapper mapper)
+    public GetRootConfigNodes(IDbContext dbContext, IMapper mapper)
     {
         _dbContext = dbContext;
         _mapper = mapper;
@@ -27,4 +28,3 @@ public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
         };
     }
 }
-

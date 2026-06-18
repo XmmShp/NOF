@@ -56,6 +56,7 @@ public static partial class NOFInfrastructureExtensions
 
             builder.Services.TryAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory>().CreateDbContext());
             builder.Services.TryAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
+            builder.Services.TryAddScoped<IDbContext>(sp => new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
 
             #endregion
 
@@ -148,6 +149,9 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>();
             builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, DbContextFactory<TDbContext>>();
             builder.Services.ReplaceOrAddScoped<INOFDbContextFactory>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
+            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
+            builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
+            builder.Services.ReplaceOrAddScoped<IDbContext>(sp => new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
                 builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());

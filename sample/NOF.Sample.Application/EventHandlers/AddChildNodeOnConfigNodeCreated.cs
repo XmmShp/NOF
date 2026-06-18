@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application.Data;
 using NOF.Abstraction;
+using NOF.Application;
 
 namespace NOF.Sample.Application.EventHandlers;
 
@@ -8,9 +9,9 @@ namespace NOF.Sample.Application.EventHandlers;
 /// </summary>
 public class AddChildNodeOnConfigNodeCreated : InMemoryEventHandler<ConfigNodeCreatedEvent>
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
 
-    public AddChildNodeOnConfigNodeCreated(DbContext dbContext)
+    public AddChildNodeOnConfigNodeCreated(IDbContext dbContext)
     {
         _dbContext = dbContext;
     }
