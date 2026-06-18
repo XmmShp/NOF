@@ -1,6 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
@@ -11,9 +9,9 @@ public sealed class RevokedRefreshToken
     public DateTime ExpiresAtUtc { get; set; }
 }
 
-public sealed class RevokedRefreshTokenModelCreatingContributor : INOFDbContextModelCreatingContributor
+public sealed class RevokedRefreshTokenModelCreatingContributor : IDbContextModelCreatingContributor
 {
-    public void Configure(ModelBuilder modelBuilder)
+    public void Configure(IDbModelBuilder modelBuilder)
     {
         modelBuilder.Entity<RevokedRefreshToken>(entity =>
         {

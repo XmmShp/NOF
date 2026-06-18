@@ -55,15 +55,6 @@ public readonly struct EFCoreSelector
         return this;
     }
 
-    public EFCoreSelector WithModelCreating(Action<ModelBuilder> configure)
-    {
-        ArgumentNullException.ThrowIfNull(configure);
-
-        Builder.Services.AddSingleton<INOFDbContextModelCreatingContributor>(
-            new DelegateDbContextModelCreatingContributor(configure));
-        return this;
-    }
-
     public EFCoreSelector MigrateOnInitialize()
     {
         var dbContextType = DbContextType;

@@ -4,42 +4,21 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NOF.Application;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-/// <summary>
-/// NOF database context factory interface
-/// </summary>
-public interface INOFDbContextFactory
-{
-    NOFDbContext CreateDbContext();
-    NOFDbContext CreateDbContext(string tenantId);
-}
-
-/// <summary>
-/// NOF database context factory interface
-/// Used to create database contexts of the specified type
-/// </summary>
-public interface INOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext> : INOFDbContextFactory where TDbContext : NOFDbContext
-{
-    NOFDbContext INOFDbContextFactory.CreateDbContext() => CreateDbContext();
-    NOFDbContext INOFDbContextFactory.CreateDbContext(string tenantId) => CreateDbContext(tenantId);
-
-    new TDbContext CreateDbContext();
-    new TDbContext CreateDbContext(string tenantId);
-}
-
-internal sealed class DbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>(INOFDbContextFactory<TDbContext> dbContextFactory) : IDbContextFactory<TDbContext>
+internal sealed class TypedDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>(NOFDbContextFactory<TDbContext> dbContextFactory) : IDbContextFactory<TDbContext>
     where TDbContext : NOFDbContext
 {
     public TDbContext CreateDbContext()
-        => dbContextFactory.CreateDbContext();
+        => dbContextFactory.CreateConcreteDbContext();
 }
 
-internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext> : INOFDbContextFactory<TDbContext>
+internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext> : IDbContextFactory
     where TDbContext : NOFDbContext
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationLocks = new(StringComparer.Ordinal);
@@ -48,14 +27,14 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
     private readonly IServiceProvider _serviceProvider;
     private readonly ICurrentTenant _currentTenant;
     private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
-    private readonly IEnumerable<INOFDbContextModelCreatingContributor> _modelCreatingContributors;
+    private readonly IEnumerable<IDbContextModelCreatingContributor> _modelCreatingContributors;
     private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
 
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         ICurrentTenant currentTenant,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
-        IEnumerable<INOFDbContextModelCreatingContributor> modelCreatingContributors,
+        IEnumerable<IDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         _serviceProvider = serviceProvider;
@@ -65,10 +44,16 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
         _logger = logger;
     }
 
-    public TDbContext CreateDbContext()
-        => CreateDbContext(TenantId.Normalize(_currentTenant.TenantId));
+    public IDbContext CreateDbContext()
+        => new EfCoreDbContextAdapter(CreateConcreteDbContext());
 
-    public TDbContext CreateDbContext(string tenantId)
+    public IDbContext CreateDbContext(string tenantId)
+        => new EfCoreDbContextAdapter(CreateConcreteDbContext(tenantId));
+
+    internal TDbContext CreateConcreteDbContext()
+        => CreateConcreteDbContext(TenantId.Normalize(_currentTenant.TenantId));
+
+    internal TDbContext CreateConcreteDbContext(string tenantId)
     {
         tenantId = TenantId.Normalize(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();

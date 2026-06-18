@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using INOFDbContextModelCreatingContributor = NOF.Infrastructure.EntityFrameworkCore.INOFDbContextModelCreatingContributor;
+using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
@@ -12,7 +12,7 @@ public sealed class PersistedSigningKeyPersistenceRegistrationStep : IServiceReg
     public ValueTask ExecuteAsync(IHostApplicationBuilder builder)
     {
         builder.Services.ReplaceOrAddScoped<ISigningKeyService, PersistenceSigningKeyService>();
-        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<INOFDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
 
         return ValueTask.CompletedTask;
     }

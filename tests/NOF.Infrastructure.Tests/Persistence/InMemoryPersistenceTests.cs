@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
@@ -150,16 +149,13 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton<IDbContextModelCreatingContributor, DynamicAuditEntryModelCreatingContributor>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
         ConfigureSqliteInMemory(
             builder.UseDbContext<NOFDbContext>()
-                .WithTenantMode(TenantMode.DatabasePerTenant)
-                .WithModelCreating(static modelBuilder =>
-                {
-                    ConfigureDynamicAuditEntry(modelBuilder);
-                }),
+                .WithTenantMode(TenantMode.DatabasePerTenant),
             $"nof-tests-{Guid.NewGuid():N}");
 
         using var services = BuildServiceProvider(builder);
@@ -180,26 +176,12 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
-    public void WithModelCreating_DifferentDelegates_ShouldNotReuseWrongModel()
+    public void DifferentModelCreatingContributors_ShouldNotReuseWrongModel()
     {
         using var firstServices = BuildServiceProviderWithModelCreating(
-            static modelBuilder =>
-            {
-                modelBuilder.Entity<FirstDynamicEntry>(entity =>
-                {
-                    entity.ToTable(nameof(FirstDynamicEntry));
-                    entity.HasKey(e => e.Id);
-                });
-            });
+            new FirstDynamicEntryContributor());
         using var secondServices = BuildServiceProviderWithModelCreating(
-            static modelBuilder =>
-            {
-                modelBuilder.Entity<SecondDynamicEntry>(entity =>
-                {
-                    entity.ToTable(nameof(SecondDynamicEntry));
-                    entity.HasKey(e => e.Id);
-                });
-            });
+            new SecondDynamicEntryContributor());
 
         using var firstScope = firstServices.CreateScope();
         SetTenant(firstScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
@@ -221,7 +203,7 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, ModelConfiguredHostOnlyEntryContributor>();
+        builder.Services.AddSingleton<IDbContextModelCreatingContributor, ModelConfiguredHostOnlyEntryContributor>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -248,7 +230,7 @@ public class SqliteInMemoryPersistenceTests
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
-        builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, AttributeHostOnlyEntryContributor>();
+        builder.Services.AddSingleton<IDbContextModelCreatingContributor, AttributeHostOnlyEntryContributor>();
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
@@ -278,7 +260,7 @@ public class SqliteInMemoryPersistenceTests
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
-        builder.Services.AddSingleton<INOFDbContextModelCreatingContributor, DynamicAuditEntryModelCreatingContributor>();
+        builder.Services.AddSingleton<IDbContextModelCreatingContributor, DynamicAuditEntryModelCreatingContributor>();
         ConfigureSqliteInMemory(
             builder.UseDbContext<NOFDbContext>()
                 .WithTenantMode(TenantMode.DatabasePerTenant),
@@ -1638,7 +1620,7 @@ public class SqliteInMemoryPersistenceTests
             .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
     }
 
-    private static void ConfigureDynamicAuditEntry(ModelBuilder modelBuilder)
+    private static void ConfigureDynamicAuditEntry(IDbModelBuilder modelBuilder)
     {
         modelBuilder.Entity<DynamicAuditEntry>(entity =>
         {
@@ -1648,18 +1630,18 @@ public class SqliteInMemoryPersistenceTests
         });
     }
 
-    private static ServiceProvider BuildServiceProviderWithModelCreating(Action<ModelBuilder> configure)
+    private static ServiceProvider BuildServiceProviderWithModelCreating(IDbContextModelCreatingContributor contributor)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddSingleton(contributor);
 
         builder.AddHostingDefaults();
         builder.AddInfrastructureDefaults();
         ConfigureSqliteInMemory(
             builder.UseDbContext<NOFDbContext>()
-                .WithTenantMode(TenantMode.DatabasePerTenant)
-                .WithModelCreating(configure),
+                .WithTenantMode(TenantMode.DatabasePerTenant),
             $"nof-tests-{Guid.NewGuid():N}");
 
         return BuildServiceProvider(builder);
@@ -1833,15 +1815,15 @@ public class SqliteInMemoryPersistenceTests
         public long Id { get; init; }
     }
 
-    private sealed class DynamicAuditEntryModelCreatingContributor : INOFDbContextModelCreatingContributor
+    private sealed class DynamicAuditEntryModelCreatingContributor : IDbContextModelCreatingContributor
     {
-        public void Configure(ModelBuilder modelBuilder)
+        public void Configure(IDbModelBuilder modelBuilder)
             => ConfigureDynamicAuditEntry(modelBuilder);
     }
 
-    private sealed class ModelConfiguredHostOnlyEntryContributor : INOFDbContextModelCreatingContributor
+    private sealed class ModelConfiguredHostOnlyEntryContributor : IDbContextModelCreatingContributor
     {
-        public void Configure(ModelBuilder modelBuilder)
+        public void Configure(IDbModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ModelConfiguredHostOnlyEntry>(entity =>
             {
@@ -1852,13 +1834,37 @@ public class SqliteInMemoryPersistenceTests
         }
     }
 
-    private sealed class AttributeHostOnlyEntryContributor : INOFDbContextModelCreatingContributor
+    private sealed class AttributeHostOnlyEntryContributor : IDbContextModelCreatingContributor
     {
-        public void Configure(ModelBuilder modelBuilder)
+        public void Configure(IDbModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AttributeHostOnlyEntry>(entity =>
             {
                 entity.ToTable(nameof(AttributeHostOnlyEntry));
+                entity.HasKey(e => e.Id);
+            });
+        }
+    }
+
+    private sealed class FirstDynamicEntryContributor : IDbContextModelCreatingContributor
+    {
+        public void Configure(IDbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<FirstDynamicEntry>(entity =>
+            {
+                entity.ToTable(nameof(FirstDynamicEntry));
+                entity.HasKey(e => e.Id);
+            });
+        }
+    }
+
+    private sealed class SecondDynamicEntryContributor : IDbContextModelCreatingContributor
+    {
+        public void Configure(IDbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<SecondDynamicEntry>(entity =>
+            {
+                entity.ToTable(nameof(SecondDynamicEntry));
                 entity.HasKey(e => e.Id);
             });
         }

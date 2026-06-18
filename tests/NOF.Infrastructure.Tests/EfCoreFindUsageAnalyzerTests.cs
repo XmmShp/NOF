@@ -3,27 +3,29 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
-using NOF.Application.SourceGenerator;
+using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Infrastructure.EntityFrameworkCore.SourceGenerator;
 using System.Collections.Immutable;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public sealed class FindUsageAnalyzerTests
+public sealed class EfCoreFindUsageAnalyzerTests
 {
     private static readonly Type[] _refs =
     [
         typeof(IDbSet<>),
         typeof(DbContext),
+        typeof(NOFDbContext),
         typeof(EntityFrameworkQueryableExtensions)
     ];
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
-        var extraReferences = _refs.Select(t => t.ToMetadataReference()).ToArray();
+        var extraReferences = _refs.Select(type => type.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
 
-        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new FindUsageAnalyzer());
+        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new EfCoreFindUsageAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         return await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
     }
@@ -60,7 +62,7 @@ public sealed class FindUsageAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.Contains(diagnostics, d => d.Id == "NOF302" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF302" && diagnostic.Severity == DiagnosticSeverity.Warning);
     }
 
     [Fact]
@@ -95,7 +97,7 @@ public sealed class FindUsageAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.Contains(diagnostics, d => d.Id == "NOF302" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF302" && diagnostic.Severity == DiagnosticSeverity.Warning);
     }
 
     [Fact]
@@ -128,7 +130,7 @@ public sealed class FindUsageAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.Contains(diagnostics, d => d.Id == "NOF303" && d.Severity == DiagnosticSeverity.Warning);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF303" && diagnostic.Severity == DiagnosticSeverity.Warning);
     }
 
     [Fact]
@@ -163,7 +165,7 @@ public sealed class FindUsageAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF302");
+        Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "NOF302");
     }
 
     [Fact]
@@ -197,7 +199,7 @@ public sealed class FindUsageAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF303");
+        Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "NOF303");
     }
 
     [Fact]
@@ -233,6 +235,40 @@ public sealed class FindUsageAnalyzerTests
             """;
 
         var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF302");
+        Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "NOF302");
+    }
+
+    [Fact]
+    public async Task DbContextSubclass_ReportsNOF304()
+    {
+        const string source = """
+            using Microsoft.EntityFrameworkCore;
+
+            namespace Test;
+
+            public sealed class AppDbContext : DbContext
+            {
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF304" && diagnostic.Severity == DiagnosticSeverity.Info);
+    }
+
+    [Fact]
+    public async Task NOFDbContextSubclass_DoesNotReportNOF304()
+    {
+        const string source = """
+            using NOF.Infrastructure.EntityFrameworkCore;
+
+            namespace Test;
+
+            public sealed class AppDbContext : NOFDbContext
+            {
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "NOF304");
     }
 }

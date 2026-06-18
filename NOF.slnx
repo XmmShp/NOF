@@ -42,6 +42,8 @@
     <Project Path="src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/NOF.Hosting.AspNetCore.Extension.OidcServer.csproj" />
   </Folder>
   <Folder Name="/src/Infrastructures/">
+    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" />
+    <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.RabbitMQ/NOF.Infrastructure.RabbitMQ.csproj" Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.StackExchangeRedis/NOF.Infrastructure.StackExchangeRedis.csproj" />
   </Folder>

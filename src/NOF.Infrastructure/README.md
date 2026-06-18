@@ -67,7 +67,6 @@ Available configuration methods:
 - `WithTenantMode(...)`
 - `WithConnectionString(...)`
 - `WithOptions(...)`
-- `WithModelCreating(...)`
 - `MigrateOnInitialize()`
 
 ## SQLite

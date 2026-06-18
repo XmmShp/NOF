@@ -1,6 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
@@ -29,9 +27,9 @@ public sealed class PersistedSigningKey
     public DateTime? InvalidatedAtUtc { get; set; }
 }
 
-public sealed class PersistedSigningKeyModelCreatingContributor : INOFDbContextModelCreatingContributor
+public sealed class PersistedSigningKeyModelCreatingContributor : IDbContextModelCreatingContributor
 {
-    public void Configure(ModelBuilder modelBuilder)
+    public void Configure(IDbModelBuilder modelBuilder)
     {
         modelBuilder.Entity<PersistedSigningKey>(entity =>
         {

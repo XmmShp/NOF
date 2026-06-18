@@ -1,12 +1,12 @@
-using Microsoft.EntityFrameworkCore;
+using NOF.Application;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTokenRepository
 {
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
 
-    public PersistenceRevokedRefreshTokenRepository(DbContext dbContext)
+    public PersistenceRevokedRefreshTokenRepository(IDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -16,11 +16,10 @@ public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTo
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
 
         var expiresAtUtc = DateTime.UtcNow.Add(expiration);
-        var revokedToken = await EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
-            _dbContext
+        var revokedToken = await _dbContext
             .Set<RevokedRefreshToken>()
-            .Where(token => token.TokenId == tokenId),
-            cancellationToken)
+            .Where(token => token.TokenId == tokenId)
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
         if (revokedToken is null)
@@ -44,11 +43,10 @@ public sealed class PersistenceRevokedRefreshTokenRepository : IRevokedRefreshTo
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
 
-        var revokedToken = await EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
-            _dbContext
+        var revokedToken = await _dbContext
             .Set<RevokedRefreshToken>()
-            .Where(token => token.TokenId == tokenId),
-            cancellationToken)
+            .Where(token => token.TokenId == tokenId)
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return revokedToken is not null && revokedToken.ExpiresAtUtc > DateTime.UtcNow;

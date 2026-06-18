@@ -1,9 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NOF.Infrastructure.EntityFrameworkCore;
+using NOF.Application;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
@@ -64,12 +63,12 @@ public sealed class RevokedRefreshTokenCleanupBackgroundService : BackgroundServ
     {
         using var scope = _serviceScopeFactory.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
         var now = DateTime.UtcNow;
         var expiredTokens = dbContext.Set<RevokedRefreshToken>()
             .Where(token => token.ExpiresAtUtc <= now)
             ;
-        var deletedCount = await EntityFrameworkQueryableExtensions.ExecuteDeleteAsync(expiredTokens, cancellationToken);
+        var deletedCount = await expiredTokens.ExecuteDeleteAsync(cancellationToken);
 
         if (deletedCount > 0)
         {

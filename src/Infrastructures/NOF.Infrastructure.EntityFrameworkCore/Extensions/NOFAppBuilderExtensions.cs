@@ -28,28 +28,19 @@ public static partial class NOFInfrastructureExtensions
             where TDbContext : NOFDbContext
         {
             builder.Services.AddOptions<DbContextConfigurationOptions>();
-            builder.Services.ReplaceOrAddScoped<INOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>();
-            builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, DbContextFactory<TDbContext>>();
-            builder.Services.ReplaceOrAddScoped<INOFDbContextFactory>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>());
-            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped<NOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>());
+            builder.Services.ReplaceOrAddScoped<IDbContextFactory>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>());
+            builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, TypedDbContextFactory<TDbContext>>();
+            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateConcreteDbContext());
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
-            builder.Services.ReplaceOrAddScoped<IDbContext>(sp => new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
+            builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<IDbContextFactory>().CreateDbContext());
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
-                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
+                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateConcreteDbContext());
             }
 
             return new EFCoreSelector(builder, typeof(TDbContext));
         }
 
-        public INOFAppBuilder AddDbContextModelCreating(Action<ModelBuilder> configure)
-        {
-            ArgumentNullException.ThrowIfNull(configure);
-
-            builder.Services.AddOptions<DbContextConfigurationOptions>();
-            builder.Services.AddSingleton<INOFDbContextModelCreatingContributor>(
-                new DelegateDbContextModelCreatingContributor(configure));
-            return builder;
-        }
     }
 }

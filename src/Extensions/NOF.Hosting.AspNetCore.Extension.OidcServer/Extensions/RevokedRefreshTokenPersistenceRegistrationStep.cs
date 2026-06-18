@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using INOFDbContextModelCreatingContributor = NOF.Infrastructure.EntityFrameworkCore.INOFDbContextModelCreatingContributor;
+using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
@@ -12,7 +12,7 @@ public sealed class RevokedRefreshTokenPersistenceRegistrationStep : IServiceReg
     public ValueTask ExecuteAsync(IHostApplicationBuilder builder)
     {
         builder.Services.TryAddScoped<IRevokedRefreshTokenRepository, PersistenceRevokedRefreshTokenRepository>();
-        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<INOFDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, RevokedRefreshTokenCleanupBackgroundService>());
 
         return ValueTask.CompletedTask;
