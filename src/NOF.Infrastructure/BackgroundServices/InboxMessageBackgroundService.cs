@@ -13,8 +13,6 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<InboxMessageBackgroundService> _logger;
-    private readonly CommandInboundPipelineExecutor _commandPipelineExecutor;
-    private readonly NotificationInboundPipelineExecutor _notificationPipelineExecutor;
     private readonly IObjectSerializer _objectSerializer;
     private readonly TypeResolver _typeResolver;
 
@@ -22,16 +20,12 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
-        CommandInboundPipelineExecutor commandPipelineExecutor,
-        NotificationInboundPipelineExecutor notificationPipelineExecutor,
         IObjectSerializer objectSerializer,
         TypeResolver typeResolver)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Inbox;
         _logger = logger;
-        _commandPipelineExecutor = commandPipelineExecutor;
-        _notificationPipelineExecutor = notificationPipelineExecutor;
         _objectSerializer = objectSerializer;
         _typeResolver = typeResolver;
     }
@@ -88,7 +82,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleMessageAsync(message, cancellationToken);
+                await ProcessSingleMessageAsync(scope.ServiceProvider, message, cancellationToken);
                 succeededIds.Add(message.Id);
             }
             catch (Exception)
@@ -104,7 +98,10 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             failedCount);
     }
 
-    private async Task ProcessSingleMessageAsync(NOFInboxMessage message, CancellationToken cancellationToken)
+    private async Task ProcessSingleMessageAsync(
+        IServiceProvider services,
+        NOFInboxMessage message,
+        CancellationToken cancellationToken)
     {
         if (message.Status != InboxMessageStatus.Pending)
         {
@@ -130,7 +127,8 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             {
                 case InboxMessageType.Command:
                     {
-                        await _commandPipelineExecutor.ExecuteAsync(
+                        var commandPipelineExecutor = services.GetRequiredService<CommandInboundPipelineExecutor>();
+                        await commandPipelineExecutor.ExecuteAsync(
                             message.Payload,
                             message.PayloadType,
                             handlerType,
@@ -140,7 +138,8 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                     }
                 case InboxMessageType.Notification:
                     {
-                        await _notificationPipelineExecutor.ExecuteAsync(
+                        var notificationPipelineExecutor = services.GetRequiredService<NotificationInboundPipelineExecutor>();
+                        await notificationPipelineExecutor.ExecuteAsync(
                             message.Payload,
                             message.PayloadType,
                             handlerType,

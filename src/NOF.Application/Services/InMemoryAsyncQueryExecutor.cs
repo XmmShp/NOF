@@ -3,11 +3,11 @@ using System.Runtime.CompilerServices;
 
 namespace NOF.Application;
 
-public sealed class InMemoryAsyncQueryExecutor : IAsyncQueryExecutor
+public class InMemoryAsyncQueryExecutor : IAsyncQueryExecutor
 {
     public static InMemoryAsyncQueryExecutor Instance { get; } = new();
 
-    private InMemoryAsyncQueryExecutor() { }
+    protected InMemoryAsyncQueryExecutor() { }
 
     public IAsyncEnumerable<TSource> AsAsyncEnumerable<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
@@ -21,13 +21,13 @@ public sealed class InMemoryAsyncQueryExecutor : IAsyncQueryExecutor
         return EnumerateSync(source, cancellationToken);
     }
 
-    public Task<int> ExecuteDeleteAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public virtual Task<int> ExecuteDeleteAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         throw new NotSupportedException("The current query provider does not support set-based delete operations.");
     }
 
-    public Task<int> ExecuteUpdateAsync<TSource>(IQueryable<TSource> source, IUpdateSetters<TSource> setters, CancellationToken cancellationToken = default)
+    public virtual Task<int> ExecuteUpdateAsync<TSource>(IQueryable<TSource> source, IUpdateSetters<TSource> setters, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(setters);

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure.EntityFrameworkCore;
@@ -36,6 +37,197 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
+    public async Task AddInMemoryPersistence_ShouldRegisterSelectablePersistenceProvider()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddInfrastructureDefaults();
+        builder.AddInMemoryPersistence();
+
+        using var provider = BuildServiceProvider(builder);
+        using (var scope = provider.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                MessageType = OutboxMessageType.Command,
+                PayloadType = "payload",
+                DispatchTypes = "[]",
+                Payload = [],
+                Headers = "{}"
+            });
+
+            Assert.Equal(1, await dbContext.SaveChangesAsync());
+        }
+
+        using (var scope = provider.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            var tracked = await dbContext.Set<NOFOutboxMessage>().SingleAsync();
+            tracked.Status = OutboxMessageStatus.Failed;
+
+            Assert.Equal(1, await dbContext.SaveChangesAsync());
+        }
+
+        using (var scope = provider.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            var detached = await dbContext.Set<NOFOutboxMessage>().AsNoTracking().SingleAsync();
+            detached.Status = OutboxMessageStatus.Sent;
+
+            Assert.Equal(0, await dbContext.SaveChangesAsync());
+            Assert.Equal(OutboxMessageStatus.Failed, (await dbContext.Set<NOFOutboxMessage>().SingleAsync()).Status);
+        }
+
+        using (var scope = provider.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            var updated = await dbContext.Set<NOFOutboxMessage>()
+                .ExecuteUpdateAsync(setters => setters.SetProperty(message => message.Status, OutboxMessageStatus.Sent));
+            var messages = await dbContext.Set<NOFOutboxMessage>().ToListAsync();
+
+            Assert.Equal(1, updated);
+            Assert.Single(messages);
+            Assert.Equal(OutboxMessageStatus.Sent, messages[0].Status);
+
+            var deleted = await dbContext.Set<NOFOutboxMessage>().ExecuteDeleteAsync();
+            Assert.Equal(1, deleted);
+            Assert.False(await dbContext.Set<NOFOutboxMessage>().AnyAsync());
+        }
+    }
+
+    [Fact]
+    public void AddInMemoryPersistence_ShouldRegisterDbContextAsScoped()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddInfrastructureDefaults();
+        builder.AddInMemoryPersistence();
+
+        using var provider = BuildServiceProvider(builder);
+        using var firstScope = provider.CreateScope();
+        using var secondScope = provider.CreateScope();
+
+        var firstResolution = firstScope.ServiceProvider.GetRequiredService<IDbContext>();
+        var secondResolution = firstScope.ServiceProvider.GetRequiredService<IDbContext>();
+        var otherScopeResolution = secondScope.ServiceProvider.GetRequiredService<IDbContext>();
+
+        Assert.Same(firstResolution, secondResolution);
+        Assert.NotSame(firstResolution, otherScopeResolution);
+    }
+
+    [Fact]
+    public async Task RequestInboundPipeline_ShouldResolveInMemoryEventHandlersFromCurrentScope()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        builder.AddInMemoryPersistence();
+        builder.Services.AddScoped<ScopeMarker>();
+        builder.Services.AddSingleton<ScopeEventProbe>();
+        builder.Services.AddTransient<ScopedRequestHandler>();
+        builder.Services.AddTransient<ScopedEventHandler>();
+        builder.Services.GetOrAddSingleton<EventHandlerRegistry>()
+            .Add(new EventHandlerRegistration(typeof(ScopedEventHandler), typeof(ScopedEvent)));
+
+        using var provider = BuildServiceProvider(builder);
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+
+        var expectedDbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+        var expectedMarker = scope.ServiceProvider.GetRequiredService<ScopeMarker>();
+        var probe = scope.ServiceProvider.GetRequiredService<ScopeEventProbe>();
+        probe.ExpectedDbContext = expectedDbContext;
+        probe.ExpectedMarker = expectedMarker;
+        var executor = scope.ServiceProvider.GetRequiredService<RequestInboundPipelineExecutor>();
+
+        await executor.ExecuteAsync(
+            new ScopedRequest(),
+            typeof(ScopedRequestHandler),
+            typeof(IScopedRpcService),
+            nameof(IScopedRpcService.Check),
+            headers: null,
+            CancellationToken.None);
+
+        Assert.True(probe.RequestHandlerUsedCurrentDbContext);
+        Assert.True(probe.EventHandlerUsedRequestHandlerDbContext);
+        Assert.True(probe.EventHandlerUsedRequestScopeMarker);
+    }
+
+    [Fact]
+    public async Task CommandInboundPipeline_ShouldResolveHandlersAndEventsFromCurrentScope()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        builder.AddInMemoryPersistence();
+        builder.Services.AddScoped<ScopeMarker>();
+        builder.Services.AddSingleton<ScopeEventProbe>();
+        builder.Services.AddTransient<ScopedCommandHandler>();
+        builder.Services.AddTransient<ScopedEventHandler>();
+        builder.Services.GetOrAddSingleton<EventHandlerRegistry>()
+            .Add(new EventHandlerRegistration(typeof(ScopedEventHandler), typeof(ScopedEvent)));
+
+        using var provider = BuildServiceProvider(builder);
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+
+        var probe = scope.ServiceProvider.GetRequiredService<ScopeEventProbe>();
+        probe.ExpectedDbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+        probe.ExpectedMarker = scope.ServiceProvider.GetRequiredService<ScopeMarker>();
+        var serializer = scope.ServiceProvider.GetRequiredService<IObjectSerializer>();
+        var typeResolver = scope.ServiceProvider.GetRequiredService<TypeResolver>();
+        var executor = scope.ServiceProvider.GetRequiredService<CommandInboundPipelineExecutor>();
+
+        await executor.ExecuteAsync(
+            serializer.Serialize(new ScopedCommand()),
+            typeResolver.Register(typeof(ScopedCommand)),
+            typeof(ScopedCommandHandler),
+            headers: null,
+            CancellationToken.None);
+
+        Assert.True(probe.CommandHandlerUsedCurrentDbContext);
+        Assert.True(probe.EventHandlerUsedCommandHandlerDbContext);
+        Assert.True(probe.EventHandlerUsedCommandScopeMarker);
+    }
+
+    [Fact]
+    public async Task NotificationInboundPipeline_ShouldResolveHandlersAndEventsFromCurrentScope()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        builder.AddInMemoryPersistence();
+        builder.Services.AddScoped<ScopeMarker>();
+        builder.Services.AddSingleton<ScopeEventProbe>();
+        builder.Services.AddTransient<ScopedNotificationHandler>();
+        builder.Services.AddTransient<ScopedEventHandler>();
+        builder.Services.GetOrAddSingleton<EventHandlerRegistry>()
+            .Add(new EventHandlerRegistration(typeof(ScopedEventHandler), typeof(ScopedEvent)));
+
+        using var provider = BuildServiceProvider(builder);
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+
+        var probe = scope.ServiceProvider.GetRequiredService<ScopeEventProbe>();
+        probe.ExpectedDbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+        probe.ExpectedMarker = scope.ServiceProvider.GetRequiredService<ScopeMarker>();
+        var serializer = scope.ServiceProvider.GetRequiredService<IObjectSerializer>();
+        var typeResolver = scope.ServiceProvider.GetRequiredService<TypeResolver>();
+        var executor = scope.ServiceProvider.GetRequiredService<NotificationInboundPipelineExecutor>();
+
+        await executor.ExecuteAsync(
+            serializer.Serialize(new ScopedNotification()),
+            typeResolver.Register(typeof(ScopedNotification)),
+            typeof(ScopedNotificationHandler),
+            headers: null,
+            CancellationToken.None);
+
+        Assert.True(probe.NotificationHandlerUsedCurrentDbContext);
+        Assert.True(probe.EventHandlerUsedNotificationHandlerDbContext);
+        Assert.True(probe.EventHandlerUsedNotificationScopeMarker);
+    }
+
+    [Fact]
     public void AddInfrastructureDefaults_ShouldRegisterCoreServicesAndOutboxOptions()
     {
         var builder = new TestServiceRegistrationContext();
@@ -55,6 +247,15 @@ public class InfrastructureDefaultsTests
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(OutboxCleanupBackgroundService));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(CommandInboundPipelineExecutor) &&
+            service.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(NotificationInboundPipelineExecutor) &&
+            service.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(RequestInboundPipelineExecutor) &&
+            service.Lifetime == ServiceLifetime.Scoped);
         Assert.Equal(4, builder.Services.Count(service =>
             service.ServiceType == typeof(IHostedService)));
         Assert.NotNull(
@@ -322,6 +523,144 @@ public class InfrastructureDefaultsTests
     private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)
     {
         return builder.Services.BuildServiceProvider();
+    }
+
+    private interface IScopedRpcService : IRpcService
+    {
+        Result Check(ScopedRequest request);
+    }
+
+    private sealed record ScopedRequest;
+
+    private sealed class ScopedCommand;
+
+    private sealed class ScopedNotification;
+
+    private sealed record ScopedEvent(IDbContext HandlerDbContext, ScopeMarker HandlerMarker, string Source);
+
+    private sealed class ScopeMarker;
+
+    private sealed class ScopeEventProbe
+    {
+        public IDbContext? ExpectedDbContext { get; set; }
+
+        public ScopeMarker? ExpectedMarker { get; set; }
+
+        public bool RequestHandlerUsedCurrentDbContext { get; set; }
+
+        public bool EventHandlerUsedRequestHandlerDbContext { get; set; }
+
+        public bool EventHandlerUsedRequestScopeMarker { get; set; }
+
+        public bool CommandHandlerUsedCurrentDbContext { get; set; }
+
+        public bool EventHandlerUsedCommandHandlerDbContext { get; set; }
+
+        public bool EventHandlerUsedCommandScopeMarker { get; set; }
+
+        public bool NotificationHandlerUsedCurrentDbContext { get; set; }
+
+        public bool EventHandlerUsedNotificationHandlerDbContext { get; set; }
+
+        public bool EventHandlerUsedNotificationScopeMarker { get; set; }
+    }
+
+    private sealed class ScopedRequestHandler : RpcHandler<ScopedRequest, Result>
+    {
+        private readonly IDbContext _dbContext;
+        private readonly ScopeMarker _marker;
+        private readonly ScopeEventProbe _probe;
+
+        public ScopedRequestHandler(IDbContext dbContext, ScopeMarker marker, ScopeEventProbe probe)
+        {
+            _dbContext = dbContext;
+            _marker = marker;
+            _probe = probe;
+        }
+
+        public override Task<Result> HandleAsync(ScopedRequest request, Context context, CancellationToken cancellationToken)
+        {
+            _probe.RequestHandlerUsedCurrentDbContext = ReferenceEquals(_probe.ExpectedDbContext, _dbContext);
+            new ScopedEvent(_dbContext, _marker, "request").PublishAsEvent();
+            return Task.FromResult(Result.Success());
+        }
+    }
+
+    private sealed class ScopedCommandHandler : CommandHandler<ScopedCommand>
+    {
+        private readonly IDbContext _dbContext;
+        private readonly ScopeMarker _marker;
+        private readonly ScopeEventProbe _probe;
+
+        public ScopedCommandHandler(IDbContext dbContext, ScopeMarker marker, ScopeEventProbe probe)
+        {
+            _dbContext = dbContext;
+            _marker = marker;
+            _probe = probe;
+        }
+
+        public override Task HandleAsync(ScopedCommand command, Context context, CancellationToken cancellationToken)
+        {
+            _probe.CommandHandlerUsedCurrentDbContext = ReferenceEquals(_probe.ExpectedDbContext, _dbContext);
+            new ScopedEvent(_dbContext, _marker, "command").PublishAsEvent();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ScopedNotificationHandler : NotificationHandler<ScopedNotification>
+    {
+        private readonly IDbContext _dbContext;
+        private readonly ScopeMarker _marker;
+        private readonly ScopeEventProbe _probe;
+
+        public ScopedNotificationHandler(IDbContext dbContext, ScopeMarker marker, ScopeEventProbe probe)
+        {
+            _dbContext = dbContext;
+            _marker = marker;
+            _probe = probe;
+        }
+
+        public override Task HandleAsync(ScopedNotification notification, Context context, CancellationToken cancellationToken)
+        {
+            _probe.NotificationHandlerUsedCurrentDbContext = ReferenceEquals(_probe.ExpectedDbContext, _dbContext);
+            new ScopedEvent(_dbContext, _marker, "notification").PublishAsEvent();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ScopedEventHandler : InMemoryEventHandler<ScopedEvent>
+    {
+        private readonly IDbContext _dbContext;
+        private readonly ScopeMarker _marker;
+        private readonly ScopeEventProbe _probe;
+
+        public ScopedEventHandler(IDbContext dbContext, ScopeMarker marker, ScopeEventProbe probe)
+        {
+            _dbContext = dbContext;
+            _marker = marker;
+            _probe = probe;
+        }
+
+        public override Task HandleAsync(ScopedEvent @event, CancellationToken cancellationToken)
+        {
+            switch (@event.Source)
+            {
+                case "request":
+                    _probe.EventHandlerUsedRequestHandlerDbContext = ReferenceEquals(@event.HandlerDbContext, _dbContext);
+                    _probe.EventHandlerUsedRequestScopeMarker = ReferenceEquals(@event.HandlerMarker, _marker);
+                    break;
+                case "command":
+                    _probe.EventHandlerUsedCommandHandlerDbContext = ReferenceEquals(@event.HandlerDbContext, _dbContext);
+                    _probe.EventHandlerUsedCommandScopeMarker = ReferenceEquals(@event.HandlerMarker, _marker);
+                    break;
+                case "notification":
+                    _probe.EventHandlerUsedNotificationHandlerDbContext = ReferenceEquals(@event.HandlerDbContext, _dbContext);
+                    _probe.EventHandlerUsedNotificationScopeMarker = ReferenceEquals(@event.HandlerMarker, _marker);
+                    break;
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
 }

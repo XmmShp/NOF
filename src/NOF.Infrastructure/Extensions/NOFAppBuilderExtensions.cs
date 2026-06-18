@@ -74,9 +74,9 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Pipelines
-            builder.Services.TryAddSingleton<CommandInboundPipelineExecutor>();
-            builder.Services.TryAddSingleton<NotificationInboundPipelineExecutor>();
-            builder.Services.TryAddSingleton<RequestInboundPipelineExecutor>();
+            builder.Services.TryAddScoped<CommandInboundPipelineExecutor>();
+            builder.Services.TryAddScoped<NotificationInboundPipelineExecutor>();
+            builder.Services.TryAddScoped<RequestInboundPipelineExecutor>();
             #endregion
 
             #region Application Services
@@ -129,6 +129,13 @@ public static partial class NOFInfrastructureExtensions
 
         public INOFAppBuilder AddRegistrationStep(Func<IHostApplicationBuilder, ValueTask> func)
             => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
+
+        public INOFAppBuilder AddInMemoryPersistence()
+        {
+            builder.Services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();
+            builder.Services.ReplaceOrAddScoped<IDbContext, InMemoryDbContext>();
+            return builder;
+        }
     }
 
     private static void AddInfrastructureJwtPropagation(INOFAppBuilder builder)
