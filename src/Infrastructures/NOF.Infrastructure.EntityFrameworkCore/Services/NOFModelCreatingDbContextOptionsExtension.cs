@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal sealed class NOFModelCreatingDbContextOptionsExtension : IDbContextOptionsExtension
 {

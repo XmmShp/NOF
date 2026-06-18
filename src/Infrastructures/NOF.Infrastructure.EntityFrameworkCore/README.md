@@ -24,7 +24,7 @@ dotnet add package NOF.Infrastructure.EntityFrameworkCore
 ```csharp
 using Microsoft.EntityFrameworkCore;
 using NOF.Hosting;
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 
 var builder = NOFWebApplicationBuilder.Create(args);
 

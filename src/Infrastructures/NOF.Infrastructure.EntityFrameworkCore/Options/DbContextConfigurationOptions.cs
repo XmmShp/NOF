@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public sealed class DbContextConfigurationOptions
 {

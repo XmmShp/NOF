@@ -50,7 +50,7 @@ After adding the EF Core package, persistence is configured through `UseDbContex
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 
 var builder = NOFWebApplicationBuilder.Create(args);
 

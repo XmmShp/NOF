@@ -31,4 +31,14 @@ public interface IDbContext
     /// Persists pending changes asynchronously.
     /// </summary>
     Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Starts a database transaction.
+    /// </summary>
+    IDbContextTransaction BeginTransaction();
+
+    /// <summary>
+    /// Starts a database transaction asynchronously.
+    /// </summary>
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }

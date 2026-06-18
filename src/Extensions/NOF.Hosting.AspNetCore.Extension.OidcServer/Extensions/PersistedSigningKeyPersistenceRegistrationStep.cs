@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using NOF.Infrastructure;
+using INOFDbContextModelCreatingContributor = NOF.Infrastructure.EntityFrameworkCore.INOFDbContextModelCreatingContributor;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 

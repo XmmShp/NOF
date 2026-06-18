@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 

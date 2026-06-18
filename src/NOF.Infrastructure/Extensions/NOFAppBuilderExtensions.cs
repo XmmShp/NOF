@@ -35,7 +35,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<CurrentTenant>();
             builder.Services.TryAddScoped<ICurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
             builder.Services.TryAddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
-            builder.Services.TryAddSingleton<IInboxMessageStore, NoOpInboxMessageStore>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
             builder.Environment.BindConfiguration(builder.Configuration);
 

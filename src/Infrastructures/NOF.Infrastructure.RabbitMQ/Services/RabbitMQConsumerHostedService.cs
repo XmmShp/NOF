@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,10 +15,11 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly IOptions<RabbitMQOptions> _options;
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
     private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
-    private readonly IInboxMessageStore _inboxMessageStore;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly TypeResolver _typeResolver;
+    private readonly IObjectSerializer _objectSerializer;
     private readonly List<IChannel> _channels = [];
     private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -28,8 +30,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         CommandHandlerRegistry commandHandlerRegistry,
         NotificationHandlerRegistry notificationHandlerRegistry,
         IHostEnvironment hostEnvironment,
-        IInboxMessageStore inboxMessageStore,
+        IServiceProvider serviceProvider,
         TypeResolver typeResolver,
+        IObjectSerializer objectSerializer,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
@@ -37,8 +40,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         _commandHandlerRegistry = commandHandlerRegistry;
         _notificationHandlerRegistry = notificationHandlerRegistry;
         _hostEnvironment = hostEnvironment;
-        _inboxMessageStore = inboxMessageStore;
+        _serviceProvider = serviceProvider;
         _typeResolver = typeResolver;
+        _objectSerializer = objectSerializer;
         _logger = logger;
     }
 
@@ -213,7 +217,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             if (_notificationHandlerTypes.TryGetValue(queueName, out var notificationHandlerType))
             {
                 var messageId = ResolveMessageId(headers);
-                await _inboxMessageStore.EnqueueAsync(
+                await EnqueueAsync(
                     messageId,
                     InboxMessageType.Notification,
                     payload,
@@ -231,7 +235,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                         requeue: false);
 
                 var messageId = ResolveMessageId(headers);
-                await _inboxMessageStore.EnqueueAsync(
+                await EnqueueAsync(
                     messageId,
                     InboxMessageType.Command,
                     payload,
@@ -260,6 +264,52 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 // Ignore
             }
         }
+    }
+
+    private async Task<bool> EnqueueAsync(
+        Guid messageId,
+        InboxMessageType messageType,
+        ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        string handlerTypeName,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        CancellationToken cancellationToken)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+
+        var dbContext = scope.ServiceProvider.GetService<IDbContext>();
+        if (dbContext is null)
+        {
+            return true;
+        }
+
+        dbContext.Set<NOFInboxMessage>().Add(new NOFInboxMessage
+        {
+            Id = messageId,
+            MessageType = messageType,
+            PayloadType = payloadTypeName,
+            HandlerType = handlerTypeName,
+            Payload = payload.ToArray(),
+            Headers = SerializeHeaders(headers)
+        });
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            return false;
+        }
+    }
+
+    private string SerializeHeaders(IEnumerable<KeyValuePair<string, string?>>? headers)
+    {
+        var dictionary = headers?.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value)
+            ?? new Dictionary<string, string?>(StringComparer.Ordinal);
+        return _objectSerializer.SerializeToText(dictionary, typeof(Dictionary<string, string?>));
     }
 
     private Type ResolveCommandType(string queueName)

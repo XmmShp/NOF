@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// DbContext options extension added for tenant-aware contexts.

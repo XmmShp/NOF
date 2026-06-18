@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public readonly struct EFCoreSelector
 {

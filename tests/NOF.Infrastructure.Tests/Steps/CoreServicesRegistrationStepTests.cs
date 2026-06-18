@@ -10,6 +10,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
+using NOF.Infrastructure.EntityFrameworkCore;
 using System.Diagnostics;
 using Xunit;
 

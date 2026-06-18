@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Hosting;
@@ -34,7 +34,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
             builder.Services.ReplaceOrAddScoped<IDbContext>(sp => new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
-            builder.Services.ReplaceOrAddSingleton<IInboxMessageStore, InboxMessageStore>();
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
                 builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<INOFDbContextFactory<TDbContext>>().CreateDbContext());

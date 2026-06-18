@@ -1,4 +1,4 @@
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Builders;
 

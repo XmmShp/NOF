@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal sealed class DbContextMigrationInitializationStep(Type dbContextType) : IApplicationInitializationStep
 {

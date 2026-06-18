@@ -5,7 +5,7 @@ using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public class NOFDbContext : DbContext
 {

@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System.Collections.Concurrent;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// Keeps named SQLite in-memory databases alive across DbContext instances.

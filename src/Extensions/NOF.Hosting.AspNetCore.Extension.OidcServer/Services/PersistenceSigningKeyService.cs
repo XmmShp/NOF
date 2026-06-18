@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -102,7 +102,7 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
         {
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateException)
+        catch (Application.DbUpdateException)
         {
             _dbContext.ChangeTracker.Clear();
             throw;
@@ -162,7 +162,7 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
         {
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateException)
+        catch (Application.DbUpdateException)
         {
             _dbContext.ChangeTracker.Clear();
 

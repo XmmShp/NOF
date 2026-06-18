@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 /// <summary>
 /// An EF Core <see cref="IValueConverterSelector"/> that automatically provides

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal static class SoftDeleteModelHelper
 {

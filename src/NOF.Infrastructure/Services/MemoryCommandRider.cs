@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 
@@ -6,17 +7,20 @@ namespace NOF.Infrastructure;
 public sealed class MemoryCommandRider : ICommandRider
 {
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
-    private readonly IInboxMessageStore _inboxMessageStore;
+    private readonly IServiceProvider _serviceProvider;
     private readonly TypeResolver _typeResolver;
+    private readonly IObjectSerializer _objectSerializer;
 
     public MemoryCommandRider(
         CommandHandlerRegistry commandHandlerRegistry,
-        IInboxMessageStore inboxMessageStore,
-        TypeResolver typeResolver)
+        IServiceProvider serviceProvider,
+        TypeResolver typeResolver,
+        IObjectSerializer objectSerializer)
     {
         _commandHandlerRegistry = commandHandlerRegistry;
-        _inboxMessageStore = inboxMessageStore;
+        _serviceProvider = serviceProvider;
         _typeResolver = typeResolver;
+        _objectSerializer = objectSerializer;
     }
 
     public async Task SendAsync(ReadOnlyMemory<byte> payload,
@@ -31,7 +35,7 @@ public sealed class MemoryCommandRider : ICommandRider
                 $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
 
         var messageId = ResolveMessageId(headers);
-        await _inboxMessageStore.EnqueueAsync(
+        await EnqueueAsync(
             messageId,
             InboxMessageType.Command,
             payload,
@@ -39,6 +43,52 @@ public sealed class MemoryCommandRider : ICommandRider
             _typeResolver.Register(handlerType),
             headers,
             cancellationToken);
+    }
+
+    private async Task<bool> EnqueueAsync(
+        Guid messageId,
+        InboxMessageType messageType,
+        ReadOnlyMemory<byte> payload,
+        string payloadTypeName,
+        string handlerTypeName,
+        IEnumerable<KeyValuePair<string, string?>>? headers,
+        CancellationToken cancellationToken)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+
+        var dbContext = scope.ServiceProvider.GetService<IDbContext>();
+        if (dbContext is null)
+        {
+            return true;
+        }
+
+        dbContext.Set<NOFInboxMessage>().Add(new NOFInboxMessage
+        {
+            Id = messageId,
+            MessageType = messageType,
+            PayloadType = payloadTypeName,
+            HandlerType = handlerTypeName,
+            Payload = payload.ToArray(),
+            Headers = SerializeHeaders(headers)
+        });
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException)
+        {
+            return false;
+        }
+    }
+
+    private string SerializeHeaders(IEnumerable<KeyValuePair<string, string?>>? headers)
+    {
+        var dictionary = headers?.ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value)
+            ?? new Dictionary<string, string?>(StringComparer.Ordinal);
+        return _objectSerializer.SerializeToText(dictionary, typeof(Dictionary<string, string?>));
     }
 
     private static Guid ResolveMessageId(IEnumerable<KeyValuePair<string, string?>>? headers)

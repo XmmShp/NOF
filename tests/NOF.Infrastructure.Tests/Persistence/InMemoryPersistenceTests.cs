@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Configuration;
@@ -7,13 +6,15 @@ using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using HostOnlyAttribute = NOF.Application.HostOnlyAttribute;
-using EFQuery = Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Hosting;
+using NOF.Infrastructure.EntityFrameworkCore;
+using System.Linq.Expressions;
 using Xunit;
+using EFQuery = Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions;
+using HostOnlyAttribute = NOF.Application.HostOnlyAttribute;
 
 namespace NOF.Infrastructure.Tests.Persistence;
 
@@ -1411,7 +1412,7 @@ public class SqliteInMemoryPersistenceTests
             });
         await db.SaveChangesAsync();
 
-        var appDb = scope.ServiceProvider.GetRequiredService<NOF.Application.IDbContext>();
+        var appDb = scope.ServiceProvider.GetRequiredService<IDbContext>();
         var changed = await TransactionalMessageRecovery.MarkExpiredExhaustedOutboxMessagesAsFailedAsync(
             appDb,
             maxRetryCount: 2,
@@ -1481,7 +1482,7 @@ public class SqliteInMemoryPersistenceTests
             });
         await db.SaveChangesAsync();
 
-        var appDb = scope.ServiceProvider.GetRequiredService<NOF.Application.IDbContext>();
+        var appDb = scope.ServiceProvider.GetRequiredService<IDbContext>();
         var changed = await TransactionalMessageRecovery.MarkExpiredExhaustedInboxMessagesAsFailedAsync(
             appDb,
             maxRetryCount: 2,

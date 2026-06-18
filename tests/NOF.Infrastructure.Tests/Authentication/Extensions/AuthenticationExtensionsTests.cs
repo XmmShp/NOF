@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
+using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Test;
 using System.Security.Claims;
 using Xunit;

@@ -2,8 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using NOF.Application;
 using System.Linq.Expressions;
 using System.Reflection;
+using AppDbException = NOF.Application.DbException;
+using AppDbTransactionCommitException = NOF.Application.DbTransactionCommitException;
+using AppDbTransactionException = NOF.Application.DbTransactionException;
+using AppDbUpdateConcurrencyException = NOF.Application.DbUpdateConcurrencyException;
+using AppDbUpdateException = NOF.Application.DbUpdateException;
+using EfDbContextTransaction = Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction;
+using EfDbUpdateConcurrencyException = Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException;
+using EfDbUpdateException = Microsoft.EntityFrameworkCore.DbUpdateException;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal sealed class EfCoreDbContextAdapter(DbContext dbContext) : IDbContext
 {
@@ -15,16 +23,211 @@ internal sealed class EfCoreDbContextAdapter(DbContext dbContext) : IDbContext
         => new EfCoreDbSetAdapter<TEntity>(_dbContext.Set<TEntity>(), _asyncExecutor);
 
     public int SaveChanges()
-        => _dbContext.SaveChanges();
+        => SaveChanges(acceptAllChangesOnSuccess: true);
 
     public int SaveChanges(bool acceptAllChangesOnSuccess)
-        => _dbContext.SaveChanges(acceptAllChangesOnSuccess);
+    {
+        try
+        {
+            return _dbContext.SaveChanges(acceptAllChangesOnSuccess);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateSaveChangesException(ex);
+        }
+    }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _dbContext.SaveChangesAsync(cancellationToken);
+        => SaveChangesAsync(acceptAllChangesOnSuccess: true, cancellationToken);
 
-    public Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
-        => _dbContext.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    public async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _dbContext.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateSaveChangesException(ex);
+        }
+    }
+
+    public IDbContextTransaction BeginTransaction()
+    {
+        try
+        {
+            return new EfCoreDbContextTransactionAdapter(_dbContext.Database.BeginTransaction());
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                "Failed to begin a database transaction.");
+        }
+    }
+
+    public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return new EfCoreDbContextTransactionAdapter(await _dbContext.Database.BeginTransactionAsync(cancellationToken));
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                "Failed to begin a database transaction.");
+        }
+    }
+}
+
+internal sealed class EfCoreDbContextTransactionAdapter(EfDbContextTransaction transaction) : IDbContextTransaction
+{
+    private readonly EfDbContextTransaction _transaction = transaction;
+
+    public Guid TransactionId => _transaction.TransactionId;
+
+    public void Commit()
+    {
+        try
+        {
+            _transaction.Commit();
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateCommitException(ex);
+        }
+    }
+
+    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _transaction.CommitAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateCommitException(ex);
+        }
+    }
+
+    public void Rollback()
+    {
+        try
+        {
+            _transaction.Rollback();
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                "Failed to roll back the database transaction.");
+        }
+    }
+
+    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _transaction.RollbackAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                "Failed to roll back the database transaction.");
+        }
+    }
+
+    public void CreateSavepoint(string name)
+    {
+        try
+        {
+            _transaction.CreateSavepoint(name);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                $"Failed to create transaction savepoint '{name}'.");
+        }
+    }
+
+    public async Task CreateSavepointAsync(string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _transaction.CreateSavepointAsync(name, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                $"Failed to create transaction savepoint '{name}'.");
+        }
+    }
+
+    public void RollbackToSavepoint(string name)
+    {
+        try
+        {
+            _transaction.RollbackToSavepoint(name);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                $"Failed to roll back to transaction savepoint '{name}'.");
+        }
+    }
+
+    public async Task RollbackToSavepointAsync(string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _transaction.RollbackToSavepointAsync(name, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                $"Failed to roll back to transaction savepoint '{name}'.");
+        }
+    }
+
+    public void ReleaseSavepoint(string name)
+    {
+        try
+        {
+            _transaction.ReleaseSavepoint(name);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                $"Failed to release transaction savepoint '{name}'.");
+        }
+    }
+
+    public async Task ReleaseSavepointAsync(string name, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _transaction.ReleaseSavepointAsync(name, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw EfCoreExceptionTranslator.TranslateTransactionException(
+                ex,
+                $"Failed to release transaction savepoint '{name}'.");
+        }
+    }
+
+    public void Dispose()
+        => _transaction.Dispose();
+
+    public ValueTask DisposeAsync()
+        => _transaction.DisposeAsync();
 }
 
 internal sealed class EfCoreDbSetAdapter<TEntity> : AsyncQueryable<TEntity>, IDbSet<TEntity>
@@ -220,4 +423,36 @@ internal sealed class EfCoreAsyncQueryExecutor : IAsyncQueryExecutor
         => efSetters.SetProperty(
             (Expression<Func<TSource, TProperty>>)propertyExpression,
             (Expression<Func<TSource, TProperty>>)valueExpression);
+}
+
+internal static class EfCoreExceptionTranslator
+{
+    public static Exception TranslateSaveChangesException(Exception exception)
+        => exception switch
+        {
+            AppDbException => exception,
+            EfDbUpdateConcurrencyException ex => new AppDbUpdateConcurrencyException(
+                "A concurrency violation was detected while saving changes.",
+                ex),
+            EfDbUpdateException ex => new AppDbUpdateException(
+                "An error occurred while saving changes to the database.",
+                ex),
+            _ => exception
+        };
+
+    public static AppDbTransactionException TranslateTransactionException(Exception exception, string message)
+        => exception switch
+        {
+            AppDbTransactionException ex => ex,
+            _ => new AppDbTransactionException(message, exception)
+        };
+
+    public static AppDbTransactionCommitException TranslateCommitException(Exception exception)
+        => exception switch
+        {
+            AppDbTransactionCommitException ex => ex,
+            _ => new AppDbTransactionCommitException(
+                "Failed to commit the database transaction.",
+                exception)
+        };
 }

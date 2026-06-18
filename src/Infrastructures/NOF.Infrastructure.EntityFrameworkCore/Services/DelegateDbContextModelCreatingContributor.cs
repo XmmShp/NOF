@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
 
-namespace NOF.Infrastructure;
+namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal sealed class DelegateDbContextModelCreatingContributor(Action<ModelBuilder> configure)
     : INOFDbContextModelCreatingContributor
