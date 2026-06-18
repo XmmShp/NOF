@@ -144,6 +144,52 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public void UseDbContext_ShouldApplyBuiltInEntitiesThroughModelCreatingContributors()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
+        builder.AddHostingDefaults();
+        builder.AddInfrastructureDefaults();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<NOFDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant),
+            $"nof-tests-{Guid.NewGuid():N}");
+
+        using var services = BuildServiceProvider(builder);
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
+        var tenant = db.Model.FindEntityType(typeof(NOFTenant));
+        var inbox = db.Model.FindEntityType(typeof(NOFInboxMessage));
+        var outbox = db.Model.FindEntityType(typeof(NOFOutboxMessage));
+        var stateMachine = db.Model.FindEntityType(typeof(NOFStateMachineContext));
+        Assert.NotNull(tenant);
+        Assert.NotNull(inbox);
+        Assert.NotNull(outbox);
+        Assert.NotNull(stateMachine);
+
+        Assert.Equal(nameof(NOFTenant), tenant.GetTableName());
+        Assert.Equal(nameof(NOFInboxMessage), inbox.GetTableName());
+        Assert.Equal(nameof(NOFOutboxMessage), outbox.GetTableName());
+        Assert.Equal(nameof(NOFStateMachineContext), stateMachine.GetTableName());
+        Assert.Equal(true, tenant.FindAnnotation("NOF:HostOnly")?.Value);
+        Assert.Equal(true, inbox.FindAnnotation("NOF:HostOnly")?.Value);
+        Assert.Equal(true, outbox.FindAnnotation("NOF:HostOnly")?.Value);
+        Assert.Equal(true, stateMachine.FindAnnotation("NOF:HostOnly")?.Value);
+        Assert.Equal([nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.HandlerType)],
+            inbox.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
+        Assert.Equal([nameof(NOFStateMachineContext.CorrelationId), nameof(NOFStateMachineContext.DefinitionTypeName)],
+            stateMachine.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
+        Assert.Contains(tenant.GetIndexes(), index => index.IsUnique
+            && index.Properties.Select(static property => property.Name).SequenceEqual([nameof(NOFTenant.Name)]));
+        Assert.Contains(outbox.GetIndexes(), index =>
+            index.Properties.Select(static property => property.Name).SequenceEqual([nameof(NOFOutboxMessage.TraceParent)]));
+    }
+
+    [Fact]
     public async Task OnModelCreatingOptions_ShouldAddDynamicEntityType()
     {
         var builder = new TestServiceRegistrationContext();

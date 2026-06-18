@@ -4,19 +4,14 @@ using System.Linq.Expressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-internal interface IEfCoreModelBuilderAccessor
+internal sealed class EfCoreModelBuilderAdapter(ModelBuilder modelBuilder) : IDbModelBuilder
 {
-    ModelBuilder ModelBuilder { get; }
-}
-
-internal sealed class EfCoreModelBuilderAdapter(ModelBuilder modelBuilder) : IDbModelBuilder, IEfCoreModelBuilderAccessor
-{
-    public ModelBuilder ModelBuilder { get; } = modelBuilder;
+    private readonly ModelBuilder _modelBuilder = modelBuilder;
 
     public void Entity<TEntity>(Action<IDbEntityTypeBuilder<TEntity>> configure)
         where TEntity : class
     {
-        ModelBuilder.Entity<TEntity>(entityBuilder =>
+        _modelBuilder.Entity<TEntity>(entityBuilder =>
         {
             configure(new EfCoreEntityTypeBuilderAdapter<TEntity>(entityBuilder));
         });
@@ -47,11 +42,17 @@ internal sealed class EfCoreEntityTypeBuilderAdapter<TEntity>(EntityTypeBuilder<
         return this;
     }
 
-    public IDbEntityTypeBuilder<TEntity> HasIndex<TProperty>(Expression<Func<TEntity, TProperty>> indexExpression)
+    public IDbEntityTypeBuilder<TEntity> HasKey(params string[] propertyNames)
     {
-        _entityBuilder.HasIndex(ToObjectExpression(indexExpression));
+        _entityBuilder.HasKey(propertyNames);
         return this;
     }
+
+    public IDbIndexBuilder<TEntity> HasIndex<TProperty>(Expression<Func<TEntity, TProperty>> indexExpression)
+        => new EfCoreIndexBuilderAdapter<TEntity>(_entityBuilder.HasIndex(ToObjectExpression(indexExpression)));
+
+    public IDbIndexBuilder<TEntity> HasIndex(params string[] propertyNames)
+        => new EfCoreIndexBuilderAdapter<TEntity>(_entityBuilder.HasIndex(propertyNames));
 
     public IDbPropertyBuilder<TEntity, TProperty> Property<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression)
         => new EfCorePropertyBuilderAdapter<TEntity, TProperty>(_entityBuilder.Property(propertyExpression));
@@ -63,6 +64,19 @@ internal sealed class EfCoreEntityTypeBuilderAdapter<TEntity>(EntityTypeBuilder<
             : expression.Body;
 
         return Expression.Lambda<Func<TEntity, object?>>(body, expression.Parameters);
+    }
+}
+
+internal sealed class EfCoreIndexBuilderAdapter<TEntity>(IndexBuilder<TEntity> indexBuilder)
+    : IDbIndexBuilder<TEntity>
+    where TEntity : class
+{
+    private readonly IndexBuilder<TEntity> _indexBuilder = indexBuilder;
+
+    public IDbIndexBuilder<TEntity> IsUnique()
+    {
+        _indexBuilder.IsUnique();
+        return this;
     }
 }
 

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using NOF.Abstraction;
 using NOF.Application;
 using System.Diagnostics.CodeAnalysis;
@@ -22,69 +21,9 @@ public class NOFDbContext : DbContext
     public TenantMode CurrentTenantMode => _tenantOptions.TenantMode;
     public bool CurrentSoftDeleteEnabled => _tenantOptions.SoftDeleteEnabled;
 
-    internal DbSet<NOFStateMachineContext> NOFStateMachineContexts { get; set; }
-    internal DbSet<NOFInboxMessage> NOFInboxMessages { get; set; }
-    internal DbSet<NOFOutboxMessage> NOFOutboxMessages { get; set; }
-    internal DbSet<NOFTenant> NOFTenants { get; set; }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<NOFTenant>(entity =>
-        {
-            entity.IsHostOnly();
-            entity.ToTable(nameof(NOFTenant));
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.Name).IsUnique();
-            entity.Property(e => e.Id).HasMaxLength(256);
-            entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.Description).HasMaxLength(1000);
-        });
-
-        modelBuilder.Entity<NOFInboxMessage>(entity =>
-        {
-            entity.IsHostOnly();
-            entity.ToTable(nameof(NOFInboxMessage));
-            entity.HasKey(e => new { e.Id, e.HandlerType });
-            entity.HasIndex(e => new { e.Status, e.CreatedAtUtc });
-            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAtUtc });
-            entity.HasIndex(e => e.ClaimedBy);
-            entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
-            entity.Property(e => e.HandlerType).HasMaxLength(512).IsRequired();
-            entity.Property(e => e.Payload).IsRequired();
-            entity.Property(e => e.Headers).IsRequired();
-            entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
-            entity.Property(e => e.ClaimedBy).HasMaxLength(256);
-        });
-
-        modelBuilder.Entity<NOFOutboxMessage>(entity =>
-        {
-            entity.IsHostOnly();
-            entity.ToTable(nameof(NOFOutboxMessage));
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.Status, e.CreatedAtUtc });
-            entity.HasIndex(e => new { e.Status, e.ClaimExpiresAtUtc });
-            entity.HasIndex(e => e.ClaimedBy);
-            entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
-            entity.Property(e => e.DispatchTypes).IsRequired();
-            entity.Property(e => e.Payload).IsRequired();
-            entity.Property(e => e.Headers).IsRequired();
-            entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
-            entity.Property(e => e.ClaimedBy).HasMaxLength(256);
-            entity.Property(e => e.TraceParent).HasMaxLength(128);
-            entity.HasIndex(e => e.TraceParent);
-        });
-
-        modelBuilder.Entity<NOFStateMachineContext>(entity =>
-        {
-            entity.IsHostOnly();
-            entity.ToTable(nameof(NOFStateMachineContext));
-            entity.HasKey(e => new { e.CorrelationId, e.DefinitionTypeName });
-            entity.Property(e => e.CorrelationId).IsRequired();
-            entity.Property(e => e.DefinitionTypeName).IsRequired();
-        });
-
         _modelCreatingOptions.ApplyModelCreating(modelBuilder);
     }
 

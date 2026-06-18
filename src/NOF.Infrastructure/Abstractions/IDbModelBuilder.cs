@@ -20,9 +20,20 @@ public interface IDbEntityTypeBuilder<TEntity>
 
     IDbEntityTypeBuilder<TEntity> HasKey<TProperty>(Expression<Func<TEntity, TProperty>> keyExpression);
 
-    IDbEntityTypeBuilder<TEntity> HasIndex<TProperty>(Expression<Func<TEntity, TProperty>> indexExpression);
+    IDbEntityTypeBuilder<TEntity> HasKey(params string[] propertyNames);
+
+    IDbIndexBuilder<TEntity> HasIndex<TProperty>(Expression<Func<TEntity, TProperty>> indexExpression);
+
+    IDbIndexBuilder<TEntity> HasIndex(params string[] propertyNames);
 
     IDbPropertyBuilder<TEntity, TProperty> Property<TProperty>(Expression<Func<TEntity, TProperty>> propertyExpression);
+}
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public interface IDbIndexBuilder<TEntity>
+    where TEntity : class
+{
+    IDbIndexBuilder<TEntity> IsUnique();
 }
 
 [EditorBrowsable(EditorBrowsableState.Never)]

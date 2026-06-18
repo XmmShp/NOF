@@ -50,6 +50,10 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFTenantModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxMessageModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFOutboxMessageModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFStateMachineContextModelCreatingContributor>());
 
             #endregion
 
