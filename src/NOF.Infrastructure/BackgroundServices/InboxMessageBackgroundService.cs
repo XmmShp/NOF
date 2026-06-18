@@ -277,10 +277,10 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             yield break;
         }
 
-        var claimed = await dbContext.Set<NOFInboxMessage>()
+        var claimedQuery = dbContext.Set<NOFInboxMessage>()
             .AsNoTracking()
-            .Where(m => m.ClaimedBy == lockId)
-            .ToListAsync(cancellationToken);
+            .Where(m => m.ClaimedBy == lockId);
+        var claimed = await EntityFrameworkQueryableExtensions.ToListAsync(claimedQuery, cancellationToken);
 
         foreach (var msgFromDb in claimed)
         {

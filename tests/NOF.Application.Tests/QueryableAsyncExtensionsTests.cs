@@ -1,10 +1,11 @@
-using NOF.Application.Data;
 using Xunit;
 
 namespace NOF.Application.Tests;
 
 public class QueryableAsyncExtensionsTests
 {
+    private sealed record Order(int Id, decimal Amount);
+
     [Fact]
     public async Task ToListAsync_ShouldFallbackToSyncQueryable()
     {
@@ -33,5 +34,55 @@ public class QueryableAsyncExtensionsTests
         var result = await query.AnyAsync(value => value > 10);
 
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task CountAsync_ShouldWorkOnWrappedQueryableChain()
+    {
+        var query = Enumerable.Range(1, 10).AsQueryable().AsAsyncQueryable();
+
+        var result = await query.Where(value => value % 2 == 0).CountAsync();
+
+        Assert.Equal(5, result);
+    }
+
+    [Fact]
+    public async Task AverageAsync_ShouldApplySelector()
+    {
+        var query = new[]
+        {
+            new Order(1, 10m),
+            new Order(2, 20m),
+            new Order(3, 30m)
+        }.AsQueryable();
+
+        var result = await query.AverageAsync(order => order.Amount);
+
+        Assert.Equal(20m, result);
+    }
+
+    [Fact]
+    public async Task ToDictionaryAsync_ShouldMaterializeByKey()
+    {
+        var query = new[]
+        {
+            new Order(1, 10m),
+            new Order(2, 20m)
+        }.AsQueryable();
+
+        var result = await query.ToDictionaryAsync(order => order.Id);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(20m, result[2].Amount);
+    }
+
+    [Fact]
+    public async Task AllAsync_ShouldEvaluatePredicate()
+    {
+        var query = Enumerable.Range(1, 5).AsQueryable();
+
+        var result = await query.AllAsync(value => value > 0);
+
+        Assert.True(result);
     }
 }

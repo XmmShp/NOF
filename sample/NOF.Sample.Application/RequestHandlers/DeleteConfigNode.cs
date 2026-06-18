@@ -1,4 +1,3 @@
-using NOF.Application.Data;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Sample.Application.CacheKeys;

@@ -2,16 +2,18 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using NOF.Application;
 using NOF.Application.SourceGenerator;
 using System.Collections.Immutable;
 using Xunit;
 
 namespace NOF.SourceGenerator.Tests;
 
-public sealed class EfCoreFindUsageAnalyzerTests
+public sealed class FindUsageAnalyzerTests
 {
     private static readonly Type[] _refs =
     [
+        typeof(IDbSet<>),
         typeof(DbContext),
         typeof(EntityFrameworkQueryableExtensions)
     ];
@@ -21,7 +23,7 @@ public sealed class EfCoreFindUsageAnalyzerTests
         var extraReferences = _refs.Select(t => t.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
 
-        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new EfCoreFindUsageAnalyzer());
+        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new FindUsageAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         return await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
     }
@@ -196,5 +198,41 @@ public sealed class EfCoreFindUsageAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
         Assert.DoesNotContain(diagnostics, d => d.Id == "NOF303");
+    }
+
+    [Fact]
+    public async Task FirstOrDefaultAsync_OnApplicationAbstraction_DoesNotReportNOF302()
+    {
+        const string source = """
+            using NOF.Application;
+            using NOF.Application.Data;
+            using System.Threading;
+            using System.Threading.Tasks;
+
+            namespace Test;
+
+            public sealed class Order
+            {
+                public int Id { get; set; }
+            }
+
+            public sealed class OrderHandler
+            {
+                private readonly IDbContext _dbContext;
+
+                public OrderHandler(IDbContext dbContext)
+                {
+                    _dbContext = dbContext;
+                }
+
+                public Task<Order?> GetAsync(CancellationToken cancellationToken)
+                {
+                    return _dbContext.Set<Order>().FirstOrDefaultAsync(order => order.Id == 1, cancellationToken);
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.DoesNotContain(diagnostics, d => d.Id == "NOF302");
     }
 }

@@ -1,4 +1,3 @@
-using NOF.Application.Data;
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Application;
 using NOF.Contract;

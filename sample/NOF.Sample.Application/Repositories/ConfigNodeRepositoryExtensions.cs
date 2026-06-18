@@ -1,6 +1,4 @@
-using NOF.Sample;
 using NOF.Application;
-using NOF.Application.Data;
 
 namespace NOF.Sample.Application.Repositories;
 

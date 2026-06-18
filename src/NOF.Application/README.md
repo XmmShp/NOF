@@ -4,7 +4,7 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 ## Overview
 
-Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, and caching.
+Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, caching, and persistence contracts.
 
 Commands and notifications are plain payload types. Handler discovery comes from the `CommandHandler<T>` and `NotificationHandler<T>` base classes rather than marker interfaces on the message types.
 
@@ -16,6 +16,8 @@ RPC contracts are declared on `IRpcService` interfaces in the contract layer. Ap
 
 ```csharp
 public partial class OrderService : RpcServer<IOrderService>;
+
+using NOF.Application;
 
 public sealed class GetOrder : OrderService.GetOrder
 {
@@ -122,6 +124,20 @@ _notificationPublisher.DeferPublish(new OrderCreatedNotification(order.Id));
 _commandSender.DeferSend(new SendEmailCommand(order.Email, "Created", "Order created."));
 await _dbContext.SaveChangesAsync(cancellationToken);
 ```
+
+### Persistence Abstractions
+
+Application code should depend on `IDbContext`, `IDbSet<TEntity>`, and async query helpers under `NOF.Application` rather than a concrete ORM type.
+
+```csharp
+using NOF.Application;
+
+var exists = await _dbContext.Set<Order>()
+    .AsNoTracking()
+    .AnyAsync(order => order.Id == request.Id, cancellationToken);
+```
+
+The async query surface is exposed through `IAsyncQueryable<T>` plus extension methods such as `AnyAsync`, `CountAsync`, `FirstOrDefaultAsync`, `SingleAsync`, `ToListAsync`, `SumAsync`, and `AverageAsync`. Concrete infrastructure adapters decide how those terminal operations are executed.
 
 ### Object Mapping (`IMapper`)
 

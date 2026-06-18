@@ -2,7 +2,7 @@ namespace NOF.Application;
 
 /// <summary>
 /// Abstracts the application's persistence context.
-/// Implementations may be backed by EF Core or another data access technology.
+/// Implementations may be backed by any concrete data access technology.
 /// </summary>
 public interface IDbContext
 {
@@ -18,7 +18,17 @@ public interface IDbContext
     int SaveChanges();
 
     /// <summary>
+    /// Persists pending changes.
+    /// </summary>
+    int SaveChanges(bool acceptAllChangesOnSuccess);
+
+    /// <summary>
     /// Persists pending changes asynchronously.
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Persists pending changes asynchronously.
+    /// </summary>
+    Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default);
 }

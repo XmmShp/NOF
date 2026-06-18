@@ -278,10 +278,10 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             yield break;
         }
 
-        var claimedMessagesFromDb = await dbContext.Set<NOFOutboxMessage>()
+        var claimedMessagesQuery = dbContext.Set<NOFOutboxMessage>()
             .AsNoTracking()
-            .Where(m => m.ClaimedBy == lockId)
-            .ToListAsync(cancellationToken);
+            .Where(m => m.ClaimedBy == lockId);
+        var claimedMessagesFromDb = await EntityFrameworkQueryableExtensions.ToListAsync(claimedMessagesQuery, cancellationToken);
 
         foreach (var msgFromDb in claimedMessagesFromDb)
         {
@@ -347,8 +347,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
         else
         {
-            message = await dbContext.Set<NOFOutboxMessage>()
-                .FirstOrDefaultAsync(m => m.Id == messageId, cancellationToken);
+            var messageQuery = dbContext.Set<NOFOutboxMessage>()
+                .Where(m => m.Id == messageId);
+            message = await EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(messageQuery, cancellationToken);
         }
 
         if (message == null)
