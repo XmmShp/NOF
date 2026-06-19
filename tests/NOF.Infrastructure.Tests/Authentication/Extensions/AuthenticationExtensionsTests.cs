@@ -24,9 +24,9 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationAuthority_WithIssuerOverload_ShouldRegisterAuthorityServices()
+    public async Task AddOidcServer_ShouldRegisterAuthorityServices()
     {
-        var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+        var builder = CreateOidcServerBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
@@ -43,13 +43,13 @@ public sealed class AuthenticationExtensionsTests
         Assert.IsType<PersistenceRevokedRefreshTokenRepository>(
         scope.GetRequiredService<IRevokedRefreshTokenRepository>());
         Assert.Contains(scope.Services.GetServices<IHostedService>(), service => service is RevokedRefreshTokenCleanupBackgroundService);
-        Assert.Equal("https://issuer.local", scope.GetRequiredService<IOptions<AuthenticationAuthorityOptions>>().Value.Issuer);
+        Assert.Equal("https://issuer.local", scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value.Issuer);
     }
 
     [Fact]
-    public async Task AddAuthenticationAuthority_ShouldRegisterPersistentRevokedRefreshTokenRepository()
+    public async Task AddOidcServer_ShouldRegisterPersistentRevokedRefreshTokenRepository()
     {
-        var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+        var builder = CreateOidcServerBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
@@ -62,10 +62,11 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddOidcServer_ShouldRegisterProtocolServicesOnly()
+    public async Task AddOidcServer_ShouldRegisterProtocolAndAuthorityServices()
     {
-        var builder = NOFTestAppBuilder.Create();
-        builder.AddOidcServer(options =>
+        var builder = CreateOidcServerBuilder(
+            $"Data Source=nof-oidc-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared",
+            options =>
         {
             options.Issuer = "https://issuer.local/oauth2";
             options.AccessTokenAudience = "nof-tests";
@@ -75,6 +76,9 @@ public sealed class AuthenticationExtensionsTests
         using var scope = host.CreateScope();
 
         Assert.NotNull(scope.GetRequiredService<IOAuthAuthorizationCodeService>());
+        Assert.NotNull(scope.GetRequiredService<ITokenService>());
+        Assert.NotNull(scope.GetRequiredService<ISigningKeyService>());
+        Assert.NotNull(scope.GetRequiredService<IOAuthClientManagementService>());
         Assert.Equal("https://issuer.local/oauth2", scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value.Issuer);
         Assert.Null(scope.Services.GetService<IOAuthAuthorizationHandler>());
         Assert.Null(scope.Services.GetService<IOAuthSubjectService>());
@@ -84,7 +88,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ClientCredentialsGrant_ShouldIssueAccessTokenWithoutRefreshToken()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientStore>(new TestOAuthClientStore())
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
             .BuildServiceProvider();
         var tokenService = new TestTokenService();
         var httpContext = new DefaultHttpContext
@@ -123,7 +127,72 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationAuthority_ShouldPersistSigningKeysAcrossHostRestarts()
+    public async Task OAuthClientManagementService_ShouldCreateValidateAndRotateClientSecrets()
+    {
+        var builder = CreateOidcServerBuilder(
+            $"Data Source=nof-oauth-client-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared",
+            options =>
+        {
+            options.Issuer = "https://issuer.local/oauth2";
+            options.AccessTokenAudience = "jobs-api";
+        });
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var management = scope.GetRequiredService<IOAuthClientManagementService>();
+
+        var createResult = await management.CreateAsync(new CreateOAuthClientRequest
+        {
+            ClientId = "service-a",
+            DisplayName = "Service A",
+            AllowedScopes = ["jobs.read", "jobs.write"],
+            AccessTokenClaims = [new OAuthClientClaim("tenant", "default")]
+        });
+
+        Assert.True(createResult.IsSuccess, createResult.Message);
+        Assert.False(string.IsNullOrWhiteSpace(createResult.Value.ClientSecret));
+
+        var validation = await management.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                "service-a",
+                createResult.Value.ClientSecret,
+                new HashSet<string>(["jobs.read"], StringComparer.Ordinal),
+                "client_secret_post"),
+            CancellationToken.None);
+
+        var success = Assert.IsType<OAuthClientCredentialsValidationResult.Success>(validation);
+        Assert.Equal("service-a", success.Subject);
+        Assert.Contains("jobs.read", success.Scopes);
+        Assert.Contains(success.AccessTokenClaims, claim => claim.Key == "tenant" && claim.Value == "default");
+        Assert.Contains(success.AccessTokenClaims, claim => claim.Key == "client_id" && claim.Value == "service-a");
+
+        var invalidScope = await management.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                "service-a",
+                createResult.Value.ClientSecret,
+                new HashSet<string>(["jobs.delete"], StringComparer.Ordinal),
+                "client_secret_post"),
+            CancellationToken.None);
+
+        Assert.IsType<OAuthClientCredentialsValidationResult.Failure>(invalidScope);
+
+        var rotateResult = await management.RotateSecretAsync("service-a");
+        Assert.True(rotateResult.IsSuccess, rotateResult.Message);
+        Assert.NotEqual(createResult.Value.ClientSecret, rotateResult.Value.ClientSecret);
+
+        var oldSecretValidation = await management.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                "service-a",
+                createResult.Value.ClientSecret,
+                new HashSet<string>(["jobs.read"], StringComparer.Ordinal),
+                "client_secret_post"),
+            CancellationToken.None);
+
+        Assert.IsType<OAuthClientCredentialsValidationResult.Failure>(oldSecretValidation);
+    }
+
+    [Fact]
+    public async Task AddOidcServer_ShouldPersistSigningKeysAcrossHostRestarts()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"nof-jwt-signing-keys-{Guid.NewGuid():N}.db");
         var connectionString = $"Data Source={dbPath}";
@@ -131,7 +200,7 @@ public sealed class AuthenticationExtensionsTests
         string firstKid;
         string rotatedKid;
 
-        await using (var firstHost = await CreateAuthorityBuilder(connectionString).BuildTestHostAsync())
+        await using (var firstHost = await CreateOidcServerBuilder(connectionString).BuildTestHostAsync())
         {
             using var scope = firstHost.CreateScope();
             var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
@@ -154,7 +223,7 @@ public sealed class AuthenticationExtensionsTests
             Assert.Contains(rotatedKeys, key => key.Status == PersistedSigningKeyStatus.Retired && key.Kid == firstKid);
         }
 
-        await using (var secondHost = await CreateAuthorityBuilder(connectionString).BuildTestHostAsync())
+        await using (var secondHost = await CreateOidcServerBuilder(connectionString).BuildTestHostAsync())
         {
             using var scope = secondHost.CreateScope();
             var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
@@ -183,10 +252,10 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationAuthority_WithoutEncryptionKey_ShouldFallbackToMachineName()
+    public async Task AddOidcServer_WithoutEncryptionKey_ShouldFallbackToMachineName()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAuthenticationAuthority(options =>
+        builder.AddOidcServer(options =>
         {
             options.Issuer = "https://issuer.local";
         });
@@ -198,7 +267,7 @@ public sealed class AuthenticationExtensionsTests
         using var scope = host.CreateScope();
 
         _ = await scope.GetRequiredService<ISigningKeyService>().GetCurrentSigningKeyAsync();
-        var options = scope.GetRequiredService<IOptions<AuthenticationAuthorityOptions>>().Value;
+        var options = scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value;
 
         Assert.Equal(Environment.MachineName, options.SigningKeyEncryptionKey);
     }
@@ -240,9 +309,9 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationAuthority_AndResourceServer_ShouldAllowSingletonJwksCacheToRefreshViaScope()
+    public async Task AddOidcServer_AndResourceServer_ShouldAllowSingletonJwksCacheToRefreshViaScope()
     {
-        var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+        var builder = CreateOidcServerBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
         builder.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://issuer.local";
@@ -328,13 +397,16 @@ public sealed class AuthenticationExtensionsTests
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(SigningKeyRotationBackgroundService));
     }
 
-    private static NOFTestAppBuilder CreateAuthorityBuilder(string connectionString)
+    private static NOFTestAppBuilder CreateOidcServerBuilder(
+        string connectionString,
+        Action<OAuthAuthorizationServerOptions>? configureOptions = null)
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAuthenticationAuthority(options =>
+        builder.AddOidcServer(options =>
         {
             options.Issuer = "https://issuer.local";
             options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;
+            configureOptions?.Invoke(options);
         });
         builder.UseDbContext<NOFDbContext>()
             .WithConnectionString(connectionString)
@@ -343,7 +415,7 @@ public sealed class AuthenticationExtensionsTests
         return builder;
     }
 
-    private sealed class TestOAuthClientStore : IOAuthClientStore
+    private sealed class TestOAuthClientManagementService : IOAuthClientManagementService
     {
         public ValueTask<OAuthClientCredentialsValidationResult> ValidateClientCredentialsAsync(
             OAuthClientCredentialsValidationRequest request,
@@ -361,6 +433,31 @@ public sealed class AuthenticationExtensionsTests
             return ValueTask.FromResult<OAuthClientCredentialsValidationResult>(
                 new OAuthClientCredentialsValidationResult.Failure("invalid_client", "client credentials are invalid."));
         }
+
+        public Task<IReadOnlyList<OAuthClientDescriptor>> ListAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result<OAuthClientDescriptor>> GetAsync(string clientId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result<OAuthClientSecretDescriptor>> CreateAsync(
+            CreateOAuthClientRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result<OAuthClientDescriptor>> UpdateAsync(
+            string clientId,
+            UpdateOAuthClientRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result<OAuthClientSecretDescriptor>> RotateSecretAsync(
+            string clientId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result> DeleteAsync(string clientId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class TestTokenService : ITokenService

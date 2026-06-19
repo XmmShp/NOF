@@ -9,13 +9,13 @@ namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 public sealed class RevokedRefreshTokenCleanupBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _serviceScopeFactory;
-    private readonly AuthenticationAuthorityOptions _options;
+    private readonly OAuthAuthorizationServerOptions _options;
     private readonly ILogger<RevokedRefreshTokenCleanupBackgroundService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
 
     public RevokedRefreshTokenCleanupBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
-        IOptions<AuthenticationAuthorityOptions> options,
+        IOptions<OAuthAuthorizationServerOptions> options,
         ILogger<RevokedRefreshTokenCleanupBackgroundService> logger,
         IHostEnvironment hostEnvironment)
     {

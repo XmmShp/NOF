@@ -116,7 +116,6 @@ public static partial class NOFOidcServerExtensions
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
         ISigningKeyService signingKeyService,
-        IOptions<AuthenticationAuthorityOptions> authorityOptions,
         IOptions<OAuthAuthorizationServerOptions> oauthOptions,
         CancellationToken cancellationToken)
     {
@@ -128,7 +127,6 @@ public static partial class NOFOidcServerExtensions
                 subjectService,
                 tokenService,
                 signingKeyService,
-                authorityOptions.Value,
                 oauthOptions.Value,
                 cancellationToken).ConfigureAwait(false),
             "client_credentials" => await TokenFromClientCredentialsAsync(
@@ -143,7 +141,6 @@ public static partial class NOFOidcServerExtensions
                 subjectService,
                 tokenService,
                 signingKeyService,
-                authorityOptions.Value,
                 oauthOptions.Value,
                 cancellationToken).ConfigureAwait(false),
             _ => Fail("unsupported_grant_type", "Only authorization_code, client_credentials, and refresh_token are supported.")
@@ -158,7 +155,6 @@ public static partial class NOFOidcServerExtensions
         HttpRequest httpRequest,
         IOAuthSubjectService subjectService,
         ISigningKeyService signingKeyService,
-        IOptions<AuthenticationAuthorityOptions> authorityOptions,
         IOptions<OAuthAuthorizationServerOptions> oauthOptions,
         CancellationToken cancellationToken)
     {
@@ -166,7 +162,7 @@ public static partial class NOFOidcServerExtensions
         var principal = await ValidateAccessTokenAsync(
             accessToken,
             signingKeyService,
-            authorityOptions.Value,
+            oauthOptions.Value,
             oauthOptions.Value.AccessTokenAudience,
             cancellationToken).ConfigureAwait(false);
         var subject = principal?.FindFirst(OAuthClaimTypes.Subject)?.Value
@@ -203,7 +199,6 @@ public static partial class NOFOidcServerExtensions
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
         ISigningKeyService signingKeyService,
-        AuthenticationAuthorityOptions authorityOptions,
         OAuthAuthorizationServerOptions oauthOptions,
         CancellationToken cancellationToken)
     {
@@ -252,7 +247,6 @@ public static partial class NOFOidcServerExtensions
             subjectService,
             tokenService,
             signingKeyService,
-            authorityOptions,
             oauthOptions,
             authorizationCode.Subject,
             authorizationCode.Scope,
@@ -286,7 +280,6 @@ public static partial class NOFOidcServerExtensions
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
         ISigningKeyService signingKeyService,
-        AuthenticationAuthorityOptions authorityOptions,
         OAuthAuthorizationServerOptions oauthOptions,
         CancellationToken cancellationToken)
     {
@@ -338,7 +331,6 @@ public static partial class NOFOidcServerExtensions
             subjectService,
             tokenService,
             signingKeyService,
-            authorityOptions,
             oauthOptions,
             subject,
             scope,
@@ -355,7 +347,6 @@ public static partial class NOFOidcServerExtensions
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
         ISigningKeyService signingKeyService,
-        AuthenticationAuthorityOptions authorityOptions,
         OAuthAuthorizationServerOptions oauthOptions,
         string subject,
         string scope,
@@ -399,7 +390,6 @@ public static partial class NOFOidcServerExtensions
 
         var idToken = await GenerateIdTokenAsync(
             signingKeyService,
-            authorityOptions,
             oauthOptions,
             profile,
             scopes,
@@ -426,10 +416,10 @@ public static partial class NOFOidcServerExtensions
         OAuthAuthorizationServerOptions oauthOptions,
         CancellationToken cancellationToken)
     {
-        var clientStore = serviceProvider.GetService<IOAuthClientStore>();
-        if (clientStore is null)
+        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
+        if (clientService is null)
         {
-            return Fail("server_error", "OAuth client credentials store is not registered.");
+            return Fail("server_error", "OAuth client management service is not registered.");
         }
 
         var clientCredentials = ResolveClientCredentials(httpRequest, request);
@@ -439,7 +429,7 @@ public static partial class NOFOidcServerExtensions
         }
 
         var requestedScopes = ParseScopes(request.Scope);
-        var validation = await clientStore.ValidateClientCredentialsAsync(
+        var validation = await clientService.ValidateClientCredentialsAsync(
             new OAuthClientCredentialsValidationRequest(
                 clientCredentials.ClientId,
                 clientCredentials.ClientSecret,
@@ -466,6 +456,7 @@ public static partial class NOFOidcServerExtensions
         {
             accessClaims.Insert(0, new TokenClaim(OAuthClaimTypes.Subject, success.Subject));
         }
+
         accessClaims.Add(new TokenClaim(OAuthClaimTypes.Scope, scopeText));
 
         var issueResult = await tokenService.IssueTokenAsync(
@@ -492,7 +483,6 @@ public static partial class NOFOidcServerExtensions
 
     private static async ValueTask<string?> GenerateIdTokenAsync(
         ISigningKeyService signingKeyService,
-        AuthenticationAuthorityOptions authorityOptions,
         OAuthAuthorizationServerOptions oauthOptions,
         OAuthSubjectProfile profile,
         IReadOnlySet<string> scopes,
@@ -529,7 +519,7 @@ public static partial class NOFOidcServerExtensions
         var now = DateTime.UtcNow;
         var signingKey = (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
         var token = new JwtSecurityToken(
-            issuer: authorityOptions.Issuer,
+            issuer: oauthOptions.Issuer,
             audience: audience,
             claims: claims,
             notBefore: now,
@@ -542,7 +532,7 @@ public static partial class NOFOidcServerExtensions
     private static async ValueTask<ClaimsPrincipal?> ValidateAccessTokenAsync(
         string token,
         ISigningKeyService signingKeyService,
-        AuthenticationAuthorityOptions options,
+        OAuthAuthorizationServerOptions options,
         string audience,
         CancellationToken cancellationToken)
     {
@@ -783,6 +773,18 @@ public static partial class NOFOidcServerExtensions
 
     private static Result<OAuthTokenEndpointResponse> Fail(string code, string message)
         => Result.Fail(code, message);
+
+    private static TService? ResolveService<TService>(IServiceProvider serviceProvider)
+    {
+        try
+        {
+            return serviceProvider.GetService<TService>();
+        }
+        catch (InvalidOperationException)
+        {
+            return default;
+        }
+    }
 
     private static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;

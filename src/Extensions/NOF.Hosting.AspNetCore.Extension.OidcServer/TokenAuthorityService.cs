@@ -10,12 +10,12 @@ public sealed partial class TokenAuthorityService : ITokenService
 {
     private readonly ISigningKeyService _signingKeyService;
     private readonly IRevokedRefreshTokenRepository _revokedRefreshTokenRepository;
-    private readonly AuthenticationAuthorityOptions _options;
+    private readonly OAuthAuthorizationServerOptions _options;
 
     public TokenAuthorityService(
         ISigningKeyService signingKeyService,
         IRevokedRefreshTokenRepository revokedRefreshTokenRepository,
-        IOptions<AuthenticationAuthorityOptions> options)
+        IOptions<OAuthAuthorizationServerOptions> options)
     {
         _signingKeyService = signingKeyService;
         _revokedRefreshTokenRepository = revokedRefreshTokenRepository;

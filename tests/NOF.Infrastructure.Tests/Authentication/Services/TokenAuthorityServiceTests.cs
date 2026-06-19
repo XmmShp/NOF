@@ -18,7 +18,7 @@ public sealed class TokenAuthorityServiceTests
     [Fact]
     public async Task IssueToken_ShouldIssueClaimsDrivenAccessAndRefreshTokens()
     {
-        var builder = CreateAuthorityBuilder();
+        var builder = CreateOidcServerBuilder();
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
@@ -78,7 +78,7 @@ public sealed class TokenAuthorityServiceTests
     [Fact]
     public async Task IssueToken_WithoutRefreshToken_ShouldOnlyIssueAccessToken()
     {
-        var builder = CreateAuthorityBuilder();
+        var builder = CreateOidcServerBuilder();
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
@@ -104,7 +104,7 @@ public sealed class TokenAuthorityServiceTests
     [Fact]
     public async Task IssueToken_ShouldSerializeNumericDateClaimsAsNumbers()
     {
-        var builder = CreateAuthorityBuilder();
+        var builder = CreateOidcServerBuilder();
         const string issuedAt = "1710000000";
 
         await using var host = await builder.BuildTestHostAsync();
@@ -135,7 +135,7 @@ public sealed class TokenAuthorityServiceTests
     [Fact]
     public async Task ValidateRefreshToken_ShouldFail_WhenAudienceDoesNotMatch()
     {
-        var builder = CreateAuthorityBuilder();
+        var builder = CreateOidcServerBuilder();
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
@@ -176,10 +176,10 @@ public sealed class TokenAuthorityServiceTests
         return Convert.FromBase64String(padded);
     }
 
-    private static NOFTestAppBuilder CreateAuthorityBuilder()
+    private static NOFTestAppBuilder CreateOidcServerBuilder()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAuthenticationAuthority(options =>
+        builder.AddOidcServer(options =>
         {
             options.Issuer = "https://issuer.local";
             options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;

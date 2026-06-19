@@ -15,17 +15,12 @@ builder.AddApplicationPart(typeof(NOFSampleService).Assembly);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
-builder.AddAuthenticationAuthority(o =>
-{
-    o.Issuer = "http://localhost/oauth2";
-    o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
-        ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
-});
-
 builder.AddOidcServer(o =>
 {
     o.Issuer = "http://localhost/oauth2";
     o.AccessTokenAudience = "nof-sample";
+    o.SigningKeyEncryptionKey = builder.Configuration["NOF:OidcServer:SigningKeyEncryptionKey"]
+        ?? throw new InvalidOperationException("Configuration value 'NOF:OidcServer:SigningKeyEncryptionKey' not found.");
 });
 
 builder.AddAuthenticationResourceServer(o =>

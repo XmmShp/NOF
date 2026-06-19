@@ -13,13 +13,13 @@ namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 /// </summary>
 public sealed class PersistenceSigningKeyService : ISigningKeyService
 {
-    private readonly AuthenticationAuthorityOptions _options;
+    private readonly OAuthAuthorizationServerOptions _options;
     private readonly IDbContext _dbContext;
     private readonly ILogger<PersistenceSigningKeyService> _logger;
     private byte[]? _encryptionKey;
 
     public PersistenceSigningKeyService(
-        IOptions<AuthenticationAuthorityOptions> options,
+        IOptions<OAuthAuthorizationServerOptions> options,
         IDbContext dbContext,
         ILogger<PersistenceSigningKeyService> logger)
     {
@@ -331,7 +331,7 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
                 ? "unknown-device"
                 : Environment.MachineName;
             _logger.LogWarning(
-                "SigningKeyEncryptionKey is not configured. Falling back to device name '{DeviceName}'. This value has been written back to AuthenticationAuthorityOptions for the current process.",
+                "SigningKeyEncryptionKey is not configured. Falling back to device name '{DeviceName}'. This value has been written back to OAuthAuthorizationServerOptions for the current process.",
                 _options.SigningKeyEncryptionKey);
         }
 

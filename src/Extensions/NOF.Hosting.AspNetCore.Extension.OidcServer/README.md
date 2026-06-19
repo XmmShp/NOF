@@ -8,8 +8,7 @@ This package provides NOF authentication authority capabilities and exposes them
 
 ## Features
 
-- `AddAuthenticationAuthority(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, and key rotation
-- `AddOidcServer(...)` registers the OIDC protocol services required by the HTTP surface
+- `AddOidcServer(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, key rotation, OIDC protocol services, and default persisted OAuth client management services
 - `MapOidcServer()` exposes discovery, authorization, token, userinfo, and JWKS endpoints
 - Supports `authorization_code`, `refresh_token`, and `client_credentials` grants
 - Uses standard ASP.NET Core HTTP behavior for redirects, form posts, status codes, and JSON responses
@@ -22,28 +21,22 @@ using NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddAuthenticationAuthority(options =>
-{
-    options.Issuer = "https://auth.example.com/oauth2";
-    options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
-});
-
 builder.AddOidcServer(options =>
 {
     options.Issuer = "https://auth.example.com/oauth2";
     options.AccessTokenAudience = "your-app";
+    options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
 });
 
 builder.Services.AddScoped<IOAuthAuthorizationHandler, YourAuthorizationHandler>();
 builder.Services.AddScoped<IOAuthSubjectService, YourSubjectService>();
-builder.Services.AddScoped<IOAuthClientStore, YourOAuthClientStore>();
 
 var app = await builder.BuildAsync();
 app.MapOidcServer();
 await app.RunAsync();
 ```
 
-Register `IOAuthClientStore` when using the `client_credentials` grant. The store validates `client_secret_basic` or `client_secret_post` credentials and returns the allowed scopes and access-token claims for the client.
+`AddOidcServer(...)` registers a default persisted OAuth client service as `IOAuthClientManagementService`. Applications can create, update, delete, rotate, and validate OAuth clients by resolving that service from DI. Replace `IOAuthClientManagementService` when an application needs custom client validation or management behavior.
 
 ## License
 
