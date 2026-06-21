@@ -153,11 +153,6 @@ csharp_using_directive_placement = outside_namespace:suggestion
 # Namespace preferences
 csharp_style_namespace_declarations = file_scoped:warning
 
-# Diagnostic severities for code cleanup / dotnet format
-dotnet_diagnostic.IDE0005.severity = warning
-dotnet_diagnostic.IDE0001.severity = warning
-dotnet_diagnostic.IDE0002.severity = warning
-
 #### C# Formatting Rules ####
 
 # New line preferences
