@@ -6,6 +6,7 @@ var builder = NOFWebAssemblyHostBuilder.Create(args);
 
 builder.Services.AddAntDesign();
 builder.Services.AddScoped<INOFSampleServiceClient, HttpNOFSampleService>();
+builder.Services.AddScoped<IOAuthChainDemoServiceClient, HttpOAuthChainDemoService>();
 builder.Services.AddScoped(_ => new HttpClient
 {
     BaseAddress = new Uri(builder.WebAssemblyHostBuilder.HostEnvironment.BaseAddress)

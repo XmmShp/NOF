@@ -40,6 +40,7 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
 
     private readonly IUserContext _userContext;
     private readonly ResourceServerJwksCacheService _jwksCacheService;
+    private readonly IPermissionResolver _permissionResolver;
     private readonly AuthenticationResourceServerOptions _jwtOptions;
     private readonly JwtSecurityTokenHandler _tokenHandler;
     private readonly ILogger<AuthenticationResourceServerInboundMiddleware> _logger;
@@ -47,11 +48,13 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
     public AuthenticationResourceServerInboundMiddleware(
         IUserContext userContext,
         ResourceServerJwksCacheService jwksCacheService,
+        IPermissionResolver permissionResolver,
         IOptions<AuthenticationResourceServerOptions> jwtOptions,
         ILogger<AuthenticationResourceServerInboundMiddleware> logger)
     {
         _userContext = userContext;
         _jwksCacheService = jwksCacheService;
+        _permissionResolver = permissionResolver;
         _jwtOptions = jwtOptions.Value;
         _tokenHandler = new JwtSecurityTokenHandler();
         _logger = logger;
@@ -121,11 +124,11 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
                     var identity = principal.Identities.FirstOrDefault();
                     _userContext.User.AddIdentity(identity is null
                         ? new JwtClaimsIdentity(
-                            CreateIdentity(token),
+                            CreateIdentity(CreateIdentity(token)),
                             token,
                             downstreamPropagation: source.DownstreamPropagation)
                         : new JwtClaimsIdentity(
-                            identity,
+                            CreateIdentity(identity),
                             token,
                             downstreamPropagation: source.DownstreamPropagation));
                     executionContext = (TContext)executionContext.WithoutItem(source.HeaderName);
@@ -185,6 +188,28 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         return new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
+    }
+
+    private ClaimsIdentity CreateIdentity(ClaimsIdentity identity)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+
+        var resolvedIdentity = new ClaimsIdentity(identity);
+        var existingPermissions = resolvedIdentity.FindAll(ClaimTypes.Permission)
+            .Select(static claim => claim.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var permission in _permissionResolver.ResolvePermissions(resolvedIdentity.Claims.ToArray()))
+        {
+            if (string.IsNullOrWhiteSpace(permission) || !existingPermissions.Add(permission))
+            {
+                continue;
+            }
+
+            resolvedIdentity.AddClaim(new Claim(ClaimTypes.Permission, permission));
+        }
+
+        return resolvedIdentity;
     }
 
     private string? GetTokenKid(string token)

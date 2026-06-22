@@ -28,6 +28,9 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
             builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
+            builder.Services.AddHttpClient<HttpAuthorizationServerService>();
+            builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             builder.Services.TryAddSingleton<IIdGenerator>(sp => new SnowflakeIdGenerator(
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
                 builder.Environment.ApplicationId,
@@ -59,6 +62,7 @@ public static partial class NOFInfrastructureExtensions
 
             #region Options
             builder.Services.AddOptions<CacheServiceOptions>();
+            builder.Services.AddOptions<AuthenticationResourceServerOptions>();
             builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()
                 .Validate(static options => options.ApplicationIdBits > 0, "ApplicationIdBits must be greater than zero.")
                 .Validate(static options => options.InstanceIdBits > 0, "InstanceIdBits must be greater than zero.")
@@ -145,6 +149,13 @@ public static partial class NOFInfrastructureExtensions
 
     private static void AddInfrastructureJwtPropagation(INOFAppBuilder builder)
     {
+        builder.Services.AddHttpClient();
+        builder.Services.AddHttpClient<HttpAuthorizationServerService>();
+        builder.Services.TryAddScoped<IJwtTokenExchangeService>(static serviceProvider =>
+            serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+        builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
+            serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+        builder.Services.AddRequestOutboundMiddleware<RequestTokenExchangeOutboundMiddleware>();
         builder.Services.AddCommandOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
         builder.Services.AddNotificationOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
     }

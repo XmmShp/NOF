@@ -37,6 +37,11 @@ public static partial class NOFAbstractionExtensions
         public string? TenantId => user.FindFirst(ClaimTypes.TenantId)?.Value;
 
         /// <summary>
+        /// Gets the proxy service name from token exchange claims. Returns null when the current token was not proxied.
+        /// </summary>
+        public string? ProxyServiceName => user.FindFirst(ClaimTypes.ProxyServiceName)?.Value;
+
+        /// <summary>
         /// Determines whether the current user has the specified permission.
         /// Supports exact match and wildcard patterns (for example: "order.*").
         /// </summary>

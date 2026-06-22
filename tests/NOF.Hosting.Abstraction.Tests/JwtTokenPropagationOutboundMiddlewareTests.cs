@@ -81,6 +81,23 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     }
 
     [Fact]
+    public void JwtPropagation_ShouldDisableTokenExchangeByDefault()
+    {
+        var propagation = new JwtPropagation();
+
+        Assert.False(propagation.EnableTokenExchange);
+    }
+
+    [Fact]
+    public void ClaimsPrincipal_ProxyServiceName_ShouldReturnProxyClaimValue()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(new ClaimsIdentity([new Claim(ClaimTypes.ProxyServiceName, "proxy-service")], "jwt"));
+
+        Assert.Equal("proxy-service", userContext.User.ProxyServiceName);
+    }
+
+    [Fact]
     public async Task InvokeAsync_WithEmptyTokenType_ShouldWriteTokenWithoutLeadingSpace()
     {
         var userContext = new UserContext();
@@ -100,6 +117,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
 
         Assert.Equal(token, outboundContext.Headers["X-Auth"]);
     }
+
 
     private static RequestOutboundContext CreateOutboundContext()
     {

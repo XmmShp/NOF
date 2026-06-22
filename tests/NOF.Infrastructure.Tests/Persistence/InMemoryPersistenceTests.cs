@@ -1768,6 +1768,16 @@ public class SqliteInMemoryPersistenceTests
 
     private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)
     {
+        if (!builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IHostEnvironment)))
+        {
+            builder.Services.AddSingleton(builder.Environment);
+        }
+
+        if (!builder.Services.Any(descriptor => descriptor.ServiceType == typeof(IConfiguration)))
+        {
+            builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        }
+
         return builder.Services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,

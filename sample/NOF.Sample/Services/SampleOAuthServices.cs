@@ -38,9 +38,7 @@ public sealed class SampleOAuthSubjectService : IOAuthSubjectService
                 accessTokenClaims:
                 [
                     new(ClaimTypes.NameIdentifier, subject),
-                    new(ClaimTypes.TenantId, "sample-tenant"),
-                    new(ClaimTypes.Permission, "sample.read"),
-                    new(ClaimTypes.Permission, "sample.write")
+                        new(ClaimTypes.TenantId, "sample-tenant")
                 ],
                 identityClaims:
                 [

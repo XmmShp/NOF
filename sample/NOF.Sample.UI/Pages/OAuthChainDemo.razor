@@ -1,0 +1,245 @@
+@page "/oauth-chain-demo"
+@using System.Text.Json
+@inject IMessageService Message
+@inject IOAuthChainDemoServiceClient OAuthDemoService
+
+<PageTitle>OAuth Chain Demo</PageTitle>
+
+<style>
+    .demo-section {
+        margin-bottom: 16px;
+    }
+
+    .mono-block {
+        background: #f5f5f5;
+        border-radius: 6px;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        min-height: 84px;
+        padding: 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+</style>
+
+<h3>OAuth Chain Demo</h3>
+
+<Alert Type="AlertType.Info" ShowIcon="true" Message="一条完整的 OAuth 演示链路"
+       Description="这个页面会按步骤演示：生成 OAuth Client、Client Credentials 获取服务 Token、用户获取 Token、Client 发起 Token Exchange，以及下游服务消费交换后的 Token 并读取 ProxyServiceName。" />
+
+<Spin Spinning="@_busy" Tip="@_busyText">
+    <Row Gutter="16">
+        <AntDesign.Col Span="12">
+            <Card Title="Step 1. 生成 Client" Class="demo-section">
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <div>点击后在后端创建一个新的 OAuth client，并返回一次性的 `ClientSecret`。</div>
+                    <Button Type="@ButtonType.Primary" OnClick="@CreateClientAsync">生成 Client</Button>
+                    <div class="mono-block">@_step1Result</div>
+                </div>
+            </Card>
+        </AntDesign.Col>
+        <AntDesign.Col Span="12">
+            <Card Title="Step 2. Client 用凭证获取 Token" Class="demo-section">
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <div>WASM 页面调用后端 demo service，由后端请求 token endpoint 获取 `client_credentials` token。</div>
+                    <Button Type="@ButtonType.Primary" Disabled="@string.IsNullOrWhiteSpace(_clientSecret)"
+                            OnClick="@GetClientTokenAsync">获取 Client Token</Button>
+                    <div class="mono-block">@_step2Result</div>
+                </div>
+            </Card>
+        </AntDesign.Col>
+    </Row>
+
+    <Row Gutter="16">
+        <AntDesign.Col Span="12">
+            <Card Title="Step 3. User 获取 Token" Class="demo-section">
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <div>WASM 页面调用后端 demo service，由后端模拟 `authorization_code + PKCE` 为 `demo-user` 取 token。</div>
+                    <Button Type="@ButtonType.Primary" OnClick="@GetUserTokenAsync">获取 User Token</Button>
+                    <div class="mono-block">@_step3Result</div>
+                </div>
+            </Card>
+        </AntDesign.Col>
+        <AntDesign.Col Span="12">
+            <Card Title="Step 4. Client 发起 Token Exchange" Class="demo-section">
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <div>WASM 页面调用后端 demo service，由后端将用户 token 作为 `subject_token`、服务 token 作为 `actor_token` 发起交换。</div>
+                    <Button Type="@ButtonType.Primary"
+                            Disabled="@(string.IsNullOrWhiteSpace(_clientAccessToken) || string.IsNullOrWhiteSpace(_userAccessToken))"
+                            OnClick="@ExchangeUserTokenAsync">
+                        发起 Token Exchange
+                    </Button>
+                    <div class="mono-block">@_step4Result</div>
+                </div>
+            </Card>
+        </AntDesign.Col>
+    </Row>
+
+    <Card Title="Step 5. Downstream 消费交换后的 Token" Class="demo-section">
+        <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+            <div>WASM 页面调用后端 orchestrator；后端再通过 `HTTPRpcClient` self-call 下游服务，读取 `ProxyServiceName`。</div>
+            <Button Type="@ButtonType.Primary" Disabled="@string.IsNullOrWhiteSpace(_exchangedAccessToken)"
+                    OnClick="@ConsumeExchangedTokenAsync">
+                调用 Downstream
+            </Button>
+            <div class="mono-block">@_step5Result</div>
+        </div>
+    </Card>
+</Spin>
+
+
+@code {
+    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true
+    };
+
+    private const string RequestedExchangeScope = "sample.read";
+
+    private bool _busy;
+    private string _busyText = "执行中...";
+
+    private string? _clientId;
+    private string? _clientSecret;
+    private string? _clientAccessToken;
+    private string? _userAccessToken;
+    private string? _exchangedAccessToken;
+
+    private string _step1Result = "尚未执行";
+    private string _step2Result = "尚未执行";
+    private string _step3Result = "尚未执行";
+    private string _step4Result = "尚未执行";
+    private string _step5Result = "尚未执行";
+
+    private async Task CreateClientAsync()
+    {
+        await ExecuteStepAsync("正在生成 Client...", async () =>
+        {
+            var result = await OAuthDemoService.CreateClientAsync(
+                new CreateDemoOAuthClientRequest(),
+                Context.Empty);
+
+            if (!result.IsSuccess)
+            {
+                throw new InvalidOperationException(result.GetRpcFailureMessage());
+            }
+
+            _clientId = result.Value.ClientId;
+            _clientSecret = result.Value.ClientSecret;
+            _clientAccessToken = null;
+            _exchangedAccessToken = null;
+            _step1Result = JsonSerializer.Serialize(result.Value, _jsonOptions);
+            _step2Result = "尚未执行";
+            _step4Result = "尚未执行";
+            _step5Result = "尚未执行";
+        });
+    }
+
+    private async Task GetClientTokenAsync()
+    {
+        await ExecuteStepAsync("正在用 Client 凭证获取 Token...", async () =>
+        {
+            var result = await OAuthDemoService.GetClientTokenAsync(
+                new GetDemoClientTokenRequest
+                {
+                    ClientId = _clientId!,
+                    ClientSecret = _clientSecret!
+                },
+                Context.Empty);
+
+            if (!result.IsSuccess)
+            {
+                throw new InvalidOperationException(result.GetRpcFailureMessage());
+            }
+
+            _clientAccessToken = result.Value.AccessToken;
+            _exchangedAccessToken = null;
+            _step2Result = JsonSerializer.Serialize(result.Value, _jsonOptions);
+            _step4Result = "尚未执行";
+            _step5Result = "尚未执行";
+        });
+    }
+
+    private async Task GetUserTokenAsync()
+    {
+        await ExecuteStepAsync("正在模拟用户授权并获取 Token...", async () =>
+        {
+            var result = await OAuthDemoService.GetUserTokenAsync(new GetDemoUserTokenRequest(), Context.Empty);
+            if (!result.IsSuccess)
+            {
+                throw new InvalidOperationException(result.GetRpcFailureMessage());
+            }
+
+            _userAccessToken = result.Value.AccessToken;
+            _exchangedAccessToken = null;
+            _step3Result = JsonSerializer.Serialize(result.Value, _jsonOptions);
+            _step4Result = "尚未执行";
+            _step5Result = "尚未执行";
+        });
+    }
+
+    private async Task ExchangeUserTokenAsync()
+    {
+        await ExecuteStepAsync("正在执行 Token Exchange...", async () =>
+        {
+            var result = await OAuthDemoService.ExchangeTokenAsync(
+                new ExchangeDemoTokenRequest
+                {
+                    ClientAccessToken = _clientAccessToken!,
+                    UserAccessToken = _userAccessToken!,
+                    RequestedScope = RequestedExchangeScope
+                },
+                Context.Empty);
+
+            if (!result.IsSuccess)
+            {
+                throw new InvalidOperationException(result.GetRpcFailureMessage());
+            }
+
+            _exchangedAccessToken = result.Value.AccessToken;
+            _step4Result = JsonSerializer.Serialize(result.Value, _jsonOptions);
+            _step5Result = "尚未执行";
+        });
+    }
+
+    private async Task ConsumeExchangedTokenAsync()
+    {
+        await ExecuteStepAsync("正在调用 Downstream 服务...", async () =>
+        {
+            var result = await OAuthDemoService.CallDownstreamAsync(
+                new CallDemoDownstreamRequest
+                {
+                    AccessToken = _exchangedAccessToken!
+                },
+                Context.Empty);
+
+            if (!result.IsSuccess)
+            {
+                throw new InvalidOperationException(result.GetRpcFailureMessage());
+            }
+
+            _step5Result = JsonSerializer.Serialize(result.Value, _jsonOptions);
+        });
+    }
+
+    private async Task ExecuteStepAsync(string busyText, Func<Task> action)
+    {
+        try
+        {
+            _busy = true;
+            _busyText = busyText;
+            await action();
+        }
+        catch (Exception ex)
+        {
+            Message.Error(ex.Message);
+        }
+        finally
+        {
+            _busy = false;
+            _busyText = "执行中...";
+            StateHasChanged();
+        }
+    }
+
+}

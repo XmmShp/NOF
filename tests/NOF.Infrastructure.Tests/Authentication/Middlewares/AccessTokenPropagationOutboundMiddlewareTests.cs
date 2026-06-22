@@ -60,6 +60,15 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
         Assert.Equal(token, outboundContext.Headers["X-Auth"]);
     }
 
+    [Fact]
+    public void AuthenticationTokenSourceOptions_DefaultDownstreamPropagation_ShouldDisableTokenExchange()
+    {
+        var options = new AuthenticationTokenSourceOptions();
+
+        Assert.NotNull(options.DownstreamPropagation);
+        Assert.False(options.DownstreamPropagation!.EnableTokenExchange);
+    }
+
     private static string CreateUnsignedToken()
     {
         var header = Base64UrlEncode("""{"alg":"none","typ":"JWT"}""");

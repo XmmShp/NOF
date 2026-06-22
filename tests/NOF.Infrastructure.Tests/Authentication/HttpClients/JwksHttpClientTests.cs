@@ -31,7 +31,7 @@ public sealed class JwtJwksHttpClientTests
             options.AuthorizationServer = "https://auth.local/oauth2";
         });
 
-        var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
+        var service = new HttpAuthorizationServerService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
             AuthorizationServer = "https://auth.local/oauth2"
         }));
@@ -54,7 +54,7 @@ public sealed class JwtJwksHttpClientTests
         var handler = new CaptureHttpMessageHandler(static (_, _) => CreateJsonResponse(
             """{"issuer":"https://other.local/oauth2","jwks_uri":"https://auth.local/oauth2/.well-known/jwks.json"}"""));
         var httpClient = new HttpClient(handler);
-        var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
+        var service = new HttpAuthorizationServerService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
             AuthorizationServer = "https://auth.local/oauth2"
         }));
@@ -69,7 +69,7 @@ public sealed class JwtJwksHttpClientTests
     {
         var handler = new CaptureHttpMessageHandler(static (_, _) => new HttpResponseMessage(HttpStatusCode.OK));
         var httpClient = new HttpClient(handler);
-        var service = new HttpJwksService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
+        var service = new HttpAuthorizationServerService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
             AuthorizationServer = "http://auth.local",
             RequireHttpsMetadata = true

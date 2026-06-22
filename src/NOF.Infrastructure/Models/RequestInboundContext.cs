@@ -8,9 +8,11 @@ namespace NOF.Infrastructure;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class RequestInboundContext : Context
 {
-    public IResult? Response { get; private set; }
+    private readonly RequestInboundState _state;
 
-    public IDictionary<string, string?> ResponseHeaders { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    public IResult? Response => _state.Response;
+
+    public IDictionary<string, string?> ResponseHeaders => _state.ResponseHeaders;
 
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     public required Type ServiceType { get; init; }
@@ -30,7 +32,7 @@ public sealed class RequestInboundContext : Context
     public void SetResponse(IResult response)
     {
         ArgumentNullException.ThrowIfNull(response);
-        Response = response;
+        _state.Response = response;
     }
 
     public void SetResponse(IResult failure, bool ignoreResultResponseType = false)
@@ -39,19 +41,18 @@ public sealed class RequestInboundContext : Context
 
         if (!ignoreResultResponseType && CreatesBusinessResult(ResponseType))
         {
-            Response = ResultProjection.CreateFailure(ResponseType, failure);
+            _state.Response = ResultProjection.CreateFailure(ResponseType, failure);
             return;
         }
 
-        Response = ResultProjection.CreateFailure(typeof(Result), failure);
+        _state.Response = ResultProjection.CreateFailure(typeof(Result), failure);
     }
 
     [SetsRequiredMembers]
     private RequestInboundContext(IReadOnlyDictionary<object, object?> items, RequestInboundContext source)
         : base(items)
     {
-        Response = source.Response;
-        ResponseHeaders = new Dictionary<string, string?>(source.ResponseHeaders, StringComparer.OrdinalIgnoreCase);
+        _state = source._state;
         ServiceType = source.ServiceType;
         ServiceMethodInfo = source.ServiceMethodInfo;
         HandlerType = source.HandlerType;
@@ -62,6 +63,7 @@ public sealed class RequestInboundContext : Context
 
     public RequestInboundContext()
     {
+        _state = new RequestInboundState();
     }
 
     protected override Context Clone(IReadOnlyDictionary<object, object?> items)
@@ -69,4 +71,11 @@ public sealed class RequestInboundContext : Context
 
     private static bool CreatesBusinessResult(Type responseType)
         => typeof(IResult).IsAssignableFrom(responseType);
+
+    private sealed class RequestInboundState
+    {
+        public IResult? Response { get; set; }
+
+        public IDictionary<string, string?> ResponseHeaders { get; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    }
 }

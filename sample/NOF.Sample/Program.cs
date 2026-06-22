@@ -10,6 +10,8 @@ using NOF.Sample.Application;
 using NOF.Sample.Services;
 
 var builder = NOFWebApplicationBuilder.Create(args);
+var sampleOrigin = ResolveSampleOrigin(builder.Configuration);
+var sampleIssuer = $"{sampleOrigin}/oauth2";
 
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly);
 
@@ -17,7 +19,7 @@ builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
 builder.AddOidcServer(o =>
 {
-    o.Issuer = "http://localhost/oauth2";
+    o.Issuer = sampleIssuer;
     o.AccessTokenAudience = "nof-sample";
     o.SigningKeyEncryptionKey = builder.Configuration["NOF:OidcServer:SigningKeyEncryptionKey"]
         ?? throw new InvalidOperationException("Configuration value 'NOF:OidcServer:SigningKeyEncryptionKey' not found.");
@@ -25,9 +27,9 @@ builder.AddOidcServer(o =>
 
 builder.AddAuthenticationResourceServer(o =>
 {
-    o.Issuer = "http://localhost/oauth2";
+    o.Issuer = sampleIssuer;
     o.RequireHttpsMetadata = false;
-    o.AuthorizationServer = "http://localhost/oauth2";
+    o.AuthorizationServer = sampleIssuer;
 });
 
 builder.AddRabbitMQ(options =>
@@ -43,8 +45,14 @@ builder.UseDbContext<ConfigurationDbContext>()
     .MigrateOnInitialize();
 
 builder.Services.ReplaceOrAddScoped<INOFSampleServiceClient, LocalNOFSampleServiceClient>();
+builder.Services.ReplaceOrAddScoped<IOAuthChainDemoServiceClient, LocalOAuthChainDemoServiceClient>();
 builder.Services.AddScoped<IOAuthAuthorizationHandler, SampleOAuthAuthorizationHandler>();
 builder.Services.AddScoped<IOAuthSubjectService, SampleOAuthSubjectService>();
+builder.Services.AddHttpClient<OAuthChainDemoBackend>(client => client.BaseAddress = new Uri(sampleOrigin));
+builder.Services.AddRequestOutboundMiddleware<OAuthChainDemoAccessTokenOutboundMiddleware>();
+builder.Services.AddHttpClient<SelfHttpDemoDownstreamServiceClient>(client => client.BaseAddress = new Uri(sampleOrigin));
+builder.Services.AddScoped<IDemoDownstreamServiceClient>(static serviceProvider =>
+    serviceProvider.GetRequiredService<SelfHttpDemoDownstreamServiceClient>());
 
 builder.Services.AddAntDesign();
 
@@ -73,6 +81,8 @@ app.MapOpenApi();
 app.UseAntiforgery();
 
 app.MapHttpEndpoint<NOFSampleService>();
+app.MapHttpEndpoint<OAuthChainDemoService>();
+app.MapHttpEndpoint<DemoDownstreamService>();
 app.MapOidcServer();
 
 app.MapStaticAssets();
@@ -84,3 +94,20 @@ app.MapRazorComponents<App>()
         typeof(NOF.Sample.Wasm.WasmMarker).Assembly);
 
 await app.RunAsync();
+
+static string ResolveSampleOrigin(IConfiguration configuration)
+{
+    var urls = configuration["ASPNETCORE_URLS"];
+    if (!string.IsNullOrWhiteSpace(urls))
+    {
+        var candidate = urls
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        if (Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return $"{uri.Scheme}://{uri.Authority}";
+        }
+    }
+
+    return "http://localhost";
+}
