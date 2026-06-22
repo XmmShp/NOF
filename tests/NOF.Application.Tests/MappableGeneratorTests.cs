@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Application.SourceGenerator;
@@ -17,6 +18,7 @@ public class MappableGeneratorTests
 
     private static readonly Type[] _extraRefs =
     [
+        typeof(IServiceCollection),
         typeof(InitializedTypes),
         typeof(MappableAttribute),
         typeof(IMapper),
