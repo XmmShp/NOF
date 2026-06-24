@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" />

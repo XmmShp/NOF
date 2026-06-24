@@ -155,6 +155,49 @@ public class LocalRpcClientGeneratorTests
             code);
     }
 
+    [Fact]
+    public void GeneratesLocalClient_ForGenericRpcClient()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Infrastructure;
+
+                              namespace MyApp
+                              {
+                                  public sealed class Payload
+                                  {
+                                  }
+
+                                  public sealed record Query<TValue>(TValue Value);
+
+                                  public partial interface IMyService<TValue> : IRpcService
+                                      where TValue : class, new()
+                                  {
+                                      Result<TValue> Get(Query<TValue> request);
+                                  }
+
+                                  public partial interface IMyServiceClient<TValue> : IRpcClient
+                                  {
+                                      global::System.Threading.Tasks.Task<Result<TValue>> GetAsync(
+                                          Query<TValue> request,
+                                          Context context,
+                                          global::System.Threading.CancellationToken cancellationToken = default);
+                                  }
+
+                                  [LocalRpcClient<IMyServiceClient<Payload>>]
+                                  public partial class LocalMyServiceClient;
+                              }
+                              """;
+
+        var runResult = new LocalRpcClientGenerator().GetResultPostGen(source, _extraRefs);
+        var code = runResult.GeneratedTrees
+            .Select(tree => tree.GetRoot().ToFullString())
+            .Single(generated => generated.Contains("partial class LocalMyServiceClient"));
+
+        Assert.Contains("partial class LocalMyServiceClient : global::MyApp.IMyServiceClient<global::MyApp.Payload>", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::MyApp.IMyService<global::MyApp.Payload>>", code);
+    }
+
     private static string GetGeneratedCode(GeneratorDriverRunResult runResult)
         => runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())

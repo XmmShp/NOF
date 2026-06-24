@@ -102,7 +102,7 @@ public sealed class ResourceServerJwksCacheServiceTests
     }
 
     [Fact]
-    public async Task GetSecurityKeysAsync_WhenKidMissingBeforeMinimumRefreshInterval_ShouldReuseCachedKeys()
+    public async Task GetSecurityKeysAsync_WhenKidMissingBeforeMinimumRefreshInterval_ShouldRefreshKeys()
     {
         var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var jwksService = new FakeJwksService(
@@ -113,11 +113,11 @@ public sealed class ResourceServerJwksCacheServiceTests
         var service = CreateService(jwksService, timeProvider, TimeSpan.FromMinutes(10));
 
         var initial = await service.GetSecurityKeysAsync();
-        var reused = await service.GetSecurityKeysAsync("kid-2");
+        var refreshed = await service.GetSecurityKeysAsync("kid-2");
 
         Assert.Equal("kid-1", Assert.Single(initial).KeyId);
-        Assert.Equal("kid-1", Assert.Single(reused).KeyId);
-        Assert.Equal(1, jwksService.RefreshCallCount);
+        Assert.Equal("kid-2", Assert.Single(refreshed).KeyId);
+        Assert.Equal(2, jwksService.RefreshCallCount);
     }
 
     [Fact]
@@ -137,6 +137,46 @@ public sealed class ResourceServerJwksCacheServiceTests
 
         Assert.Equal("kid-1", Assert.Single(initial).KeyId);
         Assert.Equal("kid-2", Assert.Single(refreshed).KeyId);
+        Assert.Equal(2, jwksService.RefreshCallCount);
+    }
+
+    [Fact]
+    public async Task GetSecurityKeysAsync_WhenKidMissingAndRefreshFails_ShouldKeepPreviousKeys()
+    {
+        var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var jwksService = new FakeJwksService(
+        [
+            _ => Task.FromResult(CreateJwksDocument("kid-1")),
+            _ => throw new InvalidOperationException("boom")
+        ]);
+        var service = CreateService(jwksService, timeProvider, TimeSpan.FromMinutes(10));
+
+        var initial = await service.GetSecurityKeysAsync();
+        var reused = await service.GetSecurityKeysAsync("kid-2");
+
+        Assert.Equal("kid-1", Assert.Single(initial).KeyId);
+        Assert.Equal("kid-1", Assert.Single(reused).KeyId);
+        Assert.Equal(2, jwksService.RefreshCallCount);
+    }
+
+    [Fact]
+    public async Task GetSecurityKeysAsync_WhenKidIsStillMissingAfterEarlyRefresh_ShouldThrottleRepeatedRefreshes()
+    {
+        var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        var jwksService = new FakeJwksService(
+        [
+            _ => Task.FromResult(CreateJwksDocument("kid-1")),
+            _ => Task.FromResult(CreateJwksDocument("kid-3")),
+            _ => Task.FromResult(CreateJwksDocument("kid-4"))
+        ]);
+        var service = CreateService(jwksService, timeProvider, TimeSpan.FromMinutes(10));
+
+        _ = await service.GetSecurityKeysAsync();
+        var firstProbe = await service.GetSecurityKeysAsync("kid-2");
+        var secondProbe = await service.GetSecurityKeysAsync("kid-2");
+
+        Assert.Equal("kid-3", Assert.Single(firstProbe).KeyId);
+        Assert.Equal("kid-3", Assert.Single(secondProbe).KeyId);
         Assert.Equal(2, jwksService.RefreshCallCount);
     }
 

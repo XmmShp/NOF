@@ -1,5 +1,11 @@
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
+public enum OAuthClientType
+{
+    Confidential = 0,
+    Public = 1
+}
+
 public sealed record OAuthClientClaim(string Type, string Value);
 
 public sealed record OAuthClientDescriptor
@@ -12,6 +18,8 @@ public sealed record OAuthClientDescriptor
 
     public required IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; }
 
+    public required OAuthClientType ClientType { get; init; }
+
     public required bool IsEnabled { get; init; }
 
     public required DateTime CreatedAtUtc { get; init; }
@@ -23,7 +31,7 @@ public sealed record OAuthClientSecretDescriptor
 {
     public required OAuthClientDescriptor Client { get; init; }
 
-    public required string ClientSecret { get; init; }
+    public string? ClientSecret { get; init; }
 }
 
 public sealed record CreateOAuthClientRequest
@@ -36,6 +44,8 @@ public sealed record CreateOAuthClientRequest
 
     public IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; } = [];
 
+    public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
+
     public bool IsEnabled { get; init; } = true;
 }
 
@@ -46,6 +56,8 @@ public sealed record UpdateOAuthClientRequest
     public IReadOnlyList<string> AllowedScopes { get; init; } = [];
 
     public IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; } = [];
+
+    public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
 
     public bool IsEnabled { get; init; } = true;
 }

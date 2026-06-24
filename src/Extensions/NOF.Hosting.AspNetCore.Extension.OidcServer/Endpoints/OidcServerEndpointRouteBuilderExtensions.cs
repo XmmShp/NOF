@@ -26,6 +26,12 @@ public static partial class NOFOidcServerExtensions
         {
             ArgumentNullException.ThrowIfNull(app);
 
+            var mappingState = app.ServiceProvider.GetService<OidcServerEndpointMappingState>();
+            if (mappingState is not null && !mappingState.TryMarkMapped())
+            {
+                return app;
+            }
+
             var options = app.ServiceProvider.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value;
             var pathBase = NormalizePathBase(options.PathBase);
             var group = app.MapGroup(CombineRoute(prefix, pathBase));
@@ -80,8 +86,8 @@ public static partial class NOFOidcServerExtensions
         [FromQuery(Name = "nonce")] string? nonce,
         [FromQuery(Name = "code_challenge")] string? codeChallenge,
         [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod,
-        IOAuthAuthorizationHandler authorizationHandler,
-        IOAuthAuthorizationCodeService authorizationCodeService,
+        [FromServices] IOAuthAuthorizationHandler authorizationHandler,
+        [FromServices] IOAuthAuthorizationCodeService authorizationCodeService,
         CancellationToken cancellationToken)
     {
         var request = new OAuthAuthorizeRequest
@@ -142,12 +148,12 @@ public static partial class NOFOidcServerExtensions
         [FromForm(Name = "actor_token")] string? actorToken,
         [FromForm(Name = "actor_token_type")] string? actorTokenType,
         [FromForm(Name = "requested_token_type")] string? requestedTokenType,
-        IServiceProvider serviceProvider,
-        ICacheService cacheService,
-        IOAuthSubjectService subjectService,
-        ITokenService tokenService,
-        ISigningKeyService signingKeyService,
-        IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        [FromServices] IServiceProvider serviceProvider,
+        [FromServices] ICacheService cacheService,
+        [FromServices] IOAuthSubjectService subjectService,
+        [FromServices] ITokenService tokenService,
+        [FromServices] ISigningKeyService signingKeyService,
+        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
         CancellationToken cancellationToken)
     {
         var request = new OAuthTokenRequest
@@ -166,11 +172,14 @@ public static partial class NOFOidcServerExtensions
             ActorTokenType = actorTokenType ?? string.Empty,
             RequestedTokenType = requestedTokenType ?? string.Empty
         };
+        ApplyResolvedClientCredentials(httpRequest, request);
 
         var result = request.GrantType switch
         {
             OAuthGrantTypes.AuthorizationCode => await TokenFromAuthorizationCodeAsync(
+                httpRequest,
                 request,
+                serviceProvider,
                 cacheService,
                 subjectService,
                 tokenService,
@@ -185,7 +194,9 @@ public static partial class NOFOidcServerExtensions
                 oauthOptions.Value,
                 cancellationToken).ConfigureAwait(false),
             OAuthGrantTypes.RefreshToken => await TokenFromRefreshTokenAsync(
+                httpRequest,
                 request,
+                serviceProvider,
                 subjectService,
                 tokenService,
                 signingKeyService,
@@ -208,9 +219,9 @@ public static partial class NOFOidcServerExtensions
 
     private static async Task<AspNetResult> UserInfoAsync(
         HttpRequest httpRequest,
-        IOAuthSubjectService subjectService,
-        ISigningKeyService signingKeyService,
-        IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        [FromServices] IOAuthSubjectService subjectService,
+        [FromServices] ISigningKeyService signingKeyService,
+        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
         CancellationToken cancellationToken)
     {
         var accessToken = await ResolveBearerTokenAsync(httpRequest, cancellationToken).ConfigureAwait(false);
@@ -248,8 +259,10 @@ public static partial class NOFOidcServerExtensions
         return Results.Json(claims);
     }
 
-    private static async Task<Result<OAuthTokenEndpointResponse>> TokenFromAuthorizationCodeAsync(
+    internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromAuthorizationCodeAsync(
+        HttpRequest httpRequest,
         OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
         ICacheService cacheService,
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
@@ -260,6 +273,16 @@ public static partial class NOFOidcServerExtensions
         if (string.IsNullOrWhiteSpace(request.Code))
         {
             return Fail("invalid_request", "code is required.");
+        }
+
+        var authenticationError = await ValidateClientAuthenticationAsync(
+            httpRequest,
+            request,
+            serviceProvider,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticationError is not null)
+        {
+            return Fail(authenticationError.Error, authenticationError.ErrorDescription);
         }
 
         var cachedCode = await cacheService
@@ -306,6 +329,7 @@ public static partial class NOFOidcServerExtensions
             authorizationCode.Subject,
             authorizationCode.Scope,
             authorizationCode.ClientId,
+            authorizationCode.ClientId,
             authorizationCode.Nonce,
             additionalAccessClaims: null,
             issueRefreshToken: true,
@@ -332,8 +356,10 @@ public static partial class NOFOidcServerExtensions
         return Result.Success(response);
     }
 
-    private static async Task<Result<OAuthTokenEndpointResponse>> TokenFromRefreshTokenAsync(
+    internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromRefreshTokenAsync(
+        HttpRequest httpRequest,
         OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
         ISigningKeyService signingKeyService,
@@ -343,6 +369,16 @@ public static partial class NOFOidcServerExtensions
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
         {
             return Fail("invalid_request", "refresh_token is required.");
+        }
+
+        var authenticationError = await ValidateClientAuthenticationAsync(
+            httpRequest,
+            request,
+            serviceProvider,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticationError is not null)
+        {
+            return Fail(authenticationError.Error, authenticationError.ErrorDescription);
         }
 
         var validateResult = await tokenService.ValidateRefreshTokenAsync(
@@ -366,6 +402,17 @@ public static partial class NOFOidcServerExtensions
         }
 
         var scope = claims.TryGetValue(OAuthClaimTypes.Scope, out var scopeClaim) ? scopeClaim : string.Empty;
+        var refreshClientId = claims.TryGetValue("client_id", out var clientIdClaim) ? clientIdClaim : string.Empty;
+        if (string.IsNullOrWhiteSpace(refreshClientId))
+        {
+            return Fail("invalid_grant", "refresh token client is invalid.");
+        }
+
+        if (!FixedTimeEquals(refreshClientId, request.ClientId))
+        {
+            return Fail("invalid_grant", "refresh token client does not match.");
+        }
+
         var scopes = ParseScopes(scope);
         if (!await subjectService.CanRefreshAsync(subject, validateResult.Value.TokenId, scopes, cancellationToken).ConfigureAwait(false))
         {
@@ -391,6 +438,7 @@ public static partial class NOFOidcServerExtensions
             oauthOptions,
             subject,
             scope,
+            refreshClientId,
             idTokenAudience: null,
             nonce: null,
             additionalAccessClaims: null,
@@ -409,6 +457,7 @@ public static partial class NOFOidcServerExtensions
         OAuthAuthorizationServerOptions oauthOptions,
         string subject,
         string scope,
+        string refreshTokenClientId,
         string? idTokenAudience,
         string? nonce,
         IReadOnlyList<KeyValuePair<string, string>>? additionalAccessClaims,
@@ -444,7 +493,8 @@ public static partial class NOFOidcServerExtensions
                         Claims =
                         [
                             new TokenClaim(OAuthClaimTypes.Subject, subject),
-                            new TokenClaim(OAuthClaimTypes.Scope, string.Join(' ', scopes))
+                            new TokenClaim(OAuthClaimTypes.Scope, string.Join(' ', scopes)),
+                            new TokenClaim("client_id", refreshTokenClientId)
                         ]
                     }
                     : null
@@ -567,6 +617,7 @@ public static partial class NOFOidcServerExtensions
             oauthOptions,
             subject,
             string.Join(' ', scopes.OrderBy(static value => value, StringComparer.Ordinal)),
+            string.Empty,
             idTokenAudience: null,
             nonce: null,
             additionalAccessClaims:
@@ -964,6 +1015,94 @@ public static partial class NOFOidcServerExtensions
 
     private static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    internal static void ApplyResolvedClientCredentials(HttpRequest httpRequest, OAuthTokenRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(httpRequest);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        request.ClientId = clientCredentials.ClientId;
+        request.ClientSecret = clientCredentials.ClientSecret ?? string.Empty;
+    }
+
+    internal static async Task<OAuthError?> ValidateClientAuthenticationAsync(
+        HttpRequest httpRequest,
+        OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(httpRequest);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
+        if (clientService is null)
+        {
+            return null;
+        }
+
+        var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (string.IsNullOrWhiteSpace(clientCredentials.ClientId))
+        {
+            return CreateOAuthError("invalid_client", "client_id is required.");
+        }
+
+        var clientResult = await clientService.GetAsync(clientCredentials.ClientId, cancellationToken).ConfigureAwait(false);
+        if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
+        {
+            return CreateOAuthError("invalid_client", "client credentials are invalid.");
+        }
+
+        if (clientResult.Value.ClientType == OAuthClientType.Public)
+        {
+            return ValidatePublicClientAuthentication(request, clientCredentials);
+        }
+
+        if (string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
+        {
+            return CreateOAuthError("invalid_client", "client_secret is required.");
+        }
+
+        var validation = await clientService.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                clientCredentials.ClientId,
+                clientCredentials.ClientSecret,
+                ParseScopes(request.Scope),
+                clientCredentials.AuthenticationMethod),
+            cancellationToken).ConfigureAwait(false);
+
+        return validation switch
+        {
+            OAuthClientCredentialsValidationResult.Success => null,
+            OAuthClientCredentialsValidationResult.Failure failure => CreateOAuthError(failure.Error, failure.ErrorDescription),
+            _ => CreateOAuthError("invalid_client", "client credentials are invalid.")
+        };
+    }
+
+    private static OAuthError? ValidatePublicClientAuthentication(
+        OAuthTokenRequest request,
+        (string ClientId, string? ClientSecret, string AuthenticationMethod) clientCredentials)
+    {
+        if (!string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
+        {
+            return CreateOAuthError("invalid_client", "public clients must not use client_secret.");
+        }
+
+        if (string.Equals(request.GrantType, OAuthGrantTypes.AuthorizationCode, StringComparison.Ordinal))
+        {
+            return string.IsNullOrWhiteSpace(request.CodeVerifier)
+                ? CreateOAuthError("invalid_client", "code_verifier is required for public clients.")
+                : null;
+        }
+
+        if (string.Equals(request.GrantType, OAuthGrantTypes.RefreshToken, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return CreateOAuthError("invalid_client", "public client authentication is invalid for this grant type.");
+    }
 
     private static (string ClientId, string? ClientSecret, string AuthenticationMethod) ResolveClientCredentials(
         HttpRequest httpRequest,

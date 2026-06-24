@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -16,15 +17,18 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
     private readonly OAuthAuthorizationServerOptions _options;
     private readonly IDbContext _dbContext;
     private readonly ILogger<PersistenceSigningKeyService> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
     private byte[]? _encryptionKey;
 
     public PersistenceSigningKeyService(
         IOptions<OAuthAuthorizationServerOptions> options,
         IDbContext dbContext,
+        IHostEnvironment hostEnvironment,
         ILogger<PersistenceSigningKeyService> logger)
     {
         _options = options.Value;
         _dbContext = dbContext;
+        _hostEnvironment = hostEnvironment;
         _logger = logger;
     }
 
@@ -327,20 +331,61 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
 
         if (string.IsNullOrWhiteSpace(_options.SigningKeyEncryptionKey))
         {
-            _options.SigningKeyEncryptionKey = string.IsNullOrWhiteSpace(Environment.MachineName)
-                ? "unknown-device"
-                : Environment.MachineName;
+            var localKeyPath = ResolveLocalEncryptionKeyPath();
+            _options.SigningKeyEncryptionKey = LoadOrCreateLocalEncryptionKey(localKeyPath);
             _logger.LogWarning(
-                "SigningKeyEncryptionKey is not configured. Falling back to device name '{DeviceName}'. This value has been written back to OAuthAuthorizationServerOptions for the current process.",
-                _options.SigningKeyEncryptionKey);
-        }
-
-        if (string.IsNullOrWhiteSpace(_options.SigningKeyEncryptionKey))
-        {
-            throw new InvalidOperationException("SigningKeyEncryptionKey must be a non-empty string.");
+                "SigningKeyEncryptionKey is not configured. Using a locally persisted fallback secret from '{KeyPath}'. This is suitable for single-node and local development only. Configure a shared SigningKeyEncryptionKey for multi-node deployments.",
+                localKeyPath);
         }
 
         _encryptionKey = SHA256.HashData(Encoding.UTF8.GetBytes(_options.SigningKeyEncryptionKey));
+    }
+
+    private string LoadOrCreateLocalEncryptionKey(string keyPath)
+    {
+        if (File.Exists(keyPath))
+        {
+            var persisted = File.ReadAllText(keyPath, Encoding.UTF8).Trim();
+            if (!string.IsNullOrWhiteSpace(persisted))
+            {
+                return persisted;
+            }
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(keyPath)!);
+
+        var generated = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        File.WriteAllText(keyPath, generated, Encoding.UTF8);
+        return generated;
+    }
+
+    private string ResolveLocalEncryptionKeyPath()
+    {
+        var appName = SanitizePathSegment(
+            !string.IsNullOrWhiteSpace(_hostEnvironment.ApplicationName)
+                ? _hostEnvironment.ApplicationName
+                : "nof-app");
+        var basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            basePath = !string.IsNullOrWhiteSpace(_hostEnvironment.ContentRootPath)
+                ? _hostEnvironment.ContentRootPath
+                : AppContext.BaseDirectory;
+        }
+
+        return Path.Combine(basePath, "NOF", appName, "oidc-signing-key-encryption.key");
+    }
+
+    private static string SanitizePathSegment(string value)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var builder = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            builder.Append(invalidChars.Contains(character) ? '_' : character);
+        }
+
+        return builder.Length == 0 ? "nof-app" : builder.ToString();
     }
 
     private string Encrypt(string plaintext)

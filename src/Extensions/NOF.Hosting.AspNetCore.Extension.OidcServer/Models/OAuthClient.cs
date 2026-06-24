@@ -16,6 +16,8 @@ public sealed class OAuthClient
 
     public string AccessTokenClaims { get; set; } = "[]";
 
+    public OAuthClientType ClientType { get; set; } = OAuthClientType.Confidential;
+
     public bool IsEnabled { get; set; } = true;
 
     public DateTime CreatedAtUtc { get; set; }
@@ -39,6 +41,7 @@ public sealed class OAuthClientModelCreatingContributor : IDbContextModelCreatin
             entity.Property(e => e.SecretSalt).HasMaxLength(64).IsRequired();
             entity.Property(e => e.AllowedScopes).IsRequired();
             entity.Property(e => e.AccessTokenClaims).IsRequired();
+            entity.Property(e => e.ClientType).IsRequired();
             entity.Property(e => e.IsEnabled).IsRequired();
             entity.Property(e => e.CreatedAtUtc).IsRequired();
             entity.Property(e => e.UpdatedAtUtc).IsRequired();

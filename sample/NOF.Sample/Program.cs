@@ -23,7 +23,11 @@ builder.AddOidcServer(o =>
     o.AccessTokenAudience = "nof-sample";
     o.SigningKeyEncryptionKey = builder.Configuration["NOF:OidcServer:SigningKeyEncryptionKey"]
         ?? throw new InvalidOperationException("Configuration value 'NOF:OidcServer:SigningKeyEncryptionKey' not found.");
-});
+})
+.AddPublicClient(
+    "nof-sample-ui",
+    ["openid", "profile", "email", "sample.read", "sample.write"],
+    displayName: "NOF Sample UI");
 
 builder.AddAuthenticationResourceServer(o =>
 {
@@ -83,7 +87,6 @@ app.UseAntiforgery();
 app.MapHttpEndpoint<NOFSampleService>();
 app.MapHttpEndpoint<OAuthChainDemoService>();
 app.MapHttpEndpoint<DemoDownstreamService>();
-app.MapOidcServer();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

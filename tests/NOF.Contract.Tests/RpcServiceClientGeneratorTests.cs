@@ -70,4 +70,29 @@ public class RpcServiceClientGeneratorTests
 
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.StreamingResult<global::App.StreamEvent>> StreamAsync", code);
     }
+
+    [Fact]
+    public void GeneratesClientInterface_ForGenericRpcService()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record Query<TValue>(TValue Value);
+
+            public partial interface IMyService<TValue> : IRpcService
+                where TValue : class, new()
+            {
+                Result<TValue> Get(Query<TValue> request);
+            }
+            """;
+
+        var runResult = new RpcServiceClientGenerator().GetResult(source, _refs);
+        var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
+
+        Assert.Contains("public interface IMyServiceClient<TValue> : global::NOF.Contract.IRpcClient", code);
+        Assert.Contains("where TValue : class, new()", code);
+        Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<TValue>> GetAsync(global::App.Query<TValue> request", code);
+    }
 }

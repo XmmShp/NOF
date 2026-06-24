@@ -48,7 +48,7 @@ public sealed record PaginatedResult<T> : Result<T[]>, IResult<PaginatedResult<T
 
         if (!other.IsSuccess)
         {
-            return new PaginatedResult<T>(false, other.ErrorCode, other.Message, [], other.Extra);
+            return new PaginatedResult<T>(false, other.ErrorCode, other.Message, null, other.Extra);
         }
 
         int? totalCount = TryGetTotalCount(other.Extra, out var parsedTotalCount) ? parsedTotalCount : null;

@@ -5,7 +5,7 @@
 }
 else
 {
-    <AuthGuard Permission="@_requiredPermission.Permission" AuthorizingContent="@AuthorizingContent"
+    <AuthGuard Permission="@_requiredPermission" AuthorizingContent="@AuthorizingContent"
                UnauthorizedContent="@UnauthorizedContent">
         <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
     </AuthGuard>
@@ -17,12 +17,10 @@ else
     [Parameter] public RenderFragment? AuthorizingContent { get; set; }
     [Parameter] public RenderFragment? UnauthorizedContent { get; set; }
 
-    private RequirePermissionAttribute? _requiredPermission;
+    private string? _requiredPermission;
 
     protected override void OnParametersSet()
     {
-        _requiredPermission = RouteData.PageType.GetCustomAttributes(typeof(RequirePermissionAttribute), inherit: true)
-            .OfType<RequirePermissionAttribute>()
-            .FirstOrDefault();
+        _requiredPermission = PermissionRouteViewMetadataResolver.ResolveRequiredPermission(RouteData.PageType);
     }
 }

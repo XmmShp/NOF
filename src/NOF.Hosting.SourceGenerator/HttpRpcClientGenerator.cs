@@ -78,14 +78,12 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {targetNamespace}");
         sb.AppendLine("{");
 
-        var clientInterfaceName = clientInterface.Name;
-        var clientInterfaceNamespace = RpcServiceHelpers.GetFullNamespace(clientInterface.ContainingNamespace);
-        var fullyQualifiedClientInterfaceName = string.IsNullOrWhiteSpace(clientInterfaceNamespace)
-            ? clientInterfaceName
-            : $"{clientInterfaceNamespace}.{clientInterfaceName}";
+        var fullyQualifiedClientInterfaceName = clientInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var targetClassDeclarationName = RpcServiceHelpers.GetTypeDeclarationName(targetClass);
 
         // No accessibility modifier here; the user-authored partial declaration decides visibility.
-        sb.AppendLine($"    partial class {targetClass.Name} : global::{fullyQualifiedClientInterfaceName}");
+        sb.AppendLine($"    partial class {targetClassDeclarationName} : {fullyQualifiedClientInterfaceName}");
+        RpcServiceHelpers.AppendTypeParameterConstraints(sb, targetClass, 1);
         sb.AppendLine("    {");
         sb.AppendLine("        private readonly global::System.Net.Http.HttpClient _httpClient;");
         sb.AppendLine("        private readonly global::NOF.Hosting.RequestOutboundPipelineExecutor _outboundPipeline;");
@@ -122,7 +120,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         sb.AppendLine("    }");
         sb.AppendLine("}");
 
-        context.AddSource($"{targetClass.ToDisplayString().Replace('.', '_')}.HttpServiceClient.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+        context.AddSource(GetHintName(targetClass, "HttpServiceClient"), SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private static bool TryGetRpcClientInterfaceFromHttpRpcClientAttribute(
@@ -205,6 +203,20 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
     private static string GetMethodInfoFieldName(ServiceMethodInfo method, int index)
         => $"__{method.Method.Name}MethodInfo_{index}";
 
+    private static string GetHintName(INamedTypeSymbol symbol, string suffix)
+    {
+        var builder = new StringBuilder(symbol.ToDisplayString().Length + suffix.Length + 5);
+        foreach (var character in symbol.ToDisplayString())
+        {
+            builder.Append(char.IsLetterOrDigit(character) ? character : '_');
+        }
+
+        builder.Append('.');
+        builder.Append(suffix);
+        builder.Append(".g.cs");
+        return builder.ToString();
+    }
+
     private static void EmitHttpMethodBody(StringBuilder sb, ServiceMethodInfo method, EndpointInfo endpoint, string methodInfoFieldName)
     {
         var clientResponseType = endpoint.ReturnInfo.ClientResponseTypeDisplay;
@@ -229,7 +241,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
 
         if (hasRequestParam)
         {
-            var requestType = endpoint.RequestType!.ToDisplayString();
+            var requestType = endpoint.RequestType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             sb.AppendLine($"        public virtual async {returnType} {methodName}({requestType} request, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
         }
         else
@@ -255,7 +267,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
 
         if (endpoint.RequestType != null)
         {
-            var requestType = endpoint.RequestType.ToDisplayString();
+            var requestType = endpoint.RequestType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             if (isBodyMethod)
             {
                 sb.AppendLine("                using var httpRequest = new global::System.Net.Http.HttpRequestMessage(" + fqnHttpMethod + ", endpoint);");

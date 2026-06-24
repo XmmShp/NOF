@@ -50,6 +50,20 @@ public class ResultTests
         Assert.Same(dto, result.Value);
     }
 
+    [Fact]
+    public void SuccessT_WithNullValue_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => Result.Success<string>(null!));
+    }
+
+    [Fact]
+    public void ResultT_SuccessJsonRoundTrip_WithNullValue_Throws()
+    {
+        var json = """{"IsSuccess":true,"ErrorCode":"","Message":"","Value":null,"Extra":{}}""";
+
+        Assert.Throws<InvalidOperationException>(() => JsonSerializer.Deserialize<Result<string>>(json));
+    }
+
     #endregion
 
     #region Result.Fail()
@@ -227,8 +241,7 @@ public class ResultTests
         Assert.Equal("409", result.ErrorCode);
         Assert.Equal("Conflict", result.Message);
         Assert.Equal("abc", result.Extra["requestId"]);
-        Assert.NotNull(result.Value);
-        Assert.Empty(result.Value);
+        Assert.Null(result.Value);
     }
 
     [Fact]

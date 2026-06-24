@@ -9,7 +9,7 @@ public static partial class NOFOidcServerExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        public INOFAppBuilder AddOidcServer(Action<OAuthAuthorizationServerOptions> configureOptions)
+        public OidcServerSelector AddOidcServer(Action<OAuthAuthorizationServerOptions> configureOptions)
         {
             builder.Services.Configure(configureOptions);
             builder.TryAddRegistrationStep<OidcServerPersistenceRegistrationStep>();
@@ -18,7 +18,10 @@ public static partial class NOFOidcServerExtensions
             builder.Services.ReplaceOrAddScoped<ITokenService, TokenAuthorityService>();
             builder.Services.AddHostedService<SigningKeyRotationBackgroundService>();
             builder.Services.TryAddScoped<IOAuthAuthorizationCodeService, OAuthAuthorizationCodeService>();
-            return builder;
+            builder.Services.AddOptions<OidcServerBootstrapOptions>();
+            builder.Services.TryAddSingleton<OidcServerEndpointMappingState>();
+            builder.Services.TryAddInitializationStep<OidcServerInitializationStep>();
+            return new OidcServerSelector(builder);
         }
     }
 }

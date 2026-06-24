@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure;
 
@@ -14,6 +15,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
     private readonly TimeSpan _minimumRefreshInterval;
     private readonly string? _configuredIssuer;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _missingKidRefreshAttempts = new(StringComparer.Ordinal);
 
     private IReadOnlyList<SecurityKey> _cachedKeys = [];
     private OAuthAuthorizationServerMetadataDocument? _cachedMetadata;
@@ -91,6 +93,7 @@ public sealed class ResourceServerJwksCacheService : IDisposable
         _cachedKeys = [];
         _cachedMetadata = null;
         _lastSuccessfulRefreshAtUtc = null;
+        _missingKidRefreshAttempts.Clear();
     }
 
     public async Task<IReadOnlyList<SecurityKey>> RefreshNowAsync(CancellationToken cancellationToken = default)
@@ -139,7 +142,11 @@ public sealed class ResourceServerJwksCacheService : IDisposable
                 return snapshot.Keys;
             }
 
-            return await RefreshUnsafeAsync(cancellationToken).ConfigureAwait(false);
+            MarkMissingKidRefreshAttempt(snapshot, requiredKid);
+
+            var keys = await RefreshUnsafeAsync(cancellationToken).ConfigureAwait(false);
+            ClearSatisfiedMissingKidRefreshAttempt(requiredKid, keys);
+            return keys;
         }
         finally
         {
@@ -215,10 +222,56 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
         if (snapshot.Contains(requiredKid))
         {
+            _missingKidRefreshAttempts.TryRemove(requiredKid, out _);
             return true;
         }
 
-        return snapshot.Age < _minimumRefreshInterval;
+        if (snapshot.Age >= _minimumRefreshInterval)
+        {
+            return false;
+        }
+
+        // A missing kid can indicate key rotation happened before the soft TTL elapsed.
+        // We still only want to probe the authorization server once per kid within the
+        // current refresh window, otherwise a burst of invalid tokens would turn into a
+        // thundering herd of metadata/JWKS requests.
+        return HasRecentMissingKidRefreshAttempt(requiredKid);
+    }
+
+    private bool HasRecentMissingKidRefreshAttempt(string requiredKid)
+    {
+        if (!_missingKidRefreshAttempts.TryGetValue(requiredKid, out var attemptedAtUtc))
+        {
+            return false;
+        }
+
+        return _timeProvider.GetUtcNow() - attemptedAtUtc < _minimumRefreshInterval;
+    }
+
+    private void MarkMissingKidRefreshAttempt(CacheSnapshot snapshot, string? requiredKid)
+    {
+        if (!snapshot.HasUsableKeys
+            || string.IsNullOrWhiteSpace(requiredKid)
+            || snapshot.Contains(requiredKid)
+            || snapshot.Age >= _minimumRefreshInterval)
+        {
+            return;
+        }
+
+        _missingKidRefreshAttempts[requiredKid] = _timeProvider.GetUtcNow();
+    }
+
+    private void ClearSatisfiedMissingKidRefreshAttempt(string? requiredKid, IReadOnlyList<SecurityKey> keys)
+    {
+        if (string.IsNullOrWhiteSpace(requiredKid))
+        {
+            return;
+        }
+
+        if (keys.Any(key => string.Equals(key.KeyId, requiredKid, StringComparison.Ordinal)))
+        {
+            _missingKidRefreshAttempts.TryRemove(requiredKid, out _);
+        }
     }
 
     public void Dispose()

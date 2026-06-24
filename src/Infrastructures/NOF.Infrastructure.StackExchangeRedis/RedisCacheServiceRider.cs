@@ -1,46 +1,94 @@
 using Microsoft.Extensions.Caching.Distributed;
 using NOF.Contract;
 using StackExchange.Redis;
+using System.Text;
 
 namespace NOF.Infrastructure.StackExchangeRedis;
 
 public sealed class RedisCacheServiceRider : ICacheServiceRider
 {
     private readonly IDatabase _database;
+    private readonly TimeProvider _timeProvider;
 
-    public RedisCacheServiceRider(IConnectionMultiplexer connectionMultiplexer)
+    public RedisCacheServiceRider(IConnectionMultiplexer connectionMultiplexer, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
 
         _database = connectionMultiplexer.GetDatabase();
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public byte[]? Get(string key) => _database.StringGet(key);
+    public byte[]? Get(string key)
+    {
+        var data = _database.StringGet(key);
+        if (data.HasValue)
+        {
+            Refresh(key);
+        }
+
+        return data.HasValue ? (byte[]?)data : null;
+    }
 
     public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
-        => await _database.StringGetAsync(key);
+    {
+        var data = await _database.StringGetAsync(key);
+        if (data.HasValue)
+        {
+            await RefreshAsync(key, token);
+        }
+
+        return data.HasValue ? (byte[]?)data : null;
+    }
 
     public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
     {
         var expiry = GetExpiration(options);
         _database.StringSet(key, value, expiry, false);
+        WriteSlidingExpirationMetadata(key, options, expiry);
     }
 
     public async Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
     {
         var expiry = GetExpiration(options);
         await _database.StringSetAsync(key, value, expiry, false);
+        await WriteSlidingExpirationMetadataAsync(key, options, expiry);
     }
 
-    public void Refresh(string key) => _database.KeyExpire(key, TimeSpan.FromMinutes(20));
+    public void Refresh(string key)
+    {
+        var expiry = GetRefreshExpiration(key);
+        if (!expiry.HasValue)
+        {
+            return;
+        }
+
+        _database.KeyExpire(key, expiry.Value);
+        _database.KeyExpire(GetSlidingExpirationMetadataKey(key), expiry.Value);
+    }
 
     public async Task RefreshAsync(string key, CancellationToken token = default)
-        => await _database.KeyExpireAsync(key, TimeSpan.FromMinutes(20));
+    {
+        var expiry = await GetRefreshExpirationAsync(key);
+        if (!expiry.HasValue)
+        {
+            return;
+        }
 
-    public void Remove(string key) => _database.KeyDelete(key);
+        await _database.KeyExpireAsync(key, expiry.Value);
+        await _database.KeyExpireAsync(GetSlidingExpirationMetadataKey(key), expiry.Value);
+    }
+
+    public void Remove(string key)
+    {
+        _database.KeyDelete(key);
+        _database.KeyDelete(GetSlidingExpirationMetadataKey(key));
+    }
 
     public async Task RemoveAsync(string key, CancellationToken token = default)
-        => await _database.KeyDeleteAsync(key);
+    {
+        await _database.KeyDeleteAsync(key);
+        await _database.KeyDeleteAsync(GetSlidingExpirationMetadataKey(key));
+    }
 
     public async ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
         => await _database.KeyExistsAsync(key);
@@ -55,6 +103,10 @@ public sealed class RedisCacheServiceRider : ICacheServiceRider
         for (var i = 0; i < keyList.Count; i++)
         {
             result[keyList[i]] = values[i].HasValue ? (byte[]?)values[i] : null;
+            if (values[i].HasValue)
+            {
+                await RefreshAsync(keyList[i], cancellationToken);
+            }
         }
         return result;
     }
@@ -67,6 +119,7 @@ public sealed class RedisCacheServiceRider : ICacheServiceRider
         foreach (var (k, v) in items)
         {
             tasks.Add(batch.StringSetAsync(k, v, expiry, false));
+            tasks.Add(EnqueueSlidingExpirationMetadata(batch, k, options, expiry));
         }
         batch.Execute();
         await Task.WhenAll(tasks);
@@ -74,8 +127,16 @@ public sealed class RedisCacheServiceRider : ICacheServiceRider
 
     public async ValueTask<long> RemoveManyAsync(IEnumerable<string> keys, CancellationToken cancellationToken = default)
     {
-        var redisKeys = keys.Select(k => (RedisKey)k).ToArray();
-        return await _database.KeyDeleteAsync(redisKeys);
+        var keyList = keys.ToList();
+        var redisKeys = keyList.Select(k => (RedisKey)k).ToArray();
+        var metadataKeys = keyList.Select(GetSlidingExpirationMetadataKey).Select(static key => (RedisKey)key).ToArray();
+        var batch = _database.CreateBatch();
+        var deletePrimaryTask = batch.KeyDeleteAsync(redisKeys);
+        var deleteMetadataTask = batch.KeyDeleteAsync(metadataKeys);
+        batch.Execute();
+        var deleted = await deletePrimaryTask;
+        await deleteMetadataTask;
+        return deleted;
     }
 
     public async ValueTask<long> IncrementAsync(string key, long delta = 1, CancellationToken cancellationToken = default)
@@ -87,21 +148,27 @@ public sealed class RedisCacheServiceRider : ICacheServiceRider
     public async ValueTask<bool> SetIfNotExistsAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken cancellationToken = default)
     {
         var expiry = GetExpiration(options);
-        return await _database.StringSetAsync(key, value, expiry, When.NotExists);
+        var created = await _database.StringSetAsync(key, value, expiry, When.NotExists);
+        if (created)
+        {
+            await WriteSlidingExpirationMetadataAsync(key, options, expiry);
+        }
+
+        return created;
     }
 
     public async ValueTask<byte[]?> GetAndSetAsync(string key, byte[] newValue, DistributedCacheEntryOptions options, CancellationToken cancellationToken = default)
     {
         var oldData = await _database.StringGetSetAsync(key, newValue);
-        if (!oldData.HasValue)
-        {
-            return null;
-        }
-
         var expiry = GetExpiration(options);
         if (expiry.HasValue)
         {
             await _database.KeyExpireAsync(key, expiry.Value);
+        }
+        await WriteSlidingExpirationMetadataAsync(key, options, expiry);
+        if (!oldData.HasValue)
+        {
+            return null;
         }
 
         return oldData;
@@ -110,6 +177,7 @@ public sealed class RedisCacheServiceRider : ICacheServiceRider
     public async ValueTask<byte[]?> GetAndRemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         var data = await _database.StringGetDeleteAsync(key);
+        await _database.KeyDeleteAsync(GetSlidingExpirationMetadataKey(key));
         return data.HasValue ? (byte[]?)data : null;
     }
 
@@ -281,6 +349,141 @@ public sealed class RedisCacheServiceRider : ICacheServiceRider
 
         return options.SlidingExpiration;
     }
+
+    private TimeSpan? GetRefreshExpiration(string key)
+    {
+        var metadataValue = _database.StringGet(GetSlidingExpirationMetadataKey(key));
+        if (!metadataValue.HasValue || !TryParseSlidingExpirationMetadata(metadataValue!, out var metadata))
+        {
+            return null;
+        }
+
+        return GetRefreshExpiration(metadata);
+    }
+
+    private async Task<TimeSpan?> GetRefreshExpirationAsync(string key)
+    {
+        var metadataValue = await _database.StringGetAsync(GetSlidingExpirationMetadataKey(key));
+        if (!metadataValue.HasValue || !TryParseSlidingExpirationMetadata(metadataValue!, out var metadata))
+        {
+            return null;
+        }
+
+        return GetRefreshExpiration(metadata);
+    }
+
+    private TimeSpan? GetRefreshExpiration(SlidingExpirationMetadata metadata)
+    {
+        var now = _timeProvider.GetUtcNow();
+        var expiration = metadata.AbsoluteExpirationUtc is null
+            ? metadata.SlidingExpiration
+            : Min(metadata.SlidingExpiration, metadata.AbsoluteExpirationUtc.Value - now);
+
+        if (expiration <= TimeSpan.Zero)
+        {
+            return null;
+        }
+
+        return expiration;
+    }
+
+    private void WriteSlidingExpirationMetadata(string key, DistributedCacheEntryOptions options, TimeSpan? expiry)
+    {
+        var metadataKey = GetSlidingExpirationMetadataKey(key);
+        if (!TryCreateSlidingExpirationMetadata(options, out var metadata))
+        {
+            _database.KeyDelete(metadataKey);
+            return;
+        }
+
+        _database.StringSet(metadataKey, SerializeSlidingExpirationMetadata(metadata), expiry, false);
+    }
+
+    private async Task WriteSlidingExpirationMetadataAsync(string key, DistributedCacheEntryOptions options, TimeSpan? expiry)
+    {
+        var metadataKey = GetSlidingExpirationMetadataKey(key);
+        if (!TryCreateSlidingExpirationMetadata(options, out var metadata))
+        {
+            await _database.KeyDeleteAsync(metadataKey);
+            return;
+        }
+
+        await _database.StringSetAsync(metadataKey, SerializeSlidingExpirationMetadata(metadata), expiry, false);
+    }
+
+    private Task EnqueueSlidingExpirationMetadata(IBatch batch, string key, DistributedCacheEntryOptions options, TimeSpan? expiry)
+    {
+        var metadataKey = GetSlidingExpirationMetadataKey(key);
+        if (!TryCreateSlidingExpirationMetadata(options, out var metadata))
+        {
+            return batch.KeyDeleteAsync(metadataKey);
+        }
+
+        return batch.StringSetAsync(metadataKey, SerializeSlidingExpirationMetadata(metadata), expiry, false);
+    }
+
+    private bool TryCreateSlidingExpirationMetadata(DistributedCacheEntryOptions options, out SlidingExpirationMetadata metadata)
+    {
+        if (!options.SlidingExpiration.HasValue)
+        {
+            metadata = default;
+            return false;
+        }
+
+        metadata = new SlidingExpirationMetadata(GetAbsoluteExpiration(options), options.SlidingExpiration.Value);
+        return true;
+    }
+
+    private DateTimeOffset? GetAbsoluteExpiration(DistributedCacheEntryOptions options)
+    {
+        if (options.AbsoluteExpiration.HasValue)
+        {
+            return options.AbsoluteExpiration.Value;
+        }
+
+        if (options.AbsoluteExpirationRelativeToNow.HasValue)
+        {
+            return _timeProvider.GetUtcNow().Add(options.AbsoluteExpirationRelativeToNow.Value);
+        }
+
+        return null;
+    }
+
+    private static string GetSlidingExpirationMetadataKey(string key)
+        => $"{key}::__nof:sliding-expiration";
+
+    private static byte[] SerializeSlidingExpirationMetadata(SlidingExpirationMetadata metadata)
+        => Encoding.UTF8.GetBytes($"{metadata.SlidingExpiration.Ticks}|{metadata.AbsoluteExpirationUtc?.UtcDateTime.Ticks.ToString() ?? string.Empty}");
+
+    private static bool TryParseSlidingExpirationMetadata(byte[] data, out SlidingExpirationMetadata metadata)
+    {
+        var parts = Encoding.UTF8.GetString(data).Split('|', 2, StringSplitOptions.None);
+        if (parts.Length != 2 || !long.TryParse(parts[0], out var slidingTicks))
+        {
+            metadata = default;
+            return false;
+        }
+
+        DateTimeOffset? absoluteExpiration = null;
+        if (!string.IsNullOrWhiteSpace(parts[1]))
+        {
+            if (!long.TryParse(parts[1], out var absoluteTicks))
+            {
+                metadata = default;
+                return false;
+            }
+
+            absoluteExpiration = new DateTimeOffset(absoluteTicks, TimeSpan.Zero);
+        }
+
+        metadata = new SlidingExpirationMetadata(absoluteExpiration, TimeSpan.FromTicks(slidingTicks));
+        return true;
+    }
+
+    private static TimeSpan Min(TimeSpan left, TimeSpan right)
+        => left <= right ? left : right;
+
+    private readonly record struct SlidingExpirationMetadata(DateTimeOffset? AbsoluteExpirationUtc, TimeSpan SlidingExpiration);
 
     private static IReadOnlyList<byte[]> ToByteArrayList(RedisValue[] values)
     {

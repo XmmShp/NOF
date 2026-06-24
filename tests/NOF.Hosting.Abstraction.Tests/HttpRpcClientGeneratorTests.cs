@@ -262,6 +262,40 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("GetJsonTypeInfo<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>()", code);
     }
 
+    [Fact]
+    public void GeneratesHttpClient_ForGenericRpcClient()
+    {
+        const string source = """
+                              using NOF.Contract;
+                              using NOF.Hosting;
+                              namespace MyApp
+                              {
+                                  public sealed class Payload
+                                  {
+                                  }
+                                  public record Query<TValue>(TValue Value);
+
+                                  public partial interface IMyService<TValue> : IRpcService
+                                      where TValue : class, new()
+                                  {
+                                      [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                                      Result<TValue> Get(Query<TValue> request);
+                                  }
+
+                                  public partial interface IMyServiceClient<TValue> : IRpcClient;
+
+                                  [HttpRpcClient<IMyServiceClient<Payload>>]
+                                  public partial class MyServiceClient;
+                              }
+                              """;
+
+        var runResult = RunGenerators(source);
+        var code = GetGeneratedHttpClientCode(runResult);
+
+        Assert.Contains("partial class MyServiceClient : global::MyApp.IMyServiceClient<global::MyApp.Payload>", code);
+        Assert.Contains("Task<global::NOF.Contract.Result<global::MyApp.Payload>> GetAsync(global::MyApp.Query<global::MyApp.Payload> request", code);
+    }
+
     private static GeneratorDriverRunResult RunGenerators(string source)
     {
         var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();

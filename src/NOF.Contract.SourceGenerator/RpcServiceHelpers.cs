@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 
 namespace NOF.Contract.SourceGenerator;
 
@@ -147,6 +148,34 @@ internal static class RpcServiceHelpers
         return string.Join(".", parts);
     }
 
+    public static string GetTypeParameterList(ImmutableArray<ITypeParameterSymbol> typeParameters)
+    {
+        if (typeParameters.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        return "<" + string.Join(", ", typeParameters.Select(static parameter => parameter.Name)) + ">";
+    }
+
+    public static void AppendTypeParameterConstraints(StringBuilder sb, INamedTypeSymbol symbol, int indentLevel)
+    {
+        foreach (var typeParameter in symbol.TypeParameters)
+        {
+            var constraints = BuildTypeParameterConstraints(typeParameter);
+            if (constraints.Count == 0)
+            {
+                continue;
+            }
+
+            sb.Append(' ', indentLevel * 4);
+            sb.Append("where ");
+            sb.Append(typeParameter.Name);
+            sb.Append(" : ");
+            sb.AppendLine(string.Join(", ", constraints));
+        }
+    }
+
     public static EndpointInfo ExtractEndpointInfo(ServiceMethodInfo method)
     {
         var attributes = method.Method.GetAttributes();
@@ -197,6 +226,36 @@ internal static class RpcServiceHelpers
         => attributes
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == attributeFqn)
             ?.ConstructorArguments.FirstOrDefault().Value as string;
+
+    private static List<string> BuildTypeParameterConstraints(ITypeParameterSymbol typeParameter)
+    {
+        var constraints = new List<string>();
+        if (typeParameter.HasReferenceTypeConstraint)
+        {
+            constraints.Add(typeParameter.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated ? "class?" : "class");
+        }
+        else if (typeParameter.HasValueTypeConstraint)
+        {
+            constraints.Add("struct");
+        }
+        else if (typeParameter.HasUnmanagedTypeConstraint)
+        {
+            constraints.Add("unmanaged");
+        }
+        else if (typeParameter.HasNotNullConstraint)
+        {
+            constraints.Add("notnull");
+        }
+
+        constraints.AddRange(typeParameter.ConstraintTypes.Select(static type => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+
+        if (typeParameter.HasConstructorConstraint)
+        {
+            constraints.Add("new()");
+        }
+
+        return constraints;
+    }
 
 }
 

@@ -20,7 +20,10 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
         }
 
         var client = await FindClientAsync(request.ClientId, cancellationToken).ConfigureAwait(false);
-        if (client is null || !client.IsEnabled || !VerifySecret(request.ClientSecret, client.SecretSalt, client.SecretHash))
+        if (client is null
+            || !client.IsEnabled
+            || client.ClientType != OAuthClientType.Confidential
+            || !VerifySecret(request.ClientSecret, client.SecretSalt, client.SecretHash))
         {
             return new OAuthClientCredentialsValidationResult.Failure("invalid_client", "client credentials are invalid.");
         }
@@ -84,17 +87,19 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             return Result.Fail("conflict", "OAuth client already exists.");
         }
 
-        var secret = GenerateSecret();
-        var salt = GenerateSalt();
+        var (secret, salt, hash) = request.ClientType == OAuthClientType.Public
+            ? (null, string.Empty, string.Empty)
+            : CreateSecretMaterial();
         var now = DateTime.UtcNow;
         var client = new OAuthClient
         {
             ClientId = request.ClientId.Trim(),
             DisplayName = NormalizeDisplayName(request.DisplayName, request.ClientId),
             SecretSalt = salt,
-            SecretHash = HashSecret(secret, salt),
+            SecretHash = hash,
             AllowedScopes = SerializeScopes(request.AllowedScopes),
             AccessTokenClaims = SerializeClaims(request.AccessTokenClaims),
+            ClientType = request.ClientType,
             IsEnabled = request.IsEnabled,
             CreatedAtUtc = now,
             UpdatedAtUtc = now
@@ -129,6 +134,12 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
         client.DisplayName = NormalizeDisplayName(request.DisplayName, client.ClientId);
         client.AllowedScopes = SerializeScopes(request.AllowedScopes);
         client.AccessTokenClaims = SerializeClaims(request.AccessTokenClaims);
+        client.ClientType = request.ClientType;
+        if (client.ClientType == OAuthClientType.Public)
+        {
+            client.SecretSalt = string.Empty;
+            client.SecretHash = string.Empty;
+        }
         client.IsEnabled = request.IsEnabled;
         client.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -151,10 +162,14 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             return Result.Fail("not_found", "OAuth client was not found.");
         }
 
-        var secret = GenerateSecret();
-        var salt = GenerateSalt();
+        if (client.ClientType == OAuthClientType.Public)
+        {
+            return Result.Fail("invalid_operation", "public clients do not use client secrets.");
+        }
+
+        var (secret, salt, hash) = CreateSecretMaterial();
         client.SecretSalt = salt;
-        client.SecretHash = HashSecret(secret, salt);
+        client.SecretHash = hash;
         client.UpdatedAtUtc = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -201,6 +216,7 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             DisplayName = client.DisplayName,
             AllowedScopes = DeserializeScopes(client.AllowedScopes).OrderBy(static scope => scope, StringComparer.Ordinal).ToArray(),
             AccessTokenClaims = DeserializeClaims(client.AccessTokenClaims),
+            ClientType = client.ClientType,
             IsEnabled = client.IsEnabled,
             CreatedAtUtc = client.CreatedAtUtc,
             UpdatedAtUtc = client.UpdatedAtUtc
@@ -236,11 +252,12 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
     private static IReadOnlyList<OAuthClientClaim> DeserializeClaims(string claims)
         => JsonSerializer.Deserialize<OAuthClientClaim[]>(claims, JsonOptions) ?? [];
 
-    private static string GenerateSecret()
-        => $"nof_{Base64UrlEncode(RandomNumberGenerator.GetBytes(32))}";
-
-    private static string GenerateSalt()
-        => Base64UrlEncode(RandomNumberGenerator.GetBytes(16));
+    private static (string Secret, string Salt, string Hash) CreateSecretMaterial()
+    {
+        var secret = $"nof_{Base64UrlEncode(RandomNumberGenerator.GetBytes(32))}";
+        var salt = Base64UrlEncode(RandomNumberGenerator.GetBytes(16));
+        return (secret, salt, HashSecret(secret, salt));
+    }
 
     private static string HashSecret(string secret, string salt)
         => Base64UrlEncode(SHA256.HashData(Encoding.UTF8.GetBytes($"{salt}.{secret}")));

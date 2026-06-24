@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -6,12 +7,14 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NOF.Contract;
 using NOF.Hosting;
+using NOF.Hosting.AspNetCore;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure.EntityFrameworkCore;
 using NOF.Test;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Authentication.Extensions;
@@ -84,6 +87,124 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public async Task AddOidcServer_ShouldMapOidcEndpointsAutomatically()
+    {
+        var builder = NOFWebApplicationBuilder.Create([]);
+        builder.AddOidcServer(options =>
+        {
+            options.Issuer = "https://issuer.local/oauth2";
+        });
+
+        await using var app = await builder.BuildAsync();
+
+        var routes = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(static dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Select(static endpoint => endpoint.RoutePattern.RawText)
+            .ToArray();
+
+        Assert.Contains("/oauth2/token", routes);
+        Assert.Contains("/oauth2/authorize", routes);
+        Assert.Contains("/.well-known/openid-configuration", routes);
+    }
+
+    [Fact]
+    public async Task AddOidcServer_AddPublicClient_ShouldEnsureClientExistsOnInitialize()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddOidcServer(options =>
+        {
+            options.Issuer = "https://issuer.local/oauth2";
+            options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;
+        })
+        .AddPublicClient(
+            "bootstrap-public-client",
+            ["openid", "profile", "jobs.read"],
+            displayName: "Bootstrap Public Client");
+        builder.UseDbContext<NOFDbContext>()
+            .WithTenantMode(TenantMode.DatabasePerTenant)
+            .WithConnectionString($"Data Source=nof-bootstrap-public-client-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString))
+            .MigrateOnInitialize();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var clientService = scope.GetRequiredService<IOAuthClientManagementService>();
+
+        var client = await clientService.GetAsync("bootstrap-public-client");
+
+        Assert.True(client.IsSuccess, client.Message);
+        Assert.Equal(OAuthClientType.Public, client.Value.ClientType);
+        Assert.Equal("Bootstrap Public Client", client.Value.DisplayName);
+        Assert.Equal(["jobs.read", "openid", "profile"], client.Value.AllowedScopes.OrderBy(static scope => scope, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public async Task AddOidcServer_AddPublicClient_ShouldNotOverwriteExistingClient()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"nof-bootstrap-existing-public-client-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={dbPath}";
+
+        try
+        {
+            await using (var firstHost = await CreateAuthorityBuilder(connectionString).BuildTestHostAsync())
+            {
+                using var scope = firstHost.CreateScope();
+                var clientService = scope.GetRequiredService<IOAuthClientManagementService>();
+
+                var createResult = await clientService.CreateAsync(new CreateOAuthClientRequest
+                {
+                    ClientId = "bootstrap-public-client",
+                    DisplayName = "Existing Public Client",
+                    AllowedScopes = ["existing.scope"],
+                    ClientType = OAuthClientType.Public,
+                    IsEnabled = false
+                });
+
+                Assert.True(createResult.IsSuccess, createResult.Message);
+            }
+
+            var secondBuilder = NOFTestAppBuilder.Create();
+            secondBuilder.AddOidcServer(options =>
+            {
+                options.Issuer = "https://issuer.local";
+                options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;
+            })
+            .AddPublicClient(
+                "bootstrap-public-client",
+                ["openid", "profile", "jobs.read"],
+                displayName: "Bootstrap Public Client");
+            secondBuilder.UseDbContext<NOFDbContext>()
+                .WithConnectionString(connectionString)
+                .WithOptions(static (optionsBuilder, databaseConnectionString) => optionsBuilder.UseSqlite(databaseConnectionString));
+
+            await using var secondHost = await secondBuilder.BuildTestHostAsync();
+            using var secondScope = secondHost.CreateScope();
+            var secondClientService = secondScope.GetRequiredService<IOAuthClientManagementService>();
+
+            var existingClient = await secondClientService.GetAsync("bootstrap-public-client");
+
+            Assert.True(existingClient.IsSuccess, existingClient.Message);
+            Assert.Equal("Existing Public Client", existingClient.Value.DisplayName);
+            Assert.Equal(["existing.scope"], existingClient.Value.AllowedScopes.OrderBy(static scope => scope, StringComparer.Ordinal).ToArray());
+            Assert.False(existingClient.Value.IsEnabled);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(dbPath))
+                {
+                    File.Delete(dbPath);
+                }
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ClientCredentialsGrant_ShouldIssueAccessTokenWithoutRefreshToken()
     {
         using var services = new ServiceCollection()
@@ -123,6 +244,352 @@ public sealed class AuthenticationExtensionsTests
         Assert.Null(tokenService.LastRequest?.RefreshToken);
         Assert.Contains(tokenService.LastRequest!.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Subject && claim.Value == "service-a");
         Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == "client_id" && claim.Value == "service-a");
+    }
+
+    [Fact]
+    public async Task ValidateClientAuthenticationAsync_ShouldAllowAuthorizationCodeRequestWithoutClientSecret_WhenPkceIsUsed()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.AuthorizationCode,
+            ClientId = "public-app",
+            Code = "code-1",
+            CodeVerifier = "pkce-code-verifier",
+            RedirectUri = "https://app.local/callback"
+        };
+
+        var error = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateClientAuthenticationAsync(
+            httpContext.Request,
+            request,
+            services,
+            CancellationToken.None);
+
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public async Task ValidateClientAuthenticationAsync_ShouldRejectAuthorizationCodeRequestWithoutClientSecret_WhenPkceIsMissing()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.AuthorizationCode,
+            ClientId = "service-a",
+            Code = "code-1",
+            RedirectUri = "https://app.local/callback"
+        };
+
+        var error = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateClientAuthenticationAsync(
+            httpContext.Request,
+            request,
+            services,
+            CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Equal("invalid_client", error.Error);
+        Assert.Equal("client_secret is required.", error.ErrorDescription);
+    }
+
+    [Fact]
+    public async Task ValidateClientAuthenticationAsync_ShouldAllowPublicRefreshTokenRequestWithoutClientSecret()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.RefreshToken,
+            ClientId = "public-app",
+            RefreshToken = "refresh-token"
+        };
+
+        var error = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateClientAuthenticationAsync(
+            httpContext.Request,
+            request,
+            services,
+            CancellationToken.None);
+
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public async Task ValidateClientAuthenticationAsync_ShouldRejectPublicClientCredentialsGrant()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.ClientCredentials,
+            ClientId = "public-app"
+        };
+
+        var error = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateClientAuthenticationAsync(
+            httpContext.Request,
+            request,
+            services,
+            CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Equal("invalid_client", error.Error);
+        Assert.Equal("public client authentication is invalid for this grant type.", error.ErrorDescription);
+    }
+
+    [Fact]
+    public async Task ValidateClientAuthenticationAsync_ShouldAcceptBasicClientCredentialsAndNormalizeRequest()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        httpContext.Request.Headers.Authorization =
+            "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes("service-a:secret-a"));
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.RefreshToken,
+            RefreshToken = "refresh-token"
+        };
+
+        Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ApplyResolvedClientCredentials(httpContext.Request, request);
+        var error = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateClientAuthenticationAsync(
+            httpContext.Request,
+            request,
+            services,
+            CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.Equal("service-a", request.ClientId);
+        Assert.Equal("secret-a", request.ClientSecret);
+    }
+
+    [Fact]
+    public async Task TokenFromRefreshTokenAsync_ShouldRejectMismatchedClientId()
+    {
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.RefreshToken,
+            ClientId = "service-a",
+            ClientSecret = "secret-a",
+            RefreshToken = "refresh-token"
+        };
+        var tokenService = new TestTokenService
+        {
+            ValidateRefreshTokenResult = Result.Success(new ValidateRefreshTokenResponse
+            {
+                TokenId = "refresh-token-id",
+                Claims =
+                [
+                    new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
+                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
+                    new TokenClaim("client_id", "other-client")
+                ]
+            })
+        };
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromRefreshTokenAsync(
+            httpContext.Request,
+            request,
+            services,
+            new TestOAuthSubjectService(),
+            tokenService,
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                RefreshTokenExpiration = TimeSpan.FromDays(7),
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("invalid_grant", result.ErrorCode);
+        Assert.Equal("refresh token client does not match.", result.Message);
+    }
+
+    [Fact]
+    public async Task TokenFromRefreshTokenAsync_ShouldIssueNewRefreshTokenBoundToClientId()
+    {
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.RefreshToken,
+            ClientId = "service-a",
+            ClientSecret = "secret-a",
+            RefreshToken = "refresh-token"
+        };
+        var tokenService = new TestTokenService
+        {
+            ValidateRefreshTokenResult = Result.Success(new ValidateRefreshTokenResponse
+            {
+                TokenId = "refresh-token-id",
+                Claims =
+                [
+                    new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
+                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
+                    new TokenClaim("client_id", "service-a")
+                ]
+            })
+        };
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromRefreshTokenAsync(
+            httpContext.Request,
+            request,
+            services,
+            new TestOAuthSubjectService(),
+            tokenService,
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                RefreshTokenExpiration = TimeSpan.FromDays(7),
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.NotNull(tokenService.LastRequest?.RefreshToken);
+        Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == "client_id" && claim.Value == "service-a");
+        Assert.Equal("refresh-token-id", tokenService.LastRevokeRequest?.TokenId);
+    }
+
+    [Fact]
+    public async Task TokenFromRefreshTokenAsync_ShouldAllowPublicClientWithoutClientSecret()
+    {
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.RefreshToken,
+            ClientId = "public-app",
+            RefreshToken = "refresh-token"
+        };
+        var tokenService = new TestTokenService
+        {
+            ValidateRefreshTokenResult = Result.Success(new ValidateRefreshTokenResponse
+            {
+                TokenId = "refresh-token-id",
+                Claims =
+                [
+                    new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
+                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
+                    new TokenClaim("client_id", "public-app")
+                ]
+            })
+        };
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromRefreshTokenAsync(
+            httpContext.Request,
+            request,
+            services,
+            new TestOAuthSubjectService(),
+            tokenService,
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                RefreshTokenExpiration = TimeSpan.FromDays(7),
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.NotNull(tokenService.LastRequest?.RefreshToken);
+        Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == "client_id" && claim.Value == "public-app");
+    }
+
+    [Fact]
+    public async Task AddOidcServer_OAuthClientService_ShouldCreatePublicClientWithoutSecret()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-oauth-client-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+
+        var result = await service.CreateAsync(new CreateOAuthClientRequest
+        {
+            ClientId = "public-app",
+            DisplayName = "Public App",
+            ClientType = OAuthClientType.Public,
+            AllowedScopes = ["jobs.read"]
+        });
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal(OAuthClientType.Public, result.Value.Client.ClientType);
+        Assert.Null(result.Value.ClientSecret);
+
+        var rotateResult = await service.RotateSecretAsync("public-app");
+        Assert.False(rotateResult.IsSuccess);
+        Assert.Equal("invalid_operation", rotateResult.ErrorCode);
     }
 
     [Fact]
@@ -241,7 +708,7 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddOidcServer_WithoutEncryptionKey_ShouldFallbackToMachineName()
+    public async Task AddOidcServer_WithoutEncryptionKey_ShouldGenerateLocalFallbackSecret()
     {
         var builder = NOFTestAppBuilder.Create();
         builder.AddOidcServer(options =>
@@ -255,10 +722,11 @@ public sealed class AuthenticationExtensionsTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
 
-        _ = await scope.GetRequiredService<ISigningKeyService>().GetCurrentSigningKeyAsync();
+        var signingKey = await scope.GetRequiredService<ISigningKeyService>().GetCurrentSigningKeyAsync();
         var options = scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value;
 
-        Assert.Equal(Environment.MachineName, options.SigningKeyEncryptionKey);
+        Assert.False(string.IsNullOrWhiteSpace(signingKey.Kid));
+        Assert.False(string.IsNullOrWhiteSpace(options.SigningKeyEncryptionKey));
     }
 
     [Fact]
@@ -428,7 +896,39 @@ public sealed class AuthenticationExtensionsTests
             => throw new NotSupportedException();
 
         public Task<Result<OAuthClientDescriptor>> GetAsync(string clientId, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            if (string.Equals(clientId, "service-a", StringComparison.Ordinal))
+            {
+                return Task.FromResult(Result.Success(new OAuthClientDescriptor
+                {
+                    ClientId = "service-a",
+                    DisplayName = "Service A",
+                    AllowedScopes = ["jobs.read", "jobs.write"],
+                    AccessTokenClaims = [],
+                    ClientType = OAuthClientType.Confidential,
+                    IsEnabled = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                }));
+            }
+
+            if (string.Equals(clientId, "public-app", StringComparison.Ordinal))
+            {
+                return Task.FromResult(Result.Success(new OAuthClientDescriptor
+                {
+                    ClientId = "public-app",
+                    DisplayName = "Public App",
+                    AllowedScopes = ["jobs.read"],
+                    AccessTokenClaims = [],
+                    ClientType = OAuthClientType.Public,
+                    IsEnabled = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                }));
+            }
+
+            return Task.FromResult<Result<OAuthClientDescriptor>>(Result.Fail("not_found", "OAuth client was not found."));
+        }
 
         public Task<Result<OAuthClientSecretDescriptor>> CreateAsync(CreateOAuthClientRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -446,6 +946,10 @@ public sealed class AuthenticationExtensionsTests
     private sealed class TestTokenService : ITokenService
     {
         public IssueTokenRequest? LastRequest { get; private set; }
+        public RevokeRefreshTokenRequest? LastRevokeRequest { get; private set; }
+        public Result<ValidateRefreshTokenResponse> ValidateRefreshTokenResult { get; set; }
+            = Result.Fail("401", "Refresh token is invalid.");
+        public Result RevokeRefreshTokenResult { get; set; } = Result.Success();
 
         public Task<Result<IssueTokenResponse>> IssueTokenAsync(IssueTokenRequest request, CancellationToken cancellationToken)
         {
@@ -453,15 +957,25 @@ public sealed class AuthenticationExtensionsTests
             return Task.FromResult(Result.Success(new IssueTokenResponse
             {
                 AccessToken = "access-token",
-                AccessTokenExpiresAtUtc = DateTime.UtcNow.Add(request.AccessTokenExpiration)
+                AccessTokenExpiresAtUtc = DateTime.UtcNow.Add(request.AccessTokenExpiration),
+                RefreshToken = request.RefreshToken is null
+                    ? null
+                    : new IssuedRefreshToken
+                    {
+                        Token = "refresh-token-issued",
+                        ExpiresAtUtc = DateTime.UtcNow.Add(request.RefreshToken.Expiration)
+                    }
             }));
         }
 
         public Task<Result<ValidateRefreshTokenResponse>> ValidateRefreshTokenAsync(ValidateRefreshTokenRequest request, CancellationToken cancellationToken)
-            => throw new NotSupportedException();
+            => Task.FromResult(ValidateRefreshTokenResult);
 
         public Task<Result> RevokeRefreshTokenAsync(RevokeRefreshTokenRequest request, CancellationToken cancellationToken)
-            => throw new NotSupportedException();
+        {
+            LastRevokeRequest = request;
+            return Task.FromResult(RevokeRefreshTokenResult);
+        }
     }
 
     private sealed class TestOAuthSubjectService : IOAuthSubjectService

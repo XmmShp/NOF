@@ -97,6 +97,7 @@ public record Result : IResult<Result>
     /// <returns>A success result containing <paramref name="value"/>.</returns>
     public static Result<T> Success<T>(T value, IDictionary<string, string>? extra = null)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return new Result<T>(true, string.Empty, string.Empty, value, extra);
     }
 
@@ -222,6 +223,11 @@ public record Result<T> : IResult<Result<T>>
     [JsonConstructor]
     internal Result(bool isSuccess, string? errorCode, string? message, T? value, IDictionary<string, string>? extra = null)
     {
+        if (isSuccess && value is null)
+        {
+            throw new InvalidOperationException("Successful results must provide a non-null value.");
+        }
+
         IsSuccess = isSuccess;
         ErrorCode = errorCode ?? string.Empty;
         Message = message ?? string.Empty;

@@ -266,7 +266,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         }
     }
 
-    private async Task<bool> EnqueueAsync(
+    private async Task EnqueueAsync(
         Guid messageId,
         InboxMessageType messageType,
         ReadOnlyMemory<byte> payload,
@@ -281,7 +281,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         var dbContext = scope.ServiceProvider.GetService<IDbContext>();
         if (dbContext is null)
         {
-            return true;
+            return;
         }
 
         dbContext.Set<NOFInboxMessage>().Add(new NOFInboxMessage
@@ -297,9 +297,41 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
-            return true;
         }
         catch (DbUpdateException)
+        {
+            if (await InboxMessageExistsAsync(messageId, handlerTypeName, cancellationToken).ConfigureAwait(false))
+            {
+                _logger.LogInformation(
+                    "Inbox message {MessageId} for handler {HandlerType} already exists. Treating RabbitMQ delivery as duplicate.",
+                    messageId,
+                    handlerTypeName);
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<bool> InboxMessageExistsAsync(Guid messageId, string handlerTypeName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            scope.ServiceProvider.ResolveDaemonServices();
+
+            var dbContext = scope.ServiceProvider.GetService<IDbContext>();
+            if (dbContext is null)
+            {
+                return false;
+            }
+
+            return await dbContext.Set<NOFInboxMessage>()
+                .Where(message => message.Id == messageId && message.HandlerType == handlerTypeName)
+                .AnyAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
         {
             return false;
         }
