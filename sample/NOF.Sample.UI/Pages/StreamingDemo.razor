@@ -22,6 +22,12 @@
                                            Step="100" Disabled="@_isStreaming" />
                 </SpaceItem>
                 <SpaceItem>
+                    <label style="display: inline-flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" @bind="_request.ForceFailure" disabled="@_isStreaming" />
+                        <span>返回失败 JSON</span>
+                    </label>
+                </SpaceItem>
+                <SpaceItem>
                     <Button Type="@ButtonType.Primary" Loading="@_isStreaming" OnClick="StartStream">
                         开始流式调用
                     </Button>
@@ -41,7 +47,8 @@
             <Alert Type="@AlertType.Info" ShowIcon="true">
                 <ChildContent>
                     这个页面通过 `INOFSampleServiceClient` 调用 `WatchSampleStreamAsync`，
-                    最终走 `StreamingResult&lt;SampleStreamEvent&gt;` + HTTP SSE 链路。
+                    成功时走 `StreamingResult&lt;SampleStreamEvent&gt;` + HTTP SSE 链路，
+                    勾选“返回失败 JSON”后会改为演示服务端返回 JSON failure 的 fallback 路径。
                 </ChildContent>
             </Alert>
 
@@ -49,6 +56,7 @@
                 <DescriptionsItem Title="Topic">@_request.Topic</DescriptionsItem>
                 <DescriptionsItem Title="Count">@_request.Count</DescriptionsItem>
                 <DescriptionsItem Title="Interval">@($"{_request.IntervalMilliseconds} ms")</DescriptionsItem>
+                <DescriptionsItem Title="Fallback">@(_request.ForceFailure ? "JSON failure" : "SSE stream")</DescriptionsItem>
                 <DescriptionsItem Title="状态">@(_isStreaming ? "Streaming" : "Idle")</DescriptionsItem>
             </Descriptions>
 

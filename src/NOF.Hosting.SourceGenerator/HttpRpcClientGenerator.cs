@@ -330,7 +330,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
             sb.AppendLine("                    {");
             sb.AppendLine("                        using (response)");
             sb.AppendLine("                        {");
-            sb.AppendLine($"                            result = (await global::System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync(response.Content, GetJsonTypeInfo<global::NOF.Contract.StreamingResult<{streamItemType}>>(), ct).ConfigureAwait(false))!;");
+            sb.AppendLine($"                            result = await global::NOF.Hosting.HttpRpcTransportResultReader.ReadStreamingFallbackAsync<{streamItemType}>(response, GetJsonTypeInfo<global::NOF.Contract.Result>(), ct).ConfigureAwait(false);");
             sb.AppendLine("                        }");
             sb.AppendLine("                    }");
             sb.AppendLine("                }");

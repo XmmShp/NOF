@@ -11,6 +11,12 @@ public sealed class WatchSampleStream : NOFSampleService.WatchSampleStream
         var intervalMilliseconds = Math.Clamp(request.IntervalMilliseconds, 100, 5000);
         var topic = string.IsNullOrWhiteSpace(request.Topic) ? "NOF Streaming Demo" : request.Topic.Trim();
 
+        if (request.ForceFailure)
+        {
+            return Task.FromResult<StreamingResult<SampleStreamEvent>>(
+                Result.Fail("sample_stream_failure", $"Sample streaming demo failed for topic '{topic}'."));
+        }
+
         return Task.FromResult(Result.Stream(Stream(topic, count, intervalMilliseconds, cancellationToken)));
     }
 

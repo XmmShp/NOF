@@ -7,6 +7,8 @@ public record WatchSampleStreamRequest
     public int Count { get; set; } = 5;
 
     public int IntervalMilliseconds { get; set; } = 1000;
+
+    public bool ForceFailure { get; set; }
 }
 
 public record SampleStreamEvent

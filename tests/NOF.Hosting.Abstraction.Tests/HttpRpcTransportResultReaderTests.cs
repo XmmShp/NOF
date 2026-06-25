@@ -83,6 +83,29 @@ public sealed class HttpRpcTransportResultReaderTests
         Assert.Equal("invalid_token", result.ErrorCode);
     }
 
+    [Fact]
+    public async Task ReadStreamingFallbackAsync_WhenStreamingEndpointReturnsJsonFailure_ReturnsFailedStreamingResult()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{"isSuccess":false,"errorCode":"stream_failed","message":"stream negotiation failed.","value":null,"extra":{"mode":"json"}}""",
+                Encoding.UTF8,
+                "application/json")
+        };
+
+        var result = await HttpRpcTransportResultReader.ReadStreamingFallbackAsync<TokenResponse>(
+            response,
+            CreateTypeInfo<Result>(),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("stream_failed", result.ErrorCode);
+        Assert.Equal("stream negotiation failed.", result.Message);
+        Assert.Null(result.Value);
+        Assert.Equal("json", result.Extra["mode"]);
+    }
+
     public sealed record TokenResponse(string Token);
 
     private static JsonTypeInfo<T> CreateTypeInfo<T>()

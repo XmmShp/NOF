@@ -7,6 +7,18 @@ namespace NOF.Hosting;
 
 public static class HttpRpcTransportResultReader
 {
+    public static async Task<StreamingResult<TItem>> ReadStreamingFallbackAsync<TItem>(
+        HttpResponseMessage response,
+        JsonTypeInfo<Result> fallbackTypeInfo,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(fallbackTypeInfo);
+
+        var fallbackResult = await ReadAsync(response, fallbackTypeInfo, cancellationToken).ConfigureAwait(false);
+        return ResultProjection.RequireCompatible<StreamingResult<TItem>>(fallbackResult);
+    }
+
     public static async Task<T> ReadAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(
         HttpResponseMessage response,
         JsonTypeInfo<T> successTypeInfo,

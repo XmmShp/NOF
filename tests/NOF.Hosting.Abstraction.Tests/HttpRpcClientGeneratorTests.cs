@@ -259,7 +259,7 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("SseResponseReader.ReadAsync<global::MyApp.StreamEvent>", code);
         Assert.Contains("result = global::NOF.Contract.Result.Stream<global::MyApp.StreamEvent>(stream);", code);
         Assert.Contains("HttpRpcTransportResultReader.ReadFailureAsync<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>", code);
-        Assert.Contains("GetJsonTypeInfo<global::NOF.Contract.StreamingResult<global::MyApp.StreamEvent>>()", code);
+        Assert.Contains("HttpRpcTransportResultReader.ReadStreamingFallbackAsync<global::MyApp.StreamEvent>(response, GetJsonTypeInfo<global::NOF.Contract.Result>(), ct)", code);
     }
 
     [Fact]
