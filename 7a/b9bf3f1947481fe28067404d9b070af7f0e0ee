@@ -1,0 +1,48 @@
+src/NOF.Hosting.Abstraction/Services/NOFLazy.cs
+  s_66b223168de18b::t_df3e08d655f75c 9-10
+src/Hostings/NOF.Hosting.AspNetCore/Steps/HttpEndpointInitializationStep.cs
+  s_66b223168de18b::t_cd190b29662c3c 13
+  h_6398fee892c8b1 14
+src/Hostings/NOF.Hosting.AspNetCore/Extensions/EndpointRouteBuilderExtensions.cs
+  s_66b223168de18b::t_e3bfef25a86959 62-63
+src/Hostings/NOF.Hosting.AspNetCore/Services/TransportStringValueConverter.cs
+  s_66b223168de18b::t_bc3c1932f41827 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7ab9bf3f1947481fe28067404d9b070af7f0e0ee",
+  "prompts": {},
+  "humans": {
+    "h_6398fee892c8b1": {
+      "author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "sessions": {
+    "s_66b223168de18b": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3911a5ca81b5b6a4b28db7",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": null
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {
+    "s_66b223168de18b": {
+      "tool": "trae",
+      "conversation_id": "6a3911a5ca81b5b6a4b28db7",
+      "session_id": "6a3911a5ca81b5b6a4b28db7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_66b223168de18b::t_ba257fe0e44436": {
+      "tool": "trae",
+      "conversation_id": "6a3911a5ca81b5b6a4b28db7",
+      "session_id": "6a3911a5ca81b5b6a4b28db7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
