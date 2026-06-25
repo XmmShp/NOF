@@ -44,6 +44,11 @@ public sealed class OAuthChainDemoBackend(
             return Result.Fail(createResult.ErrorCode, createResult.Message);
         }
 
+        if (string.IsNullOrWhiteSpace(createResult.Value.ClientSecret))
+        {
+            return Result.Fail("500", "Created OAuth client did not return a client secret.");
+        }
+
         return new CreateDemoOAuthClientResponse
         {
             ClientId = createResult.Value.Client.ClientId,
