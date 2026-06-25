@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using NOF.Abstraction;
+using NOF.Hosting;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -30,6 +31,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 
     public static NOFWebApplicationBuilder Create(string[] args)
     {
+        RpcServerRegistrationHooks.Register(AspNetCoreRpcServerRegistration.Register);
         var builder = new NOFWebApplicationBuilder(args, Assembly.GetCallingAssembly());
         builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());

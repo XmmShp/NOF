@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting.AspNetCore;
@@ -49,44 +50,110 @@ public static partial class NOFHostingAspNetCoreExtensions
         {
             ArgumentNullException.ThrowIfNull(app);
 
-            var serviceType = TRpcServer.ServiceType;
-            var handlerMappings = TRpcServer.HandlerMappings;
-            foreach (var (operationName, handlerMapping) in handlerMappings)
-            {
-                var method = serviceType.GetMethod(operationName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
-                    ?? throw new InvalidOperationException($"RPC contract method '{serviceType.FullName}.{operationName}' was not found.");
-                var isStream = TryGetStreamItemType(handlerMapping.ReturnType, out var streamItemType);
-                var responseType = isStream ? streamItemType : handlerMapping.ReturnType;
-                var endpoints = GetHttpEndpoints(method, operationName);
-                foreach (var (verb, route) in endpoints)
-                {
-                    var fullRoute = BuildRoute(prefix, route);
-                    var handler = CreateEndpointHandler(serviceType, handlerMapping.RequestType, operationName, verb, handlerMapping.ReturnType);
-                    var builder = verb switch
-                    {
-                        HttpVerb.Get => app.MapGet(fullRoute, handler),
-                        HttpVerb.Post => app.MapPost(fullRoute, handler),
-                        HttpVerb.Put => app.MapPut(fullRoute, handler),
-                        HttpVerb.Delete => app.MapDelete(fullRoute, handler),
-                        HttpVerb.Patch => app.MapPatch(fullRoute, handler),
-                        _ => throw new InvalidOperationException($"Unsupported HTTP verb '{verb}'.")
-                    };
+            return MapHttpEndpointCore(
+                app,
+                CreateHttpEndpointMappingKey(typeof(TRpcServer), prefix),
+                TRpcServer.ServiceType,
+                TRpcServer.HandlerMappings,
+                prefix);
+        }
+    }
 
-                    builder.WithMetadata(NofRpcHttpEndpointMetadata.Instance);
-                    ApplyDocumentation(builder, method);
-                    if (isStream)
-                    {
-                        builder.Produces(statusCode: 200, contentType: "text/event-stream");
-                    }
-                    else
-                    {
-                        builder.Produces(statusCode: 200, responseType: responseType);
-                    }
-                }
-            }
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "ASP.NET Core automatic RPC endpoint mapping is an explicit opt-in integration path.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "ASP.NET Core automatic RPC endpoint mapping is an explicit opt-in integration path.")]
+    internal static IEndpointRouteBuilder MapHttpEndpoint(
+        IEndpointRouteBuilder app,
+        Type rpcServerType,
+        string? prefix = null)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(rpcServerType);
 
+        if (!typeof(RpcServer).IsAssignableFrom(rpcServerType)
+            || !typeof(IRpcServer).IsAssignableFrom(rpcServerType))
+        {
+            throw new InvalidOperationException($"Type '{rpcServerType.FullName}' is not a valid RPC server type.");
+        }
+
+        var serviceType = rpcServerType.GetProperty(
+                nameof(IRpcServerServiceType.ServiceType),
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            ?.GetValue(null) as Type
+            ?? throw new InvalidOperationException($"RPC server type '{rpcServerType.FullName}' does not expose static property '{nameof(IRpcServerServiceType.ServiceType)}'.");
+
+        var handlerMappings = rpcServerType.GetProperty(
+                nameof(IRpcServer.HandlerMappings),
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            ?.GetValue(null) as IReadOnlyDictionary<string, RpcHandlerMapping>;
+
+        if (handlerMappings is null)
+        {
+            throw new InvalidOperationException($"RPC server type '{rpcServerType.FullName}' does not expose static property '{nameof(IRpcServer.HandlerMappings)}'.");
+        }
+
+        return MapHttpEndpointCore(
+            app,
+            CreateHttpEndpointMappingKey(rpcServerType, prefix),
+            serviceType,
+            handlerMappings,
+            prefix);
+    }
+
+    private static IEndpointRouteBuilder MapHttpEndpointCore(
+        IEndpointRouteBuilder app,
+        string mappingKey,
+        Type serviceType,
+        IReadOnlyDictionary<string, RpcHandlerMapping> handlerMappings,
+        string? prefix)
+    {
+        var mappingState = app.ServiceProvider.GetService<HttpEndpointMappingState>();
+        if (mappingState is not null && !mappingState.TryMarkMapped(mappingKey))
+        {
             return app;
         }
+
+        foreach (var (operationName, handlerMapping) in handlerMappings)
+        {
+            var method = serviceType.GetMethod(operationName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                ?? throw new InvalidOperationException($"RPC contract method '{serviceType.FullName}.{operationName}' was not found.");
+            var isStream = TryGetStreamItemType(handlerMapping.ReturnType, out var streamItemType);
+            var responseType = isStream ? streamItemType : handlerMapping.ReturnType;
+            var endpoints = GetHttpEndpoints(method, operationName);
+            foreach (var (verb, route) in endpoints)
+            {
+                var fullRoute = BuildRoute(prefix, route);
+                var handler = CreateEndpointHandler(serviceType, handlerMapping.RequestType, operationName, verb, handlerMapping.ReturnType);
+                var builder = verb switch
+                {
+                    HttpVerb.Get => app.MapGet(fullRoute, handler),
+                    HttpVerb.Post => app.MapPost(fullRoute, handler),
+                    HttpVerb.Put => app.MapPut(fullRoute, handler),
+                    HttpVerb.Delete => app.MapDelete(fullRoute, handler),
+                    HttpVerb.Patch => app.MapPatch(fullRoute, handler),
+                    _ => throw new InvalidOperationException($"Unsupported HTTP verb '{verb}'.")
+                };
+
+                builder.WithMetadata(NofRpcHttpEndpointMetadata.Instance);
+                ApplyDocumentation(builder, method);
+                if (isStream)
+                {
+                    builder.Produces(statusCode: 200, contentType: "text/event-stream");
+                }
+                else
+                {
+                    builder.Produces(statusCode: 200, responseType: responseType);
+                }
+            }
+        }
+
+        return app;
+    }
+
+    private static string CreateHttpEndpointMappingKey(Type rpcServerType, string? prefix)
+    {
+        ArgumentNullException.ThrowIfNull(rpcServerType);
+
+        return $"{rpcServerType.AssemblyQualifiedName}|{prefix ?? string.Empty}";
     }
 
     [RequiresUnreferencedCode("Endpoint handler creation uses runtime generic method binding.")]

@@ -14,6 +14,21 @@ public static partial class NOFInfrastructureExtensions
 {
     extension(INOFAppBuilder builder)
     {
+        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "ASP.NET Core RPC endpoint mapping is added only when an ASP.NET Core host registers the internal hook.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "ASP.NET Core RPC endpoint mapping is added only when an ASP.NET Core host registers the internal hook.")]
+        public INOFAppBuilder AddRpcServer<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TRpcServer>()
+            where TRpcServer : RpcServer, IRpcServer
+        {
+            builder.Services.TryAddScoped<TRpcServer>();
+
+            var registry = builder.Services.GetOrAddSingleton<RpcServerRegistry>();
+            registry.RemoveWhere(existing => existing.ServiceType == TRpcServer.ServiceType);
+            registry.Add(new RpcServerRegistration(TRpcServer.ServiceType, typeof(TRpcServer)));
+            RpcServerRegistrationHooks.Invoke(builder, typeof(TRpcServer));
+            return builder;
+        }
+
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);

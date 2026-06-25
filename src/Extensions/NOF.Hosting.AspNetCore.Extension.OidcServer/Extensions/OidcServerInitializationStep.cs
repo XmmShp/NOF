@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
 using NOF.Hosting;
+using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
@@ -11,12 +12,11 @@ namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 public sealed class OidcServerInitializationStep : IApplicationInitializationStep
 {
     public TopologyComparison Compare(IApplicationInitializationStep other)
-        => other.GetType().Name switch
-        {
-            "DbContextMigrationInitializationStep" => TopologyComparison.After,
-            "RpcHttpEndpointResultWrappingInitializationStep" => TopologyComparison.After,
-            _ => TopologyComparison.DoesNotMatter
-        };
+        => other is DaemonServiceResolutionInitializationStep
+            ? TopologyComparison.After
+            : other.GetType().Name == "DbContextMigrationInitializationStep"
+                ? TopologyComparison.After
+                : TopologyComparison.DoesNotMatter;
 
     public async Task ExecuteAsync(IHost app)
     {

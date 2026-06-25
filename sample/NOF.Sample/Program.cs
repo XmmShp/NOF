@@ -14,6 +14,9 @@ var sampleOrigin = ResolveSampleOrigin(builder.Configuration);
 var sampleIssuer = $"{sampleOrigin}/oauth2";
 
 builder.AddApplicationPart(typeof(NOFSampleService).Assembly);
+builder.AddRpcServer<NOFSampleService>();
+builder.AddRpcServer<OAuthChainDemoService>();
+builder.AddRpcServer<DemoDownstreamService>();
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
@@ -83,10 +86,6 @@ var app = await builder.BuildAsync();
 
 app.MapOpenApi();
 app.UseAntiforgery();
-
-app.MapHttpEndpoint<NOFSampleService>();
-app.MapHttpEndpoint<OAuthChainDemoService>();
-app.MapHttpEndpoint<DemoDownstreamService>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

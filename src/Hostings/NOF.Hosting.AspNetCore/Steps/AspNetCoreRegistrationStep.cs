@@ -36,7 +36,7 @@ public class AspNetCoreRegistrationStep : IServiceRegistrationStep
                     && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
             ));
 
-        builder.Services.AddInitializationStep(new RpcHttpEndpointResultWrappingInitializationStep());
+        builder.Services.AddInitializationStep(new DaemonServiceResolutionInitializationStep());
         builder.Services.AddInitializationStep(new HealthCheckInitializationStep());
 
         return ValueTask.CompletedTask;
@@ -56,22 +56,6 @@ public class AspNetCoreRegistrationStep : IServiceRegistrationStep
                 {
                     Predicate = r => r.Tags.Contains(Tag)
                 });
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    private class RpcHttpEndpointResultWrappingInitializationStep : IApplicationInitializationStep
-    {
-        public TopologyComparison Compare(IApplicationInitializationStep other)
-            => TopologyComparison.DoesNotMatter;
-
-        public Task ExecuteAsync(IHost app)
-        {
-            if (app is IApplicationBuilder actualApp)
-            {
-                actualApp.UseMiddleware<DaemonServiceResolutionMiddleware>();
             }
 
             return Task.CompletedTask;

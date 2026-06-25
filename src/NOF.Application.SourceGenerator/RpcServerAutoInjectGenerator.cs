@@ -41,7 +41,7 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
 
                 foreach (var registration in registrationGroups.SelectMany(x => x))
                 {
-                    if (!seen.Add(registration.Kind + "|" + registration.ServiceType + "|" + registration.ImplementationType))
+                    if (!seen.Add(registration.ServiceType + "|" + registration.ImplementationType))
                     {
                         continue;
                     }
@@ -69,23 +69,12 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
         var registrations = new List<RegistrationInfo>();
         var implementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        if (RpcServerSymbolHelper.TryGetServiceInterface(classSymbol, out var serviceInterface) && serviceInterface is not null)
-        {
-            registrations.Add(new RegistrationInfo(
-                RegistrationKind.Server,
-                implementationType,
-                implementationType,
-                serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
-        }
-
         if (RpcServerSymbolHelper.TryGetRpcHandlerBase(classSymbol, out var handlerBaseType, out _)
             && handlerBaseType is not null)
         {
             registrations.Add(new RegistrationInfo(
-                RegistrationKind.Handler,
                 handlerBaseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                implementationType,
-                null));
+                implementationType));
         }
 
         return registrations;
@@ -117,13 +106,6 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
 
         foreach (var registration in registrations)
         {
-            if (registration.Kind == RegistrationKind.Server)
-            {
-                sb.AppendLine($"            services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(typeof({registration.ServiceType}), typeof({registration.ImplementationType})));");
-                sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Application.RpcServerRegistry>().Add(new global::NOF.Application.RpcServerRegistration(typeof({registration.ServiceContractType}), typeof({registration.ImplementationType})));");
-                continue;
-            }
-
             sb.AppendLine($"            services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof({registration.ServiceType}), typeof({registration.ImplementationType})));");
         }
 
@@ -147,23 +129,13 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
 
     private sealed class RegistrationInfo
     {
-        public RegistrationInfo(RegistrationKind kind, string serviceType, string implementationType, string? serviceContractType)
+        public RegistrationInfo(string serviceType, string implementationType)
         {
-            Kind = kind;
             ServiceType = serviceType;
             ImplementationType = implementationType;
-            ServiceContractType = serviceContractType;
         }
 
-        public RegistrationKind Kind { get; }
         public string ServiceType { get; }
         public string ImplementationType { get; }
-        public string? ServiceContractType { get; }
     }
-}
-
-internal enum RegistrationKind
-{
-    Server,
-    Handler
 }

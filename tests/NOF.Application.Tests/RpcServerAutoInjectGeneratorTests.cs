@@ -12,7 +12,7 @@ namespace NOF.SourceGenerator.Tests;
 public class RpcServerAutoInjectGeneratorTests
 {
     [Fact]
-    public void GeneratedCode_RegistersRpcServerArtifacts()
+    public void GeneratedCode_RegistersRpcHandlersOnly()
     {
         const string source = """
             using NOF.Application;
@@ -64,9 +64,9 @@ public class RpcServerAutoInjectGeneratorTests
 
         Assert.Contains("AssemblyInitializeAttribute<global::App.__AppRpcServerAutoInjectAssemblyInitializer>", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppRpcServerAutoInjectAssemblyInitializer))", generatedCode);
-        Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(typeof(global::App.MyService), typeof(global::App.MyService)));", generatedCode);
-        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.RpcServerRegistry>().Add(new global::NOF.Application.RpcServerRegistration(typeof(global::App.IMyService), typeof(global::App.MyService)));", generatedCode);
         Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof(global::App.MyService.Ping), typeof(global::App.PingHandler)));", generatedCode);
+        Assert.DoesNotContain("RpcServerRegistration", generatedCode);
+        Assert.DoesNotContain("ServiceDescriptor.Scoped(typeof(global::App.MyService)", generatedCode);
     }
 
     [Fact]
