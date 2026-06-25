@@ -59,8 +59,8 @@ public static partial class NOFHostingAspNetCoreExtensions
         }
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "ASP.NET Core automatic RPC endpoint mapping is an explicit opt-in integration path.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "ASP.NET Core automatic RPC endpoint mapping is an explicit opt-in integration path.")]
+    [RequiresUnreferencedCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
+    [RequiresDynamicCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
     internal static IEndpointRouteBuilder MapHttpEndpoint(
         IEndpointRouteBuilder app,
         Type rpcServerType,

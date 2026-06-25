@@ -10,8 +10,8 @@ internal sealed class RpcServerHttpEndpointInitializationStep(Type rpcServerType
             ? TopologyComparison.After
             : TopologyComparison.DoesNotMatter;
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Automatic RPC HTTP endpoint mapping is only used by ASP.NET Core hosts that opt into this transport.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Automatic RPC HTTP endpoint mapping is only used by ASP.NET Core hosts that opt into this transport.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "IApplicationInitializationStep.ExecuteAsync cannot carry RequiresUnreferencedCode, but ASP.NET Core RPC endpoint auto-mapping intentionally calls the reflection-based mapper.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "IApplicationInitializationStep.ExecuteAsync cannot carry RequiresDynamicCode, but ASP.NET Core RPC endpoint auto-mapping intentionally calls the reflection-based mapper.")]
     public Task ExecuteAsync(IHost app)
     {
         if (app is IEndpointRouteBuilder routeBuilder)

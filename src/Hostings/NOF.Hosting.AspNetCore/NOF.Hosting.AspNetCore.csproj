@@ -7,7 +7,6 @@
 
     <!-- AOT Compatibility -->
     <IsAotCompatible>true</IsAotCompatible>
-    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
 
 	  <IsPackable>true</IsPackable>
 	  <PackageId>NOF.Hosting.AspNetCore</PackageId>

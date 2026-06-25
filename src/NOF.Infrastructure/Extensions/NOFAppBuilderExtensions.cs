@@ -7,15 +7,12 @@ using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
-
 namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "ASP.NET Core RPC endpoint mapping is added only when an ASP.NET Core host registers the internal hook.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "ASP.NET Core RPC endpoint mapping is added only when an ASP.NET Core host registers the internal hook.")]
         public INOFAppBuilder AddRpcServer<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TRpcServer>()
             where TRpcServer : RpcServer, IRpcServer

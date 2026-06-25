@@ -58,7 +58,7 @@ internal static class TransportStringValueConverter
             || TryInvokeTryParse(targetType, [typeof(string), targetType.MakeByRefType()], [value, null], out parsed);
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "NOF HTTP endpoint mapping is reflection-based; transport string binding probes public static TryParse on request property types.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "NOF HTTP endpoint mapping probes public static TryParse on request property types discovered via reflection.")]
     private static bool TryInvokeTryParse(Type targetType, Type[] parameterTypes, object?[] arguments, out object? parsed)
     {
         parsed = null;
