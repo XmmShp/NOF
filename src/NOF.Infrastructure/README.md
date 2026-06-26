@@ -30,6 +30,7 @@ dotnet add package NOF.Infrastructure
 This package includes:
 
 - in-memory cache (`ICacheService` + `MemoryCacheServiceRider`)
+- in-memory backplane (`IBackplane` + `MemoryBackplane`)
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-process event publisher (`IEventPublisher`)
 - database-agnostic persistence abstractions (`IDbContext`, `IDbSet<T>`, async query extensions)
@@ -41,6 +42,11 @@ The default in-memory cache implementation is isolated per NOF host:
 - cache data lives in `MemoryCacheServiceRiderState`
 - local `GetOrSetAsync(...)` locks live in `CacheServiceLocalLockState`
 - both are registered as DI singletons instead of process-wide `static` state
+
+The default backplane implementation is also host-local:
+
+- subscriptions live in `MemoryBackplaneState`
+- published messages are delivered only to subscribers inside the same NOF host process
 
 ## Persistence Providers
 

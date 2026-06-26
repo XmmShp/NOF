@@ -4,7 +4,7 @@ Redis caching infrastructure package for the [NOF Framework](https://github.com/
 
 ## Overview
 
-Provides a Redis-backed `ICacheService` implementation using StackExchange.Redis. Integrates with the NOF step pipeline for automatic service registration and configuration, and can also be consumed through `IDistributedCache`.
+Provides Redis-backed infrastructure for NOF using StackExchange.Redis, including `ICacheService` and `IBackplane` implementations.
 
 ## Usage
 
@@ -12,6 +12,9 @@ Provides a Redis-backed `ICacheService` implementation using StackExchange.Redis
 var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+    ?? throw new InvalidOperationException("Connection string 'redis' not found."));
+
+builder.AddRedisBackplane(builder.Configuration.GetConnectionString("redis")
     ?? throw new InvalidOperationException("Connection string 'redis' not found."));
 ```
 

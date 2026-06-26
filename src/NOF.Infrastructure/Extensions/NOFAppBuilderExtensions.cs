@@ -55,6 +55,7 @@ public static partial class NOFInfrastructureExtensions
 
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
             builder.Services.TryAddSingleton<CacheServiceLocalLockState>();
+            builder.Services.TryAddSingleton<MemoryBackplaneState>();
             builder.Services.TryAddScoped<ICacheService>(sp => new CacheService(
                 sp.GetRequiredService<ICacheServiceRider>(),
                 sp.GetRequiredService<IObjectSerializer>(),
@@ -63,6 +64,8 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<ICurrentTenant>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+            builder.Services.TryAddSingleton<IBackplane>(sp => new MemoryBackplane(
+                sp.GetRequiredService<MemoryBackplaneState>()));
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFTenantModelCreatingContributor>());

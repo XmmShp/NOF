@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Application;
 using NOF.Infrastructure;
 using NOF.Infrastructure.RabbitMQ;
 
@@ -8,6 +9,22 @@ public static partial class NOFInfrastructureRabbitMQExtensions
 {
     extension(INOFAppBuilder builder)
     {
+        public INOFAppBuilder AddRabbitMQBackplane()
+        {
+            builder.Services.ReplaceOrAddSingleton<RabbitMQConnectionManager, RabbitMQConnectionManager>();
+            builder.Services.ReplaceOrAddSingleton<IBackplane, RabbitMQBackplane>();
+
+            return builder;
+        }
+
+        public INOFAppBuilder AddRabbitMQBackplane(Action<RabbitMQOptions> configureOptions)
+        {
+            ArgumentNullException.ThrowIfNull(configureOptions);
+
+            builder.Services.Configure(configureOptions);
+            return builder.AddRabbitMQBackplane();
+        }
+
         public INOFAppBuilder AddRabbitMQ(Action<RabbitMQOptions> configureOptions)
         {
             builder.Services.Configure(configureOptions);

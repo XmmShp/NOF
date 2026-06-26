@@ -62,6 +62,7 @@ public class InfrastructureDefaultsTests
         provider.GetRequiredService<IOptions<TransactionalMessageOptions>>());
         Assert.Equal(TenantMode.DatabasePerTenant,
         provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value.TenantMode);
+        Assert.IsType<MemoryBackplane>(provider.GetRequiredService<IBackplane>());
         Assert.IsType<InMemoryEventPublisher>(provider.GetRequiredService<IEventPublisher>());
         Assert.IsType<HttpAuthorizationServerService>(provider.GetRequiredService<IClientCredentialsTokenService>());
     }
