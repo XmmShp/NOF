@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsAotCompatible>false</IsAotCompatible>
+
+    <PackageId>NOF.Infrastructure.NHibernate</PackageId>
+    <Description>NHibernate persistence integration for the NOF Framework.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NHibernate" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Application\NOF.Application.csproj" />
+    <ProjectReference Include="..\..\NOF.Hosting.Abstraction\NOF.Hosting.Abstraction.csproj" />
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

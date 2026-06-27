@@ -1,0 +1,28 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using NHibernate;
+using NOF.Application;
+using NOF.Infrastructure;
+using NOF.Hosting;
+
+namespace NOF.Infrastructure.NHibernate;
+
+public static partial class NOFInfrastructureExtensions
+{
+    extension(INOFAppBuilder builder)
+    {
+        public NHibernateSelector UseNHibernate()
+        {
+            builder.Services.AddOptions<NHibernateConfigurationOptions>();
+            builder.Services.TryAddSingleton<NHibernateSessionFactoryRegistry>();
+            builder.Services.ReplaceOrAddScoped<IDbContextFactory, NHibernateDbContextFactory>();
+            builder.Services.ReplaceOrAddScoped<ISession>(sp =>
+                sp.GetRequiredService<NHibernateSessionFactoryRegistry>()
+                    .OpenSession(TenantId.Normalize(sp.GetRequiredService<ICurrentTenant>().TenantId)));
+            builder.Services.ReplaceOrAddScoped<IDbContext>(sp =>
+                new NHibernateDbContextAdapter(sp.GetRequiredService<ISession>()));
+
+            return new NHibernateSelector(builder);
+        }
+    }
+}
