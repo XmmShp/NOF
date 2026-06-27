@@ -1,0 +1,1043 @@
+src/Infrastructures/NOF.Infrastructure.NHibernate/Extensions/NOFAppBuilderExtensions.cs
+  s_8a08863c05f318::t_c127a8b0e88bdc 5 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e457489f27d5d5e8b7d13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":5}]}]}
+  s_8a08863c05f318::t_3ccb093235f5d4 1-4,6-28 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44bf89f27d5d5e8b786f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,4]},{"Range":[6,28]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Models/NHibernateSelector.cs
+  s_8a08863c05f318::t_b8c4aa9c2e0433 1,3-35,37-55 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44b889f27d5d5e8b7844","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":1},{"Range":[3,35]},{"Range":[37,55]}]}]}
+  s_8a08863c05f318::t_6915b4ddb24741 2,36 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e457089f27d5d5e8b7cee","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":2},{"Single":36}]}]}
+NOF.slnx
+  s_8a08863c05f318::t_5108d141be6f13 47 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e453e89f27d5d5e8b7c6f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":47}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/NOF.Infrastructure.NHibernate.csproj
+  s_8a08863c05f318::t_91d638f6f5ecaa 1-24 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44a889f27d5d5e8b77d2","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,24]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateSessionFactoryRegistry.cs
+  s_8a08863c05f318::t_635119e9e64605 1-4,6,8-98,100-113,115-168,170-182,184-202,204-284 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e450189f27d5d5e8b7ab9","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,4]},{"Single":6},{"Range":[8,98]},{"Range":[100,113]},{"Range":[115,168]},{"Range":[170,182]},{"Range":[184,202]},{"Range":[204,284]}]}]}
+  s_8a08863c05f318::t_cfa3b6159e8523 99,114,169,183,203 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e45b589f27d5d5e8b7e52","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":99},{"Single":114},{"Single":169},{"Single":183},{"Single":203}]}]}
+  s_8a08863c05f318::t_667b001708bae0 5,7 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e458e89f27d5d5e8b7db4","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":5},{"Single":7}]}]}
+Directory.Packages.props
+  s_8a08863c05f318::t_972c03d1af2e70 39 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44a189f27d5d5e8b77b4","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":39}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateModelBuilderAdapter.cs
+  s_8a08863c05f318::t_e2f49f4b239e8d 4 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e459489f27d5d5e8b7ddb","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":4}]}]}
+  s_8a08863c05f318::t_15c99a67d889c8 1-3,5-41,43-164 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44cd89f27d5d5e8b78e5","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,3]},{"Range":[5,41]},{"Range":[43,164]}]}]}
+  s_8a08863c05f318::t_e21088c5b4c2d0 42 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e45af89f27d5d5e8b7e2b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":42}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateDbContextAdapter.cs
+  s_8a08863c05f318::t_5a6ffcf32ae94f 3 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e458989f27d5d5e8b7d8d","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":3}]}]}
+  s_8a08863c05f318::t_674be6126fc66e 1-2,4-374 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e451c89f27d5d5e8b7bcd","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,2]},{"Range":[4,374]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/README.md
+  s_8a08863c05f318::t_12a2c591d7f9de 1-43 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44ae89f27d5d5e8b77f9","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,43]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateValueObjectUserType.cs
+  s_8a08863c05f318::t_e23cb1361be39c 1-80 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44dc89f27d5d5e8b797a","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,80]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Options/NHibernateConfigurationOptions.cs
+  s_8a08863c05f318::t_3be78570257347 1-13,20 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44b489f27d5d5e8b781e","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,13]},{"Single":20}]}]}
+  s_8a08863c05f318::t_6210c9afd4d7fa 14-19 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e456989f27d5d5e8b7cc8","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[14,19]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateExceptionTranslator.cs
+  s_8a08863c05f318::t_b704139791956c 1,16-17 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e45a889f27d5d5e8b7e05","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":1},{"Range":[16,17]}]}]}
+  s_8a08863c05f318::t_d651d7baa7ae52 2-15,18-30 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e44c989f27d5d5e8b78bf","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[2,15]},{"Range":[18,30]}]}]}
+src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateDbContextFactory.cs
+  s_8a08863c05f318::t_fae120a2a6326c 4-15 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e451889f27d5d5e8b7b80","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[4,15]}]}]}
+  s_8a08863c05f318::t_49cddd5cd30c61 1-3 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3e458589f27d5d5e8b7d66","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,3]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "073e96788f6580a48a5efceec1616a8b159990ef",
+  "prompts": {},
+  "sessions": {
+    "s_8a08863c05f318": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3de914c1aeed0acfb59fd7",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "Directory.Packages.props": [
+      {
+        "hash": "s_8a08863c05f318::t_972c03d1af2e70",
+        "line_ranges": [
+          {
+            "Single": 39
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44a189f27d5d5e8b77b4",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 39
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "NOF.slnx": [
+      {
+        "hash": "s_8a08863c05f318::t_5108d141be6f13",
+        "line_ranges": [
+          {
+            "Single": 47
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e453e89f27d5d5e8b7c6f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 47
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Extensions/NOFAppBuilderExtensions.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_c127a8b0e88bdc",
+        "line_ranges": [
+          {
+            "Single": 5
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e457489f27d5d5e8b7d13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 5
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_3ccb093235f5d4",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              4
+            ]
+          },
+          {
+            "Range": [
+              6,
+              28
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44bf89f27d5d5e8b786f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  4
+                ]
+              },
+              {
+                "Range": [
+                  6,
+                  28
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Models/NHibernateSelector.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_b8c4aa9c2e0433",
+        "line_ranges": [
+          {
+            "Single": 1
+          },
+          {
+            "Range": [
+              3,
+              35
+            ]
+          },
+          {
+            "Range": [
+              37,
+              55
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44b889f27d5d5e8b7844",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 1
+              },
+              {
+                "Range": [
+                  3,
+                  35
+                ]
+              },
+              {
+                "Range": [
+                  37,
+                  55
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_6915b4ddb24741",
+        "line_ranges": [
+          {
+            "Single": 2
+          },
+          {
+            "Single": 36
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e457089f27d5d5e8b7cee",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 2
+              },
+              {
+                "Single": 36
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/NOF.Infrastructure.NHibernate.csproj": [
+      {
+        "hash": "s_8a08863c05f318::t_91d638f6f5ecaa",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              24
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44a889f27d5d5e8b77d2",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  24
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Options/NHibernateConfigurationOptions.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_3be78570257347",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              13
+            ]
+          },
+          {
+            "Single": 20
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44b489f27d5d5e8b781e",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  13
+                ]
+              },
+              {
+                "Single": 20
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_6210c9afd4d7fa",
+        "line_ranges": [
+          {
+            "Range": [
+              14,
+              19
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e456989f27d5d5e8b7cc8",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  14,
+                  19
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_12a2c591d7f9de",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              43
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44ae89f27d5d5e8b77f9",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  43
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateDbContextAdapter.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_5a6ffcf32ae94f",
+        "line_ranges": [
+          {
+            "Single": 3
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e458989f27d5d5e8b7d8d",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_674be6126fc66e",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              2
+            ]
+          },
+          {
+            "Range": [
+              4,
+              374
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e451c89f27d5d5e8b7bcd",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "Range": [
+                  4,
+                  374
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateDbContextFactory.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_fae120a2a6326c",
+        "line_ranges": [
+          {
+            "Range": [
+              4,
+              15
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e451889f27d5d5e8b7b80",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  4,
+                  15
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_49cddd5cd30c61",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              3
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e458589f27d5d5e8b7d66",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  3
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateExceptionTranslator.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_b704139791956c",
+        "line_ranges": [
+          {
+            "Single": 1
+          },
+          {
+            "Range": [
+              16,
+              17
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e45a889f27d5d5e8b7e05",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 1
+              },
+              {
+                "Range": [
+                  16,
+                  17
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_d651d7baa7ae52",
+        "line_ranges": [
+          {
+            "Range": [
+              2,
+              15
+            ]
+          },
+          {
+            "Range": [
+              18,
+              30
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44c989f27d5d5e8b78bf",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  2,
+                  15
+                ]
+              },
+              {
+                "Range": [
+                  18,
+                  30
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateModelBuilderAdapter.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_e2f49f4b239e8d",
+        "line_ranges": [
+          {
+            "Single": 4
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e459489f27d5d5e8b7ddb",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 4
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_15c99a67d889c8",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              3
+            ]
+          },
+          {
+            "Range": [
+              5,
+              41
+            ]
+          },
+          {
+            "Range": [
+              43,
+              164
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44cd89f27d5d5e8b78e5",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  3
+                ]
+              },
+              {
+                "Range": [
+                  5,
+                  41
+                ]
+              },
+              {
+                "Range": [
+                  43,
+                  164
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_e21088c5b4c2d0",
+        "line_ranges": [
+          {
+            "Single": 42
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e45af89f27d5d5e8b7e2b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 42
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateSessionFactoryRegistry.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_635119e9e64605",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              4
+            ]
+          },
+          {
+            "Single": 6
+          },
+          {
+            "Range": [
+              8,
+              98
+            ]
+          },
+          {
+            "Range": [
+              100,
+              113
+            ]
+          },
+          {
+            "Range": [
+              115,
+              168
+            ]
+          },
+          {
+            "Range": [
+              170,
+              182
+            ]
+          },
+          {
+            "Range": [
+              184,
+              202
+            ]
+          },
+          {
+            "Range": [
+              204,
+              284
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e450189f27d5d5e8b7ab9",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  4
+                ]
+              },
+              {
+                "Single": 6
+              },
+              {
+                "Range": [
+                  8,
+                  98
+                ]
+              },
+              {
+                "Range": [
+                  100,
+                  113
+                ]
+              },
+              {
+                "Range": [
+                  115,
+                  168
+                ]
+              },
+              {
+                "Range": [
+                  170,
+                  182
+                ]
+              },
+              {
+                "Range": [
+                  184,
+                  202
+                ]
+              },
+              {
+                "Range": [
+                  204,
+                  284
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_cfa3b6159e8523",
+        "line_ranges": [
+          {
+            "Single": 99
+          },
+          {
+            "Single": 114
+          },
+          {
+            "Single": 169
+          },
+          {
+            "Single": 183
+          },
+          {
+            "Single": 203
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e45b589f27d5d5e8b7e52",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 99
+              },
+              {
+                "Single": 114
+              },
+              {
+                "Single": 169
+              },
+              {
+                "Single": 183
+              },
+              {
+                "Single": 203
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_667b001708bae0",
+        "line_ranges": [
+          {
+            "Single": 5
+          },
+          {
+            "Single": 7
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e458e89f27d5d5e8b7db4",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 5
+              },
+              {
+                "Single": 7
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.NHibernate/Services/NHibernateValueObjectUserType.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_e23cb1361be39c",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              80
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3e44dc89f27d5d5e8b797a",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  80
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_8a08863c05f318": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_12a2c591d7f9de": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_15c99a67d889c8": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_28bebdc151ef4a": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_3be78570257347": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_3c01bd07238a7a": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_3ccb093235f5d4": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_49cddd5cd30c61": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_5108d141be6f13": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_5a6ffcf32ae94f": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_6210c9afd4d7fa": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_635119e9e64605": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_667b001708bae0": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_674be6126fc66e": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_6915b4ddb24741": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_91d638f6f5ecaa": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_972c03d1af2e70": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_99e751d5b6a588": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_b704139791956c": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_b8c4aa9c2e0433": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_c127a8b0e88bdc": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_cfa3b6159e8523": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_d651d7baa7ae52": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_e21088c5b4c2d0": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_e23cb1361be39c": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_e2f49f4b239e8d": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_fae120a2a6326c": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
