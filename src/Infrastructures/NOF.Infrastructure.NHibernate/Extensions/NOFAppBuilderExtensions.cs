@@ -2,8 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NHibernate;
 using NOF.Application;
-using NOF.Infrastructure;
 using NOF.Hosting;
+using NOF.Infrastructure;
 
 namespace NOF.Infrastructure.NHibernate;
 

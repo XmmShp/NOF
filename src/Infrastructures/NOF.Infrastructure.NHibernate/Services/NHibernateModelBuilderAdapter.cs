@@ -1,7 +1,7 @@
+using NOF.Infrastructure;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
-using NOF.Infrastructure;
 
 namespace NOF.Infrastructure.NHibernate;
 

@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Mapping.ByCode;
-using NHibernate;
 using NHibernate.Tool.hbm2ddl;
 using NOF.Infrastructure;
 using System.Collections.Concurrent;
