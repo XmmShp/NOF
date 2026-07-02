@@ -31,7 +31,7 @@ public sealed class TokenAuthorityServiceTests
                 AccessTokenExpiration = TimeSpan.FromMinutes(10),
                 AccessClaims =
                 [
-                    new(ClaimTypes.NameIdentifier, "user-1"),
+                    new(JwtRegisteredClaimNames.Sub, "user-1"),
                     new(ClaimTypes.TenantId, "tenant-1"),
                     new(ClaimTypes.Permission, "printer.read"),
                     new(ClaimTypes.Permission, "printer.write")
@@ -41,7 +41,7 @@ public sealed class TokenAuthorityServiceTests
                     Expiration = TimeSpan.FromHours(12),
                     Claims =
                     [
-                        new(ClaimTypes.NameIdentifier, "user-1")
+                        new(JwtRegisteredClaimNames.Sub, "user-1")
                     ]
                 }
             },
@@ -54,7 +54,7 @@ public sealed class TokenAuthorityServiceTests
 
         var accessToken = new JwtSecurityTokenHandler().ReadJwtToken(generateResult.Value.AccessToken);
         Assert.False(string.IsNullOrWhiteSpace(accessToken.Header.Kid));
-        Assert.Contains(accessToken.Claims, claim => claim.Type == ClaimTypes.NameIdentifier && claim.Value == "user-1");
+        Assert.Contains(accessToken.Claims, claim => claim.Type == JwtRegisteredClaimNames.Sub && claim.Value == "user-1");
         Assert.Contains(accessToken.Claims, claim => claim.Type == ClaimTypes.TenantId && claim.Value == "tenant-1");
         Assert.Equal(2, accessToken.Claims.Count(claim => claim.Type == ClaimTypes.Permission));
 
@@ -70,8 +70,8 @@ public sealed class TokenAuthorityServiceTests
 
         Assert.True(validateResult.IsSuccess, validateResult.Message);
         Assert.False(string.IsNullOrWhiteSpace(validateResult.Value.TokenId));
-        Assert.Contains(validateResult.Value.Claims, claim => claim.Type == ClaimTypes.JwtId);
-        Assert.Contains(validateResult.Value.Claims, claim => claim.Type == ClaimTypes.NameIdentifier && claim.Value == "user-1");
+        Assert.Contains(validateResult.Value.Claims, claim => claim.Type == JwtRegisteredClaimNames.Jti);
+        Assert.Contains(validateResult.Value.Claims, claim => claim.Type == JwtRegisteredClaimNames.Sub && claim.Value == "user-1");
         Assert.DoesNotContain(validateResult.Value.Claims, claim => claim.Type == ClaimTypes.TenantId);
     }
 
@@ -91,7 +91,7 @@ public sealed class TokenAuthorityServiceTests
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
                 AccessClaims =
                 [
-                    new(ClaimTypes.NameIdentifier, "service-1")
+                    new(JwtRegisteredClaimNames.Sub, "service-1")
                 ]
             },
             CancellationToken.None);
@@ -146,11 +146,11 @@ public sealed class TokenAuthorityServiceTests
             {
                 Audience = "nof-tests",
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
-                AccessClaims = [new(ClaimTypes.NameIdentifier, "user-1")],
+                AccessClaims = [new(JwtRegisteredClaimNames.Sub, "user-1")],
                 RefreshToken = new RefreshTokenOptions
                 {
                     Expiration = TimeSpan.FromMinutes(10),
-                    Claims = [new(ClaimTypes.NameIdentifier, "user-1")]
+                    Claims = [new(JwtRegisteredClaimNames.Sub, "user-1")]
                 }
             },
             CancellationToken.None);

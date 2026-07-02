@@ -56,7 +56,10 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
         _jwksCacheService = jwksCacheService;
         _permissionResolver = permissionResolver;
         _jwtOptions = jwtOptions.Value;
-        _tokenHandler = new JwtSecurityTokenHandler();
+        _tokenHandler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false
+        };
         _logger = logger;
     }
 

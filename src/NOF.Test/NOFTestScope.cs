@@ -64,7 +64,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, userId)
+            new("sub", userId)
         };
 
         if (!string.IsNullOrWhiteSpace(name))

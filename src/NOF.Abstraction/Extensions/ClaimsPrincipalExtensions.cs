@@ -10,9 +10,9 @@ public static partial class NOFAbstractionExtensions
         public bool IsAuthenticated => user.Identities.Any(identity => identity.IsAuthenticated);
 
         /// <summary>
-        /// Gets the unique identifier of the current user from the NameIdentifier claim.
+        /// Gets the unique identifier of the current user from the JWT subject claim.
         /// </summary>
-        public string? Id => user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        public string? Id => user.FindFirst("sub")?.Value;
 
         /// <summary>
         /// Gets the username of the current user from the Name claim.

@@ -149,7 +149,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var token = CreateToken(
             key.Key,
             "https://auth.local",
-            [new Claim(ClaimTypes.NameIdentifier, "user-1"), new Claim("scope", "orders.read orders.write")]);
+            [new Claim(JwtRegisteredClaimNames.Sub, "user-1"), new Claim("scope", "orders.read orders.write")]);
         var jwksService = CreateJwksService([key], "https://auth.local");
         var middleware = CreateMiddleware(userContext, jwksService);
         var inboundContext = (RequestInboundContext)CreateInboundContext()
@@ -177,7 +177,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var token = CreateToken(
             key.Key,
             "https://auth.local",
-            [new Claim(ClaimTypes.NameIdentifier, "user-1"), new Claim(ClaimTypes.Role, "ops-admin")]);
+            [new Claim(JwtRegisteredClaimNames.Sub, "user-1"), new Claim(ClaimTypes.Role, "ops-admin")]);
         var jwksService = CreateJwksService([key], "https://auth.local");
         var middleware = CreateMiddleware(userContext, jwksService, new RolePermissionResolver());
         var inboundContext = (RequestInboundContext)CreateInboundContext()
@@ -237,7 +237,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: null,
-            claims: claims ?? [new Claim(ClaimTypes.NameIdentifier, "user-1")],
+            claims: claims ?? [new Claim(JwtRegisteredClaimNames.Sub, "user-1")],
             notBefore: now.AddMinutes(-1),
             expires: now.AddMinutes(5),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.RsaSha256));

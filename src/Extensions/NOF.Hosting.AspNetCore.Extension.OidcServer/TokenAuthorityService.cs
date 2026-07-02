@@ -27,7 +27,10 @@ public sealed partial class TokenAuthorityService : ITokenService
         var now = DateTime.UtcNow;
         var accessClaims = CreateClaims(request.AccessClaims);
 
-        var tokenHandler = new JwtSecurityTokenHandler();
+        var tokenHandler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false
+        };
         var signingKey = (await _signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
         var accessTokenExpiresAtUtc = now.Add(request.AccessTokenExpiration);
@@ -74,7 +77,10 @@ public sealed partial class TokenAuthorityService : ITokenService
         ValidateRefreshTokenRequest request,
         CancellationToken cancellationToken)
     {
-        var tokenHandler = new JwtSecurityTokenHandler();
+        var tokenHandler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false
+        };
         try
         {
             var validationParameters = new TokenValidationParameters

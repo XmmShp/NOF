@@ -231,8 +231,7 @@ public static partial class NOFOidcServerExtensions
             oauthOptions.Value,
             oauthOptions.Value.AccessTokenAudience,
             cancellationToken).ConfigureAwait(false);
-        var subject = principal?.FindFirst(OAuthClaimTypes.Subject)?.Value
-            ?? principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var subject = principal?.FindFirst(OAuthClaimTypes.Subject)?.Value;
         if (string.IsNullOrWhiteSpace(subject))
         {
             return CreateOAuthErrorResult("invalid_token", "access token is invalid.", StatusCodes.Status401Unauthorized);
@@ -572,8 +571,7 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", "subject_token is invalid.");
         }
 
-        var subject = principal.FindFirst(OAuthClaimTypes.Subject)?.Value
-            ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var subject = principal.FindFirst(OAuthClaimTypes.Subject)?.Value;
         if (string.IsNullOrWhiteSpace(subject))
         {
             return Fail("invalid_grant", "subject_token subject is invalid.");
@@ -632,8 +630,7 @@ public static partial class NOFOidcServerExtensions
 
     private static string? ResolveProxyServiceName(ClaimsPrincipal actorPrincipal)
         => actorPrincipal.FindFirst("client_id")?.Value
-            ?? actorPrincipal.FindFirst(OAuthClaimTypes.Subject)?.Value
-            ?? actorPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            ?? actorPrincipal.FindFirst(OAuthClaimTypes.Subject)?.Value;
 
     internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromClientCredentialsAsync(
         HttpRequest httpRequest,
@@ -770,7 +767,12 @@ public static partial class NOFOidcServerExtensions
 
         try
         {
-            return new JwtSecurityTokenHandler().ValidateToken(
+            var tokenHandler = new JwtSecurityTokenHandler
+            {
+                MapInboundClaims = false
+            };
+
+            return tokenHandler.ValidateToken(
                 token.Trim(),
                 new TokenValidationParameters
                 {
