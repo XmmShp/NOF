@@ -1,7 +1,7 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Authentication.Middlewares;
