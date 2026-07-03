@@ -41,4 +41,46 @@ public class ContextExtensionsTests
 
         Assert.Equal("tenant-a", context["NOF.TenantId"]);
     }
+
+    [Fact]
+    public void WithServiceToken_ShouldStoreTypedHeaderMarker()
+    {
+        var context = Context.Empty.WithServiceToken("Authorization");
+
+        Assert.Equal("Authorization", context.GetServiceTokenHeaderName());
+        Assert.True(context.TryGetItem(ContextExtensions.ServiceTokenHeaderKey, out var value));
+        Assert.Equal("Authorization", value);
+    }
+
+    [Fact]
+    public void WithServiceToken_WithNullHeader_ShouldRemoveTypedHeaderMarker()
+    {
+        var context = Context.Empty
+            .WithServiceToken("Authorization")
+            .WithServiceToken(null);
+
+        Assert.Null(context.GetServiceTokenHeaderName());
+        Assert.False(context.TryGetItem(ContextExtensions.ServiceTokenHeaderKey, out _));
+    }
+
+    [Fact]
+    public void WithTokenExchange_ShouldStoreTypedHeaderMarker()
+    {
+        var context = Context.Empty.WithTokenExchange("X-Authorization");
+
+        Assert.Equal("X-Authorization", context.GetTokenExchangeHeaderName());
+        Assert.True(context.TryGetItem(ContextExtensions.TokenExchangeHeaderKey, out var value));
+        Assert.Equal("X-Authorization", value);
+    }
+
+    [Fact]
+    public void WithTokenExchange_WithNullHeader_ShouldRemoveTypedHeaderMarker()
+    {
+        var context = Context.Empty
+            .WithTokenExchange("Authorization")
+            .WithTokenExchange(null);
+
+        Assert.Null(context.GetTokenExchangeHeaderName());
+        Assert.False(context.TryGetItem(ContextExtensions.TokenExchangeHeaderKey, out _));
+    }
 }

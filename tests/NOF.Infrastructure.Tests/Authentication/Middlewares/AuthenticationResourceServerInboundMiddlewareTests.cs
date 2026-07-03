@@ -163,6 +163,32 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WhenTokenContainsStandardNameClaim_ShouldPopulateUserName()
+    {
+        var userContext = new UserContext();
+        using var rsa = RSA.Create(2048);
+        var key = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        var token = CreateToken(
+            key.Key,
+            "https://auth.local",
+            [new Claim(JwtRegisteredClaimNames.Sub, "user-1"), new Claim("name", "Alice")]);
+        var jwksService = CreateJwksService([key], "https://auth.local");
+        var middleware = CreateMiddleware(userContext, jwksService);
+        var inboundContext = (RequestInboundContext)CreateInboundContext()
+            .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, $"Bearer {token}");
+
+        await middleware.InvokeAsync(inboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
+
+        Assert.Equal("Alice", userContext.User.Name);
+    }
+
+    [Fact]
     public async Task InvokeAsync_WhenCustomResolverUsesOtherClaims_ShouldMapPermission()
     {
         var userContext = new UserContext();

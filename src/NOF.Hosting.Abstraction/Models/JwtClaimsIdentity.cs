@@ -56,6 +56,10 @@ public sealed class JwtClaimsIdentity : ClaimsIdentity
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-        return new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
+        return new ClaimsIdentity(
+            jwt.Claims,
+            authenticationType: "jwt",
+            nameType: "name",
+            roleType: ClaimTypes.Role);
     }
 }

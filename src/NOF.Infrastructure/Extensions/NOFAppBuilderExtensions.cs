@@ -117,6 +117,9 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddCommandOutboundMiddleware<TracingOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<TracingOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<TracingOutboundMiddleware>();
+            builder.Services.AddCommandOutboundMiddleware<ServiceTokenOutboundMiddleware>();
+            builder.Services.AddNotificationOutboundMiddleware<ServiceTokenOutboundMiddleware>();
+            builder.Services.AddRequestOutboundMiddleware<ServiceTokenOutboundMiddleware>();
             #endregion
 
             #region Inbound Middlewares
@@ -170,7 +173,9 @@ public static partial class NOFInfrastructureExtensions
             serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
         builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
             serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-        builder.Services.AddRequestOutboundMiddleware<RequestTokenExchangeOutboundMiddleware>();
+        builder.Services.AddRequestOutboundMiddleware<TokenExchangeOutboundMiddleware>();
+        builder.Services.AddCommandOutboundMiddleware<TokenExchangeOutboundMiddleware>();
+        builder.Services.AddNotificationOutboundMiddleware<TokenExchangeOutboundMiddleware>();
         builder.Services.AddCommandOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
         builder.Services.AddNotificationOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
     }

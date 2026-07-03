@@ -118,6 +118,8 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
                         ValidIssuer = validIssuer,
                         ValidateAudience = !string.IsNullOrEmpty(_jwtOptions.Audience),
                         ValidAudience = _jwtOptions.Audience,
+                        NameClaimType = "name",
+                        RoleClaimType = ClaimTypes.Role,
                         ValidateLifetime = true,
                         IssuerSigningKeys = keys,
                         ClockSkew = TimeSpan.FromSeconds(30)
@@ -190,7 +192,11 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-        return new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
+        return new ClaimsIdentity(
+            jwt.Claims,
+            authenticationType: "jwt",
+            nameType: "name",
+            roleType: ClaimTypes.Role);
     }
 
     private ClaimsIdentity CreateIdentity(ClaimsIdentity identity)

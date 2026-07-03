@@ -65,6 +65,15 @@ public class InfrastructureDefaultsTests
         Assert.IsType<MemoryBackplane>(provider.GetRequiredService<IBackplane>());
         Assert.IsType<InMemoryEventPublisher>(provider.GetRequiredService<IEventPublisher>());
         Assert.IsType<HttpAuthorizationServerService>(provider.GetRequiredService<IClientCredentialsTokenService>());
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(IRequestOutboundMiddleware) &&
+            service.ImplementationType == typeof(ServiceTokenOutboundMiddleware));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(ICommandOutboundMiddleware) &&
+            service.ImplementationType == typeof(ServiceTokenOutboundMiddleware));
+        Assert.Contains(builder.Services, service =>
+            service.ServiceType == typeof(INotificationOutboundMiddleware) &&
+            service.ImplementationType == typeof(ServiceTokenOutboundMiddleware));
     }
 
     [Fact]

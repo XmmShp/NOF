@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NOF.Abstraction;
 using System.Reflection;
 using System.Security.Claims;
@@ -19,7 +20,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         var token = CreateUnsignedToken();
         userContext.User.AddIdentity(new JwtClaimsIdentity(token));
 
-        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<JwtTokenPropagationOutboundMiddleware>.Instance);
 
         var called = false;
         var outboundContext = CreateOutboundContext();
@@ -52,7 +53,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
         var userContext = new UserContext();
         userContext.User.AddIdentity(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "custom"));
 
-        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<JwtTokenPropagationOutboundMiddleware>.Instance);
 
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
@@ -73,7 +74,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
                 TokenType = "Token"
             }));
 
-        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<JwtTokenPropagationOutboundMiddleware>.Instance);
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
 
@@ -111,7 +112,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
                 TokenType = string.Empty
             }));
 
-        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<JwtTokenPropagationOutboundMiddleware>.Instance);
         var outboundContext = CreateOutboundContext();
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
 

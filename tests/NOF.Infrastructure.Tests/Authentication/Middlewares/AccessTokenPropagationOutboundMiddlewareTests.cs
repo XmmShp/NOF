@@ -1,5 +1,6 @@
 using NOF.Abstraction;
 using NOF.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
 using Xunit;
 using MessageAccessTokenPropagationOutboundMiddleware = NOF.Infrastructure.JwtTokenPropagationOutboundMiddleware;
@@ -15,7 +16,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
         var token = CreateUnsignedToken();
         userContext.User.AddIdentity(new JwtClaimsIdentity(token));
 
-        var middleware = new MessageAccessTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new MessageAccessTokenPropagationOutboundMiddleware(userContext, NullLogger<MessageAccessTokenPropagationOutboundMiddleware>.Instance);
         var outboundContext = new CommandOutboundContext();
 
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
@@ -30,7 +31,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
         var token = CreateUnsignedToken();
         userContext.User.AddIdentity(new JwtClaimsIdentity(token));
 
-        var middleware = new MessageAccessTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new MessageAccessTokenPropagationOutboundMiddleware(userContext, NullLogger<MessageAccessTokenPropagationOutboundMiddleware>.Instance);
         var outboundContext = new NotificationOutboundContext();
 
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
@@ -52,7 +53,7 @@ public sealed class AccessTokenPropagationOutboundMiddlewareTests
                 TokenType = string.Empty
             }));
 
-        var middleware = new MessageAccessTokenPropagationOutboundMiddleware(userContext);
+        var middleware = new MessageAccessTokenPropagationOutboundMiddleware(userContext, NullLogger<MessageAccessTokenPropagationOutboundMiddleware>.Instance);
         var outboundContext = new CommandOutboundContext();
 
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);

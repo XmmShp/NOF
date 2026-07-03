@@ -831,7 +831,13 @@ public sealed class AuthenticationExtensionsTests
             descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(RequestTokenExchangeOutboundMiddleware));
+            descriptor.ImplementationType == typeof(TokenExchangeOutboundMiddleware));
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(TokenExchangeOutboundMiddleware));
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(TokenExchangeOutboundMiddleware));
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
             descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));

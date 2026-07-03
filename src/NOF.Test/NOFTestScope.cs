@@ -69,7 +69,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
         if (!string.IsNullOrWhiteSpace(name))
         {
-            claims.Add(new Claim(ClaimTypes.Name, name));
+            claims.Add(new Claim("name", name));
         }
 
         if (permissions is not null)
@@ -80,7 +80,11 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
             }
         }
 
-        return SetUser(new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType)));
+        return SetUser(new ClaimsPrincipal(new ClaimsIdentity(
+            claims,
+            authenticationType,
+            nameType: "name",
+            roleType: ClaimTypes.Role)));
     }
     public Task SendAsync<TCommand>(TCommand command, Context context, CancellationToken cancellationToken = default)
     {
