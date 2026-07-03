@@ -203,7 +203,9 @@ public static partial class NOFOidcServerExtensions
                 oauthOptions.Value,
                 cancellationToken).ConfigureAwait(false),
             OAuthGrantTypes.TokenExchange => await TokenFromTokenExchangeAsync(
+                httpRequest,
                 request,
+                serviceProvider,
                 subjectService,
                 tokenService,
                 signingKeyService,
@@ -525,13 +527,25 @@ public static partial class NOFOidcServerExtensions
     }
 
     internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromTokenExchangeAsync(
+        HttpRequest httpRequest,
         OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
         ISigningKeyService signingKeyService,
         OAuthAuthorizationServerOptions oauthOptions,
         CancellationToken cancellationToken)
     {
+        var authenticationError = await ValidateClientAuthenticationAsync(
+            httpRequest,
+            request,
+            serviceProvider,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticationError is not null)
+        {
+            return Fail(authenticationError.Error, authenticationError.ErrorDescription);
+        }
+
         if (string.IsNullOrWhiteSpace(request.SubjectToken))
         {
             return Fail("invalid_request", "subject_token is required.");
@@ -1099,6 +1113,11 @@ public static partial class NOFOidcServerExtensions
         }
 
         if (string.Equals(request.GrantType, OAuthGrantTypes.RefreshToken, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        if (string.Equals(request.GrantType, OAuthGrantTypes.TokenExchange, StringComparison.Ordinal))
         {
             return null;
         }

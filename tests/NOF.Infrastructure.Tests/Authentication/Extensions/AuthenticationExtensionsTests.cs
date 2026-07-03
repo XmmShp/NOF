@@ -357,6 +357,31 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public async Task ValidateClientAuthenticationAsync_ShouldAcceptPublicClientTokenExchangeGrant()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.TokenExchange,
+            ClientId = "public-app"
+        };
+
+        var error = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateClientAuthenticationAsync(
+            httpContext.Request,
+            request,
+            services,
+            CancellationToken.None);
+
+        Assert.Null(error);
+    }
+
+    [Fact]
     public async Task ValidateClientAuthenticationAsync_ShouldAcceptBasicClientCredentialsAndNormalizeRequest()
     {
         using var services = new ServiceCollection()
@@ -595,6 +620,13 @@ public sealed class AuthenticationExtensionsTests
     [Fact]
     public async Task TokenExchangeGrant_ShouldIntersectRequestedScopesWithSubjectTokenAndActorToken()
     {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
         using var rsa = RSA.Create(2048);
         var signingKey = new ManagedSigningKey
         {
@@ -606,6 +638,7 @@ public sealed class AuthenticationExtensionsTests
         var request = new OAuthTokenRequest
         {
             GrantType = OAuthGrantTypes.TokenExchange,
+            ClientId = "public-app",
             SubjectToken = CreateAccessToken(
                 signingKey.Key,
                 "https://issuer.local/oauth2",
@@ -625,7 +658,9 @@ public sealed class AuthenticationExtensionsTests
         var tokenService = new TestTokenService();
 
         var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromTokenExchangeAsync(
+            httpContext.Request,
             request,
+            services,
             subjectService,
             tokenService,
             new StaticSigningKeyService(signingKey),
@@ -645,6 +680,63 @@ public sealed class AuthenticationExtensionsTests
         Assert.Null(tokenService.LastRequest!.RefreshToken);
         Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Scope && claim.Value == "jobs.read");
         Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == ClaimTypes.ProxyServiceName && claim.Value == "proxy-service");
+    }
+
+    [Fact]
+    public async Task TokenExchangeGrant_ShouldRequireClientAuthentication()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.TokenExchange,
+            SubjectToken = CreateAccessToken(
+                signingKey.Key,
+                "https://issuer.local/oauth2",
+                "jobs-api",
+                [new Claim(OAuthClaimTypes.Subject, "user-1"), new Claim(OAuthClaimTypes.Scope, "jobs.read")]),
+            ActorToken = CreateAccessToken(
+                signingKey.Key,
+                "https://issuer.local/oauth2",
+                "jobs-api",
+                [new Claim(OAuthClaimTypes.Subject, "service-a"), new Claim("client_id", "proxy-service"), new Claim(OAuthClaimTypes.Scope, "jobs.read")]),
+            SubjectTokenType = OAuthTokenTypes.AccessToken,
+            ActorTokenType = OAuthTokenTypes.AccessToken,
+            RequestedTokenType = OAuthTokenTypes.AccessToken,
+            Scope = "jobs.read"
+        };
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromTokenExchangeAsync(
+            httpContext.Request,
+            request,
+            services,
+            new TestOAuthSubjectService(),
+            new TestTokenService(),
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("invalid_client", result.ErrorCode);
+        Assert.Equal("client_id is required.", result.Message);
     }
 
     [Fact]
@@ -829,15 +921,6 @@ public sealed class AuthenticationExtensionsTests
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
             descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(TokenExchangeOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(TokenExchangeOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(TokenExchangeOutboundMiddleware));
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
             descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));

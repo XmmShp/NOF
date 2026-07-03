@@ -17,7 +17,7 @@ public sealed class ServiceTokenOutboundMiddleware(
     INotificationOutboundMiddleware
 {
     public TopologyComparison Compare(IRequestOutboundMiddleware other)
-        => other is Hosting.JwtTokenPropagationOutboundMiddleware or TokenExchangeOutboundMiddleware
+        => other is Hosting.JwtTokenPropagationOutboundMiddleware
             ? TopologyComparison.After
             : TopologyComparison.DoesNotMatter;
 

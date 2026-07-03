@@ -173,9 +173,6 @@ public static partial class NOFInfrastructureExtensions
             serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
         builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
             serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-        builder.Services.AddRequestOutboundMiddleware<TokenExchangeOutboundMiddleware>();
-        builder.Services.AddCommandOutboundMiddleware<TokenExchangeOutboundMiddleware>();
-        builder.Services.AddNotificationOutboundMiddleware<TokenExchangeOutboundMiddleware>();
         builder.Services.AddCommandOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
         builder.Services.AddNotificationOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
     }

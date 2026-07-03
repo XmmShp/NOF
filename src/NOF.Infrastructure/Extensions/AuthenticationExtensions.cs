@@ -18,6 +18,8 @@ public static partial class NOFInfrastructureExtensions
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             builder.Services.TryAddScoped<IAuthorizationServerMetadataService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+            builder.Services.TryAddScoped<IJwtTokenExchangeService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             builder.Services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();

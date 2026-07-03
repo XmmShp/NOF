@@ -1,6 +1,6 @@
 using NOF.Hosting;
 
-namespace NOF.Infrastructure;
+namespace NOF.Hosting;
 
 public interface IJwtTokenExchangeService
 {

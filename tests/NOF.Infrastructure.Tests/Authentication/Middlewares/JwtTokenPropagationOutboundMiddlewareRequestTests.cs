@@ -6,7 +6,7 @@ using Xunit;
 
 namespace NOF.Infrastructure.Tests.Authentication.Middlewares;
 
-public sealed class TokenExchangeOutboundMiddlewareTests
+public sealed class JwtTokenPropagationOutboundMiddlewareRequestTests
 {
     [Fact]
     public async Task InvokeAsync_WithTokenExchangeEnabled_ShouldWriteExchangedToken()
@@ -23,7 +23,7 @@ public sealed class TokenExchangeOutboundMiddlewareTests
                 EnableTokenExchange = true
             }));
         var tokenExchangeService = new StubJwtTokenExchangeService("exchanged-token");
-        var middleware = new TokenExchangeOutboundMiddleware(userContext, tokenExchangeService, NullLogger<TokenExchangeOutboundMiddleware>.Instance);
+        var middleware = new NOF.Hosting.JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<NOF.Hosting.JwtTokenPropagationOutboundMiddleware>.Instance, tokenExchangeService);
         var outboundContext = CreateOutboundContext();
 
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
@@ -33,7 +33,7 @@ public sealed class TokenExchangeOutboundMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithTokenExchangeDisabled_ShouldKeepExistingHeader()
+    public async Task InvokeAsync_WithTokenExchangeDisabled_ShouldWriteOriginalToken()
     {
         var userContext = new UserContext();
         var token = CreateUnsignedToken();
@@ -47,13 +47,11 @@ public sealed class TokenExchangeOutboundMiddlewareTests
                 EnableTokenExchange = false
             }));
         var tokenExchangeService = new StubJwtTokenExchangeService("exchanged-token");
-        var middleware = new TokenExchangeOutboundMiddleware(userContext, tokenExchangeService, NullLogger<TokenExchangeOutboundMiddleware>.Instance);
+        var middleware = new NOF.Hosting.JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<NOF.Hosting.JwtTokenPropagationOutboundMiddleware>.Instance, tokenExchangeService);
         var outboundContext = CreateOutboundContext();
-        outboundContext.Headers["X-Auth"] = "Bearer original-token";
-
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
 
-        Assert.Equal("Bearer original-token", outboundContext.Headers["X-Auth"]);
+        Assert.Equal("Bearer " + token, outboundContext.Headers["X-Auth"]);
         Assert.Null(tokenExchangeService.LastSubjectToken);
     }
 
@@ -68,7 +66,7 @@ public sealed class TokenExchangeOutboundMiddlewareTests
             {
                 EnableTokenExchange = true
             }));
-        var middleware = new TokenExchangeOutboundMiddleware(userContext, new StubJwtTokenExchangeService("exchanged-token"), NullLogger<TokenExchangeOutboundMiddleware>.Instance);
+        var middleware = new NOF.Hosting.JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<NOF.Hosting.JwtTokenPropagationOutboundMiddleware>.Instance, new StubJwtTokenExchangeService("exchanged-token"));
         var outboundContext = CreateOutboundContext();
 
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
@@ -86,11 +84,11 @@ public sealed class TokenExchangeOutboundMiddlewareTests
             token,
             downstreamPropagation: null));
         var tokenExchangeService = new StubJwtTokenExchangeService("explicit-exchanged-token");
-        var middleware = new TokenExchangeOutboundMiddleware(userContext, tokenExchangeService, NullLogger<TokenExchangeOutboundMiddleware>.Instance);
+        var middleware = new NOF.Hosting.JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<NOF.Hosting.JwtTokenPropagationOutboundMiddleware>.Instance, tokenExchangeService);
         var outboundContext = new RequestOutboundContext(Context.Empty.WithTokenExchange("X-Service-Authorization"))
         {
             ServiceType = typeof(object),
-            MethodInfo = typeof(TokenExchangeOutboundMiddlewareTests)
+            MethodInfo = typeof(JwtTokenPropagationOutboundMiddlewareRequestTests)
                 .GetMethod(nameof(CreateOutboundContext), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
         };
 
@@ -101,31 +99,7 @@ public sealed class TokenExchangeOutboundMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandOutboundContextAndTokenExchangeEnabled_ShouldWriteExchangedToken()
-    {
-        var userContext = new UserContext();
-        var token = CreateUnsignedToken();
-        userContext.User.AddIdentity(new JwtClaimsIdentity(
-            new System.Security.Claims.ClaimsIdentity(authenticationType: "jwt"),
-            token,
-            new JwtPropagation
-            {
-                HeaderName = "X-Command-Auth",
-                TokenType = "Bearer",
-                EnableTokenExchange = true
-            }));
-        var tokenExchangeService = new StubJwtTokenExchangeService("command-exchanged-token");
-        var middleware = new TokenExchangeOutboundMiddleware(userContext, tokenExchangeService, NullLogger<TokenExchangeOutboundMiddleware>.Instance);
-        var outboundContext = new CommandOutboundContext();
-
-        await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
-
-        Assert.Equal("Bearer command-exchanged-token", outboundContext.Headers["X-Command-Auth"]);
-        Assert.Equal(token, tokenExchangeService.LastSubjectToken);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_WithNotificationOutboundContextAndExplicitTokenExchangeHeader_ShouldWriteExchangedToken()
+    public async Task InvokeAsync_WithExplicitTokenExchangeHeaders_ShouldWriteExchangedTokenToEachHeader()
     {
         var userContext = new UserContext();
         var token = CreateUnsignedToken();
@@ -133,13 +107,19 @@ public sealed class TokenExchangeOutboundMiddlewareTests
             new System.Security.Claims.ClaimsIdentity(authenticationType: "jwt"),
             token,
             downstreamPropagation: null));
-        var tokenExchangeService = new StubJwtTokenExchangeService("notification-explicit-exchanged-token");
-        var middleware = new TokenExchangeOutboundMiddleware(userContext, tokenExchangeService, NullLogger<TokenExchangeOutboundMiddleware>.Instance);
-        var outboundContext = new NotificationOutboundContext(Context.Empty.WithTokenExchange("X-Notification-Authorization"));
+        var tokenExchangeService = new StubJwtTokenExchangeService("explicit-exchanged-token");
+        var middleware = new NOF.Hosting.JwtTokenPropagationOutboundMiddleware(userContext, NullLogger<NOF.Hosting.JwtTokenPropagationOutboundMiddleware>.Instance, tokenExchangeService);
+        var outboundContext = new RequestOutboundContext(Context.Empty.WithTokenExchange("X-Service-Authorization", "X-Secondary-Authorization"))
+        {
+            ServiceType = typeof(object),
+            MethodInfo = typeof(JwtTokenPropagationOutboundMiddlewareRequestTests)
+                .GetMethod(nameof(CreateOutboundContext), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+        };
 
         await middleware.InvokeAsync(outboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
 
-        Assert.Equal("Bearer notification-explicit-exchanged-token", outboundContext.Headers["X-Notification-Authorization"]);
+        Assert.Equal("Bearer explicit-exchanged-token", outboundContext.Headers["X-Service-Authorization"]);
+        Assert.Equal("Bearer explicit-exchanged-token", outboundContext.Headers["X-Secondary-Authorization"]);
         Assert.Equal(token, tokenExchangeService.LastSubjectToken);
     }
 
@@ -148,7 +128,7 @@ public sealed class TokenExchangeOutboundMiddlewareTests
         return new RequestOutboundContext
         {
             ServiceType = typeof(object),
-            MethodInfo = typeof(TokenExchangeOutboundMiddlewareTests)
+            MethodInfo = typeof(JwtTokenPropagationOutboundMiddlewareRequestTests)
                 .GetMethod(nameof(CreateOutboundContext), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
         };
     }
