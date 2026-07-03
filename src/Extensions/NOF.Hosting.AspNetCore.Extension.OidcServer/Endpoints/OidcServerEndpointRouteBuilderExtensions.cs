@@ -333,7 +333,7 @@ public static partial class NOFOidcServerExtensions
             authorizationCode.ClientId,
             authorizationCode.Nonce,
             additionalAccessClaims: null,
-            issueRefreshToken: true,
+            issueRefreshToken: ShouldIssueRefreshToken(authorizationCode.Scope),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (response is null)
         {
@@ -443,7 +443,7 @@ public static partial class NOFOidcServerExtensions
             idTokenAudience: null,
             nonce: null,
             additionalAccessClaims: null,
-            issueRefreshToken: true,
+            issueRefreshToken: ShouldIssueRefreshToken(scope),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return response is null
@@ -976,6 +976,9 @@ public static partial class NOFOidcServerExtensions
     private static string NormalizeScope(string scope)
         => string.Join(' ', ParseScopes(scope).OrderBy(static value => value, StringComparer.Ordinal));
 
+    internal static bool ShouldIssueRefreshToken(string scope)
+        => ParseScopes(scope).Contains(OAuthScope.OfflineAccess);
+
     private static string NormalizeCodeChallengeMethod(string? codeChallengeMethod)
         => string.IsNullOrWhiteSpace(codeChallengeMethod) ? "plain" : codeChallengeMethod.Trim();
 
@@ -991,7 +994,7 @@ public static partial class NOFOidcServerExtensions
     {
         return claimType switch
         {
-            OAuthClaimTypes.Email => scopes.Contains(OAuthScope.Email),
+            OAuthClaimTypes.Email or OAuthClaimTypes.EmailVerified => scopes.Contains(OAuthScope.Email),
             OAuthClaimTypes.Name or OAuthClaimTypes.Groups => scopes.Contains(OAuthScope.Profile),
             OAuthClaimTypes.Scope or OAuthClaimTypes.SessionId => false,
             _ => true

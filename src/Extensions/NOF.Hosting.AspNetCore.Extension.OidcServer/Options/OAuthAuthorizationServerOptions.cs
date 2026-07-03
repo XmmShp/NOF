@@ -39,7 +39,8 @@ public sealed class OAuthAuthorizationServerOptions
     [
         OAuthScope.OpenId,
         OAuthScope.Profile,
-        OAuthScope.Email
+        OAuthScope.Email,
+        OAuthScope.OfflineAccess
     ];
 
     public IReadOnlyList<string> ClaimsSupported { get; set; } =
@@ -47,6 +48,7 @@ public sealed class OAuthAuthorizationServerOptions
         OAuthClaimTypes.Subject,
         OAuthClaimTypes.Name,
         OAuthClaimTypes.Email,
+        OAuthClaimTypes.EmailVerified,
         OAuthClaimTypes.Groups
     ];
 }

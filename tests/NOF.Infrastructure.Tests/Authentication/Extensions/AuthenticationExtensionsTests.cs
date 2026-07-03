@@ -109,6 +109,22 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public void OAuthAuthorizationServerOptions_ShouldSupportOfflineAccessByDefault()
+    {
+        var options = new OAuthAuthorizationServerOptions();
+
+        Assert.Contains(OAuthScope.OfflineAccess, options.ScopesSupported);
+    }
+
+    [Fact]
+    public void OAuthAuthorizationServerOptions_ShouldSupportEmailVerifiedClaimByDefault()
+    {
+        var options = new OAuthAuthorizationServerOptions();
+
+        Assert.Contains(OAuthClaimTypes.EmailVerified, options.ClaimsSupported);
+    }
+
+    [Fact]
     public async Task AddOidcServer_AddPublicClient_ShouldEnsureClientExistsOnInitialize()
     {
         var builder = NOFTestAppBuilder.Create();
@@ -504,7 +520,7 @@ public sealed class AuthenticationExtensionsTests
                 Claims =
                 [
                     new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
-                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
+                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read offline_access"),
                     new TokenClaim("client_id", "service-a")
                 ]
             })
@@ -530,6 +546,66 @@ public sealed class AuthenticationExtensionsTests
         Assert.NotNull(tokenService.LastRequest?.RefreshToken);
         Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == "client_id" && claim.Value == "service-a");
         Assert.Equal("refresh-token-id", tokenService.LastRevokeRequest?.TokenId);
+    }
+
+    [Fact]
+    public async Task TokenFromRefreshTokenAsync_WithoutOfflineAccess_ShouldNotIssueNewRefreshToken()
+    {
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.RefreshToken,
+            ClientId = "service-a",
+            ClientSecret = "secret-a",
+            RefreshToken = "refresh-token"
+        };
+        var tokenService = new TestTokenService
+        {
+            ValidateRefreshTokenResult = Result.Success(new ValidateRefreshTokenResponse
+            {
+                TokenId = "refresh-token-id",
+                Claims =
+                [
+                    new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
+                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
+                    new TokenClaim("client_id", "service-a")
+                ]
+            })
+        };
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromRefreshTokenAsync(
+            httpContext.Request,
+            request,
+            services,
+            new TestOAuthSubjectService(),
+            tokenService,
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                RefreshTokenExpiration = TimeSpan.FromDays(7),
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Null(tokenService.LastRequest?.RefreshToken);
+        Assert.Null(result.Value.RefreshToken);
     }
 
     [Fact]
@@ -564,7 +640,7 @@ public sealed class AuthenticationExtensionsTests
                 Claims =
                 [
                     new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
-                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
+                    new TokenClaim(OAuthClaimTypes.Scope, "jobs.read offline_access"),
                     new TokenClaim("client_id", "public-app")
                 ]
             })
@@ -589,6 +665,15 @@ public sealed class AuthenticationExtensionsTests
         Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(tokenService.LastRequest?.RefreshToken);
         Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == "client_id" && claim.Value == "public-app");
+    }
+
+    [Theory]
+    [InlineData("openid profile", false)]
+    [InlineData("openid profile offline_access", true)]
+    [InlineData("offline_access", true)]
+    public void ShouldIssueRefreshToken_ShouldFollowOfflineAccessScope(string scope, bool expected)
+    {
+        Assert.Equal(expected, Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ShouldIssueRefreshToken(scope));
     }
 
     [Fact]
