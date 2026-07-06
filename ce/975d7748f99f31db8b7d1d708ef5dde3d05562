@@ -1,0 +1,220 @@
+src/Hostings/NOF.Hosting.AspNetCore/Steps/AspNetCoreRegistrationStep.cs
+  s_8a08863c05f318::t_290016d7a81754 41-42 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4e6d4d8caf1fb25a5935","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[41,42]}]}]}
+  s_8a08863c05f318::t_07cd15017bedf7 5 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4e784d8caf1fb25a595e","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":5}]}]}
+src/Hostings/NOF.Hosting.AspNetCore/Steps/HttpEndpointInitializationStep.cs
+  s_8a08863c05f318::t_f39bd4c5a87306 4,8,21-25 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4e814d8caf1fb25a5987","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":4},{"Single":8},{"Range":[21,25]}]}]}
+  s_8a08863c05f318::t_84cca9389ac530 2 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4e8a4d8caf1fb25a59af","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":2}]}]}
+src/Hostings/NOF.Hosting.Maui/README.md
+  s_8a08863c05f318::t_559d47e19ff24c 34 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4eaa4d8caf1fb25a5a24","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":34}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "ce975d7748f99f31db8b7d1d708ef5dde3d05562",
+  "prompts": {},
+  "sessions": {
+    "s_8a08863c05f318": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3de914c1aeed0acfb59fd7",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "src/Hostings/NOF.Hosting.AspNetCore/Steps/AspNetCoreRegistrationStep.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_290016d7a81754",
+        "line_ranges": [
+          {
+            "Range": [
+              41,
+              42
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4e6d4d8caf1fb25a5935",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  41,
+                  42
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_07cd15017bedf7",
+        "line_ranges": [
+          {
+            "Single": 5
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4e784d8caf1fb25a595e",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 5
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Hostings/NOF.Hosting.AspNetCore/Steps/HttpEndpointInitializationStep.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_f39bd4c5a87306",
+        "line_ranges": [
+          {
+            "Single": 4
+          },
+          {
+            "Single": 8
+          },
+          {
+            "Range": [
+              21,
+              25
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4e814d8caf1fb25a5987",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 4
+              },
+              {
+                "Single": 8
+              },
+              {
+                "Range": [
+                  21,
+                  25
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_84cca9389ac530",
+        "line_ranges": [
+          {
+            "Single": 2
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4e8a4d8caf1fb25a59af",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 2
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Hostings/NOF.Hosting.Maui/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_559d47e19ff24c",
+        "line_ranges": [
+          {
+            "Single": 34
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4eaa4d8caf1fb25a5a24",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 34
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_8a08863c05f318": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_07cd15017bedf7": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_097630313ac984": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_290016d7a81754": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_559d47e19ff24c": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_62a58ce907fee5": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_84cca9389ac530": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_f39bd4c5a87306": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
