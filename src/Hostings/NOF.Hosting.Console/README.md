@@ -2,6 +2,8 @@
 
 Console hosting for the NOF Framework.
 
+`Create(...)` already adds the calling assembly as an application part and applies `NOF.Infrastructure` defaults.
+
 ### Usage
 
 ```csharp

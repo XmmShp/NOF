@@ -30,9 +30,11 @@ await app.RunAsync();
 
 `Create(...)` already adds the calling assembly as an application part. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
 
+`Create(...)` also registers `NOF.UI` defaults for browser storage and browser-info support. It does not apply `NOF.Infrastructure` defaults automatically.
+
 ## Dependencies
 
-- [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)
+- [`NOF.Hosting`](https://www.nuget.org/packages/NOF.Hosting)
 - [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)
 - [`Microsoft.AspNetCore.Components.WebAssembly`](https://www.nuget.org/packages/Microsoft.AspNetCore.Components.WebAssembly)
 

@@ -30,7 +30,7 @@ public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
     public static NOFConsoleHostBuilder Create(string[]? args = null)
     {
         var builder = new NOFConsoleHostBuilder(args, Assembly.GetCallingAssembly());
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
         return builder;
     }
 

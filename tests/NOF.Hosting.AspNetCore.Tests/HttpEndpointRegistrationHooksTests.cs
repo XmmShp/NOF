@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +11,7 @@ using Xunit;
 
 namespace NOF.Hosting.AspNetCore.Tests;
 
-public sealed class HttpEndpointRegistrationHooksTests
+public sealed class HttpEndpointRegistrationTests
 {
     [Fact]
     public async Task AddRpcServer_ShouldMapRpcEndpointAutomatically()

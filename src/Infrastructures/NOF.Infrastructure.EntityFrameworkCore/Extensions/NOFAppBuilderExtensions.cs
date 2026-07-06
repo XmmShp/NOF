@@ -11,7 +11,7 @@ public static partial class NOFInfrastructureExtensions
 {
     extension(INOFAppBuilder builder)
     {
-        public INOFAppBuilder AddEntityFrameworkCoreDefaults()
+        public INOFAppBuilder AddNOFEntityFrameworkCore()
         {
             builder.Services.AddOptions<DbContextConfigurationOptions>();
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();

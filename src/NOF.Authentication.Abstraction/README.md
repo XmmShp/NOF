@@ -4,7 +4,7 @@ Authentication-related execution context abstractions for the [NOF Framework](ht
 
 ## Overview
 
-This package defines outbound authentication context hints shared by `NOF.Application`, `NOF.Hosting.Abstraction`, and `NOF.Infrastructure`.
+This package defines outbound authentication context hints shared by `NOF.Application`, `NOF.Hosting`, and `NOF.Infrastructure`.
 
 It currently contains:
 

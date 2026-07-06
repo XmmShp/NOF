@@ -31,7 +31,7 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
 
     private void ConfigureDefaultTestServices()
     {
-        this.AddInfrastructureDefaults();
+        this.AddNOFInfrastructure();
     }
 
     protected override Task<IHost> BuildApplicationAsync()

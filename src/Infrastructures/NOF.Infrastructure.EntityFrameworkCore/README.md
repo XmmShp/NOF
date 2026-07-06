@@ -36,4 +36,4 @@ builder.UseDbContext<AppDbContext>()
     .MigrateOnInitialize();
 ```
 
-For lightweight local or test scenarios, call `AddEntityFrameworkCoreDefaults()` to register the default SQLite in-memory persistence.
+For lightweight local or test scenarios, call `AddNOFEntityFrameworkCore()` to register the default SQLite in-memory persistence.

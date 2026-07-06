@@ -9,7 +9,7 @@
             "src/NOF.Domain/bin/Release/net10.0/NOF.Domain.dll",
             "src/NOF.Contract/bin/Release/net10.0/NOF.Contract.dll",
             "src/NOF.Application/bin/Release/net10.0/NOF.Application.dll",
-            "src/NOF.Hosting.Abstraction/bin/Release/net10.0/NOF.Hosting.Abstraction.dll",
+            "src/NOF.Hosting/bin/Release/net10.0/NOF.Hosting.dll",
             "src/NOF.Infrastructure/bin/Release/net10.0/NOF.Infrastructure.dll",
             "src/NOF.UI/bin/Release/net10.0/NOF.UI.dll",
             "src/NOF.Test/bin/Release/net10.0/NOF.Test.dll",

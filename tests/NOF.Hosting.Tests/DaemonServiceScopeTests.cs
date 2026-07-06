@@ -8,33 +8,49 @@ using Microsoft.Extensions.Primitives;
 using NOF.Abstraction;
 using Xunit;
 
-namespace NOF.Hosting.Abstraction.Tests;
+namespace NOF.Hosting.Tests;
 
 public class DaemonServiceScopeTests
 {
     [Fact]
-    public async Task AddHostingDefaults_ShouldRegisterAmbientEventPublisherDaemon()
+    public async Task AddNOFHosting_OnServices_ShouldRegisterAmbientEventPublisherDaemon()
     {
-        var builder = new TestAppBuilder();
+        var services = new ServiceCollection();
 
-        builder.AddHostingDefaults();
+        services.AddNOFHosting();
 
-        Assert.Contains(builder.Services, service =>
+        Assert.Contains(services, service =>
             service.ServiceType == typeof(IDaemonService)
             && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));
 
-        using var provider = builder.Services.BuildServiceProvider();
+        using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IEventPublisher>());
     }
 
     [Fact]
-    public void AddHostingDefaults_ShouldBeIdempotent()
+    public void AddNOFHosting_OnServices_ShouldBeIdempotent()
+    {
+        var services = new ServiceCollection();
+
+        services.AddNOFHosting();
+        services.AddNOFHosting();
+
+        _ = Assert.Single(services, service => service.ServiceType == typeof(IUserContext));
+        _ = Assert.Single(services, service => service.ServiceType == typeof(IEventPublisher));
+        _ = Assert.Single(services, service => service.ServiceType == typeof(RequestOutboundPipelineExecutor));
+        _ = Assert.Single(services, service =>
+            service.ServiceType == typeof(IDaemonService)
+            && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));
+    }
+
+    [Fact]
+    public void AddNOFHosting_OnBuilder_ShouldRegisterEnvironmentAndRemainIdempotent()
     {
         var builder = new TestAppBuilder();
 
-        builder.AddHostingDefaults();
-        builder.AddHostingDefaults();
+        builder.AddNOFHosting();
+        builder.AddNOFHosting();
 
         _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IHostEnvironment));
         _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IUserContext));
@@ -88,7 +104,7 @@ public class DaemonServiceScopeTests
     {
         public string EnvironmentName { get; set; } = Environments.Development;
 
-        public string ApplicationName { get; set; } = "NOF.Hosting.Abstraction.Tests";
+        public string ApplicationName { get; set; } = "NOF.Hosting.Tests";
 
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
 

@@ -90,7 +90,7 @@ builder.UseDbContext<AppDbContext>()
 
 ## In-Memory SQLite
 
-For tests or lightweight local scenarios, `NOF.Infrastructure.EntityFrameworkCore` provides `AddEntityFrameworkCoreDefaults()` to register the default SQLite in-memory persistence.
+For tests or lightweight local scenarios, `NOF.Infrastructure.EntityFrameworkCore` provides `AddNOFEntityFrameworkCore()` to register the default SQLite in-memory persistence.
 
 ## License
 

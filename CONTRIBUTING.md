@@ -187,7 +187,7 @@ NOF.Abstraction                 ← Shared annotations, user context, in-memory 
 NOF.Domain                      ← Value objects, failures, domain exceptions, ID generation
 NOF.Contract                    ← RPC contracts, request/response models, Result<T>, [HttpEndpoint]
 NOF.Application                 ← RPC servers, handlers, state machines, mapping, caching
-NOF.Hosting.Abstraction         ← INOFAppBuilder and step pipeline contracts
+NOF.Hosting         ← INOFAppBuilder and step pipeline contracts
 NOF.Infrastructure              ← Builder defaults, EF Core integration, OpenTelemetry, runtime pipeline
 NOF.UI                          ← Shared UI components and browser client primitives
 NOF.Test                        ← Test host helpers for NOF applications
@@ -207,7 +207,7 @@ NOF.*.Extension.*               ← Optional features such as JWT authorization
 ### Adding a New Infrastructure Package
 
 1. Create the project under `src/Infrastructures/`.
-2. Reference `NOF.Hosting.Abstraction` or `NOF.Infrastructure`.
+2. Reference `NOF.Hosting` or `NOF.Infrastructure`.
 3. Implement registration via `IServiceRegistrationStep`.
 4. Add the project to `NOF.slnx`.
 5. Add NuGet versions to the root `Directory.Packages.props`.

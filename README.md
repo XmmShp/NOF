@@ -32,7 +32,7 @@
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain)                                                                         | Domain primitives - value objects, failures, domain exceptions, and ID generation                                       |
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract)                                                                     | Contract layer - RPC contracts, request/response models, `Result<T>`, `StreamingResult<T>`, `Optional<T>`, HTTP endpoint attributes |
 | [`NOF.Application`](https://www.nuget.org/packages/NOF.Application)                                                               | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts                   |
-| [`NOF.Hosting.Abstraction`](https://www.nuget.org/packages/NOF.Hosting.Abstraction)                                               | Hosting abstractions - builder contracts, step contracts, dependency ordering, and JWT outbound propagation             |
+| [`NOF.Hosting`](https://www.nuget.org/packages/NOF.Hosting)                                               | Hosting abstractions - builder contracts, step contracts, dependency ordering, and JWT outbound propagation             |
 | [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, auth resource server, and runtime wiring |
 | [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)                                                                                 | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers             |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore)                                                 | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, JSON configuration, and SSE streaming |
@@ -116,7 +116,7 @@ NOF.Abstraction                <- Shared annotations, user context, in-memory ev
 NOF.Domain                     <- Value objects, failures, domain utilities
 NOF.Contract                   <- RPC contracts, payload models, endpoint metadata
 NOF.Application                <- RPC servers, handlers, state machines, mapping, caching
-NOF.Hosting.Abstraction        <- Host builder and step contracts
+NOF.Hosting        <- Host builder and step contracts
 NOF.Infrastructure             <- Builder defaults, shared runtime pipeline, and auth resource server
 NOF.UI                         <- Shared UI components and browser client primitives
 NOF.Test                       <- Test host helpers for application and integration testing

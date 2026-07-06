@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Security.Claims;
 using Xunit;
 
-namespace NOF.Hosting.Abstraction.Tests;
+namespace NOF.Hosting.Tests;
 
 public sealed class JwtTokenPropagationOutboundMiddlewareTests
 {
@@ -204,7 +204,7 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
     private sealed class FakeHostEnvironment : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = Environments.Development;
-        public string ApplicationName { get; set; } = "NOF.Hosting.Abstraction.Tests";
+        public string ApplicationName { get; set; } = "NOF.Hosting.Tests";
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
         public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
             new Microsoft.Extensions.FileProviders.NullFileProvider();

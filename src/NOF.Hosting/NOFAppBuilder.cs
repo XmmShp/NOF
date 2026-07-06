@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -57,7 +58,8 @@ public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
 
     public virtual async Task<THostApplication> BuildAsync()
     {
-        this.AddHostingDefaults();
+        Services.TryAddSingleton(Environment);
+        Services.AddNOFHosting();
         var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
         foreach (var task in regGraph.GetExecutionOrder())
         {

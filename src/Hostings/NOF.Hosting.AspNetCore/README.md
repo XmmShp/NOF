@@ -4,12 +4,13 @@ ASP.NET Core hosting package for the [NOF Framework](https://github.com/XmmShp/N
 
 ## Overview
 
-Provides the ASP.NET Core host integration for NOF applications, including HTTP endpoint mapping from explicitly registered RPC servers, OpenAPI service registration, JSON serialization configuration, middleware pipeline, .NET 10 SSE streaming integration, and the `INOFAppBuilder` implementation for web applications.
+Provides the ASP.NET Core host integration for NOF applications, including HTTP endpoint mapping from registered RPC servers, OpenAPI service registration, JSON serialization configuration, middleware pipeline, .NET 10 SSE streaming integration, and the `INOFAppBuilder` implementation for web applications.
 
 ## Features
 
-- **Explicit Service Endpoint Mapping** - `MapHttpEndpoint<TRpcServer>()` maps RPC server handlers to minimal API endpoints
+- **Automatic RPC Endpoint Mapping** - registered RPC servers are mapped to minimal API endpoints during application initialization
 - **OpenAPI Registration** - built-in OpenAPI service registration; endpoint mapping stays explicit in the host application
+- **Infrastructure Defaults** - `Create()` applies `NOF.Infrastructure` defaults for typical server-side hosts
 - **JSON Configuration** - pre-configured `System.Text.Json` options with sensible defaults
 - **Streaming RPC over SSE** - `StreamingResult<T>` endpoints are exposed as server-sent events via ASP.NET Core's .NET 10 SSE support
 - **Invocation Context Middleware** - propagates tenant ID and other context through the request pipeline
@@ -18,17 +19,19 @@ Provides the ASP.NET Core host integration for NOF applications, including HTTP 
 ## Usage
 
 ```csharp
-// Create() automatically configures JSON options, CORS, and OpenAPI services.
+// Create() automatically applies infrastructure defaults and configures JSON options, CORS, and OpenAPI services.
 var builder = NOFWebApplicationBuilder.Create(args);
 
-var app = await builder.BuildAsync();
+builder.AddRpcServer<MyAppService>();
 
-app.MapHttpEndpoint<MyAppService>();
+var app = await builder.BuildAsync();
 
 await app.RunAsync();
 ```
 
 `Create()` already adds the calling assembly as an application part. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
+
+`AddRpcServer<TRpcServer>()` registers the RPC server and ASP.NET Core maps its HTTP endpoints automatically when the app initializes. `MapHttpEndpoint<TRpcServer>()` remains available when you want to map a server explicitly or apply a route prefix manually.
 
 Methods on explicitly mapped RPC services are turned into minimal API endpoints:
 

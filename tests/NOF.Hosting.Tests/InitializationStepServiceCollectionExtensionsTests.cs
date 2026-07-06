@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
-namespace NOF.Hosting.Abstraction.Tests;
+namespace NOF.Hosting.Tests;
 
 public class InitializationStepServiceCollectionExtensionsTests
 {

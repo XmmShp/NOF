@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace NOF.Hosting.Abstraction.Tests;
+namespace NOF.Hosting.Tests;
 
 public interface IConcernNode : ITopologizable<IConcernNode>;
 

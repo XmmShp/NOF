@@ -32,7 +32,7 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     public static NOFWebApplicationBuilder Create(string[] args)
     {
         var builder = new NOFWebApplicationBuilder(args, Assembly.GetCallingAssembly());
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
         builder.Services.ConfigureHttpJsonOptions(options =>
         {

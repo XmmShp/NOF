@@ -16,16 +16,16 @@ using Xunit;
 
 namespace NOF.Infrastructure.Tests.Steps;
 
-public class InfrastructureDefaultsTests
+public class NOFInfrastructureTests
 {
     [Fact]
-    public void AddInfrastructureDefaults_ShouldNotRegisterPersistenceServicesByDefault()
+    public void AddNOFInfrastructure_ShouldNotRegisterPersistenceServicesByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
 
         using var provider = BuildServiceProvider(builder);
         using var scope = provider.CreateScope();
@@ -36,10 +36,10 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void AddInfrastructureDefaults_ShouldRegisterCoreServicesAndOutboxOptions()
+    public void AddNOFInfrastructure_ShouldRegisterCoreServicesAndOutboxOptions()
     {
         var builder = new TestServiceRegistrationContext();
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
 
         using var provider = BuildServiceProvider(builder);
 
@@ -77,11 +77,11 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void AddInfrastructureDefaults_ShouldRegisterAmbientMapperAndIdGeneratorDaemons()
+    public void AddNOFInfrastructure_ShouldRegisterAmbientMapperAndIdGeneratorDaemons()
     {
         var builder = new TestServiceRegistrationContext();
 
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
 
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IDaemonService) &&
@@ -92,11 +92,11 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void AddInfrastructureDefaults_ShouldRegisterCurrentTenantAsScoped()
+    public void AddNOFInfrastructure_ShouldRegisterCurrentTenantAsScoped()
     {
         var builder = new TestServiceRegistrationContext();
 
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
 
         var descriptor = Assert.Single(builder.Services, service => service.ServiceType == typeof(ICurrentTenant));
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
@@ -127,7 +127,7 @@ public class InfrastructureDefaultsTests
     public void UseDbContext_WithTenantMode_ShouldSwitchTenantMode()
     {
         var builder = new TestServiceRegistrationContext();
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
         builder.UseDbContext<NOFDbContext>().WithTenantMode(TenantMode.SharedDatabase);
 
         using var provider = BuildServiceProvider(builder);
@@ -136,10 +136,10 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void AddInfrastructureDefaults_ShouldUseDatabasePerTenantByDefault()
+    public void AddNOFInfrastructure_ShouldUseDatabasePerTenantByDefault()
     {
         var builder = new TestServiceRegistrationContext();
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
 
         using var provider = BuildServiceProvider(builder);
         var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
@@ -160,11 +160,11 @@ public class InfrastructureDefaultsTests
     }
 
     [Fact]
-    public void AddInfrastructureDefaults_ShouldValidateSnowflakeOptions()
+    public void AddNOFInfrastructure_ShouldValidateSnowflakeOptions()
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.Configure<SnowflakeIdGeneratorOptions>(options => options.ApplicationIdBits = 0);
-        builder.AddInfrastructureDefaults();
+        builder.AddNOFInfrastructure();
 
         using var provider = BuildServiceProvider(builder);
         var act = () => _ = provider.GetRequiredService<IOptions<SnowflakeIdGeneratorOptions>>().Value;

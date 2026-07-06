@@ -25,7 +25,7 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddInfrastructureDefaults()
+        public INOFAppBuilder AddNOFInfrastructure()
         {
             JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
             builder.Services.AddNOFApplication();

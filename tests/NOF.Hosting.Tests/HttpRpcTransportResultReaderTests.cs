@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Xunit;
 
-namespace NOF.Hosting.Abstraction.Tests;
+namespace NOF.Hosting.Tests;
 
 public sealed class HttpRpcTransportResultReaderTests
 {
