@@ -51,4 +51,44 @@ public readonly struct OidcServerSelector
 
         return this;
     }
+
+    public OidcServerSelector AddConfidentialClient(
+        string clientId,
+        string clientSecret,
+        IEnumerable<string>? allowedScopes = null,
+        string? displayName = null,
+        IEnumerable<OAuthClientClaim>? accessTokenClaims = null,
+        bool isEnabled = true)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientSecret);
+
+        var normalizedClientId = clientId.Trim();
+        var normalizedClientSecret = clientSecret.Trim();
+        var normalizedDisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedClientId : displayName.Trim();
+        var scopes = allowedScopes?
+            .Where(static scope => !string.IsNullOrWhiteSpace(scope))
+            .Select(static scope => scope.Trim())
+            .ToArray() ?? [];
+        var claims = accessTokenClaims?
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
+            .Select(static claim => new OAuthClientClaim(claim.Type.Trim(), claim.Value))
+            .ToArray() ?? [];
+
+        Builder.Services.Configure<OidcServerBootstrapOptions>(options =>
+        {
+            options.ConfidentialClients.Add(new CreateOAuthClientRequest
+            {
+                ClientId = normalizedClientId,
+                ClientSecret = normalizedClientSecret,
+                DisplayName = normalizedDisplayName,
+                AllowedScopes = scopes,
+                AccessTokenClaims = claims,
+                ClientType = OAuthClientType.Confidential,
+                IsEnabled = isEnabled
+            });
+        });
+
+        return this;
+    }
 }

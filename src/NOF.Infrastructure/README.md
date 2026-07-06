@@ -32,6 +32,7 @@ This package includes:
 - in-memory cache (`ICacheService` + `MemoryCacheServiceRider`)
 - in-memory backplane (`IBackplane` + `MemoryBackplane`)
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
+- in-memory persistence for tests/development (`services.AddInMemoryPersistence()`)
 - in-process event publisher (`IEventPublisher`)
 - database-agnostic persistence abstractions (`IDbContext`, `IDbSet<T>`, async query extensions)
 - outbox / inbox entities and transactional message background services

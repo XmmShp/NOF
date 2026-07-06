@@ -9,4 +9,6 @@ public interface ITokenService
     Task<Result<ValidateRefreshTokenResponse>> ValidateRefreshTokenAsync(ValidateRefreshTokenRequest request, CancellationToken cancellationToken);
 
     Task<Result> RevokeRefreshTokenAsync(RevokeRefreshTokenRequest request, CancellationToken cancellationToken);
+
+    Task<Result<IntrospectTokenResponse>> IntrospectTokenAsync(IntrospectTokenRequest request, CancellationToken cancellationToken);
 }

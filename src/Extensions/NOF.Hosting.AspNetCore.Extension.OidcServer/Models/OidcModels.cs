@@ -22,6 +22,12 @@ public sealed record OAuthServerMetadata
     [JsonPropertyName("token_endpoint")]
     public required string TokenEndpoint { get; init; }
 
+    [JsonPropertyName("revocation_endpoint")]
+    public string? RevocationEndpoint { get; init; }
+
+    [JsonPropertyName("introspection_endpoint")]
+    public string? IntrospectionEndpoint { get; init; }
+
     [JsonPropertyName("userinfo_endpoint")]
     public required string UserInfoEndpoint { get; init; }
 
@@ -36,6 +42,12 @@ public sealed record OAuthServerMetadata
 
     [JsonPropertyName("token_endpoint_auth_methods_supported")]
     public required IReadOnlyList<string> TokenEndpointAuthMethodsSupported { get; init; }
+
+    [JsonPropertyName("revocation_endpoint_auth_methods_supported")]
+    public IReadOnlyList<string>? RevocationEndpointAuthMethodsSupported { get; init; }
+
+    [JsonPropertyName("introspection_endpoint_auth_methods_supported")]
+    public IReadOnlyList<string>? IntrospectionEndpointAuthMethodsSupported { get; init; }
 
     [JsonPropertyName("subject_types_supported")]
     public required IReadOnlyList<string> SubjectTypesSupported { get; init; }
@@ -81,4 +93,43 @@ public sealed record OAuthTokenEndpointResponse
 
     [JsonPropertyName("id_token")]
     public string? IdToken { get; init; }
+}
+
+public sealed record OAuthIntrospectionResponse
+{
+    [JsonPropertyName("active")]
+    public required bool Active { get; init; }
+
+    [JsonPropertyName("scope")]
+    public string? Scope { get; init; }
+
+    [JsonPropertyName("client_id")]
+    public string? ClientId { get; init; }
+
+    [JsonPropertyName("token_type")]
+    public string? TokenType { get; init; }
+
+    [JsonPropertyName("sub")]
+    public string? Subject { get; init; }
+
+    [JsonPropertyName("exp")]
+    public long? ExpiresAt { get; init; }
+
+    [JsonPropertyName("iat")]
+    public long? IssuedAt { get; init; }
+
+    [JsonPropertyName("nbf")]
+    public long? NotBefore { get; init; }
+
+    [JsonPropertyName("iss")]
+    public string? Issuer { get; init; }
+
+    [JsonPropertyName("aud")]
+    public string[]? Audience { get; init; }
+
+    [JsonPropertyName("jti")]
+    public string? TokenId { get; init; }
+
+    [JsonExtensionData]
+    public IDictionary<string, System.Text.Json.JsonElement>? AdditionalClaims { get; init; }
 }

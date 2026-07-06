@@ -88,6 +88,24 @@ public record ValidateRefreshTokenResponse
     public required TokenClaim[] Claims { get; set; }
 }
 
+public record IntrospectTokenRequest
+{
+    public required string Token { get; set; }
+
+    public string? TokenTypeHint { get; set; }
+
+    public string? Audience { get; set; }
+}
+
+public record IntrospectTokenResponse
+{
+    public required bool Active { get; set; }
+
+    public string? TokenType { get; set; }
+
+    public TokenClaim[] Claims { get; set; } = [];
+}
+
 public sealed class ManagedSigningKey
 {
     public required string Kid { get; init; }

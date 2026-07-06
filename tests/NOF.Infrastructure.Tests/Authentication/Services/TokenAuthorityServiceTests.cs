@@ -169,6 +169,112 @@ public sealed class TokenAuthorityServiceTests
         Assert.False(validateResult.IsSuccess);
     }
 
+    [Fact]
+    public async Task IntrospectToken_ShouldReturnActiveAccessToken()
+    {
+        var builder = CreateOidcServerBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims =
+                [
+                    new(JwtRegisteredClaimNames.Sub, "user-1"),
+                    new("client_id", "service-a"),
+                    new(OAuthClaimTypes.Scope, "jobs.read")
+                ]
+            },
+            CancellationToken.None);
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+
+        var introspectResult = await tokenService.IntrospectTokenAsync(
+            new IntrospectTokenRequest
+            {
+                Token = generateResult.Value.AccessToken,
+                TokenTypeHint = OAuthTokenTypes.AccessToken,
+                Audience = "nof-tests"
+            },
+            CancellationToken.None);
+
+        Assert.True(introspectResult.IsSuccess, introspectResult.Message);
+        Assert.True(introspectResult.Value.Active);
+        Assert.Equal(OAuthTokenTypes.AccessToken, introspectResult.Value.TokenType);
+        Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == JwtRegisteredClaimNames.Sub && claim.Value == "user-1");
+        Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == "client_id" && claim.Value == "service-a");
+        Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == OAuthClaimTypes.Scope && claim.Value == "jobs.read");
+    }
+
+    [Fact]
+    public async Task IntrospectToken_ShouldReturnInactiveForRevokedRefreshToken()
+    {
+        var builder = CreateOidcServerBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims = [new(JwtRegisteredClaimNames.Sub, "user-1")],
+                RefreshToken = new RefreshTokenOptions
+                {
+                    Expiration = TimeSpan.FromMinutes(10),
+                    Claims =
+                    [
+                        new(JwtRegisteredClaimNames.Sub, "user-1"),
+                        new("client_id", "public-app")
+                    ]
+                }
+            },
+            CancellationToken.None);
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+        Assert.NotNull(generateResult.Value.RefreshToken);
+
+        var validateResult = await tokenService.ValidateRefreshTokenAsync(
+            new ValidateRefreshTokenRequest
+            {
+                RefreshToken = generateResult.Value.RefreshToken.Token,
+                Audience = "nof-tests"
+            },
+            CancellationToken.None);
+
+        Assert.True(validateResult.IsSuccess, validateResult.Message);
+
+        var revokeResult = await tokenService.RevokeRefreshTokenAsync(
+            new RevokeRefreshTokenRequest
+            {
+                TokenId = validateResult.Value.TokenId,
+                Expiration = TimeSpan.FromMinutes(10)
+            },
+            CancellationToken.None);
+
+        Assert.True(revokeResult.IsSuccess, revokeResult.Message);
+
+        var introspectResult = await tokenService.IntrospectTokenAsync(
+            new IntrospectTokenRequest
+            {
+                Token = generateResult.Value.RefreshToken.Token,
+                TokenTypeHint = OAuthTokenTypes.RefreshToken,
+                Audience = "nof-tests"
+            },
+            CancellationToken.None);
+
+        Assert.True(introspectResult.IsSuccess, introspectResult.Message);
+        Assert.False(introspectResult.Value.Active);
+        Assert.Equal(OAuthTokenTypes.RefreshToken, introspectResult.Value.TokenType);
+    }
+
     private static byte[] Base64UrlDecode(string value)
     {
         var padded = value.Replace('-', '+').Replace('_', '/');

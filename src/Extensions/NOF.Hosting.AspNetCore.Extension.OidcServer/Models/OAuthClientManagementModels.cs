@@ -38,6 +38,8 @@ public sealed record CreateOAuthClientRequest
 {
     public string ClientId { get; init; } = string.Empty;
 
+    public string? ClientSecret { get; init; }
+
     public string DisplayName { get; init; } = string.Empty;
 
     public IReadOnlyList<string> AllowedScopes { get; init; } = [];

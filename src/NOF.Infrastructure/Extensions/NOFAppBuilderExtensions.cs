@@ -141,15 +141,6 @@ public static partial class NOFInfrastructureExtensions
 
             return builder;
         }
-
-        [RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
-        [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
-        public IHostApplicationBuilder AddInMemoryPersistence()
-        {
-            builder.Services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();
-            builder.Services.ReplaceOrAddScoped<IDbContext, InMemoryDbContext>();
-            return builder;
-        }
     }
 
     private static void AddOpenTelemetry(IHostApplicationBuilder builder)

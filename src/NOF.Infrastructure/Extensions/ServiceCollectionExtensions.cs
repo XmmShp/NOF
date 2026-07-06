@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Application;
+using NOF.Hosting;
 using NOF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
 
@@ -42,6 +44,37 @@ public static partial class NOFInfrastructureExtensions
             where TMiddleware : class, IRequestInboundMiddleware
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<IRequestInboundMiddleware, TMiddleware>());
+            return services;
+        }
+
+        public IServiceCollection AddAuthenticationResourceServer(Action<AuthenticationResourceServerOptions> configureOptions)
+        {
+            ArgumentNullException.ThrowIfNull(configureOptions);
+
+            services.Configure(configureOptions);
+            services.AddHttpClient<HttpAuthorizationServerService>();
+            services.TryAddScoped<IPermissionResolver, ScopePermissionResolver>();
+            services.TryAddScoped<IJwksService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+            services.TryAddScoped<IAuthorizationServerMetadataService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+            services.TryAddScoped<IJwtTokenExchangeService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+            services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
+            services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
+            services.AddRequestInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
+            services.AddCommandInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
+            services.AddNotificationInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
+            return services;
+        }
+
+        [RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
+        [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
+        public IServiceCollection AddInMemoryPersistence()
+        {
+            services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();
+            services.ReplaceOrAddScoped<IDbContext, InMemoryDbContext>();
             return services;
         }
 

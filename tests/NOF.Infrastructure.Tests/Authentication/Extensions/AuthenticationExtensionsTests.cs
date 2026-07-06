@@ -104,6 +104,8 @@ public sealed class AuthenticationExtensionsTests
             .ToArray();
 
         Assert.Contains("/oauth2/token", routes);
+        Assert.Contains("/oauth2/revoke", routes);
+        Assert.Contains("/oauth2/introspect", routes);
         Assert.Contains("/oauth2/authorize", routes);
         Assert.Contains("/.well-known/openid-configuration", routes);
     }
@@ -218,6 +220,46 @@ public sealed class AuthenticationExtensionsTests
             {
             }
         }
+    }
+
+    [Fact]
+    public async Task AddOidcServer_AddConfidentialClient_ShouldEnsureClientExistsOnInitialize()
+    {
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddOidcServer(options =>
+        {
+            options.Issuer = "https://issuer.local/oauth2";
+            options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;
+        })
+        .AddConfidentialClient(
+            "bootstrap-confidential-client",
+            "bootstrap-secret",
+            ["jobs.read", "jobs.write"],
+            displayName: "Bootstrap Confidential Client");
+        builder.UseDbContext<NOFDbContext>()
+            .WithTenantMode(TenantMode.DatabasePerTenant)
+            .WithConnectionString($"Data Source=nof-bootstrap-confidential-client-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString))
+            .MigrateOnInitialize();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var clientService = scope.GetRequiredService<IOAuthClientManagementService>();
+
+        var client = await clientService.GetAsync("bootstrap-confidential-client");
+        var validation = await clientService.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                "bootstrap-confidential-client",
+                "bootstrap-secret",
+                new HashSet<string>(["jobs.read"], StringComparer.Ordinal),
+                "client_secret_post"),
+            CancellationToken.None);
+
+        Assert.True(client.IsSuccess, client.Message);
+        Assert.Equal(OAuthClientType.Confidential, client.Value.ClientType);
+        Assert.Equal("Bootstrap Confidential Client", client.Value.DisplayName);
+        Assert.Equal(["jobs.read", "jobs.write"], client.Value.AllowedScopes.OrderBy(static scope => scope, StringComparer.Ordinal).ToArray());
+        Assert.IsType<OAuthClientCredentialsValidationResult.Success>(validation);
     }
 
     [Fact]
@@ -703,6 +745,36 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public async Task AddOidcServer_OAuthClientService_ShouldCreateConfidentialClientWithProvidedSecret()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-oauth-client-confidential-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+
+        var result = await service.CreateAsync(new CreateOAuthClientRequest
+        {
+            ClientId = "confidential-app",
+            ClientSecret = "provided-secret",
+            DisplayName = "Confidential App",
+            ClientType = OAuthClientType.Confidential,
+            AllowedScopes = ["jobs.read"]
+        });
+        var validation = await service.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                "confidential-app",
+                "provided-secret",
+                new HashSet<string>(["jobs.read"], StringComparer.Ordinal),
+                "client_secret_post"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal("provided-secret", result.Value.ClientSecret);
+        Assert.IsType<OAuthClientCredentialsValidationResult.Success>(validation);
+    }
+
+    [Fact]
     public async Task TokenExchangeGrant_ShouldIntersectRequestedScopesWithSubjectTokenAndActorToken()
     {
         using var services = new ServiceCollection()
@@ -911,7 +983,7 @@ public sealed class AuthenticationExtensionsTests
     {
         var builder = NOFTestAppBuilder.Create();
         builder.AddJwtPropagation();
-        builder.AddAuthenticationResourceServer(options =>
+        builder.Services.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://auth.local";
             options.RequireHttpsMetadata = true;
@@ -947,7 +1019,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task AddOidcServer_AndResourceServer_ShouldAllowSingletonJwksCacheToRefreshViaScope()
     {
         var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
-        builder.AddAuthenticationResourceServer(options =>
+        builder.Services.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://issuer.local";
             options.Issuer = "https://issuer.local";
@@ -965,7 +1037,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task AddAuthenticationResourceServer_Only_ShouldRegisterInboundResourceServer()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAuthenticationResourceServer(options =>
+        builder.Services.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://auth.local";
             options.Sources.Add(new AuthenticationTokenSourceOptions
@@ -1057,7 +1129,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task AddAuthenticationResourceServer_Only_ShouldNotRegisterAuthorityServicesExplicitly()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAuthenticationResourceServer(options =>
+        builder.Services.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://auth.local";
         });
@@ -1163,6 +1235,8 @@ public sealed class AuthenticationExtensionsTests
         public Result<ValidateRefreshTokenResponse> ValidateRefreshTokenResult { get; set; }
             = Result.Fail("401", "Refresh token is invalid.");
         public Result RevokeRefreshTokenResult { get; set; } = Result.Success();
+        public Result<IntrospectTokenResponse> IntrospectTokenResult { get; set; }
+            = Result.Success(new IntrospectTokenResponse { Active = false });
 
         public Task<Result<IssueTokenResponse>> IssueTokenAsync(IssueTokenRequest request, CancellationToken cancellationToken)
         {
@@ -1189,6 +1263,9 @@ public sealed class AuthenticationExtensionsTests
             LastRevokeRequest = request;
             return Task.FromResult(RevokeRefreshTokenResult);
         }
+
+        public Task<Result<IntrospectTokenResponse>> IntrospectTokenAsync(IntrospectTokenRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(IntrospectTokenResult);
     }
 
     private sealed class TestOAuthSubjectService : IOAuthSubjectService

@@ -32,7 +32,7 @@ builder.AddOidcServer(o =>
     ["openid", "profile", "email", "sample.read", "sample.write"],
     displayName: "NOF Sample UI");
 
-builder.AddAuthenticationResourceServer(o =>
+builder.Services.AddAuthenticationResourceServer(o =>
 {
     o.Issuer = sampleIssuer;
     o.RequireHttpsMetadata = false;

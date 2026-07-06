@@ -9,8 +9,8 @@ This package provides NOF authentication authority capabilities and exposes them
 ## Features
 
 - `AddOidcServer(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, key rotation, OIDC protocol services, and default persisted OAuth client management services
-- `MapOidcServer()` exposes discovery, authorization, token, userinfo, and JWKS endpoints
-- Supports `authorization_code`, `refresh_token`, and `client_credentials` grants
+- `MapOidcServer()` exposes discovery, authorization, token, revocation, introspection, userinfo, and JWKS endpoints
+- Supports `authorization_code`, `refresh_token`, `client_credentials`, and `token_exchange` grants
 - Uses standard ASP.NET Core HTTP behavior for redirects, form posts, status codes, and JSON responses
 
 ## Usage
@@ -37,6 +37,19 @@ await app.RunAsync();
 ```
 
 `AddOidcServer(...)` registers a default persisted OAuth client service as `IOAuthClientManagementService`. Applications can create, update, delete, rotate, and validate OAuth clients by resolving that service from DI. Replace `IOAuthClientManagementService` when an application needs custom client validation or management behavior.
+
+Bootstrap helpers are available on the returned selector:
+
+```csharp
+builder.AddOidcServer(options =>
+{
+    options.Issuer = "https://auth.example.com/oauth2";
+    options.AccessTokenAudience = "your-app";
+    options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
+})
+.AddPublicClient("spa-client", ["openid", "profile", "api.read"])
+.AddConfidentialClient("service-client", "service-client-secret", ["api.read", "api.write"]);
+```
 
 ## License
 

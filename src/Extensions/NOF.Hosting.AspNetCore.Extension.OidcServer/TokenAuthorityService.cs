@@ -131,6 +131,35 @@ public sealed partial class TokenAuthorityService : ITokenService
         return Result.Success();
     }
 
+    public async Task<Result<IntrospectTokenResponse>> IntrospectTokenAsync(
+        IntrospectTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token))
+        {
+            return Result.Fail("400", "token is required.");
+        }
+
+        var tokenTypeHint = request.TokenTypeHint?.Trim();
+        if (string.Equals(tokenTypeHint, OAuthTokenTypes.AccessToken, StringComparison.Ordinal))
+        {
+            return await IntrospectAccessTokenAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (string.Equals(tokenTypeHint, OAuthTokenTypes.RefreshToken, StringComparison.Ordinal))
+        {
+            return await IntrospectRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
+        var accessTokenResult = await IntrospectAccessTokenAsync(request, cancellationToken).ConfigureAwait(false);
+        if (accessTokenResult.IsSuccess && accessTokenResult.Value.Active)
+        {
+            return accessTokenResult;
+        }
+
+        return await IntrospectRefreshTokenAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
     private static List<Claim> CreateClaims(IEnumerable<TokenClaim>? claims)
     {
         return claims?
@@ -138,6 +167,92 @@ public sealed partial class TokenAuthorityService : ITokenService
             .Select(static claim => CreateClaim(claim))
             .ToList()
             ?? [];
+    }
+
+    private async Task<Result<IntrospectTokenResponse>> IntrospectAccessTokenAsync(
+        IntrospectTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler
+            {
+                MapInboundClaims = false
+            };
+            var principal = tokenHandler.ValidateToken(
+                request.Token.Trim(),
+                new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKeys = (await _signingKeyService.GetAllKeysAsync(cancellationToken).ConfigureAwait(false)).Select(static key => key.Key),
+                    ValidateIssuer = true,
+                    ValidIssuer = _options.Issuer,
+                    ValidateAudience = !string.IsNullOrWhiteSpace(request.Audience),
+                    ValidAudience = request.Audience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromSeconds(30)
+                },
+                out var validatedToken);
+
+            return Result.Success(new IntrospectTokenResponse
+            {
+                Active = true,
+                TokenType = OAuthTokenTypes.AccessToken,
+                Claims = principal.Claims
+                    .Select(static claim => new TokenClaim(claim.Type, claim.Value, claim.ValueType))
+                    .Concat(GetAudienceClaims(validatedToken))
+                    .ToArray()
+            });
+        }
+        catch
+        {
+            return Result.Success(new IntrospectTokenResponse
+            {
+                Active = false,
+                TokenType = OAuthTokenTypes.AccessToken
+            });
+        }
+    }
+
+    private async Task<Result<IntrospectTokenResponse>> IntrospectRefreshTokenAsync(
+        IntrospectTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        var validateResult = await ValidateRefreshTokenAsync(
+            new ValidateRefreshTokenRequest
+            {
+                RefreshToken = request.Token,
+                Audience = request.Audience
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (!validateResult.IsSuccess)
+        {
+            return Result.Success(new IntrospectTokenResponse
+            {
+                Active = false,
+                TokenType = OAuthTokenTypes.RefreshToken
+            });
+        }
+
+        return Result.Success(new IntrospectTokenResponse
+        {
+            Active = true,
+            TokenType = OAuthTokenTypes.RefreshToken,
+            Claims = validateResult.Value.Claims
+        });
+    }
+
+    private static IEnumerable<TokenClaim> GetAudienceClaims(SecurityToken validatedToken)
+    {
+        if (validatedToken is not JwtSecurityToken jwtToken)
+        {
+            yield break;
+        }
+
+        foreach (var audience in jwtToken.Audiences)
+        {
+            yield return new TokenClaim(JwtRegisteredClaimNames.Aud, audience);
+        }
     }
 
     private static Claim CreateClaim(TokenClaim claim)

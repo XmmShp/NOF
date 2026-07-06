@@ -29,13 +29,14 @@ public sealed class OidcServerInitializationStep : IApplicationInitializationSte
         scope.ServiceProvider.ResolveDaemonServices();
 
         var bootstrapOptions = scope.ServiceProvider.GetRequiredService<IOptions<OidcServerBootstrapOptions>>().Value;
-        if (bootstrapOptions.PublicClients.Count == 0)
+        if (bootstrapOptions.PublicClients.Count == 0 && bootstrapOptions.ConfidentialClients.Count == 0)
         {
             return;
         }
 
         var clientService = scope.ServiceProvider.GetRequiredService<IOAuthClientManagementService>();
         foreach (var request in bootstrapOptions.PublicClients
+                     .Concat(bootstrapOptions.ConfidentialClients)
                      .GroupBy(static client => client.ClientId, StringComparer.Ordinal)
                      .Select(static group => group.Last()))
         {
@@ -47,15 +48,21 @@ public sealed class OidcServerInitializationStep : IApplicationInitializationSte
 
             if (!string.Equals(existing.ErrorCode, "not_found", StringComparison.Ordinal))
             {
-                EnsureSucceeded(existing, request.ClientId);
+                EnsureSucceeded(
+                    existing,
+                    request.ClientId,
+                    request.ClientType == OAuthClientType.Public ? "public" : "confidential");
             }
 
             var createResult = await clientService.CreateAsync(request).ConfigureAwait(false);
-            EnsureSucceeded(createResult, request.ClientId);
+            EnsureSucceeded(
+                createResult,
+                request.ClientId,
+                request.ClientType == OAuthClientType.Public ? "public" : "confidential");
         }
     }
 
-    private static void EnsureSucceeded(IResult result, string clientId)
+    private static void EnsureSucceeded(IResult result, string clientId, string clientType)
     {
         if (result.IsSuccess)
         {
@@ -63,6 +70,6 @@ public sealed class OidcServerInitializationStep : IApplicationInitializationSte
         }
 
         throw new InvalidOperationException(
-            $"Failed to bootstrap OIDC public client '{clientId}': [{result.ErrorCode}] {result.Message}");
+            $"Failed to bootstrap OIDC {clientType} client '{clientId}': [{result.ErrorCode}] {result.Message}");
     }
 }

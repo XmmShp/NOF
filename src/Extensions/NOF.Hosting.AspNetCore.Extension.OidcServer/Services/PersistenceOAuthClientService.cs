@@ -89,7 +89,7 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
 
         var (secret, salt, hash) = request.ClientType == OAuthClientType.Public
             ? (null, string.Empty, string.Empty)
-            : CreateSecretMaterial();
+            : CreateSecretMaterial(request.ClientSecret);
         var now = DateTime.UtcNow;
         var client = new OAuthClient
         {
@@ -252,9 +252,11 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
     private static IReadOnlyList<OAuthClientClaim> DeserializeClaims(string claims)
         => JsonSerializer.Deserialize<OAuthClientClaim[]>(claims, JsonOptions) ?? [];
 
-    private static (string Secret, string Salt, string Hash) CreateSecretMaterial()
+    private static (string Secret, string Salt, string Hash) CreateSecretMaterial(string? clientSecret = null)
     {
-        var secret = $"nof_{Base64UrlEncode(RandomNumberGenerator.GetBytes(32))}";
+        var secret = string.IsNullOrWhiteSpace(clientSecret)
+            ? $"nof_{Base64UrlEncode(RandomNumberGenerator.GetBytes(32))}"
+            : clientSecret.Trim();
         var salt = Base64UrlEncode(RandomNumberGenerator.GetBytes(16));
         return (secret, salt, HashSecret(secret, salt));
     }

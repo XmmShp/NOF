@@ -14,6 +14,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace Microsoft.AspNetCore.Routing;
@@ -50,6 +51,8 @@ public static partial class NOFOidcServerExtensions
 
             group.MapGet("/authorize", AuthorizeAsync);
             group.MapPost("/token", TokenAsync).DisableAntiforgery();
+            group.MapPost("/revoke", RevokeAsync).DisableAntiforgery();
+            group.MapPost("/introspect", IntrospectAsync).DisableAntiforgery();
             group.MapGet("/userinfo", UserInfoAsync);
             group.MapPost("/userinfo", UserInfoAsync).DisableAntiforgery();
 
@@ -258,6 +261,117 @@ public static partial class NOFOidcServerExtensions
                 StringComparer.Ordinal);
 
         return Results.Json(claims);
+    }
+
+    private static async Task<AspNetResult> RevokeAsync(
+        HttpRequest httpRequest,
+        [FromForm(Name = "token")] string? token,
+        [FromForm(Name = "token_type_hint")] string? tokenTypeHint,
+        [FromForm(Name = "client_id")] string? clientId,
+        [FromForm(Name = "client_secret")] string? clientSecret,
+        [FromServices] IServiceProvider serviceProvider,
+        [FromServices] ITokenService tokenService,
+        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return CreateOAuthErrorResult("invalid_request", "token is required.");
+        }
+
+        var authenticatedClient = await AuthenticateClientAsync(
+            httpRequest,
+            clientId,
+            clientSecret,
+            string.Empty,
+            serviceProvider,
+            allowPublicClient: true,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticatedClient.Error is not null)
+        {
+            return CreateOAuthErrorResult(authenticatedClient.Error.Error, authenticatedClient.Error.ErrorDescription);
+        }
+
+        if (string.Equals(tokenTypeHint, OAuthTokenTypes.AccessToken, StringComparison.Ordinal))
+        {
+            return Results.Ok();
+        }
+
+        var validateResult = await tokenService.ValidateRefreshTokenAsync(
+            new ValidateRefreshTokenRequest
+            {
+                RefreshToken = token,
+                Audience = oauthOptions.Value.AccessTokenAudience
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (!validateResult.IsSuccess)
+        {
+            return Results.Ok();
+        }
+
+        var refreshClientId = validateResult.Value.Claims
+            .FirstOrDefault(static claim => string.Equals(claim.Type, "client_id", StringComparison.Ordinal))
+            ?.Value;
+        if (string.IsNullOrWhiteSpace(refreshClientId)
+            || !FixedTimeEquals(refreshClientId, authenticatedClient.ClientId))
+        {
+            return Results.Ok();
+        }
+
+        await tokenService.RevokeRefreshTokenAsync(
+            new RevokeRefreshTokenRequest
+            {
+                TokenId = validateResult.Value.TokenId,
+                Expiration = oauthOptions.Value.RefreshTokenExpiration
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok();
+    }
+
+    private static async Task<AspNetResult> IntrospectAsync(
+        HttpRequest httpRequest,
+        [FromForm(Name = "token")] string? token,
+        [FromForm(Name = "token_type_hint")] string? tokenTypeHint,
+        [FromForm(Name = "client_id")] string? clientId,
+        [FromForm(Name = "client_secret")] string? clientSecret,
+        [FromServices] IServiceProvider serviceProvider,
+        [FromServices] ITokenService tokenService,
+        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return CreateOAuthErrorResult("invalid_request", "token is required.");
+        }
+
+        var authenticatedClient = await AuthenticateClientAsync(
+            httpRequest,
+            clientId,
+            clientSecret,
+            string.Empty,
+            serviceProvider,
+            allowPublicClient: false,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticatedClient.Error is not null)
+        {
+            return CreateOAuthErrorResult(authenticatedClient.Error.Error, authenticatedClient.Error.ErrorDescription);
+        }
+
+        var result = await tokenService.IntrospectTokenAsync(
+            new IntrospectTokenRequest
+            {
+                Token = token,
+                TokenTypeHint = tokenTypeHint,
+                Audience = oauthOptions.Value.AccessTokenAudience
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess)
+        {
+            return CreateOAuthErrorResult(result.ErrorCode, result.Message, StatusCodes.Status500InternalServerError);
+        }
+
+        return Results.Json(BuildIntrospectionResponse(result.Value));
     }
 
     internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromAuthorizationCodeAsync(
@@ -881,11 +995,15 @@ public static partial class NOFOidcServerExtensions
             Issuer = issuer,
             AuthorizationEndpoint = $"{issuer}/authorize",
             TokenEndpoint = $"{issuer}/token",
+            RevocationEndpoint = $"{issuer}/revoke",
+            IntrospectionEndpoint = $"{issuer}/introspect",
             UserInfoEndpoint = $"{issuer}/userinfo",
             JwksUri = $"{issuer}/.well-known/jwks.json",
             ResponseTypesSupported = ["code"],
             GrantTypesSupported = [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.ClientCredentials, OAuthGrantTypes.RefreshToken, OAuthGrantTypes.TokenExchange],
             TokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
+            RevocationEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
+            IntrospectionEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post"],
             SubjectTypesSupported = ["public"],
             IdTokenSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256],
             CodeChallengeMethodsSupported = ["plain", "S256"],
@@ -1099,6 +1217,76 @@ public static partial class NOFOidcServerExtensions
         };
     }
 
+    private static async Task<(OAuthError? Error, string ClientId)> AuthenticateClientAsync(
+        HttpRequest httpRequest,
+        string? clientId,
+        string? clientSecret,
+        string scope,
+        IServiceProvider serviceProvider,
+        bool allowPublicClient,
+        CancellationToken cancellationToken)
+    {
+        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
+        if (clientService is null)
+        {
+            return (CreateOAuthError("server_error", "OAuth client management service is not registered."), string.Empty);
+        }
+
+        var request = new OAuthTokenRequest
+        {
+            ClientId = clientId ?? string.Empty,
+            ClientSecret = clientSecret ?? string.Empty,
+            Scope = scope
+        };
+        var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (string.IsNullOrWhiteSpace(clientCredentials.ClientId))
+        {
+            return (CreateOAuthError("invalid_client", "client_id is required."), string.Empty);
+        }
+
+        var clientResult = await clientService.GetAsync(clientCredentials.ClientId, cancellationToken).ConfigureAwait(false);
+        if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
+        {
+            return (CreateOAuthError("invalid_client", "client credentials are invalid."), string.Empty);
+        }
+
+        if (clientResult.Value.ClientType == OAuthClientType.Public)
+        {
+            if (!allowPublicClient)
+            {
+                return (CreateOAuthError("invalid_client", "public client authentication is invalid for this endpoint."), string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
+            {
+                return (CreateOAuthError("invalid_client", "public clients must not use client_secret."), string.Empty);
+            }
+
+            return (null, clientCredentials.ClientId);
+        }
+
+        if (string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
+        {
+            return (CreateOAuthError("invalid_client", "client_secret is required."), string.Empty);
+        }
+
+        var validation = await clientService.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                clientCredentials.ClientId,
+                clientCredentials.ClientSecret,
+                ParseScopes(scope),
+                clientCredentials.AuthenticationMethod),
+            cancellationToken).ConfigureAwait(false);
+
+        return validation switch
+        {
+            OAuthClientCredentialsValidationResult.Success => (null, clientCredentials.ClientId),
+            OAuthClientCredentialsValidationResult.Failure failure =>
+                (CreateOAuthError(failure.Error, failure.ErrorDescription), string.Empty),
+            _ => (CreateOAuthError("invalid_client", "client credentials are invalid."), string.Empty)
+        };
+    }
+
     private static OAuthError? ValidatePublicClientAuthentication(
         OAuthTokenRequest request,
         (string ClientId, string? ClientSecret, string AuthenticationMethod) clientCredentials)
@@ -1170,6 +1358,91 @@ public static partial class NOFOidcServerExtensions
         {
             return false;
         }
+    }
+
+    private static OAuthIntrospectionResponse BuildIntrospectionResponse(IntrospectTokenResponse response)
+    {
+        if (!response.Active)
+        {
+            return new OAuthIntrospectionResponse
+            {
+                Active = false
+            };
+        }
+
+        var audiences = GetClaimValues(response.Claims, JwtRegisteredClaimNames.Aud);
+        return new OAuthIntrospectionResponse
+        {
+            Active = true,
+            Scope = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Scope),
+            ClientId = GetSingleClaimValue(response.Claims, "client_id"),
+            TokenType = response.TokenType,
+            Subject = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Subject),
+            ExpiresAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Exp),
+            IssuedAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Iat),
+            NotBefore = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Nbf),
+            Issuer = GetSingleClaimValue(response.Claims, JwtRegisteredClaimNames.Iss),
+            Audience = audiences.Count == 0 ? null : audiences.ToArray(),
+            TokenId = GetSingleClaimValue(response.Claims, JwtRegisteredClaimNames.Jti),
+            AdditionalClaims = BuildAdditionalClaims(response.Claims)
+        };
+    }
+
+    private static IDictionary<string, JsonElement>? BuildAdditionalClaims(IEnumerable<TokenClaim> claims)
+    {
+        var additionalClaims = claims
+            .Where(static claim =>
+                !string.Equals(claim.Type, OAuthClaimTypes.Scope, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, "client_id", StringComparison.Ordinal)
+                && !string.Equals(claim.Type, OAuthClaimTypes.Subject, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, JwtRegisteredClaimNames.Exp, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, JwtRegisteredClaimNames.Iat, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, JwtRegisteredClaimNames.Nbf, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, JwtRegisteredClaimNames.Iss, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, JwtRegisteredClaimNames.Aud, StringComparison.Ordinal)
+                && !string.Equals(claim.Type, JwtRegisteredClaimNames.Jti, StringComparison.Ordinal))
+            .GroupBy(static claim => claim.Type, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.Count() == 1
+                    ? JsonSerializer.SerializeToElement(ToJsonValue(group.First()))
+                    : JsonSerializer.SerializeToElement(group.Select(ToJsonValue).ToArray()),
+                StringComparer.Ordinal);
+
+        return additionalClaims.Count == 0 ? null : additionalClaims;
+    }
+
+    private static object ToJsonValue(TokenClaim claim)
+    {
+        if (string.Equals(claim.ValueType, ClaimValueTypes.Integer64, StringComparison.Ordinal)
+            && long.TryParse(claim.Value, out var longValue))
+        {
+            return longValue;
+        }
+
+        if (string.Equals(claim.ValueType, ClaimValueTypes.Boolean, StringComparison.Ordinal)
+            && bool.TryParse(claim.Value, out var booleanValue))
+        {
+            return booleanValue;
+        }
+
+        return claim.Value;
+    }
+
+    private static string? GetSingleClaimValue(IEnumerable<TokenClaim> claims, string type)
+        => claims.FirstOrDefault(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))?.Value;
+
+    private static IReadOnlyList<string> GetClaimValues(IEnumerable<TokenClaim> claims, string type)
+        => claims
+            .Where(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))
+            .Select(static claim => claim.Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+    private static long? GetNumericClaimValue(IEnumerable<TokenClaim> claims, string type)
+    {
+        var value = GetSingleClaimValue(claims, type);
+        return long.TryParse(value, out var result) ? result : null;
     }
 
     private static string AddQueryString(string uri, IReadOnlyDictionary<string, string?> query)

@@ -1,4 +1,5 @@
 using NOF.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Test;
 using System.Net;
 using System.Net.Http.Headers;
@@ -26,7 +27,7 @@ public sealed class JwtJwksHttpClientTests
         };
 
         var builder = NOFTestAppBuilder.Create();
-        builder.AddAuthenticationResourceServer(options =>
+        builder.Services.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://auth.local/oauth2";
         });
