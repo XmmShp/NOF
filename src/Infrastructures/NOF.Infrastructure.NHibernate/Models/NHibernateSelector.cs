@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NHibernate.Cfg;
 using NOF.Hosting;
 
@@ -6,9 +7,9 @@ namespace NOF.Infrastructure.NHibernate;
 
 public readonly struct NHibernateSelector
 {
-    public INOFAppBuilder Builder { get; }
+    public IHostApplicationBuilder Builder { get; }
 
-    public NHibernateSelector(INOFAppBuilder builder)
+    public NHibernateSelector(IHostApplicationBuilder builder)
     {
         Builder = builder;
     }

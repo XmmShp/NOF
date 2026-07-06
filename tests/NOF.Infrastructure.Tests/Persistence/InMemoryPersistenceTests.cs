@@ -2426,7 +2426,7 @@ public class SqliteInMemoryPersistenceTests
         }
     }
 
-    private sealed class TestServiceRegistrationContext : INOFAppBuilder
+    private sealed class TestServiceRegistrationContext : IHostApplicationBuilder
     {
         private readonly IServiceCollection _services;
         private readonly ConfigurationManager _configuration;

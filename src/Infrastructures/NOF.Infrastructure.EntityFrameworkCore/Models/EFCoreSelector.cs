@@ -1,15 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public readonly struct EFCoreSelector
 {
-    public INOFAppBuilder Builder { get; }
+    public IHostApplicationBuilder Builder { get; }
     public Type DbContextType { get; }
 
-    public EFCoreSelector(INOFAppBuilder builder, Type dbContextType)
+    public EFCoreSelector(IHostApplicationBuilder builder, Type dbContextType)
     {
         Builder = builder;
         DbContextType = dbContextType;

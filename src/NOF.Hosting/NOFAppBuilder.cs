@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace NOF.Hosting;
 
 /// <summary>
-/// Provides a base implementation of <see cref="INOFAppBuilder"/> that coordinates
+/// Provides a base implementation of <see cref="IHostApplicationBuilder"/> that coordinates
 /// the application construction lifecycle through modular, dependency-aware configuration units.
 /// </summary>
 /// <remarks>
@@ -28,7 +28,7 @@ namespace NOF.Hosting;
 /// <typeparam name="THostApplication">
 /// The concrete type of the host application being built. Must be a class implementing <see cref="IHost"/>.
 /// </typeparam>
-public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
+public abstract class NOFAppBuilder<THostApplication> : IHostApplicationBuilder
     where THostApplication : class, IHost
 {
     protected NOFAppBuilder()

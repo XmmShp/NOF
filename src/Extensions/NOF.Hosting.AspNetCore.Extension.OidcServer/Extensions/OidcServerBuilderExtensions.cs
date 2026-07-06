@@ -8,7 +8,7 @@ namespace NOF.Hosting;
 
 public static partial class NOFOidcServerExtensions
 {
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
         public OidcServerSelector AddOidcServer(Action<OAuthAuthorizationServerOptions> configureOptions)
         {

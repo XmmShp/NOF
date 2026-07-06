@@ -43,7 +43,7 @@ public sealed class RabbitMQBackplaneTests
                           descriptor.ImplementationType == typeof(RabbitMQConsumerHostedService));
     }
 
-    private sealed class TestAppBuilder : INOFAppBuilder
+    private sealed class TestAppBuilder : IHostApplicationBuilder
     {
         private readonly IServiceCollection _services = new ServiceCollection();
         private readonly ConfigurationManager _configuration = new();

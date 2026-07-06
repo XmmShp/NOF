@@ -1,14 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using NOF.Infrastructure;
 
 namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureExtensions
 {
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
-        public INOFAppBuilder AddAuthenticationResourceServer(Action<AuthenticationResourceServerOptions> configureOptions)
+        public IHostApplicationBuilder AddAuthenticationResourceServer(Action<AuthenticationResourceServerOptions> configureOptions)
         {
             builder.Services.Configure(configureOptions);
 

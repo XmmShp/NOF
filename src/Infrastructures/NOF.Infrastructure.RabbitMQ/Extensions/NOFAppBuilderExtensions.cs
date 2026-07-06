@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NOF.Application;
 using NOF.Infrastructure;
 using NOF.Infrastructure.RabbitMQ;
@@ -7,9 +8,9 @@ namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureRabbitMQExtensions
 {
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
-        public INOFAppBuilder AddRabbitMQBackplane()
+        public IHostApplicationBuilder AddRabbitMQBackplane()
         {
             builder.Services.ReplaceOrAddSingleton<RabbitMQConnectionManager, RabbitMQConnectionManager>();
             builder.Services.ReplaceOrAddSingleton<IBackplane, RabbitMQBackplane>();
@@ -17,7 +18,7 @@ public static partial class NOFInfrastructureRabbitMQExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddRabbitMQBackplane(Action<RabbitMQOptions> configureOptions)
+        public IHostApplicationBuilder AddRabbitMQBackplane(Action<RabbitMQOptions> configureOptions)
         {
             ArgumentNullException.ThrowIfNull(configureOptions);
 
@@ -25,7 +26,7 @@ public static partial class NOFInfrastructureRabbitMQExtensions
             return builder.AddRabbitMQBackplane();
         }
 
-        public INOFAppBuilder AddRabbitMQ(Action<RabbitMQOptions> configureOptions)
+        public IHostApplicationBuilder AddRabbitMQ(Action<RabbitMQOptions> configureOptions)
         {
             builder.Services.Configure(configureOptions);
 

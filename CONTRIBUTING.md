@@ -57,13 +57,13 @@ The CI pipeline enforces formatting via `dotnet format`. Fix any violations befo
 
 ### Branch Strategy
 
-| Branch | Purpose |
-|--------|---------|
-| `main` | Default branch; push triggers nightly package publishing and docs deployment, while tags/manual runs produce release builds |
-| `develop` | Integration branch; CI runs on push and PR |
-| `feature/*` | New features |
-| `fix/*` | Bug fixes |
-| `docs/*` | Documentation-only changes |
+| Branch      | Purpose                                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `main`      | Default branch; push triggers nightly package publishing and docs deployment, while tags/manual runs produce release builds |
+| `develop`   | Integration branch; CI runs on push and PR                                                                                  |
+| `feature/*` | New features                                                                                                                |
+| `fix/*`     | Bug fixes                                                                                                                   |
+| `docs/*`    | Documentation-only changes                                                                                                  |
 
 ## Coding Style Guide
 
@@ -81,15 +81,15 @@ NOF enforces a consistent coding style through `.editorconfig` and `dotnet forma
 
 #### Naming
 
-| Symbol | Convention | Example |
-|--------|-----------|---------|
-| Types (class, struct, interface, enum) | PascalCase | `OrderService` |
-| Interfaces | `I` + PascalCase | `ICommandSender` |
-| Public members (property, method, event) | PascalCase | `HandleAsync` |
-| Private instance fields | `_camelCase` | `_repository` |
-| Private static / readonly fields | PascalCase | `DefaultTimeout` |
-| Constants | PascalCase | `MaxRetryCount` |
-| Local variables & parameters | camelCase | `cancellationToken` |
+| Symbol                                   | Convention       | Example             |
+| ---------------------------------------- | ---------------- | ------------------- |
+| Types (class, struct, interface, enum)   | PascalCase       | `OrderService`      |
+| Interfaces                               | `I` + PascalCase | `ICommandSender`    |
+| Public members (property, method, event) | PascalCase       | `HandleAsync`       |
+| Private instance fields                  | `_camelCase`     | `_repository`       |
+| Private static / readonly fields         | PascalCase       | `DefaultTimeout`    |
+| Constants                                | PascalCase       | `MaxRetryCount`     |
+| Local variables & parameters             | camelCase        | `cancellationToken` |
 
 #### Language Preferences
 
@@ -129,16 +129,16 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Types
 
-| Type | Description |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Formatting, no logic change |
+| Type       | Description                            |
+| ---------- | -------------------------------------- |
+| `feat`     | New feature                            |
+| `fix`      | Bug fix                                |
+| `docs`     | Documentation only                     |
+| `style`    | Formatting, no logic change            |
 | `refactor` | Code restructuring, no behavior change |
-| `perf` | Performance improvement |
-| `test` | Adding or updating tests |
-| `chore` | Build, CI, tooling changes |
+| `perf`     | Performance improvement                |
+| `test`     | Adding or updating tests               |
+| `chore`    | Build, CI, tooling changes             |
 
 ### Scopes
 
@@ -187,7 +187,7 @@ NOF.Abstraction                 ← Shared annotations, user context, in-memory 
 NOF.Domain                      ← Value objects, failures, domain exceptions, ID generation
 NOF.Contract                    ← RPC contracts, request/response models, Result<T>, [HttpEndpoint]
 NOF.Application                 ← RPC servers, handlers, state machines, mapping, caching
-NOF.Hosting         ← INOFAppBuilder and step pipeline contracts
+NOF.Hosting         ← IHostApplicationBuilder extensions and initialization pipeline contracts
 NOF.Infrastructure              ← Builder defaults, EF Core integration, OpenTelemetry, runtime pipeline
 NOF.UI                          ← Shared UI components and browser client primitives
 NOF.Test                        ← Test host helpers for NOF applications
@@ -208,7 +208,7 @@ NOF.*.Extension.*               ← Optional features such as JWT authorization
 
 1. Create the project under `src/Infrastructures/`.
 2. Reference `NOF.Hosting` or `NOF.Infrastructure`.
-3. Implement registration via explicit `IServiceCollection` or `INOFAppBuilder` extension methods.
+3. Implement registration via explicit `IServiceCollection` or `IHostApplicationBuilder` extension methods.
 4. Add the project to `NOF.slnx`.
 5. Add NuGet versions to the root `Directory.Packages.props`.
 6. Ensure the project is packable with a `PackageId`; `cd.yml` auto-discovers packable `src/**/*.csproj` files.

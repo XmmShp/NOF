@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NOF.Application;
 using NOF.Infrastructure;
 using NOF.Infrastructure.StackExchangeRedis;
@@ -8,15 +9,15 @@ namespace NOF.Hosting;
 
 public static class NOFInfrastructureExtensions
 {
-    /// <param name="builder">The <see cref="INOFAppBuilder"/>.</param>
-    extension(INOFAppBuilder builder)
+    /// <param name="builder">The <see cref="IHostApplicationBuilder"/>.</param>
+    extension(IHostApplicationBuilder builder)
     {
         /// <summary>
         /// Replaces the default in-memory backplane with a Redis-based implementation using StackExchange.Redis pub/sub.
         /// </summary>
         /// <param name="connectionOptions">StackExchange.Redis connection options.</param>
-        /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
-        public INOFAppBuilder AddRedisBackplane(ConfigurationOptions connectionOptions)
+        /// <returns>The <see cref="IHostApplicationBuilder"/> so that additional calls can be chained.</returns>
+        public IHostApplicationBuilder AddRedisBackplane(ConfigurationOptions connectionOptions)
         {
             ArgumentNullException.ThrowIfNull(connectionOptions);
 
@@ -30,8 +31,8 @@ public static class NOFInfrastructureExtensions
         /// </summary>
         /// <param name="configuration">The Redis connection string.</param>
         /// <param name="configureConnectionOptions">Configures StackExchange.Redis connection options.</param>
-        /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
-        public INOFAppBuilder AddRedisBackplane(string configuration, Action<ConfigurationOptions>? configureConnectionOptions = null)
+        /// <returns>The <see cref="IHostApplicationBuilder"/> so that additional calls can be chained.</returns>
+        public IHostApplicationBuilder AddRedisBackplane(string configuration, Action<ConfigurationOptions>? configureConnectionOptions = null)
         {
             if (configureConnectionOptions is not null)
             {
@@ -51,8 +52,8 @@ public static class NOFInfrastructureExtensions
         /// </summary>
         /// <param name="connectionOptions">StackExchange.Redis connection options.</param>
         /// <param name="configureCacheOptions">Optional action to configure cache service options.</param>
-        /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
-        public INOFAppBuilder AddRedisCache(ConfigurationOptions connectionOptions, Action<CacheServiceOptions>? configureCacheOptions = null)
+        /// <returns>The <see cref="IHostApplicationBuilder"/> so that additional calls can be chained.</returns>
+        public IHostApplicationBuilder AddRedisCache(ConfigurationOptions connectionOptions, Action<CacheServiceOptions>? configureCacheOptions = null)
         {
             ArgumentNullException.ThrowIfNull(connectionOptions);
 
@@ -74,8 +75,8 @@ public static class NOFInfrastructureExtensions
         /// <param name="configuration">The Redis connection string.</param>
         /// <param name="configureConnectionOptions">Configures StackExchange.Redis connection options.</param>
         /// <param name="configureCacheOptions">Optional action to configure cache service options.</param>
-        /// <returns>The <see cref="INOFAppBuilder"/> so that additional calls can be chained.</returns>
-        public INOFAppBuilder AddRedisCache(string configuration, Action<ConfigurationOptions>? configureConnectionOptions = null, Action<CacheServiceOptions>? configureCacheOptions = null)
+        /// <returns>The <see cref="IHostApplicationBuilder"/> so that additional calls can be chained.</returns>
+        public IHostApplicationBuilder AddRedisCache(string configuration, Action<ConfigurationOptions>? configureConnectionOptions = null, Action<CacheServiceOptions>? configureCacheOptions = null)
         {
             if (configureCacheOptions is not null)
             {

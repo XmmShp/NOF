@@ -15,9 +15,9 @@ namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureExtensions
 {
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
-        public INOFAppBuilder AddRpcServer<
+        public IHostApplicationBuilder AddRpcServer<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TRpcServer>()
             where TRpcServer : RpcServer, IRpcServer
         {
@@ -29,7 +29,7 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddNOFInfrastructure()
+        public IHostApplicationBuilder AddNOFInfrastructure()
         {
             JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
             builder.Services.AddNOFApplication();
@@ -144,7 +144,7 @@ public static partial class NOFInfrastructureExtensions
 
         [RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
         [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
-        public INOFAppBuilder AddInMemoryPersistence()
+        public IHostApplicationBuilder AddInMemoryPersistence()
         {
             builder.Services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();
             builder.Services.ReplaceOrAddScoped<IDbContext, InMemoryDbContext>();
@@ -152,7 +152,7 @@ public static partial class NOFInfrastructureExtensions
         }
     }
 
-    private static void AddOpenTelemetry(INOFAppBuilder builder)
+    private static void AddOpenTelemetry(IHostApplicationBuilder builder)
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {
@@ -185,7 +185,7 @@ public static partial class NOFInfrastructureExtensions
         }
     }
 
-    private static void AddInfrastructureJwtPropagation(INOFAppBuilder builder)
+    private static void AddInfrastructureJwtPropagation(IHostApplicationBuilder builder)
     {
         builder.Services.AddHttpClient();
         builder.Services.AddHttpClient<HttpAuthorizationServerService>();

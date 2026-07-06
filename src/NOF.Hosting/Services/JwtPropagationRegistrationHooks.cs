@@ -1,11 +1,13 @@
+using Microsoft.Extensions.Hosting;
+
 namespace NOF.Hosting;
 
 internal static class JwtPropagationRegistrationHooks
 {
     private static readonly Lock SyncRoot = new();
-    private static Action<INOFAppBuilder>? _onJwtPropagationAdded;
+    private static Action<IHostApplicationBuilder>? _onJwtPropagationAdded;
 
-    public static void Register(Action<INOFAppBuilder> handler)
+    public static void Register(Action<IHostApplicationBuilder> handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
 
@@ -16,11 +18,11 @@ internal static class JwtPropagationRegistrationHooks
         }
     }
 
-    public static void Invoke(INOFAppBuilder builder)
+    public static void Invoke(IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        Action<INOFAppBuilder>? handler;
+        Action<IHostApplicationBuilder>? handler;
         lock (SyncRoot)
         {
             handler = _onJwtPropagationAdded;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using NHibernate;
 using NOF.Application;
 using NOF.Hosting;
@@ -9,7 +10,7 @@ namespace NOF.Infrastructure.NHibernate;
 
 public static partial class NOFInfrastructureExtensions
 {
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
         public NHibernateSelector UseNHibernate()
         {

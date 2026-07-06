@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using NOF.Application;
 using NOF.Infrastructure.EntityFrameworkCore;
 using System.Diagnostics.CodeAnalysis;
@@ -9,9 +10,9 @@ namespace NOF.Hosting;
 
 public static partial class NOFInfrastructureExtensions
 {
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
-        public INOFAppBuilder AddNOFEntityFrameworkCore()
+        public IHostApplicationBuilder AddNOFEntityFrameworkCore()
         {
             builder.Services.AddOptions<DbContextConfigurationOptions>();
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();

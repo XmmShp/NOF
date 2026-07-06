@@ -224,7 +224,7 @@ public class NOFInfrastructureTests
         Assert.Equal(24u, activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.InstanceId));
     }
 
-    private sealed class TestServiceRegistrationContext : INOFAppBuilder
+    private sealed class TestServiceRegistrationContext : IHostApplicationBuilder
     {
         private readonly IServiceCollection _services;
         private readonly ConfigurationManager _configuration;

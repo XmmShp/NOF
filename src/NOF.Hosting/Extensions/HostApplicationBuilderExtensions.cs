@@ -4,17 +4,13 @@ using System.Reflection;
 
 namespace NOF.Hosting;
 
-public interface INOFAppBuilder : IHostApplicationBuilder
-{
-}
-
 public static partial class NOFHostingExtensions
 {
     private static readonly object ApplicationPartsKey = new();
 
-    extension(INOFAppBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
-        public INOFAppBuilder AddApplicationPart(Assembly assembly)
+        public IHostApplicationBuilder AddApplicationPart(Assembly assembly)
         {
             ArgumentNullException.ThrowIfNull(assembly);
 
@@ -31,10 +27,9 @@ public static partial class NOFHostingExtensions
 
             return builder;
         }
-
     }
 
-    private static HashSet<Assembly> GetOrAddApplicationParts(INOFAppBuilder builder)
+    private static HashSet<Assembly> GetOrAddApplicationParts(IHostApplicationBuilder builder)
     {
         if (builder.Properties.TryGetValue(ApplicationPartsKey, out var existing) && existing is HashSet<Assembly> assemblies)
         {

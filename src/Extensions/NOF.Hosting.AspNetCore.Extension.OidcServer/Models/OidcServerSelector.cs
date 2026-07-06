@@ -7,11 +7,11 @@ using NOF.Hosting;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-public readonly struct OidcServerSelector : INOFAppBuilder
+public readonly struct OidcServerSelector
 {
-    public INOFAppBuilder Builder { get; }
+    public IHostApplicationBuilder Builder { get; }
 
-    public OidcServerSelector(INOFAppBuilder builder)
+    public OidcServerSelector(IHostApplicationBuilder builder)
     {
         Builder = builder ?? throw new ArgumentNullException(nameof(builder));
     }
@@ -51,13 +51,4 @@ public readonly struct OidcServerSelector : INOFAppBuilder
 
         return this;
     }
-
-    public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null) where TContainerBuilder : notnull
-        => Builder.ConfigureContainer(factory, configure);
-    public IDictionary<object, object> Properties => Builder.Properties;
-    public IConfigurationManager Configuration => Builder.Configuration;
-    public IHostEnvironment Environment => Builder.Environment;
-    public ILoggingBuilder Logging => Builder.Logging;
-    public IMetricsBuilder Metrics => Builder.Metrics;
-    public IServiceCollection Services => Builder.Services;
 }
