@@ -1015,6 +1015,45 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public void AddJwtPropagation_BeforeInfrastructureDefaults_ShouldStillRegisterInfrastructureJwtPropagation()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.AddJwtPropagation();
+        builder.AddNOFInfrastructure();
+
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+        Assert.Contains(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+    }
+
+    [Fact]
+    public void AddJwtPropagation_OnDifferentBuilder_ShouldNotLeakInfrastructureRegistrations()
+    {
+        var infrastructureBuilder = Host.CreateApplicationBuilder();
+        infrastructureBuilder.AddNOFInfrastructure();
+
+        var isolatedBuilder = Host.CreateApplicationBuilder();
+        isolatedBuilder.AddJwtPropagation();
+
+        Assert.Contains(isolatedBuilder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
+        Assert.DoesNotContain(isolatedBuilder.Services, descriptor =>
+            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+        Assert.DoesNotContain(isolatedBuilder.Services, descriptor =>
+            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
+            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+    }
+
+    [Fact]
     public async Task AddAuthenticationResourceServer_Only_ShouldNotRegisterAuthorityServicesExplicitly()
     {
         var builder = NOFTestAppBuilder.Create();

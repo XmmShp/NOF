@@ -9,9 +9,10 @@ using System.Reflection;
 
 namespace NOF.Hosting.BlazorWebAssembly;
 
-public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
+public class NOFWebAssemblyHostBuilder : IHostApplicationBuilder
 {
     private readonly IConfigurationManager _configuration = new ConfigurationManager();
+    private readonly Dictionary<object, object> _properties = [];
 
     public WebAssemblyHostBuilder WebAssemblyHostBuilder { get; }
 
@@ -33,23 +34,24 @@ public class NOFWebAssemblyHostBuilder : NOFAppBuilder<NOFWebAssemblyHost>
         return builder;
     }
 
-    protected override Task<NOFWebAssemblyHost> BuildApplicationAsync()
-        => Task.FromResult(new NOFWebAssemblyHost(WebAssemblyHostBuilder.Build()));
+    public Task<NOFWebAssemblyHost> BuildAsync()
+        => this.BuildNOFAsync(() => new NOFWebAssemblyHost(WebAssemblyHostBuilder.Build()));
 
-    public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+    public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull
         => WebAssemblyHostBuilder.ConfigureContainer(factory, configure);
 
-    public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
+    public IDictionary<object, object> Properties => _properties;
 
-    public override IConfigurationManager Configuration => _configuration;
+    public IConfigurationManager Configuration => _configuration;
 
-    public override IHostEnvironment Environment { get; }
+    public IHostEnvironment Environment { get; }
 
-    public override ILoggingBuilder Logging => WebAssemblyHostBuilder.Logging;
+    public ILoggingBuilder Logging => WebAssemblyHostBuilder.Logging;
 
-    public override IMetricsBuilder Metrics => field ??= InitializeMetrics();
+    public IMetricsBuilder Metrics => field ??= InitializeMetrics();
 
-    public override IServiceCollection Services => WebAssemblyHostBuilder.Services;
+    public IServiceCollection Services => WebAssemblyHostBuilder.Services;
 
     private IMetricsBuilder InitializeMetrics()
     {

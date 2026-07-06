@@ -7,7 +7,7 @@ using NOF.Hosting;
 
 namespace NOF.Test;
 
-public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
+public sealed class NOFTestAppBuilder : IHostApplicationBuilder
 {
     public HostApplicationBuilder InnerBuilder { get; }
 
@@ -28,30 +28,29 @@ public sealed class NOFTestAppBuilder : NOFAppBuilder<IHost>
         return new NOFTestHost(host);
     }
 
+    public Task<IHost> BuildAsync()
+        => this.BuildNOFAsync(InnerBuilder.Build);
+
     private void ConfigureDefaultTestServices()
     {
         this.AddNOFInfrastructure();
     }
 
-    protected override Task<IHost> BuildApplicationAsync()
-    {
-        return Task.FromResult(InnerBuilder.Build());
-    }
-
-    public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+    public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull
     {
         InnerBuilder.ConfigureContainer(factory, configure);
     }
 
-    public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
+    public IDictionary<object, object> Properties => ((IHostApplicationBuilder)InnerBuilder).Properties;
 
-    public override IConfigurationManager Configuration => InnerBuilder.Configuration;
+    public IConfigurationManager Configuration => InnerBuilder.Configuration;
 
-    public override IHostEnvironment Environment => InnerBuilder.Environment;
+    public IHostEnvironment Environment => InnerBuilder.Environment;
 
-    public override ILoggingBuilder Logging => InnerBuilder.Logging;
+    public ILoggingBuilder Logging => InnerBuilder.Logging;
 
-    public override IMetricsBuilder Metrics => InnerBuilder.Metrics;
+    public IMetricsBuilder Metrics => InnerBuilder.Metrics;
 
-    public override IServiceCollection Services => InnerBuilder.Services;
+    public IServiceCollection Services => InnerBuilder.Services;
 }

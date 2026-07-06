@@ -31,7 +31,7 @@ public static partial class NOFInfrastructureExtensions
 
         public IHostApplicationBuilder AddNOFInfrastructure()
         {
-            JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
+            JwtPropagationRegistrationState.Register(builder, AddInfrastructureJwtPropagation);
             builder.Services.AddNOFApplication();
             AddOpenTelemetry(builder);
             builder.Services.GetOrAddSingleton<TypeResolver>();

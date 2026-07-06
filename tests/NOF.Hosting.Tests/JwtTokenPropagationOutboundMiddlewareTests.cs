@@ -155,29 +155,27 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             && descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
     }
 
-    private sealed class TestAppBuilder : NOFAppBuilder<FakeHost>
+    private sealed class TestAppBuilder : IHostApplicationBuilder
     {
         private readonly ConfigurationManager _configuration = new();
         private readonly Dictionary<object, object> _properties = [];
         private readonly FakeHostEnvironment _environment = new();
 
-        public override IDictionary<object, object> Properties => _properties;
-        public override IConfigurationManager Configuration => _configuration;
-        public override IHostEnvironment Environment => _environment;
-        public override ILoggingBuilder Logging => throw new NotSupportedException();
-        public override IMetricsBuilder Metrics => throw new NotSupportedException();
-        public override IServiceCollection Services { get; } = new ServiceCollection();
+        public IDictionary<object, object> Properties => _properties;
+        public IConfigurationManager Configuration => _configuration;
+        public IHostEnvironment Environment => _environment;
+        public ILoggingBuilder Logging => throw new NotSupportedException();
+        public IMetricsBuilder Metrics => throw new NotSupportedException();
+        public IServiceCollection Services { get; } = new ServiceCollection();
 
-        public override void ConfigureContainer<TContainerBuilder>(
+        public void ConfigureContainer<TContainerBuilder>(
             IServiceProviderFactory<TContainerBuilder> factory,
             Action<TContainerBuilder>? configure = null)
+            where TContainerBuilder : notnull
         {
             _ = factory;
             _ = configure;
         }
-
-        protected override Task<FakeHost> BuildApplicationAsync()
-            => Task.FromResult(new FakeHost());
     }
 
     private sealed class FakeHost : IHost

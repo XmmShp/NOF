@@ -8,7 +8,7 @@ using System.Reflection;
 
 namespace NOF.Hosting.Maui;
 
-public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
+public class NOFMauiAppBuilder : IHostApplicationBuilder
 {
     public MauiAppBuilder MauiAppBuilder { get; }
 
@@ -28,35 +28,26 @@ public class NOFMauiAppBuilder : NOFAppBuilder<NOFMauiApp>
         return new NOFMauiAppBuilder(MauiApp.CreateBuilder(useDefaults), Assembly.GetCallingAssembly());
     }
 
-    /// <inheritdoc />
-    protected override Task<NOFMauiApp> BuildApplicationAsync()
-    {
-        return Task.FromResult(new NOFMauiApp(MauiAppBuilder.Build()));
-    }
+    public Task<NOFMauiApp> BuildAsync()
+        => this.BuildNOFAsync(() => new NOFMauiApp(MauiAppBuilder.Build()));
 
-    /// <inheritdoc />
-    public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+    public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull
     {
         MauiAppBuilder.ConfigureContainer(factory, configure);
     }
 
-    /// <inheritdoc />
-    public override IDictionary<object, object> Properties => MauiAppBuilder.Properties;
+    public IDictionary<object, object> Properties => ((IHostApplicationBuilder)MauiAppBuilder).Properties;
 
-    /// <inheritdoc />
-    public override IConfigurationManager Configuration => MauiAppBuilder.Configuration;
+    public IConfigurationManager Configuration => MauiAppBuilder.Configuration;
 
-    /// <inheritdoc />
-    public override IHostEnvironment Environment { get; }
+    public IHostEnvironment Environment { get; }
 
-    /// <inheritdoc />
-    public override ILoggingBuilder Logging => MauiAppBuilder.Logging;
+    public ILoggingBuilder Logging => MauiAppBuilder.Logging;
 
-    /// <inheritdoc />
-    public override IMetricsBuilder Metrics => ((IHostApplicationBuilder)MauiAppBuilder).Metrics;
+    public IMetricsBuilder Metrics => ((IHostApplicationBuilder)MauiAppBuilder).Metrics;
 
-    /// <inheritdoc />
-    public override IServiceCollection Services => MauiAppBuilder.Services;
+    public IServiceCollection Services => MauiAppBuilder.Services;
 
     private sealed class NOFMauiHostEnvironment(IHostEnvironment innerEnvironment) : IHostEnvironment
     {

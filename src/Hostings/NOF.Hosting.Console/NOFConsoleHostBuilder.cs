@@ -10,7 +10,7 @@ namespace NOF.Hosting.Console;
 /// <summary>
 /// Console host builder for NOF, built on top of <see cref="HostApplicationBuilder"/>.
 /// </summary>
-public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
+public sealed class NOFConsoleHostBuilder : IHostApplicationBuilder
 {
     public HostApplicationBuilder HostApplicationBuilder { get; }
 
@@ -34,21 +34,22 @@ public sealed class NOFConsoleHostBuilder : NOFAppBuilder<IHost>
         return builder;
     }
 
-    protected override Task<IHost> BuildApplicationAsync()
-        => Task.FromResult(HostApplicationBuilder.Build());
+    public Task<IHost> BuildAsync()
+        => this.BuildNOFAsync(HostApplicationBuilder.Build);
 
-    public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+    public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull
         => HostApplicationBuilder.ConfigureContainer(factory, configure);
 
-    public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
+    public IDictionary<object, object> Properties => ((IHostApplicationBuilder)HostApplicationBuilder).Properties;
 
-    public override IConfigurationManager Configuration => HostApplicationBuilder.Configuration;
+    public IConfigurationManager Configuration => HostApplicationBuilder.Configuration;
 
-    public override IHostEnvironment Environment => HostApplicationBuilder.Environment;
+    public IHostEnvironment Environment => HostApplicationBuilder.Environment;
 
-    public override ILoggingBuilder Logging => HostApplicationBuilder.Logging;
+    public ILoggingBuilder Logging => HostApplicationBuilder.Logging;
 
-    public override IMetricsBuilder Metrics => HostApplicationBuilder.Metrics;
+    public IMetricsBuilder Metrics => HostApplicationBuilder.Metrics;
 
-    public override IServiceCollection Services => HostApplicationBuilder.Services;
+    public IServiceCollection Services => HostApplicationBuilder.Services;
 }

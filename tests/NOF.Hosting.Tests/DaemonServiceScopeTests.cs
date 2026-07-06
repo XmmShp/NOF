@@ -61,7 +61,7 @@ public class DaemonServiceScopeTests
             && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));
     }
 
-    private sealed class TestAppBuilder : NOFAppBuilder<FakeHost>
+    private sealed class TestAppBuilder : IHostApplicationBuilder
     {
         private readonly ServiceCollection _services = [];
         private readonly ConfigurationManager _configuration = new();
@@ -70,17 +70,15 @@ public class DaemonServiceScopeTests
         private readonly ServiceCollection _loggingServices = [];
         private readonly ServiceCollection _metricsServices = [];
 
-        public override IDictionary<object, object> Properties => _properties;
-        public override IConfigurationManager Configuration => _configuration;
-        public override IHostEnvironment Environment => _environment;
-        public override ILoggingBuilder Logging => new TestLoggingBuilder(_loggingServices);
-        public override IMetricsBuilder Metrics => new TestMetricsBuilder(_metricsServices);
-        public override IServiceCollection Services => _services;
+        public IDictionary<object, object> Properties => _properties;
+        public IConfigurationManager Configuration => _configuration;
+        public IHostEnvironment Environment => _environment;
+        public ILoggingBuilder Logging => new TestLoggingBuilder(_loggingServices);
+        public IMetricsBuilder Metrics => new TestMetricsBuilder(_metricsServices);
+        public IServiceCollection Services => _services;
 
-        protected override Task<FakeHost> BuildApplicationAsync()
-            => throw new NotSupportedException();
-
-        public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+        public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+            where TContainerBuilder : notnull
         {
         }
     }

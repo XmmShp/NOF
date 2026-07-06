@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
@@ -22,7 +22,7 @@ using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
 
-public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
+public class NOFWebApplicationBuilder : IHostApplicationBuilder
 {
     public WebApplicationBuilder WebApplicationBuilder { get; }
 
@@ -99,27 +99,26 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         return builder;
     }
 
-    protected override Task<WebApplication> BuildApplicationAsync()
-    {
-        return Task.FromResult(WebApplicationBuilder.Build());
-    }
+    public Task<WebApplication> BuildAsync()
+        => this.BuildNOFAsync(WebApplicationBuilder.Build);
 
-    public override void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+    public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull
     {
         ((IHostApplicationBuilder)WebApplicationBuilder).ConfigureContainer(factory, configure);
     }
 
-    public override IDictionary<object, object> Properties { get; } = new Dictionary<object, object>();
+    public IDictionary<object, object> Properties => ((IHostApplicationBuilder)WebApplicationBuilder).Properties;
 
-    public override IConfigurationManager Configuration => WebApplicationBuilder.Configuration;
+    public IConfigurationManager Configuration => WebApplicationBuilder.Configuration;
 
-    public override IHostEnvironment Environment => WebApplicationBuilder.Environment;
+    public IHostEnvironment Environment => WebApplicationBuilder.Environment;
 
-    public override ILoggingBuilder Logging => WebApplicationBuilder.Logging;
+    public ILoggingBuilder Logging => WebApplicationBuilder.Logging;
 
-    public override IMetricsBuilder Metrics => WebApplicationBuilder.Metrics;
+    public IMetricsBuilder Metrics => WebApplicationBuilder.Metrics;
 
-    public override IServiceCollection Services => WebApplicationBuilder.Services;
+    public IServiceCollection Services => WebApplicationBuilder.Services;
 
     private sealed class HealthCheckInitializationStep : IApplicationInitializationStep
     {
