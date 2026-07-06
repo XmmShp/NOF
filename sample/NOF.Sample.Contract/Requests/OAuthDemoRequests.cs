@@ -24,7 +24,9 @@ public sealed record ConsumeDemoAccessTokenResponse
 
     public string? TenantId { get; init; }
 
-    public string? ProxyServiceName { get; init; }
+    public string? ActorSubject { get; init; }
+
+    public string? ActorJson { get; init; }
 
     public required string[] Permissions { get; init; }
 
@@ -42,6 +44,10 @@ public sealed record GetDemoUserTokenRequest;
 
 public sealed record ExchangeDemoTokenRequest
 {
+    public required string ClientId { get; init; }
+
+    public required string ClientSecret { get; init; }
+
     public required string ClientAccessToken { get; init; }
 
     public required string UserAccessToken { get; init; }

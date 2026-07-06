@@ -46,9 +46,11 @@ public sealed class OAuthAuthorizationServerOptions
     public IReadOnlyList<string> ClaimsSupported { get; set; } =
     [
         OAuthClaimTypes.Subject,
+        OAuthClaimTypes.ClientId,
         OAuthClaimTypes.Name,
         OAuthClaimTypes.Email,
         OAuthClaimTypes.EmailVerified,
-        OAuthClaimTypes.Groups
+        OAuthClaimTypes.Groups,
+        OAuthClaimTypes.Entitlements
     ];
 }

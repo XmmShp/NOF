@@ -15,6 +15,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Authentication.Extensions;
@@ -124,6 +125,15 @@ public sealed class AuthenticationExtensionsTests
         var options = new OAuthAuthorizationServerOptions();
 
         Assert.Contains(OAuthClaimTypes.EmailVerified, options.ClaimsSupported);
+    }
+
+    [Fact]
+    public void OAuthAuthorizationServerOptions_ShouldSupportClientIdAndEntitlementsClaimsByDefault()
+    {
+        var options = new OAuthAuthorizationServerOptions();
+
+        Assert.Contains(OAuthClaimTypes.ClientId, options.ClaimsSupported);
+        Assert.Contains(OAuthClaimTypes.Entitlements, options.ClaimsSupported);
     }
 
     [Fact]
@@ -300,8 +310,8 @@ public sealed class AuthenticationExtensionsTests
         Assert.Equal("jobs.read jobs.write", result.Value.Scope);
         Assert.Equal("jobs-api", tokenService.LastRequest?.Audience);
         Assert.Null(tokenService.LastRequest?.RefreshToken);
-        Assert.Contains(tokenService.LastRequest!.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Subject && claim.Value == "service-a");
-        Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == "client_id" && claim.Value == "service-a");
+        Assert.Contains(tokenService.LastRequest!.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Subject && claim.Value == "client:service-a");
+        Assert.Equal("service-a", tokenService.LastRequest.ClientId);
     }
 
     [Fact]
@@ -503,7 +513,7 @@ public sealed class AuthenticationExtensionsTests
                 [
                     new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
                     new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
-                    new TokenClaim("client_id", "other-client")
+                    new TokenClaim(OAuthClaimTypes.ClientId, "other-client")
                 ]
             })
         };
@@ -563,7 +573,7 @@ public sealed class AuthenticationExtensionsTests
                 [
                     new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
                     new TokenClaim(OAuthClaimTypes.Scope, "jobs.read offline_access"),
-                    new TokenClaim("client_id", "service-a")
+                    new TokenClaim(OAuthClaimTypes.ClientId, "service-a")
                 ]
             })
         };
@@ -586,7 +596,7 @@ public sealed class AuthenticationExtensionsTests
 
         Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(tokenService.LastRequest?.RefreshToken);
-        Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == "client_id" && claim.Value == "service-a");
+        Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == OAuthClaimTypes.ClientId && claim.Value == "service-a");
         Assert.Equal("refresh-token-id", tokenService.LastRevokeRequest?.TokenId);
     }
 
@@ -624,7 +634,7 @@ public sealed class AuthenticationExtensionsTests
                 [
                     new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
                     new TokenClaim(OAuthClaimTypes.Scope, "jobs.read"),
-                    new TokenClaim("client_id", "service-a")
+                    new TokenClaim(OAuthClaimTypes.ClientId, "service-a")
                 ]
             })
         };
@@ -683,7 +693,7 @@ public sealed class AuthenticationExtensionsTests
                 [
                     new TokenClaim(OAuthClaimTypes.Subject, "user-1"),
                     new TokenClaim(OAuthClaimTypes.Scope, "jobs.read offline_access"),
-                    new TokenClaim("client_id", "public-app")
+                    new TokenClaim(OAuthClaimTypes.ClientId, "public-app")
                 ]
             })
         };
@@ -706,7 +716,7 @@ public sealed class AuthenticationExtensionsTests
 
         Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(tokenService.LastRequest?.RefreshToken);
-        Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == "client_id" && claim.Value == "public-app");
+        Assert.Contains(tokenService.LastRequest!.RefreshToken!.Claims!, claim => claim.Type == OAuthClaimTypes.ClientId && claim.Value == "public-app");
     }
 
     [Theory]
@@ -779,6 +789,7 @@ public sealed class AuthenticationExtensionsTests
     {
         using var services = new ServiceCollection()
             .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -795,7 +806,8 @@ public sealed class AuthenticationExtensionsTests
         var request = new OAuthTokenRequest
         {
             GrantType = OAuthGrantTypes.TokenExchange,
-            ClientId = "public-app",
+            ClientId = "service-a",
+            ClientSecret = "secret-a",
             SubjectToken = CreateAccessToken(
                 signingKey.Key,
                 "https://issuer.local/oauth2",
@@ -805,7 +817,7 @@ public sealed class AuthenticationExtensionsTests
                 signingKey.Key,
                 "https://issuer.local/oauth2",
                 "jobs-api",
-                [new Claim(OAuthClaimTypes.Subject, "service-a"), new Claim("client_id", "proxy-service"), new Claim(OAuthClaimTypes.Scope, "jobs.read jobs.audit")]),
+                [new Claim(OAuthClaimTypes.Subject, "client:order-service"), new Claim(OAuthClaimTypes.Actor, """{"sub":"client:web-app"}"""), new Claim(OAuthClaimTypes.Scope, "jobs.read jobs.audit")]),
             SubjectTokenType = OAuthTokenTypes.AccessToken,
             ActorTokenType = OAuthTokenTypes.AccessToken,
             RequestedTokenType = OAuthTokenTypes.AccessToken,
@@ -836,7 +848,11 @@ public sealed class AuthenticationExtensionsTests
         Assert.NotNull(tokenService.LastRequest);
         Assert.Null(tokenService.LastRequest!.RefreshToken);
         Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Scope && claim.Value == "jobs.read");
-        Assert.Contains(tokenService.LastRequest.AccessClaims!, claim => claim.Type == ClaimTypes.ProxyServiceName && claim.Value == "proxy-service");
+        var actClaim = Assert.Single(tokenService.LastRequest.AccessClaims!, static claim => claim.Type == OAuthClaimTypes.Actor);
+        Assert.Equal(Microsoft.IdentityModel.JsonWebTokens.JsonClaimValueTypes.Json, actClaim.ValueType);
+        using var actDocument = JsonDocument.Parse(actClaim.Value!);
+        Assert.Equal("client:order-service", actDocument.RootElement.GetProperty(OAuthClaimTypes.Subject).GetString());
+        Assert.Equal("client:web-app", actDocument.RootElement.GetProperty(OAuthClaimTypes.Actor).GetProperty(OAuthClaimTypes.Subject).GetString());
     }
 
     [Fact]
@@ -844,6 +860,7 @@ public sealed class AuthenticationExtensionsTests
     {
         using var services = new ServiceCollection()
             .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -869,7 +886,7 @@ public sealed class AuthenticationExtensionsTests
                 signingKey.Key,
                 "https://issuer.local/oauth2",
                 "jobs-api",
-                [new Claim(OAuthClaimTypes.Subject, "service-a"), new Claim("client_id", "proxy-service"), new Claim(OAuthClaimTypes.Scope, "jobs.read")]),
+                [new Claim(OAuthClaimTypes.Subject, "client:order-service"), new Claim(OAuthClaimTypes.Scope, "jobs.read")]),
             SubjectTokenType = OAuthTokenTypes.AccessToken,
             ActorTokenType = OAuthTokenTypes.AccessToken,
             RequestedTokenType = OAuthTokenTypes.AccessToken,
@@ -894,6 +911,128 @@ public sealed class AuthenticationExtensionsTests
         Assert.False(result.IsSuccess);
         Assert.Equal("invalid_client", result.ErrorCode);
         Assert.Equal("client_id is required.", result.Message);
+    }
+
+    [Fact]
+    public async Task TokenExchangeGrant_ForPublicClient_ShouldNotEmitActClaim()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>()
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.TokenExchange,
+            ClientId = "public-app",
+            SubjectToken = CreateAccessToken(
+                signingKey.Key,
+                "https://issuer.local/oauth2",
+                "jobs-api",
+                [new Claim(OAuthClaimTypes.Subject, "user-1"), new Claim(OAuthClaimTypes.Scope, "jobs.read")]),
+            ActorToken = CreateAccessToken(
+                signingKey.Key,
+                "https://issuer.local/oauth2",
+                "jobs-api",
+                [new Claim(OAuthClaimTypes.Subject, "client:order-service"), new Claim(OAuthClaimTypes.Scope, "jobs.read")]),
+            SubjectTokenType = OAuthTokenTypes.AccessToken,
+            ActorTokenType = OAuthTokenTypes.AccessToken,
+            RequestedTokenType = OAuthTokenTypes.AccessToken,
+            Scope = "jobs.read"
+        };
+        var subjectService = new TestOAuthSubjectService();
+        var tokenService = new TestTokenService();
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromTokenExchangeAsync(
+            httpContext.Request,
+            request,
+            services,
+            subjectService,
+            tokenService,
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.DoesNotContain(tokenService.LastRequest!.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Actor);
+    }
+
+    [Fact]
+    public async Task TokenExchangeGrant_ShouldUseCustomHandler()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthTokenExchangeHandler, CustomOAuthTokenExchangeHandler>()
+            .BuildServiceProvider();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services
+        };
+        using var rsa = RSA.Create(2048);
+        var signingKey = new ManagedSigningKey
+        {
+            Kid = "kid-1",
+            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.TokenExchange,
+            ClientId = "service-a",
+            ClientSecret = "secret-a",
+            SubjectToken = CreateAccessToken(
+                signingKey.Key,
+                "https://issuer.local/oauth2",
+                "jobs-api",
+                [new Claim(OAuthClaimTypes.Subject, "user-1"), new Claim(OAuthClaimTypes.Scope, "jobs.read jobs.write")]),
+            ActorToken = CreateAccessToken(
+                signingKey.Key,
+                "https://issuer.local/oauth2",
+                "jobs-api",
+                [new Claim(OAuthClaimTypes.Subject, "client:order-service"), new Claim(OAuthClaimTypes.Actor, """{"sub":"client:web-app"}"""), new Claim(OAuthClaimTypes.Scope, "jobs.read jobs.write")]),
+            SubjectTokenType = OAuthTokenTypes.AccessToken,
+            ActorTokenType = OAuthTokenTypes.AccessToken,
+            RequestedTokenType = OAuthTokenTypes.AccessToken,
+            Scope = "jobs.read jobs.write"
+        };
+        var tokenService = new TestTokenService();
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromTokenExchangeAsync(
+            httpContext.Request,
+            request,
+            services,
+            new TestOAuthSubjectService(),
+            tokenService,
+            new StaticSigningKeyService(signingKey),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = "https://issuer.local/oauth2",
+                AccessTokenAudience = "jobs-api",
+                AccessTokenExpiration = TimeSpan.FromMinutes(20)
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal("jobs.write", result.Value.Scope);
+        Assert.Contains(tokenService.LastRequest!.AccessClaims!, claim => claim.Type == "custom.exchange" && claim.Value == "enabled");
+        Assert.DoesNotContain(tokenService.LastRequest.AccessClaims!, claim => claim.Type == OAuthClaimTypes.Actor);
     }
 
     [Fact]
@@ -1115,7 +1254,7 @@ public sealed class AuthenticationExtensionsTests
                     new OAuthClientCredentialsValidationResult.Success(
                         request.ClientId,
                         request.RequestedScopes,
-                        [new("client_id", request.ClientId)]));
+                        [new(OAuthClaimTypes.ClientId, request.ClientId)]));
             }
 
             return ValueTask.FromResult<OAuthClientCredentialsValidationResult>(
@@ -1211,6 +1350,22 @@ public sealed class AuthenticationExtensionsTests
 
         public Task<Result<IntrospectTokenResponse>> IntrospectTokenAsync(IntrospectTokenRequest request, CancellationToken cancellationToken)
             => Task.FromResult(IntrospectTokenResult);
+    }
+
+    private sealed class CustomOAuthTokenExchangeHandler : IOAuthTokenExchangeHandler
+    {
+        public ValueTask<OAuthTokenExchangeResult> HandleAsync(
+            OAuthTokenExchangeRequest request,
+            CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+
+            return ValueTask.FromResult<OAuthTokenExchangeResult>(
+                new OAuthTokenExchangeResult.Success(
+                    request.Subject,
+                    new HashSet<string>(["jobs.write"], StringComparer.Ordinal),
+                    [new TokenClaim("custom.exchange", "enabled")]));
+        }
     }
 
     private sealed class TestOAuthSubjectService : IOAuthSubjectService

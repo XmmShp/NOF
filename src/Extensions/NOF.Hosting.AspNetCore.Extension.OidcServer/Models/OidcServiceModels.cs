@@ -1,5 +1,8 @@
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
@@ -23,13 +26,36 @@ public sealed record TokenClaim
 
     public string Type { get; set; } = string.Empty;
 
-    public string Value { get; set; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Value { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? Values { get; set; }
 
     public string? ValueType { get; set; }
 
     public static TokenClaim Integer64(string type, long value)
     {
         return new TokenClaim(type, value.ToString(), ClaimValueTypes.Integer64);
+    }
+
+    public static TokenClaim Array(string type, params string[] values)
+    {
+        return new TokenClaim
+        {
+            Type = type,
+            Values = values
+        };
+    }
+
+    public static TokenClaim Json(string type, string value)
+    {
+        return new TokenClaim(type, value, JsonClaimValueTypes.Json);
+    }
+
+    public static TokenClaim Json(string type, JsonElement value)
+    {
+        return Json(type, value.GetRawText());
     }
 }
 
@@ -50,6 +76,8 @@ public sealed class IssuedRefreshToken
 public record IssueTokenRequest
 {
     public required string Audience { get; set; }
+
+    public required string ClientId { get; set; }
 
     public TimeSpan AccessTokenExpiration { get; set; }
 
@@ -135,6 +163,24 @@ public sealed record OAuthAuthorizationCodeDescriptor(
     string? Nonce,
     string? CodeChallenge,
     string? CodeChallengeMethod);
+
+public sealed record OAuthTokenExchangeRequest(
+    string ClientId,
+    OAuthClientType ClientType,
+    string Subject,
+    ClaimsPrincipal SubjectPrincipal,
+    ClaimsPrincipal ActorPrincipal,
+    IReadOnlySet<string> RequestedScopes);
+
+public abstract record OAuthTokenExchangeResult
+{
+    public sealed record Success(
+        string Subject,
+        IReadOnlySet<string> Scopes,
+        TokenClaim[]? AccessTokenClaims = null) : OAuthTokenExchangeResult;
+
+    public sealed record Failure(string Error, string ErrorDescription) : OAuthTokenExchangeResult;
+}
 
 public sealed record OAuthSubjectProfile(
     string Subject,

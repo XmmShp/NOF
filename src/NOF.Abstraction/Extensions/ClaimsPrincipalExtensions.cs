@@ -44,7 +44,7 @@ public static partial class NOFAbstractionExtensions
             ?? user.FindFirst(ClaimTypes.Sid)?.Value;
 
         /// <summary>
-        /// Gets the list of permissions from the custom permission claims of the current user.
+        /// Gets the list of entitlements from the current user.
         /// </summary>
         public IReadOnlyList<string> Permissions => user.FindAll(ClaimTypes.Permission)
             .Select(claim => claim.Value)
@@ -55,11 +55,6 @@ public static partial class NOFAbstractionExtensions
         /// Gets the tenant identifier of the current user from the NOF tenant claim.
         /// </summary>
         public string? TenantId => user.FindFirst(ClaimTypes.TenantId)?.Value;
-
-        /// <summary>
-        /// Gets the proxy service name from token exchange claims. Returns null when the current token was not proxied.
-        /// </summary>
-        public string? ProxyServiceName => user.FindFirst(ClaimTypes.ProxyServiceName)?.Value;
 
         /// <summary>
         /// Determines whether the current user has the specified permission.

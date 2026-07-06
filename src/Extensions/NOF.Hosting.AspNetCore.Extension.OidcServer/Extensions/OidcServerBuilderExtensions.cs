@@ -18,6 +18,7 @@ public static partial class NOFOidcServerExtensions
             builder.Services.TryAddScoped<PersistenceOAuthClientService>();
             builder.Services.TryAddScoped<IOAuthClientManagementService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<PersistenceOAuthClientService>());
+            builder.Services.TryAddScoped<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, OAuthClientModelCreatingContributor>());

@@ -28,6 +28,7 @@ public sealed class TokenAuthorityServiceTests
             new IssueTokenRequest
             {
                 Audience = "nof-tests",
+                ClientId = "web-client",
                 AccessTokenExpiration = TimeSpan.FromMinutes(10),
                 AccessClaims =
                 [
@@ -54,12 +55,19 @@ public sealed class TokenAuthorityServiceTests
 
         var accessToken = new JwtSecurityTokenHandler().ReadJwtToken(generateResult.Value.AccessToken);
         Assert.False(string.IsNullOrWhiteSpace(accessToken.Header.Kid));
+        Assert.Equal("at+jwt", accessToken.Header.Typ);
         Assert.Contains(accessToken.Claims, claim => claim.Type == JwtRegisteredClaimNames.Sub && claim.Value == "user-1");
+        Assert.Contains(accessToken.Claims, claim => claim.Type == OAuthClaimTypes.ClientId && claim.Value == "web-client");
+        Assert.Contains(accessToken.Claims, claim => claim.Type == JwtRegisteredClaimNames.Iat);
+        Assert.Contains(accessToken.Claims, claim => claim.Type == JwtRegisteredClaimNames.Jti);
         Assert.Contains(accessToken.Claims, claim => claim.Type == ClaimTypes.TenantId && claim.Value == "tenant-1");
         Assert.Equal(2, accessToken.Claims.Count(claim => claim.Type == ClaimTypes.Permission));
 
         var refreshToken = generateResult.Value.RefreshToken;
         Assert.NotNull(refreshToken);
+        var refreshJwt = new JwtSecurityTokenHandler().ReadJwtToken(refreshToken.Token);
+        Assert.Equal("JWT", refreshJwt.Header.Typ);
+        Assert.Contains(refreshJwt.Claims, claim => claim.Type == OAuthClaimTypes.ClientId && claim.Value == "web-client");
 
         var validateResult = await tokenService.ValidateRefreshTokenAsync(
             new ValidateRefreshTokenRequest
@@ -88,6 +96,7 @@ public sealed class TokenAuthorityServiceTests
             new IssueTokenRequest
             {
                 Audience = "nof-tests",
+                ClientId = "service-1",
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
                 AccessClaims =
                 [
@@ -115,6 +124,7 @@ public sealed class TokenAuthorityServiceTests
             new IssueTokenRequest
             {
                 Audience = "nof-tests",
+                ClientId = "web-client",
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
                 AccessClaims =
                 [
@@ -133,6 +143,99 @@ public sealed class TokenAuthorityServiceTests
     }
 
     [Fact]
+    public async Task IssueToken_ShouldSerializeExplicitArrayClaimsAsJsonArrays()
+    {
+        var builder = CreateOidcServerBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                ClientId = "web-client",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims =
+                [
+                    new(JwtRegisteredClaimNames.Sub, "user-1"),
+                    TokenClaim.Array(OAuthClaimTypes.Groups, "engineering", "ops")
+                ]
+            },
+            CancellationToken.None);
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+
+        var payloadJson = Encoding.UTF8.GetString(Base64UrlDecode(generateResult.Value.AccessToken.Split('.')[1]));
+        using var payload = JsonDocument.Parse(payloadJson);
+        var groups = payload.RootElement.GetProperty(OAuthClaimTypes.Groups);
+
+        Assert.Equal(JsonValueKind.Array, groups.ValueKind);
+        Assert.Equal(["engineering", "ops"], groups.EnumerateArray().Select(static item => item.GetString()!).ToArray());
+    }
+
+    [Fact]
+    public async Task IssueToken_ShouldSerializeJsonClaimsAsJsonObjects()
+    {
+        var builder = CreateOidcServerBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                ClientId = "service-a",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims =
+                [
+                    new(JwtRegisteredClaimNames.Sub, "user-1"),
+                    TokenClaim.Json(OAuthClaimTypes.Actor, """{"sub":"client:order-service","act":{"sub":"client:web-app"}}""")
+                ]
+            },
+            CancellationToken.None);
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+
+        var payloadJson = Encoding.UTF8.GetString(Base64UrlDecode(generateResult.Value.AccessToken.Split('.')[1]));
+        using var payload = JsonDocument.Parse(payloadJson);
+        var actor = payload.RootElement.GetProperty(OAuthClaimTypes.Actor);
+
+        Assert.Equal(JsonValueKind.Object, actor.ValueKind);
+        Assert.Equal("client:order-service", actor.GetProperty(OAuthClaimTypes.Subject).GetString());
+        Assert.Equal("client:web-app", actor.GetProperty(OAuthClaimTypes.Actor).GetProperty(OAuthClaimTypes.Subject).GetString());
+    }
+
+    [Fact]
+    public async Task IssueToken_WithoutClientId_ShouldFail()
+    {
+        var builder = CreateOidcServerBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                ClientId = string.Empty,
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims =
+                [
+                    new(JwtRegisteredClaimNames.Sub, "user-1")
+                ]
+            },
+            CancellationToken.None);
+
+        Assert.False(generateResult.IsSuccess);
+        Assert.Equal("400", generateResult.ErrorCode);
+    }
+
+    [Fact]
     public async Task ValidateRefreshToken_ShouldFail_WhenAudienceDoesNotMatch()
     {
         var builder = CreateOidcServerBuilder();
@@ -145,6 +248,7 @@ public sealed class TokenAuthorityServiceTests
             new IssueTokenRequest
             {
                 Audience = "nof-tests",
+                ClientId = "web-client",
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
                 AccessClaims = [new(JwtRegisteredClaimNames.Sub, "user-1")],
                 RefreshToken = new RefreshTokenOptions
@@ -182,11 +286,11 @@ public sealed class TokenAuthorityServiceTests
             new IssueTokenRequest
             {
                 Audience = "nof-tests",
+                ClientId = "service-a",
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
                 AccessClaims =
                 [
                     new(JwtRegisteredClaimNames.Sub, "user-1"),
-                    new("client_id", "service-a"),
                     new(OAuthClaimTypes.Scope, "jobs.read")
                 ]
             },
@@ -207,8 +311,51 @@ public sealed class TokenAuthorityServiceTests
         Assert.True(introspectResult.Value.Active);
         Assert.Equal(OAuthTokenTypes.AccessToken, introspectResult.Value.TokenType);
         Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == JwtRegisteredClaimNames.Sub && claim.Value == "user-1");
-        Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == "client_id" && claim.Value == "service-a");
+        Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == OAuthClaimTypes.ClientId && claim.Value == "service-a");
         Assert.Contains(introspectResult.Value.Claims, claim => claim.Type == OAuthClaimTypes.Scope && claim.Value == "jobs.read");
+    }
+
+    [Fact]
+    public async Task IntrospectToken_ShouldReturnExplicitArrayClaimsAsSingleMultiValueClaim()
+    {
+        var builder = CreateOidcServerBuilder();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var tokenService = scope.GetRequiredService<ITokenService>();
+
+        var generateResult = await tokenService.IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                Audience = "nof-tests",
+                ClientId = "web-client",
+                AccessTokenExpiration = TimeSpan.FromMinutes(5),
+                AccessClaims =
+                [
+                    new(JwtRegisteredClaimNames.Sub, "user-1"),
+                    TokenClaim.Array(OAuthClaimTypes.Groups, "engineering", "ops")
+                ]
+            },
+            CancellationToken.None);
+
+        Assert.True(generateResult.IsSuccess, generateResult.Message);
+
+        var introspectResult = await tokenService.IntrospectTokenAsync(
+            new IntrospectTokenRequest
+            {
+                Token = generateResult.Value.AccessToken,
+                TokenTypeHint = OAuthTokenTypes.AccessToken,
+                Audience = "nof-tests"
+            },
+            CancellationToken.None);
+
+        Assert.True(introspectResult.IsSuccess, introspectResult.Message);
+        Assert.True(introspectResult.Value.Active);
+
+        var groupsClaim = Assert.Single(introspectResult.Value.Claims, static claim => claim.Type == OAuthClaimTypes.Groups);
+        Assert.Null(groupsClaim.Value);
+        Assert.NotNull(groupsClaim.Values);
+        Assert.Equal(["engineering", "ops"], groupsClaim.Values);
     }
 
     [Fact]
@@ -224,6 +371,7 @@ public sealed class TokenAuthorityServiceTests
             new IssueTokenRequest
             {
                 Audience = "nof-tests",
+                ClientId = "public-app",
                 AccessTokenExpiration = TimeSpan.FromMinutes(5),
                 AccessClaims = [new(JwtRegisteredClaimNames.Sub, "user-1")],
                 RefreshToken = new RefreshTokenOptions
@@ -231,8 +379,7 @@ public sealed class TokenAuthorityServiceTests
                     Expiration = TimeSpan.FromMinutes(10),
                     Claims =
                     [
-                        new(JwtRegisteredClaimNames.Sub, "user-1"),
-                        new("client_id", "public-app")
+                        new(JwtRegisteredClaimNames.Sub, "user-1")
                     ]
                 }
             },

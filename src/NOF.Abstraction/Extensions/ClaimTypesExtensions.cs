@@ -5,18 +5,13 @@ public static partial class NOFClaimTypesExtensions
     extension(ClaimTypes)
     {
         /// <summary>
-        /// Custom claim type for permissions, separate from standard Role claims.
+        /// Standard claim type for entitlements.
         /// </summary>
-        public static string Permission => "nof.permission";
+        public static string Permission => "entitlements";
 
         /// <summary>
         /// Well-known claim type for tenant identifier.
         /// </summary>
         public static string TenantId => "nof.tenant_id";
-
-        /// <summary>
-        /// Well-known claim type for the proxy service that performed token exchange.
-        /// </summary>
-        public static string ProxyServiceName => "nof.proxy_service_name";
     }
 }

@@ -8,6 +8,9 @@ namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed partial class TokenAuthorityService : ITokenService
 {
+    private const string AccessTokenTypeHeader = "at+jwt";
+    private const string JwtTypeHeader = "JWT";
+
     private readonly ISigningKeyService _signingKeyService;
     private readonly IRevokedRefreshTokenRepository _revokedRefreshTokenRepository;
     private readonly OAuthAuthorizationServerOptions _options;
@@ -24,9 +27,12 @@ public sealed partial class TokenAuthorityService : ITokenService
 
     public async Task<Result<IssueTokenResponse>> IssueTokenAsync(IssueTokenRequest request, CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
-        var accessClaims = CreateClaims(request.AccessClaims);
+        if (!TryCreateAccessClaims(request, out var accessClaims, out var accessClaimError))
+        {
+            return Result.Fail("400", accessClaimError);
+        }
 
+        var now = DateTime.UtcNow;
         var tokenHandler = new JwtSecurityTokenHandler
         {
             MapInboundClaims = false
@@ -34,30 +40,33 @@ public sealed partial class TokenAuthorityService : ITokenService
         var signingKey = (await _signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
         var accessTokenExpiresAtUtc = now.Add(request.AccessTokenExpiration);
-
-        var accessToken = tokenHandler.WriteToken(new JwtSecurityToken(
+        var accessTokenJwt = new JwtSecurityToken(
             issuer: _options.Issuer,
             audience: request.Audience,
             claims: accessClaims,
             notBefore: now,
             expires: accessTokenExpiresAtUtc,
-            signingCredentials: signingCredentials));
+            signingCredentials: signingCredentials);
+        accessTokenJwt.Header["typ"] = AccessTokenTypeHeader;
+        var accessToken = tokenHandler.WriteToken(accessTokenJwt);
 
         IssuedRefreshToken? refreshToken = null;
         if (request.RefreshToken is not null)
         {
-            var refreshClaims = CreateClaims(request.RefreshToken.Claims);
+            var refreshClaims = CreateRefreshClaims(request);
             refreshClaims.RemoveAll(claim => claim.Type == JwtRegisteredClaimNames.Jti);
             refreshClaims.Insert(0, new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")));
 
             var refreshTokenExpiresAtUtc = now.Add(request.RefreshToken.Expiration);
-            var refreshTokenValue = tokenHandler.WriteToken(new JwtSecurityToken(
+            var refreshTokenJwt = new JwtSecurityToken(
                 issuer: _options.Issuer,
                 audience: request.Audience,
                 claims: refreshClaims,
                 notBefore: now,
                 expires: refreshTokenExpiresAtUtc,
-                signingCredentials: signingCredentials));
+                signingCredentials: signingCredentials);
+            refreshTokenJwt.Header["typ"] = JwtTypeHeader;
+            var refreshTokenValue = tokenHandler.WriteToken(refreshTokenJwt);
             refreshToken = new IssuedRefreshToken
             {
                 Token = refreshTokenValue,
@@ -111,9 +120,7 @@ public sealed partial class TokenAuthorityService : ITokenService
             return Result.Success(new ValidateRefreshTokenResponse
             {
                 TokenId = tokenId,
-                Claims = principal.Claims
-                    .Select(static claim => new TokenClaim(claim.Type, claim.Value, claim.ValueType))
-                    .ToArray()
+                Claims = ToTokenClaims(principal.Claims)
             });
         }
         catch (Exception ex)
@@ -164,9 +171,22 @@ public sealed partial class TokenAuthorityService : ITokenService
     {
         return claims?
             .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
-            .Select(static claim => CreateClaim(claim))
+            .SelectMany(static claim => CreateClaims(claim))
             .ToList()
             ?? [];
+    }
+
+    private static List<Claim> CreateRefreshClaims(IssueTokenRequest request)
+    {
+        var claims = request.RefreshToken?.Claims?
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
+            .Where(static claim => !string.Equals(claim.Type, OAuthClaimTypes.ClientId, StringComparison.Ordinal))
+            .Where(static claim => !string.Equals(claim.Type, JwtRegisteredClaimNames.Iat, StringComparison.Ordinal))
+            .ToList()
+            ?? [];
+        claims.Add(new TokenClaim(OAuthClaimTypes.ClientId, request.ClientId));
+        claims.Add(TokenClaim.Integer64(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        return CreateClaims(claims);
     }
 
     private async Task<Result<IntrospectTokenResponse>> IntrospectAccessTokenAsync(
@@ -198,10 +218,10 @@ public sealed partial class TokenAuthorityService : ITokenService
             {
                 Active = true,
                 TokenType = OAuthTokenTypes.AccessToken,
-                Claims = principal.Claims
-                    .Select(static claim => new TokenClaim(claim.Type, claim.Value, claim.ValueType))
-                    .Concat(GetAudienceClaims(validatedToken))
-                    .ToArray()
+                Claims = ToTokenClaims(
+                    principal.Claims.Concat(
+                        GetAudienceClaims(validatedToken)
+                            .SelectMany(static claim => CreateClaims(claim))))
             });
         }
         catch
@@ -255,7 +275,18 @@ public sealed partial class TokenAuthorityService : ITokenService
         }
     }
 
-    private static Claim CreateClaim(TokenClaim claim)
+    private static IEnumerable<Claim> CreateClaims(TokenClaim claim)
+    {
+        var valueType = NormalizeValueType(claim);
+        foreach (var value in ResolveValues(claim))
+        {
+            yield return string.IsNullOrWhiteSpace(valueType)
+                ? new Claim(claim.Type, value)
+                : new Claim(claim.Type, value, valueType);
+        }
+    }
+
+    private static string? NormalizeValueType(TokenClaim claim)
     {
         var valueType = claim.ValueType;
         if (string.IsNullOrWhiteSpace(valueType) && IsNumericDateClaim(claim.Type) && long.TryParse(claim.Value, out _))
@@ -263,9 +294,42 @@ public sealed partial class TokenAuthorityService : ITokenService
             valueType = ClaimValueTypes.Integer64;
         }
 
-        return string.IsNullOrWhiteSpace(valueType)
-            ? new Claim(claim.Type, claim.Value)
-            : new Claim(claim.Type, claim.Value, valueType);
+        return valueType;
+    }
+
+    private static IEnumerable<string> ResolveValues(TokenClaim claim)
+    {
+        if (claim.Values is { Length: > 0 })
+        {
+            return claim.Values;
+        }
+
+        return string.IsNullOrWhiteSpace(claim.Value)
+            ? []
+            : [claim.Value!];
+    }
+
+    private static TokenClaim[] ToTokenClaims(IEnumerable<Claim> claims)
+    {
+        return claims
+            .GroupBy(static claim => (claim.Type, claim.ValueType))
+            .Select(static group =>
+            {
+                var values = group
+                    .Select(static claim => claim.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+
+                return values.Length == 1
+                    ? new TokenClaim(group.Key.Type, values[0], group.Key.ValueType)
+                    : new TokenClaim
+                    {
+                        Type = group.Key.Type,
+                        Values = values,
+                        ValueType = group.Key.ValueType
+                    };
+            })
+            .ToArray();
     }
 
     private static bool IsNumericDateClaim(string type)
@@ -274,5 +338,43 @@ public sealed partial class TokenAuthorityService : ITokenService
             || string.Equals(type, JwtRegisteredClaimNames.Nbf, StringComparison.Ordinal)
             || string.Equals(type, JwtRegisteredClaimNames.Exp, StringComparison.Ordinal)
             || string.Equals(type, "auth_time", StringComparison.Ordinal);
+    }
+
+    private static bool TryCreateAccessClaims(IssueTokenRequest request, out List<Claim> claims, out string error)
+    {
+        claims = [];
+        error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(request.Audience))
+        {
+            error = "Access token audience is required.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ClientId))
+        {
+            error = "Access token client_id is required.";
+            return false;
+        }
+
+        var normalizedClaims = request.AccessClaims?
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
+            .Where(static claim => !string.Equals(claim.Type, OAuthClaimTypes.ClientId, StringComparison.Ordinal))
+            .Where(static claim => !string.Equals(claim.Type, JwtRegisteredClaimNames.Iat, StringComparison.Ordinal))
+            .Where(static claim => !string.Equals(claim.Type, JwtRegisteredClaimNames.Jti, StringComparison.Ordinal))
+            .ToList()
+            ?? [];
+
+        if (!normalizedClaims.Any(static claim => string.Equals(claim.Type, OAuthClaimTypes.Subject, StringComparison.Ordinal)))
+        {
+            error = "Access token sub is required.";
+            return false;
+        }
+
+        normalizedClaims.Insert(0, new TokenClaim(OAuthClaimTypes.ClientId, request.ClientId));
+        normalizedClaims.Insert(0, new TokenClaim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")));
+        normalizedClaims.Insert(0, TokenClaim.Integer64(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        claims = CreateClaims(normalizedClaims);
+        return true;
     }
 }

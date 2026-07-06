@@ -25,7 +25,7 @@
 <h3>OAuth Chain Demo</h3>
 
 <Alert Type="AlertType.Info" ShowIcon="true" Message="一条完整的 OAuth 演示链路"
-       Description="这个页面会按步骤演示：生成 OAuth Client、Client Credentials 获取服务 Token、用户获取 Token、Client 发起 Token Exchange，以及下游服务消费交换后的 Token 并读取 ProxyServiceName。" />
+       Description="这个页面会按步骤演示：生成 OAuth Client、Client Credentials 获取服务 Token、用户获取 Token、Client 发起 Token Exchange，以及下游服务消费交换后的 Token 并读取标准 act claim。" />
 
 <Spin Spinning="@_busy" Tip="@_busyText">
     <Row Gutter="16">
@@ -77,7 +77,7 @@
 
     <Card Title="Step 5. Downstream 消费交换后的 Token" Class="demo-section">
         <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
-            <div>WASM 页面调用后端 orchestrator；后端再通过 `HTTPRpcClient` self-call 下游服务，读取 `ProxyServiceName`。</div>
+            <div>WASM 页面调用后端 orchestrator；后端再通过 `HTTPRpcClient` self-call 下游服务，读取标准 `act` claim 链。</div>
             <Button Type="@ButtonType.Primary" Disabled="@string.IsNullOrWhiteSpace(_exchangedAccessToken)"
                     OnClick="@ConsumeExchangedTokenAsync">
                 调用 Downstream
@@ -185,6 +185,8 @@
             var result = await OAuthDemoService.ExchangeTokenAsync(
                 new ExchangeDemoTokenRequest
                 {
+                    ClientId = _clientId!,
+                    ClientSecret = _clientSecret!,
                     ClientAccessToken = _clientAccessToken!,
                     UserAccessToken = _userAccessToken!,
                     RequestedScope = RequestedExchangeScope

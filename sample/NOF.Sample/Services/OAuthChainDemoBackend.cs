@@ -144,6 +144,7 @@ public sealed class OAuthChainDemoBackend(
                 ["scope"] = request.RequestedScope
             })
         };
+        message.Headers.Authorization = CreateBasicAuthorizationHeader(request.ClientId, request.ClientSecret);
 
         return await SendTokenRequestAsync(message, cancellationToken).ConfigureAwait(false);
     }

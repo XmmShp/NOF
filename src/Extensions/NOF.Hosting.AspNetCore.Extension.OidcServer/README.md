@@ -30,13 +30,14 @@ builder.AddOidcServer(options =>
 
 builder.Services.AddScoped<IOAuthAuthorizationHandler, YourAuthorizationHandler>();
 builder.Services.AddScoped<IOAuthSubjectService, YourSubjectService>();
+builder.Services.AddScoped<IOAuthTokenExchangeHandler, YourTokenExchangeHandler>();
 
 var app = await builder.BuildAsync();
 app.MapOidcServer();
 await app.RunAsync();
 ```
 
-`AddOidcServer(...)` registers a default persisted OAuth client service as `IOAuthClientManagementService`. Applications can create, update, delete, rotate, and validate OAuth clients by resolving that service from DI. Replace `IOAuthClientManagementService` when an application needs custom client validation or management behavior.
+`AddOidcServer(...)` registers a default persisted OAuth client service as `IOAuthClientManagementService` and a default `IOAuthTokenExchangeHandler`. Applications can replace either service when they need custom client validation, management behavior, or token-exchange claim construction.
 
 Bootstrap helpers are available on the returned selector:
 
@@ -50,6 +51,10 @@ builder.AddOidcServer(options =>
 .AddPublicClient("spa-client", ["openid", "profile", "api.read"])
 .AddConfidentialClient("service-client", "service-client-secret", ["api.read", "api.write"]);
 ```
+
+`ITokenService` accepts explicit multi-value claims through `TokenClaim.Array(...)`. The issuer expands those values into repeated same-name claims so the resulting JWT payload is emitted as a standard JSON array claim.
+
+`ITokenService` also accepts explicit JSON object claims through `TokenClaim.Json(...)`. The default token-exchange handler emits the standard chained `act` claim for confidential clients, omits `act` for public clients, and by default issues client-credentials subjects in the form `client:{client_id}`.
 
 ## License
 

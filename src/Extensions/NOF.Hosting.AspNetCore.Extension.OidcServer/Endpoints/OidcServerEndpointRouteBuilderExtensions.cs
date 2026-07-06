@@ -310,7 +310,7 @@ public static partial class NOFOidcServerExtensions
         }
 
         var refreshClientId = validateResult.Value.Claims
-            .FirstOrDefault(static claim => string.Equals(claim.Type, "client_id", StringComparison.Ordinal))
+            .FirstOrDefault(static claim => string.Equals(claim.Type, OAuthClaimTypes.ClientId, StringComparison.Ordinal))
             ?.Value;
         if (string.IsNullOrWhiteSpace(refreshClientId)
             || !FixedTimeEquals(refreshClientId, authenticatedClient.ClientId))
@@ -510,14 +510,14 @@ public static partial class NOFOidcServerExtensions
 
         var claims = validateResult.Value.Claims
             .GroupBy(static claim => claim.Type, StringComparer.Ordinal)
-            .ToDictionary(static group => group.Key, static group => group.First().Value, StringComparer.Ordinal);
+            .ToDictionary(static group => group.Key, static group => group.First().Value ?? string.Empty, StringComparer.Ordinal);
         if (!claims.TryGetValue(OAuthClaimTypes.Subject, out var subject) || string.IsNullOrWhiteSpace(subject))
         {
             return Fail("invalid_grant", "refresh token subject is invalid.");
         }
 
         var scope = claims.TryGetValue(OAuthClaimTypes.Scope, out var scopeClaim) ? scopeClaim : string.Empty;
-        var refreshClientId = claims.TryGetValue("client_id", out var clientIdClaim) ? clientIdClaim : string.Empty;
+        var refreshClientId = claims.TryGetValue(OAuthClaimTypes.ClientId, out var clientIdClaim) ? clientIdClaim : string.Empty;
         if (string.IsNullOrWhiteSpace(refreshClientId))
         {
             return Fail("invalid_grant", "refresh token client is invalid.");
@@ -528,7 +528,7 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", "refresh token client does not match.");
         }
 
-        var scopes = ParseScopes(scope);
+        var scopes = ParseScopes(scope ?? string.Empty);
         if (!await subjectService.CanRefreshAsync(subject, validateResult.Value.TokenId, scopes, cancellationToken).ConfigureAwait(false))
         {
             return Fail("invalid_grant", "refresh token session is invalid.");
@@ -546,18 +546,19 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", revokeResult.Message);
         }
 
+        var scopeText = scope ?? string.Empty;
         var response = await IssueTokenResponseAsync(
             subjectService,
             tokenService,
             signingKeyService,
             oauthOptions,
             subject,
-            scope,
+            scopeText,
             refreshClientId,
             idTokenAudience: null,
             nonce: null,
             additionalAccessClaims: null,
-            issueRefreshToken: ShouldIssueRefreshToken(scope),
+            issueRefreshToken: ShouldIssueRefreshToken(scopeText),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return response is null
@@ -572,10 +573,10 @@ public static partial class NOFOidcServerExtensions
         OAuthAuthorizationServerOptions oauthOptions,
         string subject,
         string scope,
-        string refreshTokenClientId,
+        string clientId,
         string? idTokenAudience,
         string? nonce,
-        IReadOnlyList<KeyValuePair<string, string>>? additionalAccessClaims,
+        IReadOnlyList<TokenClaim>? additionalAccessClaims,
         bool issueRefreshToken,
         CancellationToken cancellationToken)
     {
@@ -592,7 +593,7 @@ public static partial class NOFOidcServerExtensions
         accessClaims.Add(new TokenClaim(OAuthClaimTypes.Scope, string.Join(' ', scopes)));
         if (additionalAccessClaims is not null)
         {
-            accessClaims.AddRange(additionalAccessClaims.Select(static claim => new TokenClaim(claim.Key, claim.Value)));
+            accessClaims.AddRange(additionalAccessClaims);
         }
 
         var issueResult = await tokenService.IssueTokenAsync(
@@ -601,6 +602,7 @@ public static partial class NOFOidcServerExtensions
                 Audience = oauthOptions.AccessTokenAudience,
                 AccessTokenExpiration = oauthOptions.AccessTokenExpiration,
                 AccessClaims = accessClaims.ToArray(),
+                ClientId = clientId,
                 RefreshToken = issueRefreshToken
                     ? new RefreshTokenOptions
                     {
@@ -609,7 +611,7 @@ public static partial class NOFOidcServerExtensions
                         [
                             new TokenClaim(OAuthClaimTypes.Subject, subject),
                             new TokenClaim(OAuthClaimTypes.Scope, string.Join(' ', scopes)),
-                            new TokenClaim("client_id", refreshTokenClientId)
+                            new TokenClaim(OAuthClaimTypes.ClientId, clientId)
                         ]
                     }
                     : null
@@ -705,6 +707,19 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", "subject_token subject is invalid.");
         }
 
+        var authenticatedClient = await AuthenticateClientAsync(
+            httpRequest,
+            request.ClientId,
+            request.ClientSecret,
+            request.Scope,
+            serviceProvider,
+            allowPublicClient: true,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticatedClient.Error is not null)
+        {
+            return Fail(authenticatedClient.Error.Error, authenticatedClient.Error.ErrorDescription);
+        }
+
         var actorPrincipal = await ValidateAccessTokenAsync(
             request.ActorToken,
             signingKeyService,
@@ -716,38 +731,51 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", "actor_token is invalid.");
         }
 
-        var proxyServiceName = ResolveProxyServiceName(actorPrincipal);
-        if (string.IsNullOrWhiteSpace(proxyServiceName))
+        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
+        if (clientService is null)
         {
-            return Fail("invalid_grant", "actor_token subject is invalid.");
+            return Fail("server_error", "OAuth client management service is not registered.");
         }
 
-        var grantedScopes = ParseScopes(principal.FindFirst(OAuthClaimTypes.Scope)?.Value ?? string.Empty);
-        var actorScopes = ParseScopes(actorPrincipal.FindFirst(OAuthClaimTypes.Scope)?.Value ?? string.Empty);
-        var requestedScopes = ParseScopes(request.Scope);
-        var scopes = grantedScopes.Where(actorScopes.Contains).ToHashSet(StringComparer.Ordinal);
-        if (requestedScopes.Count > 0)
+        var clientResult = await clientService.GetAsync(authenticatedClient.ClientId, cancellationToken).ConfigureAwait(false);
+        if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
         {
-            scopes.IntersectWith(requestedScopes);
+            return Fail("invalid_client", "client credentials are invalid.");
         }
 
-        if (scopes.Count == 0)
+        var tokenExchangeHandler = ResolveService<IOAuthTokenExchangeHandler>(serviceProvider);
+        if (tokenExchangeHandler is null)
         {
-            return Fail("invalid_scope", "requested scope is not granted by subject_token and actor_token.");
+            return Fail("server_error", "OAuth token exchange handler is not registered.");
         }
 
+        var exchangeResult = await tokenExchangeHandler.HandleAsync(
+            new OAuthTokenExchangeRequest(
+                authenticatedClient.ClientId,
+                clientResult.Value.ClientType,
+                subject,
+                principal,
+                actorPrincipal,
+                ParseScopes(request.Scope)),
+            cancellationToken).ConfigureAwait(false);
+
+        if (exchangeResult is OAuthTokenExchangeResult.Failure failure)
+        {
+            return Fail(failure.Error, failure.ErrorDescription);
+        }
+
+        var success = (OAuthTokenExchangeResult.Success)exchangeResult;
         var response = await IssueTokenResponseAsync(
             subjectService,
             tokenService,
             signingKeyService,
             oauthOptions,
-            subject,
-            string.Join(' ', scopes.OrderBy(static value => value, StringComparer.Ordinal)),
-            string.Empty,
+            success.Subject,
+            string.Join(' ', success.Scopes.OrderBy(static value => value, StringComparer.Ordinal)),
+            authenticatedClient.ClientId,
             idTokenAudience: null,
             nonce: null,
-            additionalAccessClaims:
-                [new KeyValuePair<string, string>(ClaimTypes.ProxyServiceName, proxyServiceName)],
+            additionalAccessClaims: success.AccessTokenClaims,
             issueRefreshToken: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -755,11 +783,6 @@ public static partial class NOFOidcServerExtensions
             ? Fail("invalid_grant", "subject_token subject is invalid.")
             : Result.Success(response);
     }
-
-    private static string? ResolveProxyServiceName(ClaimsPrincipal actorPrincipal)
-        => actorPrincipal.FindFirst("client_id")?.Value
-            ?? actorPrincipal.FindFirst(OAuthClaimTypes.Subject)?.Value;
-
     internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromClientCredentialsAsync(
         HttpRequest httpRequest,
         OAuthTokenRequest request,
@@ -806,7 +829,7 @@ public static partial class NOFOidcServerExtensions
             .ToList();
         if (accessClaims.All(static claim => claim.Type != OAuthClaimTypes.Subject))
         {
-            accessClaims.Insert(0, new TokenClaim(OAuthClaimTypes.Subject, success.Subject));
+            accessClaims.Insert(0, new TokenClaim(OAuthClaimTypes.Subject, NormalizeClientSubject(success.Subject, clientCredentials.ClientId)));
         }
 
         accessClaims.Add(new TokenClaim(OAuthClaimTypes.Scope, scopeText));
@@ -815,6 +838,7 @@ public static partial class NOFOidcServerExtensions
             new IssueTokenRequest
             {
                 Audience = oauthOptions.AccessTokenAudience,
+                ClientId = clientCredentials.ClientId,
                 AccessTokenExpiration = oauthOptions.AccessTokenExpiration,
                 AccessClaims = accessClaims.ToArray()
             },
@@ -877,6 +901,7 @@ public static partial class NOFOidcServerExtensions
             notBefore: now,
             expires: now.Add(oauthOptions.AccessTokenExpiration),
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256));
+        token.Header["typ"] = "JWT";
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
@@ -1093,6 +1118,18 @@ public static partial class NOFOidcServerExtensions
 
     private static string NormalizeScope(string scope)
         => string.Join(' ', ParseScopes(scope).OrderBy(static value => value, StringComparer.Ordinal));
+
+    private static string NormalizeClientSubject(string subject, string clientId)
+    {
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            return $"client:{clientId}";
+        }
+
+        return string.Equals(subject, clientId, StringComparison.Ordinal)
+            ? $"client:{clientId}"
+            : subject;
+    }
 
     internal static bool ShouldIssueRefreshToken(string scope)
         => ParseScopes(scope).Contains(OAuthScope.OfflineAccess);
@@ -1375,7 +1412,7 @@ public static partial class NOFOidcServerExtensions
         {
             Active = true,
             Scope = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Scope),
-            ClientId = GetSingleClaimValue(response.Claims, "client_id"),
+            ClientId = GetSingleClaimValue(response.Claims, OAuthClaimTypes.ClientId),
             TokenType = response.TokenType,
             Subject = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Subject),
             ExpiresAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Exp),
@@ -1390,10 +1427,10 @@ public static partial class NOFOidcServerExtensions
 
     private static IDictionary<string, JsonElement>? BuildAdditionalClaims(IEnumerable<TokenClaim> claims)
     {
-        var additionalClaims = claims
+        var additionalClaims = ExpandTokenClaims(claims)
             .Where(static claim =>
                 !string.Equals(claim.Type, OAuthClaimTypes.Scope, StringComparison.Ordinal)
-                && !string.Equals(claim.Type, "client_id", StringComparison.Ordinal)
+                && !string.Equals(claim.Type, OAuthClaimTypes.ClientId, StringComparison.Ordinal)
                 && !string.Equals(claim.Type, OAuthClaimTypes.Subject, StringComparison.Ordinal)
                 && !string.Equals(claim.Type, JwtRegisteredClaimNames.Exp, StringComparison.Ordinal)
                 && !string.Equals(claim.Type, JwtRegisteredClaimNames.Iat, StringComparison.Ordinal)
@@ -1414,6 +1451,12 @@ public static partial class NOFOidcServerExtensions
 
     private static object ToJsonValue(TokenClaim claim)
     {
+        if (string.Equals(claim.ValueType, Microsoft.IdentityModel.JsonWebTokens.JsonClaimValueTypes.Json, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(claim.Value))
+        {
+            return JsonDocument.Parse(claim.Value).RootElement.Clone();
+        }
+
         if (string.Equals(claim.ValueType, ClaimValueTypes.Integer64, StringComparison.Ordinal)
             && long.TryParse(claim.Value, out var longValue))
         {
@@ -1426,16 +1469,18 @@ public static partial class NOFOidcServerExtensions
             return booleanValue;
         }
 
-        return claim.Value;
+        return claim.Value ?? string.Empty;
     }
 
     private static string? GetSingleClaimValue(IEnumerable<TokenClaim> claims, string type)
-        => claims.FirstOrDefault(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))?.Value;
+        => ExpandTokenClaims(claims)
+            .FirstOrDefault(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))
+            ?.Value;
 
     private static IReadOnlyList<string> GetClaimValues(IEnumerable<TokenClaim> claims, string type)
-        => claims
+        => ExpandTokenClaims(claims)
             .Where(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))
-            .Select(static claim => claim.Value)
+            .Select(static claim => claim.Value ?? string.Empty)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
@@ -1443,6 +1488,29 @@ public static partial class NOFOidcServerExtensions
     {
         var value = GetSingleClaimValue(claims, type);
         return long.TryParse(value, out var result) ? result : null;
+    }
+
+    private static IEnumerable<TokenClaim> ExpandTokenClaims(IEnumerable<TokenClaim> claims)
+    {
+        foreach (var claim in claims)
+        {
+            if (claim.Values is { Length: > 0 })
+            {
+                foreach (var value in claim.Values)
+                {
+                    yield return new TokenClaim(claim.Type, value, claim.ValueType);
+                }
+
+                continue;
+            }
+
+            if (claim.Value is null)
+            {
+                continue;
+            }
+
+            yield return claim;
+        }
     }
 
     private static string AddQueryString(string uri, IReadOnlyDictionary<string, string?> query)

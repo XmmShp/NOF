@@ -2,7 +2,9 @@ using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace NOF.Sample.Services;
 
@@ -94,16 +96,37 @@ public sealed class InspectAccessTokenHandler(IUserContext userContext) : DemoDo
             .Distinct(StringComparer.Ordinal)
             .OrderBy(static value => value, StringComparer.Ordinal)
             .ToArray();
+        var actor = ResolveActor(userContext.User);
 
         return Task.FromResult<Result<ConsumeDemoAccessTokenResponse>>(new ConsumeDemoAccessTokenResponse
         {
             IsAuthenticated = true,
-            Subject = userContext.User.FindFirst("sub")?.Value ?? userContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+            Subject = userContext.User.FindFirst("sub")?.Value,
             TenantId = userContext.User.TenantId,
-            ProxyServiceName = userContext.User.ProxyServiceName,
+            ActorSubject = actor?.Subject,
+            ActorJson = actor?.Json,
             Permissions = userContext.User.Permissions.OrderBy(static value => value, StringComparer.Ordinal).ToArray(),
             Scopes = scopes
         });
+    }
+
+    private static (string? Subject, string Json)? ResolveActor(ClaimsPrincipal user)
+    {
+        var actorJson = user.FindFirst(OAuthClaimTypes.Actor)?.Value;
+        if (string.IsNullOrWhiteSpace(actorJson))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(actorJson);
+        var root = document.RootElement;
+        var subject = root.TryGetProperty(OAuthClaimTypes.Subject, out var subjectElement)
+            ? subjectElement.GetString()
+            : null;
+
+        return string.IsNullOrWhiteSpace(subject)
+            ? null
+            : (subject, actorJson);
     }
 }
 
