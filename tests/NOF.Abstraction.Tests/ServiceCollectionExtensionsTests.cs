@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Claims;
 using Xunit;
 
 namespace NOF.Abstraction.Tests;
@@ -43,5 +44,45 @@ public class ServiceCollectionExtensionsTests
         _ = Assert.Single(services, descriptor =>
             descriptor.ServiceType == typeof(IDaemonService)
             && descriptor.ImplementationType == typeof(EventPublisherAmbientDaemonService));
+    }
+
+    [Fact]
+    public void ReplaceOrAdd_ShouldReplaceExistingDescriptor()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IUserContext, UserContext>();
+        services.ReplaceOrAdd(ServiceDescriptor.Scoped<IUserContext, TestUserContext>());
+
+        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(IUserContext));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+        Assert.Equal(typeof(TestUserContext), descriptor.ImplementationType);
+    }
+
+    [Fact]
+    public void ReplaceOrAdd_ShouldAddDescriptorWhenMissing()
+    {
+        var services = new ServiceCollection();
+
+        services.ReplaceOrAddSingleton<InitializedTypes, InitializedTypes>();
+
+        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(InitializedTypes));
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+        Assert.Equal(typeof(InitializedTypes), descriptor.ImplementationType);
+    }
+
+    private sealed class TestUserContext : IUserContext
+    {
+        public event Action? StateChanging;
+
+        public event Action? StateChanged;
+
+        public ClaimsPrincipal User => new();
+
+        public void Logout()
+        {
+            StateChanging?.Invoke();
+            StateChanged?.Invoke();
+        }
     }
 }

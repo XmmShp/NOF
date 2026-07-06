@@ -1,3 +1,4 @@
+using NOF.Authentication;
 using NOF.Contract;
 using Xunit;
 
@@ -48,7 +49,7 @@ public class ContextExtensionsTests
         var context = Context.Empty.WithServiceToken("Authorization");
 
         Assert.Equal("Authorization", context.GetServiceTokenHeaderName());
-        Assert.True(context.TryGetItem(ContextExtensions.ServiceTokenHeaderKey, out var value));
+        Assert.True(context.TryGetItem(AuthenticationContextKeys.ServiceTokenHeader, out var value));
         Assert.Equal("Authorization", value);
     }
 
@@ -60,7 +61,7 @@ public class ContextExtensionsTests
             .WithServiceToken(null);
 
         Assert.Null(context.GetServiceTokenHeaderName());
-        Assert.False(context.TryGetItem(ContextExtensions.ServiceTokenHeaderKey, out _));
+        Assert.False(context.TryGetItem(AuthenticationContextKeys.ServiceTokenHeader, out _));
     }
 
     [Fact]
@@ -69,7 +70,7 @@ public class ContextExtensionsTests
         var context = Context.Empty.WithTokenExchange("X-Authorization");
 
         Assert.Equal(["X-Authorization"], context.GetTokenExchangeHeaderNames().OrderBy(static value => value, StringComparer.Ordinal).ToArray());
-        Assert.True(context.TryGetItem(ContextExtensions.TokenExchangeHeaderKey, out var value));
+        Assert.True(context.TryGetItem(AuthenticationContextKeys.TokenExchangeHeaders, out var value));
         Assert.Equal(["X-Authorization"], Assert.IsType<HashSet<string>>(value).OrderBy(static value => value, StringComparer.Ordinal).ToArray());
     }
 
@@ -79,7 +80,7 @@ public class ContextExtensionsTests
         var context = Context.Empty.WithTokenExchange("Authorization", "X-Authorization", "authorization", null, " ");
 
         Assert.Equal(["Authorization", "X-Authorization"], context.GetTokenExchangeHeaderNames().OrderBy(static value => value, StringComparer.Ordinal).ToArray());
-        Assert.True(context.TryGetItem(ContextExtensions.TokenExchangeHeaderKey, out var value));
+        Assert.True(context.TryGetItem(AuthenticationContextKeys.TokenExchangeHeaders, out var value));
         Assert.Equal(["Authorization", "X-Authorization"], Assert.IsType<HashSet<string>>(value).OrderBy(static value => value, StringComparer.Ordinal).ToArray());
     }
 
@@ -91,6 +92,6 @@ public class ContextExtensionsTests
             .WithTokenExchange(null);
 
         Assert.Empty(context.GetTokenExchangeHeaderNames());
-        Assert.False(context.TryGetItem(ContextExtensions.TokenExchangeHeaderKey, out _));
+        Assert.False(context.TryGetItem(AuthenticationContextKeys.TokenExchangeHeaders, out _));
     }
 }

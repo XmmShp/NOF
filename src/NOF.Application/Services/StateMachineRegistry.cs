@@ -1,7 +1,6 @@
-using NOF.Application;
 using System.Collections.Concurrent;
 
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 public sealed class StateMachineRegistry : IStateMachineRegistry
 {

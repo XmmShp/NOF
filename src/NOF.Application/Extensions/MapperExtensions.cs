@@ -11,6 +11,10 @@ public static partial class NOFApplicationExtensions
         /// Gets a <see cref="MapSelector{TSource}"/> bound to the current ambient <see cref="IMapper"/>
         /// instance, providing fluent mapping via <c>.As&lt;T&gt;()</c> and <c>.To&lt;T&gt;()</c>.
         /// </summary>
+        /// <remarks>
+        /// This is a convenience API built on the ambient <see cref="IMapper"/>.
+        /// Explicit <see cref="IMapper"/> dependencies via <see cref="MapWith"/> remain preferred.
+        /// </remarks>
         public MapSelector<TSource> Map => new(source, typeof(TSource), Mapper.Current);
 
         /// <summary>

@@ -29,24 +29,19 @@ public static partial class NOFInfrastructureExtensions
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
-            builder.Services.AddNOFAbstraction();
-            builder.Services.GetOrAddSingleton<MapperRegistry>();
-            builder.Services.GetOrAddSingleton<CommandHandlerRegistry>();
-            builder.Services.GetOrAddSingleton<NotificationHandlerRegistry>();
-            builder.Services.GetOrAddSingleton<RpcServerRegistry>();
+            builder.Services.AddNOFApplication();
             builder.Services.GetOrAddSingleton<TypeResolver>();
 
             #region Core Services
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
-            builder.Services.TryAddSingleton<IMapper, ManualMapper>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.AddHttpClient<HttpAuthorizationServerService>();
             builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-            builder.Services.TryAddSingleton<IIdGenerator>(sp => new SnowflakeIdGenerator(
+            builder.Services.Replace(ServiceDescriptor.Singleton<IIdGenerator>(sp => new SnowflakeIdGenerator(
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
                 builder.Environment.ApplicationId,
-                builder.Environment.InstanceId));
+                builder.Environment.InstanceId)));
             builder.Services.TryAddScoped<CurrentTenant>();
             builder.Services.TryAddScoped<ICurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
             builder.Services.TryAddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
@@ -66,8 +61,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddSingleton<IBackplane>(sp => new MemoryBackplane(
                 sp.GetRequiredService<MemoryBackplaneState>()));
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, MapperAmbientDaemonService>());
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, IdGeneratorAmbientDaemonService>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFTenantModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxMessageModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFOutboxMessageModelCreatingContributor>());
@@ -102,7 +95,6 @@ public static partial class NOFInfrastructureExtensions
             #endregion
 
             #region Application Services
-            builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
             #endregion

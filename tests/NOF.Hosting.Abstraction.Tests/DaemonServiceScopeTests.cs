@@ -28,6 +28,23 @@ public class DaemonServiceScopeTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IEventPublisher>());
     }
 
+    [Fact]
+    public void AddHostingDefaults_ShouldBeIdempotent()
+    {
+        var builder = new TestAppBuilder();
+
+        builder.AddHostingDefaults();
+        builder.AddHostingDefaults();
+
+        _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IHostEnvironment));
+        _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IUserContext));
+        _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IEventPublisher));
+        _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(RequestOutboundPipelineExecutor));
+        _ = Assert.Single(builder.Services, service =>
+            service.ServiceType == typeof(IDaemonService)
+            && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));
+    }
+
     private sealed class TestAppBuilder : NOFAppBuilder<FakeHost>
     {
         private readonly ServiceCollection _services = [];

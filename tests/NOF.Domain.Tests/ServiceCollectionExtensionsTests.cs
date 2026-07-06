@@ -11,7 +11,7 @@ public class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        services.AddNOFDomain(applicationId: 1, instanceId: 1);
+        services.AddNOFDomain();
 
         Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(IIdGenerator)
@@ -29,50 +29,43 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddNOFDomain_ShouldResolveConfiguredSnowflakeGenerator()
+    public void AddNOFDomain_ShouldResolveDefaultSnowflakeGenerator()
     {
         var services = new ServiceCollection();
-        services.AddNOFDomain(applicationId: 7, instanceId: 9);
+        services.AddNOFDomain();
 
         using var provider = services.BuildServiceProvider();
         var generator = Assert.IsType<SnowflakeIdGenerator>(provider.GetRequiredService<IIdGenerator>());
-        var id = generator.NextId();
-
-        const int sequenceBits = 8;
-        const int instanceIdBits = 6;
-        const int applicationIdBits = 8;
-        var maxInstanceId = (1L << instanceIdBits) - 1;
-        var maxApplicationId = (1L << applicationIdBits) - 1;
-        var extractedInstanceId = (uint)((id >> sequenceBits) & maxInstanceId);
-        var extractedApplicationId = (uint)((id >> (sequenceBits + instanceIdBits)) & maxApplicationId);
-
-        Assert.Equal((uint)9, extractedInstanceId);
-        Assert.Equal((uint)7, extractedApplicationId);
+        _ = generator.NextId();
     }
 
     [Fact]
-    public void AddNOFDomain_WithInvalidSnowflakeOptions_ShouldThrow()
-    {
-        var services = new ServiceCollection();
-
-        void Act() => services.AddNOFDomain(
-            applicationId: 0,
-            instanceId: 1,
-            configure: options => options.ApplicationIdBits = 0);
-
-        Assert.Throws<ArgumentOutOfRangeException>(Act);
-    }
-
-    [Fact]
-    public void AddNOFDomain_WithExplicitGenerator_ShouldRegisterProvidedInstance()
+    public void AddNOFDomain_ShouldAllowOverridingIIdGenerator()
     {
         var services = new ServiceCollection();
         var generator = new TestIdGenerator();
 
-        services.AddNOFDomain(generator);
+        services.AddNOFDomain();
+        services.AddSingleton<IIdGenerator>(generator);
 
         using var provider = services.BuildServiceProvider();
         Assert.Same(generator, provider.GetRequiredService<IIdGenerator>());
+    }
+
+    [Fact]
+    public void AddNOFDomain_ShouldBeIdempotent()
+    {
+        var services = new ServiceCollection();
+
+        services.AddNOFDomain();
+        services.AddNOFDomain();
+
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IIdGenerator));
+        _ = Assert.Single(services, descriptor =>
+            descriptor.ServiceType == typeof(IDaemonService)
+            && descriptor.ImplementationType == typeof(IdGeneratorAmbientDaemonService));
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IEventPublisher));
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IUserContext));
     }
 
     private sealed class TestIdGenerator : IIdGenerator

@@ -11,7 +11,7 @@ Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF)
 - `Failure` and `[Failure(...)]` for strongly-typed failure definitions
 - `DomainException` and `DomainValidationException`
 - `IIdGenerator` and the ambient `IdGenerator` facade
-- `AddNOFDomain(...)` for package-local runtime registration
+- `AddNOFDomain()` for package-local runtime registration
 
 This package does **not** currently expose aggregate root, repository, or unit-of-work abstractions.
 
@@ -65,16 +65,18 @@ Before using `New()`, register NOF.Domain and ensure the current scope activates
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 
-services.AddNOFDomain(applicationId: 1, instanceId: 1);
+services.AddNOFDomain();
 ```
 
 `New()` is a convenience API over the ambient `IdGenerator`. Use `New(IIdGenerator)` when you want an explicit dependency instead of relying on ambient scope.
 Standard NOF hosts activate daemon services automatically; custom hosts should do the equivalent when entering a scope.
 
-If you already own an `IIdGenerator` implementation, you can also register it explicitly:
+`AddNOFDomain()` registers the default `SnowflakeIdGenerator`.
+If you want a different generator, register your own `IIdGenerator` in the container and let your host/container policy decide how it overrides the default:
 
 ```csharp
-services.AddNOFDomain(new MyIdGenerator());
+services.AddNOFDomain();
+services.AddSingleton<IIdGenerator, MyIdGenerator>();
 ```
 
 ### `Failure` and `[Failure]`

@@ -1,31 +1,41 @@
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 using Xunit;
 
 namespace NOF.UI.Tests.Extensions;
 
-public sealed class ServiceCollectionExtensionsTests
+public class ServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddNOFUI_ShouldRegisterBrowserInfoService()
+    public void AddNOFUI_ShouldRegisterPackageDefaults()
     {
         var services = new ServiceCollection();
 
         services.AddNOFUI();
 
         Assert.Contains(services, descriptor =>
-            descriptor.ServiceType == typeof(IBrowserInfoService) &&
-            descriptor.ImplementationType == typeof(BrowserInfoService) &&
-            descriptor.Lifetime == ServiceLifetime.Scoped);
+            descriptor.ServiceType == typeof(IBrowserInfoService)
+            && descriptor.ImplementationType == typeof(BrowserInfoService)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(ILocalStorage)
+            && descriptor.ImplementationType == typeof(LocalStorage)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(ISessionStorage)
+            && descriptor.ImplementationType == typeof(SessionStorage)
+            && descriptor.Lifetime == ServiceLifetime.Scoped);
     }
 
     [Fact]
-    public void IBrowserInfoService_ShouldExposeChangedEvent()
+    public void AddNOFUI_ShouldBeIdempotent()
     {
-        var serviceType = typeof(IBrowserInfoService);
+        var services = new ServiceCollection();
 
-        Assert.NotNull(serviceType.GetEvent(nameof(IBrowserInfoService.Changed)));
-        Assert.Null(serviceType.GetMethod("StartListeningAsync", BindingFlags.Public | BindingFlags.Instance));
-        Assert.Null(serviceType.GetMethod("StopListeningAsync", BindingFlags.Public | BindingFlags.Instance));
+        services.AddNOFUI();
+        services.AddNOFUI();
+
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IBrowserInfoService));
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ILocalStorage));
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ISessionStorage));
     }
 }

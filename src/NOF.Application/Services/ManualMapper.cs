@@ -1,25 +1,18 @@
-using NOF.Application;
 using System.Collections.Concurrent;
 
-namespace NOF.Infrastructure;
+namespace NOF.Application;
 
 /// <summary>
 /// Implements <see cref="IMapper"/> using explicitly registered mapping functions.
-/// <para>
-/// Thread-safe. Each <see cref="MapKey"/> holds exactly one delegate.
-/// </para>
-/// <para>
-/// Mapping lookup priority: exact type pair - open generic source - open generic dest
-/// - open generic both - <c>Nullable&lt;T&gt;</c> fallback (<c>A - T?</c> uses <c>A - T</c>).
-/// </para>
 /// </summary>
+/// <remarks>
+/// This is the default application-layer mapper implementation. Explicit <see cref="IMapper"/>
+/// dependencies remain the primary runtime contract, while ambient mapper access is a convenience API.
+/// </remarks>
 public sealed class ManualMapper : IMapper
 {
     private readonly ConcurrentDictionary<MapKey, MapFunc> _mappings = new();
 
-    /// <summary>
-    /// Creates a new <see cref="ManualMapper"/> seeded with mappings from the global registry.
-    /// </summary>
     public ManualMapper(MapperRegistry mapperRegistry)
     {
         foreach (var registration in mapperRegistry.Freeze())
@@ -28,9 +21,6 @@ public sealed class ManualMapper : IMapper
         }
     }
 
-    #region Generic mapping
-
-    /// <inheritdoc />
     public TDestination Map<TSource, TDestination>(TSource source, bool useRuntimeType = false, string? name = null)
     {
         var sourceType = useRuntimeType && source is not null ? source.GetType() : typeof(TSource);
@@ -45,7 +35,6 @@ public sealed class ManualMapper : IMapper
             (name is null ? "." : $" with name '{name}'."));
     }
 
-    /// <inheritdoc />
     public bool TryMap<TSource, TDestination>(TSource source, out TDestination result, bool useRuntimeType = false, string? name = null)
     {
         var sourceType = useRuntimeType && source is not null ? source.GetType() : typeof(TSource);
@@ -60,11 +49,6 @@ public sealed class ManualMapper : IMapper
         return false;
     }
 
-    #endregion
-
-    #region Non-generic mapping
-
-    /// <inheritdoc />
     public object Map(Type sourceType, Type destinationType, object source, string? name = null)
     {
         ArgumentNullException.ThrowIfNull(sourceType);
@@ -82,7 +66,6 @@ public sealed class ManualMapper : IMapper
             (name is null ? "." : $" with name '{name}'."));
     }
 
-    /// <inheritdoc />
     public bool TryMap(Type sourceType, Type destinationType, object source, out object? result, string? name = null)
     {
         ArgumentNullException.ThrowIfNull(sourceType);
@@ -100,10 +83,6 @@ public sealed class ManualMapper : IMapper
         return false;
     }
 
-    #endregion
-
-    #region Lookup: exact - open generic - Nullable<T> fallback
-
     private MapFunc? ResolveDelegate(Type sourceType, Type destType, string? name)
     {
         while (true)
@@ -114,7 +93,6 @@ public sealed class ManualMapper : IMapper
                 return func;
             }
 
-            // Open generic fallback
             var openSource = sourceType.IsGenericType ? sourceType.GetGenericTypeDefinition() : null;
             var openDest = destType.IsGenericType ? destType.GetGenericTypeDefinition() : null;
 
@@ -145,7 +123,6 @@ public sealed class ManualMapper : IMapper
                 }
             }
 
-            // Nullable<T> fallback: A - T? can use A - T mapping (but not vice versa)
             var underlyingDest = Nullable.GetUnderlyingType(destType);
             if (underlyingDest is not null)
             {
@@ -156,6 +133,4 @@ public sealed class ManualMapper : IMapper
             return null;
         }
     }
-
-    #endregion
 }

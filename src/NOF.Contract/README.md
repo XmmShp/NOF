@@ -6,6 +6,8 @@ Contract layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 Defines the messaging contracts and shared models that form the public API surface of your application. This package contains `Result<T>`, `StreamingResult<T>`, `Empty`, HTTP endpoint annotations, and other shared attributes used by source generators and hosts.
 
+`Context` remains a generic execution-context carrier for explicit metadata passing across boundaries. Runtime authentication directives such as service-token or token-exchange markers are intentionally defined outside this package.
+
 ## Key Abstractions
 
 ### Messages
@@ -86,6 +88,12 @@ public interface IOrderService : IRpcService
 - **`[RequirePermission]`** - declares required permissions for an endpoint
 - **`[Summary]`** - adds summary documentation to generated endpoints
 - These NOF-specific attributes are all metadata-backed and converge on `MetadataAttribute`
+
+## Context
+
+Use `Context` for explicit per-call metadata. Header snapshots may be copied into `Context.Items` by transport/infrastructure components.
+
+Runtime outbound authentication directives are provided by `NOF.Authentication.Abstraction`, not `NOF.Contract`.
 
 ## Installation
 

@@ -6,6 +6,8 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, caching, and persistence contracts.
 
+`AddNOFApplication()` registers the package-local application defaults, including mapper/state-machine registries, the ambient mapper convenience API support, and the package-local Domain defaults.
+
 Commands and notifications are plain payload types. Handler discovery comes from the `CommandHandler<T>` and `NotificationHandler<T>` base classes rather than marker interfaces on the message types.
 
 ## Key Abstractions
@@ -152,6 +154,28 @@ public static partial class Mappings;
 The generator writes `MapperRegistration` entries into `Registry.MapperRegistry`.
 Those mappings become available once the assembly is added via `AddApplicationPart(...)`.
 Convenience APIs can use the ambient mapper via `source.Map`, while explicit code can use `source.MapWith(mapper)`.
+
+For package-local defaults:
+
+```csharp
+services.AddNOFApplication();
+```
+
+This registers the default `IMapper`, mapping registries, and scoped ambient mapper activation.
+Custom hosts still need the equivalent of `ResolveDaemonServices()` if they want to use the ambient `source.Map` convenience API.
+
+`AddNOFApplication()` already includes `AddNOFDomain()`:
+
+```csharp
+services.AddNOFApplication();
+```
+
+If you want to override the default `IIdGenerator`, register your own implementation explicitly:
+
+```csharp
+services.AddNOFApplication();
+services.AddSingleton<IIdGenerator, MyIdGenerator>();
+```
 
 ## Installation
 

@@ -142,6 +142,19 @@ public sealed class JwtTokenPropagationOutboundMiddlewareTests
             && descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
     }
 
+    [Fact]
+    public void AddAccessTokenPropagation_ShouldBeIdempotent()
+    {
+        var builder = new TestAppBuilder();
+
+        builder.AddJwtPropagation();
+        builder.AddJwtPropagation();
+
+        _ = Assert.Single(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestOutboundMiddleware)
+            && descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+    }
+
     private sealed class TestAppBuilder : NOFAppBuilder<FakeHost>
     {
         private readonly ConfigurationManager _configuration = new();

@@ -16,6 +16,8 @@ Provides the core host-builder abstraction contracts and baseline hosting capabi
 
 This package enables host scenarios that do not require the full application/infrastructure stack.
 
+`AddHostingDefaults()` registers the package-local hosting defaults, while `AddJwtPropagation()` adds the request outbound JWT propagation convenience.
+
 ## Installation
 
 ```shell

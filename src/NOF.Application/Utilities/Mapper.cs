@@ -3,6 +3,10 @@ namespace NOF.Application;
 /// <summary>
 /// Provides access to the ambient <see cref="IMapper"/> for the current async flow.
 /// </summary>
+/// <remarks>
+/// This is part of NOF's convenience API support. Explicit <see cref="IMapper"/>
+/// dependencies remain the primary runtime contract.
+/// </remarks>
 public static class Mapper
 {
     private static readonly AsyncLocal<IMapper?> _currentMapper = new();
