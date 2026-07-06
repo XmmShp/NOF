@@ -57,9 +57,9 @@ var builder = NOFWebApplicationBuilder.Create(args);
 
 builder.AddApplicationPart(typeof(MyAppService).Assembly);
 
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+builder.Services.AddRedisCache(builder.Configuration.GetConnectionString("redis")
     ?? throw new InvalidOperationException("Connection string 'redis' not found."));
-builder.AddRabbitMQ(options =>
+builder.Services.AddRabbitMQ(options =>
 {
     options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
 });

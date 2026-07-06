@@ -18,7 +18,7 @@ builder.AddRpcServer<NOFSampleService>();
 builder.AddRpcServer<OAuthChainDemoService>();
 builder.AddRpcServer<DemoDownstreamService>();
 
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
+builder.Services.AddRedisCache(builder.Configuration.GetConnectionString("redis"));
 
 builder.AddOidcServer(o =>
 {
@@ -39,7 +39,7 @@ builder.AddAuthenticationResourceServer(o =>
     o.AuthorizationServer = sampleIssuer;
 });
 
-builder.AddRabbitMQ(options =>
+builder.Services.AddRabbitMQ(options =>
 {
     options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
 });

@@ -16,14 +16,14 @@ using NOF.Infrastructure.RabbitMQ;
 
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddRabbitMQ(options =>
+builder.Services.AddRabbitMQ(options =>
 {
     options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
     options.PrefetchCount = 8;
     options.RequeueOnConsumerFailure = true;
 });
 
-builder.AddRabbitMQBackplane(options =>
+builder.Services.AddRabbitMQBackplane(options =>
 {
     options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
 });
