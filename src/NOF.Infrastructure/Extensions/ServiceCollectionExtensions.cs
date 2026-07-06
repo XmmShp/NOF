@@ -58,10 +58,6 @@ public static partial class NOFInfrastructureExtensions
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             services.TryAddScoped<IAuthorizationServerMetadataService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-            services.TryAddScoped<IJwtTokenExchangeService>(static serviceProvider =>
-                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-            services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
-                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             services.ReplaceOrAddSingleton<ResourceServerJwksCacheService, ResourceServerJwksCacheService>();
             services.AddRequestInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();
             services.AddCommandInboundMiddleware<AuthenticationResourceServerInboundMiddleware>();

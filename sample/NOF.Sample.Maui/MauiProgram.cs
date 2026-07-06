@@ -22,7 +22,6 @@ public static class MauiProgram
         builder.Services.AddAntDesign();
         builder.Services.AddScoped<MauiHttpNOFSampleService>();
         builder.Services.AddScoped<INOFSampleServiceClient>(sp => sp.GetRequiredService<MauiHttpNOFSampleService>());
-        builder.AddJwtPropagation();
         builder.Services.AddScoped(_ => new HttpClient
         {
             BaseAddress = new Uri(builder.Configuration["SampleApiBaseAddress"] ?? "https://localhost:5001/")

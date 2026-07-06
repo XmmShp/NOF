@@ -6,7 +6,7 @@ Contract layer package for the [NOF Framework](https://github.com/XmmShp/NOF).
 
 Defines the messaging contracts and shared models that form the public API surface of your application. This package contains `Result<T>`, `StreamingResult<T>`, `Empty`, HTTP endpoint annotations, and other shared attributes used by source generators and hosts.
 
-`Context` remains a generic execution-context carrier for explicit metadata passing across boundaries. Runtime authentication directives such as service-token or token-exchange markers are intentionally defined outside this package.
+`Context` remains a generic execution-context carrier for explicit metadata passing across boundaries.
 
 ## Key Abstractions
 

@@ -9,11 +9,11 @@ Provides the core host-builder abstraction contracts and baseline hosting capabi
 - `IHostApplicationBuilder`
 - `IApplicationInitializationStep`
 - `DependencyGraph` (dependency-aware topological ordering)
-- `JwtClaimsIdentity`, `JwtPropagation`, and `AddJwtPropagation()` for outbound JWT propagation
+- `JwtClaimsIdentity` as a raw JWT-carrying identity type
 
 This package enables host scenarios that do not require the full application/infrastructure stack.
 
-`IServiceCollection.AddNOFHosting()` registers the package-local hosting defaults, while `AddJwtPropagation()` adds the request outbound JWT propagation convenience.
+`IServiceCollection.AddNOFHosting()` registers the package-local hosting defaults. Token forwarding, token exchange, and service-token acquisition are intentionally not implemented in this package.
 
 ## Installation
 

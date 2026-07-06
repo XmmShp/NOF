@@ -13,42 +13,19 @@ public sealed class JwtClaimsIdentity : ClaimsIdentity
     /// </summary>
     public string Token { get; }
 
-    /// <summary>
-    /// Downstream propagation settings for this identity. Null means do not propagate.
-    /// </summary>
-    public JwtPropagation? DownstreamPropagation { get; }
-
     public JwtClaimsIdentity(string token)
         : this(
             CreateIdentity(token),
-            token,
-            downstreamPropagation: new JwtPropagation())
+            token)
     {
     }
 
     public JwtClaimsIdentity(ClaimsIdentity identity, string token)
-        : this(
-            identity,
-            token,
-            downstreamPropagation: new JwtPropagation())
-    {
-    }
-
-    public JwtClaimsIdentity(
-        ClaimsIdentity identity,
-        string token,
-        JwtPropagation? downstreamPropagation)
         : base(identity)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
-        if (downstreamPropagation is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(downstreamPropagation.HeaderName);
-            ArgumentNullException.ThrowIfNull(downstreamPropagation.TokenType);
-        }
 
         Token = token;
-        DownstreamPropagation = downstreamPropagation;
     }
 
     private static ClaimsIdentity CreateIdentity(string token)

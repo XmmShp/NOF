@@ -39,8 +39,4 @@ public class AuthenticationResourceServerOptions
     /// </summary>
     public string? Audience { get; set; }
 
-    /// <summary>
-    /// Gets or sets the client credentials used to obtain this service's own token before token exchange.
-    /// </summary>
-    public AuthenticationClientCredentialsOptions? TokenExchangeClient { get; set; }
 }

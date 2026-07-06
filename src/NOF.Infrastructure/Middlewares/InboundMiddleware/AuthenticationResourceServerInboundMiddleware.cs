@@ -130,12 +130,10 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
                     _userContext.User.AddIdentity(identity is null
                         ? new JwtClaimsIdentity(
                             CreateIdentity(CreateIdentity(token)),
-                            token,
-                            downstreamPropagation: source.DownstreamPropagation)
+                            token)
                         : new JwtClaimsIdentity(
                             CreateIdentity(identity),
-                            token,
-                            downstreamPropagation: source.DownstreamPropagation));
+                            token));
                     executionContext = (TContext)executionContext.WithoutItem(source.HeaderName);
                 }
                 catch (SecurityTokenExpiredException)

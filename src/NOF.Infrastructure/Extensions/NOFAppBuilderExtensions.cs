@@ -31,7 +31,6 @@ public static partial class NOFInfrastructureExtensions
 
         public IHostApplicationBuilder AddNOFInfrastructure()
         {
-            JwtPropagationRegistrationState.Register(builder, AddInfrastructureJwtPropagation);
             builder.Services.AddNOFApplication();
             AddOpenTelemetry(builder);
             builder.Services.GetOrAddSingleton<TypeResolver>();
@@ -40,8 +39,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();
             builder.Services.TryAddSingleton<IObjectSerializer, JsonObjectSerializer>();
             builder.Services.AddHttpClient<HttpAuthorizationServerService>();
-            builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
-                serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             builder.Services.Replace(ServiceDescriptor.Singleton<IIdGenerator>(sp => new SnowflakeIdGenerator(
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
                 builder.Environment.ApplicationId,
@@ -112,9 +109,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddCommandOutboundMiddleware<TracingOutboundMiddleware>();
             builder.Services.AddNotificationOutboundMiddleware<TracingOutboundMiddleware>();
             builder.Services.AddRequestOutboundMiddleware<TracingOutboundMiddleware>();
-            builder.Services.AddCommandOutboundMiddleware<ServiceTokenOutboundMiddleware>();
-            builder.Services.AddNotificationOutboundMiddleware<ServiceTokenOutboundMiddleware>();
-            builder.Services.AddRequestOutboundMiddleware<ServiceTokenOutboundMiddleware>();
             #endregion
 
             #region Inbound Middlewares
@@ -174,17 +168,5 @@ public static partial class NOFInfrastructureExtensions
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
-    }
-
-    private static void AddInfrastructureJwtPropagation(IHostApplicationBuilder builder)
-    {
-        builder.Services.AddHttpClient();
-        builder.Services.AddHttpClient<HttpAuthorizationServerService>();
-        builder.Services.TryAddScoped<IJwtTokenExchangeService>(static serviceProvider =>
-            serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-        builder.Services.TryAddScoped<IClientCredentialsTokenService>(static serviceProvider =>
-            serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
-        builder.Services.AddCommandOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
-        builder.Services.AddNotificationOutboundMiddleware<Infrastructure.JwtTokenPropagationOutboundMiddleware>();
     }
 }

@@ -979,10 +979,9 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
-    public async Task AddAuthenticationResourceServer_WithExplicitTokenPropagation_ShouldRegisterSeparately()
+    public async Task AddAuthenticationResourceServer_ShouldRegisterSeparately()
     {
         var builder = NOFTestAppBuilder.Create();
-        builder.AddJwtPropagation();
         builder.Services.AddAuthenticationResourceServer(options =>
         {
             options.AuthorizationServer = "https://auth.local";
@@ -1061,68 +1060,14 @@ public sealed class AuthenticationExtensionsTests
             descriptor.ServiceType == typeof(INotificationInboundMiddleware) &&
             descriptor.ImplementationType == typeof(AuthenticationResourceServerInboundMiddleware));
         Assert.DoesNotContain(builder.Services, descriptor =>
+            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
+            descriptor.ImplementationType?.Name.Contains("JwtTokenPropagationOutboundMiddleware", StringComparison.Ordinal) == true);
+        Assert.DoesNotContain(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+            descriptor.ImplementationType?.Name.Contains("JwtTokenPropagationOutboundMiddleware", StringComparison.Ordinal) == true);
         Assert.DoesNotContain(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
-    }
-
-    [Fact]
-    public void AddJwtPropagation_WithInfrastructureDefaults_ShouldRegisterRequestCommandAndNotificationOutboundMiddleware()
-    {
-        var builder = NOFTestAppBuilder.Create();
-
-        builder.AddJwtPropagation();
-
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
-    }
-
-    [Fact]
-    public void AddJwtPropagation_BeforeInfrastructureDefaults_ShouldStillRegisterInfrastructureJwtPropagation()
-    {
-        var builder = Host.CreateApplicationBuilder();
-
-        builder.AddJwtPropagation();
-        builder.AddNOFInfrastructure();
-
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
-        Assert.Contains(builder.Services, descriptor =>
-            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
-    }
-
-    [Fact]
-    public void AddJwtPropagation_OnDifferentBuilder_ShouldNotLeakInfrastructureRegistrations()
-    {
-        var infrastructureBuilder = Host.CreateApplicationBuilder();
-        infrastructureBuilder.AddNOFInfrastructure();
-
-        var isolatedBuilder = Host.CreateApplicationBuilder();
-        isolatedBuilder.AddJwtPropagation();
-
-        Assert.Contains(isolatedBuilder.Services, descriptor =>
-            descriptor.ServiceType == typeof(IRequestOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(Hosting.JwtTokenPropagationOutboundMiddleware));
-        Assert.DoesNotContain(isolatedBuilder.Services, descriptor =>
-            descriptor.ServiceType == typeof(ICommandOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
-        Assert.DoesNotContain(isolatedBuilder.Services, descriptor =>
-            descriptor.ServiceType == typeof(INotificationOutboundMiddleware) &&
-            descriptor.ImplementationType == typeof(JwtTokenPropagationOutboundMiddleware));
+            descriptor.ImplementationType?.Name.Contains("JwtTokenPropagationOutboundMiddleware", StringComparison.Ordinal) == true);
     }
 
     [Fact]

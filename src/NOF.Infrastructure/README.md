@@ -36,7 +36,7 @@ This package includes:
 - in-process event publisher (`IEventPublisher`)
 - database-agnostic persistence abstractions (`IDbContext`, `IDbSet<T>`, async query extensions)
 - outbox / inbox entities and transactional message background services
-- JWT resource server primitives (`AddAuthenticationResourceServer`, JWKS fetching/cache, inbound token validation)
+- JWT resource server primitives (`services.AddAuthenticationResourceServer(...)`, JWKS fetching/cache, inbound token validation)
 
 The default in-memory cache implementation is isolated per NOF host:
 
