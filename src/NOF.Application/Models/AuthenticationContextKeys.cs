@@ -1,6 +1,6 @@
 using NOF.Contract;
 
-namespace NOF.Authentication;
+namespace NOF.Application;
 
 /// <summary>
 /// Well-known <see cref="Context"/> item keys used to direct outbound authentication behavior.

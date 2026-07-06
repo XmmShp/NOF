@@ -6,6 +6,8 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, caching, and persistence contracts.
 
+Runtime outbound authentication directives also live in this layer, including `WithServiceToken(...)`, `GetServiceTokenHeaderName()`, `WithTokenExchange(...)`, `GetTokenExchangeHeaderNames()`, and `AuthenticationContextKeys`.
+
 `AddNOFApplication()` registers the package-local application defaults, including mapper/state-machine registries, the ambient mapper convenience API support, and the package-local Domain defaults.
 
 Commands and notifications are plain payload types. Handler discovery comes from the `CommandHandler<T>` and `NotificationHandler<T>` base classes rather than marker interfaces on the message types.

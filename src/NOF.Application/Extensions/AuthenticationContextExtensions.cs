@@ -1,6 +1,6 @@
 using NOF.Contract;
 
-namespace NOF.Authentication;
+namespace NOF.Application;
 
 public static class AuthenticationContextExtensions
 {

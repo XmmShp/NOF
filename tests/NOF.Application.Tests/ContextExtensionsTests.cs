@@ -1,4 +1,3 @@
-using NOF.Authentication;
 using NOF.Contract;
 using Xunit;
 

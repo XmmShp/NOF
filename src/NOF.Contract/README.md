@@ -93,7 +93,7 @@ public interface IOrderService : IRpcService
 
 Use `Context` for explicit per-call metadata. Header snapshots may be copied into `Context.Items` by transport/infrastructure components.
 
-Runtime outbound authentication directives are provided by `NOF.Authentication.Abstraction`, not `NOF.Contract`.
+Runtime outbound authentication directives are provided by `NOF.Application`, not `NOF.Contract`.
 
 ## Installation
 
