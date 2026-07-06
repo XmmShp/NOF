@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Abstraction;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -6,6 +7,20 @@ public static partial class NOFAbstractionExtensions
 {
     extension(IServiceCollection services)
     {
+        public IServiceCollection AddNOFAbstraction()
+        {
+            ArgumentNullException.ThrowIfNull(services);
+
+            services.GetOrAddSingleton<EventHandlerRegistry>();
+            services.TryAddScoped<IUserContext, UserContext>();
+            services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
+            services.TryAddEnumerable(new ServiceDescriptor(
+                typeof(IDaemonService),
+                typeof(EventPublisherAmbientDaemonService),
+                ServiceLifetime.Scoped));
+            return services;
+        }
+
         public T GetOrAddSingleton<T>() where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(services);

@@ -11,6 +11,7 @@ Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF)
 - `Failure` and `[Failure(...)]` for strongly-typed failure definitions
 - `DomainException` and `DomainValidationException`
 - `IIdGenerator` and the ambient `IdGenerator` facade
+- `AddNOFDomain(...)` for package-local runtime registration
 
 This package does **not** currently expose aggregate root, repository, or unit-of-work abstractions.
 
@@ -59,9 +60,22 @@ using NOF.Domain;
 public readonly partial struct OrderId : IValueObject<long>;
 ```
 
-Before using `New()`, ensure the current scope has an ambient `IIdGenerator`.
-In standard NOF hosts this is handled by infrastructure defaults, which register `IIdGenerator` and activate the ambient scope through `IDaemonService`.
-Use `New(IIdGenerator)` when you want an explicit dependency instead of relying on ambient scope.
+Before using `New()`, register NOF.Domain and ensure the current scope activates daemon services:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+
+services.AddNOFDomain(applicationId: 1, instanceId: 1);
+```
+
+`New()` is a convenience API over the ambient `IdGenerator`. Use `New(IIdGenerator)` when you want an explicit dependency instead of relying on ambient scope.
+Standard NOF hosts activate daemon services automatically; custom hosts should do the equivalent when entering a scope.
+
+If you already own an `IIdGenerator` implementation, you can also register it explicitly:
+
+```csharp
+services.AddNOFDomain(new MyIdGenerator());
+```
 
 ### `Failure` and `[Failure]`
 

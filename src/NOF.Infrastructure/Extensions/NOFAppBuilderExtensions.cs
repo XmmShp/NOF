@@ -29,7 +29,7 @@ public static partial class NOFInfrastructureExtensions
         public INOFAppBuilder AddInfrastructureDefaults()
         {
             JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
-            builder.Services.GetOrAddSingleton<EventHandlerRegistry>();
+            builder.Services.AddNOFAbstraction();
             builder.Services.GetOrAddSingleton<MapperRegistry>();
             builder.Services.GetOrAddSingleton<CommandHandlerRegistry>();
             builder.Services.GetOrAddSingleton<NotificationHandlerRegistry>();
@@ -105,7 +105,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
-            builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
             #endregion
 
             #region Outbound Middlewares

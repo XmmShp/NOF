@@ -8,6 +8,7 @@ Provides shared contracts and annotations intended for use across layers:
 
 - `[AutoInject]` via `Microsoft.Extensions.DependencyInjection`
 - `InMemoryEventHandler<TEvent>` / `IEventPublisher`
+- `AddNOFAbstraction()` for package-local runtime registration
 - ambient event publishing helpers via `EventPublisher` and `PublishAsEvent(...)`
 
 ## In-Memory Events
@@ -24,13 +25,25 @@ For convenience, NOF also exposes an ambient publisher facade:
 
 - `payload.PublishAsEvent()` uses the ambient `IEventPublisher` for the current async flow
 - `payload.PublishAsEvent(publisher)` is the explicit alternative when ambient scope is not desired
-- standard NOF hosts establish the ambient publisher through scoped `IDaemonService` activation
+- `AddNOFAbstraction()` registers the scoped ambient activation service
+
+The ambient API is a convenience layer. The explicit `IEventPublisher` dependency remains the primary runtime contract.
 
 ## Installation
 
 ```shell
 dotnet add package NOF.Abstraction
 ```
+
+## Runtime Registration
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+
+services.AddNOFAbstraction();
+```
+
+`AddNOFAbstraction()` registers the scoped daemon service that activates the ambient event publisher. Standard NOF hosts activate daemon services automatically; custom hosts should do the equivalent when entering a scope.
 
 ## Auto Injection
 

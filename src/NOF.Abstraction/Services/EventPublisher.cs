@@ -3,12 +3,19 @@ using System.Diagnostics.CodeAnalysis;
 namespace NOF.Abstraction;
 
 /// <summary>
-/// Provides access to the ambient <see cref="IEventPublisher"/> for the current async flow.
+/// Provides convenience access to the ambient <see cref="IEventPublisher"/> for the current async flow.
 /// </summary>
+/// <remarks>
+/// Prefer explicit <see cref="IEventPublisher"/> dependencies in core runtime paths.
+/// The ambient publisher exists as a convenience API for in-scope code that wants a lighter call site.
+/// </remarks>
 public static class EventPublisher
 {
     private static readonly AsyncLocal<IEventPublisher?> _currentPublisher = new();
 
+    /// <summary>
+    /// Pushes an ambient <see cref="IEventPublisher"/> into the current async flow for convenience API usage.
+    /// </summary>
     public static IDisposable PushCurrent(IEventPublisher publisher)
     {
         ArgumentNullException.ThrowIfNull(publisher);
@@ -18,6 +25,9 @@ public static class EventPublisher
         return new AmbientPublisherScope(previous);
     }
 
+    /// <summary>
+    /// Resolves and pushes the current scope's <see cref="IEventPublisher"/> into the ambient async flow.
+    /// </summary>
     public static IDisposable PushCurrent(IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -27,6 +37,9 @@ public static class EventPublisher
         return PushCurrent(publisher);
     }
 
+    /// <summary>
+    /// Publishes an event through the ambient publisher convenience API.
+    /// </summary>
     public static void PublishEvent(object payload, Type[] eventTypes)
     {
         ArgumentNullException.ThrowIfNull(payload);

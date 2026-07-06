@@ -11,11 +11,8 @@ public static partial class NOFHostingExtensions
         public INOFAppBuilder AddHostingDefaults()
         {
             builder.Services.TryAddSingleton(builder.Environment);
-            builder.Services.GetOrAddSingleton<EventHandlerRegistry>();
+            builder.Services.AddNOFAbstraction();
             builder.Services.TryAddScoped<RequestOutboundPipelineExecutor>();
-            builder.Services.TryAddScoped<IUserContext, UserContext>();
-            builder.Services.TryAddScoped<IEventPublisher, InMemoryEventPublisher>();
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IDaemonService, EventPublisherAmbientDaemonService>());
             builder.Services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
             return builder;
         }
