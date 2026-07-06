@@ -1,0 +1,974 @@
+src/NOF.Hosting/NOFAppBuilder.cs
+  s_8a08863c05f318::t_45569ea1ecfe5b 61-62 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b52b14d8caf1fb25a5e48","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[61,62]}]}]}
+  s_8a08863c05f318::t_a38b279b45b18e 3 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b52b74d8caf1fb25a5e68","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":3}]}]}
+src/Hostings/NOF.Hosting.BlazorWebAssembly/README.md
+  s_8a08863c05f318::t_a91d8f6c330ad8 33-34 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4f5c4d8caf1fb25a5ac4","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[33,34]}]}]}
+src/Hostings/NOF.Hosting.AspNetCore/README.md
+  s_8a08863c05f318::t_dd1f366cca736d 7,11,13,22,25,27,34 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4f434d8caf1fb25a5a80","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":7},{"Single":11},{"Single":13},{"Single":22},{"Single":25},{"Single":27},{"Single":34}]}]}
+  s_8a08863c05f318::t_2f8274e884707f 35
+src/Hostings/NOF.Hosting.Console/README.md
+  s_8a08863c05f318::t_e91c096e4ca619 5-6 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4f4f4d8caf1fb25a5aa3","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[5,6]}]}]}
+src/NOF.Infrastructure/README.md
+  s_8a08863c05f318::t_d76c52a8eaa2f9 93 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b508b4d8caf1fb25a5d22","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":93}]}]}
+src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/README.md
+  s_8a08863c05f318::t_5cd6d9ffe85746 39 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b509e4d8caf1fb25a5d3f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":39}]}]}
+src/NOF.Hosting/Extensions/ServiceCollectionExtensions.cs
+  s_8a08863c05f318::t_a47af899576eca 2-20,23,25-26 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b529b4d8caf1fb25a5e04","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[2,20]},{"Single":23},{"Range":[25,26]}]}]}
+src/NOF.Test/NOFTestAppBuilder.cs
+  s_8a08863c05f318::t_c0c2f6f93eb17a 34 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b50174d8caf1fb25a5c26","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":34}]}]}
+src/NOF.Hosting/Extensions/NOFAppBuilderExtensions.cs
+  s_8a08863c05f318::t_17ed9a920983f5 13 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b52aa4d8caf1fb25a5e25","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":13}]}]}
+src/NOF.Hosting/README.md
+  s_8a08863c05f318::t_c67368befd7c5c 19 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b52ca4d8caf1fb25a5ea9","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":19}]}]}
+src/Hostings/NOF.Hosting.AspNetCore/NOFWebApplicationBuilder.cs
+  s_8a08863c05f318::t_e88d3a8a452943 35 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b50224d8caf1fb25a5c47","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":35}]}]}
+tests/NOF.Hosting.AspNetCore.Tests/HttpEndpointRegistrationHooksTests.cs
+  s_8a08863c05f318::t_4a50869580da9e 14 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4f684d8caf1fb25a5ae8","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":14}]}]}
+src/NOF.Infrastructure/Extensions/NOFAppBuilderExtensions.cs
+  s_8a08863c05f318::t_4377bf21eb6303 28 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b4ffd4d8caf1fb25a5bda","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":28}]}]}
+tests/NOF.Infrastructure.Tests/Persistence/InMemoryPersistenceTests.cs
+  s_8a08863c05f318::t_c82dbda15b74a6 51-52,87-88,125-126,153-154,200-201,254-255,281-282,307-308,1686-1687,1706-1707,1739-1740 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b50574d8caf1fb25a5cda","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[51,52]},{"Range":[87,88]},{"Range":[125,126]},{"Range":[153,154]},{"Range":[200,201]},{"Range":[254,255]},{"Range":[281,282]},{"Range":[307,308]},{"Range":[1686,1687]},{"Range":[1706,1707]},{"Range":[1739,1740]}]}]}
+tests/NOF.Hosting.Tests/DaemonServiceScopeTests.cs
+  s_8a08863c05f318::t_822663b8f93108 16,18,20,22,26,32-48 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b52c04d8caf1fb25a5e88","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":16},{"Single":18},{"Single":20},{"Single":22},{"Single":26},{"Range":[32,48]}]}]}
+tests/NOF.Infrastructure.Tests/Steps/CoreServicesRegistrationStepTests.cs
+  s_8a08863c05f318::t_bc83687d824805 19,22,28,39,42,80,84,95,99,130,139,142,163,167 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b50494d8caf1fb25a5cb7","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":19},{"Single":22},{"Single":28},{"Single":39},{"Single":42},{"Single":80},{"Single":84},{"Single":95},{"Single":99},{"Single":130},{"Single":139},{"Single":142},{"Single":163},{"Single":167}]}]}
+src/Hostings/NOF.Hosting.Console/NOFConsoleHostBuilder.cs
+  s_8a08863c05f318::t_3954f75d91322b 33 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a4b502f4d8caf1fb25a5c6e","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":33}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "0c64b9061c462caa313d73325b2a4166170e8db8",
+  "prompts": {},
+  "humans": {
+    "h_6398fee892c8b1": {
+      "author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "sessions": {
+    "s_8a08863c05f318": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3de914c1aeed0acfb59fd7",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "src/Hostings/NOF.Hosting.AspNetCore/NOFWebApplicationBuilder.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_e88d3a8a452943",
+        "line_ranges": [
+          {
+            "Single": 35
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b50224d8caf1fb25a5c47",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 35
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Hostings/NOF.Hosting.AspNetCore/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_dd1f366cca736d",
+        "line_ranges": [
+          {
+            "Single": 7
+          },
+          {
+            "Single": 11
+          },
+          {
+            "Single": 13
+          },
+          {
+            "Single": 22
+          },
+          {
+            "Single": 25
+          },
+          {
+            "Single": 27
+          },
+          {
+            "Single": 34
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4f434d8caf1fb25a5a80",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 7
+              },
+              {
+                "Single": 11
+              },
+              {
+                "Single": 13
+              },
+              {
+                "Single": 22
+              },
+              {
+                "Single": 25
+              },
+              {
+                "Single": 27
+              },
+              {
+                "Single": 34
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Hostings/NOF.Hosting.BlazorWebAssembly/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_a91d8f6c330ad8",
+        "line_ranges": [
+          {
+            "Range": [
+              33,
+              34
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4f5c4d8caf1fb25a5ac4",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  33,
+                  34
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Hostings/NOF.Hosting.Console/NOFConsoleHostBuilder.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_3954f75d91322b",
+        "line_ranges": [
+          {
+            "Single": 33
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b502f4d8caf1fb25a5c6e",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 33
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Hostings/NOF.Hosting.Console/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_e91c096e4ca619",
+        "line_ranges": [
+          {
+            "Range": [
+              5,
+              6
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4f4f4d8caf1fb25a5aa3",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  5,
+                  6
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_5cd6d9ffe85746",
+        "line_ranges": [
+          {
+            "Single": 39
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b509e4d8caf1fb25a5d3f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 39
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Hosting/Extensions/NOFAppBuilderExtensions.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_17ed9a920983f5",
+        "line_ranges": [
+          {
+            "Single": 13
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b52aa4d8caf1fb25a5e25",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 13
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Hosting/Extensions/ServiceCollectionExtensions.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_a47af899576eca",
+        "line_ranges": [
+          {
+            "Range": [
+              2,
+              20
+            ]
+          },
+          {
+            "Single": 23
+          },
+          {
+            "Range": [
+              25,
+              26
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b529b4d8caf1fb25a5e04",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  2,
+                  20
+                ]
+              },
+              {
+                "Single": 23
+              },
+              {
+                "Range": [
+                  25,
+                  26
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Hosting/NOFAppBuilder.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_45569ea1ecfe5b",
+        "line_ranges": [
+          {
+            "Range": [
+              61,
+              62
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b52b14d8caf1fb25a5e48",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  61,
+                  62
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_8a08863c05f318::t_a38b279b45b18e",
+        "line_ranges": [
+          {
+            "Single": 3
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b52b74d8caf1fb25a5e68",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 3
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Hosting/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_c67368befd7c5c",
+        "line_ranges": [
+          {
+            "Single": 19
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b52ca4d8caf1fb25a5ea9",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 19
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Extensions/NOFAppBuilderExtensions.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_4377bf21eb6303",
+        "line_ranges": [
+          {
+            "Single": 28
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4ffd4d8caf1fb25a5bda",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 28
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/README.md": [
+      {
+        "hash": "s_8a08863c05f318::t_d76c52a8eaa2f9",
+        "line_ranges": [
+          {
+            "Single": 93
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b508b4d8caf1fb25a5d22",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 93
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Test/NOFTestAppBuilder.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_c0c2f6f93eb17a",
+        "line_ranges": [
+          {
+            "Single": 34
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b50174d8caf1fb25a5c26",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 34
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Hosting.AspNetCore.Tests/HttpEndpointRegistrationHooksTests.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_4a50869580da9e",
+        "line_ranges": [
+          {
+            "Single": 14
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b4f684d8caf1fb25a5ae8",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 14
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Hosting.Tests/DaemonServiceScopeTests.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_822663b8f93108",
+        "line_ranges": [
+          {
+            "Single": 16
+          },
+          {
+            "Single": 18
+          },
+          {
+            "Single": 20
+          },
+          {
+            "Single": 22
+          },
+          {
+            "Single": 26
+          },
+          {
+            "Range": [
+              32,
+              48
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b52c04d8caf1fb25a5e88",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 16
+              },
+              {
+                "Single": 18
+              },
+              {
+                "Single": 20
+              },
+              {
+                "Single": 22
+              },
+              {
+                "Single": 26
+              },
+              {
+                "Range": [
+                  32,
+                  48
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Infrastructure.Tests/Persistence/InMemoryPersistenceTests.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_c82dbda15b74a6",
+        "line_ranges": [
+          {
+            "Range": [
+              51,
+              52
+            ]
+          },
+          {
+            "Range": [
+              87,
+              88
+            ]
+          },
+          {
+            "Range": [
+              125,
+              126
+            ]
+          },
+          {
+            "Range": [
+              153,
+              154
+            ]
+          },
+          {
+            "Range": [
+              200,
+              201
+            ]
+          },
+          {
+            "Range": [
+              254,
+              255
+            ]
+          },
+          {
+            "Range": [
+              281,
+              282
+            ]
+          },
+          {
+            "Range": [
+              307,
+              308
+            ]
+          },
+          {
+            "Range": [
+              1686,
+              1687
+            ]
+          },
+          {
+            "Range": [
+              1706,
+              1707
+            ]
+          },
+          {
+            "Range": [
+              1739,
+              1740
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b50574d8caf1fb25a5cda",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  51,
+                  52
+                ]
+              },
+              {
+                "Range": [
+                  87,
+                  88
+                ]
+              },
+              {
+                "Range": [
+                  125,
+                  126
+                ]
+              },
+              {
+                "Range": [
+                  153,
+                  154
+                ]
+              },
+              {
+                "Range": [
+                  200,
+                  201
+                ]
+              },
+              {
+                "Range": [
+                  254,
+                  255
+                ]
+              },
+              {
+                "Range": [
+                  281,
+                  282
+                ]
+              },
+              {
+                "Range": [
+                  307,
+                  308
+                ]
+              },
+              {
+                "Range": [
+                  1686,
+                  1687
+                ]
+              },
+              {
+                "Range": [
+                  1706,
+                  1707
+                ]
+              },
+              {
+                "Range": [
+                  1739,
+                  1740
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Infrastructure.Tests/Steps/CoreServicesRegistrationStepTests.cs": [
+      {
+        "hash": "s_8a08863c05f318::t_bc83687d824805",
+        "line_ranges": [
+          {
+            "Single": 19
+          },
+          {
+            "Single": 22
+          },
+          {
+            "Single": 28
+          },
+          {
+            "Single": 39
+          },
+          {
+            "Single": 42
+          },
+          {
+            "Single": 80
+          },
+          {
+            "Single": 84
+          },
+          {
+            "Single": 95
+          },
+          {
+            "Single": 99
+          },
+          {
+            "Single": 130
+          },
+          {
+            "Single": 139
+          },
+          {
+            "Single": 142
+          },
+          {
+            "Single": 163
+          },
+          {
+            "Single": 167
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a4b50494d8caf1fb25a5cb7",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 19
+              },
+              {
+                "Single": 22
+              },
+              {
+                "Single": 28
+              },
+              {
+                "Single": 39
+              },
+              {
+                "Single": 42
+              },
+              {
+                "Single": 80
+              },
+              {
+                "Single": 84
+              },
+              {
+                "Single": 95
+              },
+              {
+                "Single": 99
+              },
+              {
+                "Single": 130
+              },
+              {
+                "Single": 139
+              },
+              {
+                "Single": 142
+              },
+              {
+                "Single": 163
+              },
+              {
+                "Single": 167
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_8a08863c05f318": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_17ed9a920983f5": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_24fe79ffc92b68": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_251588e256b45b": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_3954f75d91322b": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_3e10ddc81e1297": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_4377bf21eb6303": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_45569ea1ecfe5b": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_4a50869580da9e": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_5cd6d9ffe85746": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_629be9cfada462": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_822663b8f93108": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_a0e50870e9ebd7": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_a38b279b45b18e": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_a47af899576eca": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_a91d8f6c330ad8": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_bc83687d824805": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_c0c2f6f93eb17a": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_c67368befd7c5c": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_c82dbda15b74a6": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_d76c52a8eaa2f9": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_dd1f366cca736d": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_e625113f3f0369": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_e88d3a8a452943": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_e91c096e4ca619": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8a08863c05f318::t_ea5024e4277987": {
+      "tool": "trae",
+      "conversation_id": "6a3de914c1aeed0acfb59fd7",
+      "session_id": "6a3de914c1aeed0acfb59fd7",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
