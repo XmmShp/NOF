@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Metrics;
@@ -37,6 +38,8 @@ public class AspNetCoreRegistrationStep : IServiceRegistrationStep
             ));
 
         builder.Services.AddInitializationStep(new DaemonServiceResolutionInitializationStep());
+        builder.Services.TryAddSingleton<HttpEndpointMappingState>();
+        builder.Services.TryAddInitializationStep<RpcServerHttpEndpointInitializationStep>();
         builder.Services.AddInitializationStep(new HealthCheckInitializationStep());
 
         return ValueTask.CompletedTask;

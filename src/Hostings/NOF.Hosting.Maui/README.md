@@ -31,7 +31,7 @@ public static MauiApp CreateMauiApp()
 }
 ```
 
-`Create()` already adds the calling assembly as an application part and applies infrastructure defaults. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
+`Create()` already adds the calling assembly as an application part. It does not apply `NOF.Infrastructure` defaults automatically. Use `AddApplicationPart(...)` only when you need to register additional assemblies.
 
 ## Installation
 

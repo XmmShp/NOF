@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NOF.Application;
 using System.Diagnostics.CodeAnalysis;
 namespace NOF.Hosting.AspNetCore;
 
-internal sealed class RpcServerHttpEndpointInitializationStep(Type rpcServerType) : IApplicationInitializationStep
+internal sealed class RpcServerHttpEndpointInitializationStep : IApplicationInitializationStep
 {
     public TopologyComparison Compare(IApplicationInitializationStep other)
         => other is DaemonServiceResolutionInitializationStep
@@ -16,7 +18,11 @@ internal sealed class RpcServerHttpEndpointInitializationStep(Type rpcServerType
     {
         if (app is IEndpointRouteBuilder routeBuilder)
         {
-            NOFHostingAspNetCoreExtensions.MapHttpEndpoint(routeBuilder, rpcServerType);
+            var registry = app.Services.GetRequiredService<RpcServerRegistry>();
+            foreach (var registration in registry.Freeze())
+            {
+                NOFHostingAspNetCoreExtensions.MapHttpEndpoint(routeBuilder, registration.ImplementationType);
+            }
         }
 
         return Task.CompletedTask;

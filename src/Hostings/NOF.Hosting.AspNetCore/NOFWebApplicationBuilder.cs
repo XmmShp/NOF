@@ -31,7 +31,6 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
 
     public static NOFWebApplicationBuilder Create(string[] args)
     {
-        RpcServerRegistrationHooks.Register(AspNetCoreRpcServerRegistration.Register);
         var builder = new NOFWebApplicationBuilder(args, Assembly.GetCallingAssembly());
         builder.AddInfrastructureDefaults();
         builder.AddRegistrationStep(new AspNetCoreRegistrationStep());

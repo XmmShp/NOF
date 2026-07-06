@@ -22,7 +22,6 @@ public static partial class NOFInfrastructureExtensions
             var registry = builder.Services.GetOrAddSingleton<RpcServerRegistry>();
             registry.RemoveWhere(existing => existing.ServiceType == TRpcServer.ServiceType);
             registry.Add(new RpcServerRegistration(TRpcServer.ServiceType, typeof(TRpcServer)));
-            RpcServerRegistrationHooks.Invoke(builder, typeof(TRpcServer));
             return builder;
         }
 
