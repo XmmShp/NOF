@@ -87,18 +87,19 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
 
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
-        var registrations = new List<string>();
+        var statements = new List<string>();
 
         foreach (var handlerClass in handlerClasses)
         {
             var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
+            statements.Add($"services.ReplaceOrAdd(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof({handlerTypeName}), typeof({handlerTypeName})));");
             var current = handlerClass.BaseType;
             while (current is not null)
             {
                 if (current.IsGenericType && current.OriginalDefinition.ToDisplayString() == "NOF.Abstraction.InMemoryEventHandler<TEvent>")
                 {
                     var eventTypeName = current.TypeArguments[0].ToDisplayString(typeFormat);
-                    registrations.Add($"new global::NOF.Abstraction.EventHandlerRegistration(typeof({handlerTypeName}), typeof({eventTypeName}))");
+                    statements.Add($"services.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>().Add(new global::NOF.Abstraction.EventHandlerRegistration(typeof({handlerTypeName}), typeof({eventTypeName})));");
                     break;
                 }
 
@@ -106,7 +107,7 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
             }
         }
 
-        if (registrations.Count == 0)
+        if (statements.Count == 0)
         {
             return string.Empty;
         }
@@ -133,9 +134,9 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine("            }");
         sb.AppendLine();
 
-        foreach (var registration in registrations)
+        foreach (var statement in statements)
         {
-            sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Abstraction.EventHandlerRegistry>().Add({registration});");
+            sb.AppendLine($"            {statement}");
         }
 
         sb.AppendLine("        }");

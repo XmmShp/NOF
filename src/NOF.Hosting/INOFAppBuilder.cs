@@ -6,9 +6,6 @@ namespace NOF.Hosting;
 
 public interface INOFAppBuilder : IHostApplicationBuilder
 {
-    INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep);
-
-    INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate);
 }
 
 public static partial class NOFHostingExtensions
@@ -34,33 +31,6 @@ public static partial class NOFHostingExtensions
 
             return builder;
         }
-
-        public INOFAppBuilder RemoveRegistrationStep<T>() where T : IServiceRegistrationStep
-            => builder.RemoveRegistrationStep(t => t is T);
-
-        public INOFAppBuilder TryAddRegistrationStep(IServiceRegistrationStep registrationStep)
-        {
-            ArgumentNullException.ThrowIfNull(registrationStep);
-            var exists = false;
-            builder.RemoveRegistrationStep(existing =>
-            {
-                if (existing.GetType() == registrationStep.GetType())
-                {
-                    exists = true;
-                }
-                return false;
-            });
-
-            if (exists)
-            {
-                return builder;
-            }
-
-            return builder.AddRegistrationStep(registrationStep);
-        }
-
-        public INOFAppBuilder TryAddRegistrationStep<T>() where T : IServiceRegistrationStep, new()
-            => builder.TryAddRegistrationStep(new T());
 
     }
 

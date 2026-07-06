@@ -147,6 +147,8 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
     {
         var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
 
+        registrations.Add($"services.ReplaceOrAdd(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof({handlerTypeName}), typeof({handlerTypeName})))");
+
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.CommandHandler<TCommand>", out var commandType))
         {
             var messageType = commandType!.ToDisplayString(typeFormat);

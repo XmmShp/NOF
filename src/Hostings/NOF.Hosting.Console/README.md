@@ -11,9 +11,9 @@ using NOF.Hosting.Console;
 
 var builder = NOFConsoleHostBuilder.Create(args);
 
-// Add NOF steps here:
-// builder.AddRegistrationStep(...);
-// builder.AddInitializationStep(...);
+// Add NOF services or initialization steps here:
+// builder.Services.AddNOFHosting();
+// builder.Services.AddInitializationStep(...);
 
 using var app = await builder.BuildAsync();
 await app.RunAsync();

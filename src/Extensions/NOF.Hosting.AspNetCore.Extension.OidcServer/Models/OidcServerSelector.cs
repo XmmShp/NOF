@@ -52,8 +52,6 @@ public readonly struct OidcServerSelector : INOFAppBuilder
         return this;
     }
 
-    public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep) => Builder.AddRegistrationStep(registrationStep);
-    public INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate) => Builder.RemoveRegistrationStep(predicate);
     public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null) where TContainerBuilder : notnull
         => Builder.ConfigureContainer(factory, configure);
     public IDictionary<object, object> Properties => Builder.Properties;

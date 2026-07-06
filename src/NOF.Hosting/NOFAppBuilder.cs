@@ -13,14 +13,9 @@ namespace NOF.Hosting;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This builder orchestrates two distinct phases:
-/// <list type="bullet">
-///   <item><description><b>Service Configuration Phase</b>: Executes all registered <see cref="IServiceRegistrationStep"/>
-///   instances to populate the dependency injection container and configure host capabilities.</description></item>
-///   <item><description><b>Application Configuration Phase</b>: After the host application is built,
-///   executes all registered <see cref="IApplicationInitializationStep"/> instances to perform
-///   final setup such as middleware registration, event subscriptions, or background task initialization.</description></item>
-/// </list>
+/// This builder finalizes host creation and then executes all registered
+/// <see cref="IApplicationInitializationStep"/> instances to perform
+/// post-build setup such as middleware registration, event subscriptions, or background task initialization.
 /// </para>
 /// <para>
 /// Configuration units are executed in topological order based on declared dependencies
@@ -36,36 +31,14 @@ namespace NOF.Hosting;
 public abstract class NOFAppBuilder<THostApplication> : INOFAppBuilder
     where THostApplication : class, IHost
 {
-    protected readonly HashSet<IServiceRegistrationStep> ServiceConfigs = [];
-
     protected NOFAppBuilder()
     {
-    }
-
-    public virtual INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
-    {
-        ArgumentNullException.ThrowIfNull(registrationStep);
-        ServiceConfigs.Add(registrationStep);
-        return this;
-    }
-
-    public virtual INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
-    {
-        ArgumentNullException.ThrowIfNull(predicate);
-        ServiceConfigs.RemoveWhere(node => predicate(node));
-        return this;
     }
 
     public virtual async Task<THostApplication> BuildAsync()
     {
         Services.TryAddSingleton(Environment);
         Services.AddNOFHosting();
-        var regGraph = new DependencyGraph<IServiceRegistrationStep>(ServiceConfigs);
-        foreach (var task in regGraph.GetExecutionOrder())
-        {
-            await task.ExecuteAsync(this).ConfigureAwait(false);
-        }
-
         var app = await BuildApplicationAsync();
 
         var startGraph = new DependencyGraph<IApplicationInitializationStep>(

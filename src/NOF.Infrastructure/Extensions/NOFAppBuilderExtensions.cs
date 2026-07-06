@@ -2,10 +2,14 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Domain;
 using NOF.Infrastructure;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using System.Diagnostics.CodeAnalysis;
 namespace NOF.Hosting;
 
@@ -29,6 +33,7 @@ public static partial class NOFInfrastructureExtensions
         {
             JwtPropagationRegistrationHooks.Register(AddInfrastructureJwtPropagation);
             builder.Services.AddNOFApplication();
+            AddOpenTelemetry(builder);
             builder.Services.GetOrAddSingleton<TypeResolver>();
 
             #region Core Services
@@ -127,11 +132,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddRequestInboundMiddleware<AutoInstrumentationInboundMiddleware>();
             #endregion
 
-            #region Registration & Initialization Steps
-            builder.TryAddRegistrationStep<OpenTelemetryRegistrationStep>()
-                .TryAddRegistrationStep<HandlerServiceRegistrationStep>();
-            #endregion
-
             #region Default Persistence
             builder.Services.TryAddScoped<ICacheServiceRider>(sp => new MemoryCacheServiceRider(
                 sp.GetRequiredService<MemoryCacheServiceRiderState>()));
@@ -142,9 +142,6 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
-        public INOFAppBuilder AddRegistrationStep(Func<IHostApplicationBuilder, ValueTask> func)
-            => builder.AddRegistrationStep(new ServiceRegistrationStep(func));
-
         [RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
         [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
         public INOFAppBuilder AddInMemoryPersistence()
@@ -152,6 +149,39 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();
             builder.Services.ReplaceOrAddScoped<IDbContext, InMemoryDbContext>();
             return builder;
+        }
+    }
+
+    private static void AddOpenTelemetry(INOFAppBuilder builder)
+    {
+        builder.Logging.AddOpenTelemetry(logging =>
+        {
+            logging.IncludeFormattedMessage = true;
+            logging.IncludeScopes = true;
+        });
+
+        builder.Services.AddOpenTelemetry()
+            .WithMetrics(metrics =>
+            {
+                metrics.AddMeter(NOFInfrastructureConstants.InboundPipeline.MeterName);
+                metrics.AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation();
+            })
+            .WithTracing(tracing =>
+            {
+                tracing.AddSource(NOFInfrastructureConstants.InboundPipeline.ActivitySourceName);
+                tracing.AddSource(NOFInfrastructureConstants.OutboundPipeline.ActivitySourceName);
+                tracing.AddSource(NOFApplicationConstants.StateMachine.ActivitySourceName);
+                tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddHttpClientInstrumentation();
+            });
+
+        const string otelExporterOtlpEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT";
+        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration[otelExporterOtlpEndpoint]);
+
+        if (useOtlpExporter)
+        {
+            builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
     }
 

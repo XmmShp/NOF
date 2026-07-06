@@ -199,7 +199,7 @@ NOF.*.Extension.*               ← Optional features such as JWT authorization
 
 ### Key Patterns
 
-- **Step Pipeline**: `IServiceRegistrationStep` and `IApplicationInitializationStep` with dependency ordering via `IAfter<T>` / `IBefore<T>`.
+- **Initialization Pipeline**: `IApplicationInitializationStep` with dependency ordering via `IAfter<T>` / `IBefore<T>`.
 - **CQRS Messaging**: command/notification dispatch with corresponding handlers.
 - **Source Generators**: compile-time code generation for endpoint mapping, DI registration, failure definitions.
 - **Transactional Outbox**: reliable messaging via EF Core inbox/outbox.
@@ -208,7 +208,7 @@ NOF.*.Extension.*               ← Optional features such as JWT authorization
 
 1. Create the project under `src/Infrastructures/`.
 2. Reference `NOF.Hosting` or `NOF.Infrastructure`.
-3. Implement registration via `IServiceRegistrationStep`.
+3. Implement registration via explicit `IServiceCollection` or `INOFAppBuilder` extension methods.
 4. Add the project to `NOF.slnx`.
 5. Add NuGet versions to the root `Directory.Packages.props`.
 6. Ensure the project is packable with a `PackageId`; `cd.yml` auto-discovers packable `src/**/*.csproj` files.

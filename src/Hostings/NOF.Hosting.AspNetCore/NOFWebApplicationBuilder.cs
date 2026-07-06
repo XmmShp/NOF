@@ -1,12 +1,18 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.Metrics;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using NOF.Abstraction;
 using NOF.Hosting;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -33,7 +39,6 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     {
         var builder = new NOFWebApplicationBuilder(args, Assembly.GetCallingAssembly());
         builder.AddNOFInfrastructure();
-        builder.AddRegistrationStep(new AspNetCoreRegistrationStep());
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
             var nof = JsonSerializerOptions.NOF;
@@ -51,6 +56,20 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
         });
         builder.Services.AddOptions<CorsSettingsOptions>();
         builder.Services.AddCors();
+        builder.Services.AddHealthChecks().AddCheck("self", static () => HealthCheckResult.Healthy(), ["live"]);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<HttpRequestInboundAdapter>();
+        builder.Services.AddOptions<HttpHeaderOutboundOptions>();
+        builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddAspNetCoreInstrumentation());
+        builder.Services.ConfigureOpenTelemetryTracerProvider(tracing =>
+            tracing.AddAspNetCoreInstrumentation(options =>
+                options.Filter = context =>
+                    !context.Request.Path.StartsWithSegments("/health")
+                    && !context.Request.Path.StartsWithSegments("/alive")));
+        builder.Services.AddInitializationStep(new DaemonServiceResolutionInitializationStep());
+        builder.Services.TryAddSingleton<HttpEndpointMappingState>();
+        builder.Services.TryAddInitializationStep<RpcServerHttpEndpointInitializationStep>();
+        builder.Services.AddInitializationStep(new HealthCheckInitializationStep());
         builder.Services.AddInitializationStep(new CorsInitializationStep());
         builder.Services.AddOpenApi(options =>
         {
@@ -101,4 +120,24 @@ public class NOFWebApplicationBuilder : NOFAppBuilder<WebApplication>
     public override IMetricsBuilder Metrics => WebApplicationBuilder.Metrics;
 
     public override IServiceCollection Services => WebApplicationBuilder.Services;
+
+    private sealed class HealthCheckInitializationStep : IApplicationInitializationStep
+    {
+        public TopologyComparison Compare(IApplicationInitializationStep other)
+            => TopologyComparison.DoesNotMatter;
+
+        public Task ExecuteAsync(IHost app)
+        {
+            if (app is IEndpointRouteBuilder routeBuilder)
+            {
+                routeBuilder.MapHealthChecks("/health");
+                routeBuilder.MapHealthChecks("/alive", new HealthCheckOptions
+                {
+                    Predicate = static registration => registration.Tags.Contains("live")
+                });
+            }
+
+            return Task.CompletedTask;
+        }
+    }
 }

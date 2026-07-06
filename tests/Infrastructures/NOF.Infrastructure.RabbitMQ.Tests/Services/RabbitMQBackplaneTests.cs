@@ -72,10 +72,6 @@ public sealed class RabbitMQBackplaneTests
 
         public IServiceCollection Services => _services;
 
-        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep) => this;
-
-        public INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate) => this;
-
         public void ConfigureContainer<TContainerBuilder>(
             IServiceProviderFactory<TContainerBuilder> factory,
             Action<TContainerBuilder>? configure = null)

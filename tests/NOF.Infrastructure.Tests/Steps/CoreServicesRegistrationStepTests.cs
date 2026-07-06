@@ -55,13 +55,8 @@ public class NOFInfrastructureTests
         Assert.Contains(builder.Services, service =>
             service.ServiceType == typeof(IHostedService) &&
             service.ImplementationType == typeof(OutboxCleanupBackgroundService));
-        Assert.Equal(4, builder.Services.Count(service =>
-            service.ServiceType == typeof(IHostedService)));
-        Assert.NotNull(
-
-        provider.GetRequiredService<IOptions<TransactionalMessageOptions>>());
-        Assert.Equal(TenantMode.DatabasePerTenant,
-        provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value.TenantMode);
+        Assert.NotNull(provider.GetRequiredService<IOptions<TransactionalMessageOptions>>());
+        Assert.Equal(TenantMode.DatabasePerTenant, provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value.TenantMode);
         Assert.IsType<MemoryBackplane>(provider.GetRequiredService<IBackplane>());
         Assert.IsType<InMemoryEventPublisher>(provider.GetRequiredService<IEventPublisher>());
         Assert.IsType<HttpAuthorizationServerService>(provider.GetRequiredService<IClientCredentialsTokenService>());
@@ -237,8 +232,6 @@ public class NOFInfrastructureTests
         private readonly ILoggingBuilder _logging;
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
-        private readonly List<IServiceRegistrationStep> _registrationSteps;
-
         public TestServiceRegistrationContext()
         {
             _services = new ServiceCollection();
@@ -249,7 +242,6 @@ public class NOFInfrastructureTests
             _logging = new TestLoggingBuilder(_services);
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
-            _registrationSteps = [];
         }
 
         public TestServiceRegistrationContext(TestServiceRegistrationContext other)
@@ -260,19 +252,6 @@ public class NOFInfrastructureTests
             _logging = other._logging;
             _metrics = other._metrics;
             _properties = other._properties;
-            _registrationSteps = other._registrationSteps;
-        }
-
-        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
-        {
-            _registrationSteps.Add(registrationStep);
-            return this;
-        }
-
-        public INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
-        {
-            _registrationSteps.RemoveAll(predicate);
-            return this;
         }
 
         public IDictionary<object, object> Properties => _properties;

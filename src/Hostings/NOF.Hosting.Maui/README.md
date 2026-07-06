@@ -4,11 +4,11 @@
 
 ## Overview
 
-Provides the .NET MAUI host integration for NOF applications, wrapping `MauiAppBuilder` with the NOF step pipeline for service registration and application initialization.
+Provides the .NET MAUI host integration for NOF applications, wrapping `MauiAppBuilder` with NOF host abstractions and application initialization support.
 
 ## Features
 
-- **NOF Step Pipeline** - full support for `IServiceRegistrationStep` and `IApplicationInitializationStep`
+- **Initialization Steps** - supports `IApplicationInitializationStep`
 - **`[AutoInject]` Support** - bundled source generators for automatic DI registration
 - **Seamless Integration** - works with existing `MauiAppBuilder` configuration
 

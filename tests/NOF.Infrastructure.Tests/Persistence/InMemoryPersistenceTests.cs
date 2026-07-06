@@ -2434,8 +2434,6 @@ public class SqliteInMemoryPersistenceTests
         private readonly ILoggingBuilder _logging;
         private readonly IMetricsBuilder _metrics;
         private readonly Dictionary<object, object> _properties;
-        private readonly List<IServiceRegistrationStep> _registrationSteps;
-
         public TestServiceRegistrationContext()
         {
             _services = new ServiceCollection();
@@ -2446,19 +2444,6 @@ public class SqliteInMemoryPersistenceTests
             _logging = new TestLoggingBuilder(_services);
             _metrics = new TestMetricsBuilder(_services);
             _properties = [];
-            _registrationSteps = [];
-        }
-
-        public INOFAppBuilder AddRegistrationStep(IServiceRegistrationStep registrationStep)
-        {
-            _registrationSteps.Add(registrationStep);
-            return this;
-        }
-
-        public INOFAppBuilder RemoveRegistrationStep(Predicate<IServiceRegistrationStep> predicate)
-        {
-            _registrationSteps.RemoveAll(predicate);
-            return this;
         }
 
         public IDictionary<object, object> Properties => _properties;

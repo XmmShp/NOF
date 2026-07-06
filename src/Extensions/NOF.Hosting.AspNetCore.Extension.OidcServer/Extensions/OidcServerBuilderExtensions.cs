@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using NOF.Infrastructure;
 
@@ -12,7 +13,15 @@ public static partial class NOFOidcServerExtensions
         public OidcServerSelector AddOidcServer(Action<OAuthAuthorizationServerOptions> configureOptions)
         {
             builder.Services.Configure(configureOptions);
-            builder.TryAddRegistrationStep<OidcServerPersistenceRegistrationStep>();
+            builder.Services.ReplaceOrAddScoped<ISigningKeyService, PersistenceSigningKeyService>();
+            builder.Services.TryAddScoped<IRevokedRefreshTokenRepository, PersistenceRevokedRefreshTokenRepository>();
+            builder.Services.TryAddScoped<PersistenceOAuthClientService>();
+            builder.Services.TryAddScoped<IOAuthClientManagementService>(static serviceProvider =>
+                serviceProvider.GetRequiredService<PersistenceOAuthClientService>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, OAuthClientModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, RevokedRefreshTokenCleanupBackgroundService>());
             builder.Services.ReplaceOrAddScoped<LocalJwksService, LocalJwksService>();
             builder.Services.ReplaceOrAddScoped<IJwksService>(static serviceProvider => serviceProvider.GetRequiredService<LocalJwksService>());
             builder.Services.ReplaceOrAddScoped<ITokenService, TokenAuthorityService>();
