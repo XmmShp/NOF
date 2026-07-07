@@ -81,6 +81,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddTransient<ScopeCheckHandler>();
         services.AddTransient<ScopeCheckEventHandler>();
         services.AddTransient<ProtectedFleetClient>();
+        services.AddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
         services.AddTransient<AuthorizationInboundMiddleware>();
         services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
         services.AddScoped<IEventPublisher, InMemoryEventPublisher>();
