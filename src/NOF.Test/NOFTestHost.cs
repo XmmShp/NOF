@@ -27,13 +27,54 @@ public sealed class NOFTestHost : IAsyncDisposable, IDisposable
         return new NOFTestScope(scope);
     }
 
-    public async Task SendAsync<TCommand>(TCommand command, Context context, CancellationToken cancellationToken = default)
+    public NOFTestScope CreateScope(Action<NOFTestScope> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        var scope = CreateScope();
+        configure(scope);
+        return scope;
+    }
+
+    public async Task ExecuteAsync(Func<NOFTestScope, Task> scenario, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scenario);
+
+        await using var scope = CreateScope();
+        cancellationToken.ThrowIfCancellationRequested();
+        await scenario(scope);
+    }
+
+    public async Task<TResult> ExecuteAsync<TResult>(Func<NOFTestScope, Task<TResult>> scenario, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scenario);
+
+        await using var scope = CreateScope();
+        cancellationToken.ThrowIfCancellationRequested();
+        return await scenario(scope);
+    }
+
+    public async Task<TResult> CallAsync<TClient, TResult>(
+        Func<TClient, Context, CancellationToken, Task<TResult>> invocation,
+        Action<NOFTestScope>? configure = null,
+        Context? context = null,
+        CancellationToken cancellationToken = default)
+        where TClient : notnull
+    {
+        ArgumentNullException.ThrowIfNull(invocation);
+
+        await using var scope = CreateScope();
+        configure?.Invoke(scope);
+        return await scope.CallAsync(invocation, context, cancellationToken);
+    }
+
+    public async Task SendAsync<TCommand>(TCommand command, Context? context = null, CancellationToken cancellationToken = default)
     {
         using var scope = CreateScope();
         await scope.SendAsync(command, context, cancellationToken);
     }
 
-    public async Task PublishAsync<TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)
+    public async Task PublishAsync<TNotification>(TNotification notification, Context? context = null, CancellationToken cancellationToken = default)
     {
         using var scope = CreateScope();
         await scope.PublishAsync(notification, context, cancellationToken);

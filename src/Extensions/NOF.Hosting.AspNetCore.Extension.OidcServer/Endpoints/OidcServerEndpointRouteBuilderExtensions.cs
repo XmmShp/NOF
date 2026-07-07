@@ -1451,7 +1451,7 @@ public static partial class NOFOidcServerExtensions
 
     private static object ToJsonValue(TokenClaim claim)
     {
-        if (string.Equals(claim.ValueType, Microsoft.IdentityModel.JsonWebTokens.JsonClaimValueTypes.Json, StringComparison.Ordinal)
+        if (string.Equals(claim.ValueType, IdentityModel.JsonWebTokens.JsonClaimValueTypes.Json, StringComparison.Ordinal)
             && !string.IsNullOrWhiteSpace(claim.Value))
         {
             return JsonDocument.Parse(claim.Value).RootElement.Clone();

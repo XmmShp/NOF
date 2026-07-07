@@ -11,6 +11,7 @@ namespace NOF.Test;
 public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 {
     private readonly AsyncServiceScope _scope;
+    private Context _context = Context.Empty;
     private Activity? _tracingActivity;
     private IDisposable? _tenantScope;
 
@@ -26,7 +27,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return Services.GetRequiredService<T>();
     }
 
-    public Context Context => Context.Empty;
+    public Context Context => _context;
 
     public IUserContext UserContext => GetRequiredService<IUserContext>();
 
@@ -60,6 +61,30 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
         return this;
     }
 
+    public NOFTestScope SetContext(Context context)
+    {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        return this;
+    }
+
+    public NOFTestScope SetContextItem(object key, object? value)
+    {
+        _context = Context.WithItem(key, value);
+        return this;
+    }
+
+    public NOFTestScope SetContextItems(IReadOnlyDictionary<object, object?> items)
+    {
+        _context = Context.WithItems(items);
+        return this;
+    }
+
+    public NOFTestScope RemoveContextItem(object key)
+    {
+        _context = Context.WithoutItem(key);
+        return this;
+    }
+
     public NOFTestScope SetUser(string userId, string? name = null, IEnumerable<string>? permissions = null, string authenticationType = "Test")
     {
         var claims = new List<Claim>
@@ -86,14 +111,31 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
             nameType: "name",
             roleType: ClaimTypes.Role)));
     }
-    public Task SendAsync<TCommand>(TCommand command, Context context, CancellationToken cancellationToken = default)
+
+    public TClient GetRpcClient<TClient>() where TClient : notnull
     {
-        return GetRequiredService<ICommandSender>().SendAsync(command, context, cancellationToken);
+        return GetRequiredService<TClient>();
     }
 
-    public Task PublishAsync<TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)
+    public Task<TResult> CallAsync<TClient, TResult>(
+        Func<TClient, Context, CancellationToken, Task<TResult>> invocation,
+        Context? context = null,
+        CancellationToken cancellationToken = default)
+        where TClient : notnull
     {
-        return GetRequiredService<INotificationPublisher>().PublishAsync(notification, context, cancellationToken);
+        ArgumentNullException.ThrowIfNull(invocation);
+
+        return invocation(GetRpcClient<TClient>(), context ?? Context, cancellationToken);
+    }
+
+    public Task SendAsync<TCommand>(TCommand command, Context? context = null, CancellationToken cancellationToken = default)
+    {
+        return GetRequiredService<ICommandSender>().SendAsync(command, context ?? Context, cancellationToken);
+    }
+
+    public Task PublishAsync<TNotification>(TNotification notification, Context? context = null, CancellationToken cancellationToken = default)
+    {
+        return GetRequiredService<INotificationPublisher>().PublishAsync(notification, context ?? Context, cancellationToken);
     }
 
     public void Dispose()

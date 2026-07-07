@@ -47,13 +47,29 @@ public class NOFTestHostTests
     }
 
     [Fact]
+    public async Task Scope_ShouldAllowSettingContextItems()
+    {
+        var builder = NOFTestAppBuilder.Create();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        scope.SetContextItem("case", "scope")
+            .SetContextItems(new Dictionary<object, object?> { ["step"] = 2 })
+            .RemoveContextItem("step");
+
+        Assert.Equal("scope", scope.Context["case"]);
+        Assert.False(scope.Context.TryGetItem("step", out _));
+    }
+
+    [Fact]
     public async Task SendAsync_Command_ShouldResolveCommandSenderFromScope()
     {
         var builder = NOFTestAppBuilder.Create();
         builder.Services.AddScoped<ICommandSender, FakeCommandSender>();
 
         await using var host = await builder.BuildTestHostAsync();
-        Func<Task> act = () => host.SendAsync(new TestCommand("do-it"), Context.Empty);
+        Func<Task> act = () => host.SendAsync(new TestCommand("do-it"));
 
         await Record.ExceptionAsync(act);
     }
@@ -65,9 +81,67 @@ public class NOFTestHostTests
         builder.Services.AddScoped<INotificationPublisher, FakeNotificationPublisher>();
 
         await using var host = await builder.BuildTestHostAsync();
-        Func<Task> act = () => host.PublishAsync(new TestNotification("evt"), Context.Empty);
+        Func<Task> act = () => host.PublishAsync(new TestNotification("evt"));
 
         await Record.ExceptionAsync(act);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldCreateScopeAndRunScenario()
+    {
+        var builder = NOFTestAppBuilder.Create();
+
+        await using var host = await builder.BuildTestHostAsync();
+        var result = await host.ExecuteAsync(scope =>
+        {
+            scope.SetTenant("tenant-b")
+                .SetUser("user-2")
+                .SetContextItem("flow", "execute");
+
+            return Task.FromResult(scope.Context["flow"]);
+        });
+
+        Assert.Equal("execute", result);
+    }
+
+    [Fact]
+    public async Task CallAsync_ShouldUseScopeContextAndConfiguredClient()
+    {
+        var builder = NOFTestAppBuilder.Create()
+            .AddLocalRpcClient<ITestClient, TestClient>();
+
+        await using var host = await builder.BuildTestHostAsync();
+        var result = await host.CallAsync<ITestClient, string>(
+            (client, context, cancellationToken) => client.EchoAsync(context, cancellationToken),
+            configure: scope => scope.SetContextItem("case", "host-call"));
+
+        Assert.Equal("host-call", result);
+    }
+
+    [Fact]
+    public async Task AddInMemoryPersistence_ShouldAllowPersistingAcrossScopes()
+    {
+        var builder = NOFTestAppBuilder.Create()
+            .AddInMemoryPersistence();
+
+        await using var host = await builder.BuildTestHostAsync();
+
+        await host.ExecuteAsync(async scope =>
+        {
+            var dbContext = scope.GetRequiredService<IDbContext>();
+            dbContext.Set<TestEntity>().Add(new TestEntity { Name = "persisted" });
+            await dbContext.SaveChangesAsync();
+        });
+
+        var entity = await host.ExecuteAsync(async scope =>
+        {
+            return await scope.GetRequiredService<IDbContext>()
+                .Set<TestEntity>()
+                .FirstOrDefaultAsync(item => item.Name == "persisted");
+        });
+
+        Assert.NotNull(entity);
+        Assert.Equal("persisted", entity.Name);
     }
 
     [Fact]
@@ -93,6 +167,25 @@ public class NOFTestHostTests
     private sealed record TestCommand(string Value);
 
     private sealed record TestNotification(string Value);
+
+    private interface ITestClient
+    {
+        Task<string> EchoAsync(Context context, CancellationToken cancellationToken);
+    }
+
+    private sealed class TestClient : ITestClient
+    {
+        public Task<string> EchoAsync(Context context, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult((string?)context["case"] ?? string.Empty);
+        }
+    }
+
+    private sealed class TestEntity
+    {
+        public required string Name { get; set; }
+    }
 
     private sealed class FakeCommandSender : ICommandSender
     {

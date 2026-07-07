@@ -10,6 +10,9 @@
     <Project Path="sample/NOF.Sample.Wasm/NOF.Sample.Wasm.csproj" Id="7ec16e6e-53f6-4e3d-b6a0-98f20e028ad9" />
     <Project Path="sample/NOF.Sample/NOF.Sample.csproj" Id="bb60a949-b306-4e6e-86ed-a760eb0be9fb" />
   </Folder>
+  <Folder Name="/sample-tests/">
+    <Project Path="sample-tests/NOF.Sample.Tests/NOF.Sample.Tests.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
