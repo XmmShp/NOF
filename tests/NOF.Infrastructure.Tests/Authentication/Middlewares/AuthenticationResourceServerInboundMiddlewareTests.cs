@@ -135,7 +135,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WhenTokenContainsScope_ShouldMapScopeToPermission()
+    public async Task InvokeAsync_WhenTokenContainsScope_ShouldKeepScopeClaimsWithoutMaterializingPermissions()
     {
         var userContext = new UserContext();
         using var rsa = RSA.Create(2048);
@@ -158,8 +158,8 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         await middleware.InvokeAsync(inboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
 
         Assert.True(userContext.User.IsAuthenticated);
-        Assert.Contains("orders.read", userContext.User.Permissions);
-        Assert.Contains("orders.write", userContext.User.Permissions);
+        Assert.Contains(userContext.User.Claims, claim => claim.Type == "scope" && claim.Value == "orders.read orders.write");
+        Assert.Empty(userContext.User.Permissions);
     }
 
     [Fact]
@@ -188,42 +188,13 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         Assert.Equal("Alice", userContext.User.Name);
     }
 
-    [Fact]
-    public async Task InvokeAsync_WhenCustomResolverUsesOtherClaims_ShouldMapPermission()
-    {
-        var userContext = new UserContext();
-        using var rsa = RSA.Create(2048);
-        var key = new ManagedSigningKey
-        {
-            Kid = "kid-1",
-            Key = new RsaSecurityKey(rsa) { KeyId = "kid-1" },
-            CreatedAtUtc = DateTime.UtcNow,
-            ActivatedAtUtc = DateTime.UtcNow
-        };
-        var token = CreateToken(
-            key.Key,
-            "https://auth.local",
-            [new Claim(JwtRegisteredClaimNames.Sub, "user-1"), new Claim(ClaimTypes.Role, "ops-admin")]);
-        var jwksService = CreateJwksService([key], "https://auth.local");
-        var middleware = CreateMiddleware(userContext, jwksService, new RolePermissionResolver());
-        var inboundContext = (RequestInboundContext)CreateInboundContext()
-            .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, $"Bearer {token}");
-
-        await middleware.InvokeAsync(inboundContext, new object(), (_, _, _) => ValueTask.CompletedTask, default);
-
-        Assert.True(userContext.User.IsAuthenticated);
-        Assert.Contains("ops.full", userContext.User.Permissions);
-    }
-
     private static AuthenticationResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        ResourceServerJwksCacheService jwksCacheService,
-        IPermissionResolver? permissionResolver = null)
+        ResourceServerJwksCacheService jwksCacheService)
     {
         return new AuthenticationResourceServerInboundMiddleware(
             userContext,
             jwksCacheService,
-            permissionResolver ?? new ScopePermissionResolver(),
             Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
             {
                 AuthorizationServer = "https://auth.local",
@@ -318,13 +289,4 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
         }
     }
 
-    private sealed class RolePermissionResolver : IPermissionResolver
-    {
-        public IReadOnlyCollection<string> ResolvePermissions(IReadOnlyCollection<Claim> claims)
-        {
-            return claims.Any(static claim => claim.Type == ClaimTypes.Role && claim.Value == "ops-admin")
-                ? ["ops.full"]
-                : [];
-        }
-    }
 }

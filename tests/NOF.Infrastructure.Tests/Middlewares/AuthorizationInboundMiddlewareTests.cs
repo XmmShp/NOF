@@ -107,6 +107,24 @@ public sealed class AuthorizationInboundMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_DefaultHandler_ShouldNotTreatScopeAsPermission()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity("scope", "input-method"));
+        var middleware = CreateMiddleware(userContext);
+
+        var context = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.AllowAnonymousHandler));
+        await middleware.InvokeAsync(
+            context,
+            new TestRequest(),
+            (_, _, _) => ValueTask.CompletedTask,
+            default);
+
+        var denied = Assert.IsAssignableFrom<IResult>(context.Response);
+        Assert.Equal("403", denied.ErrorCode);
+    }
+
+    [Fact]
     public async Task InvokeAsync_WhenAuthenticatedUserHasTenant_ShouldOverrideCurrentTenant()
     {
         var userContext = new UserContext();
@@ -178,6 +196,38 @@ public sealed class AuthorizationInboundMiddlewareTests
         Assert.True(nextCalled);
     }
 
+    [Fact]
+    public async Task InvokeAsync_CustomAuthorizationHandler_ShouldReceiveFullContext()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity());
+        var handler = new TestInboundAuthorizationHandler();
+        var middleware = CreateMiddleware(userContext, authorizationHandler: handler);
+        var request = new TestRequest();
+
+        var nextCalled = false;
+        await middleware.InvokeAsync(
+            CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.ExecutePermissionHandler)),
+            request,
+            (_, forwardedRequest, _) =>
+            {
+                Assert.Same(request, forwardedRequest);
+                nextCalled = true;
+                return ValueTask.CompletedTask;
+            },
+            default);
+
+        Assert.True(nextCalled);
+        Assert.NotNull(handler.LastContext);
+        Assert.Equal(InboundAuthorizationKind.Request, handler.LastContext!.Kind);
+        Assert.Same(request, handler.LastContext.Input);
+        Assert.Equal(typeof(TestService), handler.LastContext.ServiceType);
+        Assert.Equal(nameof(TestService.OverridePermissionMethod), handler.LastContext.ServiceMethodInfo?.Name);
+        Assert.Equal(typeof(TestHandler), handler.LastContext.HandlerType);
+        Assert.Equal(nameof(TestHandler.ExecutePermissionHandler), handler.LastContext.HandlerMethodInfo.Name);
+        Assert.Null(handler.LastContext.MessageType);
+    }
+
     private static RequestInboundContext CreateRequestContext(string serviceMethodName, Type? responseType = null, string? handlerMethodName = null)
     {
         var serviceMethod = typeof(TestService).GetMethod(serviceMethodName)!;
@@ -213,15 +263,18 @@ public sealed class AuthorizationInboundMiddlewareTests
         };
     }
 
-    private static AuthorizationInboundMiddleware CreateMiddleware(IUserContext userContext, IMutableCurrentTenant? currentTenant = null)
+    private static AuthorizationInboundMiddleware CreateMiddleware(
+        IUserContext userContext,
+        IMutableCurrentTenant? currentTenant = null,
+        IInboundAuthorizationHandler? authorizationHandler = null)
         => new(
             userContext,
+            authorizationHandler ?? new DefaultInboundAuthorizationHandler(NullLogger<DefaultInboundAuthorizationHandler>.Instance),
             currentTenant ?? new CurrentTenant(),
             Options.Create(new AuthenticationResourceServerOptions
             {
                 AuthorizationServer = "https://auth.local/oauth2"
-            }),
-            NullLogger<AuthorizationInboundMiddleware>.Instance);
+            }));
 
     private static ClaimsIdentity CreateAuthenticatedIdentity(params string[] permissionClaims)
     {
@@ -276,5 +329,19 @@ public sealed class AuthorizationInboundMiddlewareTests
     {
         [RequirePermission("handler")]
         public void Handle(ProtectedNotification notification) { }
+    }
+
+    private sealed class TestInboundAuthorizationHandler : IInboundAuthorizationHandler
+    {
+        public InboundAuthorizationContext? LastContext { get; private set; }
+
+        public ValueTask<InboundAuthorizationResult> AuthorizeAsync(
+            InboundAuthorizationContext context,
+            CancellationToken cancellationToken)
+        {
+            _ = cancellationToken;
+            LastContext = context;
+            return ValueTask.FromResult<InboundAuthorizationResult>(InboundAuthorizationResult.Success);
+        }
     }
 }

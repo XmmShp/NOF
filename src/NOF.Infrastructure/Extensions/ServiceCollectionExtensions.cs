@@ -53,7 +53,7 @@ public static partial class NOFInfrastructureExtensions
 
             services.Configure(configureOptions);
             services.AddHttpClient<HttpAuthorizationServerService>();
-            services.TryAddScoped<IPermissionResolver, ScopePermissionResolver>();
+            services.TryAddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
             services.TryAddScoped<IJwksService>(static serviceProvider =>
                 serviceProvider.GetRequiredService<HttpAuthorizationServerService>());
             services.TryAddScoped<IAuthorizationServerMetadataService>(static serviceProvider =>

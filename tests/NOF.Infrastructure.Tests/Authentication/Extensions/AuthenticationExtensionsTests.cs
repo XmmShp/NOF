@@ -1150,7 +1150,7 @@ public sealed class AuthenticationExtensionsTests
         Assert.IsType<HttpAuthorizationServerService>(jwksService2);
         Assert.Same(jwksService1, jwksService2);
         Assert.NotNull(scope.GetRequiredService<ResourceServerJwksCacheService>());
-        Assert.IsType<ScopePermissionResolver>(scope.GetRequiredService<IPermissionResolver>());
+        Assert.IsType<DefaultInboundAuthorizationHandler>(scope.GetRequiredService<IInboundAuthorizationHandler>());
     }
 
     [Fact]
