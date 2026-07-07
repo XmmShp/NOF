@@ -31,6 +31,7 @@ public static partial class NOFInfrastructureExtensions
 
         public IHostApplicationBuilder AddNOFInfrastructure()
         {
+            builder.ConfigureNOFHostEnvironment();
             builder.Services.AddNOFApplication();
             AddOpenTelemetry(builder);
             builder.Services.GetOrAddSingleton<TypeResolver>();
@@ -48,7 +49,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
             builder.Services.TryAddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
-            builder.Environment.BindConfiguration(builder.Configuration);
 
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
             builder.Services.TryAddSingleton<CacheServiceLocalLockState>();

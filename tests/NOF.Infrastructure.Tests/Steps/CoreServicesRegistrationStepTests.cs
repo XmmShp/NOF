@@ -184,8 +184,8 @@ public class NOFInfrastructureTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationId] = "42",
-                [NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId] = "24"
+                [NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId] = "42",
+                [NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId] = "24"
             })
             .Build();
 
@@ -195,6 +195,22 @@ public class NOFInfrastructureTests
         Assert.Equal("fallback-name", hostEnvironment.ApplicationName);
         Assert.Equal(24u, hostEnvironment.InstanceId);
         Assert.False(hostEnvironment.IsPrimaryNodeEnvironment);
+    }
+
+    [Fact]
+    public void AddNOFInfrastructure_ShouldBindHostEnvironmentFromConfiguration()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationName] = "Orders.Api";
+        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId] = "42";
+        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId] = "24";
+
+        builder.AddNOFInfrastructure();
+
+        Assert.Equal("Orders.Api", builder.Environment.ApplicationName);
+        Assert.Equal(42u, builder.Environment.ApplicationId);
+        Assert.Equal(24u, builder.Environment.InstanceId);
+        Assert.False(builder.Environment.IsPrimaryNodeEnvironment);
     }
 
     [Fact]

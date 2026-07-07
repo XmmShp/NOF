@@ -18,13 +18,6 @@ public static class NOFInfrastructureConstants
 
     public static class Deployment
     {
-        public static class ConfigurationKeys
-        {
-            public const string ApplicationName = "ApplicationName";
-            public const string ApplicationId = "ApplicationId";
-            public const string InstanceId = "InstanceId";
-        }
-
         public static class Tags
         {
             public const string ApplicationId = "service.id";

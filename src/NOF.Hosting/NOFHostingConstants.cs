@@ -8,6 +8,16 @@ namespace NOF.Hosting;
 /// </summary>
 public static class NOFHostingConstants
 {
+    public static class Deployment
+    {
+        public static class ConfigurationKeys
+        {
+            public const string ApplicationName = "ApplicationName";
+            public const string ApplicationId = "ApplicationId";
+            public const string InstanceId = "InstanceId";
+        }
+    }
+
     public static class Outbound
     {
         public const string ActivitySourceName = "NOF.Hosting.OutboundPipeline";
@@ -24,4 +34,3 @@ public static class NOFHostingConstants
         }
     }
 }
-

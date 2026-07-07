@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using NOF.Infrastructure;
 using System.Runtime.CompilerServices;
 
 namespace Microsoft.Extensions.Hosting;
@@ -81,14 +80,14 @@ public static class HostEnvironmentExtensions
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
-            environment.ApplicationName = configuration[NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationName]
+            environment.ApplicationName = configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationName]
                 ?? environment.ApplicationName;
-            if (uint.TryParse(configuration[NOFInfrastructureConstants.Deployment.ConfigurationKeys.ApplicationId], out var applicationId))
+            if (uint.TryParse(configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId], out var applicationId))
             {
                 environment.ApplicationId = applicationId;
             }
 
-            if (uint.TryParse(configuration[NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId], out var instanceId))
+            if (uint.TryParse(configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId], out var instanceId))
             {
                 environment.InstanceId = instanceId;
             }

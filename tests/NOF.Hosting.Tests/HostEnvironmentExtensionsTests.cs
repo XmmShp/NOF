@@ -4,9 +4,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Primitives;
 using Xunit;
 
-namespace NOF.Infrastructure.Tests.Extensions;
+namespace NOF.Hosting.Tests;
 
-public sealed class HostEnvironmentDeploymentExtensionsTests
+public sealed class HostEnvironmentExtensionsTests
 {
     [Fact]
     public void InstanceId_ShouldDefaultToOne()
@@ -41,30 +41,22 @@ public sealed class HostEnvironmentDeploymentExtensionsTests
     }
 
     [Fact]
-    public void IsPrimaryNodeEnvironment_ShouldDefaultToInstanceIdEqualsOne()
-    {
-        var environment = new TestHostEnvironment();
-
-        Assert.True(environment.IsPrimaryNodeEnvironment);
-
-        environment.InstanceId = 2;
-
-        Assert.False(environment.IsPrimaryNodeEnvironment);
-    }
-
-    [Fact]
-    public void BindConfiguration_ShouldApplyConfiguredInstanceId()
+    public void BindConfiguration_ShouldApplyConfiguredValues()
     {
         var environment = new TestHostEnvironment();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [NOFInfrastructureConstants.Deployment.ConfigurationKeys.InstanceId] = "2"
+                [NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationName] = "Orders.Api",
+                [NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId] = "3",
+                [NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId] = "2"
             })
             .Build();
 
         environment.BindConfiguration(configuration);
 
+        Assert.Equal("Orders.Api", environment.ApplicationName);
+        Assert.Equal(3u, environment.ApplicationId);
         Assert.Equal(2u, environment.InstanceId);
         Assert.False(environment.IsPrimaryNodeEnvironment);
     }
@@ -73,7 +65,7 @@ public sealed class HostEnvironmentDeploymentExtensionsTests
     {
         public string EnvironmentName { get; set; } = Environments.Development;
 
-        public string ApplicationName { get; set; } = "NOF.Infrastructure.Tests";
+        public string ApplicationName { get; set; } = "NOF.Hosting.Tests";
 
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
 

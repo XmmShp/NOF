@@ -20,7 +20,7 @@ public static partial class NOFHostingExtensions
         {
             ArgumentNullException.ThrowIfNull(buildApplicationAsync);
 
-            builder.Services.TryAddSingleton(builder.Environment);
+            builder.ConfigureNOFHostEnvironment();
             builder.Services.AddNOFHosting();
 
             var app = await buildApplicationAsync().ConfigureAwait(false);

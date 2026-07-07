@@ -10,7 +10,7 @@ public static partial class NOFHostingExtensions
     {
         public IHostApplicationBuilder AddNOFHosting()
         {
-            builder.Services.TryAddSingleton(builder.Environment);
+            builder.ConfigureNOFHostEnvironment();
             builder.Services.AddNOFHosting();
             return builder;
         }
