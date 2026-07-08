@@ -42,7 +42,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddHttpClient<HttpAuthorizationServerService>();
             builder.Services.Replace(ServiceDescriptor.Singleton<IIdGenerator>(sp => new SnowflakeIdGenerator(
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
-                builder.Environment.ApplicationId,
+                builder.Environment.ServiceId,
                 builder.Environment.InstanceId)));
             builder.Services.TryAddScoped<CurrentTenant>();
             builder.Services.TryAddScoped<ICurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
@@ -158,7 +158,7 @@ public static partial class NOFInfrastructureExtensions
                 tracing.AddSource(NOFInfrastructureConstants.InboundPipeline.ActivitySourceName);
                 tracing.AddSource(NOFInfrastructureConstants.OutboundPipeline.ActivitySourceName);
                 tracing.AddSource(NOFApplicationConstants.StateMachine.ActivitySourceName);
-                tracing.AddSource(builder.Environment.ApplicationName)
+                tracing.AddSource(builder.Environment.ServiceName)
                     .AddHttpClientInstrumentation();
             });
 

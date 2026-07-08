@@ -12,8 +12,8 @@ public static class ActivityExtensions
             ArgumentNullException.ThrowIfNull(activity);
             ArgumentNullException.ThrowIfNull(hostEnvironment);
 
-            activity.SetTag(NOFInfrastructureConstants.Deployment.Tags.ApplicationId, hostEnvironment.ApplicationId);
-            activity.SetTag(NOFInfrastructureConstants.Deployment.Tags.ApplicationName, hostEnvironment.ApplicationName);
+            activity.SetTag(NOFInfrastructureConstants.Deployment.Tags.ServiceId, hostEnvironment.ServiceId);
+            activity.SetTag(NOFInfrastructureConstants.Deployment.Tags.ServiceName, hostEnvironment.ServiceName);
             activity.SetTag(NOFInfrastructureConstants.Deployment.Tags.InstanceId, hostEnvironment.InstanceId);
         }
 

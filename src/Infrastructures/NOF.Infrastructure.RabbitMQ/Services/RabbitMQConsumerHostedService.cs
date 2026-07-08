@@ -82,7 +82,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         foreach (var group in notificationGroups)
         {
             var handlerType = group.Key;
-            var queueName = BuildNotificationQueueName(_hostEnvironment.ApplicationName, handlerType.DisplayName);
+            var queueName = BuildNotificationQueueName(_hostEnvironment.ServiceName, handlerType.DisplayName);
             var notificationTypes = group
                 .Select(info => info.NotificationType)
                 .Distinct()

@@ -47,16 +47,16 @@ public sealed class HostEnvironmentExtensionsTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationName] = "Orders.Api",
-                [NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId] = "3",
+                [NOFHostingConstants.Deployment.ConfigurationKeys.ServiceName] = "Orders.Api",
+                [NOFHostingConstants.Deployment.ConfigurationKeys.ServiceId] = "3",
                 [NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId] = "2"
             })
             .Build();
 
         environment.BindConfiguration(configuration);
 
-        Assert.Equal("Orders.Api", environment.ApplicationName);
-        Assert.Equal(3u, environment.ApplicationId);
+        Assert.Equal("Orders.Api", environment.ServiceName);
+        Assert.Equal(3u, environment.ServiceId);
         Assert.Equal(2u, environment.InstanceId);
         Assert.False(environment.IsPrimaryNodeEnvironment);
     }

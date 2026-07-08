@@ -362,8 +362,8 @@ public sealed class PersistenceSigningKeyService : ISigningKeyService
     private string ResolveLocalEncryptionKeyPath()
     {
         var appName = SanitizePathSegment(
-            !string.IsNullOrWhiteSpace(_hostEnvironment.ApplicationName)
-                ? _hostEnvironment.ApplicationName
+            !string.IsNullOrWhiteSpace(_hostEnvironment.ServiceName)
+                ? _hostEnvironment.ServiceName
                 : "nof-app");
         var basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrWhiteSpace(basePath))

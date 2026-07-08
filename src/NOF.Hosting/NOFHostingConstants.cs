@@ -12,8 +12,8 @@ public static class NOFHostingConstants
     {
         public static class ConfigurationKeys
         {
-            public const string ApplicationName = "ApplicationName";
-            public const string ApplicationId = "ApplicationId";
+            public const string ServiceName = "ServiceName";
+            public const string ServiceId = "ServiceId";
             public const string InstanceId = "InstanceId";
         }
     }

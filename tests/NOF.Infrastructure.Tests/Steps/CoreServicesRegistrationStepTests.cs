@@ -158,15 +158,15 @@ public class NOFInfrastructureTests
     }
 
     [Fact]
-    public void HostEnvironmentExtensions_ShouldUseApplicationNameAndDefaultInstanceId()
+    public void HostEnvironmentExtensions_ShouldUseApplicationNameAsDefaultServiceName()
     {
         var hostEnvironment = new TestHostEnvironment
         {
             ApplicationName = "Orders.Api"
         };
 
-        Assert.Equal(0u, hostEnvironment.ApplicationId);
-        Assert.Equal("Orders.Api", hostEnvironment.ApplicationName);
+        Assert.Equal(0u, hostEnvironment.ServiceId);
+        Assert.Equal("Orders.Api", hostEnvironment.ServiceName);
         Assert.Equal(1u, hostEnvironment.InstanceId);
         Assert.True(hostEnvironment.IsPrimaryNodeEnvironment);
     }
@@ -177,22 +177,22 @@ public class NOFInfrastructureTests
         var hostEnvironment = new TestHostEnvironment
         {
             ApplicationName = "fallback-name",
-            ApplicationId = 1,
+            ServiceId = 1,
             InstanceId = 7
         };
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId] = "42",
+                [NOFHostingConstants.Deployment.ConfigurationKeys.ServiceId] = "42",
                 [NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId] = "24"
             })
             .Build();
 
         hostEnvironment.BindConfiguration(configuration);
 
-        Assert.Equal(42u, hostEnvironment.ApplicationId);
-        Assert.Equal("fallback-name", hostEnvironment.ApplicationName);
+        Assert.Equal(42u, hostEnvironment.ServiceId);
+        Assert.Equal("fallback-name", hostEnvironment.ServiceName);
         Assert.Equal(24u, hostEnvironment.InstanceId);
         Assert.False(hostEnvironment.IsPrimaryNodeEnvironment);
     }
@@ -201,14 +201,14 @@ public class NOFInfrastructureTests
     public void AddNOFInfrastructure_ShouldBindHostEnvironmentFromConfiguration()
     {
         var builder = new TestServiceRegistrationContext();
-        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationName] = "Orders.Api";
-        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId] = "42";
+        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.ServiceName] = "Orders.Api";
+        builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.ServiceId] = "42";
         builder.Configuration[NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId] = "24";
 
         builder.AddNOFInfrastructure();
 
-        Assert.Equal("Orders.Api", builder.Environment.ApplicationName);
-        Assert.Equal(42u, builder.Environment.ApplicationId);
+        Assert.Equal("Orders.Api", builder.Environment.ServiceName);
+        Assert.Equal(42u, builder.Environment.ServiceId);
         Assert.Equal(24u, builder.Environment.InstanceId);
         Assert.False(builder.Environment.IsPrimaryNodeEnvironment);
     }
@@ -220,14 +220,15 @@ public class NOFInfrastructureTests
         {
             ApplicationName = "orders-api"
         };
-        hostEnvironment.ApplicationId = 42;
+        hostEnvironment.ServiceId = 42;
+        hostEnvironment.ServiceName = "orders-api";
         hostEnvironment.InstanceId = 24;
 
         using var activity = new Activity("deployment-test").Start();
         activity.SetServiceDeploymentTags(hostEnvironment);
 
-        Assert.Equal(42u, activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.ApplicationId));
-        Assert.Equal("orders-api", activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.ApplicationName));
+        Assert.Equal(42u, activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.ServiceId));
+        Assert.Equal("orders-api", activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.ServiceName));
         Assert.Equal(24u, activity.GetTagItem(NOFInfrastructureConstants.Deployment.Tags.InstanceId));
     }
 

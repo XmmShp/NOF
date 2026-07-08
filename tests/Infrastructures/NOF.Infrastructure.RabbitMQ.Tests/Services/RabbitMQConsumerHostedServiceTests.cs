@@ -9,7 +9,7 @@ namespace NOF.Infrastructure.RabbitMQ.Tests.Services;
 public class RabbitMQConsumerHostedServiceTests
 {
     [Fact]
-    public void BuildNotificationQueueName_ShouldPrefixApplicationName()
+    public void BuildNotificationQueueName_ShouldPrefixServiceName()
     {
         var queueName = RabbitMQConsumerHostedService.BuildNotificationQueueName(
             "Orders.Api",
@@ -19,7 +19,7 @@ public class RabbitMQConsumerHostedServiceTests
     }
 
     [Fact]
-    public void BuildNotificationQueueName_ShouldFallbackToOriginalName_WhenApplicationNameIsEmpty()
+    public void BuildNotificationQueueName_ShouldFallbackToOriginalName_WhenServiceNameIsEmpty()
     {
         var queueName = RabbitMQConsumerHostedService.BuildNotificationQueueName(
             string.Empty,
@@ -98,5 +98,10 @@ public class RabbitMQConsumerHostedServiceTests
 
         public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
             new Microsoft.Extensions.FileProviders.NullFileProvider();
+
+        public TestHostEnvironment()
+        {
+            this.ServiceName = ApplicationName;
+        }
     }
 }

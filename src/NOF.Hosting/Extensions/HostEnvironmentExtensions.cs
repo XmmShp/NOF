@@ -44,16 +44,30 @@ internal static class HostEnvironmentExtensionBag
 
 public static class HostEnvironmentExtensions
 {
-    private const string ApplicationIdKey = "ApplicationId";
+    private const string ServiceNameKey = "ServiceName";
+    private const string ServiceIdKey = "ServiceId";
     private const string InstanceIdKey = "InstanceId";
     private const string IsPrimaryNodeEnvironmentPredicatorKey = "IsPrimaryNodeEnvironmentPredicator";
 
     extension(IHostEnvironment environment)
     {
-        public uint ApplicationId
+        public string ServiceName
         {
-            get => HostEnvironmentExtensionBag.GetOrAdd(environment, ApplicationIdKey, static () => 0u);
-            set => HostEnvironmentExtensionBag.Set(environment, ApplicationIdKey, value);
+            get => HostEnvironmentExtensionBag.GetOrAdd(
+                environment,
+                ServiceNameKey,
+                () => environment.ApplicationName);
+            set
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(value);
+                HostEnvironmentExtensionBag.Set(environment, ServiceNameKey, value);
+            }
+        }
+
+        public uint ServiceId
+        {
+            get => HostEnvironmentExtensionBag.GetOrAdd(environment, ServiceIdKey, static () => 0u);
+            set => HostEnvironmentExtensionBag.Set(environment, ServiceIdKey, value);
         }
 
         public uint InstanceId
@@ -80,11 +94,15 @@ public static class HostEnvironmentExtensions
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
-            environment.ApplicationName = configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationName]
-                ?? environment.ApplicationName;
-            if (uint.TryParse(configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.ApplicationId], out var applicationId))
+            var serviceName = configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.ServiceName];
+            if (!string.IsNullOrWhiteSpace(serviceName))
             {
-                environment.ApplicationId = applicationId;
+                environment.ServiceName = serviceName;
+            }
+
+            if (uint.TryParse(configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.ServiceId], out var serviceId))
+            {
+                environment.ServiceId = serviceId;
             }
 
             if (uint.TryParse(configuration[NOF.Hosting.NOFHostingConstants.Deployment.ConfigurationKeys.InstanceId], out var instanceId))

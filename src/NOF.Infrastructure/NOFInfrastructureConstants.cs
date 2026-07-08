@@ -20,8 +20,8 @@ public static class NOFInfrastructureConstants
     {
         public static class Tags
         {
-            public const string ApplicationId = "service.id";
-            public const string ApplicationName = "service.name";
+            public const string ServiceId = "service.id";
+            public const string ServiceName = "service.name";
             public const string InstanceId = "service.instance.id";
         }
     }
