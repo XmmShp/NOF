@@ -14,20 +14,17 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<InboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
-    private readonly TypeResolver _typeResolver;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
-        IObjectSerializer objectSerializer,
-        TypeResolver typeResolver)
+        IObjectSerializer objectSerializer)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Inbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
-        _typeResolver = typeResolver;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -117,7 +114,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var headers = DeserializeHeaders(message.Headers);
         var traceParent = ExtractTraceParent(headers);
         var processingHeaders = RemoveTraceParent(headers);
-        var handlerType = _typeResolver.ResolveHandler(message.HandlerType);
+        var handlerType = NOF.Abstraction.TypeResolver.ResolveHandler(message.HandlerType);
 
         try
         {

@@ -11,20 +11,17 @@ public sealed class NotificationPublisher : INotificationPublisher
     private readonly IReadOnlyList<INotificationOutboundMiddleware> _middlewares;
     private readonly IDbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
-    private readonly TypeResolver _typeResolver;
 
     public NotificationPublisher(
         INotificationRider rider,
         IEnumerable<INotificationOutboundMiddleware> middlewares,
         IDbContext dbContext,
-        IObjectSerializer objectSerializer,
-        TypeResolver typeResolver)
+        IObjectSerializer objectSerializer)
     {
         _rider = rider;
         _middlewares = new DependencyGraph<INotificationOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
-        _typeResolver = typeResolver;
     }
 
     public async Task DeferPublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
@@ -36,9 +33,9 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         await ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
-        var payloadTypeName = _typeResolver.Register(notification.GetType());
+        var payloadTypeName = NOF.Abstraction.TypeResolver.Register(notification.GetType());
         var dispatchTypeNames = _objectSerializer.SerializeToText(
-            notificationTypes.Select(_typeResolver.Register).ToArray(),
+            notificationTypes.Select(NOF.Abstraction.TypeResolver.Register).ToArray(),
             typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
@@ -63,8 +60,8 @@ public sealed class NotificationPublisher : INotificationPublisher
         await ExecuteAsync(outboundContext, notification, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
-            var payloadTypeName = _typeResolver.Register(message.GetType());
-            var notificationTypeNames = notificationTypes.Select(_typeResolver.Register).ToArray();
+            var payloadTypeName = NOF.Abstraction.TypeResolver.Register(message.GetType());
+            var notificationTypeNames = notificationTypes.Select(NOF.Abstraction.TypeResolver.Register).ToArray();
             await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }

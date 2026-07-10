@@ -16,22 +16,19 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
     private readonly IHostEnvironment _hostEnvironment;
-    private readonly TypeResolver _typeResolver;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
-        IHostEnvironment hostEnvironment,
-        TypeResolver typeResolver)
+        IHostEnvironment hostEnvironment)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
         _hostEnvironment = hostEnvironment;
-        _typeResolver = typeResolver;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -110,7 +107,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
-        var payloadType = _typeResolver.Resolve(message.PayloadType);
+        var payloadType = NOF.Abstraction.TypeResolver.Resolve(message.PayloadType);
         var dispatchTypes = ResolveDispatchTypes(message);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         var headers = string.IsNullOrWhiteSpace(message.Headers)
@@ -177,7 +174,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        var payloadType = _typeResolver.Resolve(message.PayloadType);
+        var payloadType = NOF.Abstraction.TypeResolver.Resolve(message.PayloadType);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
@@ -190,16 +187,16 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         if (string.IsNullOrWhiteSpace(message.DispatchTypes))
         {
-            return [_typeResolver.Resolve(message.PayloadType)];
+            return [NOF.Abstraction.TypeResolver.Resolve(message.PayloadType)];
         }
 
         var typeNames = _objectSerializer.Deserialize<string[]>(message.DispatchTypes);
         if (typeNames is null || typeNames.Length == 0)
         {
-            return [_typeResolver.Resolve(message.PayloadType)];
+            return [NOF.Abstraction.TypeResolver.Resolve(message.PayloadType)];
         }
 
-        return [.. typeNames.Select(_typeResolver.Resolve)];
+        return [.. typeNames.Select(NOF.Abstraction.TypeResolver.Resolve)];
     }
 
     private async Task ProcessMessagesBatch(

@@ -1,13 +1,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NOF.Infrastructure;
+namespace NOF.Abstraction;
 
-public sealed class TypeResolver
+public static class TypeResolver
 {
-    private readonly ConcurrentDictionary<string, Type> _types = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, Type> _types = new(StringComparer.Ordinal);
 
-    public string Register(Type type)
+    public static string Register(Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
 
@@ -16,7 +16,7 @@ public sealed class TypeResolver
         return typeName;
     }
 
-    public Type Resolve(string typeName)
+    public static Type Resolve(string typeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
 
@@ -29,7 +29,7 @@ public sealed class TypeResolver
     }
 
     [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
-    public Type ResolveHandler(string typeName)
+    public static Type ResolveHandler(string typeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
 
@@ -42,7 +42,7 @@ public sealed class TypeResolver
     }
 
     [RequiresUnreferencedCode("Resolving arbitrary type names from loaded assemblies is not trim-safe. Register types explicitly for AOT-compatible applications.")]
-    public Type ResolveFromLoadedAssemblies(string typeName)
+    public static Type ResolveFromLoadedAssemblies(string typeName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
 

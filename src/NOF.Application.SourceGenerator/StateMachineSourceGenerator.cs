@@ -221,8 +221,8 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
         sb.AppendLine();
         foreach (var (handlerClassName, notificationFullName) in handlerPairs)
         {
-            sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Infrastructure.TypeResolver>().Register(typeof({handlerClassName}));");
-            sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Infrastructure.TypeResolver>().Register(typeof({notificationFullName}));");
+            sb.AppendLine($"            global::NOF.Abstraction.TypeResolver.Register(typeof({handlerClassName}));");
+            sb.AppendLine($"            global::NOF.Abstraction.TypeResolver.Register(typeof({notificationFullName}));");
             sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName})));");
         }
         sb.AppendLine("        }");

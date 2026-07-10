@@ -47,7 +47,6 @@ public class RabbitMQConsumerHostedServiceTests
             new NotificationHandlerRegistry(),
             new TestHostEnvironment(),
             null!,
-            new TypeResolver(),
             new JsonObjectSerializer(),
             NullLogger<RabbitMQConsumerHostedService>.Instance);
 

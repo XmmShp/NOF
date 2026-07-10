@@ -34,7 +34,6 @@ public static partial class NOFInfrastructureExtensions
             builder.ConfigureNOFHostEnvironment();
             builder.Services.AddNOFApplication();
             AddOpenTelemetry(builder);
-            builder.Services.GetOrAddSingleton<TypeResolver>();
 
             #region Core Services
             builder.Services.TryAddSingleton<ICacheLockRetryStrategy, ExponentialBackoffCacheLockRetryStrategy>();

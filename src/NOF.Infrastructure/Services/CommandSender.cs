@@ -11,20 +11,17 @@ public sealed class CommandSender : ICommandSender
     private readonly IReadOnlyList<ICommandOutboundMiddleware> _middlewares;
     private readonly IDbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
-    private readonly TypeResolver _typeResolver;
 
     public CommandSender(
         ICommandRider rider,
         IEnumerable<ICommandOutboundMiddleware> middlewares,
         IDbContext dbContext,
-        IObjectSerializer objectSerializer,
-        TypeResolver typeResolver)
+        IObjectSerializer objectSerializer)
     {
         _rider = rider;
         _middlewares = new DependencyGraph<ICommandOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
-        _typeResolver = typeResolver;
     }
 
     public async Task DeferSendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
@@ -36,8 +33,8 @@ public sealed class CommandSender : ICommandSender
 
         await ExecuteAsync(outboundContext, command, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
-        var payloadTypeName = _typeResolver.Register(command.GetType());
-        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { _typeResolver.Register(commandType) }, typeof(string[]));
+        var payloadTypeName = NOF.Abstraction.TypeResolver.Register(command.GetType());
+        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { NOF.Abstraction.TypeResolver.Register(commandType) }, typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
@@ -61,8 +58,8 @@ public sealed class CommandSender : ICommandSender
         await ExecuteAsync(outboundContext, command, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
-            var payloadTypeName = _typeResolver.Register(message.GetType());
-            var commandTypeName = _typeResolver.Register(commandType);
+            var payloadTypeName = NOF.Abstraction.TypeResolver.Register(message.GetType());
+            var commandTypeName = NOF.Abstraction.TypeResolver.Register(commandType);
             await _rider.SendAsync(payload, payloadTypeName, commandTypeName, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }

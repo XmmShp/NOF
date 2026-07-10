@@ -20,7 +20,7 @@
 
 - `Registry` is a first-class builder property and owns handler, mapper, RPC, and auto-inject metadata.
 - Auto-injected services are stored as native `ServiceDescriptor` entries in `Registry.AutoInjectRegistry`.
-- `TypeResolver` is DI-managed and replaces process-wide type lookup state.
+- `TypeResolver` is a process-wide static registry in `NOF.Abstraction` for message and handler type lookup.
 - `Mapper`, `IdGenerator`, and `EventPublisher` expose ambient async-flow convenience APIs while still supporting explicit dependency paths.
 - Built-in in-memory cache state is isolated per host through DI singletons rather than process-wide mutable `static` fields.
 

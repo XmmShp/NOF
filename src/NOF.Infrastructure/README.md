@@ -10,7 +10,7 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 - in-memory cache and messaging riders
 - OpenTelemetry registration and transport middleware
 - JWT resource server validation and command/notification token propagation
-- builder-scoped `TypeResolver`
+- static `TypeResolver` from `NOF.Abstraction`
 - ambient `IMapper` / `IIdGenerator` activation through scoped `IDaemonService`
 
 This lets consumers reference one package/project while still getting the full default infrastructure setup.

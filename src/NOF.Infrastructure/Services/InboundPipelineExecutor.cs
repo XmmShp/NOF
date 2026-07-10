@@ -11,16 +11,13 @@ public sealed class CommandInboundPipelineExecutor
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _serializer;
-    private readonly TypeResolver _typeResolver;
 
     public CommandInboundPipelineExecutor(
         IServiceProvider serviceProvider,
-        IObjectSerializer serializer,
-        TypeResolver typeResolver)
+        IObjectSerializer serializer)
     {
         _serviceProvider = serviceProvider;
         _serializer = serializer;
-        _typeResolver = typeResolver;
     }
 
     public async ValueTask ExecuteAsync(
@@ -33,7 +30,7 @@ public sealed class CommandInboundPipelineExecutor
     {
         var middlewares = new DependencyGraph<ICommandInboundMiddleware>(
             _serviceProvider.GetServices<ICommandInboundMiddleware>()).GetExecutionOrder();
-        var messageType = _typeResolver.Resolve(payloadTypeName);
+        var messageType = NOF.Abstraction.TypeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
         CommandHandlerDelegate terminal = (currentContext, currentMessage, ct)
@@ -99,16 +96,13 @@ public sealed class NotificationInboundPipelineExecutor
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _serializer;
-    private readonly TypeResolver _typeResolver;
 
     public NotificationInboundPipelineExecutor(
         IServiceProvider serviceProvider,
-        IObjectSerializer serializer,
-        TypeResolver typeResolver)
+        IObjectSerializer serializer)
     {
         _serviceProvider = serviceProvider;
         _serializer = serializer;
-        _typeResolver = typeResolver;
     }
 
     public async ValueTask ExecuteAsync(
@@ -121,7 +115,7 @@ public sealed class NotificationInboundPipelineExecutor
     {
         var middlewares = new DependencyGraph<INotificationInboundMiddleware>(
             _serviceProvider.GetServices<INotificationInboundMiddleware>()).GetExecutionOrder();
-        var messageType = _typeResolver.Resolve(payloadTypeName);
+        var messageType = NOF.Abstraction.TypeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
         NotificationHandlerDelegate terminal = (currentContext, currentMessage, ct)

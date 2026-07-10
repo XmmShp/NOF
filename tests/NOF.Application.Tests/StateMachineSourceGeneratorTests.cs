@@ -10,7 +10,7 @@ namespace NOF.SourceGenerator.Tests;
 public sealed class StateMachineSourceGeneratorTests
 {
     [Fact]
-    public void GeneratedCode_StateMachineNotificationHandlers_RegisterTypesWithTypeResolver()
+    public void GeneratedCode_StateMachineNotificationHandlers_RegisterTypesWithTypeRegistry()
     {
         const string source = """
             using NOF.Application;
@@ -47,8 +47,8 @@ public sealed class StateMachineSourceGeneratorTests
         var result = new StateMachineSourceGenerator().GetResult(compilation);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("services.GetOrAddSingleton<global::NOF.Infrastructure.TypeResolver>().Register(typeof(__OrderStateMachine_OrderCreatedNotification_Handler));", generatedCode);
-        Assert.Contains("services.GetOrAddSingleton<global::NOF.Infrastructure.TypeResolver>().Register(typeof(global::App.OrderCreatedNotification));", generatedCode);
+        Assert.Contains("global::NOF.Abstraction.TypeResolver.Register(typeof(__OrderStateMachine_OrderCreatedNotification_Handler));", generatedCode);
+        Assert.Contains("global::NOF.Abstraction.TypeResolver.Register(typeof(global::App.OrderCreatedNotification));", generatedCode);
         Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(__OrderStateMachine_OrderCreatedNotification_Handler), typeof(global::App.OrderCreatedNotification)));", generatedCode);
     }
 }
