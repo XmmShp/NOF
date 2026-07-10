@@ -1,0 +1,699 @@
+src/NOF.Infrastructure/Options/AuthenticationResourceServerOptions.cs
+  h_6398fee892c8b1 25 gitai:{"mixed_line_ranges":[{"Single":25}],"operations":[]}
+  s_3c2e7f4a69767b::t_b267e2bd3c51ea 8,21-23,35,37 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a50839248e200959dd8e13b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":8},{"Range":[21,23]},{"Single":35},{"Single":37}]}]}
+tests/NOF.Infrastructure.Tests/Authentication/HttpClients/JwksHttpClientTests.cs
+  s_3c2e7f4a69767b::t_36cc01424b1ae9 32,37,60,75 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5084c348e200959dd8e355","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":32},{"Single":37},{"Single":60},{"Single":75}]}]}
+  s_3c2e7f4a69767b::t_24ad7f21645b25 64,80 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a50849d48e200959dd8e301","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":64},{"Single":80}]}]}
+src/NOF.Infrastructure/Services/HttpAuthorizationServerService.cs
+  s_3c2e7f4a69767b::t_7d97e865e5fab8 33,40,60 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a50839e48e200959dd8e15d","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":33},{"Single":40},{"Single":60}]}]}
+src/NOF.Infrastructure/Utilities/OAuthAuthorizationServerMetadataUris.cs
+  s_3c2e7f4a69767b::t_3dc66272cf89d9 11,17,22 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5083b348e200959dd8e1f0","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":11},{"Single":17},{"Single":22}]}]}
+src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/Options/OAuthAuthorizationServerOptions.cs
+  s_3c2e7f4a69767b::t_6d4a7862da1e55 5-7,10-14,18-21 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a50838b48e200959dd8e10f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[5,7]},{"Range":[10,14]},{"Range":[18,21]}]}]}
+sample/NOF.Sample/Program.cs
+  s_3c2e7f4a69767b::t_9c4ec17cd71d83 37,39 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5083c448e200959dd8e219","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":37},{"Single":39}]}]}
+tests/NOF.Infrastructure.Tests/Middlewares/AuthorizationInboundMiddlewareTests.cs
+  s_3c2e7f4a69767b::t_dbcaae246c5307 276 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5084d148e200959dd8e3a4","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":276}]}]}
+src/NOF.Infrastructure/Services/ResourceServerJwksCacheService.cs
+  s_3c2e7f4a69767b::t_547f9084a40cd6 42,44 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5083a448e200959dd8e17f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":42},{"Single":44}]}]}
+src/NOF.Infrastructure/Middlewares/InboundMiddleware/AuthorizationInboundMiddleware.cs
+  s_3c2e7f4a69767b::t_7d4c683cab8ea7 122,124 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5083ae48e200959dd8e1cb","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":122},{"Single":124}]}]}
+src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/README.md
+  s_3c2e7f4a69767b::t_52161425ed426c 40-41 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5083c948e200959dd8e236","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[40,41]}]}]}
+tests/NOF.Infrastructure.Tests/Authentication/Middlewares/AuthenticationResourceServerInboundMiddlewareTests.cs
+  s_3c2e7f4a69767b::t_604dc84656b7c9 200 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5084cb48e200959dd8e37c","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":200}]}]}
+src/NOF.Infrastructure/Middlewares/InboundMiddleware/AuthenticationResourceServerInboundMiddleware.cs
+  s_3c2e7f4a69767b::t_4550418df14013 160,162 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5083a948e200959dd8e1a4","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":160},{"Single":162}]}]}
+tests/NOF.Infrastructure.Tests/Authentication/Extensions/AuthenticationExtensionsTests.cs
+  s_3c2e7f4a69767b::t_0399197b7f93b2 1126,1139,1162,1180,1218 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a5084bd48e200959dd8e331","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":1126},{"Single":1139},{"Single":1162},{"Single":1180},{"Single":1218}]}]}
+  s_3c2e7f4a69767b::t_18b89dc9ba3e7a 1163 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a50849848e200959dd8e2dd","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":1163}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "224cd6e056cc86dc811a537bd96a928189914c13",
+  "prompts": {},
+  "humans": {
+    "h_6398fee892c8b1": {
+      "author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "sessions": {
+    "s_3c2e7f4a69767b": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a4cd9f0a1efd7afb1661fdb",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "Shoming <louchenhao@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "sample/NOF.Sample/Program.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_9c4ec17cd71d83",
+        "line_ranges": [
+          {
+            "Single": 37
+          },
+          {
+            "Single": 39
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5083c448e200959dd8e219",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 37
+              },
+              {
+                "Single": 39
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/Options/OAuthAuthorizationServerOptions.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_6d4a7862da1e55",
+        "line_ranges": [
+          {
+            "Range": [
+              5,
+              7
+            ]
+          },
+          {
+            "Range": [
+              10,
+              14
+            ]
+          },
+          {
+            "Range": [
+              18,
+              21
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a50838b48e200959dd8e10f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  5,
+                  7
+                ]
+              },
+              {
+                "Range": [
+                  10,
+                  14
+                ]
+              },
+              {
+                "Range": [
+                  18,
+                  21
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/README.md": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_52161425ed426c",
+        "line_ranges": [
+          {
+            "Range": [
+              40,
+              41
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5083c948e200959dd8e236",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  40,
+                  41
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Middlewares/InboundMiddleware/AuthenticationResourceServerInboundMiddleware.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_4550418df14013",
+        "line_ranges": [
+          {
+            "Single": 160
+          },
+          {
+            "Single": 162
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5083a948e200959dd8e1a4",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 160
+              },
+              {
+                "Single": 162
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Middlewares/InboundMiddleware/AuthorizationInboundMiddleware.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_7d4c683cab8ea7",
+        "line_ranges": [
+          {
+            "Single": 122
+          },
+          {
+            "Single": 124
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5083ae48e200959dd8e1cb",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 122
+              },
+              {
+                "Single": 124
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Options/AuthenticationResourceServerOptions.cs": [
+      {
+        "hash": "h_6398fee892c8b1",
+        "line_ranges": [
+          {
+            "Single": 25
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 25
+          }
+        ],
+        "operations": []
+      },
+      {
+        "hash": "s_3c2e7f4a69767b::t_b267e2bd3c51ea",
+        "line_ranges": [
+          {
+            "Single": 8
+          },
+          {
+            "Range": [
+              21,
+              23
+            ]
+          },
+          {
+            "Single": 35
+          },
+          {
+            "Single": 37
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a50839248e200959dd8e13b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 8
+              },
+              {
+                "Range": [
+                  21,
+                  23
+                ]
+              },
+              {
+                "Single": 35
+              },
+              {
+                "Single": 37
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Services/HttpAuthorizationServerService.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_7d97e865e5fab8",
+        "line_ranges": [
+          {
+            "Single": 33
+          },
+          {
+            "Single": 40
+          },
+          {
+            "Single": 60
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a50839e48e200959dd8e15d",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 33
+              },
+              {
+                "Single": 40
+              },
+              {
+                "Single": 60
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Services/ResourceServerJwksCacheService.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_547f9084a40cd6",
+        "line_ranges": [
+          {
+            "Single": 42
+          },
+          {
+            "Single": 44
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5083a448e200959dd8e17f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 42
+              },
+              {
+                "Single": 44
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "src/NOF.Infrastructure/Utilities/OAuthAuthorizationServerMetadataUris.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_3dc66272cf89d9",
+        "line_ranges": [
+          {
+            "Single": 11
+          },
+          {
+            "Single": 17
+          },
+          {
+            "Single": 22
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5083b348e200959dd8e1f0",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 11
+              },
+              {
+                "Single": 17
+              },
+              {
+                "Single": 22
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Infrastructure.Tests/Authentication/Extensions/AuthenticationExtensionsTests.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_0399197b7f93b2",
+        "line_ranges": [
+          {
+            "Single": 1126
+          },
+          {
+            "Single": 1139
+          },
+          {
+            "Single": 1162
+          },
+          {
+            "Single": 1180
+          },
+          {
+            "Single": 1218
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5084bd48e200959dd8e331",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 1126
+              },
+              {
+                "Single": 1139
+              },
+              {
+                "Single": 1162
+              },
+              {
+                "Single": 1180
+              },
+              {
+                "Single": 1218
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_3c2e7f4a69767b::t_18b89dc9ba3e7a",
+        "line_ranges": [
+          {
+            "Single": 1163
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a50849848e200959dd8e2dd",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 1163
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Infrastructure.Tests/Authentication/HttpClients/JwksHttpClientTests.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_36cc01424b1ae9",
+        "line_ranges": [
+          {
+            "Single": 32
+          },
+          {
+            "Single": 37
+          },
+          {
+            "Single": 60
+          },
+          {
+            "Single": 75
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5084c348e200959dd8e355",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 32
+              },
+              {
+                "Single": 37
+              },
+              {
+                "Single": 60
+              },
+              {
+                "Single": 75
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_3c2e7f4a69767b::t_24ad7f21645b25",
+        "line_ranges": [
+          {
+            "Single": 64
+          },
+          {
+            "Single": 80
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a50849d48e200959dd8e301",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 64
+              },
+              {
+                "Single": 80
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Infrastructure.Tests/Authentication/Middlewares/AuthenticationResourceServerInboundMiddlewareTests.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_604dc84656b7c9",
+        "line_ranges": [
+          {
+            "Single": 200
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5084cb48e200959dd8e37c",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 200
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tests/NOF.Infrastructure.Tests/Middlewares/AuthorizationInboundMiddlewareTests.cs": [
+      {
+        "hash": "s_3c2e7f4a69767b::t_dbcaae246c5307",
+        "line_ranges": [
+          {
+            "Single": 276
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a5084d148e200959dd8e3a4",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 276
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_3c2e7f4a69767b": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_0399197b7f93b2": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_18b89dc9ba3e7a": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_24ad7f21645b25": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_339ac3c6b434ce": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_36cc01424b1ae9": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_3dc66272cf89d9": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_3e1f7361fcbdc8": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_4550418df14013": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_52161425ed426c": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_547f9084a40cd6": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_5ef052cc6ceab8": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_604dc84656b7c9": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_6d4a7862da1e55": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_7d4c683cab8ea7": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_7d97e865e5fab8": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_9c4ec17cd71d83": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_b267e2bd3c51ea": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_3c2e7f4a69767b::t_dbcaae246c5307": {
+      "tool": "trae",
+      "conversation_id": "6a4cd9f0a1efd7afb1661fdb",
+      "session_id": "6a4cd9f0a1efd7afb1661fdb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
