@@ -30,14 +30,14 @@ public sealed class HttpAuthorizationServerService(
 
     public async Task<OAuthAuthorizationServerMetadataDocument?> GetMetadataAsync(CancellationToken cancellationToken = default)
     {
-        var configuredIssuer = OAuthAuthorizationServerMetadataUris.NormalizeIssuer(options.Value.AuthorizationServer);
+        var configuredIssuer = OAuthAuthorizationServerMetadataUris.NormalizeIssuer(options.Value.AuthorizationServerIssuer);
         var metadata = await GetMetadataAsync(
             configuredIssuer,
             options.Value.RequireHttpsMetadata,
             cancellationToken).ConfigureAwait(false);
         if (!string.Equals(metadata?.Issuer, configuredIssuer, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("Authentication resource server metadata issuer does not match the configured authorization server.");
+            throw new InvalidOperationException("Authentication resource server metadata issuer does not match the configured authorization server issuer.");
         }
 
         return metadata;
@@ -57,7 +57,7 @@ public sealed class HttpAuthorizationServerService(
 
     private Uri BuildConfiguredMetadataEndpoint()
         => OAuthAuthorizationServerMetadataUris.BuildMetadataEndpoint(
-            options.Value.AuthorizationServer,
+            options.Value.AuthorizationServerIssuer,
             options.Value.RequireHttpsMetadata);
 
     private static Uri ResolveEndpoint(Uri metadataEndpoint, string endpoint)

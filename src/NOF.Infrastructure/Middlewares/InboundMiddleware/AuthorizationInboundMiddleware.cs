@@ -119,9 +119,9 @@ public sealed class AuthorizationInboundMiddleware(
                 : "error=\"invalid_token\""
         };
 
-        if (!string.IsNullOrWhiteSpace(_options.AuthorizationServer))
+        if (!string.IsNullOrWhiteSpace(_options.AuthorizationServerIssuer))
         {
-            parameters.Add($"authorization_server=\"{EscapeChallengeValue(_options.AuthorizationServer)}\"");
+            parameters.Add($"authorization_server=\"{EscapeChallengeValue(_options.AuthorizationServerIssuer)}\"");
         }
 
         if (failure.StatusCode == 403)

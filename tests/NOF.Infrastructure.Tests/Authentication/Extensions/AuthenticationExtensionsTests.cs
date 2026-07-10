@@ -1123,7 +1123,7 @@ public sealed class AuthenticationExtensionsTests
         var builder = NOFTestAppBuilder.Create();
         builder.Services.AddAuthenticationResourceServer(options =>
         {
-            options.AuthorizationServer = "https://auth.local";
+            options.AuthorizationServerIssuer = "https://auth.local";
             options.RequireHttpsMetadata = true;
             options.Sources.Add(new AuthenticationTokenSourceOptions
             {
@@ -1136,7 +1136,7 @@ public sealed class AuthenticationExtensionsTests
         using var scope = host.CreateScope();
 
         var resourceOptions = scope.GetRequiredService<IOptions<AuthenticationResourceServerOptions>>().Value;
-        Assert.Equal("https://auth.local", resourceOptions.AuthorizationServer);
+        Assert.Equal("https://auth.local", resourceOptions.AuthorizationServerIssuer);
         Assert.Equal(2, resourceOptions.Sources.Count);
         Assert.Contains(resourceOptions.Sources, source =>
             source.HeaderName == "Authorization" &&
@@ -1159,8 +1159,8 @@ public sealed class AuthenticationExtensionsTests
         var builder = CreateAuthorityBuilder($"Data Source=nof-jwt-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
         builder.Services.AddAuthenticationResourceServer(options =>
         {
-            options.AuthorizationServer = "https://issuer.local";
-            options.Issuer = "https://issuer.local";
+            options.AuthorizationServerIssuer = "https://issuer.local";
+            options.ExpectedIssuer = "https://issuer.local";
         });
 
         await using var host = await builder.BuildTestHostAsync();
@@ -1177,7 +1177,7 @@ public sealed class AuthenticationExtensionsTests
         var builder = NOFTestAppBuilder.Create();
         builder.Services.AddAuthenticationResourceServer(options =>
         {
-            options.AuthorizationServer = "https://auth.local";
+            options.AuthorizationServerIssuer = "https://auth.local";
             options.Sources.Add(new AuthenticationTokenSourceOptions
             {
                 HeaderName = "X-Authorization",
@@ -1215,7 +1215,7 @@ public sealed class AuthenticationExtensionsTests
         var builder = NOFTestAppBuilder.Create();
         builder.Services.AddAuthenticationResourceServer(options =>
         {
-            options.AuthorizationServer = "https://auth.local";
+            options.AuthorizationServerIssuer = "https://auth.local";
         });
 
         await using var host = await builder.BuildTestHostAsync();

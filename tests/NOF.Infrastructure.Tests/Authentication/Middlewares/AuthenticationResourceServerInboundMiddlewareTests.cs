@@ -197,7 +197,7 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             jwksCacheService,
             Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
             {
-                AuthorizationServer = "https://auth.local",
+                AuthorizationServerIssuer = "https://auth.local",
                 RequireHttpsMetadata = true,
                 Sources =
                 [

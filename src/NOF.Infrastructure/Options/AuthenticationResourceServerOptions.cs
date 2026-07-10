@@ -5,6 +5,7 @@ namespace NOF.Infrastructure;
 /// </summary>
 public class AuthenticationResourceServerOptions
 {
+
     /// <summary>
     /// Gets or sets the accepted access token sources.
     /// </summary>
@@ -17,9 +18,11 @@ public class AuthenticationResourceServerOptions
     public TimeSpan JwksRefreshInterval { get; set; } = TimeSpan.FromHours(24);
 
     /// <summary>
-    /// Gets or sets the authorization server used to discover signing keys for token validation.
+    /// Gets or sets the authorization server issuer URL used to discover metadata and signing keys.
+    /// This must match the <c>issuer</c> value returned by the authorization server metadata document,
+    /// for example <c>https://auth.example.com/oauth2</c>.
     /// </summary>
-    public string AuthorizationServer { get; set; } = string.Empty;
+    public string AuthorizationServerIssuer { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether the configured authorization server metadata endpoint must use HTTPS.
@@ -29,9 +32,9 @@ public class AuthenticationResourceServerOptions
 
     /// <summary>
     /// Gets or sets the expected issuer for token validation.
-    /// If null, issuer validation is disabled.
+    /// If null, the issuer from the discovered authorization server metadata is used.
     /// </summary>
-    public string? Issuer { get; set; }
+    public string? ExpectedIssuer { get; set; }
 
     /// <summary>
     /// Gets or sets the expected audience for token validation.

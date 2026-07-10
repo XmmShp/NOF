@@ -34,9 +34,9 @@ builder.AddOidcServer(o =>
 
 builder.Services.AddAuthenticationResourceServer(o =>
 {
-    o.Issuer = sampleIssuer;
+    o.ExpectedIssuer = sampleIssuer;
     o.RequireHttpsMetadata = false;
-    o.AuthorizationServer = sampleIssuer;
+    o.AuthorizationServerIssuer = sampleIssuer;
 });
 
 builder.Services.AddRabbitMQ(options =>

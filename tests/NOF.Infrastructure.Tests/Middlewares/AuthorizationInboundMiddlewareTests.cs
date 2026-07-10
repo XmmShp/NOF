@@ -273,7 +273,7 @@ public sealed class AuthorizationInboundMiddlewareTests
             currentTenant ?? new CurrentTenant(),
             Options.Create(new AuthenticationResourceServerOptions
             {
-                AuthorizationServer = "https://auth.local/oauth2"
+                AuthorizationServerIssuer = "https://auth.local/oauth2"
             }));
 
     private static ClaimsIdentity CreateAuthenticatedIdentity(params string[] permissionClaims)

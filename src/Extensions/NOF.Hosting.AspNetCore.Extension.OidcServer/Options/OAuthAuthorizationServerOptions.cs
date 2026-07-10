@@ -2,11 +2,23 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
+/// <summary>
+/// Configuration options for the built-in OAuth/OIDC authorization server.
+/// </summary>
 public sealed class OAuthAuthorizationServerOptions
 {
+    /// <summary>
+    /// Gets or sets the canonical issuer URL published in metadata and written into issued tokens.
+    /// This should be the final issuer identifier, for example <c>https://auth.example.com/oauth2</c>.
+    /// <see cref="PathBase"/> controls route mapping only and is not appended to this value automatically.
+    /// </summary>
     [Required(ErrorMessage = "Issuer is required.")]
     public string Issuer { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the route prefix used when mapping the local authorization server endpoints.
+    /// This does not change <see cref="Issuer"/>.
+    /// </summary>
     public string PathBase { get; set; } = "/oauth2";
 
     public string AccessTokenAudience { get; set; } = "nof-app";

@@ -8,18 +8,18 @@ public static class OAuthAuthorizationServerMetadataUris
     {
         if (string.IsNullOrWhiteSpace(issuer))
         {
-            throw new InvalidOperationException("Authentication resource server authorization server is not configured.");
+            throw new InvalidOperationException("Authentication resource server authorization server issuer is not configured.");
         }
 
         var issuerUri = new Uri(NormalizeIssuer(issuer), UriKind.Absolute);
         if (requireHttps && issuerUri.Scheme != Uri.UriSchemeHttps)
         {
-            throw new InvalidOperationException("Authentication resource server authorization server metadata must use HTTPS.");
+            throw new InvalidOperationException("Authentication resource server authorization server issuer metadata endpoint must use HTTPS.");
         }
 
         if (!string.IsNullOrEmpty(issuerUri.Query) || !string.IsNullOrEmpty(issuerUri.Fragment))
         {
-            throw new InvalidOperationException("Authentication resource server authorization server must not contain query or fragment components.");
+            throw new InvalidOperationException("Authentication resource server authorization server issuer must not contain query or fragment components.");
         }
 
         var path = issuerUri.AbsolutePath is "/" or ""

@@ -157,9 +157,9 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
     }
 
     private Task<string?> GetValidIssuerAsync(CancellationToken cancellationToken)
-        => string.IsNullOrWhiteSpace(_jwtOptions.Issuer)
+        => string.IsNullOrWhiteSpace(_jwtOptions.ExpectedIssuer)
             ? _jwksCacheService.GetIssuerAsync(cancellationToken)
-            : Task.FromResult<string?>(_jwtOptions.Issuer);
+            : Task.FromResult<string?>(_jwtOptions.ExpectedIssuer);
 
     private static bool TryGetToken(Context context, AuthenticationTokenSourceOptions source, out string token)
     {

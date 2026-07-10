@@ -29,12 +29,12 @@ public sealed class JwtJwksHttpClientTests
         var builder = NOFTestAppBuilder.Create();
         builder.Services.AddAuthenticationResourceServer(options =>
         {
-            options.AuthorizationServer = "https://auth.local/oauth2";
+            options.AuthorizationServerIssuer = "https://auth.local/oauth2";
         });
 
         var service = new HttpAuthorizationServerService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
-            AuthorizationServer = "https://auth.local/oauth2"
+            AuthorizationServerIssuer = "https://auth.local/oauth2"
         }));
 
         var result = await service.GetJwksAsync();
@@ -57,11 +57,11 @@ public sealed class JwtJwksHttpClientTests
         var httpClient = new HttpClient(handler);
         var service = new HttpAuthorizationServerService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
-            AuthorizationServer = "https://auth.local/oauth2"
+            AuthorizationServerIssuer = "https://auth.local/oauth2"
         }));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetJwksAsync());
-        Assert.Equal("Authentication resource server metadata issuer does not match the configured authorization server.", exception.Message);
+        Assert.Equal("Authentication resource server metadata issuer does not match the configured authorization server issuer.", exception.Message);
         Assert.Equal("/.well-known/oauth-authorization-server/oauth2", Assert.Single(handler.Requests).PathAndQuery);
     }
 
@@ -72,12 +72,12 @@ public sealed class JwtJwksHttpClientTests
         var httpClient = new HttpClient(handler);
         var service = new HttpAuthorizationServerService(httpClient, Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
         {
-            AuthorizationServer = "http://auth.local",
+            AuthorizationServerIssuer = "http://auth.local",
             RequireHttpsMetadata = true
         }));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetJwksAsync());
-        Assert.Equal("Authentication resource server authorization server metadata must use HTTPS.", exception.Message);
+        Assert.Equal("Authentication resource server authorization server issuer metadata endpoint must use HTTPS.", exception.Message);
         Assert.Empty(handler.Requests);
     }
 

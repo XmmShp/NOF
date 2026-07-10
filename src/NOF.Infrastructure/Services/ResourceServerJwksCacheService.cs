@@ -39,9 +39,9 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
         _scopeFactory = scopeFactory;
         _timeProvider = timeProvider;
-        _configuredIssuer = string.IsNullOrWhiteSpace(options.Value.Issuer)
+        _configuredIssuer = string.IsNullOrWhiteSpace(options.Value.ExpectedIssuer)
             ? null
-            : options.Value.Issuer;
+            : options.Value.ExpectedIssuer;
         _minimumRefreshInterval = options.Value.JwksRefreshInterval > TimeSpan.Zero
             ? options.Value.JwksRefreshInterval
             : TimeSpan.FromMinutes(10);
