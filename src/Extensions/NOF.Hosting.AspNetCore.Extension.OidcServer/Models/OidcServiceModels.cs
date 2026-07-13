@@ -159,6 +159,7 @@ public sealed record OAuthAuthorizationCodeDescriptor(
     string Subject,
     string ClientId,
     string RedirectUri,
+    bool WasRedirectUriSupplied,
     string Scope,
     string? Nonce,
     string? CodeChallenge,

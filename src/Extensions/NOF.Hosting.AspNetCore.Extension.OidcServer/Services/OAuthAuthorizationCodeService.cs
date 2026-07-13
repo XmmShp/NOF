@@ -27,6 +27,7 @@ public sealed class OAuthAuthorizationCodeService(
                 Subject = descriptor.Subject,
                 ClientId = descriptor.ClientId,
                 RedirectUri = descriptor.RedirectUri,
+                WasRedirectUriSupplied = descriptor.WasRedirectUriSupplied,
                 Scope = descriptor.Scope,
                 Nonce = descriptor.Nonce,
                 CodeChallenge = descriptor.CodeChallenge,

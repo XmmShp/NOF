@@ -50,9 +50,18 @@ builder.AddOidcServer(options =>
     options.AccessTokenAudience = "your-app";
     options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
 })
-.AddPublicClient("spa-client", ["openid", "profile", "api.read"])
-.AddConfidentialClient("service-client", "service-client-secret", ["api.read", "api.write"]);
+.AddPublicClient(
+    "spa-client",
+    ["openid", "profile", "api.read"],
+    redirectUris: ["https://app.example.com/oauth/callback"])
+.AddConfidentialClient(
+    "service-client",
+    "service-client-secret",
+    ["api.read", "api.write"],
+    redirectUris: ["https://service.example.com/oauth/callback"]);
 ```
+
+Authorization requests may omit `redirect_uri` when the client has exactly one registered redirect URI; in that case the server uses the registered value automatically. When `redirect_uri` is supplied, it must exactly match one of the client's registered `RedirectUris`. The default persisted client management service rejects non-absolute redirect URIs at create/update time, and the authorization endpoint refuses to redirect to unregistered callback URLs.
 
 `ITokenService` accepts explicit multi-value claims through `TokenClaim.Array(...)`. The issuer expands those values into repeated same-name claims so the resulting JWT payload is emitted as a standard JSON array claim.
 

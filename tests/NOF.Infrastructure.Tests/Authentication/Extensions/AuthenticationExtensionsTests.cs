@@ -148,7 +148,8 @@ public sealed class AuthenticationExtensionsTests
         .AddPublicClient(
             "bootstrap-public-client",
             ["openid", "profile", "jobs.read"],
-            displayName: "Bootstrap Public Client");
+            displayName: "Bootstrap Public Client",
+            redirectUris: ["https://public.local/callback"]);
         builder.UseDbContext<NOFDbContext>()
             .WithTenantMode(TenantMode.DatabasePerTenant)
             .WithConnectionString($"Data Source=nof-bootstrap-public-client-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
@@ -165,6 +166,7 @@ public sealed class AuthenticationExtensionsTests
         Assert.Equal(OAuthClientType.Public, client.Value.ClientType);
         Assert.Equal("Bootstrap Public Client", client.Value.DisplayName);
         Assert.Equal(["jobs.read", "openid", "profile"], client.Value.AllowedScopes.OrderBy(static scope => scope, StringComparer.Ordinal).ToArray());
+        Assert.Equal(["https://public.local/callback"], client.Value.RedirectUris);
     }
 
     [Fact]
@@ -185,6 +187,7 @@ public sealed class AuthenticationExtensionsTests
                     ClientId = "bootstrap-public-client",
                     DisplayName = "Existing Public Client",
                     AllowedScopes = ["existing.scope"],
+                    RedirectUris = ["https://existing.local/callback"],
                     ClientType = OAuthClientType.Public,
                     IsEnabled = false
                 });
@@ -201,7 +204,8 @@ public sealed class AuthenticationExtensionsTests
             .AddPublicClient(
                 "bootstrap-public-client",
                 ["openid", "profile", "jobs.read"],
-                displayName: "Bootstrap Public Client");
+                displayName: "Bootstrap Public Client",
+                redirectUris: ["https://public.local/callback"]);
             secondBuilder.UseDbContext<NOFDbContext>()
                 .WithConnectionString(connectionString)
                 .WithOptions(static (optionsBuilder, databaseConnectionString) => optionsBuilder.UseSqlite(databaseConnectionString));
@@ -215,6 +219,7 @@ public sealed class AuthenticationExtensionsTests
             Assert.True(existingClient.IsSuccess, existingClient.Message);
             Assert.Equal("Existing Public Client", existingClient.Value.DisplayName);
             Assert.Equal(["existing.scope"], existingClient.Value.AllowedScopes.OrderBy(static scope => scope, StringComparer.Ordinal).ToArray());
+            Assert.Equal(["https://existing.local/callback"], existingClient.Value.RedirectUris);
             Assert.False(existingClient.Value.IsEnabled);
         }
         finally
@@ -245,7 +250,8 @@ public sealed class AuthenticationExtensionsTests
             "bootstrap-confidential-client",
             "bootstrap-secret",
             ["jobs.read", "jobs.write"],
-            displayName: "Bootstrap Confidential Client");
+            displayName: "Bootstrap Confidential Client",
+            redirectUris: ["https://confidential.local/callback"]);
         builder.UseDbContext<NOFDbContext>()
             .WithTenantMode(TenantMode.DatabasePerTenant)
             .WithConnectionString($"Data Source=nof-bootstrap-confidential-client-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
@@ -269,6 +275,7 @@ public sealed class AuthenticationExtensionsTests
         Assert.Equal(OAuthClientType.Confidential, client.Value.ClientType);
         Assert.Equal("Bootstrap Confidential Client", client.Value.DisplayName);
         Assert.Equal(["jobs.read", "jobs.write"], client.Value.AllowedScopes.OrderBy(static scope => scope, StringComparer.Ordinal).ToArray());
+        Assert.Equal(["https://confidential.local/callback"], client.Value.RedirectUris);
         Assert.IsType<OAuthClientCredentialsValidationResult.Success>(validation);
     }
 
@@ -742,7 +749,8 @@ public sealed class AuthenticationExtensionsTests
             ClientId = "public-app",
             DisplayName = "Public App",
             ClientType = OAuthClientType.Public,
-            AllowedScopes = ["jobs.read"]
+            AllowedScopes = ["jobs.read"],
+            RedirectUris = ["https://app.local/callback"]
         });
 
         Assert.True(result.IsSuccess, result.Message);
@@ -769,7 +777,8 @@ public sealed class AuthenticationExtensionsTests
             ClientSecret = "provided-secret",
             DisplayName = "Confidential App",
             ClientType = OAuthClientType.Confidential,
-            AllowedScopes = ["jobs.read"]
+            AllowedScopes = ["jobs.read"],
+            RedirectUris = ["https://confidential.local/callback"]
         });
         var validation = await service.ValidateClientCredentialsAsync(
             new OAuthClientCredentialsValidationRequest(
@@ -782,6 +791,145 @@ public sealed class AuthenticationExtensionsTests
         Assert.True(result.IsSuccess, result.Message);
         Assert.Equal("provided-secret", result.Value.ClientSecret);
         Assert.IsType<OAuthClientCredentialsValidationResult.Success>(validation);
+    }
+
+    [Fact]
+    public async Task AddOidcServer_OAuthClientService_ShouldPersistRedirectUris()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-oauth-client-redirect-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+
+        var result = await service.CreateAsync(new CreateOAuthClientRequest
+        {
+            ClientId = "redirect-client",
+            DisplayName = "Redirect Client",
+            ClientType = OAuthClientType.Public,
+            RedirectUris = ["https://app.local/callback", "https://app.local/signout"]
+        });
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal(
+            ["https://app.local/callback", "https://app.local/signout"],
+            result.Value.Client.RedirectUris.OrderBy(static uri => uri, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public async Task AddOidcServer_OAuthClientService_ShouldTreatBlankRedirectUrisAsEmptyList()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-oauth-client-blank-redirect-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var dbContext = scope.GetRequiredService<NOFDbContext>();
+        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+        var now = DateTime.UtcNow;
+
+        await dbContext.Set<OAuthClient>().AddAsync(new OAuthClient
+        {
+            ClientId = "blank-redirect-client",
+            DisplayName = "Blank Redirect Client",
+            SecretHash = string.Empty,
+            SecretSalt = string.Empty,
+            AllowedScopes = "[]",
+            RedirectUris = string.Empty,
+            AccessTokenClaims = "[]",
+            ClientType = OAuthClientType.Public,
+            IsEnabled = true,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetAsync("blank-redirect-client");
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Empty(result.Value.RedirectUris);
+    }
+
+    [Fact]
+    public async Task ValidateAuthorizationRequestAsync_ShouldRejectUnregisteredRedirectUri()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+
+        var request = new OAuthAuthorizationRequest(
+            ResponseType: "code",
+            ClientId: "public-app",
+            RedirectUri: "https://evil.local/callback",
+            Scope: "jobs.read",
+            State: "state-1",
+            Nonce: null,
+            CodeChallenge: null,
+            CodeChallengeMethod: null);
+
+        var (_, error, allowRedirect) = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateAuthorizationRequestAsync(
+            services,
+            request,
+            CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Equal("invalid_request", error.Error);
+        Assert.Equal("redirect_uri is not registered for this client.", error.ErrorDescription);
+        Assert.False(allowRedirect);
+    }
+
+    [Fact]
+    public async Task ValidateAuthorizationRequestAsync_ShouldAllowMissingRedirectUri_WhenClientHasSingleRegisteredRedirectUri()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+
+        var request = new OAuthAuthorizationRequest(
+            ResponseType: "code",
+            ClientId: "public-app",
+            RedirectUri: string.Empty,
+            Scope: "jobs.read",
+            State: "state-1",
+            Nonce: null,
+            CodeChallenge: null,
+            CodeChallengeMethod: null);
+
+        var (resolvedRequest, error, allowRedirect) = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateAuthorizationRequestAsync(
+            services,
+            request,
+            CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.True(allowRedirect);
+        Assert.Equal("https://app.local/callback", resolvedRequest.RedirectUri);
+    }
+
+    [Fact]
+    public async Task ValidateAuthorizationRequestAsync_ShouldRequireRedirectUri_WhenClientHasMultipleRegisteredRedirectUris()
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .BuildServiceProvider();
+
+        var request = new OAuthAuthorizationRequest(
+            ResponseType: "code",
+            ClientId: "multi-redirect-app",
+            RedirectUri: string.Empty,
+            Scope: "jobs.read",
+            State: "state-1",
+            Nonce: null,
+            CodeChallenge: null,
+            CodeChallengeMethod: null);
+
+        var (_, error, allowRedirect) = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.ValidateAuthorizationRequestAsync(
+            services,
+            request,
+            CancellationToken.None);
+
+        Assert.NotNull(error);
+        Assert.Equal("invalid_request", error.Error);
+        Assert.Equal("redirect_uri is required when the client does not have exactly one registered redirect URI.", error.ErrorDescription);
+        Assert.False(allowRedirect);
     }
 
     [Fact]
@@ -1273,6 +1421,7 @@ public sealed class AuthenticationExtensionsTests
                     ClientId = "service-a",
                     DisplayName = "Service A",
                     AllowedScopes = ["jobs.read", "jobs.write"],
+                    RedirectUris = ["https://service.local/callback"],
                     AccessTokenClaims = [],
                     ClientType = OAuthClientType.Confidential,
                     IsEnabled = true,
@@ -1288,6 +1437,23 @@ public sealed class AuthenticationExtensionsTests
                     ClientId = "public-app",
                     DisplayName = "Public App",
                     AllowedScopes = ["jobs.read"],
+                    RedirectUris = ["https://app.local/callback"],
+                    AccessTokenClaims = [],
+                    ClientType = OAuthClientType.Public,
+                    IsEnabled = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                }));
+            }
+
+            if (string.Equals(clientId, "multi-redirect-app", StringComparison.Ordinal))
+            {
+                return Task.FromResult(Result.Success(new OAuthClientDescriptor
+                {
+                    ClientId = "multi-redirect-app",
+                    DisplayName = "Multi Redirect App",
+                    AllowedScopes = ["jobs.read"],
+                    RedirectUris = ["https://app.local/callback", "https://app.local/signout"],
                     AccessTokenClaims = [],
                     ClientType = OAuthClientType.Public,
                     IsEnabled = true,

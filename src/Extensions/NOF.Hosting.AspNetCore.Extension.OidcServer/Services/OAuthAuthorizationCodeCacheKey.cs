@@ -13,6 +13,8 @@ internal sealed record OAuthAuthorizationCodeCacheValue
 
     public required string RedirectUri { get; init; }
 
+    public required bool WasRedirectUriSupplied { get; init; }
+
     public required string Scope { get; init; }
 
     public string? Nonce { get; init; }

@@ -16,6 +16,8 @@ public sealed record OAuthClientDescriptor
 
     public required IReadOnlyList<string> AllowedScopes { get; init; }
 
+    public required IReadOnlyList<string> RedirectUris { get; init; }
+
     public required IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; }
 
     public required OAuthClientType ClientType { get; init; }
@@ -44,6 +46,8 @@ public sealed record CreateOAuthClientRequest
 
     public IReadOnlyList<string> AllowedScopes { get; init; } = [];
 
+    public IReadOnlyList<string> RedirectUris { get; init; } = [];
+
     public IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; } = [];
 
     public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
@@ -56,6 +60,8 @@ public sealed record UpdateOAuthClientRequest
     public string DisplayName { get; init; } = string.Empty;
 
     public IReadOnlyList<string> AllowedScopes { get; init; } = [];
+
+    public IReadOnlyList<string> RedirectUris { get; init; } = [];
 
     public IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; } = [];
 

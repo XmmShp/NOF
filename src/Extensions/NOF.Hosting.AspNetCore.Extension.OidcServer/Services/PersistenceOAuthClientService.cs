@@ -87,6 +87,12 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             return Result.Fail("conflict", "OAuth client already exists.");
         }
 
+        var redirectUris = NormalizeRedirectUris(request.RedirectUris);
+        if (redirectUris is null)
+        {
+            return Result.Fail("invalid_request", "redirect_uris must contain only absolute URIs.");
+        }
+
         var (secret, salt, hash) = request.ClientType == OAuthClientType.Public
             ? (null, string.Empty, string.Empty)
             : CreateSecretMaterial(request.ClientSecret);
@@ -98,6 +104,7 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             SecretSalt = salt,
             SecretHash = hash,
             AllowedScopes = SerializeScopes(request.AllowedScopes),
+            RedirectUris = SerializeRedirectUris(redirectUris),
             AccessTokenClaims = SerializeClaims(request.AccessTokenClaims),
             ClientType = request.ClientType,
             IsEnabled = request.IsEnabled,
@@ -131,8 +138,15 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             return Result.Fail("not_found", "OAuth client was not found.");
         }
 
+        var redirectUris = NormalizeRedirectUris(request.RedirectUris);
+        if (redirectUris is null)
+        {
+            return Result.Fail("invalid_request", "redirect_uris must contain only absolute URIs.");
+        }
+
         client.DisplayName = NormalizeDisplayName(request.DisplayName, client.ClientId);
         client.AllowedScopes = SerializeScopes(request.AllowedScopes);
+        client.RedirectUris = SerializeRedirectUris(redirectUris);
         client.AccessTokenClaims = SerializeClaims(request.AccessTokenClaims);
         client.ClientType = request.ClientType;
         if (client.ClientType == OAuthClientType.Public)
@@ -215,6 +229,7 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
             ClientId = client.ClientId,
             DisplayName = client.DisplayName,
             AllowedScopes = DeserializeScopes(client.AllowedScopes).OrderBy(static scope => scope, StringComparer.Ordinal).ToArray(),
+            RedirectUris = DeserializeRedirectUris(client.RedirectUris).OrderBy(static uri => uri, StringComparer.Ordinal).ToArray(),
             AccessTokenClaims = DeserializeClaims(client.AccessTokenClaims),
             ClientType = client.ClientType,
             IsEnabled = client.IsEnabled,
@@ -240,6 +255,51 @@ public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuth
         => (JsonSerializer.Deserialize<string[]>(scopes, JsonOptions) ?? [])
             .Where(static scope => !string.IsNullOrWhiteSpace(scope))
             .ToHashSet(StringComparer.Ordinal);
+
+    private static string SerializeRedirectUris(IEnumerable<string> redirectUris)
+        => JsonSerializer.Serialize(
+            redirectUris
+                .Where(static redirectUri => !string.IsNullOrWhiteSpace(redirectUri))
+                .Select(static redirectUri => redirectUri.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(static redirectUri => redirectUri, StringComparer.Ordinal)
+                .ToArray(),
+            JsonOptions);
+
+    private static IReadOnlySet<string> DeserializeRedirectUris(string redirectUris)
+    {
+        if (string.IsNullOrWhiteSpace(redirectUris))
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
+
+        return (JsonSerializer.Deserialize<string[]>(redirectUris, JsonOptions) ?? [])
+            .Where(static redirectUri => !string.IsNullOrWhiteSpace(redirectUri))
+            .Select(static redirectUri => redirectUri.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static IReadOnlySet<string>? NormalizeRedirectUris(IEnumerable<string> redirectUris)
+    {
+        var normalized = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var redirectUri in redirectUris)
+        {
+            if (string.IsNullOrWhiteSpace(redirectUri))
+            {
+                continue;
+            }
+
+            var trimmed = redirectUri.Trim();
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out _))
+            {
+                return null;
+            }
+
+            normalized.Add(trimmed);
+        }
+
+        return normalized;
+    }
 
     private static string SerializeClaims(IEnumerable<OAuthClientClaim> claims)
         => JsonSerializer.Serialize(

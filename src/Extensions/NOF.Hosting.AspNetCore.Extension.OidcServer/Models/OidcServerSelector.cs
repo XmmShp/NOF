@@ -21,7 +21,8 @@ public readonly struct OidcServerSelector
         IEnumerable<string>? allowedScopes = null,
         string? displayName = null,
         IEnumerable<OAuthClientClaim>? accessTokenClaims = null,
-        bool isEnabled = true)
+        bool isEnabled = true,
+        IEnumerable<string>? redirectUris = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
@@ -30,6 +31,10 @@ public readonly struct OidcServerSelector
         var scopes = allowedScopes?
             .Where(static scope => !string.IsNullOrWhiteSpace(scope))
             .Select(static scope => scope.Trim())
+            .ToArray() ?? [];
+        var redirects = redirectUris?
+            .Where(static redirectUri => !string.IsNullOrWhiteSpace(redirectUri))
+            .Select(static redirectUri => redirectUri.Trim())
             .ToArray() ?? [];
         var claims = accessTokenClaims?
             .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
@@ -43,6 +48,7 @@ public readonly struct OidcServerSelector
                 ClientId = normalizedClientId,
                 DisplayName = normalizedDisplayName,
                 AllowedScopes = scopes,
+                RedirectUris = redirects,
                 AccessTokenClaims = claims,
                 ClientType = OAuthClientType.Public,
                 IsEnabled = isEnabled
@@ -58,7 +64,8 @@ public readonly struct OidcServerSelector
         IEnumerable<string>? allowedScopes = null,
         string? displayName = null,
         IEnumerable<OAuthClientClaim>? accessTokenClaims = null,
-        bool isEnabled = true)
+        bool isEnabled = true,
+        IEnumerable<string>? redirectUris = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
         ArgumentException.ThrowIfNullOrWhiteSpace(clientSecret);
@@ -69,6 +76,10 @@ public readonly struct OidcServerSelector
         var scopes = allowedScopes?
             .Where(static scope => !string.IsNullOrWhiteSpace(scope))
             .Select(static scope => scope.Trim())
+            .ToArray() ?? [];
+        var redirects = redirectUris?
+            .Where(static redirectUri => !string.IsNullOrWhiteSpace(redirectUri))
+            .Select(static redirectUri => redirectUri.Trim())
             .ToArray() ?? [];
         var claims = accessTokenClaims?
             .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
@@ -83,6 +94,7 @@ public readonly struct OidcServerSelector
                 ClientSecret = normalizedClientSecret,
                 DisplayName = normalizedDisplayName,
                 AllowedScopes = scopes,
+                RedirectUris = redirects,
                 AccessTokenClaims = claims,
                 ClientType = OAuthClientType.Confidential,
                 IsEnabled = isEnabled

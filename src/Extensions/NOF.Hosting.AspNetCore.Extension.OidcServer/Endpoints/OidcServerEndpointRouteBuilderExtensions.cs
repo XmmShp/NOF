@@ -83,12 +83,13 @@ public static partial class NOFOidcServerExtensions
     private static async Task<AspNetResult> AuthorizeAsync(
         [FromQuery(Name = "response_type")] string responseType,
         [FromQuery(Name = "client_id")] string clientId,
-        [FromQuery(Name = "redirect_uri")] string redirectUri,
+        [FromQuery(Name = "redirect_uri")] string? redirectUri,
         [FromQuery(Name = "scope")] string scope,
         [FromQuery(Name = "state")] string state,
         [FromQuery(Name = "nonce")] string? nonce,
         [FromQuery(Name = "code_challenge")] string? codeChallenge,
         [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod,
+        [FromServices] IServiceProvider serviceProvider,
         [FromServices] IOAuthAuthorizationHandler authorizationHandler,
         [FromServices] IOAuthAuthorizationCodeService authorizationCodeService,
         CancellationToken cancellationToken)
@@ -97,13 +98,14 @@ public static partial class NOFOidcServerExtensions
         {
             ResponseType = responseType,
             ClientId = clientId,
-            RedirectUri = redirectUri,
+            RedirectUri = redirectUri ?? string.Empty,
             Scope = scope,
             State = state,
             Nonce = nonce,
             CodeChallenge = codeChallenge,
             CodeChallengeMethod = codeChallengeMethod
         };
+        var wasRedirectUriSupplied = !string.IsNullOrWhiteSpace(request.RedirectUri);
 
         var authorizationRequest = new OAuthAuthorizationRequest(
             ResponseType: request.ResponseType,
@@ -115,21 +117,24 @@ public static partial class NOFOidcServerExtensions
             CodeChallenge: EmptyToNull(request.CodeChallenge),
             CodeChallengeMethod: EmptyToNull(request.CodeChallengeMethod));
 
-        var validationError = ValidateAuthorizationRequest(authorizationRequest);
+        var validation = await ValidateAuthorizationRequestAsync(serviceProvider, authorizationRequest, cancellationToken).ConfigureAwait(false);
+        authorizationRequest = validation.Request;
+        var validationError = validation.Error;
         if (validationError is not null)
         {
-            return CreateAuthorizeFailureResult(authorizationRequest, validationError);
+            return CreateAuthorizeFailureResult(authorizationRequest, validationError, validation.AllowRedirect);
         }
 
         var result = await authorizationHandler.AuthorizeAsync(authorizationRequest, cancellationToken).ConfigureAwait(false);
         return result switch
         {
             OAuthAuthorizationResult.Authorized authorized => Results.Redirect(
-                await RedirectWithCodeAsync(authorizationCodeService, authorizationRequest, authorized.Subject, cancellationToken).ConfigureAwait(false)),
+                await RedirectWithCodeAsync(authorizationCodeService, authorizationRequest, authorized.Subject, wasRedirectUriSupplied, cancellationToken).ConfigureAwait(false)),
             OAuthAuthorizationResult.Challenge challenge => Results.Redirect(challenge.RedirectUrl),
             OAuthAuthorizationResult.Failure failure => CreateAuthorizeFailureResult(
                 authorizationRequest,
-                CreateOAuthError(failure.Error, failure.ErrorDescription)),
+                CreateOAuthError(failure.Error, failure.ErrorDescription),
+                allowRedirect: true),
             _ => Results.Json(
                 CreateOAuthError("server_error", "Unsupported OAuth authorization result."),
                 statusCode: StatusCodes.Status500InternalServerError)
@@ -411,7 +416,7 @@ public static partial class NOFOidcServerExtensions
                 .ConfigureAwait(false);
             if (!redeemed.HasValue
                 || !FixedTimeEquals(redeemed.Value.ClientId, request.ClientId)
-                || !FixedTimeEquals(redeemed.Value.RedirectUri, request.RedirectUri))
+                || !RedirectUriMatches(request.RedirectUri, redeemed.Value.RedirectUri, redeemed.Value.WasRedirectUriSupplied))
             {
                 return Fail("invalid_grant", "authorization code is invalid or expired.");
             }
@@ -425,7 +430,7 @@ public static partial class NOFOidcServerExtensions
         }
 
         if (!FixedTimeEquals(authorizationCode.ClientId, request.ClientId)
-            || !FixedTimeEquals(authorizationCode.RedirectUri, request.RedirectUri))
+            || !RedirectUriMatches(request.RedirectUri, authorizationCode.RedirectUri, authorizationCode.WasRedirectUriSupplied))
         {
             return Fail("invalid_grant", "authorization code client or redirect_uri does not match.");
         }
@@ -460,6 +465,7 @@ public static partial class NOFOidcServerExtensions
             {
                 ClientId = authorizationCode.ClientId,
                 RedirectUri = authorizationCode.RedirectUri,
+                WasRedirectUriSupplied = authorizationCode.WasRedirectUriSupplied,
                 Response = response
             },
             new DistributedCacheEntryOptions
@@ -950,6 +956,7 @@ public static partial class NOFOidcServerExtensions
         IOAuthAuthorizationCodeService authorizationCodeService,
         OAuthAuthorizationRequest request,
         string subject,
+        bool wasRedirectUriSupplied,
         CancellationToken cancellationToken)
     {
         var code = await authorizationCodeService.CreateAsync(
@@ -957,6 +964,7 @@ public static partial class NOFOidcServerExtensions
                 subject,
                 request.ClientId,
                 request.RedirectUri,
+                wasRedirectUriSupplied,
                 request.Scope,
                 request.Nonce,
                 request.CodeChallenge,
@@ -972,9 +980,10 @@ public static partial class NOFOidcServerExtensions
             });
     }
 
-    private static AspNetResult CreateAuthorizeFailureResult(OAuthAuthorizationRequest request, OAuthError error)
+    private static AspNetResult CreateAuthorizeFailureResult(OAuthAuthorizationRequest request, OAuthError error, bool allowRedirect = true)
     {
-        if (!string.IsNullOrWhiteSpace(request.ClientId)
+        if (allowRedirect
+            && !string.IsNullOrWhiteSpace(request.ClientId)
             && Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
         {
             return Results.Redirect(
@@ -991,25 +1000,72 @@ public static partial class NOFOidcServerExtensions
         return CreateOAuthErrorResult(error.Error, error.ErrorDescription);
     }
 
-    private static OAuthError? ValidateAuthorizationRequest(OAuthAuthorizationRequest request)
+    internal static async Task<(OAuthAuthorizationRequest Request, OAuthError? Error, bool AllowRedirect)> ValidateAuthorizationRequestAsync(
+        IServiceProvider serviceProvider,
+        OAuthAuthorizationRequest request,
+        CancellationToken cancellationToken)
     {
         if (!string.Equals(request.ResponseType, "code", StringComparison.Ordinal))
         {
-            return CreateOAuthError("unsupported_response_type", "Only response_type=code is supported.");
+            return (request, CreateOAuthError("unsupported_response_type", "Only response_type=code is supported."), false);
         }
 
         if (string.IsNullOrWhiteSpace(request.ClientId))
         {
-            return CreateOAuthError("invalid_request", "client_id is required.");
+            return (request, CreateOAuthError("invalid_request", "client_id is required."), false);
         }
 
-        if (!Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
+        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
+        if (clientService is null)
         {
-            return CreateOAuthError("invalid_request", "redirect_uri must be an absolute URI.");
+            return (request, CreateOAuthError("server_error", "OAuth client management service is not registered."), false);
         }
 
-        var pkceValidation = ValidateCodeChallenge(request.CodeChallenge, request.CodeChallengeMethod);
-        return pkceValidation is null ? null : CreateOAuthError("invalid_request", pkceValidation);
+        var clientResult = await clientService.GetAsync(request.ClientId, cancellationToken).ConfigureAwait(false);
+        if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
+        {
+            return (request, CreateOAuthError("invalid_client", "client_id is invalid."), false);
+        }
+
+        var resolvedRedirectUri = ResolveAuthorizationRedirectUri(request.RedirectUri, clientResult.Value.RedirectUris);
+        if (resolvedRedirectUri is null)
+        {
+            var errorDescription = string.IsNullOrWhiteSpace(request.RedirectUri)
+                ? "redirect_uri is required when the client does not have exactly one registered redirect URI."
+                : "redirect_uri is not registered for this client.";
+            return (request, CreateOAuthError("invalid_request", errorDescription), false);
+        }
+
+        var resolvedRequest = request with { RedirectUri = resolvedRedirectUri };
+
+        var pkceValidation = ValidateCodeChallenge(resolvedRequest.CodeChallenge, resolvedRequest.CodeChallengeMethod);
+        return pkceValidation is null
+            ? (resolvedRequest, null, true)
+            : (resolvedRequest, CreateOAuthError("invalid_request", pkceValidation), true);
+    }
+
+    private static bool RedirectUriMatches(string requestedRedirectUri, string expectedRedirectUri, bool wasRedirectUriSupplied)
+        => wasRedirectUriSupplied
+            ? FixedTimeEquals(expectedRedirectUri, requestedRedirectUri)
+            : string.IsNullOrWhiteSpace(requestedRedirectUri) || FixedTimeEquals(expectedRedirectUri, requestedRedirectUri);
+
+    private static string? ResolveAuthorizationRedirectUri(string requestedRedirectUri, IReadOnlyList<string> registeredRedirectUris)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedRedirectUri))
+        {
+            if (!Uri.TryCreate(requestedRedirectUri, UriKind.Absolute, out _))
+            {
+                return null;
+            }
+
+            return registeredRedirectUris.Contains(requestedRedirectUri, StringComparer.Ordinal)
+                ? requestedRedirectUri
+                : null;
+        }
+
+        return registeredRedirectUris.Count == 1
+            ? registeredRedirectUris[0]
+            : null;
     }
 
     private static OAuthServerMetadata BuildMetadata(OAuthAuthorizationServerOptions options)
@@ -1564,6 +1620,8 @@ public static partial class NOFOidcServerExtensions
 
         public required string RedirectUri { get; init; }
 
+        public required bool WasRedirectUriSupplied { get; init; }
+
         public required string Scope { get; init; }
 
         public string? Nonce { get; init; }
@@ -1583,6 +1641,8 @@ public static partial class NOFOidcServerExtensions
         public required string ClientId { get; init; }
 
         public required string RedirectUri { get; init; }
+
+        public required bool WasRedirectUriSupplied { get; init; }
 
         public required OAuthTokenEndpointResponse Response { get; init; }
     }

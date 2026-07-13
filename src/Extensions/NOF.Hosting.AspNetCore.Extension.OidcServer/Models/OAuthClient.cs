@@ -14,6 +14,8 @@ public sealed class OAuthClient
 
     public string AllowedScopes { get; set; } = "[]";
 
+    public string RedirectUris { get; set; } = "[]";
+
     public string AccessTokenClaims { get; set; } = "[]";
 
     public OAuthClientType ClientType { get; set; } = OAuthClientType.Confidential;
@@ -40,6 +42,7 @@ public sealed class OAuthClientModelCreatingContributor : IDbContextModelCreatin
             entity.Property(e => e.SecretHash).HasMaxLength(128).IsRequired();
             entity.Property(e => e.SecretSalt).HasMaxLength(64).IsRequired();
             entity.Property(e => e.AllowedScopes).IsRequired();
+            entity.Property(e => e.RedirectUris).IsRequired();
             entity.Property(e => e.AccessTokenClaims).IsRequired();
             entity.Property(e => e.ClientType).IsRequired();
             entity.Property(e => e.IsEnabled).IsRequired();

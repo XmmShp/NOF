@@ -30,7 +30,8 @@ builder.AddOidcServer(o =>
 .AddPublicClient(
     "nof-sample-ui",
     ["openid", "profile", "email", "sample.read", "sample.write"],
-    displayName: "NOF Sample UI");
+    displayName: "NOF Sample UI",
+    redirectUris: [$"{sampleOrigin}/oauth/callback", "https://client.local/oauth/callback"]);
 
 builder.Services.AddAuthenticationResourceServer(o =>
 {
