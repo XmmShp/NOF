@@ -29,10 +29,19 @@ public static partial class NOFInfrastructureExtensions
             return builder;
         }
 
+        [UnconditionalSuppressMessage(
+            "AOT",
+            "IL3050:RequiresDynamicCode",
+            Justification = "NOF defaults to in-memory persistence for host-only scenarios until an explicit persistence provider is registered.")]
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:RequiresUnreferencedCode",
+            Justification = "NOF defaults to in-memory persistence for host-only scenarios until an explicit persistence provider is registered.")]
         public IHostApplicationBuilder AddNOFInfrastructure()
         {
             builder.ConfigureNOFHostEnvironment();
             builder.Services.AddNOFApplication();
+            builder.Services.AddInMemoryPersistence();
             AddOpenTelemetry(builder);
 
             #region Core Services

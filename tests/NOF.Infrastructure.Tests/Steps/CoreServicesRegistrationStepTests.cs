@@ -19,7 +19,7 @@ namespace NOF.Infrastructure.Tests.Steps;
 public class NOFInfrastructureTests
 {
     [Fact]
-    public void AddNOFInfrastructure_ShouldNotRegisterPersistenceServicesByDefault()
+    public void AddNOFInfrastructure_ShouldRegisterInMemoryPersistenceByDefault()
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -30,7 +30,7 @@ public class NOFInfrastructureTests
         using var provider = BuildServiceProvider(builder);
         using var scope = provider.CreateScope();
         Assert.Null(scope.ServiceProvider.GetService<Microsoft.EntityFrameworkCore.DbContext>());
-        Assert.Null(scope.ServiceProvider.GetService<IDbContext>());
+        Assert.Equal("InMemoryDbContext", scope.ServiceProvider.GetRequiredService<IDbContext>().GetType().Name);
         Assert.IsType<CacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
         Assert.IsType<MemoryCacheServiceRider>(scope.ServiceProvider.GetRequiredService<ICacheServiceRider>());
     }

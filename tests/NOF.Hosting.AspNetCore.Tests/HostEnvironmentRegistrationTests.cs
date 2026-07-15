@@ -20,4 +20,16 @@ public sealed class HostEnvironmentRegistrationTests
 
         Assert.Same(builder.Environment, resolvedEnvironment);
     }
+
+    [Fact]
+    public async Task BuildAsync_InDevelopmentWithoutExplicitPersistence_ShouldSucceed()
+    {
+        var builder = NOFWebApplicationBuilder.Create([]);
+        builder.Environment.EnvironmentName = Environments.Development;
+        builder.WebApplicationBuilder.WebHost.UseTestServer();
+
+        await using var app = await builder.BuildAsync();
+
+        Assert.NotNull(app.Services.GetRequiredService<NOF.Application.IDbContext>());
+    }
 }
