@@ -32,7 +32,7 @@ public sealed class MemoryNotificationRider : INotificationRider
         var seenHandlerTypes = new HashSet<Type>();
         foreach (var notificationTypeName in notificationTypeNames)
         {
-            var notificationType = NOF.Abstraction.TypeResolver.Resolve(notificationTypeName);
+            var notificationType = TypeResolver.Resolve(notificationTypeName);
             foreach (var handlerType in _notificationHandlerRegistry.GetHandlers(notificationType))
             {
                 if (!seenHandlerTypes.Add(handlerType))
@@ -45,7 +45,7 @@ public sealed class MemoryNotificationRider : INotificationRider
                     InboxMessageType.Notification,
                     payload,
                     payloadTypeName,
-                    NOF.Abstraction.TypeResolver.Register(handlerType),
+                    TypeResolver.Register(handlerType),
                     headers,
                     cancellationToken);
             }

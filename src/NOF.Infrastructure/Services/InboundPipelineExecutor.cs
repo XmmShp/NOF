@@ -30,7 +30,7 @@ public sealed class CommandInboundPipelineExecutor
     {
         var middlewares = new DependencyGraph<ICommandInboundMiddleware>(
             _serviceProvider.GetServices<ICommandInboundMiddleware>()).GetExecutionOrder();
-        var messageType = NOF.Abstraction.TypeResolver.Resolve(payloadTypeName);
+        var messageType = Abstraction.TypeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
         CommandHandlerDelegate terminal = (currentContext, currentMessage, ct)
@@ -115,7 +115,7 @@ public sealed class NotificationInboundPipelineExecutor
     {
         var middlewares = new DependencyGraph<INotificationInboundMiddleware>(
             _serviceProvider.GetServices<INotificationInboundMiddleware>()).GetExecutionOrder();
-        var messageType = NOF.Abstraction.TypeResolver.Resolve(payloadTypeName);
+        var messageType = Abstraction.TypeResolver.Resolve(payloadTypeName);
         var message = DeserializeMessage(payload, messageType, payloadTypeName);
         var context = CreateContext(handlerType, messageType, headers);
         NotificationHandlerDelegate terminal = (currentContext, currentMessage, ct)

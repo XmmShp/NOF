@@ -219,7 +219,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     InboxMessageType.Notification,
                     payload,
                     messageTypeName,
-                    NOF.Abstraction.TypeResolver.Register(notificationHandlerType),
+                    TypeResolver.Register(notificationHandlerType),
                     headers,
                     CancellationToken.None);
             }
@@ -237,7 +237,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     InboxMessageType.Command,
                     payload,
                     messageTypeName,
-                    NOF.Abstraction.TypeResolver.Register(handlerType),
+                    TypeResolver.Register(handlerType),
                     headers,
                     CancellationToken.None);
             }
@@ -345,7 +345,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     {
         try
         {
-            return NOF.Abstraction.TypeResolver.Resolve(queueName);
+            return TypeResolver.Resolve(queueName);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {

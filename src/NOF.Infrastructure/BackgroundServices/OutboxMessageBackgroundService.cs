@@ -107,7 +107,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
-        var payloadType = NOF.Abstraction.TypeResolver.Resolve(message.PayloadType);
+        var payloadType = TypeResolver.Resolve(message.PayloadType);
         var dispatchTypes = ResolveDispatchTypes(message);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         var headers = string.IsNullOrWhiteSpace(message.Headers)
@@ -174,7 +174,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        var payloadType = NOF.Abstraction.TypeResolver.Resolve(message.PayloadType);
+        var payloadType = TypeResolver.Resolve(message.PayloadType);
         var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
@@ -187,16 +187,16 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         if (string.IsNullOrWhiteSpace(message.DispatchTypes))
         {
-            return [NOF.Abstraction.TypeResolver.Resolve(message.PayloadType)];
+            return [TypeResolver.Resolve(message.PayloadType)];
         }
 
         var typeNames = _objectSerializer.Deserialize<string[]>(message.DispatchTypes);
         if (typeNames is null || typeNames.Length == 0)
         {
-            return [NOF.Abstraction.TypeResolver.Resolve(message.PayloadType)];
+            return [TypeResolver.Resolve(message.PayloadType)];
         }
 
-        return [.. typeNames.Select(NOF.Abstraction.TypeResolver.Resolve)];
+        return [.. typeNames.Select(TypeResolver.Resolve)];
     }
 
     private async Task ProcessMessagesBatch(

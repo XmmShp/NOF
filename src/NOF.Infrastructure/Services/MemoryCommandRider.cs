@@ -26,7 +26,7 @@ public sealed class MemoryCommandRider : ICommandRider
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        var commandType = NOF.Abstraction.TypeResolver.Resolve(commandTypeName);
+        var commandType = TypeResolver.Resolve(commandTypeName);
         var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
             ?? throw new InvalidOperationException(
                 $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
@@ -37,7 +37,7 @@ public sealed class MemoryCommandRider : ICommandRider
             InboxMessageType.Command,
             payload,
             payloadTypeName,
-            NOF.Abstraction.TypeResolver.Register(handlerType),
+            TypeResolver.Register(handlerType),
             headers,
             cancellationToken);
     }

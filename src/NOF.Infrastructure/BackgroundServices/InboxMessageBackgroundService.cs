@@ -114,7 +114,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var headers = DeserializeHeaders(message.Headers);
         var traceParent = ExtractTraceParent(headers);
         var processingHeaders = RemoveTraceParent(headers);
-        var handlerType = NOF.Abstraction.TypeResolver.ResolveHandler(message.HandlerType);
+        var handlerType = TypeResolver.ResolveHandler(message.HandlerType);
 
         try
         {
