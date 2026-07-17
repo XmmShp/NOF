@@ -30,6 +30,6 @@ public sealed class HostEnvironmentRegistrationTests
 
         await using var app = await builder.BuildAsync();
 
-        Assert.NotNull(app.Services.GetRequiredService<NOF.Application.IDbContext>());
+        Assert.NotNull(app.Services.GetRequiredService<Application.IDbContext>());
     }
 }

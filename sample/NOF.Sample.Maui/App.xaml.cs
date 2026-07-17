@@ -1,6 +1,6 @@
 namespace NOF.Sample.Maui;
 
-public partial class App : Microsoft.Maui.Controls.Application
+public partial class App : Application
 {
     public App()
     {

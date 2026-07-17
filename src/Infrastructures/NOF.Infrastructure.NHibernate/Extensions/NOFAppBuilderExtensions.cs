@@ -17,7 +17,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddOptions<NHibernateConfigurationOptions>();
             builder.Services.TryAddSingleton<NHibernateSessionFactoryRegistry>();
             builder.Services.ReplaceOrAddScoped<IDbContextFactory, NHibernateDbContextFactory>();
-            builder.Services.ReplaceOrAddScoped<ISession>(sp =>
+            builder.Services.ReplaceOrAddScoped(sp =>
                 sp.GetRequiredService<NHibernateSessionFactoryRegistry>()
                     .OpenSession(TenantId.Normalize(sp.GetRequiredService<ICurrentTenant>().TenantId)));
             builder.Services.ReplaceOrAddScoped<IDbContext>(sp =>

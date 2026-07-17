@@ -65,7 +65,7 @@ internal static class RpcClientHelpers
 
     public static string GetFullNamespace(INamespaceSymbol ns)
     {
-        var parts = new System.Collections.Generic.List<string>();
+        var parts = new List<string>();
         while (ns is not null && !string.IsNullOrEmpty(ns.Name))
         {
             parts.Insert(0, ns.Name);

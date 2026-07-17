@@ -2,7 +2,7 @@ using NOF.Abstraction;
 using NOF.Hosting.AspNetCore;
 using Xunit;
 
-[assembly: AssemblyInitializeAttribute<NOF.Hosting.AspNetCore.Tests.__TypeResolverSynchronizationAssemblyInitializer>]
+[assembly: AssemblyInitialize<NOF.Hosting.AspNetCore.Tests.__TypeResolverSynchronizationAssemblyInitializer>]
 
 namespace NOF.Hosting.AspNetCore.Tests;
 
