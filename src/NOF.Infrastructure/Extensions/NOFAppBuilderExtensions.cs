@@ -57,6 +57,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
             builder.Services.TryAddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
+            builder.Services.TryAddSingleton<MessageTypeResolver>();
 
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
             builder.Services.TryAddSingleton<CacheServiceLocalLockState>();

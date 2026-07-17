@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -221,14 +222,69 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
         sb.AppendLine();
         foreach (var (handlerClassName, notificationFullName) in handlerPairs)
         {
-            sb.AppendLine($"            global::NOF.Abstraction.TypeResolver.Register(typeof({handlerClassName}));");
-            sb.AppendLine($"            global::NOF.Abstraction.TypeResolver.Register(typeof({notificationFullName}));");
-            sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName})));");
+            var invokerTypeName = $"__{SanitizeIdentifier(handlerClassName)}NotificationInboundInvoker";
+            sb.AppendLine($"            services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof({invokerTypeName}), typeof({invokerTypeName})));");
+            sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName}), typeof({invokerTypeName})));");
         }
         sb.AppendLine("        }");
         sb.AppendLine("    }");
 
+        foreach (var (handlerClassName, notificationFullName) in handlerPairs)
+        {
+            var invokerTypeName = $"__{SanitizeIdentifier(handlerClassName)}NotificationInboundInvoker";
+            var escapedTypeName = notificationFullName.Replace("global::", string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var escapedHandlerTypeName = $"{assemblyName}.{handlerClassName}".Replace("\\", "\\\\").Replace("\"", "\\\"");
+            sb.AppendLine();
+            sb.AppendLine($"    internal sealed class {invokerTypeName} : global::NOF.Application.INotificationInboundHandlerInvoker");
+            sb.AppendLine("    {");
+            sb.AppendLine($"        public string HandlerTypeName => \"{escapedHandlerTypeName}\";");
+            sb.AppendLine($"        public global::System.Type HandlerType => typeof({handlerClassName});");
+            sb.AppendLine($"        public string MessageTypeName => \"{escapedTypeName}\";");
+            sb.AppendLine($"        public global::System.Type MessageType => typeof({notificationFullName});");
+            sb.AppendLine();
+            sb.AppendLine("        public object Bind(");
+            sb.AppendLine("            string payloadTypeName,");
+            sb.AppendLine("            global::System.ReadOnlyMemory<byte> payload,");
+            sb.AppendLine("            global::System.Func<global::System.ReadOnlyMemory<byte>, global::System.Type, object?> deserialize)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            global::System.ArgumentException.ThrowIfNullOrWhiteSpace(payloadTypeName);");
+            sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(deserialize);");
+            sb.AppendLine($"            if (!global::System.String.Equals(payloadTypeName, \"{escapedTypeName}\", global::System.StringComparison.Ordinal))");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                throw new global::System.InvalidOperationException(\"Payload type '\" + payloadTypeName + \"' does not match handler message type '{escapedTypeName}'.\");");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+            sb.AppendLine($"            return deserialize(payload, typeof({notificationFullName}))");
+            sb.AppendLine($"                ?? throw new global::System.InvalidOperationException(\"Failed to deserialize message payload as '{escapedTypeName}'.\");");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        public global::System.Threading.Tasks.ValueTask InvokeAsync(");
+            sb.AppendLine("            global::System.IServiceProvider services,");
+            sb.AppendLine("            object message,");
+            sb.AppendLine("            global::NOF.Contract.Context context,");
+            sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(services);");
+            sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(message);");
+            sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
+            sb.AppendLine($"            var handler = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<{handlerClassName}>(services);");
+            sb.AppendLine($"            return new global::System.Threading.Tasks.ValueTask(handler.HandleAsync(({notificationFullName})message, context, cancellationToken));");
+            sb.AppendLine("        }");
+            sb.AppendLine("    }");
+        }
+
         sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+
+    private static string SanitizeIdentifier(string value)
+    {
+        var sb = new StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            sb.Append(char.IsLetterOrDigit(ch) ? ch : '_');
+        }
 
         return sb.ToString();
     }

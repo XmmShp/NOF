@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Hosting.AspNetCore;
 using Xunit;
@@ -9,12 +10,14 @@ namespace NOF.Hosting.AspNetCore.Tests;
 public sealed class TypeResolverSynchronizationTests
 {
     [Fact]
-    public void Create_ShouldRunAssemblyInitializerThatRegistersTypesIntoStaticTypeResolver()
+    public void Create_ShouldRunAssemblyInitializerThatRegistersGeneratedServicesIntoServiceCollection()
     {
-        _ = NOFWebApplicationBuilder.Create([]);
+        var builder = NOFWebApplicationBuilder.Create([]);
 
-        Assert.Equal(typeof(__TypeResolverSynchronizationMessage), TypeResolver.Resolve(typeof(__TypeResolverSynchronizationMessage).DisplayName));
-        Assert.Equal(typeof(__TypeResolverSynchronizationHandler), TypeResolver.ResolveHandler(typeof(__TypeResolverSynchronizationHandler).DisplayName));
+        Assert.Contains(
+            builder.Services,
+            descriptor => descriptor.ServiceType == typeof(__TypeResolverSynchronizationProbe)
+                && descriptor.ImplementationType == typeof(__TypeResolverSynchronizationProbe));
     }
 }
 
@@ -22,11 +25,8 @@ internal sealed class __TypeResolverSynchronizationAssemblyInitializer : IAssemb
 {
     public static void Initialize(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
     {
-        TypeResolver.Register(typeof(__TypeResolverSynchronizationMessage));
-        TypeResolver.Register(typeof(__TypeResolverSynchronizationHandler));
+        services.AddSingleton<__TypeResolverSynchronizationProbe>();
     }
 }
 
-internal sealed record __TypeResolverSynchronizationMessage(string Value);
-
-internal sealed class __TypeResolverSynchronizationHandler;
+internal sealed class __TypeResolverSynchronizationProbe;

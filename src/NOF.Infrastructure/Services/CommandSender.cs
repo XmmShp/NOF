@@ -33,8 +33,8 @@ public sealed class CommandSender : ICommandSender
 
         await ExecuteAsync(outboundContext, command, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
-        var payloadTypeName = Abstraction.TypeResolver.Register(command.GetType());
-        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { Abstraction.TypeResolver.Register(commandType) }, typeof(string[]));
+        var payloadTypeName = command.GetType().DisplayName;
+        var dispatchTypeNames = _objectSerializer.SerializeToText(new[] { commandType.DisplayName }, typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
@@ -58,8 +58,8 @@ public sealed class CommandSender : ICommandSender
         await ExecuteAsync(outboundContext, command, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
-            var payloadTypeName = Abstraction.TypeResolver.Register(message.GetType());
-            var commandTypeName = Abstraction.TypeResolver.Register(commandType);
+            var payloadTypeName = message.GetType().DisplayName;
+            var commandTypeName = commandType.DisplayName;
             await _rider.SendAsync(payload, payloadTypeName, commandTypeName, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }

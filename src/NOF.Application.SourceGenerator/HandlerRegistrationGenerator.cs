@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -88,21 +89,27 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
     private static string GenerateHandlerAssemblyInitializer(string assemblyName, ImmutableArray<INamedTypeSymbol> handlerClasses)
     {
         var registrations = new List<string>();
+        var invokerDefinitions = new List<string>();
         var typeFormat = SymbolDisplayFormat.FullyQualifiedFormat
             .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.Included);
 
         foreach (var handlerClass in handlerClasses)
         {
-            CollectHandlerRegistrations(registrations, handlerClass, typeFormat);
+            CollectHandlerRegistrations(registrations, invokerDefinitions, handlerClass, typeFormat);
         }
 
         return GenerateAssemblyInitializerSource(
             assemblyName,
             $"__{assemblyName.Replace(".", "")}HandlerAssemblyInitializer",
-            registrations);
+            registrations,
+            invokerDefinitions);
     }
 
-    private static string GenerateAssemblyInitializerSource(string assemblyName, string initializerTypeName, List<string> registrations)
+    private static string GenerateAssemblyInitializerSource(
+        string assemblyName,
+        string initializerTypeName,
+        List<string> registrations,
+        IReadOnlyList<string> invokerDefinitions)
     {
         if (registrations.Count == 0)
         {
@@ -135,6 +142,12 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
 
         sb.AppendLine("        }");
         sb.AppendLine("    }");
+        foreach (var invokerDefinition in invokerDefinitions)
+        {
+            sb.AppendLine();
+            sb.Append(invokerDefinition);
+        }
+
         sb.AppendLine("}");
 
         return sb.ToString();
@@ -142,27 +155,142 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
 
     private static void CollectHandlerRegistrations(
         List<string> registrations,
+        List<string> invokerDefinitions,
         INamedTypeSymbol handlerClass,
         SymbolDisplayFormat typeFormat)
     {
         var handlerTypeName = handlerClass.ToDisplayString(typeFormat);
-        registrations.Add($"global::NOF.Abstraction.TypeResolver.Register(typeof({handlerTypeName}))");
-
         registrations.Add($"services.ReplaceOrAdd(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof({handlerTypeName}), typeof({handlerTypeName})))");
 
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.CommandHandler<TCommand>", out var commandType))
         {
             var messageType = commandType!.ToDisplayString(typeFormat);
-            registrations.Add($"global::NOF.Abstraction.TypeResolver.Register(typeof({messageType}))");
-            registrations.Add($"services.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>().Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            var invokerTypeName = $"__{SanitizeIdentifier(TrimGlobalAlias(handlerTypeName))}CommandInboundInvoker";
+            registrations.Add($"services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof({invokerTypeName}), typeof({invokerTypeName})))");
+            registrations.Add($"services.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>().Add(new global::NOF.Application.CommandHandlerRegistration(typeof({handlerTypeName}), typeof({messageType}), typeof({invokerTypeName})))");
+            invokerDefinitions.Add(GenerateCommandInvokerSource(invokerTypeName, handlerTypeName, messageType));
         }
 
         if (TryGetHandledMessageType(handlerClass, "NOF.Application.NotificationHandler<TNotification>", out var notificationType))
         {
             var messageType = notificationType!.ToDisplayString(typeFormat);
-            registrations.Add($"global::NOF.Abstraction.TypeResolver.Register(typeof({messageType}))");
-            registrations.Add($"services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType})))");
+            var invokerTypeName = $"__{SanitizeIdentifier(TrimGlobalAlias(handlerTypeName))}NotificationInboundInvoker";
+            registrations.Add($"services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof({invokerTypeName}), typeof({invokerTypeName})))");
+            registrations.Add($"services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerTypeName}), typeof({messageType}), typeof({invokerTypeName})))");
+            invokerDefinitions.Add(GenerateNotificationInvokerSource(invokerTypeName, handlerTypeName, messageType));
         }
+    }
+
+    private static string TrimGlobalAlias(string typeName)
+        => typeName.Replace("global::", string.Empty);
+
+    private static string EscapeStringLiteral(string value)
+        => value.Replace("\\", "\\\\")
+            .Replace("\"", "\\\"");
+
+    private static string SanitizeIdentifier(string value)
+    {
+        var sb = new StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            sb.Append(char.IsLetterOrDigit(ch) ? ch : '_');
+        }
+
+        return sb.ToString();
+    }
+
+    private static string GenerateCommandInvokerSource(
+        string invokerTypeName,
+        string handlerTypeExpression,
+        string messageTypeExpression)
+    {
+        var handlerTypeName = EscapeStringLiteral(TrimGlobalAlias(handlerTypeExpression));
+        var messageTypeName = EscapeStringLiteral(TrimGlobalAlias(messageTypeExpression));
+        var sb = new StringBuilder();
+        sb.AppendLine($"    internal sealed class {invokerTypeName} : global::NOF.Application.ICommandInboundHandlerInvoker");
+        sb.AppendLine("    {");
+        sb.AppendLine($"        public string HandlerTypeName => \"{handlerTypeName}\";");
+        sb.AppendLine($"        public global::System.Type HandlerType => typeof({handlerTypeExpression});");
+        sb.AppendLine($"        public string MessageTypeName => \"{messageTypeName}\";");
+        sb.AppendLine($"        public global::System.Type MessageType => typeof({messageTypeExpression});");
+        sb.AppendLine();
+        sb.AppendLine("        public object Bind(");
+        sb.AppendLine("            string payloadTypeName,");
+        sb.AppendLine("            global::System.ReadOnlyMemory<byte> payload,");
+        sb.AppendLine("            global::System.Func<global::System.ReadOnlyMemory<byte>, global::System.Type, object?> deserialize)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            global::System.ArgumentException.ThrowIfNullOrWhiteSpace(payloadTypeName);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(deserialize);");
+        sb.AppendLine($"            if (!global::System.String.Equals(payloadTypeName, \"{messageTypeName}\", global::System.StringComparison.Ordinal))");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                throw new global::System.InvalidOperationException(\"Payload type '\" + payloadTypeName + \"' does not match handler message type '{messageTypeName}'.\");");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine($"            return deserialize(payload, typeof({messageTypeExpression}))");
+        sb.AppendLine($"                ?? throw new global::System.InvalidOperationException(\"Failed to deserialize message payload as '{messageTypeName}'.\");");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        public global::System.Threading.Tasks.ValueTask InvokeAsync(");
+        sb.AppendLine("            global::System.IServiceProvider services,");
+        sb.AppendLine("            object message,");
+        sb.AppendLine("            global::NOF.Contract.Context context,");
+        sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(services);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(message);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
+        sb.AppendLine($"            var handler = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<{handlerTypeExpression}>(services);");
+        sb.AppendLine($"            return new global::System.Threading.Tasks.ValueTask(handler.HandleAsync(({messageTypeExpression})message, context, cancellationToken));");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        return sb.ToString();
+    }
+
+    private static string GenerateNotificationInvokerSource(
+        string invokerTypeName,
+        string handlerTypeExpression,
+        string messageTypeExpression)
+    {
+        var handlerTypeName = EscapeStringLiteral(TrimGlobalAlias(handlerTypeExpression));
+        var messageTypeName = EscapeStringLiteral(TrimGlobalAlias(messageTypeExpression));
+        var sb = new StringBuilder();
+        sb.AppendLine($"    internal sealed class {invokerTypeName} : global::NOF.Application.INotificationInboundHandlerInvoker");
+        sb.AppendLine("    {");
+        sb.AppendLine($"        public string HandlerTypeName => \"{handlerTypeName}\";");
+        sb.AppendLine($"        public global::System.Type HandlerType => typeof({handlerTypeExpression});");
+        sb.AppendLine($"        public string MessageTypeName => \"{messageTypeName}\";");
+        sb.AppendLine($"        public global::System.Type MessageType => typeof({messageTypeExpression});");
+        sb.AppendLine();
+        sb.AppendLine("        public object Bind(");
+        sb.AppendLine("            string payloadTypeName,");
+        sb.AppendLine("            global::System.ReadOnlyMemory<byte> payload,");
+        sb.AppendLine("            global::System.Func<global::System.ReadOnlyMemory<byte>, global::System.Type, object?> deserialize)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            global::System.ArgumentException.ThrowIfNullOrWhiteSpace(payloadTypeName);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(deserialize);");
+        sb.AppendLine($"            if (!global::System.String.Equals(payloadTypeName, \"{messageTypeName}\", global::System.StringComparison.Ordinal))");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                throw new global::System.InvalidOperationException(\"Payload type '\" + payloadTypeName + \"' does not match handler message type '{messageTypeName}'.\");");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine($"            return deserialize(payload, typeof({messageTypeExpression}))");
+        sb.AppendLine($"                ?? throw new global::System.InvalidOperationException(\"Failed to deserialize message payload as '{messageTypeName}'.\");");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        public global::System.Threading.Tasks.ValueTask InvokeAsync(");
+        sb.AppendLine("            global::System.IServiceProvider services,");
+        sb.AppendLine("            object message,");
+        sb.AppendLine("            global::NOF.Contract.Context context,");
+        sb.AppendLine("            global::System.Threading.CancellationToken cancellationToken)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(services);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(message);");
+        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
+        sb.AppendLine($"            var handler = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<{handlerTypeExpression}>(services);");
+        sb.AppendLine($"            return new global::System.Threading.Tasks.ValueTask(handler.HandleAsync(({messageTypeExpression})message, context, cancellationToken));");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        return sb.ToString();
     }
 
     private static bool TryGetHandledMessageType(INamedTypeSymbol symbol, string handlerBaseType, out ITypeSymbol? messageType)

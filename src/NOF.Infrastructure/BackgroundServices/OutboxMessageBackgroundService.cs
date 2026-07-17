@@ -16,19 +16,22 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly MessageTypeResolver _messageTypeResolver;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        MessageTypeResolver messageTypeResolver)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
         _hostEnvironment = hostEnvironment;
+        _messageTypeResolver = messageTypeResolver;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -107,9 +110,10 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
-        var payloadType = TypeResolver.Resolve(message.PayloadType);
         var dispatchTypes = ResolveDispatchTypes(message);
-        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
+        var payloadType = _messageTypeResolver.Resolve(message.PayloadType);
+        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)
+            ?? throw new InvalidOperationException($"Failed to deserialize message payload as '{message.PayloadType}'.");
         var headers = string.IsNullOrWhiteSpace(message.Headers)
             ? new Dictionary<string, string?>()
             : _objectSerializer.Deserialize<Dictionary<string, string?>>(message.Headers) ?? new Dictionary<string, string?>();
@@ -174,8 +178,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        var payloadType = TypeResolver.Resolve(message.PayloadType);
-        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)!;
+        var payloadType = _messageTypeResolver.Resolve(message.PayloadType);
+        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)
+            ?? throw new InvalidOperationException($"Failed to deserialize message payload as '{message.PayloadType}'.");
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
             $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
             ActivityKind.Producer,
@@ -187,16 +192,16 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     {
         if (string.IsNullOrWhiteSpace(message.DispatchTypes))
         {
-            return [TypeResolver.Resolve(message.PayloadType)];
+            return [_messageTypeResolver.Resolve(message.PayloadType)];
         }
 
         var typeNames = _objectSerializer.Deserialize<string[]>(message.DispatchTypes);
         if (typeNames is null || typeNames.Length == 0)
         {
-            return [TypeResolver.Resolve(message.PayloadType)];
+            return [_messageTypeResolver.Resolve(message.PayloadType)];
         }
 
-        return [.. typeNames.Select(TypeResolver.Resolve)];
+        return _messageTypeResolver.Resolve(typeNames);
     }
 
     private async Task ProcessMessagesBatch(

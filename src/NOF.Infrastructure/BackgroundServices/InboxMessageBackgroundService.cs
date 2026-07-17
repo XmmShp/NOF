@@ -114,7 +114,6 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var headers = DeserializeHeaders(message.Headers);
         var traceParent = ExtractTraceParent(headers);
         var processingHeaders = RemoveTraceParent(headers);
-        var handlerType = TypeResolver.ResolveHandler(message.HandlerType);
 
         try
         {
@@ -128,7 +127,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                         await commandPipelineExecutor.ExecuteAsync(
                             message.Payload,
                             message.PayloadType,
-                            handlerType,
+                            message.HandlerType,
                             processingHeaders,
                             cancellationToken);
                         break;
@@ -139,7 +138,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                         await notificationPipelineExecutor.ExecuteAsync(
                             message.Payload,
                             message.PayloadType,
-                            handlerType,
+                            message.HandlerType,
                             processingHeaders,
                             cancellationToken);
                         break;

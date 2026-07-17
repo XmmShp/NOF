@@ -48,6 +48,7 @@ public class RabbitMQConsumerHostedServiceTests
             new TestHostEnvironment(),
             null!,
             new JsonObjectSerializer(),
+            new MessageTypeResolver(commandHandlerRegistry, new NotificationHandlerRegistry()),
             NullLogger<RabbitMQConsumerHostedService>.Instance);
 
         await Assert.ThrowsAsync<ObjectDisposedException>(() => service.StartAsync(CancellationToken.None));

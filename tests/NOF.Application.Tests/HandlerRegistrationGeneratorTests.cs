@@ -41,9 +41,16 @@ public class HandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppHandlerAssemblyInitializer))", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.TypeResolver.Register(typeof(global::App.MyCommandHandler));", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.TypeResolver.Register(typeof(global::App.MyCommand));", generatedCode);
-        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>().Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand)));", generatedCode);
+        Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof(__App_MyCommandHandlerCommandInboundInvoker), typeof(__App_MyCommandHandlerCommandInboundInvoker)));", generatedCode);
+        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.CommandHandlerRegistry>().Add(new global::NOF.Application.CommandHandlerRegistration(typeof(global::App.MyCommandHandler), typeof(global::App.MyCommand), typeof(__App_MyCommandHandlerCommandInboundInvoker)));", generatedCode);
+        Assert.Contains("internal sealed class __App_MyCommandHandlerCommandInboundInvoker : global::NOF.Application.ICommandInboundHandlerInvoker", generatedCode);
+        Assert.Contains("public string MessageTypeName => \"App.MyCommand\";", generatedCode);
+        Assert.Contains("return deserialize(payload, typeof(global::App.MyCommand))", generatedCode);
+        Assert.Contains("GetRequiredService<global::App.MyCommandHandler>(services);", generatedCode);
+        Assert.Contains("handler.HandleAsync((global::App.MyCommand)message, context, cancellationToken)", generatedCode);
+        Assert.DoesNotContain("IMessagePayloadBinder", generatedCode);
+        Assert.DoesNotContain("IMessageTypeBinder", generatedCode);
+        Assert.DoesNotContain("TypeResolver.Register", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
 
     }
@@ -78,9 +85,16 @@ public class HandlerRegistrationGeneratorTests
 
         Assert.Contains("[assembly: global::NOF.Abstraction.AssemblyInitializeAttribute<global::App.__AppHandlerAssemblyInitializer>]", generatedCode);
         Assert.Contains("services.InitializedTypes.Add(typeof(__AppHandlerAssemblyInitializer))", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.TypeResolver.Register(typeof(global::App.MyNotificationHandler));", generatedCode);
-        Assert.Contains("global::NOF.Abstraction.TypeResolver.Register(typeof(global::App.MyNotification));", generatedCode);
-        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification)));", generatedCode);
+        Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof(__App_MyNotificationHandlerNotificationInboundInvoker), typeof(__App_MyNotificationHandlerNotificationInboundInvoker)));", generatedCode);
+        Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(global::App.MyNotificationHandler), typeof(global::App.MyNotification), typeof(__App_MyNotificationHandlerNotificationInboundInvoker)));", generatedCode);
+        Assert.Contains("internal sealed class __App_MyNotificationHandlerNotificationInboundInvoker : global::NOF.Application.INotificationInboundHandlerInvoker", generatedCode);
+        Assert.Contains("public string MessageTypeName => \"App.MyNotification\";", generatedCode);
+        Assert.Contains("return deserialize(payload, typeof(global::App.MyNotification))", generatedCode);
+        Assert.Contains("GetRequiredService<global::App.MyNotificationHandler>(services);", generatedCode);
+        Assert.Contains("handler.HandleAsync((global::App.MyNotification)message, context, cancellationToken)", generatedCode);
+        Assert.DoesNotContain("IMessagePayloadBinder", generatedCode);
+        Assert.DoesNotContain("IMessageTypeBinder", generatedCode);
+        Assert.DoesNotContain("TypeResolver.Register", generatedCode);
         Assert.DoesNotContain("SourceModule.ReferencedAssemblySymbols", generatedCode);
     }
 }

@@ -33,9 +33,9 @@ public sealed class NotificationPublisher : INotificationPublisher
 
         await ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
-        var payloadTypeName = Abstraction.TypeResolver.Register(notification.GetType());
+        var payloadTypeName = notification.GetType().DisplayName;
         var dispatchTypeNames = _objectSerializer.SerializeToText(
-            notificationTypes.Select(Abstraction.TypeResolver.Register).ToArray(),
+            notificationTypes.Select(static type => type.DisplayName).ToArray(),
             typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
@@ -60,8 +60,8 @@ public sealed class NotificationPublisher : INotificationPublisher
         await ExecuteAsync(outboundContext, notification, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
-            var payloadTypeName = Abstraction.TypeResolver.Register(message.GetType());
-            var notificationTypeNames = notificationTypes.Select(Abstraction.TypeResolver.Register).ToArray();
+            var payloadTypeName = message.GetType().DisplayName;
+            var notificationTypeNames = notificationTypes.Select(static type => type.DisplayName).ToArray();
             await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }

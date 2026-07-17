@@ -7,15 +7,18 @@ namespace NOF.Infrastructure;
 public sealed class MemoryNotificationRider : INotificationRider
 {
     private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
+    private readonly MessageTypeResolver _messageTypeResolver;
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _objectSerializer;
 
     public MemoryNotificationRider(
         NotificationHandlerRegistry notificationHandlerRegistry,
+        MessageTypeResolver messageTypeResolver,
         IServiceProvider serviceProvider,
         IObjectSerializer objectSerializer)
     {
         _notificationHandlerRegistry = notificationHandlerRegistry;
+        _messageTypeResolver = messageTypeResolver;
         _serviceProvider = serviceProvider;
         _objectSerializer = objectSerializer;
     }
@@ -32,7 +35,9 @@ public sealed class MemoryNotificationRider : INotificationRider
         var seenHandlerTypes = new HashSet<Type>();
         foreach (var notificationTypeName in notificationTypeNames)
         {
-            var notificationType = TypeResolver.Resolve(notificationTypeName);
+            var notificationType = _notificationHandlerRegistry.TryGetNotificationType(notificationTypeName, out var resolvedNotificationType)
+                ? resolvedNotificationType
+                : _messageTypeResolver.Resolve(notificationTypeName);
             foreach (var handlerType in _notificationHandlerRegistry.GetHandlers(notificationType))
             {
                 if (!seenHandlerTypes.Add(handlerType))
@@ -45,7 +50,7 @@ public sealed class MemoryNotificationRider : INotificationRider
                     InboxMessageType.Notification,
                     payload,
                     payloadTypeName,
-                    TypeResolver.Register(handlerType),
+                    handlerType.DisplayName,
                     headers,
                     cancellationToken);
             }

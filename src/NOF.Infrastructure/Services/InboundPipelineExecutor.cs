@@ -11,30 +11,32 @@ public sealed class CommandInboundPipelineExecutor
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _serializer;
+    private readonly CommandHandlerRegistry _commandHandlerRegistry;
 
     public CommandInboundPipelineExecutor(
         IServiceProvider serviceProvider,
-        IObjectSerializer serializer)
+        IObjectSerializer serializer,
+        CommandHandlerRegistry commandHandlerRegistry)
     {
         _serviceProvider = serviceProvider;
         _serializer = serializer;
+        _commandHandlerRegistry = commandHandlerRegistry;
     }
 
     public async ValueTask ExecuteAsync(
         ReadOnlyMemory<byte> payload,
         string payloadTypeName,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
-        Type handlerType,
+        string handlerTypeName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
         var middlewares = new DependencyGraph<ICommandInboundMiddleware>(
             _serviceProvider.GetServices<ICommandInboundMiddleware>()).GetExecutionOrder();
-        var messageType = Abstraction.TypeResolver.Resolve(payloadTypeName);
-        var message = DeserializeMessage(payload, messageType, payloadTypeName);
-        var context = CreateContext(handlerType, messageType, headers);
+        var invoker = ResolveInvoker(handlerTypeName);
+        var message = invoker.Bind(payloadTypeName, payload, _serializer.Deserialize);
+        var context = CreateContext(invoker.HandlerType, invoker.MessageType, headers);
         CommandHandlerDelegate terminal = (currentContext, currentMessage, ct)
-            => ExecuteCommandHandlerAsync(_serviceProvider, handlerType, currentContext, currentMessage, ct);
+            => invoker.InvokeAsync(_serviceProvider, currentMessage, currentContext, ct);
         CommandHandlerDelegate pipeline = terminal;
         for (var i = middlewares.Count - 1; i >= 0; i--)
         {
@@ -47,12 +49,17 @@ public sealed class CommandInboundPipelineExecutor
         await pipeline(context, message, cancellationToken).ConfigureAwait(false);
     }
 
-    private object DeserializeMessage(
-        ReadOnlyMemory<byte> payload,
-        Type messageType,
-        string payloadTypeName)
-        => _serializer.Deserialize(payload, messageType)
-            ?? throw new InvalidOperationException($"Failed to deserialize command payload as '{payloadTypeName}'.");
+    private ICommandInboundHandlerInvoker ResolveInvoker(string handlerTypeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(handlerTypeName);
+
+        if (!_commandHandlerRegistry.TryGetInvokerType(handlerTypeName, out var invokerType))
+        {
+            throw new InvalidOperationException($"Command handler invoker for '{handlerTypeName}' is not registered.");
+        }
+
+        return (ICommandInboundHandlerInvoker)_serviceProvider.GetRequiredService(invokerType);
+    }
 
     private static CommandInboundContext CreateContext(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
@@ -68,18 +75,6 @@ public sealed class CommandInboundPipelineExecutor
             MessageType = messageType
         }.CopyHeadersFrom(headers);
     }
-
-    private static async ValueTask ExecuteCommandHandlerAsync(
-        IServiceProvider services,
-        Type handlerType,
-        CommandInboundContext context,
-        object message,
-        CancellationToken cancellationToken)
-    {
-        var handler = (CommandHandler)services.GetRequiredService(handlerType);
-        await handler.HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
-    }
-
     private static async ValueTask ExecuteCommandMiddlewareAsync(
         IServiceProvider services,
         ICommandInboundMiddleware middleware,
@@ -96,30 +91,32 @@ public sealed class NotificationInboundPipelineExecutor
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _serializer;
+    private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
 
     public NotificationInboundPipelineExecutor(
         IServiceProvider serviceProvider,
-        IObjectSerializer serializer)
+        IObjectSerializer serializer,
+        NotificationHandlerRegistry notificationHandlerRegistry)
     {
         _serviceProvider = serviceProvider;
         _serializer = serializer;
+        _notificationHandlerRegistry = notificationHandlerRegistry;
     }
 
     public async ValueTask ExecuteAsync(
         ReadOnlyMemory<byte> payload,
         string payloadTypeName,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
-        Type handlerType,
+        string handlerTypeName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
         var middlewares = new DependencyGraph<INotificationInboundMiddleware>(
             _serviceProvider.GetServices<INotificationInboundMiddleware>()).GetExecutionOrder();
-        var messageType = Abstraction.TypeResolver.Resolve(payloadTypeName);
-        var message = DeserializeMessage(payload, messageType, payloadTypeName);
-        var context = CreateContext(handlerType, messageType, headers);
+        var invoker = ResolveInvoker(handlerTypeName);
+        var message = invoker.Bind(payloadTypeName, payload, _serializer.Deserialize);
+        var context = CreateContext(invoker.HandlerType, invoker.MessageType, headers);
         NotificationHandlerDelegate terminal = (currentContext, currentMessage, ct)
-            => ExecuteNotificationHandlerAsync(_serviceProvider, handlerType, currentContext, currentMessage, ct);
+            => invoker.InvokeAsync(_serviceProvider, currentMessage, currentContext, ct);
         NotificationHandlerDelegate pipeline = terminal;
         for (var i = middlewares.Count - 1; i >= 0; i--)
         {
@@ -132,12 +129,17 @@ public sealed class NotificationInboundPipelineExecutor
         await pipeline(context, message, cancellationToken).ConfigureAwait(false);
     }
 
-    private object DeserializeMessage(
-        ReadOnlyMemory<byte> payload,
-        Type messageType,
-        string payloadTypeName)
-        => _serializer.Deserialize(payload, messageType)
-            ?? throw new InvalidOperationException($"Failed to deserialize notification payload as '{payloadTypeName}'.");
+    private INotificationInboundHandlerInvoker ResolveInvoker(string handlerTypeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(handlerTypeName);
+
+        if (!_notificationHandlerRegistry.TryGetInvokerType(handlerTypeName, out var invokerType))
+        {
+            throw new InvalidOperationException($"Notification handler invoker for '{handlerTypeName}' is not registered.");
+        }
+
+        return (INotificationInboundHandlerInvoker)_serviceProvider.GetRequiredService(invokerType);
+    }
 
     private static NotificationInboundContext CreateContext(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
@@ -153,18 +155,6 @@ public sealed class NotificationInboundPipelineExecutor
             MessageType = messageType
         }.CopyHeadersFrom(headers);
     }
-
-    private static async ValueTask ExecuteNotificationHandlerAsync(
-        IServiceProvider services,
-        Type handlerType,
-        NotificationInboundContext context,
-        object message,
-        CancellationToken cancellationToken)
-    {
-        var handler = (NotificationHandler)services.GetRequiredService(handlerType);
-        await handler.HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
-    }
-
     private static async ValueTask ExecuteNotificationMiddlewareAsync(
         IServiceProvider services,
         INotificationInboundMiddleware middleware,

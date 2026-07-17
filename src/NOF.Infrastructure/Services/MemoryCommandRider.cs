@@ -7,15 +7,18 @@ namespace NOF.Infrastructure;
 public sealed class MemoryCommandRider : ICommandRider
 {
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
+    private readonly MessageTypeResolver _messageTypeResolver;
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _objectSerializer;
 
     public MemoryCommandRider(
         CommandHandlerRegistry commandHandlerRegistry,
+        MessageTypeResolver messageTypeResolver,
         IServiceProvider serviceProvider,
         IObjectSerializer objectSerializer)
     {
         _commandHandlerRegistry = commandHandlerRegistry;
+        _messageTypeResolver = messageTypeResolver;
         _serviceProvider = serviceProvider;
         _objectSerializer = objectSerializer;
     }
@@ -26,7 +29,9 @@ public sealed class MemoryCommandRider : ICommandRider
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        var commandType = TypeResolver.Resolve(commandTypeName);
+        var commandType = _commandHandlerRegistry.TryGetCommandType(commandTypeName, out var resolvedCommandType)
+            ? resolvedCommandType
+            : _messageTypeResolver.Resolve(commandTypeName);
         var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
             ?? throw new InvalidOperationException(
                 $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
@@ -37,7 +42,7 @@ public sealed class MemoryCommandRider : ICommandRider
             InboxMessageType.Command,
             payload,
             payloadTypeName,
-            TypeResolver.Register(handlerType),
+            handlerType.DisplayName,
             headers,
             cancellationToken);
     }

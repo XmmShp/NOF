@@ -19,6 +19,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly ILogger<RabbitMQConsumerHostedService> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly MessageTypeResolver _messageTypeResolver;
     private readonly List<IChannel> _channels = [];
     private readonly Dictionary<string, Type> _notificationHandlerTypes = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -31,6 +32,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         IHostEnvironment hostEnvironment,
         IServiceProvider serviceProvider,
         IObjectSerializer objectSerializer,
+        MessageTypeResolver messageTypeResolver,
         ILogger<RabbitMQConsumerHostedService> logger)
     {
         _connectionManager = connectionManager;
@@ -40,6 +42,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         _hostEnvironment = hostEnvironment;
         _serviceProvider = serviceProvider;
         _objectSerializer = objectSerializer;
+        _messageTypeResolver = messageTypeResolver;
         _logger = logger;
     }
 
@@ -219,7 +222,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     InboxMessageType.Notification,
                     payload,
                     messageTypeName,
-                    TypeResolver.Register(notificationHandlerType),
+                    notificationHandlerType.DisplayName,
                     headers,
                     CancellationToken.None);
             }
@@ -237,7 +240,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     InboxMessageType.Command,
                     payload,
                     messageTypeName,
-                    TypeResolver.Register(handlerType),
+                    handlerType.DisplayName,
                     headers,
                     CancellationToken.None);
             }
@@ -343,9 +346,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
     private Type ResolveCommandType(string queueName)
     {
+        if (_commandHandlerRegistry.TryGetCommandType(queueName, out var commandType))
+        {
+            return commandType;
+        }
+
         try
         {
-            return TypeResolver.Resolve(queueName);
+            return _messageTypeResolver.Resolve(queueName);
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
         {
