@@ -149,7 +149,7 @@ public sealed class InMemoryPersistenceStore
     {
         if (entity is NOFInboxMessage inboxMessage)
         {
-            return [inboxMessage.Id, inboxMessage.HandlerType];
+            return [inboxMessage.Id, inboxMessage.Route];
         }
 
         var idProperty = entity.GetType().GetProperty("Id", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);

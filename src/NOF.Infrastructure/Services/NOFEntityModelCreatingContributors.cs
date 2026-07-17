@@ -27,12 +27,11 @@ public sealed class NOFInboxMessageModelCreatingContributor : IDbContextModelCre
         {
             entity.IsHostOnly();
             entity.ToTable(nameof(NOFInboxMessage));
-            entity.HasKey(nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.HandlerType));
+            entity.HasKey(nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.Route));
             entity.HasIndex(nameof(NOFInboxMessage.Status), nameof(NOFInboxMessage.CreatedAtUtc));
             entity.HasIndex(nameof(NOFInboxMessage.Status), nameof(NOFInboxMessage.ClaimExpiresAtUtc));
             entity.HasIndex(e => e.ClaimedBy);
-            entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
-            entity.Property(e => e.HandlerType).HasMaxLength(512).IsRequired();
+            entity.Property(e => e.Route).HasMaxLength(512).IsRequired();
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.Headers).IsRequired();
             entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
@@ -53,7 +52,6 @@ public sealed class NOFOutboxMessageModelCreatingContributor : IDbContextModelCr
             entity.HasIndex(nameof(NOFOutboxMessage.Status), nameof(NOFOutboxMessage.CreatedAtUtc));
             entity.HasIndex(nameof(NOFOutboxMessage.Status), nameof(NOFOutboxMessage.ClaimExpiresAtUtc));
             entity.HasIndex(e => e.ClaimedBy);
-            entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
             entity.Property(e => e.DispatchRoutes).IsRequired();
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.Headers).IsRequired();

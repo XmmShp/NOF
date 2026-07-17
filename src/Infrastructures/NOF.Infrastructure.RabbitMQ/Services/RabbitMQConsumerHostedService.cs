@@ -20,7 +20,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IObjectSerializer _objectSerializer;
     private readonly List<IChannel> _channels = [];
-    private readonly Dictionary<string, string> _commandHandlerRoutes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _commandHandlerTypes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _notificationHandlerRoutes = new(StringComparer.Ordinal);
     private bool _disposed;
 
@@ -69,6 +69,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         var commandRegistrations = _commandHandlerRegistry.Freeze()
             .Select(info => new
             {
+                MessageRoute = info.CommandTypeName,
                 info.HandlerTypeName,
                 QueueName = BuildCommandQueueName(info.HandlerTypeName)
             })
@@ -77,8 +78,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
         foreach (var registration in commandRegistrations)
         {
-            _commandHandlerRoutes[registration.QueueName] = registration.HandlerTypeName;
-            await SetupCommandConsumerAsync(registration.QueueName, cancellationToken);
+            _commandHandlerTypes[registration.QueueName] = registration.HandlerTypeName;
+            await SetupCommandConsumerAsync(registration.QueueName, registration.MessageRoute, cancellationToken);
         }
 
         var notificationGroups = _notificationHandlerRegistry.Freeze()
@@ -99,13 +100,13 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         }
     }
 
-    private async Task SetupCommandConsumerAsync(string queueName, CancellationToken cancellationToken)
+    private async Task SetupCommandConsumerAsync(string queueName, string messageRoute, CancellationToken cancellationToken)
     {
         var channel = await _connectionManager.CreateChannelAsync();
         _channels.Add(channel);
 
         await channel.ExchangeDeclareAsync(
-            exchange: queueName,
+            exchange: messageRoute,
             type: "direct",
             durable: _options.Value.Durable,
             autoDelete: _options.Value.AutoDelete,
@@ -120,8 +121,8 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
         await channel.QueueBindAsync(
             queue: queueName,
-            exchange: queueName,
-            routingKey: queueName,
+            exchange: messageRoute,
+            routingKey: messageRoute,
             cancellationToken: cancellationToken);
 
         await channel.BasicQosAsync(0, _options.Value.PrefetchCount, false, cancellationToken);
@@ -188,14 +189,6 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         {
             var payload = args.Body;
 
-            var messageTypeName = args.BasicProperties.Type;
-            if (string.IsNullOrWhiteSpace(messageTypeName))
-            {
-                throw new RabbitMQConsumerMessageException(
-                    "RabbitMQ message type was missing in BasicProperties.Type.",
-                    requeue: false);
-            }
-
             Dictionary<string, string?>? headers = null;
             if (args.BasicProperties.Headers is not null)
             {
@@ -216,20 +209,18 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                     messageId,
                     InboxMessageType.Notification,
                     payload,
-                    messageTypeName,
-                    notificationHandlerTypeName,
+                    queueName,
                     headers,
                     CancellationToken.None);
             }
-            else if (_commandHandlerRoutes.TryGetValue(queueName, out var commandHandlerTypeName))
+            else if (_commandHandlerTypes.TryGetValue(queueName, out var commandHandlerTypeName))
             {
                 var messageId = ResolveMessageId(headers);
                 await EnqueueAsync(
                     messageId,
                     InboxMessageType.Command,
                     payload,
-                    messageTypeName,
-                    commandHandlerTypeName,
+                    queueName,
                     headers,
                     CancellationToken.None);
             }
@@ -265,8 +256,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         Guid messageId,
         InboxMessageType messageType,
         ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        string handlerTypeName,
+        string route,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
@@ -283,8 +273,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         {
             Id = messageId,
             MessageType = messageType,
-            PayloadType = payloadTypeName,
-            HandlerType = handlerTypeName,
+            Route = route,
             Payload = payload.ToArray(),
             Headers = SerializeHeaders(headers)
         });
@@ -295,12 +284,12 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         }
         catch (DbUpdateException)
         {
-            if (await InboxMessageExistsAsync(messageId, handlerTypeName, cancellationToken).ConfigureAwait(false))
+            if (await InboxMessageExistsAsync(messageId, route, cancellationToken).ConfigureAwait(false))
             {
                 _logger.LogInformation(
-                    "Inbox message {MessageId} for handler {HandlerType} already exists. Treating RabbitMQ delivery as duplicate.",
+                    "Inbox message {MessageId} for route {Route} already exists. Treating RabbitMQ delivery as duplicate.",
                     messageId,
-                    handlerTypeName);
+                    route);
                 return;
             }
 
@@ -308,7 +297,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         }
     }
 
-    private async Task<bool> InboxMessageExistsAsync(Guid messageId, string handlerTypeName, CancellationToken cancellationToken)
+    private async Task<bool> InboxMessageExistsAsync(Guid messageId, string route, CancellationToken cancellationToken)
     {
         try
         {
@@ -322,7 +311,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             }
 
             return await dbContext.Set<NOFInboxMessage>()
-                .Where(message => message.Id == messageId && message.HandlerType == handlerTypeName)
+                .Where(message => message.Id == messageId && message.Route == route)
                 .AnyAsync(cancellationToken)
                 .ConfigureAwait(false);
         }

@@ -17,8 +17,7 @@ public class RabbitMQNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        IReadOnlyCollection<string> dispatchRoutes,
+        IReadOnlyCollection<string> messageRoutes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
@@ -27,8 +26,7 @@ public class RabbitMQNotificationRider : INotificationRider
         var properties = new BasicProperties
         {
             Persistent = _options.Value.Durable,
-            ContentType = "application/octet-stream",
-            Type = payloadTypeName
+            ContentType = "application/octet-stream"
         };
 
         if (headers is not null)
@@ -41,9 +39,9 @@ public class RabbitMQNotificationRider : INotificationRider
             properties.Headers = headerDict;
         }
 
-        foreach (var dispatchRoute in dispatchRoutes)
+        foreach (var messageRoute in messageRoutes)
         {
-            var exchangeName = dispatchRoute;
+            var exchangeName = messageRoute;
 
             await channel.ExchangeDeclareAsync(
                 exchange: exchangeName,

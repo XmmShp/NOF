@@ -8,20 +8,17 @@ namespace NOF.Infrastructure;
 public sealed class CommandSender : ICommandSender
 {
     private readonly ICommandRider _rider;
-    private readonly CommandHandlerRegistry _commandHandlerRegistry;
     private readonly IReadOnlyList<ICommandOutboundMiddleware> _middlewares;
     private readonly IDbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
 
     public CommandSender(
         ICommandRider rider,
-        CommandHandlerRegistry commandHandlerRegistry,
         IEnumerable<ICommandOutboundMiddleware> middlewares,
         IDbContext dbContext,
         IObjectSerializer objectSerializer)
     {
         _rider = rider;
-        _commandHandlerRegistry = commandHandlerRegistry;
         _middlewares = new DependencyGraph<ICommandOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
@@ -36,16 +33,14 @@ public sealed class CommandSender : ICommandSender
 
         await ExecuteAsync(outboundContext, command, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
-        var payloadTypeName = command.GetType().DisplayName;
         var dispatchRoutes = _objectSerializer.SerializeToText(
-            new[] { ResolveDispatchRoute(commandType) },
+            new[] { commandType.DisplayName },
             typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Command,
-            PayloadType = payloadTypeName,
             DispatchRoutes = dispatchRoutes,
             Payload = _objectSerializer.Serialize(command).ToArray(),
             Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
@@ -63,21 +58,8 @@ public sealed class CommandSender : ICommandSender
         await ExecuteAsync(outboundContext, command, async (_, message, ct) =>
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
-            var payloadTypeName = message.GetType().DisplayName;
-            var dispatchRoute = ResolveDispatchRoute(commandType);
-            await _rider.SendAsync(payload, payloadTypeName, dispatchRoute, outboundContext.Headers, ct).ConfigureAwait(false);
+            await _rider.SendAsync(payload, commandType.DisplayName, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
-    }
-
-    private string ResolveDispatchRoute(Type commandType)
-    {
-        ArgumentNullException.ThrowIfNull(commandType);
-
-        var handlerType = _commandHandlerRegistry.GetHandlers(commandType.DisplayName).FirstOrDefault()
-            ?? throw new InvalidOperationException(
-                $"Command '{commandType.DisplayName}' does not have a registered handler route.");
-
-        return handlerType.DisplayName;
     }
 
     private ValueTask ExecuteAsync(

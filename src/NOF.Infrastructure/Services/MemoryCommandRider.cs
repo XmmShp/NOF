@@ -21,36 +21,29 @@ public sealed class MemoryCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        string dispatchRoute,
+        string messageRoute,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        var handlerTypeName = ResolveHandlerTypeName(dispatchRoute);
+        var route = ResolveRoute(messageRoute);
 
         var messageId = ResolveMessageId(headers);
         await EnqueueAsync(
             messageId,
             InboxMessageType.Command,
             payload,
-            payloadTypeName,
-            handlerTypeName,
+            route,
             headers,
             cancellationToken);
     }
 
-    private string ResolveHandlerTypeName(string dispatchRoute)
+    private string ResolveRoute(string messageRoute)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(dispatchRoute);
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageRoute);
 
-        if (_commandHandlerRegistry.TryGetHandlerType(dispatchRoute, out var handlerType))
-        {
-            return handlerType.DisplayName;
-        }
-
-        var resolvedHandlerType = _commandHandlerRegistry.GetHandlers(dispatchRoute).FirstOrDefault()
+        var resolvedHandlerType = _commandHandlerRegistry.GetHandlers(messageRoute).FirstOrDefault()
             ?? throw new InvalidOperationException(
-                $"In-memory transport cannot route command '{dispatchRoute}'. No matching local handler registered.");
+                $"In-memory transport cannot route command '{messageRoute}'. No matching local handler registered.");
 
         return resolvedHandlerType.DisplayName;
     }
@@ -59,8 +52,7 @@ public sealed class MemoryCommandRider : ICommandRider
         Guid messageId,
         InboxMessageType messageType,
         ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        string handlerTypeName,
+        string route,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
@@ -77,8 +69,7 @@ public sealed class MemoryCommandRider : ICommandRider
         {
             Id = messageId,
             MessageType = messageType,
-            PayloadType = payloadTypeName,
-            HandlerType = handlerTypeName,
+            Route = route,
             Payload = payload.ToArray(),
             Headers = SerializeHeaders(headers)
         });

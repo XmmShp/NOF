@@ -25,7 +25,6 @@ public sealed class CommandInboundPipelineExecutor
 
     public async ValueTask ExecuteAsync(
         ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
         string handlerTypeName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
@@ -33,7 +32,7 @@ public sealed class CommandInboundPipelineExecutor
         var middlewares = new DependencyGraph<ICommandInboundMiddleware>(
             _serviceProvider.GetServices<ICommandInboundMiddleware>()).GetExecutionOrder();
         var invoker = ResolveInvoker(handlerTypeName);
-        var message = invoker.Bind(payloadTypeName, payload, _serializer.Deserialize);
+        var message = invoker.Bind(payload, _serializer.Deserialize);
         var context = CreateContext(invoker.HandlerType, invoker.MessageType, headers);
         CommandHandlerDelegate terminal = (currentContext, currentMessage, ct)
             => invoker.InvokeAsync(_serviceProvider, currentMessage, currentContext, ct);
@@ -105,7 +104,6 @@ public sealed class NotificationInboundPipelineExecutor
 
     public async ValueTask ExecuteAsync(
         ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
         string handlerTypeName,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
@@ -113,7 +111,7 @@ public sealed class NotificationInboundPipelineExecutor
         var middlewares = new DependencyGraph<INotificationInboundMiddleware>(
             _serviceProvider.GetServices<INotificationInboundMiddleware>()).GetExecutionOrder();
         var invoker = ResolveInvoker(handlerTypeName);
-        var message = invoker.Bind(payloadTypeName, payload, _serializer.Deserialize);
+        var message = invoker.Bind(payload, _serializer.Deserialize);
         var context = CreateContext(invoker.HandlerType, invoker.MessageType, headers);
         NotificationHandlerDelegate terminal = (currentContext, currentMessage, ct)
             => invoker.InvokeAsync(_serviceProvider, currentMessage, currentContext, ct);

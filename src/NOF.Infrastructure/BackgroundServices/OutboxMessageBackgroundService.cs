@@ -12,7 +12,6 @@ namespace NOF.Infrastructure;
 public sealed class OutboxMessageBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly CommandHandlerRegistry _commandHandlerRegistry;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
@@ -20,14 +19,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
-        CommandHandlerRegistry commandHandlerRegistry,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
         IHostEnvironment hostEnvironment)
     {
         _serviceProvider = serviceProvider;
-        _commandHandlerRegistry = commandHandlerRegistry;
         _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
@@ -125,7 +122,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         using var _ = currentTenant.PushTenant(tenantId);
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
-        activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, message.PayloadType);
+        activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, dispatchRoutes[0]);
         if (headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var activityTenantId))
         {
             activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, activityTenantId);
@@ -138,8 +135,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 case OutboxMessageType.Command:
                     await commandRider.SendAsync(
                         message.Payload,
-                        message.PayloadType,
-                        ResolveCommandDispatchRoute(dispatchRoutes[0]),
+                        dispatchRoutes[0],
                         headers,
                         cancellationToken);
                     _logger.LogDebug("Sent command via rider {MessageId} of route {Route} (retry {Retry})",
@@ -148,7 +144,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 case OutboxMessageType.Notification:
                     await notificationRider.PublishAsync(
                         message.Payload,
-                        message.PayloadType,
                         dispatchRoutes,
                         headers,
                         cancellationToken);
@@ -158,7 +153,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 default:
                     await AtomicRecordDeliveryFailureAsync(dbContext, message, "Unsupported message type", cancellationToken);
                     _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
-                        message.Id, message.PayloadType);
+                        message.Id, message.MessageType);
                     break;
             }
         }
@@ -184,8 +179,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
+        var dispatchRoutes = ResolveDispatchRoutes(message);
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
-            $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {message.PayloadType}",
+            $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {dispatchRoutes[0]}",
             ActivityKind.Producer,
             message.TraceParent,
             _hostEnvironment);
@@ -205,22 +201,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
 
         return routes;
-    }
-
-    private string ResolveCommandDispatchRoute(string dispatchRoute)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(dispatchRoute);
-
-        if (_commandHandlerRegistry.TryGetHandlerType(dispatchRoute, out var handlerType))
-        {
-            return handlerType.DisplayName;
-        }
-
-        var resolvedHandlerType = _commandHandlerRegistry.GetHandlers(dispatchRoute).FirstOrDefault()
-            ?? throw new InvalidOperationException(
-                $"Command dispatch route '{dispatchRoute}' is not registered in the generated handler registry.");
-
-        return resolvedHandlerType.DisplayName;
     }
 
     private async Task ProcessMessagesBatch(

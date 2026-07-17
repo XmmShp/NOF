@@ -223,6 +223,7 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
         foreach (var (handlerClassName, notificationFullName) in handlerPairs)
         {
             var invokerTypeName = $"__{SanitizeIdentifier(handlerClassName)}NotificationInboundInvoker";
+            sb.AppendLine($"            services.ReplaceOrAdd(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof({handlerClassName}), typeof({handlerClassName})));");
             sb.AppendLine($"            services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof({invokerTypeName}), typeof({invokerTypeName})));");
             sb.AppendLine($"            services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof({handlerClassName}), typeof({notificationFullName}), typeof({invokerTypeName})));");
         }
@@ -243,17 +244,10 @@ public class StateMachineSourceGenerator : IIncrementalGenerator
             sb.AppendLine($"        public global::System.Type MessageType => typeof({notificationFullName});");
             sb.AppendLine();
             sb.AppendLine("        public object Bind(");
-            sb.AppendLine("            string payloadTypeName,");
             sb.AppendLine("            global::System.ReadOnlyMemory<byte> payload,");
             sb.AppendLine("            global::System.Func<global::System.ReadOnlyMemory<byte>, global::System.Type, object?> deserialize)");
             sb.AppendLine("        {");
-            sb.AppendLine("            global::System.ArgumentException.ThrowIfNullOrWhiteSpace(payloadTypeName);");
             sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(deserialize);");
-            sb.AppendLine($"            if (!global::System.String.Equals(payloadTypeName, \"{escapedTypeName}\", global::System.StringComparison.Ordinal))");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                throw new global::System.InvalidOperationException(\"Payload type '\" + payloadTypeName + \"' does not match handler message type '{escapedTypeName}'.\");");
-            sb.AppendLine("            }");
-            sb.AppendLine();
             sb.AppendLine($"            return deserialize(payload, typeof({notificationFullName}))");
             sb.AppendLine($"                ?? throw new global::System.InvalidOperationException(\"Failed to deserialize message payload as '{escapedTypeName}'.\");");
             sb.AppendLine("        }");

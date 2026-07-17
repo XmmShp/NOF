@@ -47,6 +47,7 @@ public sealed class StateMachineSourceGeneratorTests
         var result = new StateMachineSourceGenerator().GetResult(compilation);
         var generatedCode = result.GeneratedTrees.Single().GetRoot().ToFullString();
 
+        Assert.Contains("services.ReplaceOrAdd(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Transient(typeof(__OrderStateMachine_OrderCreatedNotification_Handler), typeof(__OrderStateMachine_OrderCreatedNotification_Handler)));", generatedCode);
         Assert.Contains("services.Add(global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof(____OrderStateMachine_OrderCreatedNotification_HandlerNotificationInboundInvoker), typeof(____OrderStateMachine_OrderCreatedNotification_HandlerNotificationInboundInvoker)));", generatedCode);
         Assert.Contains("services.GetOrAddSingleton<global::NOF.Application.NotificationHandlerRegistry>().Add(new global::NOF.Application.NotificationHandlerRegistration(typeof(__OrderStateMachine_OrderCreatedNotification_Handler), typeof(global::App.OrderCreatedNotification), typeof(____OrderStateMachine_OrderCreatedNotification_HandlerNotificationInboundInvoker)));", generatedCode);
         Assert.Contains("internal sealed class ____OrderStateMachine_OrderCreatedNotification_HandlerNotificationInboundInvoker : global::NOF.Application.INotificationInboundHandlerInvoker", generatedCode);

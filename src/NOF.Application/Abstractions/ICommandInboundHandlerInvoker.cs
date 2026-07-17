@@ -15,7 +15,6 @@ public interface ICommandInboundHandlerInvoker
     Type MessageType { get; }
 
     object Bind(
-        string payloadTypeName,
         ReadOnlyMemory<byte> payload,
         Func<ReadOnlyMemory<byte>, Type, object?> deserialize);
 

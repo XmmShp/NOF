@@ -17,20 +17,19 @@ public class RabbitMQCommandRider : ICommandRider
     }
 
     public async Task SendAsync(ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        string dispatchRoute,
+        string messageRoute,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        await PublishToRabbitMQAsync(payload, payloadTypeName, dispatchRoute, headers, cancellationToken);
+        await PublishToRabbitMQAsync(payload, messageRoute, headers, cancellationToken);
     }
 
-    private async Task PublishToRabbitMQAsync(ReadOnlyMemory<byte> payload, string payloadTypeName, string dispatchRoute, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
+    private async Task PublishToRabbitMQAsync(ReadOnlyMemory<byte> payload, string messageRoute, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
     {
         await using var channel = await _connectionManager.CreateChannelAsync();
 
-        var exchangeName = dispatchRoute;
-        var routingKey = dispatchRoute;
+        var exchangeName = messageRoute;
+        var routingKey = messageRoute;
 
         await channel.ExchangeDeclareAsync(
             exchange: exchangeName,
@@ -42,8 +41,7 @@ public class RabbitMQCommandRider : ICommandRider
         var properties = new BasicProperties
         {
             Persistent = _options.Value.Durable,
-            ContentType = "application/octet-stream",
-            Type = payloadTypeName
+            ContentType = "application/octet-stream"
         };
 
         if (headers is not null)

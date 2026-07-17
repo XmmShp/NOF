@@ -11,17 +11,26 @@ namespace NOF.Infrastructure;
 public sealed class InboxMessageBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly CommandHandlerRegistry _commandHandlerRegistry;
+    private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
+    private readonly IHostEnvironment _hostEnvironment;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<InboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
+        CommandHandlerRegistry commandHandlerRegistry,
+        NotificationHandlerRegistry notificationHandlerRegistry,
+        IHostEnvironment hostEnvironment,
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer)
     {
         _serviceProvider = serviceProvider;
+        _commandHandlerRegistry = commandHandlerRegistry;
+        _notificationHandlerRegistry = notificationHandlerRegistry;
+        _hostEnvironment = hostEnvironment;
         _options = options.Value.Inbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
@@ -107,13 +116,14 @@ public sealed class InboxMessageBackgroundService : BackgroundService
 
         if (message.RetryCount > _options.MaxRetryCount)
         {
-            await MarkFailedAsync(message.Id, message.HandlerType, message.RetryCount, "Exceeded max retry count", cancellationToken);
+            await MarkFailedAsync(message.Id, message.Route, message.RetryCount, "Exceeded max retry count", cancellationToken);
             return;
         }
 
         var headers = DeserializeHeaders(message.Headers);
         var traceParent = ExtractTraceParent(headers);
         var processingHeaders = RemoveTraceParent(headers);
+        var handlerTypeName = ResolveHandlerTypeName(message);
 
         try
         {
@@ -126,8 +136,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                         var commandPipelineExecutor = services.GetRequiredService<CommandInboundPipelineExecutor>();
                         await commandPipelineExecutor.ExecuteAsync(
                             message.Payload,
-                            message.PayloadType,
-                            message.HandlerType,
+                            handlerTypeName,
                             processingHeaders,
                             cancellationToken);
                         break;
@@ -137,8 +146,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                         var notificationPipelineExecutor = services.GetRequiredService<NotificationInboundPipelineExecutor>();
                         await notificationPipelineExecutor.ExecuteAsync(
                             message.Payload,
-                            message.PayloadType,
-                            message.HandlerType,
+                            handlerTypeName,
                             processingHeaders,
                             cancellationToken);
                         break;
@@ -147,24 +155,24 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                     throw new InvalidOperationException($"Unsupported inbox message type '{message.MessageType}'.");
             }
 
-            await MarkProcessedAsync(message.Id, message.HandlerType, cancellationToken);
+            await MarkProcessedAsync(message.Id, message.Route, cancellationToken);
         }
         catch (Exception ex)
         {
             if (message.RetryCount >= _options.MaxRetryCount)
             {
-                await MarkFailedAsync(message.Id, message.HandlerType, message.RetryCount, ex.Message, cancellationToken, ex);
+                await MarkFailedAsync(message.Id, message.Route, message.RetryCount, ex.Message, cancellationToken, ex);
             }
             else
             {
-                await MarkRetryAsync(message.Id, message.HandlerType, message.RetryCount, ex.Message, cancellationToken);
+                await MarkRetryAsync(message.Id, message.Route, message.RetryCount, ex.Message, cancellationToken);
             }
 
             throw;
         }
     }
 
-    private async Task MarkProcessedAsync(Guid messageId, string handlerType, CancellationToken cancellationToken)
+    private async Task MarkProcessedAsync(Guid messageId, string route, CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
@@ -172,7 +180,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var processedAt = DateTime.UtcNow;
 
         await dbContext.Set<NOFInboxMessage>()
-            .Where(m => m.Id == messageId && m.HandlerType == handlerType && m.Status == InboxMessageStatus.Pending)
+            .Where(m => m.Id == messageId && m.Route == route && m.Status == InboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, InboxMessageStatus.Processed)
                 .SetProperty(m => m.ProcessedAtUtc, processedAt)
@@ -182,14 +190,14 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                 cancellationToken);
     }
 
-    private async Task MarkRetryAsync(Guid messageId, string handlerType, int retryCount, string error, CancellationToken cancellationToken)
+    private async Task MarkRetryAsync(Guid messageId, string route, int retryCount, string error, CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
         var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
 
         await dbContext.Set<NOFInboxMessage>()
-            .Where(m => m.Id == messageId && m.HandlerType == handlerType && m.Status == InboxMessageStatus.Pending)
+            .Where(m => m.Id == messageId && m.Route == route && m.Status == InboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.ErrorMessage, error)
                 .SetProperty(m => m.ClaimedBy, (string?)null)
@@ -203,7 +211,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             error);
     }
 
-    private async Task MarkFailedAsync(Guid messageId, string handlerType, int retryCount, string error, CancellationToken cancellationToken, Exception? ex = null)
+    private async Task MarkFailedAsync(Guid messageId, string route, int retryCount, string error, CancellationToken cancellationToken, Exception? ex = null)
     {
         using var scope = _serviceProvider.CreateScope();
         scope.ServiceProvider.ResolveDaemonServices();
@@ -211,7 +219,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         var failedAt = DateTime.UtcNow;
 
         await dbContext.Set<NOFInboxMessage>()
-            .Where(m => m.Id == messageId && m.HandlerType == handlerType && m.Status == InboxMessageStatus.Pending)
+            .Where(m => m.Id == messageId && m.Route == route && m.Status == InboxMessageStatus.Pending)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(m => m.Status, InboxMessageStatus.Failed)
                 .SetProperty(m => m.ErrorMessage, error)
@@ -310,7 +318,65 @@ public sealed class InboxMessageBackgroundService : BackgroundService
 
     private static Activity? StartBoundaryActivity(NOFInboxMessage message, string? traceParent)
         => NOFInfrastructureConstants.InboundPipeline.Source.StartActivityWithParent(
-            $"InboundTransport: {message.PayloadType}",
+            $"InboundTransport: {message.Route}",
             ActivityKind.Consumer,
             traceParent);
+
+    private string ResolveHandlerTypeName(NOFInboxMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message.Route);
+
+        return message.MessageType switch
+        {
+            InboxMessageType.Command => ResolveCommandHandlerTypeName(message.Route),
+            InboxMessageType.Notification => ResolveNotificationHandlerTypeName(message.Route),
+            _ => throw new InvalidOperationException($"Unsupported inbox message type '{message.MessageType}'.")
+        };
+    }
+
+    private string ResolveCommandHandlerTypeName(string route)
+    {
+        if (_commandHandlerRegistry.TryGetHandlerType(route, out var handlerType))
+        {
+            return handlerType.DisplayName;
+        }
+
+        var resolvedHandlerType = _commandHandlerRegistry.GetHandlers(route).FirstOrDefault()
+            ?? throw new InvalidOperationException($"No command handler route is registered for '{route}'.");
+
+        return resolvedHandlerType.DisplayName;
+    }
+
+    private string ResolveNotificationHandlerTypeName(string route)
+    {
+        if (_notificationHandlerRegistry.TryGetHandlerType(route, out var handlerType))
+        {
+            return handlerType.DisplayName;
+        }
+
+        foreach (var notificationGroup in _notificationHandlerRegistry.Freeze().GroupBy(static registration => registration.HandlerType))
+        {
+            var handlerRoute = BuildNotificationRoute(_hostEnvironment.ServiceName, notificationGroup.Key.DisplayName);
+
+            if (string.Equals(handlerRoute, route, StringComparison.Ordinal))
+            {
+                return notificationGroup.Key.DisplayName;
+            }
+        }
+
+        throw new InvalidOperationException($"No notification handler route is registered for '{route}'.");
+    }
+
+    private static string BuildNotificationRoute(string? serviceName, string handlerDisplayName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(handlerDisplayName);
+
+        if (string.IsNullOrWhiteSpace(serviceName))
+        {
+            return handlerDisplayName;
+        }
+
+        return $"{serviceName}.{handlerDisplayName}";
+    }
 }

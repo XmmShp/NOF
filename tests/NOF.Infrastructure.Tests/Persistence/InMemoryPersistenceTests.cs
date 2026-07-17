@@ -179,7 +179,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Equal(true, inbox.FindAnnotation("NOF:HostOnly")?.Value);
         Assert.Equal(true, outbox.FindAnnotation("NOF:HostOnly")?.Value);
         Assert.Equal(true, stateMachine.FindAnnotation("NOF:HostOnly")?.Value);
-        Assert.Equal([nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.HandlerType)],
+        Assert.Equal([nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.Route)],
             inbox.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
         Assert.Equal([nameof(NOFStateMachineContext.CorrelationId), nameof(NOFStateMachineContext.DefinitionTypeName)],
             stateMachine.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
@@ -1228,8 +1228,7 @@ public class SqliteInMemoryPersistenceTests
         var message = new NOFInboxMessage
         {
             Id = Guid.NewGuid(),
-            HandlerType = typeof(SqliteInMemoryPersistenceTests).AssemblyQualifiedName!,
-            PayloadType = typeof(string).AssemblyQualifiedName!,
+            Route = typeof(SqliteInMemoryPersistenceTests).AssemblyQualifiedName!,
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = InboxMessageType.Command
@@ -1237,11 +1236,11 @@ public class SqliteInMemoryPersistenceTests
 
         db.Set<NOFInboxMessage>().Add(message);
         await db.SaveChangesAsync();
-        Assert.NotNull(await db.FindAsync<NOFInboxMessage>([message.Id, message.HandlerType]));
+        Assert.NotNull(await db.FindAsync<NOFInboxMessage>([message.Id, message.Route]));
 
         db.Set<NOFInboxMessage>().Remove(message);
         await db.SaveChangesAsync();
-        Assert.Null(await db.FindAsync<NOFInboxMessage>([message.Id, message.HandlerType]));
+        Assert.Null(await db.FindAsync<NOFInboxMessage>([message.Id, message.Route]));
     }
 
     [Fact]
@@ -1257,7 +1256,6 @@ public class SqliteInMemoryPersistenceTests
         db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id,
-            PayloadType = typeof(string).AssemblyQualifiedName!,
             DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
@@ -1317,7 +1315,6 @@ public class SqliteInMemoryPersistenceTests
         db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id1,
-            PayloadType = typeof(string).AssemblyQualifiedName!,
             DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("a"),
             Headers = "{}",
@@ -1328,7 +1325,6 @@ public class SqliteInMemoryPersistenceTests
         db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id2,
-            PayloadType = typeof(string).AssemblyQualifiedName!,
             DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("b"),
             Headers = "{}",
@@ -1371,7 +1367,6 @@ public class SqliteInMemoryPersistenceTests
         db.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
         {
             Id = id,
-            PayloadType = typeof(string).AssemblyQualifiedName!,
             DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
@@ -1418,7 +1413,6 @@ public class SqliteInMemoryPersistenceTests
             {
                 Id = expiredId,
                 RetryCount = 2,
-                PayloadType = typeof(string).AssemblyQualifiedName!,
                 DispatchRoutes = "[\"System.String\"]",
                 Payload = System.Text.Encoding.UTF8.GetBytes("expired"),
                 Headers = "{}",
@@ -1430,7 +1424,6 @@ public class SqliteInMemoryPersistenceTests
             {
                 Id = futureId,
                 RetryCount = 2,
-                PayloadType = typeof(string).AssemblyQualifiedName!,
                 DispatchRoutes = "[\"System.String\"]",
                 Payload = System.Text.Encoding.UTF8.GetBytes("future"),
                 Headers = "{}",
@@ -1488,8 +1481,7 @@ public class SqliteInMemoryPersistenceTests
             {
                 Id = expiredId,
                 RetryCount = 2,
-                HandlerType = handlerType,
-                PayloadType = typeof(string).AssemblyQualifiedName!,
+                Route = handlerType,
                 Payload = System.Text.Encoding.UTF8.GetBytes("expired"),
                 Headers = "{}",
                 MessageType = InboxMessageType.Command,
@@ -1500,8 +1492,7 @@ public class SqliteInMemoryPersistenceTests
             {
                 Id = futureId,
                 RetryCount = 2,
-                HandlerType = handlerType,
-                PayloadType = typeof(string).AssemblyQualifiedName!,
+                Route = handlerType,
                 Payload = System.Text.Encoding.UTF8.GetBytes("future"),
                 Headers = "{}",
                 MessageType = InboxMessageType.Command,

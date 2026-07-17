@@ -7,8 +7,7 @@ public class NOFInboxMessage
     public int RetryCount { get; set; }
 
     public InboxMessageType MessageType { get; set; }
-    public string PayloadType { get; set; } = null!;
-    public string HandlerType { get; set; } = null!;
+    public string Route { get; set; } = null!;
     public byte[] Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
     public DateTime? ProcessedAtUtc { get; set; }

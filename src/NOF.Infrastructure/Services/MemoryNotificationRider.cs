@@ -21,8 +21,7 @@ public sealed class MemoryNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        IReadOnlyCollection<string> dispatchRoutes,
+        IReadOnlyCollection<string> messageRoutes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
@@ -30,11 +29,11 @@ public sealed class MemoryNotificationRider : INotificationRider
 
         // Deduplicate per handler, because each handler is a separate reliable processing unit.
         var seenHandlerTypeNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var dispatchRoute in dispatchRoutes)
+        foreach (var messageRoute in messageRoutes)
         {
-            foreach (var handlerTypeName in ResolveHandlerTypeNames(dispatchRoute))
+            foreach (var route in ResolveRoutes(messageRoute))
             {
-                if (!seenHandlerTypeNames.Add(handlerTypeName))
+                if (!seenHandlerTypeNames.Add(route))
                 {
                     continue;
                 }
@@ -43,32 +42,24 @@ public sealed class MemoryNotificationRider : INotificationRider
                     messageId,
                     InboxMessageType.Notification,
                     payload,
-                    payloadTypeName,
-                    handlerTypeName,
+                    route,
                     headers,
                     cancellationToken);
             }
         }
     }
 
-    private IReadOnlyCollection<string> ResolveHandlerTypeNames(string dispatchRoute)
+    private IReadOnlyCollection<string> ResolveRoutes(string messageRoute)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(dispatchRoute);
-
-        if (_notificationHandlerRegistry.TryGetHandlerType(dispatchRoute, out var handlerType))
-        {
-            return [handlerType.DisplayName];
-        }
-
-        return [.. _notificationHandlerRegistry.GetHandlers(dispatchRoute).Select(static handlerType => handlerType.DisplayName)];
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageRoute);
+        return [.. _notificationHandlerRegistry.GetHandlers(messageRoute).Select(static handlerType => handlerType.DisplayName)];
     }
 
     private async Task<bool> EnqueueAsync(
         Guid messageId,
         InboxMessageType messageType,
         ReadOnlyMemory<byte> payload,
-        string payloadTypeName,
-        string handlerTypeName,
+        string route,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken)
     {
@@ -85,8 +76,7 @@ public sealed class MemoryNotificationRider : INotificationRider
         {
             Id = messageId,
             MessageType = messageType,
-            PayloadType = payloadTypeName,
-            HandlerType = handlerTypeName,
+            Route = route,
             Payload = payload.ToArray(),
             Headers = SerializeHeaders(headers)
         });
