@@ -7,34 +7,26 @@ namespace NOF.Infrastructure;
 public sealed class MemoryCommandRider : ICommandRider
 {
     private readonly CommandHandlerRegistry _commandHandlerRegistry;
-    private readonly MessageTypeResolver _messageTypeResolver;
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _objectSerializer;
 
     public MemoryCommandRider(
         CommandHandlerRegistry commandHandlerRegistry,
-        MessageTypeResolver messageTypeResolver,
         IServiceProvider serviceProvider,
         IObjectSerializer objectSerializer)
     {
         _commandHandlerRegistry = commandHandlerRegistry;
-        _messageTypeResolver = messageTypeResolver;
         _serviceProvider = serviceProvider;
         _objectSerializer = objectSerializer;
     }
 
     public async Task SendAsync(ReadOnlyMemory<byte> payload,
         string payloadTypeName,
-        string commandTypeName,
+        string dispatchRoute,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
-        var commandType = _commandHandlerRegistry.TryGetCommandType(commandTypeName, out var resolvedCommandType)
-            ? resolvedCommandType
-            : _messageTypeResolver.Resolve(commandTypeName);
-        var handlerType = _commandHandlerRegistry.GetHandlers(commandType).FirstOrDefault()
-            ?? throw new InvalidOperationException(
-                $"In-memory transport cannot route command '{commandType.Name}'. No matching local handler registered.");
+        var handlerTypeName = ResolveHandlerTypeName(dispatchRoute);
 
         var messageId = ResolveMessageId(headers);
         await EnqueueAsync(
@@ -42,9 +34,25 @@ public sealed class MemoryCommandRider : ICommandRider
             InboxMessageType.Command,
             payload,
             payloadTypeName,
-            handlerType.DisplayName,
+            handlerTypeName,
             headers,
             cancellationToken);
+    }
+
+    private string ResolveHandlerTypeName(string dispatchRoute)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dispatchRoute);
+
+        if (_commandHandlerRegistry.TryGetHandlerType(dispatchRoute, out var handlerType))
+        {
+            return handlerType.DisplayName;
+        }
+
+        var resolvedHandlerType = _commandHandlerRegistry.GetHandlers(dispatchRoute).FirstOrDefault()
+            ?? throw new InvalidOperationException(
+                $"In-memory transport cannot route command '{dispatchRoute}'. No matching local handler registered.");
+
+        return resolvedHandlerType.DisplayName;
     }
 
     private async Task<bool> EnqueueAsync(

@@ -34,7 +34,7 @@ public sealed class NotificationPublisher : INotificationPublisher
         await ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
         var payloadTypeName = notification.GetType().DisplayName;
-        var dispatchTypeNames = _objectSerializer.SerializeToText(
+        var dispatchRoutes = _objectSerializer.SerializeToText(
             notificationTypes.Select(static type => type.DisplayName).ToArray(),
             typeof(string[]));
 
@@ -43,7 +43,7 @@ public sealed class NotificationPublisher : INotificationPublisher
             Id = Guid.NewGuid(),
             MessageType = OutboxMessageType.Notification,
             PayloadType = payloadTypeName,
-            DispatchTypes = dispatchTypeNames,
+            DispatchRoutes = dispatchRoutes,
             Payload = _objectSerializer.Serialize(notification).ToArray(),
             Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
             TraceParent = Activity.Current?.ToTraceParent()
@@ -61,8 +61,8 @@ public sealed class NotificationPublisher : INotificationPublisher
         {
             var payload = _objectSerializer.Serialize(message, message.GetType());
             var payloadTypeName = message.GetType().DisplayName;
-            var notificationTypeNames = notificationTypes.Select(static type => type.DisplayName).ToArray();
-            await _rider.PublishAsync(payload, payloadTypeName, notificationTypeNames, outboundContext.Headers, ct).ConfigureAwait(false);
+            var dispatchRoutes = notificationTypes.Select(static type => type.DisplayName).ToArray();
+            await _rider.PublishAsync(payload, payloadTypeName, dispatchRoutes, outboundContext.Headers, ct).ConfigureAwait(false);
         }, cancellationToken);
     }
 

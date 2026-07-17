@@ -18,7 +18,7 @@ public class RabbitMQNotificationRider : INotificationRider
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
         string payloadTypeName,
-        IReadOnlyCollection<string> notificationTypeNames,
+        IReadOnlyCollection<string> dispatchRoutes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
@@ -41,9 +41,9 @@ public class RabbitMQNotificationRider : INotificationRider
             properties.Headers = headerDict;
         }
 
-        foreach (var notificationTypeName in notificationTypeNames)
+        foreach (var dispatchRoute in dispatchRoutes)
         {
-            var exchangeName = notificationTypeName;
+            var exchangeName = dispatchRoute;
 
             await channel.ExchangeDeclareAsync(
                 exchange: exchangeName,

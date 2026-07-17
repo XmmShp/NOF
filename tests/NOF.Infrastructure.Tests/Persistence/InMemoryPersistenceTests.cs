@@ -1258,7 +1258,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            DispatchTypes = "[\"System.String\"]",
+            DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command,
@@ -1318,7 +1318,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id1,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            DispatchTypes = "[\"System.String\"]",
+            DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("a"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command
@@ -1329,7 +1329,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id2,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            DispatchTypes = "[\"System.String\"]",
+            DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("b"),
             Headers = "{}",
             MessageType = OutboxMessageType.Command
@@ -1372,7 +1372,7 @@ public class SqliteInMemoryPersistenceTests
         {
             Id = id,
             PayloadType = typeof(string).AssemblyQualifiedName!,
-            DispatchTypes = "[\"System.String\"]",
+            DispatchRoutes = "[\"System.String\"]",
             Payload = System.Text.Encoding.UTF8.GetBytes("payload"),
             Headers = "{}",
             MessageType = OutboxMessageType.Notification
@@ -1419,7 +1419,7 @@ public class SqliteInMemoryPersistenceTests
                 Id = expiredId,
                 RetryCount = 2,
                 PayloadType = typeof(string).AssemblyQualifiedName!,
-                DispatchTypes = "[\"System.String\"]",
+                DispatchRoutes = "[\"System.String\"]",
                 Payload = System.Text.Encoding.UTF8.GetBytes("expired"),
                 Headers = "{}",
                 MessageType = OutboxMessageType.Command,
@@ -1431,7 +1431,7 @@ public class SqliteInMemoryPersistenceTests
                 Id = futureId,
                 RetryCount = 2,
                 PayloadType = typeof(string).AssemblyQualifiedName!,
-                DispatchTypes = "[\"System.String\"]",
+                DispatchRoutes = "[\"System.String\"]",
                 Payload = System.Text.Encoding.UTF8.GetBytes("future"),
                 Headers = "{}",
                 MessageType = OutboxMessageType.Command,

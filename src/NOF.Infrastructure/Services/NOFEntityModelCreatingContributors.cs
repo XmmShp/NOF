@@ -54,7 +54,7 @@ public sealed class NOFOutboxMessageModelCreatingContributor : IDbContextModelCr
             entity.HasIndex(nameof(NOFOutboxMessage.Status), nameof(NOFOutboxMessage.ClaimExpiresAtUtc));
             entity.HasIndex(e => e.ClaimedBy);
             entity.Property(e => e.PayloadType).HasMaxLength(512).IsRequired();
-            entity.Property(e => e.DispatchTypes).IsRequired();
+            entity.Property(e => e.DispatchRoutes).IsRequired();
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.Headers).IsRequired();
             entity.Property(e => e.ErrorMessage).HasMaxLength(2048);

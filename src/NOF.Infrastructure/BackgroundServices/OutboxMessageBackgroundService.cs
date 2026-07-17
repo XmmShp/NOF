@@ -12,26 +12,26 @@ namespace NOF.Infrastructure;
 public sealed class OutboxMessageBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly CommandHandlerRegistry _commandHandlerRegistry;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
     private readonly IHostEnvironment _hostEnvironment;
-    private readonly MessageTypeResolver _messageTypeResolver;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
+        CommandHandlerRegistry commandHandlerRegistry,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
-        IHostEnvironment hostEnvironment,
-        MessageTypeResolver messageTypeResolver)
+        IHostEnvironment hostEnvironment)
     {
         _serviceProvider = serviceProvider;
+        _commandHandlerRegistry = commandHandlerRegistry;
         _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
         _hostEnvironment = hostEnvironment;
-        _messageTypeResolver = messageTypeResolver;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -70,8 +70,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             _logger.LogDebug("Skipping outbox processing because no IDbContext provider is registered.");
             return;
         }
-        var commandSender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
-        var notificationPublisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var commandRider = scope.ServiceProvider.GetRequiredService<ICommandRider>();
+        var notificationRider = scope.ServiceProvider.GetRequiredService<INotificationRider>();
 
         try
         {
@@ -84,7 +84,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
 
             _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
-            await ProcessMessagesBatch(scope.ServiceProvider, dbContext, pendingMessages, commandSender, notificationPublisher, cancellationToken);
+            await ProcessMessagesBatch(scope.ServiceProvider, dbContext, pendingMessages, commandRider, notificationRider, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -96,8 +96,8 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         IServiceProvider scopedServiceProvider,
         IDbContext dbContext,
         NOFOutboxMessage message,
-        ICommandSender commandSender,
-        INotificationPublisher notificationPublisher,
+        ICommandRider commandRider,
+        INotificationRider notificationRider,
         CancellationToken cancellationToken)
     {
         if (message.RetryCount >= _options.MaxRetryCount)
@@ -110,10 +110,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Restore the tracing context
         using var activity = RestoreTracingContext(message);
-        var dispatchTypes = ResolveDispatchTypes(message);
-        var payloadType = _messageTypeResolver.Resolve(message.PayloadType);
-        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)
-            ?? throw new InvalidOperationException($"Failed to deserialize message payload as '{message.PayloadType}'.");
+        var dispatchRoutes = ResolveDispatchRoutes(message);
         var headers = string.IsNullOrWhiteSpace(message.Headers)
             ? new Dictionary<string, string?>()
             : _objectSerializer.Deserialize<Dictionary<string, string?>>(message.Headers) ?? new Dictionary<string, string?>();
@@ -126,10 +123,9 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             ? TenantId.Normalize(headerTenantId)
             : TenantId.Normalize(null);
         using var _ = currentTenant.PushTenant(tenantId);
-        var context = Context.Empty.ReplaceHeadersFrom(headers);
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
-        activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, payload.GetType().Name);
+        activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, message.PayloadType);
         if (headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var activityTenantId))
         {
             activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.TenantId, activityTenantId);
@@ -140,19 +136,29 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             switch (message.MessageType)
             {
                 case OutboxMessageType.Command:
-                    await commandSender.SendAsync(payload, dispatchTypes[0], context, cancellationToken);
-                    _logger.LogDebug("Sent command via sender {MessageId} of type {Type} (retry {Retry})",
-                        message.Id, payload.GetType().Name, message.RetryCount);
+                    await commandRider.SendAsync(
+                        message.Payload,
+                        message.PayloadType,
+                        ResolveCommandDispatchRoute(dispatchRoutes[0]),
+                        headers,
+                        cancellationToken);
+                    _logger.LogDebug("Sent command via rider {MessageId} of route {Route} (retry {Retry})",
+                        message.Id, dispatchRoutes[0], message.RetryCount);
                     break;
                 case OutboxMessageType.Notification:
-                    await notificationPublisher.PublishAsync(payload, dispatchTypes, context, cancellationToken);
-                    _logger.LogDebug("Published notification via publisher {MessageId} of type {Type} (retry {Retry})",
-                        message.Id, payload.GetType().Name, message.RetryCount);
+                    await notificationRider.PublishAsync(
+                        message.Payload,
+                        message.PayloadType,
+                        dispatchRoutes,
+                        headers,
+                        cancellationToken);
+                    _logger.LogDebug("Published notification via rider {MessageId} with {RouteCount} routes (retry {Retry})",
+                        message.Id, dispatchRoutes.Length, message.RetryCount);
                     break;
                 default:
                     await AtomicRecordDeliveryFailureAsync(dbContext, message, "Unsupported message type", cancellationToken);
                     _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
-                        message.Id, payload.GetType().FullName ?? "null");
+                        message.Id, message.PayloadType);
                     break;
             }
         }
@@ -178,38 +184,51 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
-        var payloadType = _messageTypeResolver.Resolve(message.PayloadType);
-        var payload = _objectSerializer.Deserialize(message.Payload, payloadType)
-            ?? throw new InvalidOperationException($"Failed to deserialize message payload as '{message.PayloadType}'.");
         return NOFInfrastructureConstants.OutboundPipeline.Source.StartActivityWithParent(
-            $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {payload.GetType().FullName}",
+            $"{NOFInfrastructureConstants.OutboundPipeline.ActivityNames.MessageSending}: {message.PayloadType}",
             ActivityKind.Producer,
             message.TraceParent,
             _hostEnvironment);
     }
 
-    private Type[] ResolveDispatchTypes(NOFOutboxMessage message)
+    private string[] ResolveDispatchRoutes(NOFOutboxMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.DispatchTypes))
+        if (string.IsNullOrWhiteSpace(message.DispatchRoutes))
         {
-            return [_messageTypeResolver.Resolve(message.PayloadType)];
+            throw new InvalidOperationException($"Outbox message '{message.Id}' does not contain any dispatch routes.");
         }
 
-        var typeNames = _objectSerializer.Deserialize<string[]>(message.DispatchTypes);
-        if (typeNames is null || typeNames.Length == 0)
+        var routes = _objectSerializer.Deserialize<string[]>(message.DispatchRoutes);
+        if (routes is null || routes.Length == 0)
         {
-            return [_messageTypeResolver.Resolve(message.PayloadType)];
+            throw new InvalidOperationException($"Outbox message '{message.Id}' does not contain any dispatch routes.");
         }
 
-        return _messageTypeResolver.Resolve(typeNames);
+        return routes;
+    }
+
+    private string ResolveCommandDispatchRoute(string dispatchRoute)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dispatchRoute);
+
+        if (_commandHandlerRegistry.TryGetHandlerType(dispatchRoute, out var handlerType))
+        {
+            return handlerType.DisplayName;
+        }
+
+        var resolvedHandlerType = _commandHandlerRegistry.GetHandlers(dispatchRoute).FirstOrDefault()
+            ?? throw new InvalidOperationException(
+                $"Command dispatch route '{dispatchRoute}' is not registered in the generated handler registry.");
+
+        return resolvedHandlerType.DisplayName;
     }
 
     private async Task ProcessMessagesBatch(
         IServiceProvider scopedServiceProvider,
         IDbContext dbContext,
         IReadOnlyCollection<NOFOutboxMessage> pendingMessages,
-        ICommandSender commandSender,
-        INotificationPublisher notificationPublisher,
+        ICommandRider commandRider,
+        INotificationRider notificationRider,
         CancellationToken cancellationToken)
     {
         var succeededIds = new List<Guid>(pendingMessages.Count);
@@ -219,7 +238,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleMessageAsync(scopedServiceProvider, dbContext, message, commandSender, notificationPublisher, cancellationToken);
+                await ProcessSingleMessageAsync(scopedServiceProvider, dbContext, message, commandRider, notificationRider, cancellationToken);
                 succeededIds.Add(message.Id);
             }
             catch (Exception ex)

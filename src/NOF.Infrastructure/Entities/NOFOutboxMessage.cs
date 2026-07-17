@@ -14,7 +14,7 @@ public class NOFOutboxMessage
 
     public OutboxMessageType MessageType { get; set; }
     public string PayloadType { get; set; } = null!;
-    public string DispatchTypes { get; set; } = null!;
+    public string DispatchRoutes { get; set; } = null!;
     public byte[] Payload { get; set; } = null!;
     public string Headers { get; set; } = null!;
     public DateTime? SentAtUtc { get; set; }

@@ -7,40 +7,34 @@ namespace NOF.Infrastructure;
 public sealed class MemoryNotificationRider : INotificationRider
 {
     private readonly NotificationHandlerRegistry _notificationHandlerRegistry;
-    private readonly MessageTypeResolver _messageTypeResolver;
     private readonly IServiceProvider _serviceProvider;
     private readonly IObjectSerializer _objectSerializer;
 
     public MemoryNotificationRider(
         NotificationHandlerRegistry notificationHandlerRegistry,
-        MessageTypeResolver messageTypeResolver,
         IServiceProvider serviceProvider,
         IObjectSerializer objectSerializer)
     {
         _notificationHandlerRegistry = notificationHandlerRegistry;
-        _messageTypeResolver = messageTypeResolver;
         _serviceProvider = serviceProvider;
         _objectSerializer = objectSerializer;
     }
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
         string payloadTypeName,
-        IReadOnlyCollection<string> notificationTypeNames,
+        IReadOnlyCollection<string> dispatchRoutes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
         var messageId = ResolveMessageId(headers);
 
         // Deduplicate per handler, because each handler is a separate reliable processing unit.
-        var seenHandlerTypes = new HashSet<Type>();
-        foreach (var notificationTypeName in notificationTypeNames)
+        var seenHandlerTypeNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var dispatchRoute in dispatchRoutes)
         {
-            var notificationType = _notificationHandlerRegistry.TryGetNotificationType(notificationTypeName, out var resolvedNotificationType)
-                ? resolvedNotificationType
-                : _messageTypeResolver.Resolve(notificationTypeName);
-            foreach (var handlerType in _notificationHandlerRegistry.GetHandlers(notificationType))
+            foreach (var handlerTypeName in ResolveHandlerTypeNames(dispatchRoute))
             {
-                if (!seenHandlerTypes.Add(handlerType))
+                if (!seenHandlerTypeNames.Add(handlerTypeName))
                 {
                     continue;
                 }
@@ -50,11 +44,23 @@ public sealed class MemoryNotificationRider : INotificationRider
                     InboxMessageType.Notification,
                     payload,
                     payloadTypeName,
-                    handlerType.DisplayName,
+                    handlerTypeName,
                     headers,
                     cancellationToken);
             }
         }
+    }
+
+    private IReadOnlyCollection<string> ResolveHandlerTypeNames(string dispatchRoute)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dispatchRoute);
+
+        if (_notificationHandlerRegistry.TryGetHandlerType(dispatchRoute, out var handlerType))
+        {
+            return [handlerType.DisplayName];
+        }
+
+        return [.. _notificationHandlerRegistry.GetHandlers(dispatchRoute).Select(static handlerType => handlerType.DisplayName)];
     }
 
     private async Task<bool> EnqueueAsync(

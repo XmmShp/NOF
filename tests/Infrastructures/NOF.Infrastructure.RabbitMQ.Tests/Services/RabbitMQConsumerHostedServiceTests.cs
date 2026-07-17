@@ -9,6 +9,15 @@ namespace NOF.Infrastructure.RabbitMQ.Tests.Services;
 public class RabbitMQConsumerHostedServiceTests
 {
     [Fact]
+    public void BuildCommandQueueName_ShouldUseHandlerName()
+    {
+        var queueName = RabbitMQConsumerHostedService.BuildCommandQueueName(
+            "App.Commands.CreateOrderHandler");
+
+        Assert.Equal("App.Commands.CreateOrderHandler", queueName);
+    }
+
+    [Fact]
     public void BuildNotificationQueueName_ShouldPrefixServiceName()
     {
         var queueName = RabbitMQConsumerHostedService.BuildNotificationQueueName(
@@ -48,7 +57,6 @@ public class RabbitMQConsumerHostedServiceTests
             new TestHostEnvironment(),
             null!,
             new JsonObjectSerializer(),
-            new MessageTypeResolver(commandHandlerRegistry, new NotificationHandlerRegistry()),
             NullLogger<RabbitMQConsumerHostedService>.Instance);
 
         await Assert.ThrowsAsync<ObjectDisposedException>(() => service.StartAsync(CancellationToken.None));

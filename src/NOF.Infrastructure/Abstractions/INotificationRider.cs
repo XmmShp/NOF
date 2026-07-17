@@ -4,7 +4,7 @@ public interface INotificationRider
 {
     Task PublishAsync(ReadOnlyMemory<byte> payload,
         string payloadTypeName,
-        IReadOnlyCollection<string> notificationTypeNames,
+        IReadOnlyCollection<string> dispatchRoutes,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default);
 }
