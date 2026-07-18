@@ -17,10 +17,12 @@ public class RabbitMQNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
-        IReadOnlyCollection<string> messageRoutes,
+        string messageRoute,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageRoute);
+
         await using var channel = await _connectionManager.CreateChannelAsync();
 
         var properties = new BasicProperties
@@ -39,24 +41,19 @@ public class RabbitMQNotificationRider : INotificationRider
             properties.Headers = headerDict;
         }
 
-        foreach (var messageRoute in messageRoutes)
-        {
-            var exchangeName = messageRoute;
+        await channel.ExchangeDeclareAsync(
+            exchange: messageRoute,
+            type: "fanout",
+            durable: _options.Value.Durable,
+            autoDelete: _options.Value.AutoDelete,
+            cancellationToken: cancellationToken);
 
-            await channel.ExchangeDeclareAsync(
-                exchange: exchangeName,
-                type: "fanout",
-                durable: _options.Value.Durable,
-                autoDelete: _options.Value.AutoDelete,
-                cancellationToken: cancellationToken);
-
-            await channel.BasicPublishAsync(
-                exchange: exchangeName,
-                routingKey: string.Empty,
-                basicProperties: properties,
-                body: payload,
-                mandatory: false,
-                cancellationToken: cancellationToken);
-        }
+        await channel.BasicPublishAsync(
+            exchange: messageRoute,
+            routingKey: string.Empty,
+            basicProperties: properties,
+            body: payload,
+            mandatory: false,
+            cancellationToken: cancellationToken);
     }
 }

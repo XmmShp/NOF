@@ -82,21 +82,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             await SetupCommandConsumerAsync(registration.QueueName, registration.MessageRoute, cancellationToken);
         }
 
-        var notificationGroups = _notificationHandlerRegistry.Freeze()
-            .GroupBy(info => info.HandlerType)
-            .ToArray();
+        var notificationRegistrations = BuildNotificationConsumerRegistrations(
+            _notificationHandlerRegistry.Freeze(),
+            _hostEnvironment.ServiceName);
 
-        foreach (var group in notificationGroups)
+        foreach (var registration in notificationRegistrations)
         {
-            var handlerType = group.Key;
-            var queueName = BuildNotificationQueueName(_hostEnvironment.ServiceName, handlerType.DisplayName);
-            var notificationTypes = group
-                .Select(info => info.NotificationType)
-                .Distinct()
-                .ToArray();
-
-            _notificationHandlerRoutes[queueName] = handlerType.DisplayName;
-            await SetupNotificationConsumerAsync(queueName, notificationTypes, cancellationToken);
+            _notificationHandlerRoutes[registration.QueueName] = registration.HandlerTypeName;
+            await SetupNotificationConsumerAsync(registration.QueueName, registration.NotificationTypes, cancellationToken);
         }
     }
 
@@ -357,6 +350,27 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         return $"{applicationName}.{handlerDisplayName}";
     }
 
+    internal static IReadOnlyCollection<NotificationConsumerRegistration> BuildNotificationConsumerRegistrations(
+        IEnumerable<NotificationHandlerRegistration> registrations,
+        string? applicationName)
+    {
+        ArgumentNullException.ThrowIfNull(registrations);
+
+        return [.. registrations
+            .GroupBy(static registration => registration.HandlerType)
+            .Select(group =>
+            {
+                var handlerTypeName = group.Key.DisplayName;
+                var queueName = BuildNotificationQueueName(applicationName, handlerTypeName);
+                var notificationTypes = group
+                    .Select(static registration => registration.NotificationType)
+                    .Distinct()
+                    .ToArray();
+
+                return new NotificationConsumerRegistration(queueName, handlerTypeName, notificationTypes);
+            })];
+    }
+
     private static Guid ResolveMessageId(Dictionary<string, string?>? headers)
     {
         if (headers is not null
@@ -390,4 +404,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
         _disposed = true;
     }
+
+    internal sealed record NotificationConsumerRegistration(
+        string QueueName,
+        string HandlerTypeName,
+        IReadOnlyCollection<Type> NotificationTypes);
 }

@@ -3,7 +3,7 @@ namespace NOF.Infrastructure;
 public interface INotificationRider
 {
     Task PublishAsync(ReadOnlyMemory<byte> payload,
-        IReadOnlyCollection<string> messageRoutes,
+        string messageRoute,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default);
 }

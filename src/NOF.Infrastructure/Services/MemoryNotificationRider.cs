@@ -21,31 +21,30 @@ public sealed class MemoryNotificationRider : INotificationRider
     }
 
     public async Task PublishAsync(ReadOnlyMemory<byte> payload,
-        IReadOnlyCollection<string> messageRoutes,
+        string messageRoute,
         IEnumerable<KeyValuePair<string, string?>>? headers,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageRoute);
+
         var messageId = ResolveMessageId(headers);
 
         // Deduplicate per handler, because each handler is a separate reliable processing unit.
         var seenHandlerTypeNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var messageRoute in messageRoutes)
+        foreach (var route in ResolveRoutes(messageRoute))
         {
-            foreach (var route in ResolveRoutes(messageRoute))
+            if (!seenHandlerTypeNames.Add(route))
             {
-                if (!seenHandlerTypeNames.Add(route))
-                {
-                    continue;
-                }
-
-                await EnqueueAsync(
-                    messageId,
-                    InboxMessageType.Notification,
-                    payload,
-                    route,
-                    headers,
-                    cancellationToken);
+                continue;
             }
+
+            await EnqueueAsync(
+                messageId,
+                InboxMessageType.Notification,
+                payload,
+                route,
+                headers,
+                cancellationToken);
         }
     }
 

@@ -38,6 +38,38 @@ public class RabbitMQConsumerHostedServiceTests
     }
 
     [Fact]
+    public void BuildNotificationConsumerRegistrations_ShouldCreateOneQueuePerHandler_WhenHandlersShareNotificationType()
+    {
+        var registrations = new[]
+        {
+            new NotificationHandlerRegistration(typeof(FirstTestNotificationHandler), typeof(TestNotification)),
+            new NotificationHandlerRegistration(typeof(SecondTestNotificationHandler), typeof(TestNotification))
+        };
+
+        var consumers = RabbitMQConsumerHostedService.BuildNotificationConsumerRegistrations(
+            registrations,
+            "Orders.Api");
+
+        Assert.Equal(2, consumers.Count);
+
+        var first = Assert.Single(
+            consumers,
+            consumer => consumer.HandlerTypeName == typeof(FirstTestNotificationHandler).DisplayName);
+        var second = Assert.Single(
+            consumers,
+            consumer => consumer.HandlerTypeName == typeof(SecondTestNotificationHandler).DisplayName);
+
+        Assert.Equal(
+            RabbitMQConsumerHostedService.BuildNotificationQueueName("Orders.Api", typeof(FirstTestNotificationHandler).DisplayName),
+            first.QueueName);
+        Assert.Equal(
+            RabbitMQConsumerHostedService.BuildNotificationQueueName("Orders.Api", typeof(SecondTestNotificationHandler).DisplayName),
+            second.QueueName);
+        Assert.Equal([typeof(TestNotification)], first.NotificationTypes);
+        Assert.Equal([typeof(TestNotification)], second.NotificationTypes);
+    }
+
+    [Fact]
     public async Task StartAsync_ShouldThrow_WhenConsumerInitializationFails()
     {
         var connectionManager = new RabbitMQConnectionManager(Options.Create(new RabbitMQOptions
@@ -95,6 +127,12 @@ public class RabbitMQConsumerHostedServiceTests
     private sealed class TestCommand;
 
     private sealed class TestCommandHandler;
+
+    private sealed class TestNotification;
+
+    private sealed class FirstTestNotificationHandler;
+
+    private sealed class SecondTestNotificationHandler;
 
     private sealed class TestHostEnvironment : IHostEnvironment
     {

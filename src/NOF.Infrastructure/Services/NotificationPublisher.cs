@@ -24,17 +24,17 @@ public sealed class NotificationPublisher : INotificationPublisher
         _objectSerializer = objectSerializer;
     }
 
-    public async Task DeferPublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
+    public async Task DeferPublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
-        ArgumentNullException.ThrowIfNull(notificationTypes);
+        ArgumentNullException.ThrowIfNull(notificationType);
         ArgumentNullException.ThrowIfNull(context);
         var outboundContext = new NotificationOutboundContext(context);
 
         await ExecuteAsync(outboundContext, notification, static (_, _, _) => ValueTask.CompletedTask, cancellationToken);
 
         var dispatchRoutes = _objectSerializer.SerializeToText(
-            notificationTypes.Select(static type => type.DisplayName).ToArray(),
+            new[] { notificationType.DisplayName },
             typeof(string[]));
 
         _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
@@ -48,10 +48,10 @@ public sealed class NotificationPublisher : INotificationPublisher
         });
     }
 
-    public async Task PublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notification);
-        ArgumentNullException.ThrowIfNull(notificationTypes);
+        ArgumentNullException.ThrowIfNull(notificationType);
         ArgumentNullException.ThrowIfNull(context);
         var outboundContext = new NotificationOutboundContext(context);
 
@@ -60,7 +60,7 @@ public sealed class NotificationPublisher : INotificationPublisher
             var payload = _objectSerializer.Serialize(message, message.GetType());
             await _rider.PublishAsync(
                 payload,
-                notificationTypes.Select(static type => type.DisplayName).ToArray(),
+                notificationType.DisplayName,
                 outboundContext.Headers,
                 ct).ConfigureAwait(false);
         }, cancellationToken);

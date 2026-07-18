@@ -204,13 +204,13 @@ public class NOFTestHostTests
 
     private sealed class FakeNotificationPublisher : INotificationPublisher
     {
-        public Task DeferPublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
+        public Task DeferPublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)
         {
             _ = context;
             return Task.CompletedTask;
         }
 
-        public Task PublishAsync(object notification, Type[] notificationTypes, Context context, CancellationToken cancellationToken = default)
+        public Task PublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)
         {
             _ = context;
             return Task.CompletedTask;

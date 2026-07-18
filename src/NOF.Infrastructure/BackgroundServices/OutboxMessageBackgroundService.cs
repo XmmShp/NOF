@@ -144,7 +144,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 case OutboxMessageType.Notification:
                     await notificationRider.PublishAsync(
                         message.Payload,
-                        dispatchRoutes,
+                        dispatchRoutes[0],
                         headers,
                         cancellationToken);
                     _logger.LogDebug("Published notification via rider {MessageId} with {RouteCount} routes (retry {Retry})",
