@@ -24,6 +24,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
         var entityTypes = modelBuilder.Model.GetEntityTypes().ToList();
         var useTenantDiscriminator = dbContext.CurrentTenantMode == TenantMode.SharedDatabase;
         var useSoftDelete = dbContext.CurrentSoftDeleteEnabled;
+        var softDeleteActiveRowsFilter = SoftDeleteModelHelper.BuildActiveRowsFilter(context.Database.ProviderName);
 
         foreach (var entityType in entityTypes)
         {
@@ -52,6 +53,11 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
             if (!shouldConfigureTenantBehavior)
             {
+                if (shouldConfigureSoftDelete)
+                {
+                    ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                }
+
                 continue;
             }
 
@@ -66,12 +72,22 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
                 {
                     entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
                 }
+                if (shouldConfigureSoftDelete)
+                {
+                    ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                }
+
                 continue;
             }
 
             if (isHostOnly)
             {
                 entityType.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
+                if (shouldConfigureSoftDelete)
+                {
+                    ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                }
+
                 continue;
             }
 
@@ -96,6 +112,11 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             entityBuilder.HasQueryFilter(
                 TenantModelHelper.TenantIdPropertyName,
                 TenantModelHelper.BuildTenantFilter(entityType.ClrType, dbContext));
+
+            if (shouldConfigureSoftDelete)
+            {
+                ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+            }
         }
     }
 
@@ -113,6 +134,25 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             entityBuilder.HasIndex(
                     [TenantModelHelper.TenantIdPropertyName, .. index.Properties.Select(property => property.Name)])
                 .IsUnique();
+        }
+    }
+
+    private static void ConfigureSoftDeleteUniqueIndexes(IMutableEntityType entityType, string activeRowsFilter)
+    {
+        if (string.IsNullOrWhiteSpace(activeRowsFilter))
+        {
+            return;
+        }
+
+        var uniqueIndexes = entityType.GetIndexes()
+            .Where(index => index.IsUnique
+                && index.Properties.All(property => property.Name != SoftDeleteModelHelper.DeletedAtUtcPropertyName)
+                && string.IsNullOrWhiteSpace(index.GetFilter()))
+            .ToList();
+
+        foreach (var index in uniqueIndexes)
+        {
+            index.SetFilter(activeRowsFilter);
         }
     }
 }

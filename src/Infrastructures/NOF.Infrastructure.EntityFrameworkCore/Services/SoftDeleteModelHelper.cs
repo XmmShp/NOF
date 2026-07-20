@@ -14,6 +14,18 @@ internal static class SoftDeleteModelHelper
             && !entityType.IsOwned()
             && entityType.ClrType != typeof(Dictionary<string, object>);
 
+    public static string BuildActiveRowsFilter(string? providerName)
+    {
+        var columnName = providerName switch
+        {
+            "Microsoft.EntityFrameworkCore.SqlServer" => $"[{DeletedAtUtcPropertyName}]",
+            var name when name?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true => $"`{DeletedAtUtcPropertyName}`",
+            _ => $"\"{DeletedAtUtcPropertyName}\""
+        };
+
+        return $"{columnName} IS NULL";
+    }
+
     [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[])")]
     [RequiresUnreferencedCode("Calls System.Linq.Expressions.Expression.Property(Expression, String)")]
     public static LambdaExpression BuildSoftDeleteFilter(Type entityClrType)

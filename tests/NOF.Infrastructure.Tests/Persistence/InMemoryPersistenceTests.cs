@@ -41,6 +41,12 @@ public class SqliteInMemoryPersistenceTests
         CancellationToken cancellationToken = default)
         => EFQuery.ToListAsync(source, cancellationToken);
 
+    private static Task<int> CountAsync<TSource>(
+        IQueryable<TSource> source,
+        Expression<Func<TSource, bool>> predicate,
+        CancellationToken cancellationToken = default)
+        => EFQuery.CountAsync(source, predicate, cancellationToken);
+
     [Fact]
     public async Task UseDbContext_NonGeneric_ShouldRegisterDefaultNOFDbContext()
     {
@@ -483,6 +489,43 @@ public class SqliteInMemoryPersistenceTests
                 .Select(e => EF.Property<DateTime?>(e, "__DeletedAtUtc")));
 
         Assert.NotNull(deletedAtUtc);
+    }
+
+    [Fact]
+    public async Task SoftDelete_ShouldFilterUniqueIndexesToActiveRows()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var entityType = db.Model.FindEntityType(typeof(TestUniqueSoftDeleteRecord));
+
+        Assert.NotNull(entityType);
+        Assert.Contains(entityType.GetIndexes(), index => index.IsUnique
+            && index.GetFilter() == "\"__DeletedAtUtc\" IS NULL"
+            && index.Properties.Select(static property => property.Name).SequenceEqual([nameof(TestUniqueSoftDeleteRecord.Code)]));
+
+        db.Set<TestUniqueSoftDeleteRecord>().Add(new TestUniqueSoftDeleteRecord
+        {
+            Id = 1,
+            Code = "same-code"
+        });
+        await db.SaveChangesAsync();
+
+        var existing = await SingleAsync(db.Set<TestUniqueSoftDeleteRecord>(), e => e.Code == "same-code");
+        db.Remove(existing);
+        await db.SaveChangesAsync();
+
+        db.Set<TestUniqueSoftDeleteRecord>().Add(new TestUniqueSoftDeleteRecord
+        {
+            Id = 2,
+            Code = "same-code"
+        });
+        await db.SaveChangesAsync();
+
+        Assert.Equal(1, await CountAsync(db.Set<TestUniqueSoftDeleteRecord>(), e => e.Code == "same-code"));
+        Assert.Equal(2, await CountAsync(db.Set<TestUniqueSoftDeleteRecord>().IgnoreQueryFilters(), e => e.Code == "same-code"));
     }
 
     [Fact]
@@ -1933,6 +1976,13 @@ public class SqliteInMemoryPersistenceTests
             => Create(Id, Number);
     }
 
+    private sealed class TestUniqueSoftDeleteRecord
+    {
+        public long Id { get; init; }
+
+        public string Code { get; init; } = string.Empty;
+    }
+
     private sealed class TestOrderWithOwned
     {
         public long Id { get; init; }
@@ -2247,6 +2297,14 @@ public class SqliteInMemoryPersistenceTests
                 entity.ToTable(nameof(TestOrder));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Number).HasMaxLength(256).IsRequired();
+            });
+
+            modelBuilder.Entity<TestUniqueSoftDeleteRecord>(entity =>
+            {
+                entity.ToTable(nameof(TestUniqueSoftDeleteRecord));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).HasMaxLength(256).IsRequired();
+                entity.HasIndex(e => e.Code).IsUnique();
             });
 
             modelBuilder.Entity<TestOrderWithOwned>(entity =>
