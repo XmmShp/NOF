@@ -24,7 +24,6 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
         var entityTypes = modelBuilder.Model.GetEntityTypes().ToList();
         var useTenantDiscriminator = dbContext.CurrentTenantMode == TenantMode.SharedDatabase;
         var useSoftDelete = dbContext.CurrentSoftDeleteEnabled;
-        var softDeleteActiveRowsFilter = SoftDeleteModelHelper.BuildActiveRowsFilter(context.Database.ProviderName);
 
         foreach (var entityType in entityTypes)
         {
@@ -44,10 +43,11 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
             if (shouldConfigureSoftDelete)
             {
-                entityBuilder.Property<DateTime?>(SoftDeleteModelHelper.DeletedAtUtcPropertyName);
-                entityBuilder.HasIndex(SoftDeleteModelHelper.DeletedAtUtcPropertyName);
+                entityBuilder.Property<long>(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName)
+                    .HasDefaultValue(SoftDeleteModelHelper.ActiveDeletedAtUnixTime);
+                entityBuilder.HasIndex(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName);
                 entityBuilder.HasQueryFilter(
-                    SoftDeleteModelHelper.DeletedAtUtcPropertyName,
+                    SoftDeleteModelHelper.DeletedAtUnixTimePropertyName,
                     SoftDeleteModelHelper.BuildSoftDeleteFilter(entityType.ClrType));
             }
 
@@ -55,7 +55,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
             {
                 if (shouldConfigureSoftDelete)
                 {
-                    ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                    ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
                 }
 
                 continue;
@@ -74,7 +74,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
                 }
                 if (shouldConfigureSoftDelete)
                 {
-                    ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                    ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
                 }
 
                 continue;
@@ -85,7 +85,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
                 entityType.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
                 if (shouldConfigureSoftDelete)
                 {
-                    ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                    ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
                 }
 
                 continue;
@@ -115,7 +115,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
             if (shouldConfigureSoftDelete)
             {
-                ConfigureSoftDeleteUniqueIndexes(entityType, softDeleteActiveRowsFilter);
+                ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
             }
         }
     }
@@ -137,22 +137,20 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
         }
     }
 
-    private static void ConfigureSoftDeleteUniqueIndexes(IMutableEntityType entityType, string activeRowsFilter)
+    private static void ConfigureSoftDeleteUniqueIndexes(IMutableEntityType entityType, EntityTypeBuilder entityBuilder)
     {
-        if (string.IsNullOrWhiteSpace(activeRowsFilter))
-        {
-            return;
-        }
-
         var uniqueIndexes = entityType.GetIndexes()
             .Where(index => index.IsUnique
-                && index.Properties.All(property => property.Name != SoftDeleteModelHelper.DeletedAtUtcPropertyName)
-                && string.IsNullOrWhiteSpace(index.GetFilter()))
+                && index.Properties.All(property => property.Name != SoftDeleteModelHelper.DeletedAtUnixTimePropertyName))
             .ToList();
 
         foreach (var index in uniqueIndexes)
         {
-            index.SetFilter(activeRowsFilter);
+            index.IsUnique = false;
+
+            entityBuilder.HasIndex(
+                    [.. index.Properties.Select(property => property.Name), SoftDeleteModelHelper.DeletedAtUnixTimePropertyName])
+                .IsUnique();
         }
     }
 }

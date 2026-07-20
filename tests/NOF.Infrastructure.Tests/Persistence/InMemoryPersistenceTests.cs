@@ -190,7 +190,8 @@ public class SqliteInMemoryPersistenceTests
         Assert.Equal([nameof(NOFStateMachineContext.CorrelationId), nameof(NOFStateMachineContext.DefinitionTypeName)],
             stateMachine.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
         Assert.Contains(tenant.GetIndexes(), index => index.IsUnique
-            && index.Properties.Select(static property => property.Name).SequenceEqual([nameof(NOFTenant.Name)]));
+            && index.Properties.Select(static property => property.Name).SequenceEqual(
+                [nameof(NOFTenant.Name), "__DeletedAtUnixTime"]));
         Assert.Contains(outbox.GetIndexes(), index =>
             index.Properties.Select(static property => property.Name).SequenceEqual([nameof(NOFOutboxMessage.TraceParent)]));
     }
@@ -453,7 +454,7 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
-    public async Task SoftDelete_ShouldAddShadowDeletedAtAndFilterDeletedRows()
+    public async Task SoftDelete_ShouldAddShadowDeletedAtUnixTimeAndFilterDeletedRows()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
@@ -463,7 +464,7 @@ public class SqliteInMemoryPersistenceTests
         var entityType = db.Model.FindEntityType(typeof(TestOrder));
 
         Assert.NotNull(entityType);
-        Assert.NotNull(entityType.FindProperty("__DeletedAtUtc"));
+        Assert.NotNull(entityType.FindProperty("__DeletedAtUnixTime"));
 
         db.Set<TestOrder>().Add(TestOrder.Create(10, "soft-delete"));
         await db.SaveChangesAsync();
@@ -482,17 +483,17 @@ public class SqliteInMemoryPersistenceTests
 
         Assert.Null(await SingleOrDefaultAsync(verifyDb.Set<TestOrder>(), e => e.Id == 10));
 
-        var deletedAtUtc = await SingleAsync(
+        var deletedAtUnixTime = await SingleAsync(
             verifyDb.Set<TestOrder>()
                 .IgnoreQueryFilters()
                 .Where(e => e.Id == 10)
-                .Select(e => EF.Property<DateTime?>(e, "__DeletedAtUtc")));
+                .Select(e => EF.Property<long>(e, "__DeletedAtUnixTime")));
 
-        Assert.NotNull(deletedAtUtc);
+        Assert.True(deletedAtUnixTime > 0);
     }
 
     [Fact]
-    public async Task SoftDelete_ShouldFilterUniqueIndexesToActiveRows()
+    public async Task SoftDelete_ShouldIncludeDeleteMarkerInUniqueIndexes()
     {
         using var services = CreateServiceProvider();
         using var scope = services.CreateScope();
@@ -503,8 +504,8 @@ public class SqliteInMemoryPersistenceTests
 
         Assert.NotNull(entityType);
         Assert.Contains(entityType.GetIndexes(), index => index.IsUnique
-            && index.GetFilter() == "\"__DeletedAtUtc\" IS NULL"
-            && index.Properties.Select(static property => property.Name).SequenceEqual([nameof(TestUniqueSoftDeleteRecord.Code)]));
+            && index.Properties.Select(static property => property.Name).SequenceEqual(
+                [nameof(TestUniqueSoftDeleteRecord.Code), "__DeletedAtUnixTime"]));
 
         db.Set<TestUniqueSoftDeleteRecord>().Add(new TestUniqueSoftDeleteRecord
         {
@@ -562,12 +563,12 @@ public class SqliteInMemoryPersistenceTests
                 .Where(e => e.Id == 12)
                 .Select(e => new
                 {
-                    DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
+                    DeletedAtUnixTime = EF.Property<long>(e, "__DeletedAtUnixTime"),
                     DetailCode = e.RequiredDetail.Code,
                     ItemNames = e.Items.OrderBy(i => i.Id).Select(i => i.Name).ToList()
                 }));
 
-        Assert.NotNull(deletedOrder.DeletedAtUtc);
+        Assert.True(deletedOrder.DeletedAtUnixTime > 0);
         Assert.Equal("required-detail", deletedOrder.DetailCode);
         Assert.Equal(["item-a", "item-b"], deletedOrder.ItemNames);
     }
@@ -586,15 +587,15 @@ public class SqliteInMemoryPersistenceTests
         var ownsManyType = db.Model.FindEntityType(typeof(TestOwnedItem));
 
         Assert.NotNull(ownerType);
-        Assert.NotNull(ownerType.FindProperty("__DeletedAtUtc"));
+        Assert.NotNull(ownerType.FindProperty("__DeletedAtUnixTime"));
 
         Assert.NotNull(ownsOneType);
         Assert.True(ownsOneType.IsOwned());
-        Assert.Null(ownsOneType.FindProperty("__DeletedAtUtc"));
+        Assert.Null(ownsOneType.FindProperty("__DeletedAtUnixTime"));
 
         Assert.NotNull(ownsManyType);
         Assert.True(ownsManyType.IsOwned());
-        Assert.Null(ownsManyType.FindProperty("__DeletedAtUtc"));
+        Assert.Null(ownsManyType.FindProperty("__DeletedAtUnixTime"));
     }
 
     [Fact]
@@ -635,7 +636,7 @@ public class SqliteInMemoryPersistenceTests
                 .Where(e => e.Id == 13)
                 .Select(e => new
                 {
-                    DeletedAtUtc = EF.Property<DateTime?>(e, "__DeletedAtUtc"),
+                    DeletedAtUnixTime = EF.Property<long>(e, "__DeletedAtUnixTime"),
                     DetailCode = e.RequiredDetail.Code,
                     DetailLeafCode = e.RequiredDetail.RequiredLeaf.Code,
                     DetailNotes = e.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
@@ -650,7 +651,7 @@ public class SqliteInMemoryPersistenceTests
                         .ToList()
                 }));
 
-        Assert.NotNull(deletedOrder.DeletedAtUtc);
+        Assert.True(deletedOrder.DeletedAtUnixTime > 0);
         Assert.Equal("detail-code", deletedOrder.DetailCode);
         Assert.Equal("detail-leaf", deletedOrder.DetailLeafCode);
         Assert.Equal(["detail-note-a", "detail-note-b"], deletedOrder.DetailNotes);
@@ -740,13 +741,13 @@ public class SqliteInMemoryPersistenceTests
                 .Where(p => p.Id == 21)
                 .Select(p => new
                 {
-                    DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                    DeletedAtUnixTime = EF.Property<long>(p, "__DeletedAtUnixTime"),
                     p.Name
                 }));
 
         Assert.Equal(21, visibleChild.ParentId);
         Assert.Null(visibleChild.Parent);
-        Assert.NotNull(deletedParent.DeletedAtUtc);
+        Assert.True(deletedParent.DeletedAtUnixTime > 0);
         Assert.Equal("parent", deletedParent.Name);
     }
 
@@ -883,7 +884,7 @@ public class SqliteInMemoryPersistenceTests
                 .Where(p => p.Id == 32)
                 .Select(p => new
                 {
-                    DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                    DeletedAtUnixTime = EF.Property<long>(p, "__DeletedAtUnixTime"),
                     DetailCode = p.RequiredDetail.Code,
                     Notes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList()
                 }));
@@ -893,7 +894,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Equal("profile-321", child.RequiredProfile.Code);
         Assert.Equal("leaf-321", child.RequiredProfile.RequiredLeaf.Code);
         Assert.Equal(["tag-321-a", "tag-321-b"], child.Tags.OrderBy(t => t.Id).Select(t => t.Name).ToList());
-        Assert.NotNull(deletedParent.DeletedAtUtc);
+        Assert.True(deletedParent.DeletedAtUnixTime > 0);
         Assert.Equal("parent-detail-32", deletedParent.DetailCode);
         Assert.Equal(["parent-note-32"], deletedParent.Notes);
     }
@@ -1074,7 +1075,7 @@ public class SqliteInMemoryPersistenceTests
                 .Where(p => p.Id == 36)
                 .Select(p => new
                 {
-                    DeletedAtUtc = EF.Property<DateTime?>(p, "__DeletedAtUtc"),
+                    DeletedAtUnixTime = EF.Property<long>(p, "__DeletedAtUnixTime"),
                     DetailCode = p.RequiredDetail.Code,
                     ParentNotes = p.RequiredDetail.Notes.OrderBy(n => n.Id).Select(n => n.Message).ToList(),
                     Children = p.Children
@@ -1089,7 +1090,7 @@ public class SqliteInMemoryPersistenceTests
                         .ToList()
                 }));
 
-        Assert.NotNull(projection.DeletedAtUtc);
+        Assert.True(projection.DeletedAtUnixTime > 0);
         Assert.Equal("parent-detail-36", projection.DetailCode);
         Assert.Equal(["parent-note-36"], projection.ParentNotes);
         Assert.Single(projection.Children);

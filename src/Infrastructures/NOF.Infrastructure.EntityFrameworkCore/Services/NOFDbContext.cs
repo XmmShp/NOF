@@ -7,6 +7,8 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 
 public class NOFDbContext : DbContext
 {
+    private static long _lastDeletedAtUnixTime;
+
     private readonly NOFTenantDbContextOptionsExtension _tenantOptions;
     private readonly NOFModelCreatingDbContextOptionsExtension _modelCreatingOptions;
 
@@ -81,14 +83,14 @@ public class NOFDbContext : DbContext
         var softDeletedEntries = new HashSet<EntityEntry>();
         foreach (var entry in deletedEntries)
         {
-            if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUtcPropertyName) is null)
+            if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName) is null)
             {
                 continue;
             }
 
             entry.State = EntityState.Unchanged;
-            entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).CurrentValue = DateTime.UtcNow;
-            entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).IsModified = true;
+            entry.Property(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName).CurrentValue = GetCurrentUnixTimeMicroseconds();
+            entry.Property(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName).IsModified = true;
             softDeletedEntries.Add(entry);
         }
 
@@ -147,12 +149,30 @@ public class NOFDbContext : DbContext
         }
 
         var entry = Entry(entity);
-        if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUtcPropertyName) is null)
+        if (entry.Metadata.FindProperty(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName) is null)
         {
             return false;
         }
 
-        return entry.Property(SoftDeleteModelHelper.DeletedAtUtcPropertyName).CurrentValue is not null;
+        return entry.Property(SoftDeleteModelHelper.DeletedAtUnixTimePropertyName).CurrentValue is long deletedAtUnixTime
+            && deletedAtUnixTime != SoftDeleteModelHelper.ActiveDeletedAtUnixTime;
+    }
+
+    private static long GetCurrentUnixTimeMicroseconds()
+    {
+        var unixTime = Math.Max(
+            1,
+            (DateTimeOffset.UtcNow.UtcTicks - DateTimeOffset.UnixEpoch.UtcTicks) / 10);
+
+        while (true)
+        {
+            var lastUnixTime = Volatile.Read(ref _lastDeletedAtUnixTime);
+            var nextUnixTime = Math.Max(unixTime, lastUnixTime + 1);
+            if (Interlocked.CompareExchange(ref _lastDeletedAtUnixTime, nextUnixTime, lastUnixTime) == lastUnixTime)
+            {
+                return nextUnixTime;
+            }
+        }
     }
 
     private void ApplyTenantRules()

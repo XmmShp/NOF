@@ -7,39 +7,28 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 
 internal static class SoftDeleteModelHelper
 {
-    public const string DeletedAtUtcPropertyName = "__DeletedAtUtc";
+    public const string DeletedAtUnixTimePropertyName = "__DeletedAtUnixTime";
+    public const long ActiveDeletedAtUnixTime = 0;
 
     public static bool ShouldConfigureSoftDelete(IMutableEntityType entityType)
         => entityType.BaseType is null
             && !entityType.IsOwned()
             && entityType.ClrType != typeof(Dictionary<string, object>);
 
-    public static string BuildActiveRowsFilter(string? providerName)
-    {
-        var columnName = providerName switch
-        {
-            "Microsoft.EntityFrameworkCore.SqlServer" => $"[{DeletedAtUtcPropertyName}]",
-            var name when name?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true => $"`{DeletedAtUtcPropertyName}`",
-            _ => $"\"{DeletedAtUtcPropertyName}\""
-        };
-
-        return $"{columnName} IS NULL";
-    }
-
     [RequiresDynamicCode("Calls System.Linq.Expressions.Expression.Lambda(Expression, params ParameterExpression[])")]
     [RequiresUnreferencedCode("Calls System.Linq.Expressions.Expression.Property(Expression, String)")]
     public static LambdaExpression BuildSoftDeleteFilter(Type entityClrType)
     {
         var entityParameter = Expression.Parameter(entityClrType, "entity");
-        var deletedAtUtcProperty = Expression.Call(
+        var deletedAtUnixTimeProperty = Expression.Call(
             typeof(EF),
             nameof(EF.Property),
-            [typeof(DateTime?)],
+            [typeof(long)],
             entityParameter,
-            Expression.Constant(DeletedAtUtcPropertyName));
+            Expression.Constant(DeletedAtUnixTimePropertyName));
 
         return Expression.Lambda(
-            Expression.Equal(deletedAtUtcProperty, Expression.Constant(null, typeof(DateTime?))),
+            Expression.Equal(deletedAtUnixTimeProperty, Expression.Constant(ActiveDeletedAtUnixTime)),
             entityParameter);
     }
 }
