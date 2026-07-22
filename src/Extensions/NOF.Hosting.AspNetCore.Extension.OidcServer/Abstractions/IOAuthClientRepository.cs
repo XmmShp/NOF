@@ -2,7 +2,7 @@ using NOF.Contract;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-public interface IOAuthClientManagementService
+public interface IOAuthClientRepository
 {
     ValueTask<OAuthClientCredentialsValidationResult> ValidateClientCredentialsAsync(
         OAuthClientCredentialsValidationRequest request,

@@ -28,7 +28,7 @@ builder.AddOidcServer(options =>
     options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
 });
 
-builder.Services.AddScoped<IOAuthAuthorizationHandler, YourAuthorizationHandler>();
+builder.Services.AddScoped<IOAuthAuthorizeEndpoint, YourAuthorizeEndpoint>();
 builder.Services.AddScoped<IOAuthSubjectService, YourSubjectService>();
 builder.Services.AddScoped<IOAuthTokenExchangeHandler, YourTokenExchangeHandler>();
 
@@ -39,7 +39,7 @@ await app.RunAsync();
 
 `options.Issuer` is the final issuer identifier published in discovery metadata and embedded into issued tokens. It should usually include the OIDC path segment such as `/oauth2`. `options.PathBase` only controls where the local endpoints are mapped and is not appended to `Issuer` automatically.
 
-`AddOidcServer(...)` registers a default persisted OAuth client service as `IOAuthClientManagementService` and a default `IOAuthTokenExchangeHandler`. Applications can replace either service when they need custom client validation, management behavior, or token-exchange claim construction.
+`AddOidcServer(...)` registers a default persisted OAuth client repository as `IOAuthClientRepository` and a default `IOAuthTokenExchangeHandler`. Applications can replace either service when they need custom client validation, management behavior, or token-exchange claim construction.
 
 Bootstrap helpers are available on the returned selector:
 

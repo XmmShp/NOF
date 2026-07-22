@@ -12,7 +12,7 @@ namespace NOF.Sample.Services;
 
 public sealed class OAuthChainDemoBackend(
     HttpClient httpClient,
-    IOAuthClientManagementService clientManagementService,
+    IOAuthClientRepository clientRepository,
     IOptions<OAuthAuthorizationServerOptions> authorizationServerOptions)
 {
     private static readonly string[] AllowedScopes = ["sample.read", "sample.write"];
@@ -30,7 +30,7 @@ public sealed class OAuthChainDemoBackend(
             ? "sample-client"
             : request.ClientIdPrefix.Trim().ToLowerInvariant();
         var clientId = $"{clientIdPrefix}-{Guid.NewGuid().ToString("N")[..8]}";
-        var createResult = await clientManagementService.CreateAsync(
+        var createResult = await clientRepository.CreateAsync(
             new CreateOAuthClientRequest
             {
                 ClientId = clientId,

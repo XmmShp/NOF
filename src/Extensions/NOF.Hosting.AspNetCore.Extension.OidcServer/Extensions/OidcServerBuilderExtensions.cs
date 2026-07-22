@@ -15,9 +15,9 @@ public static partial class NOFOidcServerExtensions
             builder.Services.Configure(configureOptions);
             builder.Services.ReplaceOrAddScoped<ISigningKeyService, PersistenceSigningKeyService>();
             builder.Services.TryAddScoped<IRevokedRefreshTokenRepository, PersistenceRevokedRefreshTokenRepository>();
-            builder.Services.TryAddScoped<PersistenceOAuthClientService>();
-            builder.Services.TryAddScoped<IOAuthClientManagementService>(static serviceProvider =>
-                serviceProvider.GetRequiredService<PersistenceOAuthClientService>());
+            builder.Services.TryAddScoped<PersistenceOAuthClientRepository>();
+            builder.Services.TryAddScoped<IOAuthClientRepository>(static serviceProvider =>
+                serviceProvider.GetRequiredService<PersistenceOAuthClientRepository>());
             builder.Services.TryAddScoped<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());
@@ -26,8 +26,16 @@ public static partial class NOFOidcServerExtensions
             builder.Services.ReplaceOrAddScoped<LocalJwksService, LocalJwksService>();
             builder.Services.ReplaceOrAddScoped<IJwksService>(static serviceProvider => serviceProvider.GetRequiredService<LocalJwksService>());
             builder.Services.ReplaceOrAddScoped<ITokenService, TokenAuthorityService>();
+            builder.Services.TryAddScoped<IOAuthServerRootEndpoint, DefaultOAuthServerRootEndpoint>();
+            builder.Services.TryAddScoped<IOAuthMetadataEndpoint, DefaultOAuthMetadataEndpoint>();
+            builder.Services.TryAddScoped<IOAuthJwksEndpoint, DefaultOAuthJwksEndpoint>();
+            builder.Services.TryAddScoped<IOAuthAuthorizeEndpoint, DefaultOAuthAuthorizeEndpoint>();
+            builder.Services.TryAddScoped<IOAuthTokenEndpoint, DefaultOAuthTokenEndpoint>();
+            builder.Services.TryAddScoped<IOAuthRevokeEndpoint, DefaultOAuthRevokeEndpoint>();
+            builder.Services.TryAddScoped<IOAuthIntrospectEndpoint, DefaultOAuthIntrospectEndpoint>();
+            builder.Services.TryAddScoped<IOAuthUserInfoEndpoint, DefaultOAuthUserInfoEndpoint>();
+            builder.Services.TryAddScoped<OAuthAuthorizationCodeIssuer>();
             builder.Services.AddHostedService<SigningKeyRotationBackgroundService>();
-            builder.Services.TryAddScoped<IOAuthAuthorizationCodeService, OAuthAuthorizationCodeService>();
             builder.Services.AddOptions<OidcServerBootstrapOptions>();
             builder.Services.TryAddSingleton<OidcServerEndpointMappingState>();
             builder.Services.TryAddInitializationStep<OidcServerInitializationStep>();

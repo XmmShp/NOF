@@ -34,13 +34,13 @@ public sealed class OidcServerInitializationStep : IApplicationInitializationSte
             return;
         }
 
-        var clientService = scope.ServiceProvider.GetRequiredService<IOAuthClientManagementService>();
+        var clientRepository = scope.ServiceProvider.GetRequiredService<IOAuthClientRepository>();
         foreach (var request in bootstrapOptions.PublicClients
                      .Concat(bootstrapOptions.ConfidentialClients)
                      .GroupBy(static client => client.ClientId, StringComparer.Ordinal)
                      .Select(static group => group.Last()))
         {
-            var existing = await clientService.GetAsync(request.ClientId).ConfigureAwait(false);
+            var existing = await clientRepository.GetAsync(request.ClientId).ConfigureAwait(false);
             if (existing.IsSuccess)
             {
                 continue;
@@ -54,7 +54,7 @@ public sealed class OidcServerInitializationStep : IApplicationInitializationSte
                     request.ClientType == OAuthClientType.Public ? "public" : "confidential");
             }
 
-            var createResult = await clientService.CreateAsync(request).ConfigureAwait(false);
+            var createResult = await clientRepository.CreateAsync(request).ConfigureAwait(false);
             EnsureSucceeded(
                 createResult,
                 request.ClientId,

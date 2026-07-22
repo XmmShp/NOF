@@ -34,20 +34,37 @@ public static partial class NOFOidcServerExtensions
             }
 
             var options = app.ServiceProvider.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value;
-            var pathBase = NormalizePathBase(options.PathBase);
+            var pathBase = string.IsNullOrWhiteSpace(options.PathBase)
+                ? "/oauth2"
+                : options.PathBase.StartsWith("/", StringComparison.Ordinal)
+                    ? options.PathBase.TrimEnd('/')
+                    : $"/{options.PathBase.TrimEnd('/')}";
             var group = app.MapGroup(CombineRoute(prefix, pathBase));
 
-            group.MapGet(string.Empty, static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) =>
-            {
-                var issuer = ResolveIssuer(oidcOptions.Value);
-                return Results.Json(new OAuthServerRootDocument
-                {
-                    Issuer = issuer,
-                    Metadata = OAuthAuthorizationServerMetadataUris.BuildMetadataEndpoint(issuer, requireHttps: false).ToString()
-                });
-            });
+            group.MapGet(string.Empty, static (IOAuthServerRootEndpoint endpoint, CancellationToken cancellationToken)
+                => endpoint.HandleAsync(cancellationToken));
 
-            MapMetadataEndpoints(app, prefix, pathBase);
+            app.MapGet(CombineRoute(prefix, "/.well-known/openid-configuration"),
+                static (IOAuthMetadataEndpoint endpoint, CancellationToken cancellationToken) => endpoint.HandleAsync(cancellationToken));
+            app.MapGet(CombineRoute(prefix, $"{pathBase}/.well-known/openid-configuration"),
+                static (IOAuthMetadataEndpoint endpoint, CancellationToken cancellationToken) => endpoint.HandleAsync(cancellationToken));
+
+            app.MapGet(CombineRoute(prefix, "/.well-known/oauth-authorization-server"),
+                static (IOAuthMetadataEndpoint endpoint, CancellationToken cancellationToken) => endpoint.HandleAsync(cancellationToken));
+
+            var issuerPath = pathBase.TrimEnd('/');
+            var authorizationServerMetadataRoute = string.IsNullOrEmpty(issuerPath) || issuerPath == "/"
+                ? "/.well-known/oauth-authorization-server"
+                : $"/.well-known/oauth-authorization-server{issuerPath}";
+            app.MapGet(CombineRoute(prefix, authorizationServerMetadataRoute),
+                static (IOAuthMetadataEndpoint endpoint, CancellationToken cancellationToken) => endpoint.HandleAsync(cancellationToken));
+
+            app.MapGet(CombineRoute(prefix, "/.well-known/jwks.json"),
+                static (IOAuthJwksEndpoint endpoint, CancellationToken cancellationToken)
+                    => endpoint.HandleAsync(cancellationToken));
+            app.MapGet(CombineRoute(prefix, $"{pathBase}/.well-known/jwks.json"),
+                static (IOAuthJwksEndpoint endpoint, CancellationToken cancellationToken)
+                    => endpoint.HandleAsync(cancellationToken));
 
             group.MapGet("/authorize", AuthorizeAsync);
             group.MapPost("/token", TokenAsync).DisableAntiforgery();
@@ -60,26 +77,6 @@ public static partial class NOFOidcServerExtensions
         }
     }
 
-    private static void MapMetadataEndpoints(IEndpointRouteBuilder app, string? prefix, string pathBase)
-    {
-        app.MapGet(CombineRoute(prefix, "/.well-known/openid-configuration"),
-            static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) => Results.Json(BuildMetadata(oidcOptions.Value)));
-        app.MapGet(CombineRoute(prefix, $"{pathBase}/.well-known/openid-configuration"),
-            static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) => Results.Json(BuildMetadata(oidcOptions.Value)));
-
-        app.MapGet(CombineRoute(prefix, "/.well-known/oauth-authorization-server"),
-            static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) => Results.Json(BuildMetadata(oidcOptions.Value)));
-        app.MapGet(CombineRoute(prefix, BuildOAuthAuthorizationServerMetadataRoute(pathBase)),
-            static (IOptions<OAuthAuthorizationServerOptions> oidcOptions) => Results.Json(BuildMetadata(oidcOptions.Value)));
-
-        app.MapGet(CombineRoute(prefix, "/.well-known/jwks.json"),
-            static async (IJwksService jwksService, CancellationToken cancellationToken)
-                => Results.Json(await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false)));
-        app.MapGet(CombineRoute(prefix, $"{pathBase}/.well-known/jwks.json"),
-            static async (IJwksService jwksService, CancellationToken cancellationToken)
-                => Results.Json(await jwksService.GetJwksAsync(cancellationToken).ConfigureAwait(false)));
-    }
-
     private static async Task<AspNetResult> AuthorizeAsync(
         [FromQuery(Name = "response_type")] string responseType,
         [FromQuery(Name = "client_id")] string clientId,
@@ -89,9 +86,7 @@ public static partial class NOFOidcServerExtensions
         [FromQuery(Name = "nonce")] string? nonce,
         [FromQuery(Name = "code_challenge")] string? codeChallenge,
         [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod,
-        [FromServices] IServiceProvider serviceProvider,
-        [FromServices] IOAuthAuthorizationHandler authorizationHandler,
-        [FromServices] IOAuthAuthorizationCodeService authorizationCodeService,
+        [FromServices] IOAuthAuthorizeEndpoint endpoint,
         CancellationToken cancellationToken)
     {
         var request = new OAuthAuthorizeRequest
@@ -107,38 +102,9 @@ public static partial class NOFOidcServerExtensions
         };
         var wasRedirectUriSupplied = !string.IsNullOrWhiteSpace(request.RedirectUri);
 
-        var authorizationRequest = new OAuthAuthorizationRequest(
-            ResponseType: request.ResponseType,
-            ClientId: request.ClientId,
-            RedirectUri: request.RedirectUri,
-            Scope: NormalizeScope(request.Scope),
-            State: request.State,
-            Nonce: EmptyToNull(request.Nonce),
-            CodeChallenge: EmptyToNull(request.CodeChallenge),
-            CodeChallengeMethod: EmptyToNull(request.CodeChallengeMethod));
-
-        var validation = await ValidateAuthorizationRequestAsync(serviceProvider, authorizationRequest, cancellationToken).ConfigureAwait(false);
-        authorizationRequest = validation.Request;
-        var validationError = validation.Error;
-        if (validationError is not null)
-        {
-            return CreateAuthorizeFailureResult(authorizationRequest, validationError, validation.AllowRedirect);
-        }
-
-        var result = await authorizationHandler.AuthorizeAsync(authorizationRequest, cancellationToken).ConfigureAwait(false);
-        return result switch
-        {
-            OAuthAuthorizationResult.Authorized authorized => Results.Redirect(
-                await RedirectWithCodeAsync(authorizationCodeService, authorizationRequest, authorized.Subject, wasRedirectUriSupplied, cancellationToken).ConfigureAwait(false)),
-            OAuthAuthorizationResult.Challenge challenge => Results.Redirect(challenge.RedirectUrl),
-            OAuthAuthorizationResult.Failure failure => CreateAuthorizeFailureResult(
-                authorizationRequest,
-                CreateOAuthError(failure.Error, failure.ErrorDescription),
-                allowRedirect: true),
-            _ => Results.Json(
-                CreateOAuthError("server_error", "Unsupported OAuth authorization result."),
-                statusCode: StatusCodes.Status500InternalServerError)
-        };
+        return await endpoint.HandleAsync(
+            new OAuthAuthorizeEndpointRequest(request, wasRedirectUriSupplied),
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<AspNetResult> TokenAsync(
@@ -156,12 +122,7 @@ public static partial class NOFOidcServerExtensions
         [FromForm(Name = "actor_token")] string? actorToken,
         [FromForm(Name = "actor_token_type")] string? actorTokenType,
         [FromForm(Name = "requested_token_type")] string? requestedTokenType,
-        [FromServices] IServiceProvider serviceProvider,
-        [FromServices] ICacheService cacheService,
-        [FromServices] IOAuthSubjectService subjectService,
-        [FromServices] ITokenService tokenService,
-        [FromServices] ISigningKeyService signingKeyService,
-        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        [FromServices] IOAuthTokenEndpoint endpoint,
         CancellationToken cancellationToken)
     {
         var request = new OAuthTokenRequest
@@ -182,91 +143,16 @@ public static partial class NOFOidcServerExtensions
         };
         ApplyResolvedClientCredentials(httpRequest, request);
 
-        var result = request.GrantType switch
-        {
-            OAuthGrantTypes.AuthorizationCode => await TokenFromAuthorizationCodeAsync(
-                httpRequest,
-                request,
-                serviceProvider,
-                cacheService,
-                subjectService,
-                tokenService,
-                signingKeyService,
-                oauthOptions.Value,
-                cancellationToken).ConfigureAwait(false),
-            OAuthGrantTypes.ClientCredentials => await TokenFromClientCredentialsAsync(
-                httpRequest,
-                request,
-                serviceProvider,
-                tokenService,
-                oauthOptions.Value,
-                cancellationToken).ConfigureAwait(false),
-            OAuthGrantTypes.RefreshToken => await TokenFromRefreshTokenAsync(
-                httpRequest,
-                request,
-                serviceProvider,
-                subjectService,
-                tokenService,
-                signingKeyService,
-                oauthOptions.Value,
-                cancellationToken).ConfigureAwait(false),
-            OAuthGrantTypes.TokenExchange => await TokenFromTokenExchangeAsync(
-                httpRequest,
-                request,
-                serviceProvider,
-                subjectService,
-                tokenService,
-                signingKeyService,
-                oauthOptions.Value,
-                cancellationToken).ConfigureAwait(false),
-            _ => Fail("unsupported_grant_type", "Only authorization_code, client_credentials, refresh_token, and token-exchange are supported.")
-        };
-
-        return result.IsSuccess
-            ? Results.Json(result.Value)
-            : CreateOAuthErrorResult(result.ErrorCode, result.Message);
+        return await endpoint.HandleAsync(
+            new OAuthTokenEndpointRequest(httpRequest, request),
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<AspNetResult> UserInfoAsync(
         HttpRequest httpRequest,
-        [FromServices] IOAuthSubjectService subjectService,
-        [FromServices] ISigningKeyService signingKeyService,
-        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        [FromServices] IOAuthUserInfoEndpoint endpoint,
         CancellationToken cancellationToken)
-    {
-        var accessToken = await ResolveBearerTokenAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        var principal = await ValidateAccessTokenAsync(
-            accessToken,
-            signingKeyService,
-            oauthOptions.Value,
-            oauthOptions.Value.AccessTokenAudience,
-            cancellationToken).ConfigureAwait(false);
-        var subject = principal?.FindFirst(OAuthClaimTypes.Subject)?.Value;
-        if (string.IsNullOrWhiteSpace(subject))
-        {
-            return CreateOAuthErrorResult("invalid_token", "access token is invalid.", StatusCodes.Status401Unauthorized);
-        }
-
-        var scope = principal!.FindFirst(OAuthClaimTypes.Scope)?.Value ?? string.Empty;
-        var scopes = ParseScopes(scope);
-        var profile = await subjectService.GetProfileAsync(subject, scopes, cancellationToken).ConfigureAwait(false);
-        if (profile is null)
-        {
-            return CreateOAuthErrorResult("invalid_token", "access token subject is invalid.", StatusCodes.Status401Unauthorized);
-        }
-
-        IReadOnlyDictionary<string, object> claims = profile.IdentityClaims
-            .Where(claim => ShouldEmitIdentityClaim(claim.Key, scopes))
-            .GroupBy(static claim => claim.Key, StringComparer.Ordinal)
-            .ToDictionary(
-                static group => group.Key,
-                static group => group.Count() == 1
-                    ? (object)group.First().Value
-                    : group.Select(static claim => claim.Value).ToArray(),
-                StringComparer.Ordinal);
-
-        return Results.Json(claims);
-    }
+        => await endpoint.HandleAsync(httpRequest, cancellationToken).ConfigureAwait(false);
 
     private static async Task<AspNetResult> RevokeAsync(
         HttpRequest httpRequest,
@@ -274,65 +160,11 @@ public static partial class NOFOidcServerExtensions
         [FromForm(Name = "token_type_hint")] string? tokenTypeHint,
         [FromForm(Name = "client_id")] string? clientId,
         [FromForm(Name = "client_secret")] string? clientSecret,
-        [FromServices] IServiceProvider serviceProvider,
-        [FromServices] ITokenService tokenService,
-        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        [FromServices] IOAuthRevokeEndpoint endpoint,
         CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return CreateOAuthErrorResult("invalid_request", "token is required.");
-        }
-
-        var authenticatedClient = await AuthenticateClientAsync(
-            httpRequest,
-            clientId,
-            clientSecret,
-            string.Empty,
-            serviceProvider,
-            allowPublicClient: true,
+        => await endpoint.HandleAsync(
+            new OAuthRevokeEndpointRequest(httpRequest, token, tokenTypeHint, clientId, clientSecret),
             cancellationToken).ConfigureAwait(false);
-        if (authenticatedClient.Error is not null)
-        {
-            return CreateOAuthErrorResult(authenticatedClient.Error.Error, authenticatedClient.Error.ErrorDescription);
-        }
-
-        if (string.Equals(tokenTypeHint, OAuthTokenTypes.AccessToken, StringComparison.Ordinal))
-        {
-            return Results.Ok();
-        }
-
-        var validateResult = await tokenService.ValidateRefreshTokenAsync(
-            new ValidateRefreshTokenRequest
-            {
-                RefreshToken = token,
-                Audience = oauthOptions.Value.AccessTokenAudience
-            },
-            cancellationToken).ConfigureAwait(false);
-        if (!validateResult.IsSuccess)
-        {
-            return Results.Ok();
-        }
-
-        var refreshClientId = validateResult.Value.Claims
-            .FirstOrDefault(static claim => string.Equals(claim.Type, OAuthClaimTypes.ClientId, StringComparison.Ordinal))
-            ?.Value;
-        if (string.IsNullOrWhiteSpace(refreshClientId)
-            || !FixedTimeEquals(refreshClientId, authenticatedClient.ClientId))
-        {
-            return Results.Ok();
-        }
-
-        await tokenService.RevokeRefreshTokenAsync(
-            new RevokeRefreshTokenRequest
-            {
-                TokenId = validateResult.Value.TokenId,
-                Expiration = oauthOptions.Value.RefreshTokenExpiration
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        return Results.Ok();
-    }
 
     private static async Task<AspNetResult> IntrospectAsync(
         HttpRequest httpRequest,
@@ -340,44 +172,11 @@ public static partial class NOFOidcServerExtensions
         [FromForm(Name = "token_type_hint")] string? tokenTypeHint,
         [FromForm(Name = "client_id")] string? clientId,
         [FromForm(Name = "client_secret")] string? clientSecret,
-        [FromServices] IServiceProvider serviceProvider,
-        [FromServices] ITokenService tokenService,
-        [FromServices] IOptions<OAuthAuthorizationServerOptions> oauthOptions,
+        [FromServices] IOAuthIntrospectEndpoint endpoint,
         CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return CreateOAuthErrorResult("invalid_request", "token is required.");
-        }
-
-        var authenticatedClient = await AuthenticateClientAsync(
-            httpRequest,
-            clientId,
-            clientSecret,
-            string.Empty,
-            serviceProvider,
-            allowPublicClient: false,
+        => await endpoint.HandleAsync(
+            new OAuthIntrospectEndpointRequest(httpRequest, token, tokenTypeHint, clientId, clientSecret),
             cancellationToken).ConfigureAwait(false);
-        if (authenticatedClient.Error is not null)
-        {
-            return CreateOAuthErrorResult(authenticatedClient.Error.Error, authenticatedClient.Error.ErrorDescription);
-        }
-
-        var result = await tokenService.IntrospectTokenAsync(
-            new IntrospectTokenRequest
-            {
-                Token = token,
-                TokenTypeHint = tokenTypeHint,
-                Audience = oauthOptions.Value.AccessTokenAudience
-            },
-            cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return CreateOAuthErrorResult(result.ErrorCode, result.Message, StatusCodes.Status500InternalServerError);
-        }
-
-        return Results.Json(BuildIntrospectionResponse(result.Value));
-    }
 
     internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromAuthorizationCodeAsync(
         HttpRequest httpRequest,
@@ -435,7 +234,25 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", "authorization code client or redirect_uri does not match.");
         }
 
-        var verifierError = ValidateCodeVerifier(authorizationCode, request.CodeVerifier);
+        string? verifierError = null;
+        if (!string.IsNullOrWhiteSpace(authorizationCode.CodeChallenge))
+        {
+            if (string.IsNullOrWhiteSpace(request.CodeVerifier))
+            {
+                verifierError = "code_verifier is required.";
+            }
+            else
+            {
+                var expectedChallenge = string.Equals(authorizationCode.CodeChallengeMethod, "S256", StringComparison.Ordinal)
+                    ? Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(request.CodeVerifier)))
+                    : request.CodeVerifier;
+
+                verifierError = FixedTimeEquals(authorizationCode.CodeChallenge, expectedChallenge)
+                    ? null
+                    : "code_verifier is invalid.";
+            }
+        }
+
         if (verifierError is not null)
         {
             return Fail("invalid_grant", verifierError);
@@ -628,14 +445,43 @@ public static partial class NOFOidcServerExtensions
             return null;
         }
 
-        var idToken = await GenerateIdTokenAsync(
-            signingKeyService,
-            oauthOptions,
-            profile,
-            scopes,
-            idTokenAudience,
-            nonce,
-            cancellationToken).ConfigureAwait(false);
+        string? idToken = null;
+        if (!string.IsNullOrWhiteSpace(idTokenAudience) && scopes.Contains(OAuthScope.OpenId))
+        {
+            var idTokenClaims = profile.IdentityClaims
+                .Where(claim => ShouldEmitIdentityClaim(claim.Key, scopes))
+                .Select(claim => claim.Key == OAuthClaimTypes.IssuedAt && long.TryParse(claim.Value, out _)
+                    ? new Claim(claim.Key, claim.Value, ClaimValueTypes.Integer64)
+                    : new Claim(claim.Key, claim.Value))
+                .ToList();
+            if (idTokenClaims.All(static claim => claim.Type != OAuthClaimTypes.Subject))
+            {
+                idTokenClaims.Insert(0, new Claim(OAuthClaimTypes.Subject, profile.Subject));
+            }
+
+            idTokenClaims.Add(new Claim(
+                OAuthClaimTypes.IssuedAt,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                ClaimValueTypes.Integer64));
+
+            if (!string.IsNullOrWhiteSpace(nonce))
+            {
+                idTokenClaims.Add(new Claim(OAuthClaimTypes.Nonce, nonce));
+            }
+
+            var now = DateTime.UtcNow;
+            var signingKey = (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
+            var token = new JwtSecurityToken(
+                issuer: oauthOptions.Issuer,
+                audience: idTokenAudience,
+                claims: idTokenClaims,
+                notBefore: now,
+                expires: now.Add(oauthOptions.AccessTokenExpiration),
+                signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256));
+            token.Header["typ"] = "JWT";
+
+            idToken = new JwtSecurityTokenHandler().WriteToken(token);
+        }
 
         return new OAuthTokenEndpointResponse
         {
@@ -737,13 +583,13 @@ public static partial class NOFOidcServerExtensions
             return Fail("invalid_grant", "actor_token is invalid.");
         }
 
-        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
-        if (clientService is null)
+        var clientRepository = ResolveService<IOAuthClientRepository>(serviceProvider);
+        if (clientRepository is null)
         {
-            return Fail("server_error", "OAuth client management service is not registered.");
+            return Fail("server_error", "OAuth client repository is not registered.");
         }
 
-        var clientResult = await clientService.GetAsync(authenticatedClient.ClientId, cancellationToken).ConfigureAwait(false);
+        var clientResult = await clientRepository.GetAsync(authenticatedClient.ClientId, cancellationToken).ConfigureAwait(false);
         if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
         {
             return Fail("invalid_client", "client credentials are invalid.");
@@ -797,10 +643,10 @@ public static partial class NOFOidcServerExtensions
         OAuthAuthorizationServerOptions oauthOptions,
         CancellationToken cancellationToken)
     {
-        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
-        if (clientService is null)
+        var clientRepository = ResolveService<IOAuthClientRepository>(serviceProvider);
+        if (clientRepository is null)
         {
-            return Fail("server_error", "OAuth client management service is not registered.");
+            return Fail("server_error", "OAuth client repository is not registered.");
         }
 
         var clientCredentials = ResolveClientCredentials(httpRequest, request);
@@ -810,7 +656,7 @@ public static partial class NOFOidcServerExtensions
         }
 
         var requestedScopes = ParseScopes(request.Scope);
-        var validation = await clientService.ValidateClientCredentialsAsync(
+        var validation = await clientRepository.ValidateClientCredentialsAsync(
             new OAuthClientCredentialsValidationRequest(
                 clientCredentials.ClientId,
                 clientCredentials.ClientSecret,
@@ -835,7 +681,11 @@ public static partial class NOFOidcServerExtensions
             .ToList();
         if (accessClaims.All(static claim => claim.Type != OAuthClaimTypes.Subject))
         {
-            accessClaims.Insert(0, new TokenClaim(OAuthClaimTypes.Subject, NormalizeClientSubject(success.Subject, clientCredentials.ClientId)));
+            var subject = string.IsNullOrWhiteSpace(success.Subject)
+                || string.Equals(success.Subject, clientCredentials.ClientId, StringComparison.Ordinal)
+                    ? $"client:{clientCredentials.ClientId}"
+                    : success.Subject;
+            accessClaims.Insert(0, new TokenClaim(OAuthClaimTypes.Subject, subject));
         }
 
         accessClaims.Add(new TokenClaim(OAuthClaimTypes.Scope, scopeText));
@@ -863,56 +713,7 @@ public static partial class NOFOidcServerExtensions
         });
     }
 
-    private static async ValueTask<string?> GenerateIdTokenAsync(
-        ISigningKeyService signingKeyService,
-        OAuthAuthorizationServerOptions oauthOptions,
-        OAuthSubjectProfile profile,
-        IReadOnlySet<string> scopes,
-        string? audience,
-        string? nonce,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(audience) || !scopes.Contains(OAuthScope.OpenId))
-        {
-            return null;
-        }
-
-        var claims = profile.IdentityClaims
-            .Where(claim => ShouldEmitIdentityClaim(claim.Key, scopes))
-            .Select(claim => claim.Key == OAuthClaimTypes.IssuedAt && long.TryParse(claim.Value, out _)
-                ? new Claim(claim.Key, claim.Value, ClaimValueTypes.Integer64)
-                : new Claim(claim.Key, claim.Value))
-            .ToList();
-        if (claims.All(static claim => claim.Type != OAuthClaimTypes.Subject))
-        {
-            claims.Insert(0, new Claim(OAuthClaimTypes.Subject, profile.Subject));
-        }
-
-        claims.Add(new Claim(
-            OAuthClaimTypes.IssuedAt,
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-            ClaimValueTypes.Integer64));
-
-        if (!string.IsNullOrWhiteSpace(nonce))
-        {
-            claims.Add(new Claim(OAuthClaimTypes.Nonce, nonce));
-        }
-
-        var now = DateTime.UtcNow;
-        var signingKey = (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
-        var token = new JwtSecurityToken(
-            issuer: oauthOptions.Issuer,
-            audience: audience,
-            claims: claims,
-            notBefore: now,
-            expires: now.Add(oauthOptions.AccessTokenExpiration),
-            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256));
-        token.Header["typ"] = "JWT";
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private static async ValueTask<ClaimsPrincipal?> ValidateAccessTokenAsync(
+    internal static async ValueTask<ClaimsPrincipal?> ValidateAccessTokenAsync(
         string token,
         ISigningKeyService signingKeyService,
         OAuthAuthorizationServerOptions options,
@@ -952,35 +753,7 @@ public static partial class NOFOidcServerExtensions
         }
     }
 
-    private static async ValueTask<string> RedirectWithCodeAsync(
-        IOAuthAuthorizationCodeService authorizationCodeService,
-        OAuthAuthorizationRequest request,
-        string subject,
-        bool wasRedirectUriSupplied,
-        CancellationToken cancellationToken)
-    {
-        var code = await authorizationCodeService.CreateAsync(
-            new OAuthAuthorizationCodeDescriptor(
-                subject,
-                request.ClientId,
-                request.RedirectUri,
-                wasRedirectUriSupplied,
-                request.Scope,
-                request.Nonce,
-                request.CodeChallenge,
-                NormalizeCodeChallengeMethod(request.CodeChallengeMethod)),
-            cancellationToken).ConfigureAwait(false);
-
-        return AddQueryString(
-            request.RedirectUri,
-            new Dictionary<string, string?>
-            {
-                ["code"] = code,
-                ["state"] = request.State
-            });
-    }
-
-    private static AspNetResult CreateAuthorizeFailureResult(OAuthAuthorizationRequest request, OAuthError error, bool allowRedirect = true)
+    internal static AspNetResult CreateAuthorizeFailureResult(OAuthAuthorizationRequest request, OAuthError error, bool allowRedirect = true)
     {
         if (allowRedirect
             && !string.IsNullOrWhiteSpace(request.ClientId)
@@ -1015,19 +788,39 @@ public static partial class NOFOidcServerExtensions
             return (request, CreateOAuthError("invalid_request", "client_id is required."), false);
         }
 
-        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
-        if (clientService is null)
+        var clientRepository = ResolveService<IOAuthClientRepository>(serviceProvider);
+        if (clientRepository is null)
         {
-            return (request, CreateOAuthError("server_error", "OAuth client management service is not registered."), false);
+            return (request, CreateOAuthError("server_error", "OAuth client repository is not registered."), false);
         }
 
-        var clientResult = await clientService.GetAsync(request.ClientId, cancellationToken).ConfigureAwait(false);
+        var clientResult = await clientRepository.GetAsync(request.ClientId, cancellationToken).ConfigureAwait(false);
         if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
         {
             return (request, CreateOAuthError("invalid_client", "client_id is invalid."), false);
         }
 
-        var resolvedRedirectUri = ResolveAuthorizationRedirectUri(request.RedirectUri, clientResult.Value.RedirectUris);
+        string? resolvedRedirectUri;
+        if (!string.IsNullOrWhiteSpace(request.RedirectUri))
+        {
+            if (!Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
+            {
+                resolvedRedirectUri = null;
+            }
+            else
+            {
+                resolvedRedirectUri = clientResult.Value.RedirectUris.Contains(request.RedirectUri, StringComparer.Ordinal)
+                    ? request.RedirectUri
+                    : null;
+            }
+        }
+        else
+        {
+            resolvedRedirectUri = clientResult.Value.RedirectUris.Count == 1
+                ? clientResult.Value.RedirectUris[0]
+                : null;
+        }
+
         if (resolvedRedirectUri is null)
         {
             var errorDescription = string.IsNullOrWhiteSpace(request.RedirectUri)
@@ -1038,7 +831,26 @@ public static partial class NOFOidcServerExtensions
 
         var resolvedRequest = request with { RedirectUri = resolvedRedirectUri };
 
-        var pkceValidation = ValidateCodeChallenge(resolvedRequest.CodeChallenge, resolvedRequest.CodeChallengeMethod);
+        string? pkceValidation = null;
+        if (!string.IsNullOrWhiteSpace(resolvedRequest.CodeChallenge))
+        {
+            if (resolvedRequest.CodeChallenge.Length is < 43 or > 128)
+            {
+                pkceValidation = "code_challenge length is invalid.";
+            }
+            else
+            {
+                var normalizedMethod = string.IsNullOrWhiteSpace(resolvedRequest.CodeChallengeMethod)
+                    ? "plain"
+                    : resolvedRequest.CodeChallengeMethod.Trim();
+                if (!string.Equals(normalizedMethod, "plain", StringComparison.Ordinal)
+                    && !string.Equals(normalizedMethod, "S256", StringComparison.Ordinal))
+                {
+                    pkceValidation = "code_challenge_method is not supported.";
+                }
+            }
+        }
+
         return pkceValidation is null
             ? (resolvedRequest, null, true)
             : (resolvedRequest, CreateOAuthError("invalid_request", pkceValidation), true);
@@ -1048,73 +860,6 @@ public static partial class NOFOidcServerExtensions
         => wasRedirectUriSupplied
             ? FixedTimeEquals(expectedRedirectUri, requestedRedirectUri)
             : string.IsNullOrWhiteSpace(requestedRedirectUri) || FixedTimeEquals(expectedRedirectUri, requestedRedirectUri);
-
-    private static string? ResolveAuthorizationRedirectUri(string requestedRedirectUri, IReadOnlyList<string> registeredRedirectUris)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedRedirectUri))
-        {
-            if (!Uri.TryCreate(requestedRedirectUri, UriKind.Absolute, out _))
-            {
-                return null;
-            }
-
-            return registeredRedirectUris.Contains(requestedRedirectUri, StringComparer.Ordinal)
-                ? requestedRedirectUri
-                : null;
-        }
-
-        return registeredRedirectUris.Count == 1
-            ? registeredRedirectUris[0]
-            : null;
-    }
-
-    private static OAuthServerMetadata BuildMetadata(OAuthAuthorizationServerOptions options)
-    {
-        var issuer = ResolveIssuer(options);
-        return new OAuthServerMetadata
-        {
-            Issuer = issuer,
-            AuthorizationEndpoint = $"{issuer}/authorize",
-            TokenEndpoint = $"{issuer}/token",
-            RevocationEndpoint = $"{issuer}/revoke",
-            IntrospectionEndpoint = $"{issuer}/introspect",
-            UserInfoEndpoint = $"{issuer}/userinfo",
-            JwksUri = $"{issuer}/.well-known/jwks.json",
-            ResponseTypesSupported = ["code"],
-            GrantTypesSupported = [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.ClientCredentials, OAuthGrantTypes.RefreshToken, OAuthGrantTypes.TokenExchange],
-            TokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
-            RevocationEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
-            IntrospectionEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post"],
-            SubjectTypesSupported = ["public"],
-            IdTokenSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256],
-            CodeChallengeMethodsSupported = ["plain", "S256"],
-            ScopesSupported = options.ScopesSupported,
-            ClaimsSupported = options.ClaimsSupported
-        };
-    }
-
-    private static string ResolveIssuer(OAuthAuthorizationServerOptions options)
-        => options.Issuer.TrimEnd('/');
-
-    private static string NormalizePathBase(string? pathBase)
-    {
-        if (string.IsNullOrWhiteSpace(pathBase))
-        {
-            return "/oauth2";
-        }
-
-        return pathBase.StartsWith("/", StringComparison.Ordinal)
-            ? pathBase.TrimEnd('/')
-            : $"/{pathBase.TrimEnd('/')}";
-    }
-
-    private static string BuildOAuthAuthorizationServerMetadataRoute(string pathBase)
-    {
-        var issuerPath = pathBase.TrimEnd('/');
-        return string.IsNullOrEmpty(issuerPath) || issuerPath == "/"
-            ? "/.well-known/oauth-authorization-server"
-            : $"/.well-known/oauth-authorization-server{issuerPath}";
-    }
 
     private static string CombineRoute(string? prefix, string route)
     {
@@ -1128,72 +873,17 @@ public static partial class NOFOidcServerExtensions
         return $"{normalizedPrefix}{normalizedRoute}";
     }
 
-    private static string? ValidateCodeChallenge(string? codeChallenge, string? codeChallengeMethod)
-    {
-        if (string.IsNullOrWhiteSpace(codeChallenge))
-        {
-            return null;
-        }
-
-        if (codeChallenge.Length is < 43 or > 128)
-        {
-            return "code_challenge length is invalid.";
-        }
-
-        var normalizedMethod = NormalizeCodeChallengeMethod(codeChallengeMethod);
-        return string.Equals(normalizedMethod, "plain", StringComparison.Ordinal)
-            || string.Equals(normalizedMethod, "S256", StringComparison.Ordinal)
-            ? null
-            : "code_challenge_method is not supported.";
-    }
-
-    private static string? ValidateCodeVerifier(OidcAuthorizationCodeCacheValue code, string codeVerifier)
-    {
-        if (string.IsNullOrWhiteSpace(code.CodeChallenge))
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(codeVerifier))
-        {
-            return "code_verifier is required.";
-        }
-
-        var expectedChallenge = string.Equals(code.CodeChallengeMethod, "S256", StringComparison.Ordinal)
-            ? Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier)))
-            : codeVerifier;
-
-        return FixedTimeEquals(code.CodeChallenge, expectedChallenge)
-            ? null
-            : "code_verifier is invalid.";
-    }
-
-    private static IReadOnlySet<string> ParseScopes(string scope)
+    internal static IReadOnlySet<string> ParseScopes(string scope)
         => scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToHashSet(StringComparer.Ordinal);
 
-    private static string NormalizeScope(string scope)
+    internal static string NormalizeScope(string scope)
         => string.Join(' ', ParseScopes(scope).OrderBy(static value => value, StringComparer.Ordinal));
-
-    private static string NormalizeClientSubject(string subject, string clientId)
-    {
-        if (string.IsNullOrWhiteSpace(subject))
-        {
-            return $"client:{clientId}";
-        }
-
-        return string.Equals(subject, clientId, StringComparison.Ordinal)
-            ? $"client:{clientId}"
-            : subject;
-    }
 
     internal static bool ShouldIssueRefreshToken(string scope)
         => ParseScopes(scope).Contains(OAuthScope.OfflineAccess);
 
-    private static string NormalizeCodeChallengeMethod(string? codeChallengeMethod)
-        => string.IsNullOrWhiteSpace(codeChallengeMethod) ? "plain" : codeChallengeMethod.Trim();
-
-    private static bool FixedTimeEquals(string expected, string actual)
+    internal static bool FixedTimeEquals(string expected, string actual)
     {
         var expectedBytes = Encoding.UTF8.GetBytes(expected);
         var actualBytes = Encoding.UTF8.GetBytes(actual);
@@ -1201,7 +891,7 @@ public static partial class NOFOidcServerExtensions
             && CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 
-    private static bool ShouldEmitIdentityClaim(string claimType, IReadOnlySet<string> scopes)
+    internal static bool ShouldEmitIdentityClaim(string claimType, IReadOnlySet<string> scopes)
     {
         return claimType switch
         {
@@ -1212,14 +902,14 @@ public static partial class NOFOidcServerExtensions
         };
     }
 
-    private static OAuthError CreateOAuthError(string error, string description)
+    internal static OAuthError CreateOAuthError(string error, string description)
         => new()
         {
             Error = error,
             ErrorDescription = description
         };
 
-    private static AspNetResult CreateOAuthErrorResult(string error, string? description, int statusCode = StatusCodes.Status400BadRequest)
+    internal static AspNetResult CreateOAuthErrorResult(string error, string? description, int statusCode = StatusCodes.Status400BadRequest)
         => Results.Json(
             new OAuthError
             {
@@ -1228,7 +918,7 @@ public static partial class NOFOidcServerExtensions
             },
             statusCode: statusCode);
 
-    private static Result<OAuthTokenEndpointResponse> Fail(string code, string message)
+    internal static Result<OAuthTokenEndpointResponse> Fail(string code, string message)
         => Result.Fail(code, message);
 
     private static TService? ResolveService<TService>(IServiceProvider serviceProvider)
@@ -1243,7 +933,7 @@ public static partial class NOFOidcServerExtensions
         }
     }
 
-    private static string? EmptyToNull(string? value)
+    internal static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
 
     internal static void ApplyResolvedClientCredentials(HttpRequest httpRequest, OAuthTokenRequest request)
@@ -1266,8 +956,8 @@ public static partial class NOFOidcServerExtensions
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
-        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
-        if (clientService is null)
+        var clientRepository = ResolveService<IOAuthClientRepository>(serviceProvider);
+        if (clientRepository is null)
         {
             return null;
         }
@@ -1278,7 +968,7 @@ public static partial class NOFOidcServerExtensions
             return CreateOAuthError("invalid_client", "client_id is required.");
         }
 
-        var clientResult = await clientService.GetAsync(clientCredentials.ClientId, cancellationToken).ConfigureAwait(false);
+        var clientResult = await clientRepository.GetAsync(clientCredentials.ClientId, cancellationToken).ConfigureAwait(false);
         if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
         {
             return CreateOAuthError("invalid_client", "client credentials are invalid.");
@@ -1286,7 +976,25 @@ public static partial class NOFOidcServerExtensions
 
         if (clientResult.Value.ClientType == OAuthClientType.Public)
         {
-            return ValidatePublicClientAuthentication(request, clientCredentials);
+            if (!string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
+            {
+                return CreateOAuthError("invalid_client", "public clients must not use client_secret.");
+            }
+
+            if (string.Equals(request.GrantType, OAuthGrantTypes.AuthorizationCode, StringComparison.Ordinal))
+            {
+                return string.IsNullOrWhiteSpace(request.CodeVerifier)
+                    ? CreateOAuthError("invalid_client", "code_verifier is required for public clients.")
+                    : null;
+            }
+
+            if (string.Equals(request.GrantType, OAuthGrantTypes.RefreshToken, StringComparison.Ordinal)
+                || string.Equals(request.GrantType, OAuthGrantTypes.TokenExchange, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return CreateOAuthError("invalid_client", "public client authentication is invalid for this grant type.");
         }
 
         if (string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
@@ -1294,7 +1002,7 @@ public static partial class NOFOidcServerExtensions
             return CreateOAuthError("invalid_client", "client_secret is required.");
         }
 
-        var validation = await clientService.ValidateClientCredentialsAsync(
+        var validation = await clientRepository.ValidateClientCredentialsAsync(
             new OAuthClientCredentialsValidationRequest(
                 clientCredentials.ClientId,
                 clientCredentials.ClientSecret,
@@ -1310,7 +1018,7 @@ public static partial class NOFOidcServerExtensions
         };
     }
 
-    private static async Task<(OAuthError? Error, string ClientId)> AuthenticateClientAsync(
+    internal static async Task<(OAuthError? Error, string ClientId)> AuthenticateClientAsync(
         HttpRequest httpRequest,
         string? clientId,
         string? clientSecret,
@@ -1319,10 +1027,10 @@ public static partial class NOFOidcServerExtensions
         bool allowPublicClient,
         CancellationToken cancellationToken)
     {
-        var clientService = ResolveService<IOAuthClientManagementService>(serviceProvider);
-        if (clientService is null)
+        var clientRepository = ResolveService<IOAuthClientRepository>(serviceProvider);
+        if (clientRepository is null)
         {
-            return (CreateOAuthError("server_error", "OAuth client management service is not registered."), string.Empty);
+            return (CreateOAuthError("server_error", "OAuth client repository is not registered."), string.Empty);
         }
 
         var request = new OAuthTokenRequest
@@ -1337,7 +1045,7 @@ public static partial class NOFOidcServerExtensions
             return (CreateOAuthError("invalid_client", "client_id is required."), string.Empty);
         }
 
-        var clientResult = await clientService.GetAsync(clientCredentials.ClientId, cancellationToken).ConfigureAwait(false);
+        var clientResult = await clientRepository.GetAsync(clientCredentials.ClientId, cancellationToken).ConfigureAwait(false);
         if (!clientResult.IsSuccess || !clientResult.Value.IsEnabled)
         {
             return (CreateOAuthError("invalid_client", "client credentials are invalid."), string.Empty);
@@ -1363,7 +1071,7 @@ public static partial class NOFOidcServerExtensions
             return (CreateOAuthError("invalid_client", "client_secret is required."), string.Empty);
         }
 
-        var validation = await clientService.ValidateClientCredentialsAsync(
+        var validation = await clientRepository.ValidateClientCredentialsAsync(
             new OAuthClientCredentialsValidationRequest(
                 clientCredentials.ClientId,
                 clientCredentials.ClientSecret,
@@ -1380,80 +1088,37 @@ public static partial class NOFOidcServerExtensions
         };
     }
 
-    private static OAuthError? ValidatePublicClientAuthentication(
-        OAuthTokenRequest request,
-        (string ClientId, string? ClientSecret, string AuthenticationMethod) clientCredentials)
-    {
-        if (!string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
-        {
-            return CreateOAuthError("invalid_client", "public clients must not use client_secret.");
-        }
-
-        if (string.Equals(request.GrantType, OAuthGrantTypes.AuthorizationCode, StringComparison.Ordinal))
-        {
-            return string.IsNullOrWhiteSpace(request.CodeVerifier)
-                ? CreateOAuthError("invalid_client", "code_verifier is required for public clients.")
-                : null;
-        }
-
-        if (string.Equals(request.GrantType, OAuthGrantTypes.RefreshToken, StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        if (string.Equals(request.GrantType, OAuthGrantTypes.TokenExchange, StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        return CreateOAuthError("invalid_client", "public client authentication is invalid for this grant type.");
-    }
-
     private static (string ClientId, string? ClientSecret, string AuthenticationMethod) ResolveClientCredentials(
         HttpRequest httpRequest,
         OAuthTokenRequest request)
     {
-        if (TryResolveBasicClientCredentials(httpRequest.Headers.Authorization.ToString(), out var basicCredentials))
+        const string basicAuthenticationPrefix = "Basic ";
+        var authorization = httpRequest.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authorization)
+            && authorization.StartsWith(basicAuthenticationPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            return (basicCredentials.ClientId, basicCredentials.ClientSecret, "client_secret_basic");
+            try
+            {
+                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(authorization[basicAuthenticationPrefix.Length..].Trim()));
+                var separatorIndex = decoded.IndexOf(':', StringComparison.Ordinal);
+                if (separatorIndex >= 0)
+                {
+                    return (
+                        Uri.UnescapeDataString(decoded[..separatorIndex]),
+                        Uri.UnescapeDataString(decoded[(separatorIndex + 1)..]),
+                        "client_secret_basic");
+                }
+            }
+            catch (FormatException)
+            {
+                // Ignore invalid Basic auth and fall back to form credentials.
+            }
         }
 
         return (request.ClientId, EmptyToNull(request.ClientSecret), "client_secret_post");
     }
 
-    private static bool TryResolveBasicClientCredentials(
-        string authorization,
-        out (string ClientId, string? ClientSecret) credentials)
-    {
-        credentials = default;
-        const string prefix = "Basic ";
-        if (string.IsNullOrWhiteSpace(authorization)
-            || !authorization.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        try
-        {
-            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(authorization[prefix.Length..].Trim()));
-            var separatorIndex = decoded.IndexOf(':', StringComparison.Ordinal);
-            if (separatorIndex < 0)
-            {
-                return false;
-            }
-
-            credentials = (
-                Uri.UnescapeDataString(decoded[..separatorIndex]),
-                Uri.UnescapeDataString(decoded[(separatorIndex + 1)..]));
-            return true;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-    }
-
-    private static OAuthIntrospectionResponse BuildIntrospectionResponse(IntrospectTokenResponse response)
+    internal static OAuthIntrospectionResponse BuildIntrospectionResponse(IntrospectTokenResponse response)
     {
         if (!response.Active)
         {
@@ -1463,27 +1128,12 @@ public static partial class NOFOidcServerExtensions
             };
         }
 
-        var audiences = GetClaimValues(response.Claims, JwtRegisteredClaimNames.Aud);
-        return new OAuthIntrospectionResponse
-        {
-            Active = true,
-            Scope = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Scope),
-            ClientId = GetSingleClaimValue(response.Claims, OAuthClaimTypes.ClientId),
-            TokenType = response.TokenType,
-            Subject = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Subject),
-            ExpiresAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Exp),
-            IssuedAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Iat),
-            NotBefore = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Nbf),
-            Issuer = GetSingleClaimValue(response.Claims, JwtRegisteredClaimNames.Iss),
-            Audience = audiences.Count == 0 ? null : audiences.ToArray(),
-            TokenId = GetSingleClaimValue(response.Claims, JwtRegisteredClaimNames.Jti),
-            AdditionalClaims = BuildAdditionalClaims(response.Claims)
-        };
-    }
-
-    private static IDictionary<string, JsonElement>? BuildAdditionalClaims(IEnumerable<TokenClaim> claims)
-    {
-        var additionalClaims = ExpandTokenClaims(claims)
+        var audiences = ExpandTokenClaims(response.Claims)
+            .Where(claim => string.Equals(claim.Type, JwtRegisteredClaimNames.Aud, StringComparison.Ordinal))
+            .Select(static claim => claim.Value ?? string.Empty)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var additionalClaims = ExpandTokenClaims(response.Claims)
             .Where(static claim =>
                 !string.Equals(claim.Type, OAuthClaimTypes.Scope, StringComparison.Ordinal)
                 && !string.Equals(claim.Type, OAuthClaimTypes.ClientId, StringComparison.Ordinal)
@@ -1502,7 +1152,21 @@ public static partial class NOFOidcServerExtensions
                     : JsonSerializer.SerializeToElement(group.Select(ToJsonValue).ToArray()),
                 StringComparer.Ordinal);
 
-        return additionalClaims.Count == 0 ? null : additionalClaims;
+        return new OAuthIntrospectionResponse
+        {
+            Active = true,
+            Scope = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Scope),
+            ClientId = GetSingleClaimValue(response.Claims, OAuthClaimTypes.ClientId),
+            TokenType = response.TokenType,
+            Subject = GetSingleClaimValue(response.Claims, OAuthClaimTypes.Subject),
+            ExpiresAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Exp),
+            IssuedAt = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Iat),
+            NotBefore = GetNumericClaimValue(response.Claims, JwtRegisteredClaimNames.Nbf),
+            Issuer = GetSingleClaimValue(response.Claims, JwtRegisteredClaimNames.Iss),
+            Audience = audiences.Length == 0 ? null : audiences,
+            TokenId = GetSingleClaimValue(response.Claims, JwtRegisteredClaimNames.Jti),
+            AdditionalClaims = additionalClaims.Count == 0 ? null : additionalClaims
+        };
     }
 
     private static object ToJsonValue(TokenClaim claim)
@@ -1532,13 +1196,6 @@ public static partial class NOFOidcServerExtensions
         => ExpandTokenClaims(claims)
             .FirstOrDefault(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))
             ?.Value;
-
-    private static IReadOnlyList<string> GetClaimValues(IEnumerable<TokenClaim> claims, string type)
-        => ExpandTokenClaims(claims)
-            .Where(claim => string.Equals(claim.Type, type, StringComparison.Ordinal))
-            .Select(static claim => claim.Value ?? string.Empty)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
 
     private static long? GetNumericClaimValue(IEnumerable<TokenClaim> claims, string type)
     {
@@ -1590,7 +1247,7 @@ public static partial class NOFOidcServerExtensions
         return builder.ToString();
     }
 
-    private static async ValueTask<string> ResolveBearerTokenAsync(HttpRequest request, CancellationToken cancellationToken)
+    internal static async ValueTask<string> ResolveBearerTokenAsync(HttpRequest request, CancellationToken cancellationToken)
     {
         if (BearerToken.TryParse(request.Headers.Authorization.ToString(), provider: null, out var headerToken))
         {
@@ -1607,30 +1264,6 @@ public static partial class NOFOidcServerExtensions
         }
 
         return string.Empty;
-    }
-
-    private sealed record OidcAuthorizationCodeCacheKey(string Code)
-        : CacheKey<OidcAuthorizationCodeCacheValue>($"nof:oauth:auth-code:{Code}");
-
-    private sealed record OidcAuthorizationCodeCacheValue
-    {
-        public required string Subject { get; init; }
-
-        public required string ClientId { get; init; }
-
-        public required string RedirectUri { get; init; }
-
-        public required bool WasRedirectUriSupplied { get; init; }
-
-        public required string Scope { get; init; }
-
-        public string? Nonce { get; init; }
-
-        public string? CodeChallenge { get; init; }
-
-        public string? CodeChallengeMethod { get; init; }
-
-        public required DateTime ExpiresAtUtc { get; init; }
     }
 
     private sealed record OidcRedeemedAuthorizationCodeCacheKey(string Code)

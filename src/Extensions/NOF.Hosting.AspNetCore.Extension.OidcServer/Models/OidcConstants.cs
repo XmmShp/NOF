@@ -36,9 +36,6 @@ public static class OAuthClaimTypes
     public const string IssuedAt = "iat";
     public const string Scope = "scope";
     public const string SessionId = "sid";
-    public const string IdentityKind = "identity_kind";
-    public const string IdentityKindUser = "user";
-    public const string IdentityKindClient = "client";
 }
 
 public readonly record struct BearerToken(string Value)

@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-public sealed class PersistenceOAuthClientService(IDbContext dbContext) : IOAuthClientManagementService
+public sealed class PersistenceOAuthClientRepository(IDbContext dbContext) : IOAuthClientRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

@@ -81,9 +81,7 @@ public sealed class AuthenticationExtensionsTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
 
-        Assert.NotNull(scope.GetRequiredService<IOAuthAuthorizationCodeService>());
         Assert.Equal("https://issuer.local/oauth2", scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value.Issuer);
-        Assert.Null(scope.Services.GetService<IOAuthAuthorizationHandler>());
         Assert.Null(scope.Services.GetService<IOAuthSubjectService>());
     }
 
@@ -158,9 +156,9 @@ public sealed class AuthenticationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
-        var clientService = scope.GetRequiredService<IOAuthClientManagementService>();
+        var clientRepository = scope.GetRequiredService<IOAuthClientRepository>();
 
-        var client = await clientService.GetAsync("bootstrap-public-client");
+        var client = await clientRepository.GetAsync("bootstrap-public-client");
 
         Assert.True(client.IsSuccess, client.Message);
         Assert.Equal(OAuthClientType.Public, client.Value.ClientType);
@@ -180,9 +178,9 @@ public sealed class AuthenticationExtensionsTests
             await using (var firstHost = await CreateAuthorityBuilder(connectionString).BuildTestHostAsync())
             {
                 using var scope = firstHost.CreateScope();
-                var clientService = scope.GetRequiredService<IOAuthClientManagementService>();
+                var clientRepository = scope.GetRequiredService<IOAuthClientRepository>();
 
-                var createResult = await clientService.CreateAsync(new CreateOAuthClientRequest
+                var createResult = await clientRepository.CreateAsync(new CreateOAuthClientRequest
                 {
                     ClientId = "bootstrap-public-client",
                     DisplayName = "Existing Public Client",
@@ -212,9 +210,9 @@ public sealed class AuthenticationExtensionsTests
 
             await using var secondHost = await secondBuilder.BuildTestHostAsync();
             using var secondScope = secondHost.CreateScope();
-            var secondClientService = secondScope.GetRequiredService<IOAuthClientManagementService>();
+            var secondClientRepository = secondScope.GetRequiredService<IOAuthClientRepository>();
 
-            var existingClient = await secondClientService.GetAsync("bootstrap-public-client");
+            var existingClient = await secondClientRepository.GetAsync("bootstrap-public-client");
 
             Assert.True(existingClient.IsSuccess, existingClient.Message);
             Assert.Equal("Existing Public Client", existingClient.Value.DisplayName);
@@ -260,10 +258,10 @@ public sealed class AuthenticationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
-        var clientService = scope.GetRequiredService<IOAuthClientManagementService>();
+        var clientRepository = scope.GetRequiredService<IOAuthClientRepository>();
 
-        var client = await clientService.GetAsync("bootstrap-confidential-client");
-        var validation = await clientService.ValidateClientCredentialsAsync(
+        var client = await clientRepository.GetAsync("bootstrap-confidential-client");
+        var validation = await clientRepository.ValidateClientCredentialsAsync(
             new OAuthClientCredentialsValidationRequest(
                 "bootstrap-confidential-client",
                 "bootstrap-secret",
@@ -283,7 +281,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ClientCredentialsGrant_ShouldIssueAccessTokenWithoutRefreshToken()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var tokenService = new TestTokenService();
         var httpContext = new DefaultHttpContext
@@ -325,7 +323,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateClientAuthenticationAsync_ShouldAllowAuthorizationCodeRequestWithoutClientSecret_WhenPkceIsUsed()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -353,7 +351,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateClientAuthenticationAsync_ShouldRejectAuthorizationCodeRequestWithoutClientSecret_WhenPkceIsMissing()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -382,7 +380,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateClientAuthenticationAsync_ShouldAllowPublicRefreshTokenRequestWithoutClientSecret()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -408,7 +406,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateClientAuthenticationAsync_ShouldRejectPublicClientCredentialsGrant()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -435,7 +433,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateClientAuthenticationAsync_ShouldAcceptPublicClientTokenExchangeGrant()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -460,7 +458,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateClientAuthenticationAsync_ShouldAcceptBasicClientCredentialsAndNormalizeRequest()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -498,7 +496,7 @@ public sealed class AuthenticationExtensionsTests
             ActivatedAtUtc = DateTime.UtcNow
         };
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -558,7 +556,7 @@ public sealed class AuthenticationExtensionsTests
             ActivatedAtUtc = DateTime.UtcNow
         };
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -619,7 +617,7 @@ public sealed class AuthenticationExtensionsTests
             ActivatedAtUtc = DateTime.UtcNow
         };
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -679,7 +677,7 @@ public sealed class AuthenticationExtensionsTests
             ActivatedAtUtc = DateTime.UtcNow
         };
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
@@ -742,7 +740,7 @@ public sealed class AuthenticationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
-        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+        var service = scope.GetRequiredService<IOAuthClientRepository>();
 
         var result = await service.CreateAsync(new CreateOAuthClientRequest
         {
@@ -769,7 +767,7 @@ public sealed class AuthenticationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
-        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+        var service = scope.GetRequiredService<IOAuthClientRepository>();
 
         var result = await service.CreateAsync(new CreateOAuthClientRequest
         {
@@ -800,7 +798,7 @@ public sealed class AuthenticationExtensionsTests
 
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
-        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+        var service = scope.GetRequiredService<IOAuthClientRepository>();
 
         var result = await service.CreateAsync(new CreateOAuthClientRequest
         {
@@ -824,7 +822,7 @@ public sealed class AuthenticationExtensionsTests
         await using var host = await builder.BuildTestHostAsync();
         using var scope = host.CreateScope();
         var dbContext = scope.GetRequiredService<NOFDbContext>();
-        var service = scope.GetRequiredService<IOAuthClientManagementService>();
+        var service = scope.GetRequiredService<IOAuthClientRepository>();
         var now = DateTime.UtcNow;
 
         await dbContext.Set<OAuthClient>().AddAsync(new OAuthClient
@@ -853,7 +851,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateAuthorizationRequestAsync_ShouldRejectUnregisteredRedirectUri()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
 
         var request = new OAuthAuthorizationRequest(
@@ -881,7 +879,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateAuthorizationRequestAsync_ShouldAllowMissingRedirectUri_WhenClientHasSingleRegisteredRedirectUri()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
 
         var request = new OAuthAuthorizationRequest(
@@ -908,7 +906,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task ValidateAuthorizationRequestAsync_ShouldRequireRedirectUri_WhenClientHasMultipleRegisteredRedirectUris()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .BuildServiceProvider();
 
         var request = new OAuthAuthorizationRequest(
@@ -936,7 +934,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task TokenExchangeGrant_ShouldIntersectRequestedScopesWithSubjectTokenAndActorToken()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .AddSingleton<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
@@ -1007,7 +1005,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task TokenExchangeGrant_ShouldRequireClientAuthentication()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .AddSingleton<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
@@ -1065,7 +1063,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task TokenExchangeGrant_ForPublicClient_ShouldNotEmitActClaim()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .AddSingleton<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
@@ -1125,7 +1123,7 @@ public sealed class AuthenticationExtensionsTests
     public async Task TokenExchangeGrant_ShouldUseCustomHandler()
     {
         using var services = new ServiceCollection()
-            .AddSingleton<IOAuthClientManagementService>(new TestOAuthClientManagementService())
+            .AddSingleton<IOAuthClientRepository>(new TestOAuthClientRepository())
             .AddSingleton<IOAuthTokenExchangeHandler, CustomOAuthTokenExchangeHandler>()
             .BuildServiceProvider();
         var httpContext = new DefaultHttpContext
@@ -1390,7 +1388,7 @@ public sealed class AuthenticationExtensionsTests
         return builder;
     }
 
-    private sealed class TestOAuthClientManagementService : IOAuthClientManagementService
+    private sealed class TestOAuthClientRepository : IOAuthClientRepository
     {
         public ValueTask<OAuthClientCredentialsValidationResult> ValidateClientCredentialsAsync(
             OAuthClientCredentialsValidationRequest request,

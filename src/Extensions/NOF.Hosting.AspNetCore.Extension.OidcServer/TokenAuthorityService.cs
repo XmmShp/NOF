@@ -382,17 +382,6 @@ public sealed partial class TokenAuthorityService : ITokenService
         }
 
         normalizedClaims.Insert(0, new TokenClaim(OAuthClaimTypes.ClientId, request.ClientId));
-        if (!normalizedClaims.Any(static claim => string.Equals(claim.Type, OAuthClaimTypes.IdentityKind, StringComparison.Ordinal)))
-        {
-            var subject = normalizedClaims
-                .First(static claim => string.Equals(claim.Type, OAuthClaimTypes.Subject, StringComparison.Ordinal))
-                .Value
-                ?? string.Empty;
-            var identityKind = subject.StartsWith("client:", StringComparison.Ordinal)
-                ? OAuthClaimTypes.IdentityKindClient
-                : OAuthClaimTypes.IdentityKindUser;
-            normalizedClaims.Insert(0, new TokenClaim(OAuthClaimTypes.IdentityKind, identityKind));
-        }
         normalizedClaims.Insert(0, new TokenClaim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")));
         normalizedClaims.Insert(0, TokenClaim.Integer64(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         claims = CreateClaims(normalizedClaims);

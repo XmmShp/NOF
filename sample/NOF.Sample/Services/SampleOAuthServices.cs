@@ -1,22 +1,40 @@
+using Microsoft.AspNetCore.Http;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using System.Security.Claims;
 
 namespace NOF.Sample.Services;
 
-public sealed class SampleOAuthAuthorizationHandler : IOAuthAuthorizationHandler
+public sealed class SampleOAuthAuthorizeEndpoint(OAuthAuthorizationCodeIssuer authorizationCodeIssuer) : IOAuthAuthorizeEndpoint
 {
-    public ValueTask<OAuthAuthorizationResult> AuthorizeAsync(
-        OAuthAuthorizationRequest request,
+    public async Task<IResult> HandleAsync(
+        OAuthAuthorizeEndpointRequest request,
         CancellationToken cancellationToken)
     {
-        if (!Uri.TryCreate(request.RedirectUri, UriKind.Absolute, out _))
+        if (!Uri.TryCreate(request.Request.RedirectUri, UriKind.Absolute, out _))
         {
-            return ValueTask.FromResult<OAuthAuthorizationResult>(
-                new OAuthAuthorizationResult.Failure("invalid_request", "redirect_uri must be an absolute URI."));
+            return Results.BadRequest(new OAuthError
+            {
+                Error = "invalid_request",
+                ErrorDescription = "redirect_uri must be an absolute URI."
+            });
         }
 
-        return ValueTask.FromResult<OAuthAuthorizationResult>(
-            new OAuthAuthorizationResult.Authorized("demo-user"));
+        var authorizationRequest = new OAuthAuthorizationRequest(
+            ResponseType: request.Request.ResponseType,
+            ClientId: request.Request.ClientId,
+            RedirectUri: request.Request.RedirectUri,
+            Scope: request.Request.Scope,
+            State: request.Request.State,
+            Nonce: request.Request.Nonce,
+            CodeChallenge: request.Request.CodeChallenge,
+            CodeChallengeMethod: request.Request.CodeChallengeMethod);
+
+        return Results.Redirect(
+            await authorizationCodeIssuer.CreateRedirectUriAsync(
+                authorizationRequest,
+                "demo-user",
+                request.WasRedirectUriSupplied,
+                cancellationToken).ConfigureAwait(false));
     }
 }
 

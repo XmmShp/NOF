@@ -155,16 +155,6 @@ public sealed record OAuthAuthorizationRequest(
     string? CodeChallenge,
     string? CodeChallengeMethod);
 
-public sealed record OAuthAuthorizationCodeDescriptor(
-    string Subject,
-    string ClientId,
-    string RedirectUri,
-    bool WasRedirectUriSupplied,
-    string Scope,
-    string? Nonce,
-    string? CodeChallenge,
-    string? CodeChallengeMethod);
-
 public sealed record OAuthTokenExchangeRequest(
     string ClientId,
     OAuthClientType ClientType,
@@ -219,13 +209,4 @@ public sealed record OAuthSubjectProfile(
 
         return [new(OAuthClaimTypes.Subject, subject), .. claims];
     }
-}
-
-public abstract record OAuthAuthorizationResult
-{
-    public sealed record Authorized(string Subject) : OAuthAuthorizationResult;
-
-    public sealed record Challenge(string RedirectUrl) : OAuthAuthorizationResult;
-
-    public sealed record Failure(string Error, string ErrorDescription) : OAuthAuthorizationResult;
 }

@@ -54,7 +54,7 @@ builder.UseDbContext<ConfigurationDbContext>()
 
 builder.Services.ReplaceOrAddScoped<INOFSampleServiceClient, LocalNOFSampleServiceClient>();
 builder.Services.ReplaceOrAddScoped<IOAuthChainDemoServiceClient, LocalOAuthChainDemoServiceClient>();
-builder.Services.AddScoped<IOAuthAuthorizationHandler, SampleOAuthAuthorizationHandler>();
+builder.Services.AddScoped<IOAuthAuthorizeEndpoint, SampleOAuthAuthorizeEndpoint>();
 builder.Services.AddScoped<IOAuthSubjectService, SampleOAuthSubjectService>();
 builder.Services.AddHttpClient<OAuthChainDemoBackend>(client => client.BaseAddress = new Uri(sampleOrigin));
 builder.Services.AddRequestOutboundMiddleware<OAuthChainDemoAccessTokenOutboundMiddleware>();
