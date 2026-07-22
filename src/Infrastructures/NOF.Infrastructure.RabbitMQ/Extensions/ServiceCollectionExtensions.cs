@@ -29,6 +29,20 @@ public static partial class NOFInfrastructureRabbitMQExtensions
             ArgumentNullException.ThrowIfNull(configureOptions);
 
             services.Configure(configureOptions);
+            services.AddOptions<RabbitMQOptions>()
+                .Validate(
+                    static options => !string.IsNullOrWhiteSpace(options.HostName),
+                    "RabbitMQ HostName must be configured.")
+                .Validate(
+                    static options => options.Port >= 0,
+                    "RabbitMQ Port must be greater than or equal to zero.")
+                .Validate(
+                    static options => options.PrefetchCount > 0,
+                    "RabbitMQ PrefetchCount must be greater than zero.")
+                .Validate(
+                    static options => !options.PublisherConfirmationsEnabled || options.PublisherConfirmationTrackingEnabled,
+                    "RabbitMQ publisher confirmation tracking must be enabled when publisher confirmations are enabled.")
+                .ValidateOnStart();
             services.ReplaceOrAddSingleton<RabbitMQConnectionManager, RabbitMQConnectionManager>();
             services.ReplaceOrAddSingleton<ICommandRider, RabbitMQCommandRider>();
             services.ReplaceOrAddSingleton<INotificationRider, RabbitMQNotificationRider>();

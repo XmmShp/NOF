@@ -68,21 +68,6 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-builder.Services.AddHostedService(async (sp, ct) =>
-{
-    while (!ct.IsCancellationRequested)
-    {
-        await using var scope = sp.CreateAsyncScope();
-        scope.ServiceProvider.ResolveDaemonServices();
-        var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
-        var taskId = Random.Shared.Next().ToString();
-        await publisher.PublishAsync(new TaskStarted(taskId), Context.Empty, ct);
-        await Task.Delay(TimeSpan.FromSeconds(3), ct);
-        await publisher.PublishAsync(new TaskContinued(taskId), Context.Empty, ct);
-        await Task.Delay(TimeSpan.FromSeconds(5), ct);
-    }
-});
-
 var app = await builder.BuildAsync();
 
 app.MapOpenApi();

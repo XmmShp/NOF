@@ -26,7 +26,9 @@ public class RabbitMQCommandRider : ICommandRider
 
     private async Task PublishToRabbitMQAsync(ReadOnlyMemory<byte> payload, string messageRoute, IEnumerable<KeyValuePair<string, string?>>? headers, CancellationToken cancellationToken)
     {
-        await using var channel = await _connectionManager.CreateChannelAsync();
+        await using var channel = _options.Value.PublisherConfirmationsEnabled
+            ? await _connectionManager.CreatePublisherChannelAsync()
+            : await _connectionManager.CreateChannelAsync();
 
         var exchangeName = messageRoute;
         var routingKey = messageRoute;
@@ -59,7 +61,7 @@ public class RabbitMQCommandRider : ICommandRider
             routingKey: routingKey,
             basicProperties: properties,
             body: payload,
-            mandatory: false,
+            mandatory: _options.Value.MandatoryPublish,
             cancellationToken: cancellationToken);
     }
 }

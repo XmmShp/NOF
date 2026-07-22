@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using NOF.Application;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
@@ -100,14 +99,6 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
             entityBuilder.HasIndex(TenantModelHelper.TenantIdPropertyName);
             ConfigureUniqueIndexes(entityType, entityBuilder);
-
-            if (entityType.ClrType == typeof(NOFStateMachineContext))
-            {
-                entityBuilder.HasKey(
-                    nameof(NOFStateMachineContext.CorrelationId),
-                    nameof(NOFStateMachineContext.DefinitionTypeName),
-                    TenantModelHelper.TenantIdPropertyName);
-            }
 
             entityBuilder.HasQueryFilter(
                 TenantModelHelper.TenantIdPropertyName,

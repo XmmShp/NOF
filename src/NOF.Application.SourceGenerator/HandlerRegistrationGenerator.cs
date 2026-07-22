@@ -28,7 +28,7 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                         return null;
                     }
                     var symbol = ctx.SemanticModel.GetDeclaredSymbol(cds) as INamedTypeSymbol;
-                    if (symbol is { IsAbstract: false, IsGenericType: false } && !IsStateMachineHandler(symbol) && IsHandlerType(symbol))
+                    if (symbol is { IsAbstract: false, IsGenericType: false } && IsHandlerType(symbol))
                     {
                         return symbol;
                     }
@@ -63,21 +63,6 @@ public class HandlerRegistrationGenerator : IIncrementalGenerator
                 spc.AddSource("HandlerAssemblyInitializer.g.cs", SourceText.From(source, Encoding.UTF8));
             }
         });
-    }
-
-    private static bool IsStateMachineHandler(INamedTypeSymbol symbol)
-    {
-        var current = symbol.BaseType;
-        while (current is not null)
-        {
-            if (current.IsGenericType &&
-                current.OriginalDefinition.ToDisplayString() == "NOF.Application.StateMachineNotificationHandler<TStateMachineDefinition, TState, TNotification>")
-            {
-                return true;
-            }
-            current = current.BaseType;
-        }
-        return false;
     }
 
     private static bool IsHandlerType(INamedTypeSymbol symbol)

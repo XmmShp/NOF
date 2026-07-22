@@ -4,11 +4,11 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 ## Overview
 
-Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, state machines, mapping, caching, and persistence contracts.
+Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, mapping, caching, and persistence contracts.
 
 This package does not define runtime outbound authentication directives.
 
-`AddNOFApplication()` registers the package-local application defaults, including mapper/state-machine registries, the ambient mapper convenience API support, and the package-local Domain defaults.
+`AddNOFApplication()` registers the package-local application defaults, including mapper registries, the ambient mapper convenience API support, and the package-local Domain defaults.
 
 Commands and notifications are plain payload types. Handler discovery comes from the `CommandHandler<T>` and `NotificationHandler<T>` base classes rather than marker interfaces on the message types.
 
@@ -93,28 +93,6 @@ public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotifi
     public override Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
-    }
-}
-```
-
-### State Machines
-
-Declarative, event-driven state machines:
-
-```csharp
-public sealed class OrderStateMachine : IStateMachineDefinition<OrderState>
-{
-    public void Build(IStateMachineBuilder<OrderState> builder)
-    {
-        builder.Correlate<OrderCreatedNotification>(n => n.OrderId.ToString());
-        builder.Correlate<PaymentReceivedNotification>(n => n.OrderId.ToString());
-
-        builder.StartWhen<OrderCreatedNotification>(OrderState.Pending)
-            .SendCommandAsync(n => new StartProcessingCommand(n.OrderId));
-
-        builder.On(OrderState.Pending)
-            .When<PaymentReceivedNotification>()
-            .TransitionTo(OrderState.Completed);
     }
 }
 ```

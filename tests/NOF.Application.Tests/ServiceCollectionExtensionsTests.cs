@@ -31,10 +31,6 @@ public class ServiceCollectionExtensionsTests
             descriptor.ImplementationType == typeof(ManualMapper) &&
             descriptor.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(services, descriptor =>
-            descriptor.ServiceType == typeof(IStateMachineRegistry) &&
-            descriptor.ImplementationType == typeof(StateMachineRegistry) &&
-            descriptor.Lifetime == ServiceLifetime.Singleton);
-        Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(IIdGenerator) &&
             descriptor.ImplementationType == typeof(SnowflakeIdGenerator) &&
             descriptor.Lifetime == ServiceLifetime.Singleton);
@@ -76,7 +72,6 @@ public class ServiceCollectionExtensionsTests
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(NotificationHandlerRegistry));
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(RpcServerRegistry));
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IMapper));
-        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IStateMachineRegistry));
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IIdGenerator));
         _ = Assert.Single(services, descriptor =>
             descriptor.ServiceType == typeof(IDaemonService)

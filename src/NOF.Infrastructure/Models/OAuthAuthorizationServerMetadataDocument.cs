@@ -10,6 +10,9 @@ public sealed record OAuthAuthorizationServerMetadataDocument
     [JsonPropertyName("token_endpoint")]
     public string? TokenEndpoint { get; init; }
 
+    [JsonPropertyName("introspection_endpoint")]
+    public string? IntrospectionEndpoint { get; init; }
+
     [JsonPropertyName("jwks_uri")]
     public string? JwksUri { get; init; }
 }

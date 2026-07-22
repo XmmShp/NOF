@@ -20,7 +20,6 @@ public static partial class NOFApplicationExtensions
             services.GetOrAddSingleton<NotificationHandlerRegistry>();
             services.GetOrAddSingleton<RpcServerRegistry>();
             services.TryAddSingleton<IMapper, ManualMapper>();
-            services.TryAddSingleton<IStateMachineRegistry, StateMachineRegistry>();
             services.TryAddEnumerable(new ServiceDescriptor(
                 typeof(IDaemonService),
                 typeof(MapperAmbientDaemonService),

@@ -64,17 +64,20 @@ public sealed class InboxMessageBackgroundService : BackgroundService
 
     private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
-        scope.ServiceProvider.ResolveDaemonServices();
-        var dbContext = scope.ServiceProvider.GetService<IDbContext>();
-        if (dbContext is null)
+        List<NOFInboxMessage> pendingMessages;
+        using (var claimScope = _serviceProvider.CreateScope())
         {
-            _logger.LogDebug("Skipping inbox processing because no IDbContext provider is registered.");
-            return;
-        }
+            claimScope.ServiceProvider.ResolveDaemonServices();
+            var dbContext = claimScope.ServiceProvider.GetService<IDbContext>();
+            if (dbContext is null)
+            {
+                _logger.LogDebug("Skipping inbox processing because no IDbContext provider is registered.");
+                return;
+            }
 
-        var pendingMessages = await AtomicClaimPendingMessagesAsync(dbContext, _options.BatchSize, _options.ClaimTimeout, cancellationToken)
-            .ToListAsync(cancellationToken);
+            pendingMessages = await AtomicClaimPendingMessagesAsync(dbContext, _options.BatchSize, _options.ClaimTimeout, cancellationToken)
+                .ToListAsync(cancellationToken);
+        }
 
         if (pendingMessages.Count == 0)
         {
@@ -88,7 +91,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleMessageAsync(scope.ServiceProvider, message, cancellationToken);
+                await ProcessSingleMessageAsync(message, cancellationToken);
                 succeededIds.Add(message.Id);
             }
             catch (Exception)
@@ -105,7 +108,6 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     }
 
     private async Task ProcessSingleMessageAsync(
-        IServiceProvider services,
         NOFInboxMessage message,
         CancellationToken cancellationToken)
     {
@@ -120,16 +122,33 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             return;
         }
 
-        var headers = DeserializeHeaders(message.Headers);
-        var traceParent = ExtractTraceParent(headers);
-        var processingHeaders = RemoveTraceParent(headers);
-        var handlerTypeName = ResolveHandlerTypeName(message);
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        scope.ServiceProvider.ResolveDaemonServices();
+        var services = scope.ServiceProvider;
+        var dbContext = services.GetRequiredService<IDbContext>();
+        await using var transaction = await dbContext.BeginTransactionAsync(cancellationToken);
 
         try
         {
+            var pendingMessage = await dbContext.Set<NOFInboxMessage>()
+                .FirstOrDefaultAsync(
+                    m => m.Id == message.Id && m.Route == message.Route && m.Status == InboxMessageStatus.Pending,
+                    cancellationToken);
+
+            if (pendingMessage is null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return;
+            }
+
+            var headers = DeserializeHeaders(pendingMessage.Headers);
+            var traceParent = ExtractTraceParent(headers);
+            var processingHeaders = RemoveTraceParent(headers);
+            var handlerTypeName = ResolveHandlerTypeName(pendingMessage);
+
             using var activity = StartBoundaryActivity(message, traceParent);
 
-            switch (message.MessageType)
+            switch (pendingMessage.MessageType)
             {
                 case InboxMessageType.Command:
                     {
@@ -152,13 +171,22 @@ public sealed class InboxMessageBackgroundService : BackgroundService
                         break;
                     }
                 default:
-                    throw new InvalidOperationException($"Unsupported inbox message type '{message.MessageType}'.");
+                    throw new InvalidOperationException($"Unsupported inbox message type '{pendingMessage.MessageType}'.");
             }
 
-            await MarkProcessedAsync(message.Id, message.Route, cancellationToken);
+            pendingMessage.Status = InboxMessageStatus.Processed;
+            pendingMessage.ProcessedAtUtc = DateTime.UtcNow;
+            pendingMessage.ErrorMessage = null;
+            pendingMessage.ClaimedBy = null;
+            pendingMessage.ClaimExpiresAtUtc = null;
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync(cancellationToken);
+
             if (message.RetryCount >= _options.MaxRetryCount)
             {
                 await MarkFailedAsync(message.Id, message.Route, message.RetryCount, ex.Message, cancellationToken, ex);

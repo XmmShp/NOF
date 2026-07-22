@@ -23,7 +23,9 @@ public class RabbitMQNotificationRider : INotificationRider
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(messageRoute);
 
-        await using var channel = await _connectionManager.CreateChannelAsync();
+        await using var channel = _options.Value.PublisherConfirmationsEnabled
+            ? await _connectionManager.CreatePublisherChannelAsync()
+            : await _connectionManager.CreateChannelAsync();
 
         var properties = new BasicProperties
         {
@@ -53,7 +55,7 @@ public class RabbitMQNotificationRider : INotificationRider
             routingKey: string.Empty,
             basicProperties: properties,
             body: payload,
-            mandatory: false,
+            mandatory: _options.Value.MandatoryPublish,
             cancellationToken: cancellationToken);
     }
 }

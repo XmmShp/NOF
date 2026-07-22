@@ -58,6 +58,9 @@ public class RabbitMQOptions
     public bool AutoDelete { get; set; } = false;
     public ushort PrefetchCount { get; set; } = 1;
     public bool RequeueOnConsumerFailure { get; set; } = true;
+    public bool PublisherConfirmationsEnabled { get; set; } = true;
+    public bool PublisherConfirmationTrackingEnabled { get; set; } = true;
+    public bool MandatoryPublish { get; set; } = true;
 
     private void ParseConnectionString(string connectionString)
     {

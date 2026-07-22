@@ -62,20 +62,3 @@ public sealed class NOFOutboxMessageModelCreatingContributor : IDbContextModelCr
         });
     }
 }
-
-public sealed class NOFStateMachineContextModelCreatingContributor : IDbContextModelCreatingContributor
-{
-    public void Configure(IDbModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<NOFStateMachineContext>(entity =>
-        {
-            entity.IsHostOnly();
-            entity.ToTable(nameof(NOFStateMachineContext));
-            entity.HasKey(
-                nameof(NOFStateMachineContext.CorrelationId),
-                nameof(NOFStateMachineContext.DefinitionTypeName));
-            entity.Property(e => e.CorrelationId).IsRequired();
-            entity.Property(e => e.DefinitionTypeName).IsRequired();
-        });
-    }
-}

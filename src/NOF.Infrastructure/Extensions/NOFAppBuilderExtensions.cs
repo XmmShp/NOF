@@ -74,7 +74,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFTenantModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxMessageModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFOutboxMessageModelCreatingContributor>());
-            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFStateMachineContextModelCreatingContributor>());
 
             #endregion
 
@@ -88,7 +87,10 @@ public static partial class NOFInfrastructureExtensions
                 .Validate(
                     static options => options.ApplicationIdBits + options.InstanceIdBits + options.SequenceBits <= 22,
                     "The sum of ApplicationIdBits, InstanceIdBits, and SequenceBits must be less than or equal to 22.");
-            builder.Services.AddOptions<TransactionalMessageOptions>();
+            builder.Services.AddOptions<TransactionalMessageOptions>()
+                .Validate(static options => ValidateTransactionalMessageProcessor(options.Inbox), "Inbox transactional message options are invalid.")
+                .Validate(static options => ValidateTransactionalMessageProcessor(options.Outbox), "Outbox transactional message options are invalid.")
+                .ValidateOnStart();
             #endregion
 
             #region Background Services
@@ -144,6 +146,14 @@ public static partial class NOFInfrastructureExtensions
 
             return builder;
         }
+
+        private static bool ValidateTransactionalMessageProcessor(TransactionalMessageProcessorOptions options)
+            => options.PollingInterval > TimeSpan.Zero
+               && options.BatchSize > 0
+               && options.MaxRetryCount > 0
+               && options.ClaimTimeout > TimeSpan.Zero
+               && options.CleanupInterval > TimeSpan.Zero
+               && options.RetentionPeriod > TimeSpan.Zero;
     }
 
     private static void AddOpenTelemetry(IHostApplicationBuilder builder)
@@ -165,7 +175,6 @@ public static partial class NOFInfrastructureExtensions
             {
                 tracing.AddSource(NOFInfrastructureConstants.InboundPipeline.ActivitySourceName);
                 tracing.AddSource(NOFInfrastructureConstants.OutboundPipeline.ActivitySourceName);
-                tracing.AddSource(NOFApplicationConstants.StateMachine.ActivitySourceName);
                 tracing.AddSource(builder.Environment.ServiceName)
                     .AddHttpClientInstrumentation();
             });
