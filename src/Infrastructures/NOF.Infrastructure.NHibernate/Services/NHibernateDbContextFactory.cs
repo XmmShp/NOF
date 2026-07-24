@@ -1,5 +1,4 @@
 using NOF.Application;
-using NOF.Infrastructure;
 
 namespace NOF.Infrastructure.NHibernate;
 

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using NOF.Application;
 using NOF.Hosting;
 using NOF.Infrastructure.StackExchangeRedis;

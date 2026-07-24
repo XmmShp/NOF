@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Contract;
-using NOF.Hosting;
-using NOF.Hosting.AspNetCore;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;

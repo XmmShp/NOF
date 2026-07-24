@@ -1,5 +1,3 @@
-using NOF.Application;
-
 namespace NOF.Infrastructure;
 
 public sealed class NOFTenantModelCreatingContributor : IDbContextModelCreatingContributor

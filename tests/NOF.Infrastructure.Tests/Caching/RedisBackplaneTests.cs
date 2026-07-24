@@ -1,5 +1,4 @@
 using Moq;
-using NOF.Application;
 using NOF.Infrastructure.StackExchangeRedis;
 using StackExchange.Redis;
 using System.Text.Json;

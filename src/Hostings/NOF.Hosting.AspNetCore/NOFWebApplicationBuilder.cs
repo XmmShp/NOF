@@ -10,7 +10,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using NOF.Abstraction;
-using NOF.Hosting;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using System.Reflection;

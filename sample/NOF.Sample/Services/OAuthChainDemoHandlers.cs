@@ -1,5 +1,4 @@
 using NOF.Abstraction;
-using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;

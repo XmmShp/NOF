@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using NOF.Infrastructure;
 using OidcRoutes = Microsoft.AspNetCore.Routing.NOFOidcServerExtensions;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;

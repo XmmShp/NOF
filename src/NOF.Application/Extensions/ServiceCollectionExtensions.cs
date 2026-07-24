@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Abstraction;
 using NOF.Application;
-using NOF.Domain;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

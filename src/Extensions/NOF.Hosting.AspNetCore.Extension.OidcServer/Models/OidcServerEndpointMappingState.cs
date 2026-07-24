@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
 public sealed class OidcServerEndpointMappingState

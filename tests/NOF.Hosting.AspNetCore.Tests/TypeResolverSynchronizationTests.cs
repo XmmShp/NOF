@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
-using NOF.Hosting.AspNetCore;
 using Xunit;
 
 [assembly: AssemblyInitialize<NOF.Hosting.AspNetCore.Tests.__TypeResolverSynchronizationAssemblyInitializer>]

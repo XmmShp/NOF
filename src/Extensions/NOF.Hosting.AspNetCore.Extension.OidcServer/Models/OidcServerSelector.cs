@@ -1,9 +1,5 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using NOF.Hosting;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 

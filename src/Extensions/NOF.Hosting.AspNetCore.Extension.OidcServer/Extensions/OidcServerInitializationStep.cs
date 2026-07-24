@@ -3,9 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NOF.Contract;
-using NOF.Hosting;
-using NOF.Hosting.AspNetCore;
-using NOF.Infrastructure;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 

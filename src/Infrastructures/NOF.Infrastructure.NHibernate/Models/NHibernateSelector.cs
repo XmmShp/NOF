@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NHibernate.Cfg;
-using NOF.Hosting;
 
 namespace NOF.Infrastructure.NHibernate;
 

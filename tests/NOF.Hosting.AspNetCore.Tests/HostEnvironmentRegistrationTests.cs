@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using NOF.Hosting.AspNetCore;
 using Xunit;
 
 namespace NOF.Hosting.AspNetCore.Tests;

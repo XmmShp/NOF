@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using NOF.Application;
-using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;

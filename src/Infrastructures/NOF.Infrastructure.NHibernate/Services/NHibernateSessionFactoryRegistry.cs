@@ -4,7 +4,6 @@ using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Mapping.ByCode;
 using NHibernate.Tool.hbm2ddl;
-using NOF.Infrastructure;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Reflection;

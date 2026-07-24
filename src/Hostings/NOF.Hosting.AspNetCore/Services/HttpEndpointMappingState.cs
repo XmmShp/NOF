@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace NOF.Hosting.AspNetCore;
 
 internal sealed class HttpEndpointMappingState

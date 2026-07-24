@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
-using NOF.Infrastructure;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Persistence;

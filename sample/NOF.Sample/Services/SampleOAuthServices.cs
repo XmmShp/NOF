@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using NOF.Hosting.AspNetCore.Extension.OidcServer;
 using System.Security.Claims;
 

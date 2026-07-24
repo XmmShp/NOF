@@ -1,4 +1,3 @@
-using NOF.Application;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Services;

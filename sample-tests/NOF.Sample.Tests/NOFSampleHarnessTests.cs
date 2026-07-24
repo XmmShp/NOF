@@ -1,7 +1,6 @@
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
-using NOF.Sample;
 using NOF.Sample.Application;
 using NOF.Sample.Application.Entities;
 using NOF.Test;
