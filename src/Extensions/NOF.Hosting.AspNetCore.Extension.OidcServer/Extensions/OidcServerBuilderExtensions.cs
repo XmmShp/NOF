@@ -24,6 +24,7 @@ public static partial class NOFOidcServerExtensions
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, OAuthClientModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, RevokedRefreshTokenCleanupBackgroundService>());
             builder.Services.ReplaceOrAddScoped<LocalJwksService, LocalJwksService>();
+
             builder.Services.ReplaceOrAddScoped<IJwksService>(static serviceProvider => serviceProvider.GetRequiredService<LocalJwksService>());
             builder.Services.ReplaceOrAddScoped<ITokenService, TokenAuthorityService>();
             builder.Services.TryAddScoped<IOAuthServerRootEndpoint, DefaultOAuthServerRootEndpoint>();
