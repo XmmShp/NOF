@@ -1,5 +1,6 @@
 using NHibernate;
 using NOF.Application;
+using NOF.Domain;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -156,6 +157,10 @@ internal sealed class NHibernateDbSetAdapter<TEntity> : AsyncQueryable<TEntity>,
         _session = session;
     }
 
+    public int Count => _session.Query<TEntity>().Count();
+
+    public bool IsReadOnly => false;
+
     public void Add(TEntity entity)
         => _session.Save(entity);
 
@@ -203,8 +208,11 @@ internal sealed class NHibernateDbSetAdapter<TEntity> : AsyncQueryable<TEntity>,
         }
     }
 
-    public void Remove(TEntity entity)
-        => _session.Delete(entity);
+    public bool Remove(TEntity entity)
+    {
+        _session.Delete(entity);
+        return true;
+    }
 
     public void RemoveRange(IEnumerable<TEntity> entities)
     {
@@ -213,6 +221,15 @@ internal sealed class NHibernateDbSetAdapter<TEntity> : AsyncQueryable<TEntity>,
             Remove(entity);
         }
     }
+
+    public void Clear()
+        => RemoveRange(_session.Query<TEntity>().ToArray());
+
+    public bool Contains(TEntity item)
+        => _session.Query<TEntity>().Contains(item);
+
+    public void CopyTo(TEntity[] array, int arrayIndex)
+        => _session.Query<TEntity>().ToArray().CopyTo(array, arrayIndex);
 
     public IAsyncQueryable<TEntity> AsNoTracking()
         => new AsyncQueryable<TEntity>(_session.Query<TEntity>(), AsyncExecutor);

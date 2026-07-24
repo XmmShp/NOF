@@ -1,4 +1,5 @@
 using NOF.Application;
+using NOF.Domain;
 using System.Linq.Expressions;
 
 namespace System.Linq;

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace NOF.Application;
+namespace NOF.Domain;
 
 /// <summary>
 /// Describes a provider-agnostic batch update specification for a queryable entity set.

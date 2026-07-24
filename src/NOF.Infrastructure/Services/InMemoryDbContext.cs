@@ -1,4 +1,5 @@
 using NOF.Application;
+using NOF.Domain;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
@@ -177,6 +178,10 @@ internal sealed class InMemoryDbSet<TEntity> : AsyncQueryable<TEntity>, IDbSet<T
         _dbContext = dbContext;
     }
 
+    public int Count => _dbContext.Query<TEntity>().Count();
+
+    public bool IsReadOnly => false;
+
     public void Add(TEntity entity)
         => _dbContext.AddChange(InMemoryPersistenceChangeKind.Add, typeof(TEntity), entity);
 
@@ -223,8 +228,11 @@ internal sealed class InMemoryDbSet<TEntity> : AsyncQueryable<TEntity>, IDbSet<T
         }
     }
 
-    public void Remove(TEntity entity)
-        => _dbContext.AddChange(InMemoryPersistenceChangeKind.Remove, typeof(TEntity), entity);
+    public bool Remove(TEntity entity)
+    {
+        _dbContext.AddChange(InMemoryPersistenceChangeKind.Remove, typeof(TEntity), entity);
+        return true;
+    }
 
     public void RemoveRange(IEnumerable<TEntity> entities)
     {
@@ -233,6 +241,15 @@ internal sealed class InMemoryDbSet<TEntity> : AsyncQueryable<TEntity>, IDbSet<T
             Remove(entity);
         }
     }
+
+    public void Clear()
+        => RemoveRange(_dbContext.Query<TEntity>().ToArray());
+
+    public bool Contains(TEntity item)
+        => _dbContext.Query<TEntity>().Contains(item);
+
+    public void CopyTo(TEntity[] array, int arrayIndex)
+        => _dbContext.Query<TEntity>().ToArray().CopyTo(array, arrayIndex);
 
     public IAsyncQueryable<TEntity> AsNoTracking()
         => new AsyncQueryable<TEntity>(_dbContext.Query<TEntity>(track: false), AsyncExecutor);

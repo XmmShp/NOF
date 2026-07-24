@@ -109,17 +109,18 @@ await _dbContext.SaveChangesAsync(cancellationToken);
 
 ### Persistence Abstractions
 
-Application code should depend on `IDbContext`, `IDbSet<TEntity>`, and async query helpers under `NOF.Application` rather than a concrete ORM type.
+Application code should depend on `IDbContext` from `NOF.Application`, repository/set abstractions from `NOF.Domain`, and async query helpers under `NOF.Application` rather than a concrete ORM type.
 
 ```csharp
 using NOF.Application;
+using NOF.Domain;
 
 var exists = await _dbContext.Set<Order>()
     .AsNoTracking()
     .AnyAsync(order => order.Id == request.Id, cancellationToken);
 ```
 
-The async query surface is exposed through `IAsyncQueryable<T>` plus extension methods such as `AnyAsync`, `CountAsync`, `FirstOrDefaultAsync`, `SingleAsync`, `ToListAsync`, `SumAsync`, and `AverageAsync`. Concrete infrastructure adapters decide how those terminal operations are executed.
+The async query surface is exposed through `IAsyncQueryable<T>` in `NOF.Domain` plus extension methods such as `AnyAsync`, `CountAsync`, `FirstOrDefaultAsync`, `SingleAsync`, `ToListAsync`, `SumAsync`, and `AverageAsync`. Concrete infrastructure adapters decide how those terminal operations are executed.
 
 ### Object Mapping (`IMapper`)
 

@@ -1,4 +1,4 @@
-using NOF.Application;
+using NOF.Domain;
 
 namespace NOF.Sample.Application.Repositories;
 

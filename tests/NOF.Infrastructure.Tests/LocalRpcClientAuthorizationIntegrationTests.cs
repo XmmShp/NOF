@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
+using NOF.Domain;
 using NOF.Hosting;
 using System.Security.Claims;
 using Xunit;

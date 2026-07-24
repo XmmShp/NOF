@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NOF.Application;
+using NOF.Domain;
 using System.Linq.Expressions;
 using System.Reflection;
 using AppDbException = NOF.Application.DbException;
@@ -240,6 +241,10 @@ internal sealed class EfCoreDbSetAdapter<TEntity> : AsyncQueryable<TEntity>, IDb
         _dbSet = dbSet;
     }
 
+    public int Count => _dbSet.Count();
+
+    public bool IsReadOnly => false;
+
     public void Add(TEntity entity)
         => _dbSet.Add(entity);
 
@@ -264,11 +269,23 @@ internal sealed class EfCoreDbSetAdapter<TEntity> : AsyncQueryable<TEntity>, IDb
     public void UpdateRange(IEnumerable<TEntity> entities)
         => _dbSet.UpdateRange(entities);
 
-    public void Remove(TEntity entity)
-        => _dbSet.Remove(entity);
+    public bool Remove(TEntity entity)
+    {
+        _dbSet.Remove(entity);
+        return true;
+    }
 
     public void RemoveRange(IEnumerable<TEntity> entities)
         => _dbSet.RemoveRange(entities);
+
+    public void Clear()
+        => RemoveRange(_dbSet.ToArray());
+
+    public bool Contains(TEntity item)
+        => _dbSet.Contains(item);
+
+    public void CopyTo(TEntity[] array, int arrayIndex)
+        => _dbSet.ToArray().CopyTo(array, arrayIndex);
 
     public IAsyncQueryable<TEntity> AsNoTracking()
         => new AsyncQueryable<TEntity>(_dbSet.AsNoTracking(), AsyncExecutor);

@@ -1,4 +1,4 @@
-namespace NOF.Application;
+namespace NOF.Domain;
 
 /// <summary>
 /// Represents a queryable source whose asynchronous terminal operations are provided by an adapter-specific executor.

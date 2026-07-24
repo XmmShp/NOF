@@ -1,3 +1,5 @@
+using NOF.Domain;
+
 namespace NOF.Application;
 
 /// <summary>

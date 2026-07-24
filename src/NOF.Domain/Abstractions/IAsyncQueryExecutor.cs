@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace NOF.Application;
+namespace NOF.Domain;
 
 /// <summary>
 /// Executes asynchronous terminal operations for a LINQ query.

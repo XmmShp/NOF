@@ -1,15 +1,15 @@
-namespace NOF.Application;
+namespace NOF.Domain;
 
 /// <summary>
 /// Abstracts an entity set while preserving LINQ composition and common unit-of-work operations.
 /// </summary>
-public interface IDbSet<TEntity> : IAsyncQueryable<TEntity>
+public interface IDbSet<TEntity> : IAsyncQueryable<TEntity>, ICollection<TEntity>
     where TEntity : class
 {
     /// <summary>
     /// Adds an entity to the current unit of work.
     /// </summary>
-    void Add(TEntity entity);
+    new void Add(TEntity entity);
     ValueTask AddAsync(TEntity entity, CancellationToken cancellationToken = default);
     void AddRange(IEnumerable<TEntity> entities);
     Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
@@ -29,7 +29,7 @@ public interface IDbSet<TEntity> : IAsyncQueryable<TEntity>
     /// <summary>
     /// Marks an entity for deletion.
     /// </summary>
-    void Remove(TEntity entity);
+    new bool Remove(TEntity entity);
     void RemoveRange(IEnumerable<TEntity> entities);
 
     /// <summary>
