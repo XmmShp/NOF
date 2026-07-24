@@ -11,10 +11,10 @@ Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF)
 - `Failure` and `[Failure(...)]` for strongly-typed failure definitions
 - `DomainException` and `DomainValidationException`
 - `IIdGenerator` and the ambient `IdGenerator` facade
-- `IDbSet<TEntity>`, `IAsyncQueryable<T>`, and provider-agnostic batch update descriptors for repository/set abstractions
+- `IRepository<TEntity>`, `IAsyncQueryable<T>`, and provider-agnostic batch update descriptors for repository abstractions
 - `AddNOFDomain()` for package-local runtime registration
 
-Unit-of-work orchestration remains in `NOF.Application` through `IDbContext`; repository/set abstractions live here so Domain services can express collection dependencies without referencing Application.
+Unit-of-work orchestration remains in `NOF.Application` through `IDbContext`; repository abstractions live here so Domain services can express collection dependencies without referencing Application.
 
 ## Key Abstractions
 

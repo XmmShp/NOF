@@ -109,7 +109,7 @@ await _dbContext.SaveChangesAsync(cancellationToken);
 
 ### Persistence Abstractions
 
-Application code should depend on `IDbContext` from `NOF.Application`, repository/set abstractions from `NOF.Domain`, and async query helpers under `NOF.Application` rather than a concrete ORM type.
+Application code should depend on `IDbContext` from `NOF.Application`, repository abstractions from `NOF.Domain`, and async query helpers under `NOF.Application` rather than a concrete ORM type.
 
 ```csharp
 using NOF.Application;

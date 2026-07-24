@@ -20,6 +20,7 @@ public static partial class NOFInfrastructureExtensions
                     .OpenSession(TenantId.Normalize(sp.GetRequiredService<ICurrentTenant>().TenantId)));
             builder.Services.ReplaceOrAddScoped<IDbContext>(sp =>
                 new NHibernateDbContextAdapter(sp.GetRequiredService<ISession>()));
+            builder.Services.AddRepositoryProviders();
 
             return new NHibernateSelector(builder);
         }

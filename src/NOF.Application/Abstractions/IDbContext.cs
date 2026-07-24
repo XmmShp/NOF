@@ -11,7 +11,7 @@ public interface IDbContext
     /// <summary>
     /// Gets a query/update entry point for <typeparamref name="TEntity"/>.
     /// </summary>
-    IDbSet<TEntity> Set<TEntity>()
+    IRepository<TEntity> Set<TEntity>()
         where TEntity : class;
 
     /// <summary>

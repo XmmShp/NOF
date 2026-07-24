@@ -33,7 +33,7 @@ This package includes:
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-memory persistence for tests/development (`services.AddInMemoryPersistence()`)
 - in-process event publisher (`IEventPublisher`)
-- database-agnostic persistence adapters for `IDbContext`, Domain `IDbSet<T>`, and async query extensions
+- database-agnostic persistence adapters for `IDbContext`, Domain `IRepository<T>`, and async query extensions
 - outbox / inbox entities and transactional message background services
 - JWT resource server primitives (`services.AddAuthenticationResourceServer(...)`, JWKS fetching/cache, inbound token validation)
 

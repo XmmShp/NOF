@@ -36,6 +36,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateConcreteDbContext());
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
             builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<IDbContextFactory>().CreateDbContext());
+            builder.Services.AddRepositoryProviders();
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
                 builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateConcreteDbContext());

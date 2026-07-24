@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
+using NOF.Domain;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Persistence;
@@ -18,6 +19,24 @@ public sealed class InMemoryServiceCollectionExtensionsTests
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<InMemoryPersistenceStore>());
         Assert.Equal("InMemoryDbContext", scope.ServiceProvider.GetRequiredService<IDbContext>().GetType().Name);
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IRepository<RepositoryTestEntity>>());
+    }
+
+    [Fact]
+    public void AddInMemoryPersistence_ShouldRegisterRepositoryProvider()
+    {
+        var services = new ServiceCollection();
+
+        services.AddInMemoryPersistence();
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IRepository<RepositoryTestEntity>>();
+        repository.Add(new RepositoryTestEntity { Id = 1 });
+
+        scope.ServiceProvider.GetRequiredService<IDbContext>().SaveChanges();
+
+        Assert.True(repository.Any(entity => entity.Id == 1));
     }
 
     [Fact]
@@ -30,5 +49,11 @@ public sealed class InMemoryServiceCollectionExtensionsTests
 
         Assert.Single(services, static descriptor => descriptor.ServiceType == typeof(InMemoryPersistenceStore));
         Assert.Single(services, static descriptor => descriptor.ServiceType == typeof(IDbContext));
+        Assert.Single(services, static descriptor => descriptor.ServiceType == typeof(IRepository<>));
+    }
+
+    private sealed class RepositoryTestEntity
+    {
+        public int Id { get; set; }
     }
 }

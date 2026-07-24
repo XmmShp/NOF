@@ -12,9 +12,9 @@ internal sealed class NHibernateDbContextAdapter(ISession session) : IDbContext
     private readonly ISession _session = session;
     private readonly NHibernateAsyncQueryExecutor _asyncExecutor = new(session);
 
-    public IDbSet<TEntity> Set<TEntity>()
+    public IRepository<TEntity> Set<TEntity>()
         where TEntity : class
-        => new NHibernateDbSetAdapter<TEntity>(_session, _asyncExecutor);
+        => new NHibernateRepositoryAdapter<TEntity>(_session, _asyncExecutor);
 
     public int SaveChanges()
         => SaveChanges(acceptAllChangesOnSuccess: true);
@@ -146,12 +146,12 @@ internal sealed class NHibernateDbContextTransactionAdapter(ITransaction transac
     }
 }
 
-internal sealed class NHibernateDbSetAdapter<TEntity> : AsyncQueryable<TEntity>, IDbSet<TEntity>
+internal sealed class NHibernateRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
     where TEntity : class
 {
     private readonly ISession _session;
 
-    public NHibernateDbSetAdapter(ISession session, IAsyncQueryExecutor asyncExecutor)
+    public NHibernateRepositoryAdapter(ISession session, IAsyncQueryExecutor asyncExecutor)
         : base(session.Query<TEntity>(), asyncExecutor)
     {
         _session = session;

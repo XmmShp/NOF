@@ -14,7 +14,7 @@ public sealed class EfCoreFindUsageAnalyzerTests
 {
     private static readonly Type[] _refs =
     [
-        typeof(IDbSet<>),
+        typeof(IRepository<>),
         typeof(DbContext),
         typeof(NOFDbContext),
         typeof(EntityFrameworkQueryableExtensions)

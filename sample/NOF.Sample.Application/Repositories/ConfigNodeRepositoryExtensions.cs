@@ -4,7 +4,7 @@ namespace NOF.Sample.Application.Repositories;
 
 public static class ConfigNodeRepositoryExtensions
 {
-    extension(IDbSet<ConfigNode> set)
+    extension(IRepository<ConfigNode> set)
     {
         public Task<List<ConfigNode>> GetRootNodesAsync(CancellationToken cancellationToken = default)
         {

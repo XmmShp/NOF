@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NOF.Application;
+using NOF.Domain;
 using NOF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
 
@@ -70,6 +71,13 @@ public static partial class NOFInfrastructureExtensions
         {
             services.ReplaceOrAddSingleton<InMemoryPersistenceStore, InMemoryPersistenceStore>();
             services.ReplaceOrAddScoped<IDbContext, InMemoryDbContext>();
+            services.AddRepositoryProviders();
+            return services;
+        }
+
+        public IServiceCollection AddRepositoryProviders()
+        {
+            services.TryAddScoped(typeof(IRepository<>), typeof(RepositoryProvider<>));
             return services;
         }
 

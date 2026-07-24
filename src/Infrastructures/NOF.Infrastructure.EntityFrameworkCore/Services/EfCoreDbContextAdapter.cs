@@ -19,9 +19,9 @@ internal sealed class EfCoreDbContextAdapter(DbContext dbContext) : IDbContext
     private readonly DbContext _dbContext = dbContext;
     private readonly EfCoreAsyncQueryExecutor _asyncExecutor = new();
 
-    public IDbSet<TEntity> Set<TEntity>()
+    public IRepository<TEntity> Set<TEntity>()
         where TEntity : class
-        => new EfCoreDbSetAdapter<TEntity>(_dbContext.Set<TEntity>(), _asyncExecutor);
+        => new EfCoreRepositoryAdapter<TEntity>(_dbContext.Set<TEntity>(), _asyncExecutor);
 
     public int SaveChanges()
         => SaveChanges(acceptAllChangesOnSuccess: true);
@@ -231,12 +231,12 @@ internal sealed class EfCoreDbContextTransactionAdapter(EfDbContextTransaction t
         => _transaction.DisposeAsync();
 }
 
-internal sealed class EfCoreDbSetAdapter<TEntity> : AsyncQueryable<TEntity>, IDbSet<TEntity>
+internal sealed class EfCoreRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
     where TEntity : class
 {
     private readonly DbSet<TEntity> _dbSet;
 
-    public EfCoreDbSetAdapter(DbSet<TEntity> dbSet, IAsyncQueryExecutor asyncExecutor) : base(dbSet, asyncExecutor)
+    public EfCoreRepositoryAdapter(DbSet<TEntity> dbSet, IAsyncQueryExecutor asyncExecutor) : base(dbSet, asyncExecutor)
     {
         _dbSet = dbSet;
     }

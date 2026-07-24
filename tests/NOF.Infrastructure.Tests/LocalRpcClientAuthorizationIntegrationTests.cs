@@ -194,7 +194,7 @@ public sealed class ScopeCheckEventHandler(
 
 public sealed class LocalScopedDbContext : IDbContext
 {
-    public IDbSet<TEntity> Set<TEntity>()
+    public IRepository<TEntity> Set<TEntity>()
         where TEntity : class
         => throw new NotSupportedException();
 

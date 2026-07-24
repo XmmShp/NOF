@@ -11,9 +11,9 @@ internal sealed class InMemoryDbContext(InMemoryPersistenceStore store) : IDbCon
     private readonly List<InMemoryPersistenceChange> _changes = [];
     private readonly Dictionary<Type, List<TrackedInMemoryEntity>> _trackedEntities = [];
 
-    public IDbSet<TEntity> Set<TEntity>()
+    public IRepository<TEntity> Set<TEntity>()
         where TEntity : class
-        => new InMemoryDbSet<TEntity>(this, store);
+        => new InMemoryRepository<TEntity>(this, store);
 
     public int SaveChanges()
         => SaveChanges(acceptAllChangesOnSuccess: true);
@@ -167,12 +167,12 @@ internal sealed class TrackedInMemoryEntity(object entity, object original)
     }
 }
 
-internal sealed class InMemoryDbSet<TEntity> : AsyncQueryable<TEntity>, IDbSet<TEntity>
+internal sealed class InMemoryRepository<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
     where TEntity : class
 {
     private readonly InMemoryDbContext _dbContext;
 
-    public InMemoryDbSet(InMemoryDbContext dbContext, InMemoryPersistenceStore store)
+    public InMemoryRepository(InMemoryDbContext dbContext, InMemoryPersistenceStore store)
         : base(dbContext.Query<TEntity>(), new InMemoryPersistenceAsyncQueryExecutor<TEntity>(store))
     {
         _dbContext = dbContext;

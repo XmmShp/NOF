@@ -1,9 +1,9 @@
 namespace NOF.Domain;
 
 /// <summary>
-/// Abstracts an entity set while preserving LINQ composition and common unit-of-work operations.
+/// Abstracts a repository while preserving LINQ composition and common unit-of-work operations.
 /// </summary>
-public interface IDbSet<TEntity> : IAsyncQueryable<TEntity>, ICollection<TEntity>
+public interface IRepository<TEntity> : IAsyncQueryable<TEntity>, ICollection<TEntity>
     where TEntity : class
 {
     /// <summary>
