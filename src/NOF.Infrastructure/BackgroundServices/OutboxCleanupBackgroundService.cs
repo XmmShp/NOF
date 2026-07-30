@@ -77,6 +77,18 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
             .Where(m => m.SentAtUtc != null && m.SentAtUtc < olderThan)
             .ExecuteDeleteAsync(cancellationToken);
 
+        var compactedOrderStateCount = await dbContext.Set<NOFOutboxOrderState>()
+            .Where(state => state.CreatedAtUtc < olderThan)
+            .Where(state => dbContext.Set<NOFOutboxOrderState>().Any(newer =>
+                newer.OrderKey == state.OrderKey && newer.Sequence > state.Sequence))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        var deletedCompletedOrderStateCount = await dbContext.Set<NOFOutboxOrderState>()
+            .Where(state => state.CompletesOrderKey && state.CreatedAtUtc < olderThan)
+            .Where(state => !dbContext.Set<NOFOutboxMessage>().Any(message =>
+                message.OrderKey == state.OrderKey && message.Status != OutboxMessageStatus.Sent))
+            .ExecuteDeleteAsync(cancellationToken);
+
         if (deletedCount > 0)
         {
             _logger.LogInformation(
@@ -86,6 +98,14 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
         else
         {
             _logger.LogDebug("Outbox cleanup completed. No messages to delete");
+        }
+
+        if (compactedOrderStateCount > 0 || deletedCompletedOrderStateCount > 0)
+        {
+            _logger.LogInformation(
+                "Outbox order-state cleanup completed. Compacted {CompactedCount} historical allocations and deleted {CompletedCount} completed keys",
+                compactedOrderStateCount,
+                deletedCompletedOrderStateCount);
         }
     }
 }

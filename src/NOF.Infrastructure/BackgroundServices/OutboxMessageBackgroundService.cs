@@ -110,6 +110,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         var headers = string.IsNullOrWhiteSpace(message.Headers)
             ? new Dictionary<string, string?>()
             : _objectSerializer.Deserialize<Dictionary<string, string?>>(message.Headers) ?? new Dictionary<string, string?>();
+        AddOrderingHeaders(message, headers);
 
         // Restore the ambient execution context for downstream components that rely on it.
         // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
@@ -176,6 +177,37 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         activity?.SetStatus(ActivityStatusCode.Ok);
     }
 
+    private static void AddOrderingHeaders(
+        NOFOutboxMessage message,
+        IDictionary<string, string?> headers)
+    {
+        foreach (var reservedHeader in headers.Keys.Where(static key =>
+                     string.Equals(key, NOFAbstractionConstants.Transport.Headers.OrderKey, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(key, NOFAbstractionConstants.Transport.Headers.Sequence, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(key, NOFAbstractionConstants.Transport.Headers.CompletesOrderKey, StringComparison.OrdinalIgnoreCase)).ToArray())
+        {
+            headers.Remove(reservedHeader);
+        }
+
+        if (message.OrderKey is null && message.Sequence is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(message.OrderKey) || message.Sequence is null or <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Outbox message '{message.Id}' must have both a non-empty order key and a positive sequence, or neither.");
+        }
+
+        headers[NOFAbstractionConstants.Transport.Headers.OrderKey] = message.OrderKey;
+        headers[NOFAbstractionConstants.Transport.Headers.Sequence] = message.Sequence.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (message.CompletesOrderKey)
+        {
+            headers[NOFAbstractionConstants.Transport.Headers.CompletesOrderKey] = bool.TrueString;
+        }
+    }
+
     private Activity? RestoreTracingContext(NOFOutboxMessage message)
     {
         var dispatchRoutes = ResolveDispatchRoutes(message);
@@ -213,8 +245,10 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         var succeededIds = new List<Guid>(pendingMessages.Count);
         var failedCount = 0;
 
-        foreach (var message in pendingMessages)
+        var messages = pendingMessages.ToArray();
+        for (var index = 0; index < messages.Length; index++)
         {
+            var message = messages[index];
             try
             {
                 await ProcessSingleMessageAsync(scopedServiceProvider, dbContext, message, commandRider, notificationRider, cancellationToken);
@@ -224,6 +258,15 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             {
                 failedCount++;
                 _logger.LogError(ex, "Unhandled exception while processing claimed message {MessageId}", message.Id);
+
+                // Do not allow later messages in the ordered batch to overtake a failed predecessor.
+                var unprocessedIds = messages.Skip(index + 1).Select(static pending => pending.Id).ToArray();
+                if (unprocessedIds.Length > 0)
+                {
+                    await AtomicReleaseClaimsAsync(dbContext, unprocessedIds, cancellationToken);
+                }
+
+                break;
             }
         }
 
@@ -270,6 +313,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                         m.RetryCount < _options.MaxRetryCount &&
                         (m.ClaimedBy == null || m.ClaimExpiresAtUtc == null || m.ClaimExpiresAtUtc <= now))
             .OrderBy(m => m.CreatedAtUtc)
+            .ThenBy(m => m.Id)
             .Take(batchSize)
             .ExecuteUpdateAsync(setters => setters
                     .SetProperty(m => m.RetryCount, m => m.RetryCount + 1)
@@ -285,12 +329,28 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         var claimedMessages = await dbContext.Set<NOFOutboxMessage>()
             .AsNoTracking()
             .Where(m => m.ClaimedBy == lockId)
+            .OrderBy(m => m.CreatedAtUtc)
+            .ThenBy(m => m.Id)
             .ToListAsync(cancellationToken);
 
         foreach (var msgFromDb in claimedMessages)
         {
             yield return msgFromDb;
         }
+    }
+
+    private static async ValueTask AtomicReleaseClaimsAsync(
+        IDbContext dbContext,
+        IEnumerable<Guid> messageIds,
+        CancellationToken cancellationToken = default)
+    {
+        await dbContext.Set<NOFOutboxMessage>()
+            .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(m => m.RetryCount, m => m.RetryCount - 1)
+                .SetProperty(m => m.ClaimedBy, (string?)null)
+                .SetProperty(m => m.ClaimExpiresAtUtc, (DateTime?)null),
+                cancellationToken);
     }
 
     private static async ValueTask AtomicMarkAsSentAsync(

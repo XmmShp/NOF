@@ -30,6 +30,9 @@ public static class NOFAbstractionConstants
             public const string TenantId = "X-Tenant-Id";
             public const string TraceParent = "traceparent";
             public const string MessageId = "X-Message-Id";
+            public const string OrderKey = "X-Order-Key";
+            public const string Sequence = "X-Sequence";
+            public const string CompletesOrderKey = "X-Completes-Order-Key";
         }
     }
 }

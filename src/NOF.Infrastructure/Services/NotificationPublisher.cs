@@ -11,20 +11,41 @@ public sealed class NotificationPublisher : INotificationPublisher
     private readonly IReadOnlyList<INotificationOutboundMiddleware> _middlewares;
     private readonly IDbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly OutboxOrderSequenceAllocator _orderSequenceAllocator;
 
     public NotificationPublisher(
         INotificationRider rider,
         IEnumerable<INotificationOutboundMiddleware> middlewares,
         IDbContext dbContext,
-        IObjectSerializer objectSerializer)
+        IObjectSerializer objectSerializer,
+        OutboxOrderSequenceAllocator orderSequenceAllocator)
     {
         _rider = rider;
         _middlewares = new DependencyGraph<INotificationOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
+        _orderSequenceAllocator = orderSequenceAllocator;
     }
 
     public async Task DeferPublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)
+        => await DeferPublishCoreAsync(notification, notificationType, null, context, false, cancellationToken);
+
+    public async Task DeferPublishOrderedAsync(
+        object notification,
+        Type notificationType,
+        string orderKey,
+        Context context,
+        bool completesOrderKey = false,
+        CancellationToken cancellationToken = default)
+        => await DeferPublishCoreAsync(notification, notificationType, orderKey, context, completesOrderKey, cancellationToken);
+
+    private async Task DeferPublishCoreAsync(
+        object notification,
+        Type notificationType,
+        string? orderKey,
+        Context context,
+        bool completesOrderKey,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(notification);
         ArgumentNullException.ThrowIfNull(notificationType);
@@ -37,15 +58,17 @@ public sealed class NotificationPublisher : INotificationPublisher
             new[] { notificationType.DisplayName },
             typeof(string[]));
 
-        _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
-        {
-            Id = Guid.NewGuid(),
-            MessageType = OutboxMessageType.Notification,
-            DispatchRoutes = dispatchRoutes,
-            Payload = _objectSerializer.Serialize(notification).ToArray(),
-            Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
-            TraceParent = Activity.Current?.ToTraceParent()
-        });
+        var order = orderKey is null
+            ? (OutboxOrder?)null
+            : await _orderSequenceAllocator.AllocateAsync(orderKey, completesOrderKey, cancellationToken);
+
+        _dbContext.Set<NOFOutboxMessage>().Add(NOFOutboxMessage.Create(
+            OutboxMessageType.Notification,
+            dispatchRoutes,
+            _objectSerializer.Serialize(notification).ToArray(),
+            _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
+            Activity.Current?.ToTraceParent(),
+            order));
     }
 
     public async Task PublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)

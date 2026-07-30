@@ -72,7 +72,9 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<MemoryBackplaneState>()));
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFTenantModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxMessageModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxOrderStateModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFOutboxMessageModelCreatingContributor>());
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFOutboxOrderStateModelCreatingContributor>());
 
             #endregion
 
@@ -108,6 +110,7 @@ public static partial class NOFInfrastructureExtensions
             #region Application Services
             builder.Services.TryAddScoped<ICommandSender, CommandSender>();
             builder.Services.TryAddScoped<INotificationPublisher, NotificationPublisher>();
+            builder.Services.TryAddScoped<OutboxOrderSequenceAllocator>();
             #endregion
 
             #region Outbound Middlewares

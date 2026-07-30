@@ -65,14 +65,15 @@ public sealed class MemoryCommandRider : ICommandRider
             return true;
         }
 
-        dbContext.Set<NOFInboxMessage>().Add(new NOFInboxMessage
-        {
-            Id = messageId,
-            MessageType = messageType,
-            Route = route,
-            Payload = payload.ToArray(),
-            Headers = SerializeHeaders(headers)
-        });
+        var order = InboxMessageOrdering.Parse(headers);
+        await InboxMessageOrdering.EnsureStateAsync(dbContext, messageId, route, order, cancellationToken);
+        dbContext.Set<NOFInboxMessage>().Add(NOFInboxMessage.Create(
+            messageId,
+            messageType,
+            route,
+            payload.ToArray(),
+            SerializeHeaders(headers),
+            order));
 
         try
         {

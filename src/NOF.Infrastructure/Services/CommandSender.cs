@@ -11,20 +11,41 @@ public sealed class CommandSender : ICommandSender
     private readonly IReadOnlyList<ICommandOutboundMiddleware> _middlewares;
     private readonly IDbContext _dbContext;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly OutboxOrderSequenceAllocator _orderSequenceAllocator;
 
     public CommandSender(
         ICommandRider rider,
         IEnumerable<ICommandOutboundMiddleware> middlewares,
         IDbContext dbContext,
-        IObjectSerializer objectSerializer)
+        IObjectSerializer objectSerializer,
+        OutboxOrderSequenceAllocator orderSequenceAllocator)
     {
         _rider = rider;
         _middlewares = new DependencyGraph<ICommandOutboundMiddleware>(middlewares).GetExecutionOrder();
         _dbContext = dbContext;
         _objectSerializer = objectSerializer;
+        _orderSequenceAllocator = orderSequenceAllocator;
     }
 
     public async Task DeferSendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
+        => await DeferSendCoreAsync(command, commandType, null, context, false, cancellationToken);
+
+    public async Task DeferSendOrderedAsync(
+        object command,
+        Type commandType,
+        string orderKey,
+        Context context,
+        bool completesOrderKey = false,
+        CancellationToken cancellationToken = default)
+        => await DeferSendCoreAsync(command, commandType, orderKey, context, completesOrderKey, cancellationToken);
+
+    private async Task DeferSendCoreAsync(
+        object command,
+        Type commandType,
+        string? orderKey,
+        Context context,
+        bool completesOrderKey,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(commandType);
@@ -37,15 +58,17 @@ public sealed class CommandSender : ICommandSender
             new[] { commandType.DisplayName },
             typeof(string[]));
 
-        _dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
-        {
-            Id = Guid.NewGuid(),
-            MessageType = OutboxMessageType.Command,
-            DispatchRoutes = dispatchRoutes,
-            Payload = _objectSerializer.Serialize(command).ToArray(),
-            Headers = _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
-            TraceParent = Activity.Current?.ToTraceParent()
-        });
+        var order = orderKey is null
+            ? (OutboxOrder?)null
+            : await _orderSequenceAllocator.AllocateAsync(orderKey, completesOrderKey, cancellationToken);
+
+        _dbContext.Set<NOFOutboxMessage>().Add(NOFOutboxMessage.Create(
+            OutboxMessageType.Command,
+            dispatchRoutes,
+            _objectSerializer.Serialize(command).ToArray(),
+            _objectSerializer.SerializeToText(outboundContext.Headers, typeof(Dictionary<string, string?>)),
+            Activity.Current?.ToTraceParent(),
+            order));
     }
 
     public async Task SendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)

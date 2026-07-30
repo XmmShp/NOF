@@ -153,6 +153,16 @@ public sealed class InMemoryPersistenceStore
             return [inboxMessage.Id, inboxMessage.Route];
         }
 
+        if (entity is NOFInboxOrderState inboxOrderState)
+        {
+            return [inboxOrderState.Route, inboxOrderState.OrderKey];
+        }
+
+        if (entity is NOFOutboxOrderState outboxOrderState)
+        {
+            return [outboxOrderState.OrderKey, outboxOrderState.Sequence];
+        }
+
         var idProperty = entity.GetType().GetProperty("Id", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         return idProperty is null ? [] : [idProperty.GetValue(entity)];
     }

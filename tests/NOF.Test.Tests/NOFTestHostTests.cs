@@ -195,6 +195,18 @@ public class NOFTestHostTests
             return Task.CompletedTask;
         }
 
+        public Task DeferSendOrderedAsync(
+            object command,
+            Type commandType,
+            string orderKey,
+            Context context,
+            bool completesOrderKey = false,
+            CancellationToken cancellationToken = default)
+        {
+            _ = context;
+            return Task.CompletedTask;
+        }
+
         public Task SendAsync(object command, Type commandType, Context context, CancellationToken cancellationToken = default)
         {
             _ = context;
@@ -205,6 +217,18 @@ public class NOFTestHostTests
     private sealed class FakeNotificationPublisher : INotificationPublisher
     {
         public Task DeferPublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default)
+        {
+            _ = context;
+            return Task.CompletedTask;
+        }
+
+        public Task DeferPublishOrderedAsync(
+            object notification,
+            Type notificationType,
+            string orderKey,
+            Context context,
+            bool completesOrderKey = false,
+            CancellationToken cancellationToken = default)
         {
             _ = context;
             return Task.CompletedTask;

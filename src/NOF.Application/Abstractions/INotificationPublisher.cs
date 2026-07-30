@@ -12,6 +12,20 @@ public interface INotificationPublisher
     /// </summary>
     Task DeferPublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Adds an ordered notification to the transactional outbox context.
+    /// The framework qualifies <paramref name="orderKey"/> with the producer service name and assigns its sequence transactionally.
+    /// Every notification in one ordered stream must use the same key and reach each participating consumer handler without filtering gaps.
+    /// Set <paramref name="completesOrderKey"/> only on the final notification in the stream.
+    /// </summary>
+    Task DeferPublishOrderedAsync(
+        object notification,
+        Type notificationType,
+        string orderKey,
+        Context context,
+        bool completesOrderKey = false,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Publishes a notification.</summary>
     Task PublishAsync(object notification, Type notificationType, Context context, CancellationToken cancellationToken = default);
 }
@@ -20,19 +34,6 @@ public static class NotificationPublisherExtensions
 {
     extension(INotificationPublisher publisher)
     {
-        public Task PublishAsync(
-            object notification,
-            Type runtimeType,
-            Context context,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(publisher);
-            ArgumentNullException.ThrowIfNull(notification);
-            ArgumentNullException.ThrowIfNull(runtimeType);
-            ArgumentNullException.ThrowIfNull(context);
-            return publisher.PublishAsync(notification, runtimeType, context, cancellationToken);
-        }
-
         public Task DeferPublishAsync<TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(publisher);
@@ -41,17 +42,24 @@ public static class NotificationPublisherExtensions
             return publisher.DeferPublishAsync(notification, typeof(TNotification), context, cancellationToken);
         }
 
-        public Task DeferPublishAsync(
-            object notification,
-            Type runtimeType,
+        public Task DeferPublishOrderedAsync<TNotification>(
+            TNotification notification,
+            string orderKey,
             Context context,
+            bool completesOrderKey = false,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(publisher);
             ArgumentNullException.ThrowIfNull(notification);
-            ArgumentNullException.ThrowIfNull(runtimeType);
+            ArgumentException.ThrowIfNullOrWhiteSpace(orderKey);
             ArgumentNullException.ThrowIfNull(context);
-            return publisher.DeferPublishAsync(notification, runtimeType, context, cancellationToken);
+            return publisher.DeferPublishOrderedAsync(
+                notification,
+                typeof(TNotification),
+                orderKey,
+                context,
+                completesOrderKey,
+                cancellationToken);
         }
 
         public Task PublishAsync<TNotification>(TNotification notification, Context context, CancellationToken cancellationToken = default)

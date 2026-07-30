@@ -34,6 +34,27 @@ public sealed class NOFInboxMessageModelCreatingContributor : IDbContextModelCre
             entity.Property(e => e.Headers).IsRequired();
             entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
             entity.Property(e => e.ClaimedBy).HasMaxLength(256);
+            entity.Property(e => e.OrderKey).HasMaxLength(OutboxOrderSequenceAllocator.MaxOrderKeyLength);
+            entity.HasIndex(nameof(NOFInboxMessage.Route), nameof(NOFInboxMessage.OrderKey), nameof(NOFInboxMessage.Sequence));
+        });
+    }
+}
+
+public sealed class NOFInboxOrderStateModelCreatingContributor : IDbContextModelCreatingContributor
+{
+    public void Configure(IDbModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<NOFInboxOrderState>(entity =>
+        {
+            entity.IsHostOnly();
+            entity.ToTable(nameof(NOFInboxOrderState));
+            entity.HasKey(nameof(NOFInboxOrderState.Route), nameof(NOFInboxOrderState.OrderKey));
+            entity.Property(e => e.Route).HasMaxLength(512).IsRequired();
+            entity.Property(e => e.OrderKey).HasMaxLength(OutboxOrderSequenceAllocator.MaxOrderKeyLength).IsRequired();
+            entity.Property(e => e.ClaimedBy).HasMaxLength(256);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(2048);
+            entity.HasIndex(nameof(NOFInboxOrderState.ClaimedBy), nameof(NOFInboxOrderState.ClaimExpiresAtUtc));
+            entity.HasIndex(e => e.UpdatedAtUtc);
         });
     }
 }
@@ -57,6 +78,23 @@ public sealed class NOFOutboxMessageModelCreatingContributor : IDbContextModelCr
             entity.Property(e => e.ClaimedBy).HasMaxLength(256);
             entity.Property(e => e.TraceParent).HasMaxLength(128);
             entity.HasIndex(e => e.TraceParent);
+            entity.Property(e => e.OrderKey).HasMaxLength(OutboxOrderSequenceAllocator.MaxOrderKeyLength);
+            entity.HasIndex(nameof(NOFOutboxMessage.OrderKey), nameof(NOFOutboxMessage.Sequence));
+        });
+    }
+}
+
+public sealed class NOFOutboxOrderStateModelCreatingContributor : IDbContextModelCreatingContributor
+{
+    public void Configure(IDbModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<NOFOutboxOrderState>(entity =>
+        {
+            entity.IsHostOnly();
+            entity.ToTable(nameof(NOFOutboxOrderState));
+            entity.HasKey(nameof(NOFOutboxOrderState.OrderKey), nameof(NOFOutboxOrderState.Sequence));
+            entity.Property(e => e.OrderKey).HasMaxLength(OutboxOrderSequenceAllocator.MaxOrderKeyLength).IsRequired();
+            entity.HasIndex(e => e.CreatedAtUtc);
         });
     }
 }

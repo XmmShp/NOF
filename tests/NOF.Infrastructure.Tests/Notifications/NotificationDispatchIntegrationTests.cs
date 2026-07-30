@@ -11,6 +11,105 @@ namespace NOF.Infrastructure.Tests.Notifications;
 public sealed class NotificationDispatchIntegrationTests
 {
     [Fact]
+    public async Task DeferPublishOrderedAsync_ShouldQualifyKeyAndAllocateContiguousSequences()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddNOFInfrastructure();
+
+        using var host = builder.Build();
+        using var scope = host.Services.CreateScope();
+        var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+        var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+
+        await publisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("first"),
+            "Invoice:42",
+            Context.Empty);
+        await publisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("second"),
+            "Invoice:42",
+            Context.Empty,
+            completesOrderKey: true);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => publisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("after-terminal"),
+            "Invoice:42",
+            Context.Empty));
+        await publisher.DeferPublishAsync(new ConcreteNotification("unordered"), Context.Empty);
+        await dbContext.SaveChangesAsync();
+
+        var messages = await dbContext.Set<NOFOutboxMessage>()
+            .Where(static message => message.OrderKey != null)
+            .OrderBy(static message => message.Sequence)
+            .ToListAsync();
+        var allocations = await dbContext.Set<NOFOutboxOrderState>()
+            .OrderBy(static state => state.Sequence)
+            .ToListAsync();
+
+        Assert.Equal(2, messages.Count);
+        Assert.Equal([1L, 2L], messages.Select(static message => message.Sequence!.Value).ToArray());
+        Assert.All(messages, message => Assert.Equal($"{environment.ServiceName}:Invoice:42", message.OrderKey));
+        Assert.False(messages[0].CompletesOrderKey);
+        Assert.True(messages[1].CompletesOrderKey);
+        Assert.Equal([1L, 2L], allocations.Select(static state => state.Sequence).ToArray());
+
+        var unordered = await dbContext.Set<NOFOutboxMessage>()
+            .SingleAsync(static message => message.OrderKey == null);
+        Assert.Null(unordered.Sequence);
+        Assert.False(unordered.CompletesOrderKey);
+
+        using var secondScope = host.Services.CreateScope();
+        var secondPublisher = secondScope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => secondPublisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("after-persisted-terminal"),
+            "Invoice:42",
+            Context.Empty));
+    }
+
+    [Fact]
+    public async Task ConcurrentOrderedAllocations_ShouldConflictAndRetryWithNextSequence()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddNOFInfrastructure();
+
+        using var host = builder.Build();
+        using var firstScope = host.Services.CreateScope();
+        using var secondScope = host.Services.CreateScope();
+        var firstPublisher = firstScope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var secondPublisher = secondScope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var firstDbContext = firstScope.ServiceProvider.GetRequiredService<IDbContext>();
+        var secondDbContext = secondScope.ServiceProvider.GetRequiredService<IDbContext>();
+
+        await firstPublisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("first-instance"),
+            "Invoice:99",
+            Context.Empty);
+        await secondPublisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("second-instance"),
+            "Invoice:99",
+            Context.Empty);
+
+        await firstDbContext.SaveChangesAsync();
+        await Assert.ThrowsAsync<DbUpdateException>(() => secondDbContext.SaveChangesAsync());
+
+        using var retryScope = host.Services.CreateScope();
+        var retryPublisher = retryScope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var retryDbContext = retryScope.ServiceProvider.GetRequiredService<IDbContext>();
+        await retryPublisher.DeferPublishOrderedAsync(
+            new ConcreteNotification("retry"),
+            "Invoice:99",
+            Context.Empty);
+        await retryDbContext.SaveChangesAsync();
+
+        var sequences = await retryDbContext.Set<NOFOutboxOrderState>()
+            .Where(static state => state.OrderKey.EndsWith(":Invoice:99"))
+            .OrderBy(static state => state.Sequence)
+            .Select(static state => state.Sequence)
+            .ToListAsync();
+        Assert.Equal([1L, 2L], sequences);
+    }
+
+    [Fact]
     public async Task PublishAsync_ShouldDispatchConcreteNotificationToEveryConcreteHandler_EndToEnd()
     {
         var builder = Host.CreateApplicationBuilder();
@@ -79,6 +178,86 @@ public sealed class NotificationDispatchIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task OrderedNotification_ShouldWaitForMissingPredecessorAndThenProcessContiguously()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddNOFInfrastructure();
+        builder.Services.Configure<TransactionalMessageOptions>(static options =>
+        {
+            options.Inbox.PollingInterval = TimeSpan.FromMilliseconds(10);
+            options.Inbox.BatchSize = 10;
+        });
+
+        var registry = builder.Services.GetOrAddSingleton<NotificationHandlerRegistry>();
+        registry.Add(new NotificationHandlerRegistration(
+            typeof(OrderedNotificationHandler),
+            typeof(OrderedNotification),
+            typeof(NotificationInboundInvoker<OrderedNotificationHandler, OrderedNotification>)));
+        builder.Services.AddSingleton<OrderedNotificationProbe>();
+        builder.Services.AddScoped<OrderedNotificationHandler>();
+        builder.Services.AddSingleton<NotificationInboundInvoker<OrderedNotificationHandler, OrderedNotification>>();
+
+        using var host = builder.Build();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await host.StartAsync(timeout.Token);
+
+        try
+        {
+            var rider = host.Services.GetRequiredService<INotificationRider>();
+            var serializer = host.Services.GetRequiredService<IObjectSerializer>();
+            const string orderKey = "ProducerService:Invoice:42";
+
+            await PublishOrderedAsync(rider, serializer, new OrderedNotification(2), orderKey, 2, true, timeout.Token);
+            await Task.Delay(100, timeout.Token);
+            Assert.Empty(host.Services.GetRequiredService<OrderedNotificationProbe>().Values);
+
+            await PublishOrderedAsync(rider, serializer, new OrderedNotification(1), orderKey, 1, false, timeout.Token);
+            var probe = host.Services.GetRequiredService<OrderedNotificationProbe>();
+            await WaitUntilAsync(() => probe.Values.Count == 2, timeout.Token);
+
+            Assert.Equal([1, 2], probe.Values);
+
+            using var verificationScope = host.Services.CreateScope();
+            var dbContext = verificationScope.ServiceProvider.GetRequiredService<IDbContext>();
+            var state = await dbContext.Set<NOFInboxOrderState>().SingleAsync(timeout.Token);
+            Assert.Equal(3, state.NextSequence);
+            Assert.NotNull(state.CompletedAtUtc);
+            Assert.Null(state.BlockedSequence);
+
+            await PublishOrderedAsync(rider, serializer, new OrderedNotification(3), orderKey, 1, false, timeout.Token);
+            await WaitUntilAsync(() => probe.Values.Count == 3, timeout.Token);
+            Assert.Equal([1, 2, 3], probe.Values);
+        }
+        finally
+        {
+            await host.StopAsync(CancellationToken.None);
+        }
+    }
+
+    private static Task PublishOrderedAsync(
+        INotificationRider rider,
+        IObjectSerializer serializer,
+        OrderedNotification notification,
+        string orderKey,
+        long sequence,
+        bool completesOrderKey,
+        CancellationToken cancellationToken)
+    {
+        var headers = new Dictionary<string, string?>
+        {
+            [NOFAbstractionConstants.Transport.Headers.MessageId] = Guid.NewGuid().ToString(),
+            [NOFAbstractionConstants.Transport.Headers.OrderKey] = orderKey,
+            [NOFAbstractionConstants.Transport.Headers.Sequence] = sequence.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            [NOFAbstractionConstants.Transport.Headers.CompletesOrderKey] = completesOrderKey.ToString()
+        };
+        return rider.PublishAsync(
+            serializer.Serialize(notification),
+            typeof(OrderedNotification).DisplayName,
+            headers,
+            cancellationToken);
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken cancellationToken)
     {
         while (!condition())
@@ -91,6 +270,8 @@ public sealed class NotificationDispatchIntegrationTests
     private abstract record BaseNotification(string Value);
 
     private sealed record ConcreteNotification(string Value) : BaseNotification(Value);
+
+    private sealed record OrderedNotification(int Value);
 
     private sealed class NotificationDispatchProbe
     {
@@ -134,6 +315,40 @@ public sealed class NotificationDispatchIntegrationTests
         public override Task HandleAsync(BaseNotification notification, Context context, CancellationToken cancellationToken)
         {
             probe.MarkBase();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class OrderedNotificationProbe
+    {
+        private readonly object _sync = new();
+        private readonly List<int> _values = [];
+
+        public IReadOnlyList<int> Values
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return [.. _values];
+                }
+            }
+        }
+
+        public void Add(int value)
+        {
+            lock (_sync)
+            {
+                _values.Add(value);
+            }
+        }
+    }
+
+    private sealed class OrderedNotificationHandler(OrderedNotificationProbe probe) : NotificationHandler<OrderedNotification>
+    {
+        public override Task HandleAsync(OrderedNotification notification, Context context, CancellationToken cancellationToken)
+        {
+            probe.Add(notification.Value);
             return Task.CompletedTask;
         }
     }

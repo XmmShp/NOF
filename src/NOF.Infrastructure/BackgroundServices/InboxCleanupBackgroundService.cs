@@ -78,6 +78,14 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
             .Where(m => m.ProcessedAtUtc != null && m.ProcessedAtUtc < olderThan)
             .ExecuteDeleteAsync(cancellationToken);
 
+        var deletedOrderStateCount = await dbContext.Set<NOFInboxOrderState>()
+            .Where(state => state.CompletedAtUtc != null && state.CompletedAtUtc < olderThan)
+            .Where(state => !dbContext.Set<NOFInboxMessage>().Any(message =>
+                message.Route == state.Route &&
+                message.OrderKey == state.OrderKey &&
+                message.Status == InboxMessageStatus.Pending))
+            .ExecuteDeleteAsync(cancellationToken);
+
         if (deletedCount > 0)
         {
             _logger.LogInformation(
@@ -87,6 +95,14 @@ internal sealed class InboxCleanupBackgroundService : BackgroundService
         else
         {
             _logger.LogDebug("Inbox cleanup completed. No messages to delete");
+        }
+
+        if (deletedOrderStateCount > 0)
+        {
+            _logger.LogInformation(
+                "Inbox cleanup deleted {Count} completed order states older than {Date}",
+                deletedOrderStateCount,
+                olderThan);
         }
     }
 }

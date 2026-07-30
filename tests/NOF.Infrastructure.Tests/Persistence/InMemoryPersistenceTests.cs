@@ -11,6 +11,7 @@ using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Reflection;
 using Xunit;
 using EFQuery = Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions;
 using HostOnlyAttribute = NOF.Application.HostOnlyAttribute;
@@ -170,10 +171,14 @@ public class SqliteInMemoryPersistenceTests
         var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
         var tenant = db.Model.FindEntityType(typeof(NOFTenant));
         var inbox = db.Model.FindEntityType(typeof(NOFInboxMessage));
+        var inboxOrderState = db.Model.FindEntityType(typeof(NOFInboxOrderState));
         var outbox = db.Model.FindEntityType(typeof(NOFOutboxMessage));
+        var outboxOrderState = db.Model.FindEntityType(typeof(NOFOutboxOrderState));
         Assert.NotNull(tenant);
         Assert.NotNull(inbox);
+        Assert.NotNull(inboxOrderState);
         Assert.NotNull(outbox);
+        Assert.NotNull(outboxOrderState);
 
         Assert.Equal(nameof(NOFTenant), tenant.GetTableName());
         Assert.Equal(nameof(NOFInboxMessage), inbox.GetTableName());
@@ -183,11 +188,59 @@ public class SqliteInMemoryPersistenceTests
         Assert.Equal(true, outbox.FindAnnotation("NOF:HostOnly")?.Value);
         Assert.Equal([nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.Route)],
             inbox.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
+        Assert.Equal([nameof(NOFInboxOrderState.Route), nameof(NOFInboxOrderState.OrderKey)],
+            inboxOrderState.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
+        Assert.Equal([nameof(NOFOutboxOrderState.OrderKey), nameof(NOFOutboxOrderState.Sequence)],
+            outboxOrderState.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
         Assert.Contains(tenant.GetIndexes(), index => index.IsUnique
             && index.Properties.Select(static property => property.Name).SequenceEqual(
                 [nameof(NOFTenant.Name), "__DeletedAtUnixTime"]));
         Assert.Contains(outbox.GetIndexes(), index =>
             index.Properties.Select(static property => property.Name).SequenceEqual([nameof(NOFOutboxMessage.TraceParent)]));
+    }
+
+    [Fact]
+    public async Task OrderedInboxClaim_ShouldExecuteAgainstRelationalProvider()
+    {
+        using var services = CreateServiceProvider();
+        using (var setupScope = services.CreateScope())
+        {
+            SetTenant(setupScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+            var dbContext = setupScope.ServiceProvider.GetRequiredService<IDbContext>();
+            dbContext.Set<NOFInboxOrderState>().Add(new NOFInboxOrderState
+            {
+                Route = "OrderedHandler",
+                OrderKey = "Producer:Aggregate:1"
+            });
+            dbContext.Set<NOFInboxMessage>().Add(NOFInboxMessage.Create(
+                Guid.NewGuid(),
+                InboxMessageType.Notification,
+                "OrderedHandler",
+                [1],
+                "{}",
+                new InboxMessageOrder("Producer:Aggregate:1", 1, false)));
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var claimScope = services.CreateScope();
+        SetTenant(claimScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+        var claimDbContext = claimScope.ServiceProvider.GetRequiredService<IDbContext>();
+        var processor = services.GetServices<IHostedService>().OfType<InboxMessageBackgroundService>().Single();
+        var claimMethod = typeof(InboxMessageBackgroundService).GetMethod(
+            "AtomicClaimPendingMessagesAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var claimedEnumerable = (IAsyncEnumerable<NOFInboxMessage>)claimMethod.Invoke(
+            processor,
+            [claimDbContext, 10, TimeSpan.FromMinutes(1), CancellationToken.None])!;
+        var claimed = new List<NOFInboxMessage>();
+        await foreach (var message in claimedEnumerable)
+        {
+            claimed.Add(message);
+        }
+
+        var claimedMessage = Assert.Single(claimed);
+        Assert.Equal(1, claimedMessage.Sequence);
+        Assert.NotNull(claimedMessage.ClaimedBy);
     }
 
     [Fact]
