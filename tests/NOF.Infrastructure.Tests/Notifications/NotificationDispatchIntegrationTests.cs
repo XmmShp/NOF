@@ -179,6 +179,57 @@ public sealed class NotificationDispatchIntegrationTests
     }
 
     [Fact]
+    public async Task PublishAsync_WhenHandlerThrows_ShouldRetryAndMarkInboxAsFailed()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddNOFInfrastructure();
+        builder.Services.Configure<TransactionalMessageOptions>(static options =>
+        {
+            options.Inbox.PollingInterval = TimeSpan.FromMilliseconds(10);
+            options.Inbox.BatchSize = 10;
+            options.Inbox.MaxRetryCount = 2;
+        });
+
+        var registry = builder.Services.GetOrAddSingleton<NotificationHandlerRegistry>();
+        registry.Add(new NotificationHandlerRegistration(
+            typeof(FailingNotificationHandler),
+            typeof(FailingNotification),
+            typeof(NotificationInboundInvoker<FailingNotificationHandler, FailingNotification>)));
+        builder.Services.AddSingleton<FailingNotificationProbe>();
+        builder.Services.AddScoped<FailingNotificationHandler>();
+        builder.Services.AddSingleton<NotificationInboundInvoker<FailingNotificationHandler, FailingNotification>>();
+
+        using var host = builder.Build();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await host.StartAsync(timeout.Token);
+
+        try
+        {
+            using (var scope = host.Services.CreateScope())
+            {
+                var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+                await publisher.PublishAsync(new FailingNotification(), Context.Empty, timeout.Token);
+            }
+
+            var probe = host.Services.GetRequiredService<FailingNotificationProbe>();
+            await WaitUntilAsync(() => probe.AttemptCount == 2, timeout.Token);
+            var inboxMessage = await WaitForInboxStatusAsync(
+                host.Services,
+                InboxMessageStatus.Failed,
+                timeout.Token);
+
+            Assert.Equal(2, inboxMessage.RetryCount);
+            Assert.Null(inboxMessage.ProcessedAtUtc);
+            Assert.NotNull(inboxMessage.FailedAtUtc);
+            Assert.Equal("Notification failed.", inboxMessage.ErrorMessage);
+        }
+        finally
+        {
+            await host.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task OrderedNotification_ShouldWaitForMissingPredecessorAndThenProcessContiguously()
     {
         var builder = Host.CreateApplicationBuilder();
@@ -267,11 +318,35 @@ public sealed class NotificationDispatchIntegrationTests
         }
     }
 
+    private static async Task<NOFInboxMessage> WaitForInboxStatusAsync(
+        IServiceProvider services,
+        InboxMessageStatus status,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var scope = services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            var message = await dbContext.Set<NOFInboxMessage>()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(cancellationToken);
+            if (message?.Status == status)
+            {
+                return message;
+            }
+
+            await Task.Delay(10, cancellationToken);
+        }
+    }
+
     private abstract record BaseNotification(string Value);
 
     private sealed record ConcreteNotification(string Value) : BaseNotification(Value);
 
     private sealed record OrderedNotification(int Value);
+
+    private sealed record FailingNotification;
 
     private sealed class NotificationDispatchProbe
     {
@@ -350,6 +425,24 @@ public sealed class NotificationDispatchIntegrationTests
         {
             probe.Add(notification.Value);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FailingNotificationProbe
+    {
+        private int _attemptCount;
+
+        public int AttemptCount => Volatile.Read(ref _attemptCount);
+
+        public void MarkAttempt() => Interlocked.Increment(ref _attemptCount);
+    }
+
+    private sealed class FailingNotificationHandler(FailingNotificationProbe probe) : NotificationHandler<FailingNotification>
+    {
+        public override Task HandleAsync(FailingNotification notification, Context context, CancellationToken cancellationToken)
+        {
+            probe.MarkAttempt();
+            throw new InvalidOperationException("Notification failed.");
         }
     }
 

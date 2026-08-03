@@ -39,6 +39,7 @@ public sealed class TracingInboundMiddleware(
         {
             HandleActivityException(activity, ex);
             HandleCommandException(context, ex, logger);
+            throw;
         }
     }
 
@@ -69,6 +70,7 @@ public sealed class TracingInboundMiddleware(
         {
             HandleActivityException(activity, ex);
             HandleNotificationException(context, ex, logger);
+            throw;
         }
     }
 
