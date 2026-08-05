@@ -111,7 +111,7 @@ public sealed class HttpEndpointRegistrationTests
             => Task.FromResult(Result.Success(new EchoResponse(request.Value)));
     }
 
-    [TransportOverHttp(HttpRpcStyle.ControllerRpc, "/controller-rpc")]
+    [TransportOverHttp(HttpRpcStyle.ControllerRpc, "controller-rpc/")]
     public partial interface IPrefixedControllerRpcService : IRpcService
     {
         [HttpEndpoint(HttpVerb.Post, "/Echo")]

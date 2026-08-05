@@ -85,8 +85,10 @@ Declaring `TransportOverHttp` also generates the transport client next to the co
 
 ```csharp
 builder.Services.AddHttpClient<IOrderServiceClient, HttpOrderServiceClient>(client =>
-    client.BaseAddress = new Uri("https://orders.example"));
+    client.BaseAddress = new Uri("https://orders.example/"));
 ```
+
+Generated HTTP request URIs are relative to `HttpClient.BaseAddress`. This preserves path prefixes such as `https://webui.example/bff/orders/` when the client is routed through a BFF or reverse proxy. When `BaseAddress` contains a path prefix, end it with `/` so standard URI resolution treats the complete path as a directory.
 
 The generated constructor accepts `IRequestOutboundPipelineExecutor` as an optional dependency. When a hosting package registers it, outbound middleware participates in the call; when it is absent, the client sends the HTTP request directly.
 
@@ -95,6 +97,7 @@ The generated constructor accepts `IRequestOutboundPipelineExecutor` as an optio
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
 - Every RPC service contract must declare exactly one `TransportOverAttribute` implementation
 - **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix, and generates the matching `Http...Client`
+- HTTP route prefixes are application-relative paths. A leading `/` is optional and one trailing `/` is normalized away; empty or whitespace values, absolute URIs, query strings, fragments, route parameters, escaped characters, backslashes, empty path segments, and `.` or `..` segments are rejected at compile time
 - JSON-RPC contracts use the service route prefix and operation names; when the prefix is omitted, the endpoint is `/`
 - JSON-RPC methods must not declare `[HttpEndpoint]`
 - JSON-RPC streaming methods use SSE; each event carries a JSON-RPC response envelope for one stream item

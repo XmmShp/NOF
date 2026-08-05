@@ -7,6 +7,7 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting.AspNetCore;
 using NOF.Infrastructure;
+using NOF.Internal;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -365,19 +366,17 @@ internal static partial class NOFHostingAspNetCoreExtensions
 
     private static string BuildRoute(string? prefix, string route)
     {
-        prefix ??= string.Empty;
-
-        if (string.IsNullOrEmpty(prefix))
+        if (prefix is null)
         {
             return NormalizeRoute(route);
         }
 
         if (string.IsNullOrEmpty(route))
         {
-            return NormalizeRoute(prefix);
+            return HttpRoutePrefix.Normalize(prefix);
         }
 
-        var normalizedPrefix = NormalizeRoute(prefix).TrimEnd('/');
+        var normalizedPrefix = HttpRoutePrefix.Normalize(prefix).TrimEnd('/');
         var normalizedRoute = NormalizeRoute(route);
         return normalizedPrefix + normalizedRoute;
     }

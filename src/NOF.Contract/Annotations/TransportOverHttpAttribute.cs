@@ -1,14 +1,27 @@
+using NOF.Internal;
+
 namespace NOF.Contract;
 
 /// <summary>
 /// Declares that an RPC service contract is transported over HTTP.
 /// </summary>
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
-public sealed class TransportOverHttpAttribute(HttpRpcStyle style, string? routePrefix = null) : TransportOverAttribute
+public sealed class TransportOverHttpAttribute : TransportOverAttribute
 {
-    public HttpRpcStyle Style { get; } = style;
+    public TransportOverHttpAttribute(HttpRpcStyle style, string? routePrefix = null)
+    {
+        if (routePrefix is not null)
+        {
+            _ = HttpRoutePrefix.Normalize(routePrefix);
+        }
 
-    public string? RoutePrefix { get; } = routePrefix;
+        Style = style;
+        RoutePrefix = routePrefix;
+    }
+
+    public HttpRpcStyle Style { get; }
+
+    public string? RoutePrefix { get; }
 }
 
 /// <summary>

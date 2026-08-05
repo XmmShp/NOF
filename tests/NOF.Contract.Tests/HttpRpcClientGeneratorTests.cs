@@ -49,7 +49,7 @@ public class HttpRpcClientGeneratorTests
 
         Assert.Contains("public partial class HttpMyServiceClient : IMyServiceClient", code);
         Assert.Contains("public HttpMyServiceClient(global::System.Net.Http.HttpClient httpClient, global::NOF.Contract.IRequestOutboundPipelineExecutor? outboundPipeline = null)", code);
-        Assert.Contains("var endpoint = \"/api/users\";", code);
+        Assert.Contains("var endpoint = \"./api/users\";", code);
         Assert.Contains("global::System.Net.Http.HttpMethod.Post", code);
         Assert.Contains("new global::NOF.Contract.RequestOutboundContext(context)", code);
         Assert.Contains("if (_outboundPipeline is null)", code);
@@ -104,7 +104,7 @@ public class HttpRpcClientGeneratorTests
         var code = GetGeneratedHttpClientCode(RunGenerators(source));
 
         Assert.Contains("var queryParts = new global::System.Collections.Generic.List<string>();", code);
-        Assert.Contains("var endpoint = \"/events\";", code);
+        Assert.Contains("var endpoint = \"./events\";", code);
         Assert.DoesNotContain("httpRequest.Content =", code);
         Assert.Contains("text/event-stream", code);
         Assert.Contains("global::NOF.Contract.SseResponseReader.ReadAsync", code);
@@ -121,7 +121,7 @@ public class HttpRpcClientGeneratorTests
 
             public record PingRequest(string Value);
 
-            [TransportOverHttp(HttpRpcStyle.JsonRpc, "/contract-rpc")]
+            [TransportOverHttp(HttpRpcStyle.JsonRpc, "contract-rpc/")]
             public interface IMyService : IRpcService
             {
                 Result Ping(PingRequest request);
@@ -131,9 +131,31 @@ public class HttpRpcClientGeneratorTests
         var code = GetGeneratedHttpClientCode(RunGenerators(source));
 
         Assert.Contains("global::NOF.Contract.JsonRpcHttpClient.SendAsync", code);
-        Assert.Contains("\"/contract-rpc\"", code);
+        Assert.Contains("\"./contract-rpc\"", code);
         Assert.Contains("nameof(global::App.IMyService.Ping)", code);
         Assert.DoesNotContain("global::System.Net.Http.HttpRequestMessage", code);
+    }
+
+    [Fact]
+    public void TransportOverJsonRpc_WithInvalidPrefix_DoesNotCrashGenerator()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record PingRequest(string Value);
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc, "../rpc")]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(PingRequest request);
+            }
+            """;
+
+        var code = GetGeneratedHttpClientCode(RunGenerators(source));
+
+        Assert.Contains("\"./\"", code);
     }
 
     [Fact]
@@ -155,8 +177,11 @@ public class HttpRpcClientGeneratorTests
 
         var code = GetGeneratedHttpClientCode(RunGenerators(source));
 
-        Assert.Contains("\"/\"", code);
+        Assert.Contains("\"./\"", code);
         Assert.DoesNotContain("\"/rpc\"", code);
+        Assert.Equal(
+            "https://webui.example/bff/user-service/",
+            new Uri(new Uri("https://webui.example/bff/user-service/"), "./").AbsoluteUri);
     }
 
     [Fact]
@@ -180,6 +205,7 @@ public class HttpRpcClientGeneratorTests
         var code = GetGeneratedHttpClientCode(RunGenerators(source));
 
         Assert.Contains("JsonRpcHttpClient.SendStreamingAsync<global::App.StreamRequest, global::App.StreamEvent>", code);
+        Assert.Contains("\"./stream-rpc\"", code);
         Assert.Contains("GetJsonTypeInfo<global::App.StreamEvent>()", code);
         Assert.Contains("GetJsonTypeInfo<global::NOF.Contract.Result>()", code);
         Assert.DoesNotContain("JsonRpcHttpClient.SendAsync<global::App.StreamRequest, global::NOF.Contract.StreamingResult", code);
@@ -208,6 +234,33 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("public partial class HttpMyServiceClient<TValue> : IMyServiceClient<TValue>", code);
         Assert.Contains("where TValue : class, new()", code);
         Assert.Contains("public HttpMyServiceClient(global::System.Net.Http.HttpClient httpClient", code);
+    }
+
+    [Fact]
+    public void ControllerRpcRoute_IsRelativeToBaseAddressPath()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record GetCurrentUserRequest;
+
+            [TransportOverHttp(HttpRpcStyle.ControllerRpc, "/api/user-service")]
+            public interface IUserService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Get, "/get-current-user")]
+                Result GetCurrentUser(GetCurrentUserRequest request);
+            }
+            """;
+
+        var code = GetGeneratedHttpClientCode(RunGenerators(source), "partial class HttpUserServiceClient");
+        const string generatedRequestUri = "./api/user-service/get-current-user";
+
+        Assert.Contains($"var endpoint = \"{generatedRequestUri}\";", code);
+        Assert.Equal(
+            "https://webui.example/bff/user-service/api/user-service/get-current-user",
+            new Uri(new Uri("https://webui.example/bff/user-service/"), generatedRequestUri).AbsoluteUri);
     }
 
     [Fact]
@@ -256,8 +309,10 @@ public class HttpRpcClientGeneratorTests
         return driver.GetRunResult();
     }
 
-    private static string GetGeneratedHttpClientCode(GeneratorDriverRunResult runResult)
+    private static string GetGeneratedHttpClientCode(
+        GeneratorDriverRunResult runResult,
+        string classMarker = "partial class HttpMyServiceClient")
         => runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())
-            .Single(code => code.Contains("partial class HttpMyServiceClient"));
+            .Single(code => code.Contains(classMarker));
 }

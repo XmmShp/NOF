@@ -12,10 +12,12 @@ public sealed class JsonRpcHttpClientTests
     {
         JsonDocument? capturedRequest = null;
         string? capturedHeader = null;
+        Uri? capturedRequestUri = null;
         var handler = new StubHttpMessageHandler(async request =>
         {
             capturedRequest = JsonDocument.Parse(await request.Content!.ReadAsStreamAsync());
             capturedHeader = request.Headers.GetValues("x-test").Single();
+            capturedRequestUri = request.RequestUri;
             var id = capturedRequest.RootElement.GetProperty("id").GetString();
             var payload = JsonSerializer.Serialize(new
             {
@@ -28,11 +30,11 @@ public sealed class JsonRpcHttpClientTests
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
             };
         });
-        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/bff/user-service/") };
 
         var result = await JsonRpcHttpClient.SendAsync<Ping, Result<Pong>>(
             httpClient,
-            "/rpc",
+            "./rpc",
             "Ping",
             new Ping("ping"),
             new Dictionary<string, string?> { ["x-test"] = "header" },
@@ -45,6 +47,7 @@ public sealed class JsonRpcHttpClientTests
         Assert.Equal("Ping", capturedRequest.RootElement.GetProperty("method").GetString());
         Assert.Equal("ping", capturedRequest.RootElement.GetProperty("params").GetProperty("value").GetString());
         Assert.Equal("header", capturedHeader);
+        Assert.Equal("https://example.test/bff/user-service/rpc", capturedRequestUri?.AbsoluteUri);
         Assert.True(result.IsSuccess);
         Assert.Equal("pong", result.Value!.Value);
         capturedRequest.Dispose();

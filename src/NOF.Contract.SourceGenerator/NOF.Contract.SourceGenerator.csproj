@@ -23,6 +23,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="..\SourceGenerator.Shared\HttpRoutePrefix.cs" Link="Shared\HttpRoutePrefix.cs" />
 		<Compile Include="..\SourceGenerator.Shared\RpcContractConventions.cs" Link="Shared\RpcContractConventions.cs" />
 	</ItemGroup>
 </Project>

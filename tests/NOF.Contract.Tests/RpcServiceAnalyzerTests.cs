@@ -45,6 +45,84 @@ public class RpcServiceAnalyzerTests
         Assert.Null(attributeWithoutPrefix.RoutePrefix);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("https://example.test/rpc")]
+    [InlineData("//rpc")]
+    [InlineData("/rpc//v1")]
+    [InlineData("/rpc/{tenant}")]
+    [InlineData("/rpc?version=1")]
+    [InlineData("/rpc#fragment")]
+    [InlineData("../rpc")]
+    [InlineData("./rpc")]
+    [InlineData("/rpc\\v1")]
+    [InlineData("/rpc/%76%31")]
+    public void TransportOverHttp_WithInvalidRoutePrefix_ShouldThrow(string routePrefix)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TransportOverHttpAttribute(HttpRpcStyle.JsonRpc, routePrefix));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("https://example.test/rpc")]
+    [InlineData("//rpc")]
+    [InlineData("/rpc//v1")]
+    [InlineData("/rpc/{tenant}")]
+    [InlineData("/rpc?version=1")]
+    [InlineData("/rpc#fragment")]
+    [InlineData("../rpc")]
+    [InlineData("./rpc")]
+    [InlineData("/rpc\\v1")]
+    [InlineData("/rpc/%76%31")]
+    public async Task TransportOverHttp_WithInvalidRoutePrefix_ShouldReportNOF215(string routePrefix)
+    {
+        var routePrefixLiteral = SymbolDisplay.FormatLiteral(routePrefix, quote: true);
+        var source = $$"""
+            using NOF.Contract;
+
+            namespace App;
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc, {{routePrefixLiteral}})]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(Empty request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF215");
+    }
+
+    [Theory]
+    [InlineData("rpc")]
+    [InlineData("/rpc")]
+    [InlineData("rpc/")]
+    [InlineData("/")]
+    [InlineData("/api/v1")]
+    public async Task TransportOverHttp_WithValidRoutePrefix_ShouldNotReportNOF215(string routePrefix)
+    {
+        var routePrefixLiteral = SymbolDisplay.FormatLiteral(routePrefix, quote: true);
+        var source = $$"""
+            using NOF.Contract;
+
+            namespace App;
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc, {{routePrefixLiteral}})]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(Empty request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id == "NOF215");
+    }
+
     [Fact]
     public async Task TransportOverHttp_OnRpcServiceContract_ShouldBeValid()
     {

@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using NOF.Internal;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -106,6 +107,14 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor InvalidHttpRoutePrefix = new(
+        "NOF215",
+        "HTTP RPC route prefix is invalid",
+        "TransportOverHttp route prefix '{0}' on RPC service contract '{1}' is invalid: {2}",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
@@ -119,7 +128,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         TransportRequiresRpcService,
         MultipleTransportsNotSupported,
         HttpEndpointNotSupportedForJsonRpc,
-        TransportRequired
+        TransportRequired,
+        InvalidHttpRoutePrefix
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -173,6 +183,26 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         if (transportAttributes.Length > 1)
         {
             context.ReportDiagnostic(Diagnostic.Create(MultipleTransportsNotSupported, typeLocation, typeSymbol.Name));
+        }
+
+        foreach (var attribute in transportAttributes)
+        {
+            if (attribute.AttributeClass?.ToDisplayString() != RpcServiceHelpers.TransportOverHttpAttributeFqn
+                || attribute.ConstructorArguments.Length < 2
+                || attribute.ConstructorArguments[1].Value is not string routePrefix
+                || HttpRoutePrefix.TryNormalize(routePrefix, out _, out var error))
+            {
+                continue;
+            }
+
+            var attributeLocation = attribute.ApplicationSyntaxReference?.GetSyntax(context.CancellationToken).GetLocation()
+                ?? typeLocation;
+            context.ReportDiagnostic(Diagnostic.Create(
+                InvalidHttpRoutePrefix,
+                attributeLocation,
+                routePrefix,
+                typeSymbol.Name,
+                error));
         }
     }
 

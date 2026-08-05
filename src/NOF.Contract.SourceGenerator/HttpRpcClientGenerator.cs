@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using NOF.Internal;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -180,7 +181,7 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
 
         if (transport.Style == HttpRpcStyle.JsonRpc)
         {
-            var jsonRpcRoute = NormalizeRoute(transport.RoutePrefix ?? "/");
+            var jsonRpcRoute = MakeBaseAddressRelative(NormalizeRoutePrefix(transport.RoutePrefix));
             if (isStreaming)
             {
                 sb.AppendLine($"                result = await global::NOF.Contract.JsonRpcHttpClient.SendStreamingAsync<{requestType}, {streamItemType}>(");
@@ -366,14 +367,30 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
 
     private static string BuildRoute(string? prefix, string route)
     {
-        if (string.IsNullOrEmpty(prefix))
+        var normalizedPrefix = NormalizeRoutePrefix(prefix).TrimEnd('/');
+        var normalizedRoute = NormalizeRoute(route);
+        var combinedRoute = normalizedPrefix + normalizedRoute;
+
+        return MakeBaseAddressRelative(combinedRoute);
+    }
+
+    private static string NormalizeRoutePrefix(string? routePrefix)
+    {
+        if (routePrefix is not null
+            && HttpRoutePrefix.TryNormalize(routePrefix, out var normalizedRoutePrefix, out _))
         {
-            return NormalizeRoute(route);
+            return normalizedRoutePrefix;
         }
 
-        var normalizedPrefix = NormalizeRoute(prefix!).TrimEnd('/');
-        var normalizedRoute = NormalizeRoute(route);
-        return normalizedPrefix + normalizedRoute;
+        // The analyzer reports invalid prefixes. Falling back to root keeps generation
+        // deterministic and prevents malformed user input from crashing the generator.
+        return "/";
+    }
+
+    private static string MakeBaseAddressRelative(string route)
+    {
+        var relativeRoute = route.TrimStart('/');
+        return string.IsNullOrEmpty(relativeRoute) ? "./" : "./" + relativeRoute;
     }
 
     private static string NormalizeRoute(string route)

@@ -230,7 +230,7 @@ public sealed class JsonRpcEndpointIntegrationTests
 
     public sealed record PrefixedEchoResponse(string Value);
 
-    [TransportOverHttp(HttpRpcStyle.JsonRpc, "/contract-rpc")]
+    [TransportOverHttp(HttpRpcStyle.JsonRpc, "contract-rpc/")]
     public partial interface IPrefixedJsonRpcService : IRpcService
     {
         Result<PrefixedEchoResponse> Echo(PrefixedEchoRequest request);

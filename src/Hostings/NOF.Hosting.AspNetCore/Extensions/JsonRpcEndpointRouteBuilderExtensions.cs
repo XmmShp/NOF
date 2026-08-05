@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NOF.Application;
 using NOF.Hosting.AspNetCore;
+using NOF.Internal;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -46,9 +47,7 @@ internal static partial class NOFHostingAspNetCoreExtensions
         Type serviceType,
         IReadOnlyDictionary<string, RpcHandlerMapping> handlerMappings)
     {
-        var resolvedPattern = GetHttpRoutePrefix(serviceType) ?? "/";
-        ArgumentException.ThrowIfNullOrWhiteSpace(resolvedPattern);
-        resolvedPattern = NormalizeRoute(resolvedPattern);
+        var resolvedPattern = HttpRoutePrefix.Normalize(GetHttpRoutePrefix(serviceType) ?? "/");
 
         var mappingState = app.ServiceProvider.GetService<HttpEndpointMappingState>();
         var mappingKey = $"{rpcServerType.AssemblyQualifiedName}|JsonRpc";
