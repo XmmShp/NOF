@@ -62,7 +62,7 @@ public class RpcServiceAnalyzerTests
 
         var diagnostics = await GetDiagnosticsAsync(source);
 
-        Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id is "NOF211" or "NOF212");
+        Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id is "NOF211" or "NOF212" or "NOF214");
     }
 
     [Fact]
@@ -103,6 +103,26 @@ public class RpcServiceAnalyzerTests
         var diagnostics = await GetDiagnosticsAsync(source);
 
         Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF212");
+    }
+
+    [Fact]
+    public async Task RpcServiceContract_WithoutTransportAttribute_ShouldReportNOF214()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public interface IMyService : IRpcService
+            {
+                Result Ping(Empty request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        var diagnostic = Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF214");
+        Assert.Contains(nameof(TransportOverAttribute), diagnostic.GetMessage());
     }
 
     [Fact]

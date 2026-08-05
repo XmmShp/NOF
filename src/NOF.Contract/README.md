@@ -93,6 +93,7 @@ The generated constructor accepts `IRequestOutboundPipelineExecutor` as an optio
 ### Other Annotations
 
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
+- Every RPC service contract must declare exactly one `TransportOverAttribute` implementation
 - **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix, and generates the matching `Http...Client`
 - JSON-RPC contracts use the service route prefix and operation names; when the prefix is omitted, the endpoint is `/`
 - JSON-RPC methods must not declare `[HttpEndpoint]`

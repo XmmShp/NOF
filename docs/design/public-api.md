@@ -74,14 +74,14 @@ When the mapped RPC method returns `StreamingResult<T>`, `NOF.Hosting.AspNetCore
 
 ## RPC Transport Declaration
 
-An RPC service contract can declare one intended transport:
+An RPC service contract must declare exactly one intended transport:
 
 ```csharp
 [TransportOverHttp(HttpRpcStyle.JsonRpc, "/rpc")]
 public interface IUserService : IRpcService;
 ```
 
-`TransportOverAttribute` is abstract and belongs to `NOF.Contract`, so callers and implementations read the same transport metadata from the RPC service interface. The analyzer rejects declarations on interfaces that do not inherit `IRpcService` and rejects multiple transport declarations on one contract. The route prefix is optional. During automatic endpoint registration, `ControllerRpc` prepends it to each operation route, while `JsonRpc` uses it as the single JSON-RPC endpoint route. A JSON-RPC contract without a route prefix is mapped at `/`.
+`TransportOverAttribute` is abstract and belongs to `NOF.Contract`, so callers and implementations read the same transport metadata from the RPC service interface. The analyzer rejects missing or multiple transport declarations, as well as transport attributes placed on interfaces that do not inherit `IRpcService`. The route prefix is optional. During automatic endpoint registration, `ControllerRpc` prepends it to each operation route, while `JsonRpc` uses it as the single JSON-RPC endpoint route. A JSON-RPC contract without a route prefix is mapped at `/`.
 
 Registering the server through `AddRpcServer<UserService>()` exposes it using the transport style and route prefix declared by the contract.
 
@@ -104,6 +104,7 @@ Current RPC analyzer diagnostics include:
 - `NOF208`: service method overloads are not supported.
 - `NOF209`: `void` return types are not supported.
 - `NOF211`: a transport attribute can only be declared on an interface inheriting `IRpcService`.
-- `NOF212`: an RPC service contract can declare at most one `TransportOverAttribute`.
+- `NOF212`: an RPC service contract cannot declare multiple `TransportOverAttribute` implementations.
 - `NOF213`: methods on a JSON-RPC contract must not declare `[HttpEndpoint]`.
+- `NOF214`: an RPC service contract must declare a `TransportOverAttribute` implementation.
 - `NOF300`: a class inheriting `RpcServer<TService>` must be `partial`.

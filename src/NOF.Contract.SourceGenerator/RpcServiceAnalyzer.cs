@@ -98,6 +98,14 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor TransportRequired = new(
+        "NOF214",
+        "RPC service contract must declare a transport",
+        "RPC service contract '{0}' must declare exactly one TransportOverAttribute implementation",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
@@ -110,7 +118,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         ReturnTypeMustImplementIResult,
         TransportRequiresRpcService,
         MultipleTransportsNotSupported,
-        HttpEndpointNotSupportedForJsonRpc
+        HttpEndpointNotSupportedForJsonRpc,
+        TransportRequired
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -136,6 +145,12 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             .ToArray();
         if (transportAttributes.Length == 0)
         {
+            if (RpcServiceHelpers.IsRpcServiceContract(typeSymbol))
+            {
+                var contractLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
+                context.ReportDiagnostic(Diagnostic.Create(TransportRequired, contractLocation, typeSymbol.Name));
+            }
+
             return;
         }
 

@@ -16,6 +16,7 @@ public class HttpRpcClientGeneratorTests
         typeof(HttpClient),
         typeof(System.Net.Http.Json.JsonContent),
         typeof(System.Net.Http.Json.HttpContentJsonExtensions),
+        typeof(System.Text.Json.JsonSerializerOptions),
         typeof(IRequestOutboundPipelineExecutor),
         typeof(IRpcClient),
         typeof(IRpcService),

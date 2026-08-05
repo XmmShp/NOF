@@ -32,6 +32,10 @@ internal static class RpcServiceHelpers
            && (symbol.ToDisplayString() == RpcServiceInterfaceFqn
                || symbol.AllInterfaces.Any(i => i.ToDisplayString() == RpcServiceInterfaceFqn));
 
+    public static bool IsRpcServiceContract(INamedTypeSymbol symbol)
+        => IsRpcServiceInterface(symbol)
+           && symbol.ToDisplayString() != RpcServiceInterfaceFqn;
+
     public static List<IPropertySymbol> GetAllPublicProperties(INamedTypeSymbol typeSymbol)
     {
         var properties = new List<IPropertySymbol>();
