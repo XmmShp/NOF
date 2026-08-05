@@ -46,6 +46,8 @@ public sealed class GetOrder : OrderService.GetOrder
 }
 ```
 
+When a host references `NOF.Infrastructure`, the same `OrderService` declaration also causes a `LocalOrderServiceClient` to be generated in the server namespace. Its service/client contract relationship comes from `IOrderServiceClient : IRpcClient<IOrderService>`, not from matching interface names.
+
 Streaming RPC handlers use the same generated nested `RpcHandler<TRequest, StreamingResult<T>>` model:
 
 ```csharp

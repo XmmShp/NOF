@@ -210,6 +210,34 @@ public class HttpRpcClientGeneratorTests
         Assert.Contains("public HttpMyServiceClient(global::System.Net.Http.HttpClient httpClient", code);
     }
 
+    [Fact]
+    public void HttpClientGenerator_DoesNotRequireRpcServiceClientGeneratorOutputAsInput()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record PingRequest(string Value);
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc)]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(PingRequest request);
+            }
+            """;
+
+        var extraReferences = _refs.Select(type => type.ToMetadataReference()).ToArray();
+        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new HttpRpcClientGenerator());
+
+        driver = driver.RunGenerators(compilation);
+
+        var code = GetGeneratedHttpClientCode(driver.GetRunResult());
+        Assert.Contains("partial class HttpMyServiceClient : IMyServiceClient", code);
+        Assert.Contains("Task<global::NOF.Contract.Result> PingAsync", code);
+    }
+
     private static GeneratorDriverRunResult RunGenerators(string source)
     {
         var extraReferences = _refs.Select(type => type.ToMetadataReference()).ToArray();

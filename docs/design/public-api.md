@@ -41,6 +41,14 @@ public class GetUser : UserService.GetUser
 }
 ```
 
+The generated client contract explicitly records its service relationship:
+
+```csharp
+public interface IUserServiceClient : IRpcClient<IUserService>;
+```
+
+When `NOF.Infrastructure` discovers `UserService : RpcServer<IUserService>`, it uses this generic relationship to generate `LocalUserServiceClient`. No local-client attribute or empty partial client declaration is needed.
+
 Streaming methods are implemented with the same generated handler model:
 
 ```csharp

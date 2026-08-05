@@ -25,8 +25,21 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
                         return [];
                     }
 
-                    var registrations = CollectRegistrations(classSymbol);
-                    return registrations.Count == 0 ? [] : [.. registrations];
+                    if (!RpcServerSymbolHelper.TryGetGeneratedRpcHandlerBaseName(
+                            classDeclaration,
+                            ctx.SemanticModel,
+                            out var handlerBaseTypeName)
+                        || handlerBaseTypeName is null)
+                    {
+                        return [];
+                    }
+
+                    return
+                    [
+                        new RegistrationInfo(
+                            handlerBaseTypeName,
+                            classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                    ];
                 })
             .Where(static registrations => !registrations.IsDefaultOrEmpty);
 
@@ -62,22 +75,6 @@ public sealed class RpcServerAutoInjectGenerator : IIncrementalGenerator
             var source = GenerateInitializer(data.AssemblyName, data.Registrations);
             spc.AddSource("RpcServerAutoInjectAssemblyInitializer.g.cs", SourceText.From(source, Encoding.UTF8));
         });
-    }
-
-    private static List<RegistrationInfo> CollectRegistrations(INamedTypeSymbol classSymbol)
-    {
-        var registrations = new List<RegistrationInfo>();
-        var implementationType = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-        if (RpcServerSymbolHelper.TryGetRpcHandlerBase(classSymbol, out var handlerBaseType, out _)
-            && handlerBaseType is not null)
-        {
-            registrations.Add(new RegistrationInfo(
-                handlerBaseType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                implementationType));
-        }
-
-        return registrations;
     }
 
     private static string GenerateInitializer(string assemblyName, ImmutableArray<RegistrationInfo> registrations)

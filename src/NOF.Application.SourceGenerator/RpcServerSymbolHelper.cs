@@ -1,11 +1,12 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Linq;
 
 namespace NOF.Application.SourceGenerator;
 
 internal static class RpcServerSymbolHelper
 {
     private const string RpcServerFqn = "NOF.Application.RpcServer<TRpcService>";
-    private const string RpcHandlerFqn = "NOF.Application.RpcHandler<TRequest, TResponse>";
 
     public static bool ImplementsRpcServer(INamedTypeSymbol classSymbol)
         => TryGetServiceInterface(classSymbol, out _);
@@ -31,35 +32,59 @@ internal static class RpcServerSymbolHelper
         return false;
     }
 
-    public static bool TryGetRpcHandlerBase(INamedTypeSymbol typeSymbol, out INamedTypeSymbol? handlerBaseType, out INamedTypeSymbol? serverType)
+    /// <summary>
+    /// Resolves a user-authored reference such as <c>MyServer.Ping</c> without requiring
+    /// the nested <c>Ping</c> type emitted by <see cref="RpcServerGenerator"/> to exist in
+    /// this generator's input compilation.
+    /// </summary>
+    public static bool TryGetGeneratedRpcHandlerBaseName(
+        ClassDeclarationSyntax classDeclaration,
+        SemanticModel semanticModel,
+        out string? handlerBaseTypeName)
     {
-        handlerBaseType = null;
-        serverType = null;
+        handlerBaseTypeName = null;
 
-        var current = typeSymbol.BaseType;
-        while (current is not null)
+        foreach (var baseType in classDeclaration.BaseList?.Types ?? [])
         {
-            if (current.IsGenericType
-                && current.OriginalDefinition.ToDisplayString() == RpcHandlerFqn
-                && current.ContainingType is INamedTypeSymbol containingType
-                && TryGetServiceInterface(containingType, out _))
+            if (baseType.Type is not QualifiedNameSyntax qualifiedName
+                || TryGetNamedTypeSymbol(semanticModel, qualifiedName.Left) is not { } serverType
+                || !TryGetServiceInterface(serverType, out var serviceInterface)
+                || serviceInterface is null)
             {
-                handlerBaseType = current;
-                serverType = containingType;
-                return true;
+                continue;
             }
 
-            if (current.ContainingType is INamedTypeSymbol nestedContainingType
-                && TryGetServiceInterface(nestedContainingType, out _))
+            var operationName = qualifiedName.Right.Identifier.ValueText;
+            var generatedHandlerExists = serviceInterface.GetMembers(operationName)
+                .OfType<IMethodSymbol>()
+                .Any(static method => method.MethodKind == MethodKind.Ordinary
+                    && !method.IsImplicitlyDeclared
+                    && method.Parameters.Length == 1
+                    && method.Parameters[0].Type is INamedTypeSymbol);
+            if (!generatedHandlerExists)
             {
-                handlerBaseType = current;
-                serverType = nestedContainingType;
-                return true;
+                continue;
             }
 
-            current = current.BaseType;
+            handlerBaseTypeName = serverType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                + "."
+                + operationName;
+            return true;
         }
 
         return false;
+    }
+
+    private static INamedTypeSymbol? TryGetNamedTypeSymbol(SemanticModel semanticModel, NameSyntax syntax)
+    {
+        if (syntax is IdentifierNameSyntax identifierName
+            && semanticModel.GetAliasInfo(identifierName)?.Target is INamedTypeSymbol aliasTarget)
+        {
+            return aliasTarget;
+        }
+
+        var symbolInfo = semanticModel.GetSymbolInfo(syntax);
+        return symbolInfo.Symbol as INamedTypeSymbol
+            ?? symbolInfo.CandidateSymbols.OfType<INamedTypeSymbol>().FirstOrDefault();
     }
 }

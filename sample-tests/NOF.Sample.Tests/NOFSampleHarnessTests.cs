@@ -102,17 +102,14 @@ public sealed class NOFSampleHarnessTests
     {
         var builder = NOFTestAppBuilder.Create()
             .AddApplicationPartOf<NOFSampleService>()
-            .AddApplicationPartOf<LocalSampleServiceClient>()
+            .AddApplicationPartOf<LocalNOFSampleServiceClient>()
             .AddRpcServer<NOFSampleService>()
             .AddInMemoryPersistence()
-            .AddLocalRpcClient<INOFSampleServiceClient, LocalSampleServiceClient>();
+            .AddLocalRpcClient<INOFSampleServiceClient, LocalNOFSampleServiceClient>();
 
         return await builder.BuildTestHostAsync();
     }
 }
-
-[LocalRpcClient<INOFSampleServiceClient>]
-public sealed partial class LocalSampleServiceClient : INOFSampleServiceClient;
 
 [Mappable<ConfigFile, ConfigFileDto>]
 [Mappable<ConfigNode, ConfigNodeDto>]

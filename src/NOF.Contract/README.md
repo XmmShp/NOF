@@ -81,7 +81,7 @@ public interface IOrderService : IRpcService
 }
 ```
 
-Declaring `TransportOverHttp` also generates the transport client next to the contract. For the example above, NOF generates the protocol-neutral `IOrderServiceClient` interface and a public partial `HttpOrderServiceClient` implementation. No client marker attribute or user-authored empty partial class is required.
+Declaring `TransportOverHttp` also generates the transport client next to the contract. For the example above, NOF generates the protocol-neutral `IOrderServiceClient : IRpcClient<IOrderService>` interface and a public partial `HttpOrderServiceClient` implementation. The generic `IRpcClient<TRpcService>` base is the explicit relationship between service and client contracts; transport and local-client generators do not need to infer that relationship from type names.
 
 ```csharp
 builder.Services.AddHttpClient<IOrderServiceClient, HttpOrderServiceClient>(client =>

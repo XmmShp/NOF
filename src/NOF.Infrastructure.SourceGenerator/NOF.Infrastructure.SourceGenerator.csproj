@@ -17,4 +17,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SourceGenerator.Shared\RpcContractConventions.cs" Link="Shared\RpcContractConventions.cs" />
+  </ItemGroup>
 </Project>

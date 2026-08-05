@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
 using NOF.Infrastructure.SourceGenerator;
@@ -11,8 +12,10 @@ public class LocalRpcClientGeneratorTests
 {
     private static readonly Type[] _extraRefs =
     [
-        typeof(LocalRpcClientAttribute<>),
+        typeof(RpcServer<>),
+        typeof(RpcServerInvoker),
         typeof(IRpcClient),
+        typeof(IRpcClient<>),
         typeof(IRpcService),
         typeof(Result),
         typeof(Result<>),
@@ -24,6 +27,7 @@ public class LocalRpcClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
+                              using NOF.Application;
                               using NOF.Infrastructure;
 
                               namespace MyApp
@@ -36,7 +40,7 @@ public class LocalRpcClientGeneratorTests
                                       Result<GetFleetOverviewResponse> GetFleetOverview(Empty request);
                                   }
 
-                                  public partial interface IDroneOpsServiceClient : IRpcClient
+                                  public partial interface IDroneOpsServiceClient : IRpcClient<IDroneOpsService>
                                   {
                                       global::System.Threading.Tasks.Task<Result<GetFleetOverviewResponse>> GetFleetOverviewAsync(
                                           Empty request,
@@ -44,8 +48,7 @@ public class LocalRpcClientGeneratorTests
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 
-                                  [LocalRpcClient<IDroneOpsServiceClient>]
-                                  public partial class LocalDroneOpsClient;
+                                  public abstract class DroneOpsServer : RpcServer<IDroneOpsService>;
                               }
                               """;
 
@@ -55,8 +58,9 @@ public class LocalRpcClientGeneratorTests
         Assert.Contains(
             "global::NOF.Contract.ResultProjection.RequireCompatible<global::NOF.Contract.Result<global::MyApp.GetFleetOverviewResponse>>(result ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\"))",
             code);
-        Assert.Contains("private static readonly global::System.Reflection.MethodInfo __GetFleetOverviewAsyncMethodInfo_0 =", code);
-        Assert.Contains("RpcServerInvoker.InvokeAsync<global::MyApp.IDroneOpsService>(_serviceProvider, __GetFleetOverviewAsyncMethodInfo_0, request, context, cancellationToken)", code);
+        Assert.Contains("public sealed class LocalDroneOpsServerClient : global::MyApp.IDroneOpsServiceClient", code);
+        Assert.Contains("private static readonly global::System.Reflection.MethodInfo __GetFleetOverviewMethodInfo_0 =", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::MyApp.IDroneOpsService>(_serviceProvider, __GetFleetOverviewMethodInfo_0, request, context, cancellationToken)", code);
         Assert.DoesNotContain(
             "((global::NOF.Contract.IResult)result!)",
             code);
@@ -73,6 +77,7 @@ public class LocalRpcClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
+                              using NOF.Application;
                               using NOF.Infrastructure;
                               using System.Collections.Generic;
 
@@ -86,7 +91,7 @@ public class LocalRpcClientGeneratorTests
                                       StreamingResult<DroneEvent> StreamEvents(Empty request);
                                   }
 
-                                  public partial interface IDroneOpsServiceClient : IRpcClient
+                                  public partial interface IDroneOpsServiceClient : IRpcClient<IDroneOpsService>
                                   {
                                       global::System.Threading.Tasks.Task<StreamingResult<DroneEvent>> StreamEventsAsync(
                                           Empty request,
@@ -94,8 +99,7 @@ public class LocalRpcClientGeneratorTests
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 
-                                  [LocalRpcClient<IDroneOpsServiceClient>]
-                                  public partial class LocalDroneOpsClient;
+                                  public abstract class DroneOpsServer : RpcServer<IDroneOpsService>;
                               }
                               """;
 
@@ -113,6 +117,7 @@ public class LocalRpcClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
+                              using NOF.Application;
                               using NOF.Infrastructure;
                               using System.Collections.Generic;
 
@@ -133,7 +138,7 @@ public class LocalRpcClientGeneratorTests
                                       FleetOverviewResult GetFleetOverview(Empty request);
                                   }
 
-                                  public partial interface IDroneOpsServiceClient : IRpcClient
+                                  public partial interface IDroneOpsServiceClient : IRpcClient<IDroneOpsService>
                                   {
                                       global::System.Threading.Tasks.Task<FleetOverviewResult> GetFleetOverviewAsync(
                                           Empty request,
@@ -141,8 +146,7 @@ public class LocalRpcClientGeneratorTests
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 
-                                  [LocalRpcClient<IDroneOpsServiceClient>]
-                                  public partial class LocalDroneOpsClient;
+                                  public abstract class DroneOpsServer : RpcServer<IDroneOpsService>;
                               }
                               """;
 
@@ -160,6 +164,7 @@ public class LocalRpcClientGeneratorTests
     {
         const string source = """
                               using NOF.Contract;
+                              using NOF.Application;
                               using NOF.Infrastructure;
 
                               namespace MyApp
@@ -176,7 +181,8 @@ public class LocalRpcClientGeneratorTests
                                       Result<TValue> Get(Query<TValue> request);
                                   }
 
-                                  public partial interface IMyServiceClient<TValue> : IRpcClient
+                                  public partial interface IMyServiceClient<TValue> : IRpcClient<IMyService<TValue>>
+                                      where TValue : class, new()
                                   {
                                       global::System.Threading.Tasks.Task<Result<TValue>> GetAsync(
                                           Query<TValue> request,
@@ -184,36 +190,55 @@ public class LocalRpcClientGeneratorTests
                                           global::System.Threading.CancellationToken cancellationToken = default);
                                   }
 
-                                  [LocalRpcClient<IMyServiceClient<Payload>>]
-                                  public partial class LocalMyServiceClient;
+                                  public abstract class MyServiceServer<TValue> : RpcServer<IMyService<TValue>>
+                                      where TValue : class, new();
                               }
                               """;
 
         var runResult = new LocalRpcClientGenerator().GetResultPostGen(source, _extraRefs);
         var code = runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())
-            .Single(generated => generated.Contains("partial class LocalMyServiceClient"));
+            .Single(generated => generated.Contains("class LocalMyServiceServerClient<TValue>"));
 
-        Assert.Contains("partial class LocalMyServiceClient : global::MyApp.IMyServiceClient<global::MyApp.Payload>", code);
-        Assert.Contains("RpcServerInvoker.InvokeAsync<global::MyApp.IMyService<global::MyApp.Payload>>", code);
+        Assert.Contains("public sealed class LocalMyServiceServerClient<TValue> : global::MyApp.IMyServiceClient<TValue>", code);
+        Assert.Contains("where TValue : class, new()", code);
+        Assert.Contains("RpcServerInvoker.InvokeAsync<global::MyApp.IMyService<TValue>>", code);
+    }
+
+    [Fact]
+    public void RpcServer_WithoutClientGeneratorOutput_StillProducesLocalClient()
+    {
+        const string source = """
+                              using NOF.Application;
+                              using NOF.Contract;
+
+                              namespace MyApp
+                              {
+                                  public sealed record Empty;
+
+                                  public interface IDroneOpsService : IRpcService
+                                  {
+                                      Result Ping(Empty request);
+                                  }
+
+                                  public abstract class DroneOpsServer : RpcServer<IDroneOpsService>;
+                              }
+                              """;
+
+        var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
+        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new LocalRpcClientGenerator());
+
+        driver = driver.RunGenerators(compilation);
+
+        var code = GetGeneratedCode(driver.GetRunResult());
+        Assert.Contains("public sealed class LocalDroneOpsServerClient : global::MyApp.IDroneOpsServiceClient", code);
+        Assert.Contains("Task<global::NOF.Contract.Result> PingAsync", code);
     }
 
     private static string GetGeneratedCode(GeneratorDriverRunResult runResult)
         => runResult.GeneratedTrees
             .Select(tree => tree.GetRoot().ToFullString())
-            .Single(code => code.Contains("partial class LocalDroneOpsClient"));
+            .Single(code => code.Contains("class LocalDroneOpsServerClient"));
 
-    private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
-        RunGeneratorWithDiagnostics(string source)
-    {
-        var extraReferences = _extraRefs.Select(type => type.ToMetadataReference()).ToArray();
-        var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
-
-        var driver = CSharpGeneratorDriver.Create(new LocalRpcClientGenerator());
-        driver = (CSharpGeneratorDriver)driver.RunGenerators(compilation);
-
-        var result = driver.GetRunResult();
-        var diagnostics = result.Results.SelectMany(r => r.Diagnostics).ToList();
-        return (result, diagnostics);
-    }
 }

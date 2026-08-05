@@ -48,6 +48,18 @@ The default backplane implementation is also host-local:
 - subscriptions live in `MemoryBackplaneState`
 - published messages are delivered only to subscribers inside the same NOF host process
 
+## Local RPC Clients
+
+The Infrastructure source generator discovers `RpcServer<TService>` implementations in the host and referenced application assemblies. For a server named `OrderService`, it generates a public `LocalOrderServiceClient` implementing the canonical client interface generated beside the service contract:
+
+```csharp
+public partial class OrderService : RpcServer<IOrderService>;
+
+builder.Services.ReplaceOrAddScoped<IOrderServiceClient, LocalOrderServiceClient>();
+```
+
+No `LocalRpcClientAttribute` or user-authored empty partial client class is required. Both the Contract and Infrastructure generators derive `IOrderServiceClient` independently from `IOrderService`; the Infrastructure generator never reads Contract generator output.
+
 ## RPC Server Transport Extension Point
 
 `NOF.Infrastructure` owns the framework-level RPC server transport initialization step. Transport packages implement `IRpcServerTransport` and register the implementation in DI:

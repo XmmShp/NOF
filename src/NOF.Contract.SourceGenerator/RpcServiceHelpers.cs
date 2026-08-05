@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using NOF.SourceGeneration;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -64,20 +65,10 @@ internal static class RpcServiceHelpers
     }
 
     public static string GetHttpClientName(string interfaceName)
-    {
-        var baseName = GetServiceBaseName(interfaceName);
-        return $"Http{baseName}Client";
-    }
+        => RpcContractConventions.GetHttpClientName(interfaceName);
 
     public static string GetClientInterfaceName(string interfaceName)
-        => interfaceName + "Client";
-
-    public static string GetServiceBaseName(string interfaceName)
-    {
-        return interfaceName.StartsWith("I") && interfaceName.Length > 1 && char.IsUpper(interfaceName[1])
-            ? interfaceName.Substring(1)
-            : interfaceName;
-    }
+        => RpcContractConventions.GetClientInterfaceName(interfaceName);
 
     public static bool TryGetHttpTransport(INamedTypeSymbol serviceInterface, out HttpTransportInfo transport)
     {

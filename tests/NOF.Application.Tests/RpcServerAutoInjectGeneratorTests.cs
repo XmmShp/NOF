@@ -121,4 +121,41 @@ public class RpcServerAutoInjectGeneratorTests
         var generatedCode = string.Join("\n\n", driver.GetRunResult().GeneratedTrees.Select(tree => tree.GetRoot().ToFullString()));
         Assert.DoesNotContain("UnrelatedHandler", generatedCode);
     }
+
+    [Fact]
+    public void GeneratedCode_DoesNotRequireRpcServerGeneratorOutputAsInput()
+    {
+        const string source = """
+            using NOF.Application;
+            using NOF.Contract;
+
+            namespace App;
+
+            public record PingRequest(string Value);
+
+            public interface IMyService : IRpcService
+            {
+                Result Ping(PingRequest request);
+            }
+
+            public partial class MyService : RpcServer<IMyService>;
+
+            public sealed class PingHandler : MyService.Ping;
+            """;
+
+        var compilation = CSharpCompilation.CreateCompilation("App", source, isDll: true,
+            typeof(RpcServer<>),
+            typeof(RpcHandler<,>),
+            typeof(IRpcService),
+            typeof(Result),
+            typeof(ServiceDescriptor),
+            typeof(AssemblyInitializeAttribute),
+            typeof(InitializedTypes));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new RpcServerAutoInjectGenerator());
+
+        driver = driver.RunGenerators(compilation);
+
+        var generatedCode = string.Join("\n\n", driver.GetRunResult().GeneratedTrees.Select(tree => tree.GetRoot().ToFullString()));
+        Assert.Contains("typeof(global::App.MyService.Ping), typeof(global::App.PingHandler)", generatedCode);
+    }
 }

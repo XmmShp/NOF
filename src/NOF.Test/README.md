@@ -23,7 +23,7 @@ var builder = NOFTestAppBuilder.Create()
     .AddApplicationPartOf<MyRpcServer>()
     .AddRpcServer<MyRpcServer>()
     .AddInMemoryPersistence()
-    .AddLocalRpcClient<IMyServiceClient, LocalMyServiceClient>();
+    .AddLocalRpcClient<IMyServiceClient, LocalMyRpcServerClient>();
 
 await using var host = await builder.BuildTestHostAsync();
 ```
@@ -36,6 +36,8 @@ Common builder helpers:
 - `AddRpcServer<TRpcServer>()`
 - `AddInMemoryPersistence()`
 - `AddLocalRpcClient<TService, TImplementation>()`
+
+`LocalMyRpcServerClient` is generated from `MyRpcServer : RpcServer<IMyService>`; tests do not declare a `LocalRpcClientAttribute` or an empty partial client class.
 
 ### `NOFTestHost`
 

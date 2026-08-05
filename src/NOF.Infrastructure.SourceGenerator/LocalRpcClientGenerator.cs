@@ -1,135 +1,179 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace NOF.Infrastructure.SourceGenerator;
 
 [Generator]
 public sealed class LocalRpcClientGenerator : IIncrementalGenerator
 {
-    private static readonly DiagnosticDescriptor _unsupportedClientReturnType = new(
-        id: "NOF030",
-        title: "Local RPC client method must return the RPC result type",
-        messageFormat: "Local RPC client method '{0}' must return '{1}' to match the RPC service contract signature",
-        category: "LocalRpcClientGenerator",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var classProvider = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                static (node, _) => node is ClassDeclarationSyntax,
-                static (ctx, _) =>
-                {
-                    if (ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is not INamedTypeSymbol classSymbol)
-                    {
-                        return null;
-                    }
+        var rpcServers = context.CompilationProvider.Select(
+            static (compilation, cancellationToken) => DiscoverRpcServers(compilation, cancellationToken));
 
-                    return TryGetRpcClientInterfaceFromLocalRpcClientAttribute(classSymbol, out var _, out var _) ? classSymbol : null;
-                })
-            .Where(static symbol => symbol is not null);
-
-        context.RegisterSourceOutput(classProvider.Collect(), Generate);
+        context.RegisterSourceOutput(rpcServers, Generate);
     }
 
-    private static void Generate(SourceProductionContext context, ImmutableArray<INamedTypeSymbol?> classes)
+    private static ImmutableArray<INamedTypeSymbol> DiscoverRpcServers(
+        Compilation compilation,
+        CancellationToken cancellationToken)
     {
-        if (classes.IsDefaultOrEmpty)
+        var servers = ImmutableArray.CreateBuilder<INamedTypeSymbol>();
+        CollectRpcServers(compilation.Assembly.GlobalNamespace, servers, cancellationToken);
+
+        foreach (var assembly in compilation.SourceModule.ReferencedAssemblySymbols)
         {
-            return;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ReferencesNofApplication(assembly))
+            {
+                continue;
+            }
+
+            CollectRpcServers(assembly.GlobalNamespace, servers, cancellationToken);
         }
 
-        foreach (var targetClass in classes.Distinct(SymbolEqualityComparer.Default).OfType<INamedTypeSymbol>())
+        return servers
+            .Distinct<INamedTypeSymbol>(SymbolEqualityComparer.Default)
+            .ToImmutableArray();
+    }
+
+    private static bool ReferencesNofApplication(IAssemblySymbol assembly)
+        => assembly.Name == "NOF.Application"
+           || assembly.Modules.Any(static module =>
+               module.ReferencedAssemblySymbols.Any(static reference => reference.Name == "NOF.Application"));
+
+    private static void CollectRpcServers(
+        INamespaceSymbol namespaceSymbol,
+        ImmutableArray<INamedTypeSymbol>.Builder servers,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        foreach (var type in namespaceSymbol.GetTypeMembers())
+        {
+            CollectRpcServers(type, servers, cancellationToken);
+        }
+
+        foreach (var childNamespace in namespaceSymbol.GetNamespaceMembers())
+        {
+            CollectRpcServers(childNamespace, servers, cancellationToken);
+        }
+    }
+
+    private static void CollectRpcServers(
+        INamedTypeSymbol type,
+        ImmutableArray<INamedTypeSymbol>.Builder servers,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (type.TypeKind == TypeKind.Class
+            && RpcClientHelpers.TryGetRpcServiceFromRpcServer(type, out _))
+        {
+            servers.Add(type);
+        }
+
+        foreach (var nestedType in type.GetTypeMembers())
+        {
+            CollectRpcServers(nestedType, servers, cancellationToken);
+        }
+    }
+
+    private static void Generate(SourceProductionContext context, ImmutableArray<INamedTypeSymbol> rpcServers)
+    {
+        foreach (var rpcServer in rpcServers)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            GenerateForTargetClass(context, targetClass);
+            GenerateForRpcServer(context, rpcServer);
         }
     }
 
-    private static void GenerateForTargetClass(SourceProductionContext context, INamedTypeSymbol targetClass)
+    private static void GenerateForRpcServer(SourceProductionContext context, INamedTypeSymbol rpcServer)
     {
-        if (!TryGetRpcClientInterfaceFromLocalRpcClientAttribute(targetClass, out var clientInterface, out var serviceInterface)
-            || clientInterface is null
+        if (!RpcClientHelpers.TryGetRpcServiceFromRpcServer(rpcServer, out var serviceInterface)
             || serviceInterface is null)
         {
             return;
         }
 
-        var clientMethods = clientInterface.GetMembers()
+        // The local generator must not inspect the client interface emitted by the contract
+        // generator. Both generators independently derive their output from the service source.
+        var serviceMethods = serviceInterface.GetMembers()
             .OfType<IMethodSymbol>()
-            .Where(m => m.MethodKind == MethodKind.Ordinary && !m.IsImplicitlyDeclared)
+            .Where(static method => method.MethodKind == MethodKind.Ordinary
+                && !method.IsImplicitlyDeclared
+                && method.Parameters.Length == 1
+                && RpcClientHelpers.ImplementsResultContract(method.ReturnType))
             .ToList();
 
-        if (clientMethods.Count == 0)
+        if (serviceMethods.Count == 0)
         {
             return;
         }
 
-        foreach (var method in clientMethods)
-        {
-            if (!IsSupportedClientMethod(method, serviceInterface, out var expectedReturnType))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    _unsupportedClientReturnType,
-                    method.Locations.FirstOrDefault(),
-                    method.ToDisplayString(),
-                    expectedReturnType ?? "a normalized contract return type"));
-                return;
-            }
-        }
-
-        var targetNamespace = RpcClientHelpers.GetFullNamespace(targetClass.ContainingNamespace);
-        var fullyQualifiedClientInterfaceName = clientInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var targetClassDeclarationName = RpcClientHelpers.GetTypeDeclarationName(targetClass);
+        var targetNamespace = RpcClientHelpers.GetFullNamespace(rpcServer.ContainingNamespace);
+        var fullyQualifiedClientInterfaceName = RpcClientHelpers.GetRpcClientInterfaceTypeName(serviceInterface);
+        var localClientName = RpcClientHelpers.GetLocalClientName(rpcServer);
+        var localClientDeclarationName = localClientName + RpcClientHelpers.GetTypeParameterList(rpcServer.TypeParameters);
 
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
         sb.AppendLine("#nullable enable");
         sb.AppendLine();
-        sb.AppendLine($"namespace {targetNamespace}");
-        sb.AppendLine("{");
-        // No accessibility modifier here; the user-authored partial declaration decides visibility.
-        sb.AppendLine($"    partial class {targetClassDeclarationName} : {fullyQualifiedClientInterfaceName}");
-        RpcClientHelpers.AppendTypeParameterConstraints(sb, targetClass, 1);
-        sb.AppendLine("    {");
-        sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
-        sb.AppendLine();
-        for (var i = 0; i < clientMethods.Count; i++)
+        if (!string.IsNullOrWhiteSpace(targetNamespace))
         {
-            EmitMethodInfoField(sb, clientMethods[i], serviceInterface, i);
+            sb.AppendLine($"namespace {targetNamespace}");
+            sb.AppendLine("{");
+        }
+
+        var indentLevel = string.IsNullOrWhiteSpace(targetNamespace) ? 0 : 1;
+        var indent = new string(' ', indentLevel * 4);
+        sb.AppendLine($"{indent}public sealed class {localClientDeclarationName} : {fullyQualifiedClientInterfaceName}");
+        RpcClientHelpers.AppendTypeParameterConstraints(sb, rpcServer, indentLevel);
+        sb.AppendLine($"{indent}{{");
+        sb.AppendLine($"{indent}    private readonly global::System.IServiceProvider _serviceProvider;");
+        sb.AppendLine();
+        for (var i = 0; i < serviceMethods.Count; i++)
+        {
+            EmitMethodInfoField(sb, serviceMethods[i], serviceInterface, i, indentLevel + 1);
         }
 
         sb.AppendLine();
-        sb.AppendLine($"        public {targetClass.Name}(global::System.IServiceProvider serviceProvider)");
-        sb.AppendLine("        {");
-        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(serviceProvider);");
-        sb.AppendLine("            _serviceProvider = serviceProvider;");
-        sb.AppendLine("        }");
+        sb.AppendLine($"{indent}    public {localClientName}(global::System.IServiceProvider serviceProvider)");
+        sb.AppendLine($"{indent}    {{");
+        sb.AppendLine($"{indent}        global::System.ArgumentNullException.ThrowIfNull(serviceProvider);");
+        sb.AppendLine($"{indent}        _serviceProvider = serviceProvider;");
+        sb.AppendLine($"{indent}    }}");
         sb.AppendLine();
 
-        for (var i = 0; i < clientMethods.Count; i++)
+        for (var i = 0; i < serviceMethods.Count; i++)
         {
-            EmitMethod(sb, clientMethods[i], serviceInterface, GetMethodInfoFieldName(clientMethods[i], i));
+            EmitMethod(sb, serviceMethods[i], serviceInterface, GetMethodInfoFieldName(serviceMethods[i], i), indentLevel + 1);
         }
 
-        sb.AppendLine("    }");
-        sb.AppendLine("}");
+        sb.AppendLine($"{indent}}}");
+        if (!string.IsNullOrWhiteSpace(targetNamespace))
+        {
+            sb.AppendLine("}");
+        }
 
-        context.AddSource(GetHintName(targetClass, "LocalRpcClient"), SourceText.From(sb.ToString(), Encoding.UTF8));
+        context.AddSource(GetHintName(rpcServer, "LocalRpcClient"), SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
-    private static void EmitMethodInfoField(StringBuilder sb, IMethodSymbol method, INamedTypeSymbol serviceInterface, int index)
+    private static void EmitMethodInfoField(
+        StringBuilder sb,
+        IMethodSymbol method,
+        INamedTypeSymbol serviceInterface,
+        int index,
+        int indentLevel)
     {
+        var indent = new string(' ', indentLevel * 4);
         var serviceType = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var operationName = method.Name.EndsWith("Async", System.StringComparison.Ordinal)
-            ? method.Name.Substring(0, method.Name.Length - 5)
-            : method.Name;
-        var operationNameExpression = $"nameof({serviceType}.{operationName})";
+        var operationNameExpression = $"nameof({serviceType}.{method.Name})";
         var fieldName = GetMethodInfoFieldName(method, index);
         var parameterTypes = method.Parameters
             .Take(1)
@@ -139,9 +183,9 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
             ? "global::System.Type.EmptyTypes"
             : $"[{string.Join(", ", parameterTypes)}]";
 
-        sb.AppendLine($"        private static readonly global::System.Reflection.MethodInfo {fieldName} =");
-        sb.AppendLine($"            typeof({serviceType}).GetMethod({operationNameExpression}, {parameterTypesExpression})");
-        sb.AppendLine($"            ?? throw new global::System.InvalidOperationException(\"Unable to resolve method '{serviceType}.{operationName}'.\");");
+        sb.AppendLine($"{indent}private static readonly global::System.Reflection.MethodInfo {fieldName} =");
+        sb.AppendLine($"{indent}    typeof({serviceType}).GetMethod({operationNameExpression}, {parameterTypesExpression})");
+        sb.AppendLine($"{indent}    ?? throw new global::System.InvalidOperationException(\"Unable to resolve method '{serviceType}.{method.Name}'.\");");
     }
 
     private static string GetMethodInfoFieldName(IMethodSymbol method, int index)
@@ -161,51 +205,31 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
         return builder.ToString();
     }
 
-    private static void EmitMethod(StringBuilder sb, IMethodSymbol method, INamedTypeSymbol serviceInterface, string methodInfoFieldName)
+    private static void EmitMethod(
+        StringBuilder sb,
+        IMethodSymbol method,
+        INamedTypeSymbol serviceInterface,
+        string methodInfoFieldName,
+        int indentLevel)
     {
         if (method.Parameters.Length == 0)
         {
             return;
         }
 
-        var requestParameter = method.Parameters[0];
-        var requestType = requestParameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var indent = new string(' ', indentLevel * 4);
+        var requestType = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var serviceType = serviceInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC failure projection may require generic instantiation at runtime.\")]");
-        sb.AppendLine("        [global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC failure projection may require reflective access to generic result helpers.\")]");
-        sb.AppendLine($"        public async {returnType} {method.Name}({requestType} {requestParameter.Name}, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
-        sb.AppendLine("        {");
-        sb.AppendLine("            global::System.ArgumentNullException.ThrowIfNull(context);");
-        sb.AppendLine($"            var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {methodInfoFieldName}, {requestParameter.Name}, context, cancellationToken).ConfigureAwait(false);");
-        if (method.ReturnType is INamedTypeSymbol { Name: "Task", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } taskType)
-        {
-            if (taskType.IsGenericType && taskType.TypeArguments.Length == 1)
-            {
-                sb.AppendLine($"            return {BuildResponseConversionExpression(taskType.TypeArguments[0], "result")};");
-            }
-            else
-            {
-                sb.AppendLine("            return;");
-            }
-        }
-        else if (method.ReturnType is INamedTypeSymbol { Name: "ValueTask", ContainingNamespace: { Name: "Tasks", ContainingNamespace: { Name: "Threading", ContainingNamespace: { Name: "System" } } } } valueTaskType)
-        {
-            if (valueTaskType.IsGenericType && valueTaskType.TypeArguments.Length == 1)
-            {
-                sb.AppendLine($"            return {BuildResponseConversionExpression(valueTaskType.TypeArguments[0], "result")};");
-            }
-            else
-            {
-                sb.AppendLine("            return;");
-            }
-        }
-        else
-        {
-            sb.AppendLine($"            return {BuildResponseConversionExpression(method.ReturnType, "result")};");
-        }
-        sb.AppendLine("        }");
+        sb.AppendLine($"{indent}[global::System.Diagnostics.CodeAnalysis.RequiresDynamicCode(\"Local RPC failure projection may require generic instantiation at runtime.\")]");
+        sb.AppendLine($"{indent}[global::System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(\"Local RPC failure projection may require reflective access to generic result helpers.\")]");
+        sb.AppendLine($"{indent}public async global::System.Threading.Tasks.Task<{returnType}> {method.Name}Async({requestType} request, global::NOF.Contract.Context context, global::System.Threading.CancellationToken cancellationToken = default)");
+        sb.AppendLine($"{indent}{{");
+        sb.AppendLine($"{indent}    global::System.ArgumentNullException.ThrowIfNull(context);");
+        sb.AppendLine($"{indent}    var result = await global::NOF.Infrastructure.RpcServerInvoker.InvokeAsync<{serviceType}>(_serviceProvider, {methodInfoFieldName}, request, context, cancellationToken).ConfigureAwait(false);");
+        sb.AppendLine($"{indent}    return {BuildResponseConversionExpression(method.ReturnType, "result")};");
+        sb.AppendLine($"{indent}}}");
         sb.AppendLine();
     }
 
@@ -217,49 +241,5 @@ public sealed class LocalRpcClientGenerator : IIncrementalGenerator
     }
 
     private static string BuildRequiredResultExpression(string valueExpression)
-    {
-        return $"{valueExpression} ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\")";
-    }
-
-    private static bool IsSupportedClientMethod(IMethodSymbol clientMethod, INamedTypeSymbol serviceInterface, out string? expectedReturnType)
-    {
-        expectedReturnType = null;
-
-        var operationName = clientMethod.Name.EndsWith("Async", System.StringComparison.Ordinal)
-            ? clientMethod.Name.Substring(0, clientMethod.Name.Length - 5)
-            : clientMethod.Name;
-
-        var serviceMethod = serviceInterface.GetMembers()
-            .OfType<IMethodSymbol>()
-            .FirstOrDefault(m => m.MethodKind == MethodKind.Ordinary
-                && !m.IsImplicitlyDeclared
-                && m.Name == operationName);
-        if (serviceMethod is null)
-        {
-            return true;
-        }
-
-        expectedReturnType = BuildExpectedClientReturnTypeDisplay(serviceMethod);
-        return clientMethod.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == expectedReturnType;
-    }
-
-    private static string BuildExpectedClientReturnTypeDisplay(IMethodSymbol serviceMethod)
-    {
-        return $"global::System.Threading.Tasks.Task<{serviceMethod.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>";
-    }
-
-    private static bool TryGetRpcClientInterfaceFromLocalRpcClientAttribute(
-        INamedTypeSymbol classSymbol,
-        out INamedTypeSymbol? clientInterface,
-        out INamedTypeSymbol? serviceInterface)
-    {
-        serviceInterface = null;
-        if (!RpcClientHelpers.TryGetRpcClientFromLocalRpcClientAttribute(classSymbol, out clientInterface)
-            || clientInterface is null)
-        {
-            return false;
-        }
-
-        return RpcClientHelpers.TryGetRpcServiceFromClientInterface(clientInterface, out serviceInterface);
-    }
+        => $"{valueExpression} ?? throw new global::System.InvalidOperationException(\"RPC call returned a null response.\")";
 }

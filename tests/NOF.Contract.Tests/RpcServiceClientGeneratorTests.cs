@@ -41,7 +41,7 @@ public class RpcServiceClientGeneratorTests
         var runResult = new RpcServiceClientGenerator().GetResult(source, _refs);
         var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("public interface IMyServiceClient : global::NOF.Contract.IRpcClient", code);
+        Assert.Contains("public interface IMyServiceClient : global::NOF.Contract.IRpcClient<global::App.IMyService>", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> PingAsync", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<global::App.Pong>> GetAsync", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result> ArchiveAsync", code);
@@ -91,7 +91,7 @@ public class RpcServiceClientGeneratorTests
         var runResult = new RpcServiceClientGenerator().GetResult(source, _refs);
         var code = runResult.GeneratedTrees.Single().GetRoot().ToFullString();
 
-        Assert.Contains("public interface IMyServiceClient<TValue> : global::NOF.Contract.IRpcClient", code);
+        Assert.Contains("public interface IMyServiceClient<TValue> : global::NOF.Contract.IRpcClient<global::App.IMyService<TValue>>", code);
         Assert.Contains("where TValue : class, new()", code);
         Assert.Contains("global::System.Threading.Tasks.Task<global::NOF.Contract.Result<TValue>> GetAsync(global::App.Query<TValue> request", code);
     }

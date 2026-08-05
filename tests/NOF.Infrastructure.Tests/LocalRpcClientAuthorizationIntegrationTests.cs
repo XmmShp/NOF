@@ -16,7 +16,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     {
         using var provider = BuildServiceProvider();
 
-        var client = provider.GetRequiredService<ProtectedFleetClient>();
+        var client = provider.GetRequiredService<LocalProtectedFleetServerClient>();
         Result<GetFleetOverviewResponse> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
 
@@ -34,7 +34,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         userContext.Logout();
         userContext.User.AddIdentity(TestPrincipalFactory.CreateAuthenticatedIdentity((ClaimTypes.Permission, "fleet.read")));
 
-        var client = provider.GetRequiredService<ProtectedFleetClient>();
+        var client = provider.GetRequiredService<LocalProtectedFleetServerClient>();
         Result<GetFleetOverviewResponse> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
 
@@ -53,7 +53,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
 
         var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
         var marker = scope.ServiceProvider.GetRequiredService<LocalScopeMarker>();
-        var client = scope.ServiceProvider.GetRequiredService<ProtectedFleetClient>();
+        var client = scope.ServiceProvider.GetRequiredService<LocalProtectedFleetServerClient>();
 
         var result = await client.CheckScopeAsync(new ScopeCheckRequest(dbContext, marker), Context.Empty);
         var probe = scope.ServiceProvider.GetRequiredService<LocalScopeProbe>();
@@ -81,7 +81,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddTransient<GetFleetOverviewHandler>();
         services.AddTransient<ScopeCheckHandler>();
         services.AddTransient<ScopeCheckEventHandler>();
-        services.AddTransient<ProtectedFleetClient>();
+        services.AddTransient<LocalProtectedFleetServerClient>();
         services.AddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
         services.AddTransient<AuthorizationInboundMiddleware>();
         services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
@@ -106,9 +106,6 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     }
 }
 
-[LocalRpcClient<IProtectedFleetServiceClient>]
-public partial class ProtectedFleetClient;
-
 public partial interface IProtectedFleetService : IRpcService
 {
     [RequirePermission("fleet.read")]
@@ -117,7 +114,7 @@ public partial interface IProtectedFleetService : IRpcService
     Result CheckScope(ScopeCheckRequest request);
 }
 
-public partial interface IProtectedFleetServiceClient : IRpcClient
+public partial interface IProtectedFleetServiceClient : IRpcClient<IProtectedFleetService>
 {
     Task<Result<GetFleetOverviewResponse>> GetFleetOverviewAsync(
         Empty request,

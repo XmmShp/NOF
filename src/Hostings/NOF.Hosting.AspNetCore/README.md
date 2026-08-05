@@ -40,7 +40,7 @@ An RPC service contract can declare its intended HTTP transport style:
 public interface IOrderService : IRpcService;
 ```
 
-`TransportOverAttribute` is abstract and defined in `NOF.Contract`, allowing callers and implementations to discover the same transport choice from the service interface. The RPC service analyzer ensures that transport attributes are only placed on interfaces inheriting `IRpcService` and that each contract declares at most one transport. `AddRpcServer<TRpcServer>()` selects the endpoint mapper from `HttpRpcStyle`: `ControllerRpc` prepends the optional prefix to operation routes, and `JsonRpc` maps one JSON-RPC endpoint at that route. When a JSON-RPC prefix is omitted, the endpoint is mapped at `/`.
+`TransportOverAttribute` is abstract and defined in `NOF.Contract`, allowing callers and implementations to discover the same transport choice from the service interface. The RPC service analyzer ensures that transport attributes are only placed on interfaces inheriting `IRpcService` and that each contract declares exactly one transport. `AddRpcServer<TRpcServer>()` selects the endpoint mapper from `HttpRpcStyle`: `ControllerRpc` prepends the optional prefix to operation routes, and `JsonRpc` maps one JSON-RPC endpoint at that route. When a JSON-RPC prefix is omitted, the endpoint is mapped at `/`.
 
 ASP.NET Core endpoint mapping is implemented as an `IRpcServerTransport` registered in DI. The framework-level initialization step lives in `NOF.Infrastructure`; this package owns only the HTTP-specific contract inspection and endpoint mapping behavior.
 
