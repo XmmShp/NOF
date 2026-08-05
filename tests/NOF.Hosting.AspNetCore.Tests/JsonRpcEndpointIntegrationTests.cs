@@ -124,6 +124,43 @@ public sealed class JsonRpcEndpointIntegrationTests
         Assert.Equal("contract route", result.Value!.Value);
     }
 
+    [Fact]
+    public async Task AddRpcServer_WithoutJsonRpcRoutePrefix_ShouldMapRootRoute()
+    {
+        var builder = NOFWebApplicationBuilder.Create([]);
+        builder.WebApplicationBuilder.WebHost.UseTestServer();
+        builder.AddRpcServer<RootJsonRpcServer>();
+        builder.Services.AddTransient<RootEchoHandler>();
+
+        await using var app = await builder.BuildAsync();
+        await app.StartAsync();
+
+        var rootEndpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(static source => source.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Where(static endpoint => endpoint.RoutePattern.RawText == "/")
+            .ToArray();
+        Assert.Single(rootEndpoints);
+
+        using var client = app.GetTestClient();
+        using var response = await client.PostAsJsonAsync("/", new
+        {
+            jsonrpc = "2.0",
+            method = nameof(IRootJsonRpcService.Echo),
+            @params = new PrefixedEchoRequest { Value = "root route" },
+            id = "root"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync());
+        Assert.Equal("root", document.RootElement.GetProperty("id").GetString());
+        var result = document.RootElement.GetProperty("result").Deserialize<Result<PrefixedEchoResponse>>(
+            JsonSerializerOptions.NOF);
+        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
+        Assert.Equal("root route", result.Value!.Value);
+    }
+
     private static async Task<Microsoft.AspNetCore.Builder.WebApplication> CreateAppAsync()
     {
         var builder = NOFWebApplicationBuilder.Create([]);
@@ -162,6 +199,33 @@ public sealed class JsonRpcEndpointIntegrationTests
     }
 
     public sealed class PrefixedEchoHandler : RpcHandler<PrefixedEchoRequest, Result<PrefixedEchoResponse>>
+    {
+        public override Task<Result<PrefixedEchoResponse>> HandleAsync(
+            PrefixedEchoRequest request,
+            Context context,
+            CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new PrefixedEchoResponse(request.Value)));
+    }
+
+    [TransportOverHttp(HttpRpcStyle.JsonRpc)]
+    public interface IRootJsonRpcService : IRpcService
+    {
+        Result<PrefixedEchoResponse> Echo(PrefixedEchoRequest request);
+    }
+
+    public sealed class RootJsonRpcServer : RpcServer<IRootJsonRpcService>, IRpcServer
+    {
+        public static IReadOnlyDictionary<string, RpcHandlerMapping> HandlerMappings { get; } =
+            new Dictionary<string, RpcHandlerMapping>
+            {
+                [nameof(IRootJsonRpcService.Echo)] =
+                    new(typeof(RootEchoHandler), typeof(PrefixedEchoRequest), typeof(Result<PrefixedEchoResponse>))
+            };
+
+        protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
+    }
+
+    public sealed class RootEchoHandler : RpcHandler<PrefixedEchoRequest, Result<PrefixedEchoResponse>>
     {
         public override Task<Result<PrefixedEchoResponse>> HandleAsync(
             PrefixedEchoRequest request,

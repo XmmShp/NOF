@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NOF.Hosting.Maui;
-using NOF.Sample.Maui.Services;
+using NOF.Sample;
 
 namespace NOF.Sample.Maui;
 
@@ -19,8 +19,7 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddAntDesign();
-        builder.Services.AddScoped<MauiHttpNOFSampleService>();
-        builder.Services.AddScoped<INOFSampleServiceClient>(sp => sp.GetRequiredService<MauiHttpNOFSampleService>());
+        builder.Services.AddScoped<INOFSampleServiceClient, HttpNOFSampleServiceClient>();
         builder.Services.AddScoped(_ => new HttpClient
         {
             BaseAddress = new Uri(builder.Configuration["SampleApiBaseAddress"] ?? "https://localhost:5001/")

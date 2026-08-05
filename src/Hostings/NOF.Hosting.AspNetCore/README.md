@@ -40,7 +40,7 @@ An RPC service contract can declare its intended HTTP transport style:
 public interface IOrderService : IRpcService;
 ```
 
-`TransportOverAttribute` is abstract and defined in `NOF.Contract`, allowing callers and implementations to discover the same transport choice from the service interface. The RPC service analyzer ensures that transport attributes are only placed on interfaces inheriting `IRpcService` and that each contract declares at most one transport. `AddRpcServer<TRpcServer>()` selects the endpoint mapper from `HttpRpcStyle`: `ControllerRpc` prepends the optional prefix to operation routes, and `JsonRpc` maps one JSON-RPC endpoint at that route.
+`TransportOverAttribute` is abstract and defined in `NOF.Contract`, allowing callers and implementations to discover the same transport choice from the service interface. The RPC service analyzer ensures that transport attributes are only placed on interfaces inheriting `IRpcService` and that each contract declares at most one transport. `AddRpcServer<TRpcServer>()` selects the endpoint mapper from `HttpRpcStyle`: `ControllerRpc` prepends the optional prefix to operation routes, and `JsonRpc` maps one JSON-RPC endpoint at that route. When a JSON-RPC prefix is omitted, the endpoint is mapped at `/`.
 
 ASP.NET Core endpoint mapping is implemented as an `IRpcServerTransport` registered in DI. The framework-level initialization step lives in `NOF.Infrastructure`; this package owns only the HTTP-specific contract inspection and endpoint mapping behavior.
 
@@ -58,6 +58,8 @@ Example request:
 ```
 
 Each registered JSON-RPC server is mapped once, so the JSON-RPC method is only the contract operation name. The endpoint runs the same request inbound middleware and handler pipeline as normal HTTP RPC endpoints.
+
+Methods on a JSON-RPC contract must not declare `[HttpEndpoint]`; that attribute is reserved for `ControllerRpc`, where it selects the HTTP verb and operation route.
 
 The current JSON-RPC endpoint supports unary calls with object `params`; it does not support batch requests, notifications, or streaming results.
 

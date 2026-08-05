@@ -46,7 +46,7 @@ internal static partial class NOFHostingAspNetCoreExtensions
         Type serviceType,
         IReadOnlyDictionary<string, RpcHandlerMapping> handlerMappings)
     {
-        var resolvedPattern = GetHttpRoutePrefix(serviceType) ?? "/rpc";
+        var resolvedPattern = GetHttpRoutePrefix(serviceType) ?? "/";
         ArgumentException.ThrowIfNullOrWhiteSpace(resolvedPattern);
         resolvedPattern = NormalizeRoute(resolvedPattern);
 

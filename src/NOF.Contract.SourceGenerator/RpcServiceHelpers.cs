@@ -12,6 +12,7 @@ internal static class RpcServiceHelpers
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
     public const string ParsableFqn = "System.IParsable<TSelf>";
     public const string TransportOverAttributeFqn = "NOF.Contract.TransportOverAttribute";
+    public const string TransportOverHttpAttributeFqn = "NOF.Contract.TransportOverHttpAttribute";
     public const string SummaryAttributeFqn = "NOF.Contract.SummaryAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
     public const string ResultInterfaceFqn = "NOF.Contract.IResult";
@@ -61,7 +62,7 @@ internal static class RpcServiceHelpers
     public static string GetHttpClientName(string interfaceName)
     {
         var baseName = GetServiceBaseName(interfaceName);
-        return $"Http{baseName}";
+        return $"Http{baseName}Client";
     }
 
     public static string GetClientInterfaceName(string interfaceName)
@@ -72,6 +73,25 @@ internal static class RpcServiceHelpers
         return interfaceName.StartsWith("I") && interfaceName.Length > 1 && char.IsUpper(interfaceName[1])
             ? interfaceName.Substring(1)
             : interfaceName;
+    }
+
+    public static bool TryGetHttpTransport(INamedTypeSymbol serviceInterface, out HttpTransportInfo transport)
+    {
+        var attribute = serviceInterface.GetAttributes()
+            .FirstOrDefault(static attr => attr.AttributeClass?.ToDisplayString() == TransportOverHttpAttributeFqn);
+        if (attribute is null
+            || attribute.ConstructorArguments.Length == 0
+            || attribute.ConstructorArguments[0].Value is not int style)
+        {
+            transport = default;
+            return false;
+        }
+
+        var routePrefix = attribute.ConstructorArguments.Length > 1
+            ? attribute.ConstructorArguments[1].Value as string
+            : null;
+        transport = new HttpTransportInfo((HttpRpcStyle)style, routePrefix);
+        return true;
     }
 
     public static string GetOperationName(string methodName)
@@ -322,4 +342,23 @@ internal enum HttpVerb
     Put,
     Delete,
     Patch
+}
+
+internal enum HttpRpcStyle
+{
+    JsonRpc,
+    ControllerRpc
+}
+
+internal readonly struct HttpTransportInfo
+{
+    public HttpTransportInfo(HttpRpcStyle style, string? routePrefix)
+    {
+        Style = style;
+        RoutePrefix = routePrefix;
+    }
+
+    public HttpRpcStyle Style { get; }
+
+    public string? RoutePrefix { get; }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using NOF.Abstraction;
+using NOF.Contract;
 using Xunit;
 
 namespace NOF.Hosting.Tests;
@@ -38,7 +39,8 @@ public class DaemonServiceScopeTests
 
         _ = Assert.Single(services, service => service.ServiceType == typeof(IUserContext));
         _ = Assert.Single(services, service => service.ServiceType == typeof(IEventPublisher));
-        _ = Assert.Single(services, service => service.ServiceType == typeof(RequestOutboundPipelineExecutor));
+        var outboundPipeline = Assert.Single(services, service => service.ServiceType == typeof(IRequestOutboundPipelineExecutor));
+        Assert.Equal(typeof(RequestOutboundPipelineExecutor), outboundPipeline.ImplementationType);
         _ = Assert.Single(services, service =>
             service.ServiceType == typeof(IDaemonService)
             && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));
@@ -55,7 +57,8 @@ public class DaemonServiceScopeTests
         _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IHostEnvironment));
         _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IUserContext));
         _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(IEventPublisher));
-        _ = Assert.Single(builder.Services, service => service.ServiceType == typeof(RequestOutboundPipelineExecutor));
+        var outboundPipeline = Assert.Single(builder.Services, service => service.ServiceType == typeof(IRequestOutboundPipelineExecutor));
+        Assert.Equal(typeof(RequestOutboundPipelineExecutor), outboundPipeline.ImplementationType);
         _ = Assert.Single(builder.Services, service =>
             service.ServiceType == typeof(IDaemonService)
             && service.ImplementationType == typeof(EventPublisherAmbientDaemonService));

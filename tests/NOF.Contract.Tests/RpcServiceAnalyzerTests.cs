@@ -106,6 +106,53 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
+    public async Task JsonRpcServiceMethod_WithHttpEndpoint_ShouldReportNOF213()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record PingRequest(string Value);
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc, "/rpc")]
+            public interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Post, "/ping")]
+                Result Ping(PingRequest request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        var diagnostic = Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF213");
+        Assert.Contains(nameof(HttpEndpointAttribute), diagnostic.GetMessage());
+    }
+
+    [Fact]
+    public async Task ControllerRpcServiceMethod_WithHttpEndpoint_ShouldNotReportNOF213()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record PingRequest(string Value);
+
+            [TransportOverHttp(HttpRpcStyle.ControllerRpc, "/api")]
+            public interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Post, "/ping")]
+                Result Ping(PingRequest request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id == "NOF213");
+    }
+
+    [Fact]
     public async Task StructRequest_WithHttpEndpoint_ReportsNOF200()
     {
         const string source = """

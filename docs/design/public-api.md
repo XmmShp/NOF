@@ -81,11 +81,15 @@ An RPC service contract can declare one intended transport:
 public interface IUserService : IRpcService;
 ```
 
-`TransportOverAttribute` is abstract and belongs to `NOF.Contract`, so callers and implementations read the same transport metadata from the RPC service interface. The analyzer rejects declarations on interfaces that do not inherit `IRpcService` and rejects multiple transport declarations on one contract. The route prefix is optional. During automatic endpoint registration, `ControllerRpc` prepends it to each operation route, while `JsonRpc` uses it as the single JSON-RPC endpoint route.
+`TransportOverAttribute` is abstract and belongs to `NOF.Contract`, so callers and implementations read the same transport metadata from the RPC service interface. The analyzer rejects declarations on interfaces that do not inherit `IRpcService` and rejects multiple transport declarations on one contract. The route prefix is optional. During automatic endpoint registration, `ControllerRpc` prepends it to each operation route, while `JsonRpc` uses it as the single JSON-RPC endpoint route. A JSON-RPC contract without a route prefix is mapped at `/`.
 
 Registering the server through `AddRpcServer<UserService>()` exposes it using the transport style and route prefix declared by the contract.
 
+The same declaration generates both `IUserServiceClient` and a public partial `HttpUserServiceClient` in the contract assembly. The HTTP client constructor requires `HttpClient` and accepts `IRequestOutboundPipelineExecutor` optionally. This keeps the transport choice and usable client together: hosts with an outbound pipeline get middleware execution through DI, while lightweight callers can use the generated client without referencing `NOF.Hosting`.
+
 Because the endpoint is bound to one RPC server, the JSON-RPC method key is only the contract operation name, such as `GetUser`. Request inbound middleware continues to run before the handler. Business `IResult` values are encoded as the JSON-RPC `result`; protocol failures are encoded as `error`.
+
+Methods on a `JsonRpc` contract must not declare `[HttpEndpoint]`: JSON-RPC always uses the service-level route prefix and the RPC operation name. `ControllerRpc` methods may use `[HttpEndpoint]` to select their HTTP verb and operation route.
 
 The first version supports unary calls and object `params` only. Batch calls, notifications, and streaming results are intentionally excluded.
 
@@ -101,4 +105,5 @@ Current RPC analyzer diagnostics include:
 - `NOF209`: `void` return types are not supported.
 - `NOF211`: a transport attribute can only be declared on an interface inheriting `IRpcService`.
 - `NOF212`: an RPC service contract can declare at most one `TransportOverAttribute`.
+- `NOF213`: methods on a JSON-RPC contract must not declare `[HttpEndpoint]`.
 - `NOF300`: a class inheriting `RpcServer<TService>` must be `partial`.

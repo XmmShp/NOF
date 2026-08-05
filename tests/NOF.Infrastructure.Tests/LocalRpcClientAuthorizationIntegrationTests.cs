@@ -89,7 +89,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddScoped<IDaemonService, EventPublisherAmbientDaemonService>();
 
         services.AddScoped<RequestInboundPipelineExecutor>();
-        services.AddSingleton<RequestOutboundPipelineExecutor>();
+        services.AddSingleton<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
         services.AddScoped<RpcServerInvocationResolver>();
 
         var rpcServerRegistry = new RpcServerRegistry();

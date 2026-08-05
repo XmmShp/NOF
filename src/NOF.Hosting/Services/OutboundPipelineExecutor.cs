@@ -1,6 +1,8 @@
+using NOF.Contract;
+
 namespace NOF.Hosting;
 
-public sealed class RequestOutboundPipelineExecutor
+public sealed class RequestOutboundPipelineExecutor : IRequestOutboundPipelineExecutor
 {
     private readonly IReadOnlyList<IRequestOutboundMiddleware> _middlewares;
 

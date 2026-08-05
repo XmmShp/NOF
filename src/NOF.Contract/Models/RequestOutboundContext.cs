@@ -1,9 +1,8 @@
-using NOF.Contract;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
-namespace NOF.Hosting;
+namespace NOF.Contract;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class RequestOutboundContext : Context

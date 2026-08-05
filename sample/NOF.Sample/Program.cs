@@ -56,9 +56,7 @@ builder.Services.AddScoped<IOAuthAuthorizeEndpoint, SampleOAuthAuthorizeEndpoint
 builder.Services.AddScoped<IOAuthSubjectService, SampleOAuthSubjectService>();
 builder.Services.AddHttpClient<OAuthChainDemoBackend>(client => client.BaseAddress = new Uri(sampleOrigin));
 builder.Services.AddRequestOutboundMiddleware<OAuthChainDemoAccessTokenOutboundMiddleware>();
-builder.Services.AddHttpClient<SelfHttpDemoDownstreamServiceClient>(client => client.BaseAddress = new Uri(sampleOrigin));
-builder.Services.AddScoped<IDemoDownstreamServiceClient>(static serviceProvider =>
-    serviceProvider.GetRequiredService<SelfHttpDemoDownstreamServiceClient>());
+builder.Services.AddHttpClient<IDemoDownstreamServiceClient, HttpDemoDownstreamServiceClient>(client => client.BaseAddress = new Uri(sampleOrigin));
 
 builder.Services.AddAntDesign();
 

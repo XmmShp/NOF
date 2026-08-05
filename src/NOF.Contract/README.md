@@ -60,7 +60,7 @@ do not end with `Async`, and must return a non-Task, non-`void` value. Unary met
 public record GetOrderRequest(Guid Id);
 public record CreateOrderRequest(string ProductName, int Quantity);
 
-[TransportOverHttp(HttpRpcStyle.JsonRpc, "/rpc")]
+[TransportOverHttp(HttpRpcStyle.ControllerRpc)]
 public interface IOrderService : IRpcService
 {
     [Summary("Get order")]
@@ -81,10 +81,21 @@ public interface IOrderService : IRpcService
 }
 ```
 
+Declaring `TransportOverHttp` also generates the transport client next to the contract. For the example above, NOF generates the protocol-neutral `IOrderServiceClient` interface and a public partial `HttpOrderServiceClient` implementation. No client marker attribute or user-authored empty partial class is required.
+
+```csharp
+builder.Services.AddHttpClient<IOrderServiceClient, HttpOrderServiceClient>(client =>
+    client.BaseAddress = new Uri("https://orders.example"));
+```
+
+The generated constructor accepts `IRequestOutboundPipelineExecutor` as an optional dependency. When a hosting package registers it, outbound middleware participates in the call; when it is absent, the client sends the HTTP request directly.
+
 ### Other Annotations
 
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
-- **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix
+- **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix, and generates the matching `Http...Client`
+- JSON-RPC contracts use the service route prefix and operation names; when the prefix is omitted, the endpoint is `/`
+- JSON-RPC methods must not declare `[HttpEndpoint]`
 - Route parameters such as `"{id}"` are not supported for RPC HTTP endpoints; put input data on the request object instead
 - Streaming HTTP endpoints use server-sent events when hosted by `NOF.Hosting.AspNetCore`
 - **`[RequirePermission]`** - declares required permissions for an endpoint

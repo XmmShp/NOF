@@ -24,7 +24,7 @@ public static class RpcServerInvoker
         var invocationResolver = rootServiceProvider.GetRequiredService<RpcServerInvocationResolver>();
         var resolution = invocationResolver.Resolve<TRpcService>(operationName);
 
-        var outboundPipeline = rootServiceProvider.GetRequiredService<RequestOutboundPipelineExecutor>();
+        var outboundPipeline = rootServiceProvider.GetRequiredService<IRequestOutboundPipelineExecutor>();
         var outboundContext = new RequestOutboundContext(context)
         {
             ServiceType = typeof(TRpcService),

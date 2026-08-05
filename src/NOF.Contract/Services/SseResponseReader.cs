@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-namespace NOF.Hosting;
+namespace NOF.Contract;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class SseResponseReader

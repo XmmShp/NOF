@@ -3,6 +3,7 @@ using System.ComponentModel;
 
 namespace NOF.Sample;
 
+[TransportOverHttp(HttpRpcStyle.ControllerRpc)]
 public interface IOAuthChainDemoService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Post, "rpc/OAuthChainDemo/CreateClient")]

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics.CodeAnalysis;
 
@@ -12,7 +13,7 @@ public static partial class NOFHostingExtensions
         public IServiceCollection AddNOFHosting()
         {
             services.AddNOFAbstraction();
-            services.TryAddScoped<RequestOutboundPipelineExecutor>();
+            services.TryAddScoped<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
             services.TryAddTransient(typeof(Lazy<>), typeof(NOFLazy<>));
             return services;
         }

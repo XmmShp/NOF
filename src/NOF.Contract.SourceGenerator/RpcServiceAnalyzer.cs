@@ -90,6 +90,14 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor HttpEndpointNotSupportedForJsonRpc = new(
+        "NOF213",
+        "HttpEndpoint is not supported by JSON-RPC contracts",
+        "Method '{0}' on JSON-RPC service '{1}' must not declare HttpEndpointAttribute; JSON-RPC uses the contract route prefix and operation name",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
@@ -101,7 +109,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         VoidReturnNotSupported,
         ReturnTypeMustImplementIResult,
         TransportRequiresRpcService,
-        MultipleTransportsNotSupported
+        MultipleTransportsNotSupported,
+        HttpEndpointNotSupportedForJsonRpc
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -187,6 +196,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             return;
         }
         var attrLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
+        var isJsonRpc = RpcServiceHelpers.TryGetHttpTransport(typeSymbol, out var transport)
+            && transport.Style == HttpRpcStyle.JsonRpc;
 
         // 禁止同名重载：按名称分组，若某一名称出现多次则全部报错
         var declaredMethods = typeSymbol.GetMembers()
@@ -209,6 +220,26 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
 
         foreach (var method in declaredMethods)
         {
+            var methodHttpEndpointAttrs = method.GetAttributes()
+                .Where(a => a.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn)
+                .ToArray();
+            if (isJsonRpc)
+            {
+                foreach (var methodHttpEndpointAttr in methodHttpEndpointAttrs)
+                {
+                    var attributeLocation = methodHttpEndpointAttr.ApplicationSyntaxReference
+                        ?.GetSyntax(context.CancellationToken)
+                        .GetLocation()
+                        ?? method.Locations.FirstOrDefault()
+                        ?? attrLocation;
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        HttpEndpointNotSupportedForJsonRpc,
+                        attributeLocation,
+                        method.Name,
+                        typeSymbol.Name));
+                }
+            }
+
             if (method.ReturnsVoid)
             {
                 context.ReportDiagnostic(
@@ -249,10 +280,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
                 requestType = type;
             }
 
-            var methodHttpEndpointAttrs = method.GetAttributes()
-                .Where(a => a.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn)
-                .ToArray();
-            if (methodHttpEndpointAttrs.Length == 0)
+            if (methodHttpEndpointAttrs.Length == 0 || isJsonRpc)
             {
                 continue;
             }

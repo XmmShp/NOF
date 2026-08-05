@@ -1,9 +1,8 @@
-using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
 
-namespace NOF.Hosting;
+namespace NOF.Contract;
 
 public static class HttpRpcTransportResultReader
 {
@@ -43,7 +42,9 @@ public static class HttpRpcTransportResultReader
         return await ReadFailureAsync<T>(response, cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task<T> ReadFailureAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    public static async Task<T> ReadFailureAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] T>(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
         where T : IResult
     {
         ArgumentNullException.ThrowIfNull(response);
