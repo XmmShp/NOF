@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
@@ -49,16 +48,13 @@ public sealed class HttpRpcTransportBoundaryTests
     {
         await using var app = await CreateAppAsync();
         using var client = app.GetTestClient();
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/rpc/ReadToken");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "header-token");
-
-        using var response = await client.SendAsync(request);
+        using var response = await client.GetAsync("/rpc/ReadToken?token=query-token");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<Result<ReadTokenResponse>>();
         Assert.NotNull(payload);
         Assert.True(payload.IsSuccess);
-        Assert.Equal("header-token", payload.Value!.Token);
+        Assert.Equal("query-token", payload.Value!.Token);
     }
 
     [Fact]
@@ -153,8 +149,7 @@ public sealed class HttpRpcTransportBoundaryTests
 
     public sealed class ReadTokenRequest
     {
-        [Contract.FromHeader(NOFAbstractionConstants.Transport.Headers.Authorization)]
-        public HeaderToken Token { get; set; }
+        public QueryToken Token { get; set; }
     }
 
     public sealed class RedirectRequest
@@ -175,18 +170,14 @@ public sealed class HttpRpcTransportBoundaryTests
         public required string ErrorDescription { get; init; }
     }
 
-    public readonly record struct HeaderToken(string Value) : ITransportStringParsable<HeaderToken>
+    public readonly record struct QueryToken(string Value) : IParsable<QueryToken>
     {
-        public static bool TryParse(string? value, IFormatProvider? provider, out HeaderToken result)
-        {
-            var token = value ?? string.Empty;
-            const string prefix = "Bearer ";
-            if (token.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                token = token[prefix.Length..].TrimStart();
-            }
+        public static QueryToken Parse(string value, IFormatProvider? provider)
+            => new(value);
 
-            result = new HeaderToken(token);
+        public static bool TryParse(string? value, IFormatProvider? provider, out QueryToken result)
+        {
+            result = new QueryToken(value ?? string.Empty);
             return true;
         }
     }

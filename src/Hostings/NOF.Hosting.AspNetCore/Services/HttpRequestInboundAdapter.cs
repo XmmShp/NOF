@@ -5,7 +5,6 @@ using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 
 namespace NOF.Hosting.AspNetCore;
 
@@ -53,7 +52,6 @@ public sealed class HttpRequestInboundAdapter(
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(handlerMapping);
 
-        BindHeaderProperties(httpContext, handlerMapping.RequestType, request);
         var headers = CreateInboundHeaders(httpContext);
         var execution = await inboundPipeline.ExecuteAsync(
             request,
@@ -110,34 +108,6 @@ public sealed class HttpRequestInboundAdapter(
             }
 
             httpContext.Response.Headers[name] = value;
-        }
-    }
-
-    private static void BindHeaderProperties(
-        HttpContext httpContext,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type requestType,
-        object request)
-    {
-        foreach (var property in requestType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
-        {
-            var attribute = property.GetCustomAttribute<FromHeaderAttribute>(inherit: true);
-            if (attribute is null || !property.CanWrite)
-            {
-                continue;
-            }
-
-            if (!httpContext.Request.Headers.TryGetValue(attribute.HeaderName, out var headerValues))
-            {
-                continue;
-            }
-
-            var value = headerValues.ToString();
-            if (string.IsNullOrEmpty(value))
-            {
-                continue;
-            }
-
-            property.SetValue(request, TransportStringValueConverter.Convert(value, property.PropertyType));
         }
     }
 }

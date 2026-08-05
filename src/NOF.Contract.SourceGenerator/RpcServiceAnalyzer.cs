@@ -34,10 +34,10 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
-    public static readonly DiagnosticDescriptor TransportStringPropertyMustBeParsable = new(
+    public static readonly DiagnosticDescriptor QueryPropertyMustBeParsable = new(
         "NOF203",
-        "Transport string-bound property type must be parsable",
-        "Property '{0}' on request type '{1}' is bound from {2} and must be string, an enum, a TryParse-compatible type, or implement ITransportStringParsable<TSelf>",
+        "Query-bound property type must be parsable",
+        "Property '{0}' on request type '{1}' is bound from query and must be string, an enum, a TryParse-compatible type, or implement IParsable<TSelf>",
         "HttpEndpoint",
         DiagnosticSeverity.Error,
         true);
@@ -95,7 +95,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         RequestMustBeReferenceType,
         RouteParametersNotSupported,
         ClassMustHaveParameterlessCtor,
-        TransportStringPropertyMustBeParsable,
+        QueryPropertyMustBeParsable,
         InvalidServiceMethodSignature,
         ServiceMethodOverloadsNotSupported,
         VoidReturnNotSupported,
@@ -169,7 +169,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         foreach (var attr in httpEndpointAttributes)
         {
             var attrLocation = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? typeLocation;
-            ValidateTransportStringBoundProperties(context, typeSymbol, [attr], attrLocation);
+            ValidateQueryBoundProperties(context, typeSymbol, [attr], attrLocation);
             var route = attr.ConstructorArguments.Length > 1 ? attr.ConstructorArguments[1].Value as string : null;
             if (string.IsNullOrWhiteSpace(route))
             {
@@ -261,7 +261,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             if (requestType != null)
             {
                 ValidateRequestPayloadShape(context, requestType, methodLocation);
-                ValidateTransportStringBoundProperties(context, requestType, methodHttpEndpointAttrs, methodLocation);
+                ValidateQueryBoundProperties(context, requestType, methodHttpEndpointAttrs, methodLocation);
 
                 foreach (var methodHttpEndpointAttr in methodHttpEndpointAttrs)
                 {
@@ -317,7 +317,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static void ValidateTransportStringBoundProperties(
+    private static void ValidateQueryBoundProperties(
         SymbolAnalysisContext context,
         INamedTypeSymbol requestType,
         IEnumerable<AttributeData> endpointAttributes,
@@ -328,29 +328,25 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             && attr.ConstructorArguments[0].Value is int verb
             && (verb == (int)HttpVerb.Get || verb == (int)HttpVerb.Delete));
 
+        if (!hasQueryBinding)
+        {
+            return;
+        }
+
         foreach (var property in RpcServiceHelpers.GetAllPublicProperties(requestType))
         {
-            var fromHeader = property.GetAttributes()
-                .Any(static attr => attr.AttributeClass?.ToDisplayString() == RpcServiceHelpers.FromHeaderAttributeFqn);
-            if (!fromHeader && !hasQueryBinding)
+            if (!IsQueryStringParsable(property.Type))
             {
-                continue;
-            }
-
-            if (!IsTransportStringParsable(property.Type))
-            {
-                var source = fromHeader ? "header" : "query";
                 context.ReportDiagnostic(Diagnostic.Create(
-                    TransportStringPropertyMustBeParsable,
+                    QueryPropertyMustBeParsable,
                     property.Locations.FirstOrDefault() ?? location,
                     property.Name,
-                    requestType.Name,
-                    source));
+                    requestType.Name));
             }
         }
     }
 
-    private static bool IsTransportStringParsable(ITypeSymbol type)
+    private static bool IsQueryStringParsable(ITypeSymbol type)
     {
         if (type.NullableAnnotation == NullableAnnotation.Annotated && type is INamedTypeSymbol nullableReference)
         {
@@ -376,7 +372,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         if (type is INamedTypeSymbol namedType)
         {
             if (namedType.AllInterfaces.Any(static i =>
-                    i.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.TransportStringParsableFqn))
+                    i.OriginalDefinition.ToDisplayString() == RpcServiceHelpers.ParsableFqn))
             {
                 return true;
             }

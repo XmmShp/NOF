@@ -18,8 +18,7 @@ public class RpcServiceAnalyzerTests
         typeof(HttpVerb),
         typeof(Result),
         typeof(Result<>),
-        typeof(FromHeaderAttribute),
-        typeof(ITransportStringParsable<>),
+        typeof(IParsable<>),
         typeof(TransportOverAttribute),
         typeof(TransportOverHttpAttribute)
     ];
@@ -191,34 +190,7 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
-    public async Task PostEndpoint_WithUnparsableHeaderProperty_ReportsNOF203()
-    {
-        const string source = """
-            using NOF.Contract;
-
-            namespace App;
-
-            public sealed class CommandRequest
-            {
-                [FromHeader("X-Value")]
-                public ComplexValue Value { get; set; } = new();
-            }
-
-            public sealed class ComplexValue;
-
-            public partial interface IMyService : IRpcService
-            {
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
-                Result Execute(CommandRequest request);
-            }
-            """;
-
-        var diagnostics = await GetDiagnosticsAsync(source);
-        Assert.Single(diagnostics, d => d.Id == "NOF203");
-    }
-
-    [Fact]
-    public async Task HeaderProperty_WithTransportStringParsableType_NoNOF203()
+    public async Task GetEndpoint_WithParsableProperty_NoNOF203()
     {
         const string source = """
             using NOF.Contract;
@@ -228,12 +200,14 @@ public class RpcServiceAnalyzerTests
 
             public sealed class CommandRequest
             {
-                [FromHeader("X-Value")]
                 public StrongValue Value { get; set; }
             }
 
-            public readonly record struct StrongValue(string Value) : ITransportStringParsable<StrongValue>
+            public readonly record struct StrongValue(string Value) : IParsable<StrongValue>
             {
+                public static StrongValue Parse(string value, IFormatProvider? provider)
+                    => new(value);
+
                 public static bool TryParse(string? value, IFormatProvider? provider, out StrongValue result)
                 {
                     result = new StrongValue(value ?? string.Empty);
@@ -243,7 +217,7 @@ public class RpcServiceAnalyzerTests
 
             public partial interface IMyService : IRpcService
             {
-                [HttpEndpoint(HttpVerb.Post, "/api/items")]
+                [HttpEndpoint(HttpVerb.Get, "/api/items")]
                 Result Execute(CommandRequest request);
             }
             """;

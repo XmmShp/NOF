@@ -33,14 +33,6 @@ internal static partial class NOFHostingAspNetCoreExtensions
         .GetMethod(nameof(CreateStreamBodyHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"Method '{nameof(CreateStreamBodyHandlerCore)}' was not found.");
 
-    private static readonly MethodInfo _createHeaderAwareQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
-        .GetMethod(nameof(CreateHeaderAwareQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
-        ?? throw new InvalidOperationException($"Method '{nameof(CreateHeaderAwareQueryHandlerCore)}' was not found.");
-
-    private static readonly MethodInfo _createHeaderAwareStreamQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
-        .GetMethod(nameof(CreateHeaderAwareStreamQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
-        ?? throw new InvalidOperationException($"Method '{nameof(CreateHeaderAwareStreamQueryHandlerCore)}' was not found.");
-
     [RequiresUnreferencedCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
     [RequiresDynamicCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
     internal static IEndpointRouteBuilder MapHttpEndpoint(
@@ -155,14 +147,14 @@ internal static partial class NOFHostingAspNetCoreExtensions
         if (TryGetStreamItemType(returnType, out var streamItemType))
         {
             templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
-                ? RequestHasHeaderBindings(requestType) ? _createHeaderAwareStreamQueryHandlerMethod : _createStreamQueryHandlerMethod
+                ? _createStreamQueryHandlerMethod
                 : _createStreamBodyHandlerMethod;
             genericArguments = [serviceType, requestType, streamItemType];
         }
         else
         {
             templateMethod = verb is HttpVerb.Get or HttpVerb.Delete
-                ? RequestHasHeaderBindings(requestType) ? _createHeaderAwareQueryHandlerMethod : _createQueryHandlerMethod
+                ? _createQueryHandlerMethod
                 : _createBodyHandlerMethod;
             genericArguments = [serviceType, requestType, returnType];
         }
@@ -215,27 +207,6 @@ internal static partial class NOFHostingAspNetCoreExtensions
 
     [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
-    private static Delegate CreateHeaderAwareQueryHandlerCore<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
-        TResponse>(string operationName)
-        where TService : class, IRpcService
-    {
-        async Task<Http.IResult> Handler(
-            HttpContext httpContext,
-            [FromServices] HttpRequestInboundAdapter adapter,
-            CancellationToken cancellationToken)
-        {
-            var request = CreateRequestFromQuery<TRequest>(httpContext);
-            var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
-            return CreateHttpResponse<TResponse>(execution.Response, httpContext);
-        }
-
-        return Handler;
-    }
-
-    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
-    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
     private static Delegate CreateStreamQueryHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
@@ -270,27 +241,6 @@ internal static partial class NOFHostingAspNetCoreExtensions
             CancellationToken cancellationToken)
         {
             var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request!, cancellationToken).ConfigureAwait(false);
-            return CreateStreamingResult<TItem>(execution.Response, httpContext);
-        }
-
-        return Handler;
-    }
-
-    [RequiresUnreferencedCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
-    [RequiresDynamicCode("Endpoint response writing may require runtime JSON serialization for transport bodies.")]
-    private static Delegate CreateHeaderAwareStreamQueryHandlerCore<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TService,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest,
-        TItem>(string operationName)
-        where TService : class, IRpcService
-    {
-        async Task<Http.IResult> Handler(
-            HttpContext httpContext,
-            [FromServices] HttpRequestInboundAdapter adapter,
-            CancellationToken cancellationToken)
-        {
-            var request = CreateRequestFromQuery<TRequest>(httpContext);
-            var execution = await adapter.InvokeAsync<TService, TRequest>(httpContext, operationName, request, cancellationToken).ConfigureAwait(false);
             return CreateStreamingResult<TItem>(execution.Response, httpContext);
         }
 
@@ -352,38 +302,6 @@ internal static partial class NOFHostingAspNetCoreExtensions
 
         streamItemType = null;
         return false;
-    }
-
-    private static bool RequestHasHeaderBindings([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type requestType)
-        => requestType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Any(static property => property.GetCustomAttribute<NOF.Contract.FromHeaderAttribute>(inherit: true) is not null);
-
-    private static TRequest CreateRequestFromQuery<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
-        HttpContext httpContext)
-    {
-        var request = Activator.CreateInstance<TRequest>();
-        foreach (var property in typeof(TRequest).GetProperties(BindingFlags.Instance | BindingFlags.Public))
-        {
-            if (!property.CanWrite || property.GetCustomAttribute<NOF.Contract.FromHeaderAttribute>(inherit: true) is not null)
-            {
-                continue;
-            }
-
-            if (!httpContext.Request.Query.TryGetValue(property.Name, out var values))
-            {
-                continue;
-            }
-
-            property.SetValue(request, ConvertQueryValue(values.ToString(), property.PropertyType));
-        }
-
-        return request;
-    }
-
-    private static object? ConvertQueryValue(string value, Type propertyType)
-    {
-        return TransportStringValueConverter.Convert(value, propertyType);
     }
 
     private static IEnumerable<(HttpVerb Verb, string Route)> GetHttpEndpoints(MethodInfo method, string defaultRoute)

@@ -10,8 +10,7 @@ namespace NOF.Contract.SourceGenerator;
 internal static class RpcServiceHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
-    public const string FromHeaderAttributeFqn = "NOF.Contract.FromHeaderAttribute";
-    public const string TransportStringParsableFqn = "NOF.Contract.ITransportStringParsable<TSelf>";
+    public const string ParsableFqn = "System.IParsable<TSelf>";
     public const string TransportOverAttributeFqn = "NOF.Contract.TransportOverAttribute";
     public const string SummaryAttributeFqn = "NOF.Contract.SummaryAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
