@@ -53,8 +53,6 @@ public class NOFWebApplicationBuilder : IHostApplicationBuilder
 
             options.SerializerOptions.TypeInfoResolver = nof.TypeInfoResolver;
         });
-        builder.Services.AddOptions<CorsSettingsOptions>();
-        builder.Services.AddCors();
         builder.Services.AddHealthChecks().AddCheck("self", static () => HealthCheckResult.Healthy(), ["live"]);
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<HttpRequestInboundAdapter>();
@@ -67,9 +65,8 @@ public class NOFWebApplicationBuilder : IHostApplicationBuilder
                     && !context.Request.Path.StartsWithSegments("/alive")));
         builder.Services.AddInitializationStep(new DaemonServiceResolutionInitializationStep());
         builder.Services.TryAddSingleton<HttpEndpointMappingState>();
-        builder.Services.TryAddInitializationStep<RpcServerHttpEndpointInitializationStep>();
+        builder.Services.AddRpcServerTransport<AspNetCoreRpcServerTransport>();
         builder.Services.AddInitializationStep(new HealthCheckInitializationStep());
-        builder.Services.AddInitializationStep(new CorsInitializationStep());
         builder.Services.AddOpenApi(options =>
         {
             options.AddDocumentTransformer(static (document, _, _) =>

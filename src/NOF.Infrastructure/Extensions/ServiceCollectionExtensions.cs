@@ -47,6 +47,13 @@ public static partial class NOFInfrastructureExtensions
             return services;
         }
 
+        public IServiceCollection AddRpcServerTransport<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TTransport>()
+            where TTransport : class, IRpcServerTransport
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IRpcServerTransport, TTransport>());
+            return services;
+        }
+
         public IServiceCollection AddAuthenticationResourceServer(Action<AuthenticationResourceServerOptions> configureOptions)
         {
             ArgumentNullException.ThrowIfNull(configureOptions);

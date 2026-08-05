@@ -10,7 +10,7 @@
 
 	  <IsPackable>true</IsPackable>
 	  <PackageId>NOF.Hosting.AspNetCore</PackageId>
-	  <Description>ASP.NET Core hosting for the NOF Framework - OpenAPI service registration, JSON configuration, and CORS.</Description>
+	  <Description>ASP.NET Core hosting for the NOF Framework - OpenAPI service registration, JSON configuration, and HTTP transport integration.</Description>
   </PropertyGroup>
 
 	<ItemGroup>

@@ -48,6 +48,28 @@ The default backplane implementation is also host-local:
 - subscriptions live in `MemoryBackplaneState`
 - published messages are delivered only to subscribers inside the same NOF host process
 
+## RPC Server Transport Extension Point
+
+`NOF.Infrastructure` owns the framework-level RPC server transport initialization step. Transport packages implement `IRpcServerTransport` and register the implementation in DI:
+
+```csharp
+public sealed class MyRpcServerTransport : IRpcServerTransport
+{
+    public TopologyComparison Compare(IRpcServerTransport other)
+        => TopologyComparison.DoesNotMatter;
+
+    public Task MapAsync(IHost host, RpcServerRegistration registration)
+    {
+        // Inspect the contract metadata and map this registration.
+        return Task.CompletedTask;
+    }
+}
+
+services.AddRpcServerTransport<MyRpcServerTransport>();
+```
+
+At application initialization, NOF orders all registered transports through the normal topology mechanism and passes every `RpcServerRegistration`, together with the built `IHost`, to each transport. The transport implementation owns applicability checks and mapping behavior.
+
 ## Persistence Providers
 
 `NOF.Infrastructure` no longer ships a built-in EF Core implementation. Database persistence is provided by adapter packages such as `NOF.Infrastructure.EntityFrameworkCore`.
