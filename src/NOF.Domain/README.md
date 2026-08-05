@@ -31,6 +31,7 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 The generated `JsonConverter` is AOT-friendly and resolves primitive serialization through `JsonTypeInfo`.
 If you use Native AOT-style publishing, make sure the `JsonSerializerOptions` passed to serialization includes metadata for the primitive type backing the value object.
 Best practice: keep `Normalize(T)` limited to canonicalization such as trimming or casing, and avoid calling `Of(...)` or `Validate(...)` from inside `Normalize`.
+When using a value object as a LINQ ordering key, cast it to its primitive type, for example `orders.OrderBy(order => (long)order.Id)`. Diagnostic `NOF015` warns when an `OrderBy` family operation relies on the default comparer for a value object. Implement `IComparable<TSelf>` or `IComparable` explicitly when the value object itself has intentional domain ordering semantics.
 
 ```csharp
 using NOF.Domain;

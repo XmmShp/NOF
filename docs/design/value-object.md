@@ -73,7 +73,15 @@ With explicit casts and the `ValueConverter` properly configured, EF Core sees t
 
 No `.Value`, no expression tree gymnastics. The value object participates in the query as a first-class type, and the `ValueConverter` handles the SQL translation transparently.
 
-This extends to ordering, grouping, projections, and any other LINQ operation. Every place where you'd write `.Value`, you'd be asking the expression tree translator to do extra work — work that it might not do correctly.
+This extends to equality, grouping, projections, and other LINQ operations. Ordering is the exception: LINQ's default comparer cannot order a generated value object because NOF deliberately generates equality semantics but not domain-specific ordering semantics.
+
+When an `OrderBy` key is a value object, order by its primitive representation explicitly:
+
+```csharp
+var orders = query.OrderBy(order => (long)order.Id);
+```
+
+Diagnostic `NOF015` reports `OrderBy`, `OrderByDescending`, `ThenBy`, and `ThenByDescending` keys that are value objects. The diagnostic is suppressed when the value object explicitly implements `IComparable<TSelf>` or `IComparable`, because that declaration makes the domain's ordering semantics intentional.
 
 ## Reason 3: Discouraging Unwrapping
 
