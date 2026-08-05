@@ -159,6 +159,32 @@ public class HttpRpcClientGeneratorTests
     }
 
     [Fact]
+    public void TransportOverJsonRpc_StreamingMethod_UsesJsonRpcSseClient()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record StreamRequest(string Value);
+            public record StreamEvent(string Value);
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc, "/stream-rpc")]
+            public interface IMyService : IRpcService
+            {
+                StreamingResult<StreamEvent> Stream(StreamRequest request);
+            }
+            """;
+
+        var code = GetGeneratedHttpClientCode(RunGenerators(source));
+
+        Assert.Contains("JsonRpcHttpClient.SendStreamingAsync<global::App.StreamRequest, global::App.StreamEvent>", code);
+        Assert.Contains("GetJsonTypeInfo<global::App.StreamEvent>()", code);
+        Assert.Contains("GetJsonTypeInfo<global::NOF.Contract.Result>()", code);
+        Assert.DoesNotContain("JsonRpcHttpClient.SendAsync<global::App.StreamRequest, global::NOF.Contract.StreamingResult", code);
+    }
+
+    [Fact]
     public void GenericRpcService_GeneratesGenericHttpClientWithConstraints()
     {
         const string source = """

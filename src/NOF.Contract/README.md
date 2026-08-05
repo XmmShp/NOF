@@ -96,6 +96,7 @@ The generated constructor accepts `IRequestOutboundPipelineExecutor` as an optio
 - **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix, and generates the matching `Http...Client`
 - JSON-RPC contracts use the service route prefix and operation names; when the prefix is omitted, the endpoint is `/`
 - JSON-RPC methods must not declare `[HttpEndpoint]`
+- JSON-RPC streaming methods use SSE; each event carries a JSON-RPC response envelope for one stream item
 - Route parameters such as `"{id}"` are not supported for RPC HTTP endpoints; put input data on the request object instead
 - Streaming HTTP endpoints use server-sent events when hosted by `NOF.Hosting.AspNetCore`
 - **`[RequirePermission]`** - declares required permissions for an endpoint

@@ -61,7 +61,7 @@ Each registered JSON-RPC server is mapped once, so the JSON-RPC method is only t
 
 Methods on a JSON-RPC contract must not declare `[HttpEndpoint]`; that attribute is reserved for `ControllerRpc`, where it selects the HTTP verb and operation route.
 
-The current JSON-RPC endpoint supports unary calls with object `params`; it does not support batch requests, notifications, or streaming results.
+The JSON-RPC endpoint supports unary and streaming calls with object `params`. Streaming responses use `text/event-stream`; each SSE `data` payload is a JSON-RPC response envelope containing one stream item and the original request ID. Batch requests and notifications are not supported.
 
 Methods on ControllerRpc services are turned into minimal API endpoints:
 

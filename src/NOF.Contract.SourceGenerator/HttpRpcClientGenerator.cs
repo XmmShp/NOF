@@ -181,14 +181,31 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         if (transport.Style == HttpRpcStyle.JsonRpc)
         {
             var jsonRpcRoute = NormalizeRoute(transport.RoutePrefix ?? "/");
-            sb.AppendLine($"                result = await global::NOF.Contract.JsonRpcHttpClient.SendAsync<{requestType}, {responseType}>(");
+            if (isStreaming)
+            {
+                sb.AppendLine($"                result = await global::NOF.Contract.JsonRpcHttpClient.SendStreamingAsync<{requestType}, {streamItemType}>(");
+            }
+            else
+            {
+                sb.AppendLine($"                result = await global::NOF.Contract.JsonRpcHttpClient.SendAsync<{requestType}, {responseType}>(");
+            }
+
             sb.AppendLine("                    _httpClient,");
             sb.AppendLine($"                    {Literal(jsonRpcRoute)},");
             sb.AppendLine($"                    nameof({serviceType}.{method.Method.Name}),");
             sb.AppendLine($"                    ({requestType})currentRequest,");
             sb.AppendLine("                    currentContext.Headers,");
             sb.AppendLine($"                    GetJsonTypeInfo<{requestType}>(),");
-            sb.AppendLine($"                    GetJsonTypeInfo<{responseType}>(),");
+            if (isStreaming)
+            {
+                sb.AppendLine($"                    GetJsonTypeInfo<{streamItemType}>(),");
+                sb.AppendLine("                    GetJsonTypeInfo<global::NOF.Contract.Result>(),");
+            }
+            else
+            {
+                sb.AppendLine($"                    GetJsonTypeInfo<{responseType}>(),");
+            }
+
             sb.AppendLine("                    ct).ConfigureAwait(false);");
         }
         else

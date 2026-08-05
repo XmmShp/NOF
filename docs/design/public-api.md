@@ -91,7 +91,7 @@ Because the endpoint is bound to one RPC server, the JSON-RPC method key is only
 
 Methods on a `JsonRpc` contract must not declare `[HttpEndpoint]`: JSON-RPC always uses the service-level route prefix and the RPC operation name. `ControllerRpc` methods may use `[HttpEndpoint]` to select their HTTP verb and operation route.
 
-The first version supports unary calls and object `params` only. Batch calls, notifications, and streaming results are intentionally excluded.
+JSON-RPC supports unary calls and streaming calls with object `params`. Streaming responses use SSE, with each `data` payload containing a JSON-RPC response envelope for one stream item. Batch calls and notifications are intentionally excluded.
 
 ## Diagnostics
 

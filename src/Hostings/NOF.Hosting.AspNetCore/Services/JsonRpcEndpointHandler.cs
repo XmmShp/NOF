@@ -4,6 +4,7 @@ using NOF.Contract;
 using NOF.Infrastructure;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -12,6 +13,9 @@ namespace NOF.Hosting.AspNetCore;
 internal static class JsonRpcEndpointHandler
 {
     private const string JsonRpcVersion = "2.0";
+    private static readonly MethodInfo _createStreamingResultMethod = typeof(JsonRpcEndpointHandler)
+        .GetMethod(nameof(CreateStreamingResultCore), BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException($"Method '{nameof(CreateStreamingResultCore)}' was not found.");
 
     [RequiresUnreferencedCode("JSON-RPC request binding and response writing use runtime JSON type metadata.")]
     [RequiresDynamicCode("JSON-RPC request binding and response writing use runtime JSON type metadata.")]
@@ -38,6 +42,8 @@ internal static class JsonRpcEndpointHandler
         return Handler;
     }
 
+    [RequiresUnreferencedCode("JSON-RPC request binding and response writing use runtime JSON type metadata.")]
+    [RequiresDynamicCode("JSON-RPC request binding and response writing use runtime JSON type metadata.")]
     private static async Task<Microsoft.AspNetCore.Http.IResult> HandleAsync(
         HttpContext httpContext,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
@@ -67,11 +73,6 @@ internal static class JsonRpcEndpointHandler
             if (!handlerMappings.TryGetValue(method, out var handlerMapping))
             {
                 return CreateError(id, -32601, "Method not found");
-            }
-
-            if (IsStreamingResult(handlerMapping.ReturnType))
-            {
-                return CreateError(id, -32601, "Streaming RPC operations are not supported by the JSON-RPC endpoint.");
             }
 
             object request;
@@ -111,10 +112,26 @@ internal static class JsonRpcEndpointHandler
 
             try
             {
+                if (IsStreamingResult(handlerMapping.ReturnType))
+                {
+                    if (execution.Response.IsSuccess)
+                    {
+                        return CreateStreamingResult(
+                            handlerMapping.ReturnType,
+                            execution.Response,
+                            Encoding.UTF8.GetBytes(id.GetRawText()),
+                            serializer);
+                    }
+
+                    var failure = Result.From(execution.Response);
+                    var failurePayload = serializer.Serialize(failure, typeof(Result));
+                    return CreateResult(id, failurePayload);
+                }
+
                 var payload = serializer.Serialize(execution.Response, execution.Response.GetType());
                 return CreateResult(id, payload);
             }
-            catch (Exception exception) when (exception is JsonException or NotSupportedException or InvalidOperationException)
+            catch (Exception exception) when (exception is JsonException or NotSupportedException or InvalidOperationException or TargetInvocationException)
             {
                 return CreateError(id, -32603, "Internal error");
             }
@@ -172,6 +189,33 @@ internal static class JsonRpcEndpointHandler
 
     private static bool IsStreamingResult(Type returnType)
         => returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(StreamingResult<>);
+
+    [RequiresUnreferencedCode("JSON-RPC streaming response creation uses runtime generic type metadata.")]
+    [RequiresDynamicCode("JSON-RPC streaming response creation uses runtime generic type instantiation.")]
+    private static Microsoft.AspNetCore.Http.IResult CreateStreamingResult(
+        Type returnType,
+        NOF.Contract.IResult response,
+        ReadOnlyMemory<byte> requestId,
+        IObjectSerializer serializer)
+    {
+        var itemType = returnType.GetGenericArguments()[0];
+        var createMethod = _createStreamingResultMethod.MakeGenericMethod(itemType);
+        return (Microsoft.AspNetCore.Http.IResult)createMethod.Invoke(null, [response, requestId, serializer])!;
+    }
+
+    private static Microsoft.AspNetCore.Http.IResult CreateStreamingResultCore<TItem>(
+        NOF.Contract.IResult response,
+        ReadOnlyMemory<byte> requestId,
+        IObjectSerializer serializer)
+    {
+        if (response is not StreamingResult<TItem> streamingResult)
+        {
+            throw new InvalidOperationException(
+                $"JSON-RPC streaming operation returned '{response.GetType().FullName}' instead of '{typeof(StreamingResult<TItem>).FullName}'.");
+        }
+
+        return new JsonRpcStreamingHttpResult<TItem>(streamingResult, requestId, serializer);
+    }
 
     private static Microsoft.AspNetCore.Http.IResult CreateResult(JsonElement id, ReadOnlyMemory<byte> result)
     {
