@@ -15,7 +15,7 @@ namespace Microsoft.AspNetCore.Routing;
 
 [RequiresUnreferencedCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
 [RequiresDynamicCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
-public static partial class NOFHostingAspNetCoreExtensions
+internal static partial class NOFHostingAspNetCoreExtensions
 {
     private static readonly MethodInfo _createQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
         .GetMethod(nameof(CreateQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
@@ -41,30 +41,11 @@ public static partial class NOFHostingAspNetCoreExtensions
         .GetMethod(nameof(CreateHeaderAwareStreamQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException($"Method '{nameof(CreateHeaderAwareStreamQueryHandlerCore)}' was not found.");
 
-    extension(IEndpointRouteBuilder app)
-    {
-        [RequiresUnreferencedCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
-        [RequiresDynamicCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
-        public IEndpointRouteBuilder MapHttpEndpoint<TRpcServer>(string? prefix = null)
-            where TRpcServer : RpcServer, IRpcServer
-        {
-            ArgumentNullException.ThrowIfNull(app);
-
-            return MapHttpEndpointCore(
-                app,
-                CreateHttpEndpointMappingKey(typeof(TRpcServer), prefix),
-                TRpcServer.ServiceType,
-                TRpcServer.HandlerMappings,
-                prefix);
-        }
-    }
-
     [RequiresUnreferencedCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
     [RequiresDynamicCode("Endpoint mapping uses reflection on delegate signatures and service contracts.")]
     internal static IEndpointRouteBuilder MapHttpEndpoint(
         IEndpointRouteBuilder app,
-        Type rpcServerType,
-        string? prefix = null)
+        Type rpcServerType)
     {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(rpcServerType);
@@ -91,12 +72,14 @@ public static partial class NOFHostingAspNetCoreExtensions
             throw new InvalidOperationException($"RPC server type '{rpcServerType.FullName}' does not expose static property '{nameof(IRpcServer.HandlerMappings)}'.");
         }
 
+        var routePrefix = GetHttpRoutePrefix(serviceType);
+
         return MapHttpEndpointCore(
             app,
-            CreateHttpEndpointMappingKey(rpcServerType, prefix),
+            CreateHttpEndpointMappingKey(rpcServerType, routePrefix),
             serviceType,
             handlerMappings,
-            prefix);
+            routePrefix);
     }
 
     private static IEndpointRouteBuilder MapHttpEndpointCore(
@@ -154,6 +137,13 @@ public static partial class NOFHostingAspNetCoreExtensions
         ArgumentNullException.ThrowIfNull(rpcServerType);
 
         return $"{rpcServerType.AssemblyQualifiedName}|{prefix ?? string.Empty}";
+    }
+
+    private static string? GetHttpRoutePrefix(Type serviceType)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+
+        return serviceType.GetCustomAttribute<TransportOverHttpAttribute>(inherit: false)?.RoutePrefix;
     }
 
     [RequiresUnreferencedCode("Endpoint handler creation uses runtime generic method binding.")]

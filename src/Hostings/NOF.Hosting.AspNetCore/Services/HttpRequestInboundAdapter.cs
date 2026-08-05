@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Contract;
 using NOF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
@@ -28,18 +29,37 @@ public sealed class HttpRequestInboundAdapter(
         CancellationToken cancellationToken)
         where TRpcService : class, IRpcService
     {
+        var resolution = invocationResolver.Resolve<TRpcService>(operationName);
+        return await InvokeAsync(
+            httpContext,
+            typeof(TRpcService),
+            operationName,
+            request!,
+            resolution.HandlerMapping,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<RequestInboundContext> InvokeAsync(
+        HttpContext httpContext,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,
+        string operationName,
+        object request,
+        RpcHandlerMapping handlerMapping,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(serviceType);
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
         ArgumentNullException.ThrowIfNull(request);
-        var resolution = invocationResolver.Resolve<TRpcService>(operationName);
+        ArgumentNullException.ThrowIfNull(handlerMapping);
 
-        BindHeaderProperties(httpContext, request);
+        BindHeaderProperties(httpContext, handlerMapping.RequestType, request);
         var headers = CreateInboundHeaders(httpContext);
         var execution = await inboundPipeline.ExecuteAsync(
             request,
-            resolution.HandlerMapping.HandlerType,
-            resolution.HandlerMapping.ReturnType,
-            typeof(TRpcService),
+            handlerMapping.HandlerType,
+            handlerMapping.ReturnType,
+            serviceType,
             operationName,
             headers,
             cancellationToken).ConfigureAwait(false);
@@ -93,11 +113,12 @@ public sealed class HttpRequestInboundAdapter(
         }
     }
 
-    private static void BindHeaderProperties<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TRequest>(
+    private static void BindHeaderProperties(
         HttpContext httpContext,
-        TRequest request)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] Type requestType,
+        object request)
     {
-        foreach (var property in typeof(TRequest).GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        foreach (var property in requestType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             var attribute = property.GetCustomAttribute<FromHeaderAttribute>(inherit: true);
             if (attribute is null || !property.CanWrite)

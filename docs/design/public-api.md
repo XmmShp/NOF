@@ -62,15 +62,32 @@ public class WatchUsers : UserService.WatchUsers
 
 ## HTTP Exposure
 
-`NOF.Hosting.AspNetCore` maps RPC HTTP endpoints explicitly:
+`NOF.Hosting.AspNetCore` maps registered RPC servers automatically during application initialization:
 
 ```csharp
-app.MapHttpEndpoint<UserService>();
+builder.AddRpcServer<UserService>();
 ```
 
-OpenAPI service registration happens during builder creation. Endpoint mapping stays in the host application, so call `app.MapOpenApi()` explicitly when you want to expose the document.
+OpenAPI service registration happens during builder creation. Call `app.MapOpenApi()` explicitly when you want to expose the document.
 
 When the mapped RPC method returns `StreamingResult<T>`, `NOF.Hosting.AspNetCore` exposes it as an SSE endpoint and generated HTTP clients consume it as `Task<StreamingResult<T>>`.
+
+## RPC Transport Declaration
+
+An RPC service contract can declare one intended transport:
+
+```csharp
+[TransportOverHttp(HttpRpcStyle.JsonRpc, "/rpc")]
+public interface IUserService : IRpcService;
+```
+
+`TransportOverAttribute` is abstract and belongs to `NOF.Contract`, so callers and implementations read the same transport metadata from the RPC service interface. The analyzer rejects declarations on interfaces that do not inherit `IRpcService` and rejects multiple transport declarations on one contract. The route prefix is optional. During automatic endpoint registration, `ControllerRpc` prepends it to each operation route, while `JsonRpc` uses it as the single JSON-RPC endpoint route.
+
+Registering the server through `AddRpcServer<UserService>()` exposes it using the transport style and route prefix declared by the contract.
+
+Because the endpoint is bound to one RPC server, the JSON-RPC method key is only the contract operation name, such as `GetUser`. Request inbound middleware continues to run before the handler. Business `IResult` values are encoded as the JSON-RPC `result`; protocol failures are encoded as `error`.
+
+The first version supports unary calls and object `params` only. Batch calls, notifications, and streaming results are intentionally excluded.
 
 ## Diagnostics
 
@@ -82,4 +99,6 @@ Current RPC analyzer diagnostics include:
 - `NOF207`: invalid RPC method signature.
 - `NOF208`: service method overloads are not supported.
 - `NOF209`: `void` return types are not supported.
+- `NOF211`: a transport attribute can only be declared on an interface inheriting `IRpcService`.
+- `NOF212`: an RPC service contract can declare at most one `TransportOverAttribute`.
 - `NOF300`: a class inheriting `RpcServer<TService>` must be `partial`.

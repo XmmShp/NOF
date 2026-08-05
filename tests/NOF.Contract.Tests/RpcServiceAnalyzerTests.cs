@@ -19,7 +19,9 @@ public class RpcServiceAnalyzerTests
         typeof(Result),
         typeof(Result<>),
         typeof(FromHeaderAttribute),
-        typeof(ITransportStringParsable<>)
+        typeof(ITransportStringParsable<>),
+        typeof(TransportOverAttribute),
+        typeof(TransportOverHttpAttribute)
     ];
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
@@ -30,6 +32,78 @@ public class RpcServiceAnalyzerTests
         var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new RpcServiceAnalyzer());
         var compilationWithAnalyzers = compilation.WithAnalyzers(analyzers);
         return await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
+    }
+
+    [Fact]
+    public void TransportOverHttp_ShouldExposeSelectedRpcStyle()
+    {
+        var attribute = new TransportOverHttpAttribute(HttpRpcStyle.JsonRpc, "/rpc");
+        var attributeWithoutPrefix = new TransportOverHttpAttribute(HttpRpcStyle.ControllerRpc);
+
+        Assert.True(typeof(TransportOverAttribute).IsAbstract);
+        Assert.Equal(HttpRpcStyle.JsonRpc, attribute.Style);
+        Assert.Equal("/rpc", attribute.RoutePrefix);
+        Assert.Null(attributeWithoutPrefix.RoutePrefix);
+    }
+
+    [Fact]
+    public async Task TransportOverHttp_OnRpcServiceContract_ShouldBeValid()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            [TransportOverHttp(HttpRpcStyle.ControllerRpc, "/api")]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(Empty request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id is "NOF211" or "NOF212");
+    }
+
+    [Fact]
+    public async Task TransportOverHttp_OnNonRpcServiceInterface_ShouldReportNOF211()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc)]
+            public interface INotAnRpcService;
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF211");
+    }
+
+    [Fact]
+    public async Task RpcServiceContract_WithMultipleTransportAttributes_ShouldReportNOF212()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public sealed class TransportOverQueueAttribute : TransportOverAttribute;
+
+            [TransportOverHttp(HttpRpcStyle.JsonRpc)]
+            [TransportOverQueue]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(Empty request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF212");
     }
 
     [Fact]

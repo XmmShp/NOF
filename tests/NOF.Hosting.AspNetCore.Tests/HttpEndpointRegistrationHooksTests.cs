@@ -36,15 +36,15 @@ public sealed class HttpEndpointRegistrationTests
     }
 
     [Fact]
-    public async Task MapHttpEndpoint_ShouldBeIdempotentAfterAutomaticMapping()
+    public async Task AddRpcServer_ShouldRegisterRpcServerOnlyOnce()
     {
         var builder = NOFWebApplicationBuilder.Create([]);
         builder.WebApplicationBuilder.WebHost.UseTestServer();
         builder.AddRpcServer<HookedRpcServer>();
+        builder.AddRpcServer<HookedRpcServer>();
         builder.Services.AddTransient<EchoHandler>();
 
         await using var app = await builder.BuildAsync();
-        app.MapHttpEndpoint<HookedRpcServer>();
         await app.StartAsync();
 
         var routeEndpoints = ((IEndpointRouteBuilder)app).DataSources
@@ -54,6 +54,30 @@ public sealed class HttpEndpointRegistrationTests
             .ToArray();
 
         Assert.Single(routeEndpoints);
+    }
+
+    [Fact]
+    public async Task AddRpcServer_ShouldUseControllerRpcContractRoutePrefix()
+    {
+        var builder = NOFWebApplicationBuilder.Create([]);
+        builder.WebApplicationBuilder.WebHost.UseTestServer();
+        builder.AddRpcServer<PrefixedControllerRpcServer>();
+        builder.Services.AddTransient<PrefixedEchoHandler>();
+
+        await using var app = await builder.BuildAsync();
+        await app.StartAsync();
+
+        using var client = app.GetTestClient();
+        using var response = await client.PostAsJsonAsync("/controller-rpc/Echo", new EchoRequest
+        {
+            Value = "prefixed"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<Result<EchoResponse>>();
+        Assert.NotNull(payload);
+        Assert.True(payload.IsSuccess);
+        Assert.Equal("prefixed", payload.Value!.Value);
     }
 
     public sealed class EchoRequest
@@ -82,6 +106,31 @@ public sealed class HttpEndpointRegistrationTests
     }
 
     public sealed class EchoHandler : RpcHandler<EchoRequest, Result<EchoResponse>>
+    {
+        public override Task<Result<EchoResponse>> HandleAsync(EchoRequest request, Context context, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new EchoResponse(request.Value)));
+    }
+
+    [TransportOverHttp(HttpRpcStyle.ControllerRpc, "/controller-rpc")]
+    public partial interface IPrefixedControllerRpcService : IRpcService
+    {
+        [HttpEndpoint(HttpVerb.Post, "/Echo")]
+        Result<EchoResponse> Echo(EchoRequest request);
+    }
+
+    public sealed class PrefixedControllerRpcServer : RpcServer<IPrefixedControllerRpcService>, IRpcServer
+    {
+        public static IReadOnlyDictionary<string, RpcHandlerMapping> HandlerMappings { get; } =
+            new Dictionary<string, RpcHandlerMapping>
+            {
+                [nameof(IPrefixedControllerRpcService.Echo)] =
+                    new(typeof(PrefixedEchoHandler), typeof(EchoRequest), typeof(Result<EchoResponse>))
+            };
+
+        protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
+    }
+
+    public sealed class PrefixedEchoHandler : RpcHandler<EchoRequest, Result<EchoResponse>>
     {
         public override Task<Result<EchoResponse>> HandleAsync(EchoRequest request, Context context, CancellationToken cancellationToken)
             => Task.FromResult(Result.Success(new EchoResponse(request.Value)));

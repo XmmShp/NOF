@@ -71,10 +71,11 @@ builder.UseDbContext<AppDbContext>()
     .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
     .MigrateOnInitialize();
 
+builder.AddRpcServer<MyAppService>();
+
 var app = await builder.BuildAsync();
 
 app.MapOpenApi();
-app.MapHttpEndpoint<MyAppService>();
 
 await app.RunAsync();
 ```

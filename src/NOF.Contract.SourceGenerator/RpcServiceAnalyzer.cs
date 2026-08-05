@@ -74,6 +74,22 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor TransportRequiresRpcService = new(
+        "NOF211",
+        "RPC transport can only be declared on an RPC service contract",
+        "Transport attribute '{0}' can only be applied to an interface inheriting IRpcService",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
+    public static readonly DiagnosticDescriptor MultipleTransportsNotSupported = new(
+        "NOF212",
+        "Only one RPC transport can be declared",
+        "RPC service contract '{0}' declares multiple TransportOverAttribute implementations; declare exactly one transport",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
@@ -83,7 +99,9 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         InvalidServiceMethodSignature,
         ServiceMethodOverloadsNotSupported,
         VoidReturnNotSupported,
-        ReturnTypeMustImplementIResult
+        ReturnTypeMustImplementIResult,
+        TransportRequiresRpcService,
+        MultipleTransportsNotSupported
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -98,7 +116,40 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         var typeSymbol = (INamedTypeSymbol)context.Symbol;
 
         AnalyzeLegacyHttpEndpointAttributes(context, typeSymbol);
+        AnalyzeTransportAttributes(context, typeSymbol);
         AnalyzeRpcServiceInterface(context, typeSymbol);
+    }
+
+    private static void AnalyzeTransportAttributes(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
+    {
+        var transportAttributes = typeSymbol.GetAttributes()
+            .Where(static attribute => IsTransportOverAttribute(attribute.AttributeClass))
+            .ToArray();
+        if (transportAttributes.Length == 0)
+        {
+            return;
+        }
+
+        var typeLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
+        if (!RpcServiceHelpers.IsRpcServiceInterface(typeSymbol))
+        {
+            foreach (var attribute in transportAttributes)
+            {
+                var attributeLocation = attribute.ApplicationSyntaxReference?.GetSyntax(context.CancellationToken).GetLocation()
+                    ?? typeLocation;
+                context.ReportDiagnostic(Diagnostic.Create(
+                    TransportRequiresRpcService,
+                    attributeLocation,
+                    attribute.AttributeClass?.Name ?? "TransportOverAttribute"));
+            }
+
+            return;
+        }
+
+        if (transportAttributes.Length > 1)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(MultipleTransportsNotSupported, typeLocation, typeSymbol.Name));
+        }
     }
 
     private static void AnalyzeLegacyHttpEndpointAttributes(SymbolAnalysisContext context, INamedTypeSymbol typeSymbol)
@@ -369,6 +420,19 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         return returnType is not INamedTypeSymbol { IsGenericType: true } namedType
                || (namedType.OriginalDefinition.ToDisplayString() != "System.Threading.Tasks.Task<T>"
                    && namedType.OriginalDefinition.ToDisplayString() != "System.Threading.Tasks.ValueTask<T>");
+    }
+
+    private static bool IsTransportOverAttribute(INamedTypeSymbol? attributeType)
+    {
+        for (var current = attributeType; current is not null; current = current.BaseType)
+        {
+            if (current.ToDisplayString() == RpcServiceHelpers.TransportOverAttributeFqn)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

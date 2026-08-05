@@ -7,13 +7,17 @@ using Xunit;
 
 namespace NOF.Hosting.AspNetCore.Tests;
 
-public class MapHttpEndpointReflectionTests
+public class HttpEndpointReflectionTests
 {
-    private static readonly MethodInfo CreateEndpointHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
+    private static readonly Type EndpointExtensionsType = typeof(NOFWebApplicationBuilder).Assembly.GetType(
+        "Microsoft.AspNetCore.Routing.NOFHostingAspNetCoreExtensions",
+        throwOnError: true)!;
+
+    private static readonly MethodInfo CreateEndpointHandlerMethod = EndpointExtensionsType
         .GetMethod("CreateEndpointHandler", BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("Method 'CreateEndpointHandler' not found.");
 
-    private static readonly MethodInfo GetHttpEndpointsMethod = typeof(NOFHostingAspNetCoreExtensions)
+    private static readonly MethodInfo GetHttpEndpointsMethod = EndpointExtensionsType
         .GetMethod("GetHttpEndpoints", BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("Method 'GetHttpEndpoints' not found.");
 
@@ -22,6 +26,15 @@ public class MapHttpEndpointReflectionTests
     public record DeleteUserRequest(string Name);
     public record StreamUsersRequest(string Name);
     public record UserDto(string Name);
+
+    [Fact]
+    public void PublicApi_ShouldNotExposeExplicitRpcEndpointMapping()
+    {
+        var publicMethods = typeof(NOFWebApplicationBuilder).Assembly.ExportedTypes
+            .SelectMany(static type => type.GetMethods(BindingFlags.Public | BindingFlags.Static));
+
+        Assert.DoesNotContain(publicMethods, static method => method.Name is "MapHttpEndpoint" or "MapJsonRpcEndpoint");
+    }
 
     private interface IAppService : IRpcService
     {

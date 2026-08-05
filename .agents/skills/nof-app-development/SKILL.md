@@ -51,7 +51,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 
 | I want to... | Use |
 |---|---|
-| expose HTTP API | `IRpcService` + `[HttpEndpoint]` + `app.MapHttpEndpoint<TRpcServer>()` |
+| expose HTTP API | `IRpcService` + `[TransportOverHttp]` + `builder.AddRpcServer<TRpcServer>()` |
 | send async work | payload object + `ICommandSender` |
 | publish notifications | payload object + `INotificationPublisher` |
 | publish in-memory events | payload object + `PublishAsEvent()` / `PublishAsEvent(publisher)` / `IEventPublisher` |

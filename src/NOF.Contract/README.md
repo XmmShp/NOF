@@ -60,6 +60,7 @@ do not end with `Async`, and must return a non-Task, non-`void` value. Unary met
 public record GetOrderRequest(Guid Id);
 public record CreateOrderRequest(string ProductName, int Quantity);
 
+[TransportOverHttp(HttpRpcStyle.JsonRpc, "/rpc")]
 public interface IOrderService : IRpcService
 {
     [Summary("Get order")]
@@ -83,6 +84,7 @@ public interface IOrderService : IRpcService
 ### Other Annotations
 
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
+- **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix
 - Route parameters such as `"{id}"` are not supported for RPC HTTP endpoints; put input data on the request object instead
 - Streaming HTTP endpoints use server-sent events when hosted by `NOF.Hosting.AspNetCore`
 - **`[RequirePermission]`** - declares required permissions for an endpoint

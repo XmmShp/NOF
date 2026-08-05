@@ -129,29 +129,18 @@ public sealed class HttpRpcTransportBoundaryTests
 
     private static async Task<WebApplication> CreateAppAsync()
     {
-        var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
+        var builder = NOFWebApplicationBuilder.Create([]);
+        builder.WebApplicationBuilder.WebHost.UseTestServer();
 
-        builder.Services.AddRouting();
-        builder.Services.AddScoped<RequestInboundPipelineExecutor>();
-        builder.Services.AddScoped<RpcServerInvocationResolver>();
-        builder.Services.AddScoped<HttpRequestInboundAdapter>();
         builder.Services.AddScoped<IRequestInboundMiddleware, OAuthStatusInboundMiddleware>();
-        builder.Services.AddOptions<HttpHeaderOutboundOptions>();
-
-        builder.Services.AddSingleton<ValidationRpcServer>();
         builder.Services.AddTransient<CreateUserHandler>();
         builder.Services.AddTransient<ReadTokenHandler>();
         builder.Services.AddTransient<RedirectHandler>();
         builder.Services.AddTransient<TokenFailureHandler>();
         builder.Services.AddTransient<OAuthFailureHandler>();
+        builder.AddRpcServer<ValidationRpcServer>();
 
-        var rpcServerRegistry = new RpcServerRegistry();
-        rpcServerRegistry.Add(new RpcServerRegistration(typeof(IValidationRpcService), typeof(ValidationRpcServer)));
-        builder.Services.AddSingleton(rpcServerRegistry);
-
-        var app = builder.Build();
-        app.MapHttpEndpoint<ValidationRpcServer>("/rpc");
+        var app = await builder.BuildAsync();
         app.MapPost("/custom", ([FromBody] CreateUserRequest request) => Results.Ok(Result.Success(new CreateUserResponse(request.Age))));
         await app.StartAsync();
         return app;
@@ -202,6 +191,7 @@ public sealed class HttpRpcTransportBoundaryTests
         }
     }
 
+    [TransportOverHttp(HttpRpcStyle.ControllerRpc, "/rpc")]
     public partial interface IValidationRpcService : IRpcService
     {
         [HttpEndpoint(HttpVerb.Post, "/CreateUser")]

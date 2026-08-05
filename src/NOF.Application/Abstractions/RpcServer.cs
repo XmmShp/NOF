@@ -25,6 +25,9 @@ public sealed record RpcHandlerMapping(
         | DynamicallyAccessedMemberTypes.PublicMethods
         | DynamicallyAccessedMemberTypes.NonPublicMethods)]
     Type HandlerType,
+    [property: DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicConstructors
+        | DynamicallyAccessedMemberTypes.PublicProperties)]
     Type RequestType,
     [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     Type ReturnType);

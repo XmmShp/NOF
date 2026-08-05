@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NOF.Application;
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 namespace NOF.Hosting.AspNetCore;
 
 internal sealed class RpcServerHttpEndpointInitializationStep : IApplicationInitializationStep
@@ -21,7 +23,15 @@ internal sealed class RpcServerHttpEndpointInitializationStep : IApplicationInit
             var registry = app.Services.GetRequiredService<RpcServerRegistry>();
             foreach (var registration in registry.Freeze())
             {
-                NOFHostingAspNetCoreExtensions.MapHttpEndpoint(routeBuilder, registration.ImplementationType);
+                var transport = registration.ServiceType.GetCustomAttribute<TransportOverAttribute>(inherit: false);
+                if (transport is TransportOverHttpAttribute { Style: HttpRpcStyle.JsonRpc })
+                {
+                    NOFHostingAspNetCoreExtensions.MapJsonRpcEndpoint(routeBuilder, registration.ImplementationType);
+                }
+                else if (transport is null or TransportOverHttpAttribute)
+                {
+                    NOFHostingAspNetCoreExtensions.MapHttpEndpoint(routeBuilder, registration.ImplementationType);
+                }
             }
         }
 
