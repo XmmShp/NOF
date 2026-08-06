@@ -247,6 +247,168 @@ public sealed class ValueObjectLengthConfigurationAnalyzerTests
         Assert.DoesNotContain("HasMaxLength", changedInfrastructure);
     }
 
+    [Fact]
+    public async Task FixAllInSolution_MovesEachLengthOnceAndRemovesAllConfigurations()
+    {
+        const string domainSource = """
+            using NOF.Domain;
+            namespace Test;
+            public readonly struct Name : IValueObject<string> { }
+            public readonly struct Code : IValueObject<string> { }
+            """;
+        const string firstInfrastructureSource = """
+            using NOF.Infrastructure;
+            namespace Test;
+
+            public sealed class FirstEntity
+            {
+                public Name Value { get; set; }
+            }
+
+            public sealed class SecondEntity
+            {
+                public Name Value { get; set; }
+            }
+
+            public sealed class Contributor : IDbContextModelCreatingContributor
+            {
+                public void Configure(IDbModelBuilder modelBuilder)
+                {
+                    modelBuilder.Entity<FirstEntity>(entity =>
+                        entity.Property(item => item.Value).HasMaxLength(100));
+                    modelBuilder.Entity<SecondEntity>(entity =>
+                        entity.Property(item => item.Value).HasMaxLength(100));
+                }
+            }
+            """;
+        const string secondInfrastructureSource = """
+            using NOF.Infrastructure;
+            namespace Test;
+
+            public sealed class CodeEntity
+            {
+                public Code Value { get; set; }
+            }
+
+            public sealed class Contributor : IDbContextModelCreatingContributor
+            {
+                public void Configure(IDbModelBuilder modelBuilder)
+                {
+                    modelBuilder.Entity<CodeEntity>(entity =>
+                        entity.Property(item => item.Value).HasMaxLength(50));
+                }
+            }
+            """;
+        using var workspace = new AdhocWorkspace();
+        var domainProjectId = ProjectId.CreateNewId();
+        var firstInfrastructureProjectId = ProjectId.CreateNewId();
+        var secondInfrastructureProjectId = ProjectId.CreateNewId();
+        var domainDocumentId = DocumentId.CreateNewId(domainProjectId);
+        var firstInfrastructureDocumentId = DocumentId.CreateNewId(firstInfrastructureProjectId);
+        var secondInfrastructureDocumentId = DocumentId.CreateNewId(secondInfrastructureProjectId);
+        var references = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(static assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+            .Select(static assembly => MetadataReference.CreateFromFile(assembly.Location));
+        var solution = workspace.CurrentSolution
+            .AddProject(domainProjectId, "Domain", "Domain", LanguageNames.CSharp)
+            .WithProjectCompilationOptions(domainProjectId, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+            .AddMetadataReferences(domainProjectId, references)
+            .AddDocument(domainDocumentId, "ValueObjects.cs", SourceText.From(domainSource))
+            .AddProject(firstInfrastructureProjectId, "FirstInfrastructure", "FirstInfrastructure", LanguageNames.CSharp)
+            .WithProjectCompilationOptions(firstInfrastructureProjectId, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+            .AddMetadataReferences(firstInfrastructureProjectId, references)
+            .AddProjectReference(firstInfrastructureProjectId, new ProjectReference(domainProjectId))
+            .AddDocument(firstInfrastructureDocumentId, "FirstMapping.cs", SourceText.From(firstInfrastructureSource))
+            .AddProject(secondInfrastructureProjectId, "SecondInfrastructure", "SecondInfrastructure", LanguageNames.CSharp)
+            .WithProjectCompilationOptions(secondInfrastructureProjectId, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+            .AddMetadataReferences(secondInfrastructureProjectId, references)
+            .AddProjectReference(secondInfrastructureProjectId, new ProjectReference(domainProjectId))
+            .AddDocument(secondInfrastructureDocumentId, "SecondMapping.cs", SourceText.From(secondInfrastructureSource));
+        Assert.True(workspace.TryApplyChanges(solution));
+
+        var diagnosticsByProject = ImmutableDictionary.CreateBuilder<ProjectId, ImmutableArray<Diagnostic>>();
+        foreach (var projectId in new[] { firstInfrastructureProjectId, secondInfrastructureProjectId })
+        {
+            var project = workspace.CurrentSolution.GetProject(projectId)!;
+            var compilation = await project.GetCompilationAsync();
+            diagnosticsByProject[projectId] = await compilation!.WithAnalyzers(
+                [new ValueObjectLengthConfigurationAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+        }
+
+        Assert.Equal(3, diagnosticsByProject.Values.SelectMany(static diagnostics => diagnostics).Count());
+        var provider = new MoveValueObjectLengthToDomainCodeFixProvider();
+        var triggerDocument = workspace.CurrentSolution.GetDocument(firstInfrastructureDocumentId)!;
+        var fixAllContext = new FixAllContext(
+            triggerDocument,
+            provider,
+            FixAllScope.Solution,
+            "MoveValueObjectLengthToDomain",
+            provider.FixableDiagnosticIds,
+            new TestFixAllDiagnosticProvider(diagnosticsByProject.ToImmutable()),
+            CancellationToken.None);
+
+        var action = await provider.GetFixAllProvider().GetFixAsync(fixAllContext);
+
+        Assert.NotNull(action);
+        var operations = await action.GetOperationsAsync(CancellationToken.None);
+        var changedSolution = Assert.Single(operations.OfType<ApplyChangesOperation>()).ChangedSolution;
+        var changedDomain = (await changedSolution.GetDocument(domainDocumentId)!.GetTextAsync()).ToString();
+        var changedFirstInfrastructure = (await changedSolution.GetDocument(firstInfrastructureDocumentId)!.GetTextAsync()).ToString();
+        var changedSecondInfrastructure = (await changedSolution.GetDocument(secondInfrastructureDocumentId)!.GetTextAsync()).ToString();
+        Assert.Equal(1, CountOccurrences(changedDomain, "ValueObjectLength(100)"));
+        Assert.Equal(1, CountOccurrences(changedDomain, "ValueObjectLength(50)"));
+        Assert.DoesNotContain("HasMaxLength", changedFirstInfrastructure);
+        Assert.DoesNotContain("HasMaxLength", changedSecondInfrastructure);
+    }
+
+    private static int CountOccurrences(string value, string searchValue)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = value.IndexOf(searchValue, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += searchValue.Length;
+        }
+
+        return count;
+    }
+
+    private sealed class TestFixAllDiagnosticProvider : FixAllContext.DiagnosticProvider
+    {
+        private readonly ImmutableDictionary<ProjectId, ImmutableArray<Diagnostic>> _diagnosticsByProject;
+
+        public TestFixAllDiagnosticProvider(
+            ImmutableDictionary<ProjectId, ImmutableArray<Diagnostic>> diagnosticsByProject)
+        {
+            _diagnosticsByProject = diagnosticsByProject;
+        }
+
+        public override async Task<IEnumerable<Diagnostic>> GetDocumentDiagnosticsAsync(
+            Document document,
+            CancellationToken cancellationToken)
+        {
+            var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
+            return GetDiagnostics(document.Project.Id)
+                .Where(diagnostic => diagnostic.Location.SourceTree == syntaxTree);
+        }
+
+        public override Task<IEnumerable<Diagnostic>> GetProjectDiagnosticsAsync(
+            Project project,
+            CancellationToken cancellationToken)
+            => Task.FromResult(Enumerable.Empty<Diagnostic>());
+
+        public override Task<IEnumerable<Diagnostic>> GetAllDiagnosticsAsync(
+            Project project,
+            CancellationToken cancellationToken)
+            => Task.FromResult<IEnumerable<Diagnostic>>(GetDiagnostics(project.Id));
+
+        private ImmutableArray<Diagnostic> GetDiagnostics(ProjectId projectId)
+            => _diagnosticsByProject.TryGetValue(projectId, out var diagnostics)
+                ? diagnostics
+                : [];
+    }
+
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source, bool useEfCore)
     {
         var extraReferences = _refs.Select(type => type.ToMetadataReference()).ToArray();

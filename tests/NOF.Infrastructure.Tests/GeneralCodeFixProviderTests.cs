@@ -383,6 +383,167 @@ public sealed class GeneralCodeFixProviderTests
         Assert.Empty(actions);
     }
 
+    [Fact]
+    public async Task BatchFixProviders_SupportFixAllInSolution()
+    {
+        var cases = new[]
+        {
+            new SolutionFixAllCase(
+                "type declaration",
+                "NOF010",
+                """
+                    namespace Test;
+                    public readonly struct Value { }
+                    """,
+                "Value",
+                new TypeDeclarationCodeFixProvider(),
+                "Add partial modifier",
+                static text => text.Contains("partial struct Value", StringComparison.Ordinal)),
+            new SolutionFixAllCase(
+                "attribute removal",
+                "NOF213",
+                """
+                    namespace Test;
+                    [System.Obsolete]
+                    public interface IService { }
+                    """,
+                "System.Obsolete",
+                new AttributeRemovalCodeFixProvider(),
+                "RemoveInvalidAttribute",
+                static text => !text.Contains("Obsolete", StringComparison.Ordinal)),
+            new SolutionFixAllCase(
+                "normalize invocation",
+                "NOF013",
+                """
+                    namespace Test;
+                    public static class Value
+                    {
+                        public static void Normalize(string value)
+                        {
+                            Of(value);
+                        }
+
+                        private static void Of(string value) { }
+                    }
+                    """,
+                "Of(value)",
+                new RemoveNormalizeInvocationCodeFixProvider(),
+                "RemoveInvocationFromNormalize",
+                static text => !text.Contains("Of(value);", StringComparison.Ordinal)),
+            new SolutionFixAllCase(
+                "value object ordering",
+                "NOF015",
+                """
+                    using System.Linq;
+                    namespace Test;
+                    public static class Query
+                    {
+                        public static void Run(Item[] items) => items.OrderBy(item => item.Name);
+                    }
+                    public sealed class Item { public object Name { get; set; } = new(); }
+                    """,
+                "item => item.Name",
+                new ValueObjectOrderingCodeFixProvider(),
+                "CastOrderingKeyToPrimitive",
+                static text => text.Contains("(global::System.String)item.Name", StringComparison.Ordinal),
+                ImmutableDictionary<string, string?>.Empty
+                    .Add("PrimitiveType", "global::System.String")
+                    .Add("NullableKey", "false")),
+            new SolutionFixAllCase(
+                "daemon service resolution",
+                "NOF040",
+                """
+                    namespace Test;
+                    public static class Worker
+                    {
+                        public static void Run(dynamic services)
+                        {
+                            using var scope = services.CreateScope();
+                            Use(scope);
+                        }
+
+                        private static void Use(dynamic value) { }
+                    }
+                    """,
+                "CreateScope",
+                new DaemonServiceResolutionCodeFixProvider(),
+                "ResolveDaemonServices",
+                static text => text.Contains("scope.ServiceProvider.ResolveDaemonServices();", StringComparison.Ordinal)),
+            new SolutionFixAllCase(
+                "native host build",
+                "NOF401",
+                """
+                    namespace Test;
+                    public static class Program
+                    {
+                        public static async System.Threading.Tasks.Task Run(dynamic builder)
+                        {
+                            var app = builder.NativeBuilder.Build();
+                        }
+                    }
+                    """,
+                "Build",
+                new NativeHostBuilderBuildCodeFixProvider(),
+                "UseNofBuildAsync",
+                static text => text.Contains("await builder.BuildAsync()", StringComparison.Ordinal)
+                    && !text.Contains("NativeBuilder.Build", StringComparison.Ordinal),
+                ImmutableDictionary<string, string?>.Empty.Add("RecommendedMethod", "BuildAsync")),
+            new SolutionFixAllCase(
+                "value object length configuration",
+                "NOF306",
+                """
+                    namespace Test;
+                    public static class Configuration
+                    {
+                        public static void Configure(dynamic property)
+                        {
+                            property.HasMaxLength(100).IsRequired();
+                        }
+                    }
+                    """,
+                "100",
+                new RemoveValueObjectLengthConfigurationCodeFixProvider(),
+                nameof(RemoveValueObjectLengthConfigurationCodeFixProvider),
+                static text => text.Contains("property.IsRequired();", StringComparison.Ordinal)
+                    && !text.Contains("HasMaxLength", StringComparison.Ordinal)),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var changedDocuments = await ApplySolutionFixAllAsync(testCase);
+
+            Assert.Equal(2, changedDocuments.Length);
+            Assert.All(
+                changedDocuments,
+                text => Assert.True(testCase.IsFixed(text), $"Solution Fix All failed for {testCase.Name}:{Environment.NewLine}{text}"));
+        }
+    }
+
+    [Fact]
+    public async Task MultipleTransportFix_FixAllRemovesOnlySelectedTransport()
+    {
+        var testCase = new SolutionFixAllCase(
+            "selected transport removal",
+            "NOF212",
+            """
+                using NOF.Contract;
+                namespace Test;
+                [TransportOverMemory]
+                [TransportOverHttp(HttpRpcStyle.JsonRpc)]
+                public interface IService : IRpcService { }
+                """,
+            "IService",
+            new AttributeRemovalCodeFixProvider(),
+            "RemoveTransport:TransportOverMemoryAttribute",
+            static text => !text.Contains("TransportOverMemory", StringComparison.Ordinal)
+                && text.Contains("TransportOverHttp", StringComparison.Ordinal));
+
+        var changedDocuments = await ApplySolutionFixAllAsync(testCase);
+
+        Assert.Equal(2, changedDocuments.Length);
+        Assert.All(changedDocuments, text => Assert.True(testCase.IsFixed(text), text));
+    }
+
     private static async Task<string> ApplyFirstFixAsync(
         string source,
         string diagnosticId,
@@ -442,5 +603,118 @@ public sealed class GeneralCodeFixProviderTests
 
         await provider.RegisterCodeFixesAsync(context);
         return (document, actions);
+    }
+
+    private static async Task<ImmutableArray<string>> ApplySolutionFixAllAsync(SolutionFixAllCase testCase)
+    {
+        _ = _forceLoadedAssemblies.Length;
+        using var workspace = new AdhocWorkspace();
+        var references = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(static assembly => !assembly.IsDynamic && !string.IsNullOrWhiteSpace(assembly.Location))
+            .Select(static assembly => MetadataReference.CreateFromFile(assembly.Location))
+            .ToImmutableArray();
+        var solution = workspace.CurrentSolution;
+        var documentIds = ImmutableArray.CreateBuilder<DocumentId>();
+
+        for (var index = 1; index <= 2; index++)
+        {
+            var projectId = ProjectId.CreateNewId();
+            var documentId = DocumentId.CreateNewId(projectId);
+            documentIds.Add(documentId);
+            solution = solution
+                .AddProject(projectId, $"TestProject{index}", $"TestProject{index}", LanguageNames.CSharp)
+                .WithProjectCompilationOptions(projectId, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+                .AddMetadataReferences(projectId, references)
+                .AddDocument(documentId, "Test.cs", SourceText.From(testCase.Source));
+        }
+
+        Assert.True(workspace.TryApplyChanges(solution));
+
+        var descriptor = new DiagnosticDescriptor(
+            testCase.DiagnosticId,
+            testCase.DiagnosticId,
+            testCase.DiagnosticId,
+            "Tests",
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true);
+        var diagnosticsByProject = ImmutableDictionary.CreateBuilder<ProjectId, ImmutableArray<Diagnostic>>();
+        foreach (var documentId in documentIds)
+        {
+            var document = workspace.CurrentSolution.GetDocument(documentId)!;
+            var syntaxTree = await document.GetSyntaxTreeAsync();
+            var start = testCase.Source.IndexOf(testCase.LocationText, StringComparison.Ordinal);
+            Assert.True(start >= 0, $"Could not find diagnostic location '{testCase.LocationText}'.");
+            var diagnostic = Diagnostic.Create(
+                descriptor,
+                Location.Create(syntaxTree!, new TextSpan(start, testCase.LocationText.Length)),
+                testCase.Properties);
+            diagnosticsByProject.Add(document.Project.Id, [diagnostic]);
+        }
+
+        var triggerDocument = workspace.CurrentSolution.GetDocument(documentIds[0])!;
+        var fixAllProvider = Assert.IsAssignableFrom<FixAllProvider>(testCase.Provider.GetFixAllProvider());
+        var context = new FixAllContext(
+            triggerDocument,
+            testCase.Provider,
+            FixAllScope.Solution,
+            testCase.EquivalenceKey,
+            testCase.Provider.FixableDiagnosticIds,
+            new TestFixAllDiagnosticProvider(diagnosticsByProject.ToImmutable()),
+            CancellationToken.None);
+        var action = await fixAllProvider.GetFixAsync(context);
+        Assert.NotNull(action);
+
+        var operations = await action.GetOperationsAsync(CancellationToken.None);
+        var changedSolution = Assert.Single(operations.OfType<ApplyChangesOperation>()).ChangedSolution;
+        var changedDocuments = ImmutableArray.CreateBuilder<string>();
+        foreach (var documentId in documentIds)
+        {
+            changedDocuments.Add((await changedSolution.GetDocument(documentId)!.GetTextAsync()).ToString());
+        }
+
+        return changedDocuments.ToImmutable();
+    }
+
+    private sealed record SolutionFixAllCase(
+        string Name,
+        string DiagnosticId,
+        string Source,
+        string LocationText,
+        CodeFixProvider Provider,
+        string EquivalenceKey,
+        Func<string, bool> IsFixed,
+        ImmutableDictionary<string, string?>? DiagnosticProperties = null)
+    {
+        public ImmutableDictionary<string, string?> Properties { get; } =
+            DiagnosticProperties ?? ImmutableDictionary<string, string?>.Empty;
+    }
+
+    private sealed class TestFixAllDiagnosticProvider(
+        ImmutableDictionary<ProjectId, ImmutableArray<Diagnostic>> diagnosticsByProject)
+        : FixAllContext.DiagnosticProvider
+    {
+        public override async Task<IEnumerable<Diagnostic>> GetDocumentDiagnosticsAsync(
+            Document document,
+            CancellationToken cancellationToken)
+        {
+            var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
+            return GetDiagnostics(document.Project.Id)
+                .Where(diagnostic => diagnostic.Location.SourceTree == syntaxTree);
+        }
+
+        public override Task<IEnumerable<Diagnostic>> GetProjectDiagnosticsAsync(
+            Project project,
+            CancellationToken cancellationToken)
+            => Task.FromResult(Enumerable.Empty<Diagnostic>());
+
+        public override Task<IEnumerable<Diagnostic>> GetAllDiagnosticsAsync(
+            Project project,
+            CancellationToken cancellationToken)
+            => Task.FromResult<IEnumerable<Diagnostic>>(GetDiagnostics(project.Id));
+
+        private ImmutableArray<Diagnostic> GetDiagnostics(ProjectId projectId)
+            => diagnosticsByProject.TryGetValue(projectId, out var diagnostics)
+                ? diagnostics
+                : [];
     }
 }

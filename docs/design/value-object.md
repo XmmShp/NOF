@@ -44,7 +44,7 @@ Explicit constant persistence configuration is diagnosed at compilation time:
 - `NOF307` is an error when `HasMaxLength` conflicts with the value object's declared length.
 - `NOF308` warns when infrastructure declares a constant `HasMaxLength` but the value object has no `ValueObjectLength` declaration.
 
-The analyzer deliberately ignores values that Roslyn cannot evaluate as constants. Persistence model construction still rejects a dynamically configured conflicting length at runtime. Code fixes remove redundant/conflicting infrastructure calls, or move a missing constant declaration onto a source value object and remove the infrastructure call.
+The analyzer deliberately ignores values that Roslyn cannot evaluate as constants. Persistence model construction still rejects a dynamically configured conflicting length at runtime. Code fixes remove redundant/conflicting infrastructure calls, or move a missing constant declaration onto a source value object and remove the infrastructure call. `NOF308` supports Fix All for a document, project, or solution; repeated mappings of the same value object are merged into one attribute declaration. If those mappings specify different lengths, that value object is left unchanged for manual resolution.
 
 `ValueObjectLength` uses `string.Length`; persistence providers translate that declaration into their maximum-length facet. Provider-specific byte limits, index-size limits, and explicit column types remain infrastructure concerns.
 

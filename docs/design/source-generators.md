@@ -28,4 +28,6 @@ The regression suite runs every generator together in one compilation in both no
 
 NOF runtime packages ship a shared `NOF.CodeFixes` analyzer assembly beside their layer-specific source generator. A code fix is offered only when the diagnostic has a deterministic local transformation, including required type modifiers, invalid or duplicate attribute removal, value-object primitive ordering casts, daemon-service resolution, supported RPC request/signature corrections, direct `DbContext` base replacement, NOF host build routing, and value-object length migration.
 
-Diagnostics that require a domain or API design choice deliberately remain analyzer-only. Examples include choosing between RPC transports, renaming overloaded operations, selecting a parsable query representation, inventing unique failure names/codes, or rewriting `Find` calls without a known key predicate.
+All provided code fixes support Fix All at document, project, and solution scope. For diagnostics with multiple valid actions, such as `NOF212`, Fix All repeats only the action selected by the developer; choosing to remove one transport does not remove the other transport attributes.
+
+Diagnostics that require a domain or API design choice deliberately remain analyzer-only. Examples include renaming overloaded operations, selecting a parsable query representation, inventing unique failure names/codes, or rewriting `Find` calls without a known key predicate.

@@ -15,7 +15,7 @@ public sealed class AttributeRemovalCodeFixProvider : CodeFixProvider
 {
     public override ImmutableArray<string> FixableDiagnosticIds => ["NOF020", "NOF211", "NOF212", "NOF213", "NOF216"];
 
-    public override FixAllProvider? GetFixAllProvider() => null;
+    public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
