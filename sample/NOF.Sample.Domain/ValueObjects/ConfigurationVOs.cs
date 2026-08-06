@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 
 namespace NOF.Sample;
 
+[ValueObjectLength(100, MinimumLength = 1)]
 public readonly partial struct ConfigNodeName : IValueObject<string>
 {
     public static void Validate(string input)
@@ -12,14 +13,10 @@ public readonly partial struct ConfigNodeName : IValueObject<string>
         {
             throw new DomainValidationException("Node name cannot be empty.");
         }
-
-        if (input.Length > 100)
-        {
-            throw new DomainValidationException("Node name cannot exceed 100 characters.");
-        }
     }
 }
 
+[ValueObjectLength(100, MinimumLength = 1)]
 public readonly partial struct ConfigFileName : IValueObject<string>
 {
     public static void Validate(string input)
@@ -27,11 +24,6 @@ public readonly partial struct ConfigFileName : IValueObject<string>
         if (string.IsNullOrWhiteSpace(input))
         {
             throw new DomainValidationException("File name cannot be empty.");
-        }
-
-        if (input.Length > 100)
-        {
-            throw new DomainValidationException("File name cannot exceed 100 characters.");
         }
     }
 }

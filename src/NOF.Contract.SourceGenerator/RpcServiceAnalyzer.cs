@@ -62,7 +62,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor VoidReturnNotSupported = new(
         "NOF209",
         "Void return is not supported",
-        "Method '{0}' on service interface '{1}' must not return void. Return a concrete response type instead, such as Empty when no payload is needed.",
+        "Method '{0}' on service interface '{1}' must not return void. Return a concrete IResult type instead, such as Result when no payload is needed.",
         "RpcService",
         DiagnosticSeverity.Error,
         true);
@@ -365,9 +365,10 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
 
     private static void ValidateRequestPayloadShape(SymbolAnalysisContext context, INamedTypeSymbol requestType, Location location)
     {
+        var requestLocation = requestType.Locations.FirstOrDefault(static candidate => candidate.IsInSource) ?? location;
         if (requestType.IsValueType)
         {
-            context.ReportDiagnostic(Diagnostic.Create(RequestMustBeReferenceType, location, requestType.Name));
+            context.ReportDiagnostic(Diagnostic.Create(RequestMustBeReferenceType, requestLocation, requestType.Name));
             return;
         }
 
@@ -384,7 +385,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
 
         if (hasExplicitCtors && !hasParameterlessCtor)
         {
-            context.ReportDiagnostic(Diagnostic.Create(ClassMustHaveParameterlessCtor, location, requestType.Name));
+            context.ReportDiagnostic(Diagnostic.Create(ClassMustHaveParameterlessCtor, requestLocation, requestType.Name));
         }
     }
 

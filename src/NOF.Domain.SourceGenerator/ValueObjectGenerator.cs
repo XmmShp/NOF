@@ -16,6 +16,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
 {
     private const string InterfaceMetadataName = "NOF.Domain.IValueObject<T>";
     private const string NewableAttributeMetadataName = "NOF.Domain.NewableValueObjectAttribute";
+    private const string LengthAttributeMetadataName = "NOF.Domain.ValueObjectLengthAttribute";
 
     private static readonly DiagnosticDescriptor _mustBePartialDescriptor = new(
         id: "NOF010",
@@ -41,11 +42,33 @@ public class ValueObjectGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor _lengthRequiresStringDescriptor = new(
+        id: "NOF016",
+        title: "[ValueObjectLength] requires IValueObject<string>",
+        messageFormat: "'{0}' is annotated with [ValueObjectLength] but does not implement IValueObject<string>",
+        category: "ValueObjectGenerator",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor _invalidLengthDescriptor = new(
+        id: "NOF017",
+        title: "[ValueObjectLength] requires a valid length range",
+        messageFormat: "'{0}' declares an invalid length range [{1}, {2}]. MinimumLength must be non-negative and cannot exceed the positive maximum length.",
+        category: "ValueObjectGenerator",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var candidates = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => node is StructDeclarationSyntax { BaseList.Types.Count: > 0 },
+                predicate: static (node, _) => node is StructDeclarationSyntax
+                {
+                    BaseList.Types.Count: > 0
+                } or StructDeclarationSyntax
+                {
+                    AttributeLists.Count: > 0
+                },
                 transform: static (ctx, _) => GetValueObjectInfo(ctx))
             .Where(static x => x is not null);
 
@@ -77,6 +100,9 @@ public class ValueObjectGenerator : IIncrementalGenerator
             return null;
         }
 
+        var lengthAttribute = symbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == LengthAttributeMetadataName);
+
         // Find IValueObject<TPrimitive> in the interface list
         ITypeSymbol? primitiveType = null;
         var primitiveNullableAnnotation = NullableAnnotation.None;
@@ -99,6 +125,16 @@ public class ValueObjectGenerator : IIncrementalGenerator
 
         if (primitiveType is null)
         {
+            if (lengthAttribute is not null)
+            {
+                var invalidResult = new ValueObjectResult();
+                invalidResult.Diagnostics.Add(Diagnostic.Create(
+                    _lengthRequiresStringDescriptor,
+                    syntax.Identifier.GetLocation(),
+                    symbol.Name));
+                return invalidResult;
+            }
+
             return null;
         }
 
@@ -145,6 +181,36 @@ public class ValueObjectGenerator : IIncrementalGenerator
             return result; // no code gen
         }
 
+        int? maximumLength = null;
+        var minimumLength = 0;
+        if (lengthAttribute is not null)
+        {
+            if (primitiveType.SpecialType != SpecialType.System_String
+                || primitiveNullableAnnotation == NullableAnnotation.Annotated)
+            {
+                result.Diagnostics.Add(Diagnostic.Create(
+                    _lengthRequiresStringDescriptor,
+                    syntax.Identifier.GetLocation(),
+                    symbol.Name));
+                return result;
+            }
+
+            maximumLength = lengthAttribute.ConstructorArguments.FirstOrDefault().Value as int?;
+            minimumLength = lengthAttribute.NamedArguments
+                .FirstOrDefault(static argument => argument.Key == "MinimumLength")
+                .Value.Value as int? ?? 0;
+            if (maximumLength is null or <= 0 || minimumLength < 0 || minimumLength > maximumLength)
+            {
+                result.Diagnostics.Add(Diagnostic.Create(
+                    _invalidLengthDescriptor,
+                    syntax.Identifier.GetLocation(),
+                    symbol.Name,
+                    minimumLength,
+                    maximumLength ?? 0));
+                return result;
+            }
+        }
+
         result.Info = new ValueObjectInfo
         {
             TypeName = symbol.Name,
@@ -154,6 +220,8 @@ public class ValueObjectGenerator : IIncrementalGenerator
             PrimitiveIsValueType = primitiveType.IsValueType,
             PrimitiveRequiresNullCheck = primitiveRequiresNullCheck,
             HasNewMethod = hasNewableAttribute,
+            MinimumLength = minimumLength,
+            MaximumLength = maximumLength,
         };
         return result;
     }
@@ -195,6 +263,24 @@ public class ValueObjectGenerator : IIncrementalGenerator
 
         sb.AppendLine($"            value = __CallNormalize<{info.TypeName}>(value);");
         sb.AppendLine();
+        if (info.MinimumLength > 0)
+        {
+            sb.AppendLine($"            if (value.Length < {info.MinimumLength})");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                throw new global::NOF.Domain.DomainValidationException(\"Value object '{info.TypeName}' must contain at least {info.MinimumLength} characters.\");");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+        }
+
+        if (info.MaximumLength is { } maximumLength)
+        {
+            sb.AppendLine($"            if (value.Length > {maximumLength})");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                throw new global::NOF.Domain.DomainValidationException(\"Value object '{info.TypeName}' cannot exceed {maximumLength} characters.\");");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+        }
+
         sb.AppendLine("            // Validate via static virtual on IValueObject<T> — dispatches to user override or default no-op");
         sb.AppendLine($"            __CallValidate<{info.TypeName}>(value);");
 
@@ -315,5 +401,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         public bool PrimitiveIsValueType { get; set; }
         public bool PrimitiveRequiresNullCheck { get; set; }
         public bool HasNewMethod { get; set; }
+        public int MinimumLength { get; set; }
+        public int? MaximumLength { get; set; }
     }
 }

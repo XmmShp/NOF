@@ -18,6 +18,36 @@ public readonly partial struct OrderName : IValueObject<string>
 The source generator produces everything else: a private constructor, a `static Of(T)` factory that calls `Validate`, an explicit cast to `T`, equality members, `ToString`, and a nested `JsonConverter`. The developer writes only the type declaration and optional validation. That's it.
 If you override `Normalize(T)`, keep it limited to canonicalization such as trimming or casing, and avoid calling `Of(...)` or `Validate(...)` from inside `Normalize`.
 
+## String Length Is Declared Once
+
+String-backed value objects can declare their accepted `string.Length` range on the value-object type:
+
+```csharp
+[ValueObjectLength(100, MinimumLength = 1)]
+public readonly partial struct OrderName : IValueObject<string>
+{
+    public static void Validate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new DomainValidationException("Order name cannot be empty.");
+        }
+    }
+}
+```
+
+`ValueObjectGenerator` inserts the minimum- and maximum-length checks after `Normalize` and before the custom `Validate` method. `MinimumLength` defaults to `0`. EF Core and NHibernate read `MaximumLength` when constructing their models, so entity mappings do not repeat `HasMaxLength(100)`; minimum length remains a domain validation rule rather than a database column facet.
+
+Explicit constant persistence configuration is diagnosed at compilation time:
+
+- `NOF306` warns when `HasMaxLength` repeats the value object's declared length.
+- `NOF307` is an error when `HasMaxLength` conflicts with the value object's declared length.
+- `NOF308` warns when infrastructure declares a constant `HasMaxLength` but the value object has no `ValueObjectLength` declaration.
+
+The analyzer deliberately ignores values that Roslyn cannot evaluate as constants. Persistence model construction still rejects a dynamically configured conflicting length at runtime. Code fixes remove redundant/conflicting infrastructure calls, or move a missing constant declaration onto a source value object and remove the infrastructure call.
+
+`ValueObjectLength` uses `string.Length`; persistence providers translate that declaration into their maximum-length facet. Provider-specific byte limits, index-size limits, and explicit column types remain infrastructure concerns.
+
 One thing the developer does _not_ get is a `.Value` property. This is deliberate, and the rest of this document explains why.
 
 ## The Temptation of `.Value`

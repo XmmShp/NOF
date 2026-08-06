@@ -21,4 +21,8 @@
     <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="NOF.Infrastructure.Tests" />
+  </ItemGroup>
+
 </Project>

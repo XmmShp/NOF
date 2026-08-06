@@ -37,7 +37,7 @@ public sealed class ValueObjectOrderingAnalyzer : DiagnosticAnalyzer
         var method = invocation.TargetMethod;
         if (!IsLinqOrderingMethod(method)
             || method.TypeArguments.Length < 2
-            || !TryGetValueObject(method.TypeArguments[1], out var valueObjectType, out var primitiveType)
+            || !TryGetValueObject(method.TypeArguments[1], out var valueObjectType, out var primitiveType, out var nullableKey)
             || ImplementsComparison(valueObjectType))
         {
             return;
@@ -46,9 +46,13 @@ public sealed class ValueObjectOrderingAnalyzer : DiagnosticAnalyzer
         var keySelector = invocation.Arguments
             .FirstOrDefault(static argument => argument.Parameter?.Name == "keySelector");
         var location = keySelector?.Syntax.GetLocation() ?? invocation.Syntax.GetLocation();
+        var properties = ImmutableDictionary<string, string?>.Empty
+            .Add("PrimitiveType", primitiveType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+            .Add("NullableKey", nullableKey ? "true" : "false");
         context.ReportDiagnostic(Diagnostic.Create(
             OrderByShouldUsePrimitive,
             location,
+            properties,
             valueObjectType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
             primitiveType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
     }
@@ -68,14 +72,17 @@ public sealed class ValueObjectOrderingAnalyzer : DiagnosticAnalyzer
     private static bool TryGetValueObject(
         ITypeSymbol keyType,
         out INamedTypeSymbol valueObjectType,
-        out ITypeSymbol primitiveType)
+        out ITypeSymbol primitiveType,
+        out bool nullableKey)
     {
+        nullableKey = false;
         if (keyType is INamedTypeSymbol
             {
                 OriginalDefinition.SpecialType: SpecialType.System_Nullable_T,
                 TypeArguments.Length: 1
             } nullableType)
         {
+            nullableKey = true;
             keyType = nullableType.TypeArguments[0];
         }
 
@@ -83,6 +90,7 @@ public sealed class ValueObjectOrderingAnalyzer : DiagnosticAnalyzer
         {
             valueObjectType = null!;
             primitiveType = null!;
+            nullableKey = false;
             return false;
         }
 
@@ -96,6 +104,7 @@ public sealed class ValueObjectOrderingAnalyzer : DiagnosticAnalyzer
         {
             valueObjectType = null!;
             primitiveType = null!;
+            nullableKey = false;
             return false;
         }
 

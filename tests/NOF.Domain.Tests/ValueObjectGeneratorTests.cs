@@ -17,6 +17,7 @@ public class ValueObjectGeneratorTests
     [
         typeof(IValueObject<>),
         typeof(NewableValueObjectAttribute),
+        typeof(ValueObjectLengthAttribute),
         typeof(IdGenerator),
         typeof(JsonConverterAttribute),
     ];
@@ -28,6 +29,19 @@ public class ValueObjectGeneratorTests
         => result.GeneratedTrees
             .Select(t => t.GetText().ToString())
             .Single();
+
+    [Fact]
+    public void ValueObjectLengthAttribute_ValidatesMinimumLength()
+    {
+        var attribute = new ValueObjectLengthAttribute(10)
+        {
+            MinimumLength = 2,
+        };
+
+        Assert.Equal(2, attribute.MinimumLength);
+        Assert.Throws<ArgumentOutOfRangeException>(() => attribute.MinimumLength = -1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => attribute.MinimumLength = 11);
+    }
 
     private static (GeneratorDriverRunResult Result, IReadOnlyList<Diagnostic> Diagnostics)
         RunGeneratorWithDiagnostics(string source)
@@ -329,5 +343,152 @@ public class ValueObjectGeneratorTests
         var validateIdx = code.IndexOf("__CallValidate<Tag>(value);", StringComparison.Ordinal);
         Assert.True(nullGuardIdx < normalizeIdx);
         Assert.True(normalizeIdx < validateIdx);
+    }
+
+    [Fact]
+    public void StringVoWithLength_GeneratesLengthValidationAfterNormalize()
+    {
+        const string source = """
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength(100)]
+                public readonly partial struct Name : IValueObject<string> { }
+            }
+            """;
+
+        var result = RunGenerator(source);
+        var code = GetVoCode(result);
+
+        var normalizeIdx = code.IndexOf("__CallNormalize<Name>(value);", StringComparison.Ordinal);
+        var lengthIdx = code.IndexOf("if (value.Length > 100)", StringComparison.Ordinal);
+        var validateIdx = code.IndexOf("__CallValidate<Name>(value);", StringComparison.Ordinal);
+
+        Assert.True(normalizeIdx >= 0);
+        Assert.True(lengthIdx > normalizeIdx);
+        Assert.True(validateIdx > lengthIdx);
+        Assert.Contains("Value object 'Name' cannot exceed 100 characters.", code);
+    }
+
+    [Fact]
+    public void StringVoWithMinimumLength_GeneratesRangeValidationAfterNormalize()
+    {
+        const string source = """
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength(100, MinimumLength = 3)]
+                public readonly partial struct Name : IValueObject<string> { }
+            }
+            """;
+
+        var result = RunGenerator(source);
+        var code = GetVoCode(result);
+
+        var normalizeIdx = code.IndexOf("__CallNormalize<Name>(value);", StringComparison.Ordinal);
+        var minimumIdx = code.IndexOf("if (value.Length < 3)", StringComparison.Ordinal);
+        var maximumIdx = code.IndexOf("if (value.Length > 100)", StringComparison.Ordinal);
+        var validateIdx = code.IndexOf("__CallValidate<Name>(value);", StringComparison.Ordinal);
+
+        Assert.True(normalizeIdx >= 0);
+        Assert.True(minimumIdx > normalizeIdx);
+        Assert.True(maximumIdx > minimumIdx);
+        Assert.True(validateIdx > maximumIdx);
+        Assert.Contains("Value object 'Name' must contain at least 3 characters.", code);
+    }
+
+    [Fact]
+    public void LengthOnNonStringValueObject_EmitsNOF016_AndNoSource()
+    {
+        const string source = """
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength(10)]
+                public readonly partial struct Score : IValueObject<int> { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF016" && diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Empty(result.GeneratedTrees);
+    }
+
+    [Fact]
+    public void LengthOnNullableStringValueObject_EmitsNOF016_AndNoSource()
+    {
+        const string source = """
+            #nullable enable
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength(10)]
+                public readonly partial struct Name : IValueObject<string?> { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF016" && diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Empty(result.GeneratedTrees);
+    }
+
+    [Fact]
+    public void LengthOnNonValueObject_EmitsNOF016_AndNoSource()
+    {
+        const string source = """
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength(10)]
+                public readonly struct Name { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF016" && diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Empty(result.GeneratedTrees);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void NonPositiveLength_EmitsNOF017_AndNoSource(int maximumLength)
+    {
+        var source = $$"""
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength({{maximumLength}})]
+                public readonly partial struct Name : IValueObject<string> { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF017" && diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Empty(result.GeneratedTrees);
+    }
+
+    [Theory]
+    [InlineData(-1, 10)]
+    [InlineData(11, 10)]
+    public void InvalidMinimumLength_EmitsNOF017_AndNoSource(int minimumLength, int maximumLength)
+    {
+        var source = $$"""
+            using NOF.Domain;
+            namespace Test
+            {
+                [ValueObjectLength({{maximumLength}}, MinimumLength = {{minimumLength}})]
+                public readonly partial struct Name : IValueObject<string> { }
+            }
+            """;
+
+        var (result, diagnostics) = RunGeneratorWithDiagnostics(source);
+
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF017" && diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Empty(result.GeneratedTrees);
     }
 }

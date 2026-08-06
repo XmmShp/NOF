@@ -109,6 +109,8 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
                 ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
             }
         }
+
+        ValueObjectLengthModelConvention.Apply(modelBuilder.Model);
     }
 
     private static void ConfigureUniqueIndexes(IMutableEntityType entityType, EntityTypeBuilder entityBuilder)

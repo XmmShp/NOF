@@ -3,6 +3,7 @@ using NOF.Domain;
 
 namespace NOF.Infrastructure;
 
+[ValueObjectLength(256, MinimumLength = 1)]
 public readonly partial struct TenantId : IValueObject<string>
 {
     public static TenantId Host { get; } = Of(NOFAbstractionConstants.Tenant.HostId);

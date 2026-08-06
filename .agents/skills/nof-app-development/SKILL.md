@@ -42,6 +42,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 |---|---|
 | `IValueObject<T>` | equality, converters, casts, validation hooks |
 | `[NewableValueObject]` | static `New()` and `New(IIdGenerator)` |
+| `[ValueObjectLength(maximumLength, MinimumLength = ...)]` | string range validation and persistence maximum-length metadata |
 | `[AutoInject]` | DI registration |
 | `[HttpEndpoint]` | HTTP route metadata for RPC methods |
 | `[TransportOverMemory]` | in-process-only RPC transport without external endpoint mapping |

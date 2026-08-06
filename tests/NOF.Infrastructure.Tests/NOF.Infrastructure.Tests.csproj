@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Common" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -25,8 +26,10 @@
     <ProjectReference Include="..\..\src\NOF.Infrastructure\NOF.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.StackExchangeRedis\NOF.Infrastructure.StackExchangeRedis.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore\NOF.Infrastructure.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.NHibernate\NOF.Infrastructure.NHibernate.csproj" />
     <ProjectReference Include="..\..\src\Infrastructures\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator\NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" />
+    <ProjectReference Include="..\..\src\NOF.CodeFixes\NOF.CodeFixes.csproj" />
     <ProjectReference Include="..\..\src\NOF.Infrastructure.SourceGenerator\NOF.Infrastructure.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\NOF.Abstraction.SourceGenerator\NOF.Abstraction.SourceGenerator.csproj" />
     <ProjectReference Include="..\..\src\NOF.Application.SourceGenerator\NOF.Application.SourceGenerator.csproj" />

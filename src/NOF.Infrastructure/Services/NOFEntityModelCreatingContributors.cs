@@ -10,7 +10,6 @@ public sealed class NOFTenantModelCreatingContributor : IDbContextModelCreatingC
             entity.ToTable(nameof(NOFTenant));
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Name).IsUnique();
-            entity.Property(e => e.Id).HasMaxLength(256);
             entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(1000);
         });

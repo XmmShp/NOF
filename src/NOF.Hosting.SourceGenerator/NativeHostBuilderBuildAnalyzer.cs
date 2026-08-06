@@ -69,6 +69,8 @@ public sealed class NativeHostBuilderBuildAnalyzer : DiagnosticAnalyzer
                 Diagnostic.Create(
                     _descriptor,
                     buildAccess.Name.GetLocation(),
+                    ImmutableDictionary<string, string?>.Empty
+                        .Add("RecommendedMethod", mapping.RecommendedMethod),
                     property.Name,
                     property.ContainingType.Name,
                     mapping.RecommendedMethod));

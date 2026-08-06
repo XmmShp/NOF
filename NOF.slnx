@@ -31,6 +31,7 @@
     <Project Path="src/NOF.Domain/NOF.Domain.csproj" />
     <Project Path="src/NOF.Hosting/NOF.Hosting.csproj" />
     <Project Path="src/NOF.Infrastructure.SourceGenerator/NOF.Infrastructure.SourceGenerator.csproj" />
+    <Project Path="src/NOF.CodeFixes/NOF.CodeFixes.csproj" />
     <Project Path="src/NOF.Infrastructure/NOF.Infrastructure.csproj" />
     <Project Path="src/NOF.UI/NOF.UI.csproj" />
     <Project Path="src/NOF.Test/NOF.Test.csproj" />

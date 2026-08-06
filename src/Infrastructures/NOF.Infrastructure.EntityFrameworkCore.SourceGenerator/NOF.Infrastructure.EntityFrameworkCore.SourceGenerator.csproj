@@ -18,4 +18,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\SourceGenerator.Shared\ValueObjectLengthConfigurationAnalysis.cs" Link="Shared\ValueObjectLengthConfigurationAnalysis.cs" />
+  </ItemGroup>
+
 </Project>

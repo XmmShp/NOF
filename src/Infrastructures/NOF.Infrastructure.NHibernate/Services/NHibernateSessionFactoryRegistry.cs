@@ -169,6 +169,11 @@ internal sealed class NHibernateSessionFactoryRegistry
             {
                 id.Column(propertyInfo.Name);
                 id.Generator(Generators.Assigned);
+                if (ResolveMaximumLength(definition, propertyInfo) is { } maximumLength)
+                {
+                    id.Length(maximumLength);
+                }
+
                 ConfigureType(id, propertyInfo.PropertyType);
             });
             return;
@@ -182,6 +187,11 @@ internal sealed class NHibernateSessionFactoryRegistry
                 id.Property(propertyInfo.Name, key =>
                 {
                     key.Column(propertyInfo.Name);
+                    if (ResolveMaximumLength(definition, propertyInfo) is { } maximumLength)
+                    {
+                        key.Length(maximumLength);
+                    }
+
                     ConfigureType(key, propertyInfo.PropertyType);
                 });
             }
@@ -204,9 +214,9 @@ internal sealed class NHibernateSessionFactoryRegistry
             property.Column(column =>
             {
                 column.Name(propertyInfo.Name);
-                if (propertyDefinition?.MaxLength is { } maxLength)
+                if (ResolveMaximumLength(definition, propertyInfo) is { } maximumLength)
                 {
-                    column.Length(maxLength);
+                    column.Length(maximumLength);
                 }
 
                 if (propertyDefinition?.IsRequired == true || IsNonNullableValueType(propertyInfo.PropertyType))
@@ -233,6 +243,15 @@ internal sealed class NHibernateSessionFactoryRegistry
 
     private static bool IsNonNullableValueType(Type propertyType)
         => propertyType.IsValueType && Nullable.GetUnderlyingType(propertyType) is null;
+
+    private static int? ResolveMaximumLength(NHibernateEntityDefinition definition, PropertyInfo propertyInfo)
+    {
+        definition.Properties.TryGetValue(propertyInfo.Name, out var propertyDefinition);
+        return NHibernateValueObjectLengthResolver.Resolve(
+            definition.EntityType,
+            propertyInfo,
+            propertyDefinition?.MaxLength);
+    }
 
     private static bool TryGetPersistentPropertyType(Type propertyType, out Type persistentType)
     {

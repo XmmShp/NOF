@@ -8,6 +8,7 @@ Domain primitives package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 - `IValueObject<T>` for source-generated value objects
 - `[NewableValueObject]` for `long`-backed ID value objects
+- `[ValueObjectLength]` for string-backed value-object length constraints shared with persistence providers
 - `Failure` and `[Failure(...)]` for strongly-typed failure definitions
 - `DomainException` and `DomainValidationException`
 - `IIdGenerator` and the ambient `IdGenerator` facade
@@ -47,6 +48,25 @@ public readonly partial struct CustomerName : IValueObject<string>
     }
 }
 ```
+
+For a string-backed value object, declare its length range once on the value-object type:
+
+```csharp
+[ValueObjectLength(100, MinimumLength = 1)]
+public readonly partial struct CustomerName : IValueObject<string>
+{
+    public static void Validate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new DomainValidationException("Customer name cannot be empty.");
+        }
+    }
+}
+```
+
+The source generator validates the normalized string against the minimum and maximum before calling the custom `Validate` method. `MinimumLength` defaults to zero; supported persistence providers use only `MaximumLength` for the column facet. Explicit constant `HasMaxLength` calls produce `NOF306` when redundant, `NOF307` when conflicting, and `NOF308` when the value object has no domain declaration; dynamically computed values are checked when the persistence model is built.
+Diagnostic `NOF016` rejects the attribute on anything other than `IValueObject<string>`, and `NOF017` rejects invalid ranges.
 
 ### `[NewableValueObject]`
 
