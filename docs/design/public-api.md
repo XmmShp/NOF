@@ -89,6 +89,8 @@ An RPC service contract must declare exactly one intended transport:
 public interface IUserService : IRpcService;
 ```
 
+Use `[TransportOverMemory]` instead when the contract is only consumed by an in-process UI such as Blazor Server. It still gets the protocol-neutral client interface and a generated local client, but it gets no HTTP client and the built-in HTTP transport does not map it. Transport initialization remains transport-agnostic; each `IRpcServerTransport` decides whether it applies by inspecting the contract's transport metadata.
+
 `TransportOverAttribute` is abstract and belongs to `NOF.Contract`, so callers and implementations read the same transport metadata from the RPC service interface. The analyzer rejects missing or multiple transport declarations, as well as transport attributes placed on interfaces that do not inherit `IRpcService`. The route prefix is optional. During automatic endpoint registration, `ControllerRpc` prepends it to each operation route, while `JsonRpc` uses it as the single JSON-RPC endpoint route. A JSON-RPC contract without a route prefix is mapped at `/`.
 
 Registering the server through `AddRpcServer<UserService>()` exposes it using the transport style and route prefix declared by the contract.
@@ -115,4 +117,6 @@ Current RPC analyzer diagnostics include:
 - `NOF212`: an RPC service contract cannot declare multiple `TransportOverAttribute` implementations.
 - `NOF213`: methods on a JSON-RPC contract must not declare `[HttpEndpoint]`.
 - `NOF214`: an RPC service contract must declare a `TransportOverAttribute` implementation.
+- `NOF215`: an HTTP RPC route prefix is invalid.
+- `NOF216`: methods on an in-memory RPC contract must not declare `[HttpEndpoint]`.
 - `NOF300`: a class inheriting `RpcServer<TService>` must be `partial`.

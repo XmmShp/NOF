@@ -115,6 +115,14 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         DiagnosticSeverity.Error,
         true);
 
+    public static readonly DiagnosticDescriptor HttpEndpointNotSupportedForMemory = new(
+        "NOF216",
+        "HttpEndpoint is not supported by in-memory RPC contracts",
+        "Method '{0}' on in-memory RPC service '{1}' must not declare HttpEndpointAttribute; in-memory services are not exposed over HTTP",
+        "RpcService",
+        DiagnosticSeverity.Error,
+        true);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         RequestMustBeReferenceType,
@@ -129,7 +137,8 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         MultipleTransportsNotSupported,
         HttpEndpointNotSupportedForJsonRpc,
         TransportRequired,
-        InvalidHttpRoutePrefix
+        InvalidHttpRoutePrefix,
+        HttpEndpointNotSupportedForMemory
     ];
 
     public override void Initialize(AnalysisContext context)
@@ -243,6 +252,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
         var attrLocation = typeSymbol.Locations.FirstOrDefault() ?? Location.None;
         var isJsonRpc = RpcServiceHelpers.TryGetHttpTransport(typeSymbol, out var transport)
             && transport.Style == HttpRpcStyle.JsonRpc;
+        var isMemory = RpcServiceHelpers.HasMemoryTransport(typeSymbol);
 
         // 禁止同名重载：按名称分组，若某一名称出现多次则全部报错
         var declaredMethods = typeSymbol.GetMembers()
@@ -268,7 +278,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
             var methodHttpEndpointAttrs = method.GetAttributes()
                 .Where(a => a.AttributeClass?.ToDisplayString() == RpcServiceHelpers.HttpEndpointAttributeFqn)
                 .ToArray();
-            if (isJsonRpc)
+            if (isJsonRpc || isMemory)
             {
                 foreach (var methodHttpEndpointAttr in methodHttpEndpointAttrs)
                 {
@@ -278,7 +288,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
                         ?? method.Locations.FirstOrDefault()
                         ?? attrLocation;
                     context.ReportDiagnostic(Diagnostic.Create(
-                        HttpEndpointNotSupportedForJsonRpc,
+                        isMemory ? HttpEndpointNotSupportedForMemory : HttpEndpointNotSupportedForJsonRpc,
                         attributeLocation,
                         method.Name,
                         typeSymbol.Name));
@@ -325,7 +335,7 @@ public class RpcServiceAnalyzer : DiagnosticAnalyzer
                 requestType = type;
             }
 
-            if (methodHttpEndpointAttrs.Length == 0 || isJsonRpc)
+            if (methodHttpEndpointAttrs.Length == 0 || isJsonRpc || isMemory)
             {
                 continue;
             }

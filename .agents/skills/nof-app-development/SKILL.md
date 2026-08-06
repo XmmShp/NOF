@@ -44,6 +44,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | `[NewableValueObject]` | static `New()` and `New(IIdGenerator)` |
 | `[AutoInject]` | DI registration |
 | `[HttpEndpoint]` | HTTP route metadata for RPC methods |
+| `[TransportOverMemory]` | in-process-only RPC transport without external endpoint mapping |
 | `[Mappable]` | mapping registrations |
 | `[Failure]` | static failure definitions |
 
@@ -52,6 +53,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | I want to... | Use |
 |---|---|
 | expose HTTP API | `IRpcService` + `[TransportOverHttp]` + `builder.AddRpcServer<TRpcServer>()` |
+| keep an RPC service in process | `IRpcService` + `[TransportOverMemory]` + generated local client |
 | send async work | payload object + `ICommandSender` |
 | publish notifications | payload object + `INotificationPublisher` |
 | publish in-memory events | payload object + `PublishAsEvent()` / `PublishAsEvent(publisher)` / `IEventPublisher` |

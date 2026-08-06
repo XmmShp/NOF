@@ -19,7 +19,8 @@ public class LocalRpcClientGeneratorTests
         typeof(IRpcService),
         typeof(Result),
         typeof(Result<>),
-        typeof(StreamingResult<>)
+        typeof(StreamingResult<>),
+        typeof(TransportOverMemoryAttribute)
     ];
 
     [Fact]
@@ -206,17 +207,18 @@ public class LocalRpcClientGeneratorTests
     }
 
     [Fact]
-    public void RpcServer_WithoutClientGeneratorOutput_StillProducesLocalClient()
+    public void TransportOverMemory_WithoutClientGeneratorOutput_StillProducesLocalClient()
     {
         const string source = """
                               using NOF.Application;
                               using NOF.Contract;
 
-                              namespace MyApp
-                              {
-                                  public sealed record Empty;
+                                  namespace MyApp
+                                  {
+                                      public sealed record Empty;
 
-                                  public interface IDroneOpsService : IRpcService
+                                      [TransportOverMemory]
+                                      public interface IDroneOpsService : IRpcService
                                   {
                                       Result Ping(Empty request);
                                   }

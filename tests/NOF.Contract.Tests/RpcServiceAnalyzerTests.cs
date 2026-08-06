@@ -20,7 +20,8 @@ public class RpcServiceAnalyzerTests
         typeof(Result<>),
         typeof(IParsable<>),
         typeof(TransportOverAttribute),
-        typeof(TransportOverHttpAttribute)
+        typeof(TransportOverHttpAttribute),
+        typeof(TransportOverMemoryAttribute)
     ];
 
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
@@ -144,6 +145,26 @@ public class RpcServiceAnalyzerTests
     }
 
     [Fact]
+    public async Task TransportOverMemory_OnRpcServiceContract_ShouldBeValid()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            [TransportOverMemory]
+            public interface IMyService : IRpcService
+            {
+                Result Ping(Empty request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id is "NOF211" or "NOF212" or "NOF214");
+    }
+
+    [Fact]
     public async Task TransportOverHttp_OnNonRpcServiceInterface_ShouldReportNOF211()
     {
         const string source = """
@@ -168,10 +189,8 @@ public class RpcServiceAnalyzerTests
 
             namespace App;
 
-            public sealed class TransportOverQueueAttribute : TransportOverAttribute;
-
             [TransportOverHttp(HttpRpcStyle.JsonRpc)]
-            [TransportOverQueue]
+            [TransportOverMemory]
             public interface IMyService : IRpcService
             {
                 Result Ping(Empty request);
@@ -248,6 +267,30 @@ public class RpcServiceAnalyzerTests
         var diagnostics = await GetDiagnosticsAsync(source);
 
         Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id == "NOF213");
+    }
+
+    [Fact]
+    public async Task MemoryRpcServiceMethod_WithHttpEndpoint_ShouldReportNOF216()
+    {
+        const string source = """
+            using NOF.Contract;
+
+            namespace App;
+
+            public record PingRequest(string Value);
+
+            [TransportOverMemory]
+            public interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Post, "/ping")]
+                Result Ping(PingRequest request);
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        var diagnostic = Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "NOF216");
+        Assert.Contains(nameof(HttpEndpointAttribute), diagnostic.GetMessage());
     }
 
     [Fact]

@@ -57,6 +57,34 @@ public sealed class HttpEndpointRegistrationTests
     }
 
     [Fact]
+    public async Task AddRpcServer_WithMemoryTransport_ShouldNotMapHttpEndpoint()
+    {
+        var builder = NOFWebApplicationBuilder.Create([]);
+        builder.WebApplicationBuilder.WebHost.UseTestServer();
+        builder.AddRpcServer<MemoryRpcServer>();
+        builder.Services.AddTransient<MemoryEchoHandler>();
+
+        await using var app = await builder.BuildAsync();
+        await app.StartAsync();
+
+        var routeEndpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(static dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Where(static endpoint => string.Equals(endpoint.RoutePattern.RawText, "/MemoryEcho", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(routeEndpoints);
+
+        using var client = app.GetTestClient();
+        using var response = await client.PostAsJsonAsync("/MemoryEcho", new EchoRequest
+        {
+            Value = "local only"
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task AddRpcServer_ShouldUseControllerRpcContractRoutePrefix()
     {
         var builder = NOFWebApplicationBuilder.Create([]);
@@ -131,6 +159,30 @@ public sealed class HttpEndpointRegistrationTests
     }
 
     public sealed class PrefixedEchoHandler : RpcHandler<EchoRequest, Result<EchoResponse>>
+    {
+        public override Task<Result<EchoResponse>> HandleAsync(EchoRequest request, Context context, CancellationToken cancellationToken)
+            => Task.FromResult(Result.Success(new EchoResponse(request.Value)));
+    }
+
+    [TransportOverMemory]
+    public interface IMemoryRpcService : IRpcService
+    {
+        Result<EchoResponse> MemoryEcho(EchoRequest request);
+    }
+
+    public sealed class MemoryRpcServer : RpcServer<IMemoryRpcService>, IRpcServer
+    {
+        public static IReadOnlyDictionary<string, RpcHandlerMapping> HandlerMappings { get; } =
+            new Dictionary<string, RpcHandlerMapping>
+            {
+                [nameof(IMemoryRpcService.MemoryEcho)] =
+                    new(typeof(MemoryEchoHandler), typeof(EchoRequest), typeof(Result<EchoResponse>))
+            };
+
+        protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => HandlerMappings;
+    }
+
+    public sealed class MemoryEchoHandler : RpcHandler<EchoRequest, Result<EchoResponse>>
     {
         public override Task<Result<EchoResponse>> HandleAsync(EchoRequest request, Context context, CancellationToken cancellationToken)
             => Task.FromResult(Result.Success(new EchoResponse(request.Value)));

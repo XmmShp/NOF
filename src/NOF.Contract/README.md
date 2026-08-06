@@ -92,11 +92,31 @@ Generated HTTP request URIs are relative to `HttpClient.BaseAddress`. This prese
 
 The generated constructor accepts `IRequestOutboundPipelineExecutor` as an optional dependency. When a hosting package registers it, outbound middleware participates in the call; when it is absent, the client sends the HTTP request directly.
 
+For RPC contracts that must remain inside one process, use `TransportOverMemory` and omit `HttpEndpoint` metadata:
+
+```csharp
+[TransportOverMemory]
+public interface IBackOfficeService : IRpcService
+{
+    Result<DashboardDto> GetDashboard(GetDashboardRequest request);
+}
+```
+
+NOF still generates `IBackOfficeServiceClient`, and `NOF.Infrastructure` generates the corresponding local client from its `RpcServer<IBackOfficeService>` implementation. Register the server and local client in a Blazor Server or other in-process host:
+
+```csharp
+builder.AddRpcServer<BackOfficeService>();
+builder.Services.ReplaceOrAddScoped<IBackOfficeServiceClient, LocalBackOfficeServiceClient>();
+```
+
+No HTTP client is generated for a memory-only contract. Each server transport decides whether a registration applies to it from the contract's `TransportOverAttribute`; the built-in HTTP transport ignores `TransportOverMemory`, so no HTTP endpoint is mapped.
+
 ### Other Annotations
 
 - **`[HttpEndpoint]`** - declares HTTP verb and route metadata for RPC methods
 - Every RPC service contract must declare exactly one `TransportOverAttribute` implementation
 - **`[TransportOverHttp]`** - declares the HTTP RPC style and an optional contract-level route prefix, and generates the matching `Http...Client`
+- **`[TransportOverMemory]`** - declares that the RPC service is intended for its generated local client; the built-in HTTP transport does not expose it, and methods must not declare `[HttpEndpoint]`
 - HTTP route prefixes are application-relative paths. A leading `/` is optional and one trailing `/` is normalized away; empty or whitespace values, absolute URIs, query strings, fragments, route parameters, escaped characters, backslashes, empty path segments, and `.` or `..` segments are rejected at compile time
 - JSON-RPC contracts use the service route prefix and operation names; when the prefix is omitted, the endpoint is `/`
 - JSON-RPC methods must not declare `[HttpEndpoint]`

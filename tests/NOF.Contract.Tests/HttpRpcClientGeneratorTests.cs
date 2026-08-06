@@ -24,7 +24,8 @@ public class HttpRpcClientGeneratorTests
         typeof(Result),
         typeof(Result<>),
         typeof(StreamingResult<>),
-        typeof(TransportOverHttpAttribute)
+        typeof(TransportOverHttpAttribute),
+        typeof(TransportOverMemoryAttribute)
     ];
 
     [Fact]
@@ -61,7 +62,7 @@ public class HttpRpcClientGeneratorTests
     }
 
     [Fact]
-    public void RpcServiceWithoutHttpTransport_DoesNotGenerateHttpClient()
+    public void TransportOverMemory_GeneratesOnlyProtocolNeutralClient()
     {
         const string source = """
             using NOF.Contract;
@@ -70,6 +71,7 @@ public class HttpRpcClientGeneratorTests
 
             public record PingRequest(string Value);
 
+            [TransportOverMemory]
             public interface IMyService : IRpcService
             {
                 Result Ping(PingRequest request);

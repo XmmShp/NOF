@@ -60,6 +60,8 @@ builder.Services.ReplaceOrAddScoped<IOrderServiceClient, LocalOrderServiceClient
 
 No `LocalRpcClientAttribute` or user-authored empty partial client class is required. Both the Contract and Infrastructure generators derive `IOrderServiceClient` independently from `IOrderService`; the Infrastructure generator never reads Contract generator output.
 
+Contracts marked with `[TransportOverMemory]` use the same local client path. Their server registrations remain available to `RpcServerInvoker`. The transport initialization step stays transport-agnostic and passes every registration to every `IRpcServerTransport`; each transport inspects the contract metadata and decides whether it applies. The built-in HTTP transport ignores memory-only contracts.
+
 ## RPC Server Transport Extension Point
 
 `NOF.Infrastructure` owns the framework-level RPC server transport initialization step. Transport packages implement `IRpcServerTransport` and register the implementation in DI:

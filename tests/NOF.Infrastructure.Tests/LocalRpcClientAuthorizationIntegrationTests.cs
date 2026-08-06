@@ -106,6 +106,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     }
 }
 
+[TransportOverMemory]
 public partial interface IProtectedFleetService : IRpcService
 {
     [RequirePermission("fleet.read")]

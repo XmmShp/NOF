@@ -14,6 +14,7 @@ internal static class RpcServiceHelpers
     public const string ParsableFqn = "System.IParsable<TSelf>";
     public const string TransportOverAttributeFqn = "NOF.Contract.TransportOverAttribute";
     public const string TransportOverHttpAttributeFqn = "NOF.Contract.TransportOverHttpAttribute";
+    public const string TransportOverMemoryAttributeFqn = "NOF.Contract.TransportOverMemoryAttribute";
     public const string SummaryAttributeFqn = "NOF.Contract.SummaryAttribute";
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
     public const string ResultInterfaceFqn = "NOF.Contract.IResult";
@@ -88,6 +89,10 @@ internal static class RpcServiceHelpers
         transport = new HttpTransportInfo((HttpRpcStyle)style, routePrefix);
         return true;
     }
+
+    public static bool HasMemoryTransport(INamedTypeSymbol serviceInterface)
+        => serviceInterface.GetAttributes()
+            .Any(static attr => attr.AttributeClass?.ToDisplayString() == TransportOverMemoryAttributeFqn);
 
     public static string GetOperationName(string methodName)
     {
