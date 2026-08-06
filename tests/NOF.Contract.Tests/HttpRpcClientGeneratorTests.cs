@@ -112,6 +112,41 @@ public class HttpRpcClientGeneratorTests
     }
 
     [Fact]
+    public void ControllerRpcGet_NullableQueryProperties_DoNotProduceNullableWarnings()
+    {
+        const string source = """
+            #nullable enable
+            using System;
+            using NOF.Contract;
+
+            namespace App;
+
+            public record QueryRequest(string? Keyword, DateTime? CreatedFromUtc);
+
+            [TransportOverHttp(HttpRpcStyle.ControllerRpc)]
+            public interface IMyService : IRpcService
+            {
+                [HttpEndpoint(HttpVerb.Get, "/profiles")]
+                Result GetProfiles(QueryRequest request);
+            }
+            """;
+
+        var runResult = RunGenerators(source, out var outputCompilation);
+        var code = GetGeneratedHttpClientCode(runResult);
+        var nullableDiagnostics = outputCompilation.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Id is "CS8602" or "CS8629")
+            .ToList();
+
+        Assert.Empty(nullableDiagnostics);
+        Assert.Contains("var queryValue0 = ((global::App.QueryRequest)currentRequest).Keyword;", code);
+        Assert.Contains("if (queryValue0 is not null)", code);
+        Assert.Contains("global::System.Uri.EscapeDataString(queryValue0)", code);
+        Assert.Contains("var queryValue1 = ((global::App.QueryRequest)currentRequest).CreatedFromUtc;", code);
+        Assert.Contains("if (queryValue1 is { } queryValue1Value)", code);
+        Assert.Contains("queryValue1Value.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)", code);
+    }
+
+    [Fact]
     public void TransportOverJsonRpc_GeneratesJsonRpcDispatchAndHonorsRoutePrefix()
     {
         const string source = """
@@ -292,6 +327,9 @@ public class HttpRpcClientGeneratorTests
     }
 
     private static GeneratorDriverRunResult RunGenerators(string source)
+        => RunGenerators(source, out _);
+
+    private static GeneratorDriverRunResult RunGenerators(string source, out Compilation outputCompilation)
     {
         var extraReferences = _refs.Select(type => type.ToMetadataReference()).ToArray();
         var compilation = CSharpCompilation.CreateCompilation("TestAssembly", source, true, extraReferences);
@@ -299,7 +337,7 @@ public class HttpRpcClientGeneratorTests
             new RpcServiceClientGenerator().AsSourceGenerator(),
             new HttpRpcClientGenerator().AsSourceGenerator());
 
-        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
+        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out outputCompilation, out _);
 
         var diagnostics = outputCompilation.GetDiagnostics()
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)

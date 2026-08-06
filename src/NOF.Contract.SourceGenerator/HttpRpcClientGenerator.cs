@@ -255,9 +255,9 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
             if (properties.Count > 0)
             {
                 sb.AppendLine("                var queryParts = new global::System.Collections.Generic.List<string>();");
-                foreach (var property in properties)
+                for (var i = 0; i < properties.Count; i++)
                 {
-                    EmitQueryParamAppend(sb, property, requestType);
+                    EmitQueryParamAppend(sb, properties[i], requestType, i);
                 }
 
                 sb.AppendLine("                if (queryParts.Count > 0)");
@@ -310,43 +310,52 @@ public sealed class HttpRpcClientGenerator : IIncrementalGenerator
         }
     }
 
-    private static void EmitQueryParamAppend(StringBuilder sb, IPropertySymbol property, string requestType)
+    private static void EmitQueryParamAppend(StringBuilder sb, IPropertySymbol property, string requestType, int index)
     {
         var propertyName = property.Name;
         var accessor = $"(({requestType})currentRequest).{propertyName}";
+        var nullableValueType = property.Type as INamedTypeSymbol;
+        var isNullableValueType = nullableValueType?.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
         var isNullable = property.Type.NullableAnnotation == NullableAnnotation.Annotated
-            || property.Type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
-        if (isNullable)
+            || isNullableValueType;
+        if (isNullableValueType)
         {
-            sb.AppendLine($"                if ({accessor} is not null)");
+            var cachedValue = $"queryValue{index}";
+            var unwrappedValue = $"{cachedValue}Value";
+            sb.AppendLine($"                var {cachedValue} = {accessor};");
+            sb.AppendLine($"                if ({cachedValue} is {{ }} {unwrappedValue})");
             sb.AppendLine("                {");
-            sb.AppendLine($"                    queryParts.Add(global::System.Uri.EscapeDataString({Literal(propertyName)}) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression(accessor, property.Type, true)}));");
+            sb.AppendLine($"                    queryParts.Add(global::System.Uri.EscapeDataString({Literal(propertyName)}) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression(unwrappedValue, nullableValueType!.TypeArguments[0])}));");
+            sb.AppendLine("                }");
+        }
+        else if (isNullable)
+        {
+            var cachedValue = $"queryValue{index}";
+            sb.AppendLine($"                var {cachedValue} = {accessor};");
+            sb.AppendLine($"                if ({cachedValue} is not null)");
+            sb.AppendLine("                {");
+            sb.AppendLine($"                    queryParts.Add(global::System.Uri.EscapeDataString({Literal(propertyName)}) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression(cachedValue, property.Type)}));");
             sb.AppendLine("                }");
         }
         else
         {
-            sb.AppendLine($"                queryParts.Add(global::System.Uri.EscapeDataString({Literal(propertyName)}) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression(accessor, property.Type, false)}));");
+            sb.AppendLine($"                queryParts.Add(global::System.Uri.EscapeDataString({Literal(propertyName)}) + \"=\" + global::System.Uri.EscapeDataString({FormatValueExpression(accessor, property.Type)}));");
         }
     }
 
-    internal static string FormatValueExpression(string accessor, ITypeSymbol type, bool isNullable)
+    internal static string FormatValueExpression(string accessor, ITypeSymbol type)
     {
-        var underlying = type;
-        var isNullableValueType = false;
-        if (isNullable && type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+        if (type.SpecialType == SpecialType.System_String)
         {
-            underlying = nullable.TypeArguments[0];
-            isNullableValueType = true;
+            return accessor;
         }
 
-        var valueAccessor = isNullableValueType ? $"{accessor}.Value" : accessor;
-        return underlying.ToDisplayString() switch
+        return type.ToDisplayString() switch
         {
-            "System.DateTime" => $"{valueAccessor}.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)",
-            "System.DateTimeOffset" => $"{valueAccessor}.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)",
-            "System.DateOnly" => $"{valueAccessor}.ToString(\"yyyy-MM-dd\", global::System.Globalization.CultureInfo.InvariantCulture)",
-            "System.TimeOnly" => $"{valueAccessor}.ToString(\"HH:mm:ss.FFFFFFF\", global::System.Globalization.CultureInfo.InvariantCulture)",
-            "string" => isNullable ? $"{accessor}!" : accessor,
+            "System.DateTime" => $"{accessor}.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)",
+            "System.DateTimeOffset" => $"{accessor}.ToString(\"O\", global::System.Globalization.CultureInfo.InvariantCulture)",
+            "System.DateOnly" => $"{accessor}.ToString(\"yyyy-MM-dd\", global::System.Globalization.CultureInfo.InvariantCulture)",
+            "System.TimeOnly" => $"{accessor}.ToString(\"HH:mm:ss.FFFFFFF\", global::System.Globalization.CultureInfo.InvariantCulture)",
             _ => $"{accessor}.ToString()!"
         };
     }
