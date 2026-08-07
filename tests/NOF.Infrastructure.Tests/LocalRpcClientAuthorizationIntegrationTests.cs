@@ -14,9 +14,10 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     [Fact]
     public async Task LocalRpcClient_ShouldReturn401_WhenUserIsUnauthenticated()
     {
-        using var provider = BuildServiceProvider();
+        await using var provider = BuildServiceProvider();
+        await using var callerScope = provider.CreateAsyncScope();
 
-        var client = provider.GetRequiredService<LocalProtectedFleetServerClient>();
+        var client = callerScope.ServiceProvider.GetRequiredService<LocalProtectedFleetServerClient>();
         Result<GetFleetOverviewResponse> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
 
@@ -29,12 +30,13 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     [Fact]
     public async Task LocalRpcClient_ShouldInvokeHandler_WhenUserHasPermission()
     {
-        using var provider = BuildServiceProvider();
-        var userContext = (UserContext)provider.GetRequiredService<IUserContext>();
+        await using var provider = BuildServiceProvider();
+        await using var callerScope = provider.CreateAsyncScope();
+        var userContext = (UserContext)callerScope.ServiceProvider.GetRequiredService<IUserContext>();
         userContext.Logout();
         userContext.User.AddIdentity(TestPrincipalFactory.CreateAuthenticatedIdentity((ClaimTypes.Permission, "fleet.read")));
 
-        var client = provider.GetRequiredService<LocalProtectedFleetServerClient>();
+        var client = callerScope.ServiceProvider.GetRequiredService<LocalProtectedFleetServerClient>();
         Result<GetFleetOverviewResponse> result = await client.GetFleetOverviewAsync(new Empty(), Context.Empty);
         var recorder = provider.GetRequiredService<InvocationRecorder>();
 
@@ -45,23 +47,32 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
     }
 
     [Fact]
-    public async Task LocalRpcClient_ShouldInvokeHandlerAndInMemoryEventHandlerInClientScope()
+    public async Task LocalRpcClient_ShouldUseCallerScopeForOutboundAndNewScopeForEachInboundInvocation()
     {
-        using var provider = BuildServiceProvider();
-        using var scope = provider.CreateScope();
-        scope.ServiceProvider.ResolveDaemonServices();
+        await using var provider = BuildServiceProvider();
+        await using var callerScope = provider.CreateAsyncScope();
 
-        var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
-        var marker = scope.ServiceProvider.GetRequiredService<LocalScopeMarker>();
-        var client = scope.ServiceProvider.GetRequiredService<LocalProtectedFleetServerClient>();
+        var dbContext = callerScope.ServiceProvider.GetRequiredService<IDbContext>();
+        var marker = callerScope.ServiceProvider.GetRequiredService<LocalScopeMarker>();
+        var client = callerScope.ServiceProvider.GetRequiredService<LocalProtectedFleetServerClient>();
 
-        var result = await client.CheckScopeAsync(new ScopeCheckRequest(dbContext, marker), Context.Empty);
-        var probe = scope.ServiceProvider.GetRequiredService<LocalScopeProbe>();
+        var firstResult = await client.CheckScopeAsync(new ScopeCheckRequest(dbContext, marker), Context.Empty);
+        var secondResult = await client.CheckScopeAsync(new ScopeCheckRequest(dbContext, marker), Context.Empty);
+        var probe = callerScope.ServiceProvider.GetRequiredService<LocalScopeProbe>();
 
-        Assert.True(result.IsSuccess);
-        Assert.True(probe.HandlerUsedClientScopeDbContext);
+        Assert.True(firstResult.IsSuccess);
+        Assert.True(secondResult.IsSuccess);
+        Assert.True(probe.OutboundUsedCallerScopeMarker);
+        Assert.False(probe.HandlerUsedCallerScopeDbContext);
+        Assert.False(probe.HandlerUsedCallerScopeMarker);
         Assert.True(probe.EventHandlerUsedHandlerDbContext);
-        Assert.True(probe.EventHandlerUsedClientScopeMarker);
+        Assert.True(probe.EventHandlerUsedHandlerScopeMarker);
+        Assert.Equal(2, probe.HandlerScopeMarkers.Count);
+        Assert.All(probe.HandlerScopeMarkers, handlerMarker => Assert.NotSame(marker, handlerMarker));
+        Assert.NotSame(probe.HandlerScopeMarkers[0], probe.HandlerScopeMarkers[1]);
+        Assert.Equal(2, probe.DaemonServiceActivations);
+        Assert.Equal(2, probe.DaemonServiceAsyncDisposals);
+        Assert.Equal(2, probe.OutboundObservedDisposedInboundScopes);
     }
 
     private static ServiceProvider BuildServiceProvider()
@@ -77,19 +88,21 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddScoped<LocalScopeMarker>();
         services.AddSingleton<InvocationRecorder>();
         services.AddSingleton<LocalScopeProbe>();
-        services.AddSingleton<ProtectedFleetServer>();
+        services.AddScoped<ProtectedFleetServer>();
         services.AddTransient<GetFleetOverviewHandler>();
         services.AddTransient<ScopeCheckHandler>();
         services.AddTransient<ScopeCheckEventHandler>();
         services.AddTransient<LocalProtectedFleetServerClient>();
+        services.AddRequestOutboundMiddleware<ScopeCheckOutboundMiddleware>();
         services.AddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
         services.AddTransient<AuthorizationInboundMiddleware>();
         services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
         services.AddScoped<IEventPublisher, InMemoryEventPublisher>();
         services.AddScoped<IDaemonService, EventPublisherAmbientDaemonService>();
+        services.AddScoped<IDaemonService, ScopeLifecycleDaemonService>();
 
         services.AddScoped<RequestInboundPipelineExecutor>();
-        services.AddSingleton<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
+        services.AddScoped<IRequestOutboundPipelineExecutor, RequestOutboundPipelineExecutor>();
         services.AddScoped<RpcServerInvocationResolver>();
 
         var rpcServerRegistry = new RpcServerRegistry();
@@ -102,7 +115,11 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
             return registry;
         });
 
-        return services.BuildServiceProvider();
+        return services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
     }
 }
 
@@ -138,11 +155,23 @@ public sealed class LocalScopeMarker;
 
 public sealed class LocalScopeProbe
 {
-    public bool HandlerUsedClientScopeDbContext { get; set; }
+    public bool OutboundUsedCallerScopeMarker { get; set; }
+
+    public bool HandlerUsedCallerScopeDbContext { get; set; }
+
+    public bool HandlerUsedCallerScopeMarker { get; set; }
 
     public bool EventHandlerUsedHandlerDbContext { get; set; }
 
-    public bool EventHandlerUsedClientScopeMarker { get; set; }
+    public bool EventHandlerUsedHandlerScopeMarker { get; set; }
+
+    public List<LocalScopeMarker> HandlerScopeMarkers { get; } = [];
+
+    public int DaemonServiceActivations { get; set; }
+
+    public int DaemonServiceAsyncDisposals { get; set; }
+
+    public int OutboundObservedDisposedInboundScopes { get; set; }
 }
 
 public sealed class InvocationRecorder
@@ -164,6 +193,54 @@ public sealed class ProtectedFleetServer : RpcServer<IProtectedFleetService>
     protected override IReadOnlyDictionary<string, RpcHandlerMapping> GetHandlerMappings() => _mappings;
 }
 
+public sealed class ScopeCheckOutboundMiddleware(
+    LocalScopeMarker marker,
+    LocalScopeProbe probe) : IRequestOutboundMiddleware
+{
+    public TopologyComparison Compare(IRequestOutboundMiddleware other)
+        => TopologyComparison.DoesNotMatter;
+
+    public async ValueTask InvokeAsync(
+        RequestOutboundContext context,
+        object request,
+        RequestOutboundHandlerDelegate next,
+        CancellationToken cancellationToken)
+    {
+        if (request is not ScopeCheckRequest scopeCheckRequest)
+        {
+            await next(context, request, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        probe.OutboundUsedCallerScopeMarker = ReferenceEquals(scopeCheckRequest.ExpectedMarker, marker);
+        var expectedDisposalCount = probe.DaemonServiceAsyncDisposals + 1;
+
+        await next(context, request, cancellationToken).ConfigureAwait(false);
+
+        if (probe.DaemonServiceAsyncDisposals >= expectedDisposalCount)
+        {
+            probe.OutboundObservedDisposedInboundScopes++;
+        }
+    }
+}
+
+public sealed class ScopeLifecycleDaemonService : IDaemonService, IAsyncDisposable
+{
+    private readonly LocalScopeProbe _probe;
+
+    public ScopeLifecycleDaemonService(LocalScopeProbe probe)
+    {
+        _probe = probe;
+        _probe.DaemonServiceActivations++;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _probe.DaemonServiceAsyncDisposals++;
+        return ValueTask.CompletedTask;
+    }
+}
+
 public sealed class ScopeCheckHandler(
     IDbContext dbContext,
     LocalScopeMarker marker,
@@ -171,7 +248,9 @@ public sealed class ScopeCheckHandler(
 {
     public override Task<Result> HandleAsync(ScopeCheckRequest request, Context context, CancellationToken cancellationToken)
     {
-        probe.HandlerUsedClientScopeDbContext = ReferenceEquals(request.ExpectedDbContext, dbContext);
+        probe.HandlerUsedCallerScopeDbContext = ReferenceEquals(request.ExpectedDbContext, dbContext);
+        probe.HandlerUsedCallerScopeMarker = ReferenceEquals(request.ExpectedMarker, marker);
+        probe.HandlerScopeMarkers.Add(marker);
         new ScopeCheckEvent(dbContext, marker).PublishAsEvent();
         return Task.FromResult(Result.Success());
     }
@@ -185,7 +264,7 @@ public sealed class ScopeCheckEventHandler(
     public override Task HandleAsync(ScopeCheckEvent @event, CancellationToken cancellationToken)
     {
         probe.EventHandlerUsedHandlerDbContext = ReferenceEquals(@event.HandlerDbContext, dbContext);
-        probe.EventHandlerUsedClientScopeMarker = ReferenceEquals(@event.HandlerMarker, marker);
+        probe.EventHandlerUsedHandlerScopeMarker = ReferenceEquals(@event.HandlerMarker, marker);
         return Task.CompletedTask;
     }
 }

@@ -60,6 +60,8 @@ builder.Services.ReplaceOrAddScoped<IOrderServiceClient, LocalOrderServiceClient
 
 No `LocalRpcClientAttribute` or user-authored empty partial client class is required. Both the Contract and Infrastructure generators derive `IOrderServiceClient` independently from `IOrderService`; the Infrastructure generator never reads Contract generator output.
 
+Local calls preserve the same request boundary as a remote RPC for dependency-injection lifetimes. The outbound pipeline runs in the caller's scope. Its terminal dispatch creates and asynchronously disposes a new scope for RPC server resolution, daemon-service activation, the inbound pipeline, and the handler. Scoped dependencies such as `DbContext` are therefore not shared between the caller and handler, while headers produced by outbound middleware cross the boundary.
+
 Contracts marked with `[TransportOverMemory]` use the same local client path. Their server registrations remain available to `RpcServerInvoker`. The transport initialization step stays transport-agnostic and passes every registration to every `IRpcServerTransport`; each transport inspects the contract metadata and decides whether it applies. The built-in HTTP transport ignores memory-only contracts.
 
 ## RPC Server Transport Extension Point
