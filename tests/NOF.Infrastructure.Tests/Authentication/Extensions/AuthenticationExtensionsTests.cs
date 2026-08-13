@@ -278,6 +278,130 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public async Task ClientCredentialsGrant_ShouldAuthenticateWithPrivateKeyJwtClientAssertion()
+    {
+        const string clientId = "assertion-client";
+        const string keyId = "assertion-key-1";
+        const string issuer = "https://issuer.local/oauth2";
+        var audience = $"{issuer}/token";
+        using var rsa = RSA.Create(2048);
+        var jsonWebKeySet = CreateJsonWebKeySet(rsa, keyId);
+        var builder = NOFTestAppBuilder.Create();
+        builder.AddOidcServer(options =>
+        {
+            options.Issuer = issuer;
+            options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;
+        })
+        .AddClientAssertionClient(
+            clientId,
+            jsonWebKeySet,
+            ["jobs.read", "jobs.write"],
+            displayName: "Assertion Client");
+        builder.UseDbContext<NOFDbContext>()
+            .WithTenantMode(TenantMode.DatabasePerTenant)
+            .WithConnectionString($"Data Source=nof-client-assertion-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString))
+            .MigrateOnInitialize();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var repository = scope.GetRequiredService<IOAuthClientRepository>();
+        var client = await repository.GetAsync(clientId);
+        var tokenService = new TestTokenService();
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = scope.Services
+        };
+        var assertion = CreateClientAssertion(rsa, keyId, clientId, audience, "assertion-jti-1");
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.ClientCredentials,
+            ClientAssertionType = OAuthClientAssertionTypes.JwtBearer,
+            ClientAssertion = assertion,
+            Scope = "jobs.read"
+        };
+        var options = scope.GetRequiredService<IOptions<OAuthAuthorizationServerOptions>>().Value;
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromClientCredentialsAsync(
+            httpContext.Request,
+            request,
+            scope.Services,
+            tokenService,
+            options,
+            CancellationToken.None);
+        var replayResult = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromClientCredentialsAsync(
+            httpContext.Request,
+            request,
+            scope.Services,
+            tokenService,
+            options,
+            CancellationToken.None);
+
+        Assert.True(client.IsSuccess, client.Message);
+        Assert.Equal(jsonWebKeySet, client.Value.JsonWebKeySet);
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.Equal("access-token", result.Value.AccessToken);
+        Assert.Equal(clientId, tokenService.LastRequest?.ClientId);
+        Assert.False(replayResult.IsSuccess);
+        Assert.Equal("invalid_client", replayResult.ErrorCode);
+        Assert.Equal("client assertion has already been used.", replayResult.Message);
+    }
+
+    [Fact]
+    public async Task ClientCredentialsGrant_ShouldRejectClientAssertionWithWrongAudience()
+    {
+        const string clientId = "wrong-audience-assertion-client";
+        const string keyId = "assertion-key-1";
+        const string issuer = "https://issuer.local/oauth2";
+        using var rsa = RSA.Create(2048);
+        var builder = CreateAuthorityBuilder($"Data Source=nof-wrong-audience-assertion-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var repository = scope.GetRequiredService<IOAuthClientRepository>();
+        var createResult = await repository.CreateAsync(new CreateOAuthClientRequest
+        {
+            ClientId = clientId,
+            JsonWebKeySet = CreateJsonWebKeySet(rsa, keyId),
+            AllowedScopes = ["jobs.read"]
+        });
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = scope.Services
+        };
+        var request = new OAuthTokenRequest
+        {
+            GrantType = OAuthGrantTypes.ClientCredentials,
+            ClientId = clientId,
+            ClientAssertionType = OAuthClientAssertionTypes.JwtBearer,
+            ClientAssertion = CreateClientAssertion(
+                rsa,
+                keyId,
+                clientId,
+                "https://issuer.local/oauth2/not-token",
+                "assertion-jti-2"),
+            Scope = "jobs.read"
+        };
+
+        var result = await Microsoft.AspNetCore.Routing.NOFOidcServerExtensions.TokenFromClientCredentialsAsync(
+            httpContext.Request,
+            request,
+            scope.Services,
+            new TestTokenService(),
+            new OAuthAuthorizationServerOptions
+            {
+                Issuer = issuer
+            },
+            CancellationToken.None);
+
+        Assert.True(createResult.IsSuccess, createResult.Message);
+        Assert.Null(createResult.Value.ClientSecret);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("invalid_client", result.ErrorCode);
+        Assert.Equal("client assertion is invalid.", result.Message);
+    }
+
+    [Fact]
     public async Task ClientCredentialsGrant_ShouldIssueAccessTokenWithoutRefreshToken()
     {
         using var services = new ServiceCollection()
@@ -1371,6 +1495,53 @@ public sealed class AuthenticationExtensionsTests
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ServiceType == typeof(ITokenService));
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(LocalJwksService));
         Assert.DoesNotContain(builder.Services, descriptor => descriptor.ImplementationType == typeof(SigningKeyRotationBackgroundService));
+    }
+
+    private static string CreateJsonWebKeySet(RSA rsa, string keyId)
+    {
+        var parameters = rsa.ExportParameters(false);
+        return JsonSerializer.Serialize(new
+        {
+            keys = new[]
+            {
+                new
+                {
+                    kty = JsonWebAlgorithmsKeyTypes.RSA,
+                    use = JsonWebKeyUseNames.Sig,
+                    kid = keyId,
+                    alg = SecurityAlgorithms.RsaSha256,
+                    n = Base64UrlEncoder.Encode(parameters.Modulus),
+                    e = Base64UrlEncoder.Encode(parameters.Exponent)
+                }
+            }
+        });
+    }
+
+    private static string CreateClientAssertion(
+        RSA rsa,
+        string keyId,
+        string clientId,
+        string audience,
+        string tokenId)
+    {
+        var now = DateTime.UtcNow;
+        var token = new JwtSecurityToken(
+            issuer: clientId,
+            audience: audience,
+            claims:
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, clientId),
+                new Claim(JwtRegisteredClaimNames.Jti, tokenId)
+            ],
+            notBefore: now.AddSeconds(-5),
+            expires: now.AddMinutes(2),
+            signingCredentials: new SigningCredentials(
+                new RsaSecurityKey(rsa)
+                {
+                    KeyId = keyId
+                },
+                SecurityAlgorithms.RsaSha256));
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     private static NOFTestAppBuilder CreateAuthorityBuilder(string connectionString)

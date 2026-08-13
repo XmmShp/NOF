@@ -16,6 +16,12 @@ public sealed record OAuthTokenRequest
     [FromForm(Name = "client_secret")]
     public string ClientSecret { get; set; } = string.Empty;
 
+    [FromForm(Name = "client_assertion_type")]
+    public string ClientAssertionType { get; set; } = string.Empty;
+
+    [FromForm(Name = "client_assertion")]
+    public string ClientAssertion { get; set; } = string.Empty;
+
     [FromForm(Name = "redirect_uri")]
     public string RedirectUri { get; set; } = string.Empty;
 

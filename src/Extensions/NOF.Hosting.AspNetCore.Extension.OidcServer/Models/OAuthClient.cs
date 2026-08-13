@@ -12,6 +12,8 @@ public sealed class OAuthClient
 
     public string SecretSalt { get; set; } = string.Empty;
 
+    public string JsonWebKeySet { get; set; } = string.Empty;
+
     public string AllowedScopes { get; set; } = "[]";
 
     public string RedirectUris { get; set; } = "[]";
@@ -41,6 +43,7 @@ public sealed class OAuthClientModelCreatingContributor : IDbContextModelCreatin
             entity.Property(e => e.DisplayName).HasMaxLength(256).IsRequired();
             entity.Property(e => e.SecretHash).HasMaxLength(128).IsRequired();
             entity.Property(e => e.SecretSalt).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.JsonWebKeySet).IsRequired();
             entity.Property(e => e.AllowedScopes).IsRequired();
             entity.Property(e => e.RedirectUris).IsRequired();
             entity.Property(e => e.AccessTokenClaims).IsRequired();

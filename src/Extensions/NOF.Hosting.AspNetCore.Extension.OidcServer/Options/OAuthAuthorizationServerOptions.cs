@@ -45,6 +45,16 @@ public sealed class OAuthAuthorizationServerOptions
 
     public TimeSpan AuthorizationCodeExpiration { get; set; } = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// Gets or sets the maximum accepted lifetime of a private-key JWT client assertion.
+    /// </summary>
+    public TimeSpan ClientAssertionMaximumLifetime { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Gets or sets the clock skew allowed while validating private-key JWT client assertions.
+    /// </summary>
+    public TimeSpan ClientAssertionClockSkew { get; set; } = TimeSpan.FromMinutes(1);
+
     public TimeSpan RedeemedAuthorizationCodeGracePeriod { get; set; } = TimeSpan.FromSeconds(10);
 
     public IReadOnlyList<string> ScopesSupported { get; set; } =

@@ -8,6 +8,19 @@ public static class OAuthGrantTypes
     public const string TokenExchange = "urn:ietf:params:oauth:grant-type:token-exchange";
 }
 
+public static class OAuthClientAuthenticationMethods
+{
+    public const string ClientSecretBasic = "client_secret_basic";
+    public const string ClientSecretPost = "client_secret_post";
+    public const string PrivateKeyJwt = "private_key_jwt";
+    public const string None = "none";
+}
+
+public static class OAuthClientAssertionTypes
+{
+    public const string JwtBearer = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+}
+
 public static class OAuthTokenTypes
 {
     public const string AccessToken = "urn:ietf:params:oauth:token-type:access_token";

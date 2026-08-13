@@ -112,6 +112,8 @@ public static partial class NOFOidcServerExtensions
         [FromForm(Name = "code")] string? code,
         [FromForm(Name = "client_id")] string? clientId,
         [FromForm(Name = "client_secret")] string? clientSecret,
+        [FromForm(Name = "client_assertion_type")] string? clientAssertionType,
+        [FromForm(Name = "client_assertion")] string? clientAssertion,
         [FromForm(Name = "redirect_uri")] string? redirectUri,
         [FromForm(Name = "code_verifier")] string? codeVerifier,
         [FromForm(Name = "refresh_token")] string? refreshToken,
@@ -130,6 +132,8 @@ public static partial class NOFOidcServerExtensions
             Code = code ?? string.Empty,
             ClientId = clientId ?? string.Empty,
             ClientSecret = clientSecret ?? string.Empty,
+            ClientAssertionType = clientAssertionType ?? string.Empty,
+            ClientAssertion = clientAssertion ?? string.Empty,
             RedirectUri = redirectUri ?? string.Empty,
             CodeVerifier = codeVerifier ?? string.Empty,
             RefreshToken = refreshToken ?? string.Empty,
@@ -649,6 +653,11 @@ public static partial class NOFOidcServerExtensions
         }
 
         var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (clientCredentials.Error is not null)
+        {
+            return Fail(clientCredentials.Error.Error, clientCredentials.Error.ErrorDescription);
+        }
+
         if (string.IsNullOrWhiteSpace(clientCredentials.ClientId))
         {
             return Fail("invalid_client", "client_id is required.");
@@ -660,7 +669,10 @@ public static partial class NOFOidcServerExtensions
                 clientCredentials.ClientId,
                 clientCredentials.ClientSecret,
                 requestedScopes,
-                clientCredentials.AuthenticationMethod),
+                clientCredentials.AuthenticationMethod,
+                EmptyToNull(request.ClientAssertion),
+                EmptyToNull(request.ClientAssertionType),
+                BuildTokenEndpointAudience(oauthOptions)),
             cancellationToken).ConfigureAwait(false);
 
         if (validation is OAuthClientCredentialsValidationResult.Failure failure)
@@ -941,6 +953,11 @@ public static partial class NOFOidcServerExtensions
         ArgumentNullException.ThrowIfNull(request);
 
         var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (clientCredentials.Error is not null)
+        {
+            return;
+        }
+
         request.ClientId = clientCredentials.ClientId;
         request.ClientSecret = clientCredentials.ClientSecret ?? string.Empty;
     }
@@ -962,6 +979,11 @@ public static partial class NOFOidcServerExtensions
         }
 
         var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (clientCredentials.Error is not null)
+        {
+            return clientCredentials.Error;
+        }
+
         if (string.IsNullOrWhiteSpace(clientCredentials.ClientId))
         {
             return CreateOAuthError("invalid_client", "client_id is required.");
@@ -975,6 +997,14 @@ public static partial class NOFOidcServerExtensions
 
         if (clientResult.Value.ClientType == OAuthClientType.Public)
         {
+            if (string.Equals(
+                    clientCredentials.AuthenticationMethod,
+                    OAuthClientAuthenticationMethods.PrivateKeyJwt,
+                    StringComparison.Ordinal))
+            {
+                return CreateOAuthError("invalid_client", "public clients must not use client assertions.");
+            }
+
             if (!string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
             {
                 return CreateOAuthError("invalid_client", "public clients must not use client_secret.");
@@ -996,7 +1026,11 @@ public static partial class NOFOidcServerExtensions
             return CreateOAuthError("invalid_client", "public client authentication is invalid for this grant type.");
         }
 
-        if (string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
+        if (!string.Equals(
+                clientCredentials.AuthenticationMethod,
+                OAuthClientAuthenticationMethods.PrivateKeyJwt,
+                StringComparison.Ordinal)
+            && string.IsNullOrWhiteSpace(clientCredentials.ClientSecret))
         {
             return CreateOAuthError("invalid_client", "client_secret is required.");
         }
@@ -1006,7 +1040,10 @@ public static partial class NOFOidcServerExtensions
                 clientCredentials.ClientId,
                 clientCredentials.ClientSecret,
                 ParseScopes(request.Scope),
-                clientCredentials.AuthenticationMethod),
+                clientCredentials.AuthenticationMethod,
+                EmptyToNull(request.ClientAssertion),
+                EmptyToNull(request.ClientAssertionType),
+                ResolveTokenEndpointAudience(serviceProvider)),
             cancellationToken).ConfigureAwait(false);
 
         return validation switch
@@ -1039,6 +1076,11 @@ public static partial class NOFOidcServerExtensions
             Scope = scope
         };
         var clientCredentials = ResolveClientCredentials(httpRequest, request);
+        if (clientCredentials.Error is not null)
+        {
+            return (clientCredentials.Error, string.Empty);
+        }
+
         if (string.IsNullOrWhiteSpace(clientCredentials.ClientId))
         {
             return (CreateOAuthError("invalid_client", "client_id is required."), string.Empty);
@@ -1087,14 +1129,51 @@ public static partial class NOFOidcServerExtensions
         };
     }
 
-    private static (string ClientId, string? ClientSecret, string AuthenticationMethod) ResolveClientCredentials(
+    private static (string ClientId, string? ClientSecret, string AuthenticationMethod, OAuthError? Error) ResolveClientCredentials(
         HttpRequest httpRequest,
         OAuthTokenRequest request)
     {
         const string basicAuthenticationPrefix = "Basic ";
         var authorization = httpRequest.Headers.Authorization.ToString();
-        if (!string.IsNullOrWhiteSpace(authorization)
-            && authorization.StartsWith(basicAuthenticationPrefix, StringComparison.OrdinalIgnoreCase))
+        var hasBasicAuthentication = !string.IsNullOrWhiteSpace(authorization)
+            && authorization.StartsWith(basicAuthenticationPrefix, StringComparison.OrdinalIgnoreCase);
+        var hasClientAssertion = !string.IsNullOrWhiteSpace(request.ClientAssertion)
+            || !string.IsNullOrWhiteSpace(request.ClientAssertionType);
+        if (hasClientAssertion)
+        {
+            if (hasBasicAuthentication || !string.IsNullOrWhiteSpace(request.ClientSecret))
+            {
+                return (
+                    request.ClientId,
+                    null,
+                    OAuthClientAuthenticationMethods.PrivateKeyJwt,
+                    CreateOAuthError("invalid_client", "multiple client authentication methods are not allowed."));
+            }
+
+            var assertionClientId = request.ClientId;
+            if (string.IsNullOrWhiteSpace(assertionClientId)
+                && !string.IsNullOrWhiteSpace(request.ClientAssertion))
+            {
+                try
+                {
+                    assertionClientId = new JwtSecurityTokenHandler()
+                        .ReadJwtToken(request.ClientAssertion)
+                        .Issuer;
+                }
+                catch (Exception exception) when (exception is ArgumentException or SecurityTokenException)
+                {
+                    assertionClientId = string.Empty;
+                }
+            }
+
+            return (
+                assertionClientId,
+                null,
+                OAuthClientAuthenticationMethods.PrivateKeyJwt,
+                null);
+        }
+
+        if (hasBasicAuthentication)
         {
             try
             {
@@ -1105,7 +1184,8 @@ public static partial class NOFOidcServerExtensions
                     return (
                         Uri.UnescapeDataString(decoded[..separatorIndex]),
                         Uri.UnescapeDataString(decoded[(separatorIndex + 1)..]),
-                        "client_secret_basic");
+                        OAuthClientAuthenticationMethods.ClientSecretBasic,
+                        null);
                 }
             }
             catch (FormatException)
@@ -1114,7 +1194,22 @@ public static partial class NOFOidcServerExtensions
             }
         }
 
-        return (request.ClientId, EmptyToNull(request.ClientSecret), "client_secret_post");
+        return (
+            request.ClientId,
+            EmptyToNull(request.ClientSecret),
+            OAuthClientAuthenticationMethods.ClientSecretPost,
+            null);
+    }
+
+    private static string BuildTokenEndpointAudience(OAuthAuthorizationServerOptions options)
+        => $"{options.Issuer.TrimEnd('/')}/token";
+
+    private static string? ResolveTokenEndpointAudience(IServiceProvider serviceProvider)
+    {
+        var options = ResolveService<IOptions<OAuthAuthorizationServerOptions>>(serviceProvider)?.Value;
+        return options is null || string.IsNullOrWhiteSpace(options.Issuer)
+            ? null
+            : BuildTokenEndpointAudience(options);
     }
 
     internal static OAuthIntrospectionResponse BuildIntrospectionResponse(IntrospectTokenResponse response)

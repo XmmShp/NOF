@@ -61,6 +61,25 @@ builder.AddOidcServer(options =>
     redirectUris: ["https://service.example.com/oauth/callback"]);
 ```
 
+Clients that authenticate with a signed JWT instead of a shared secret can register an RSA public JWKS:
+
+```csharp
+builder.AddOidcServer(options =>
+{
+    options.Issuer = "https://auth.example.com/oauth2";
+    options.AccessTokenAudience = "your-app";
+    options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
+})
+.AddClientAssertionClient(
+    "worker-client",
+    """
+    {"keys":[{"kty":"RSA","use":"sig","kid":"worker-key-1","alg":"RS256","n":"...","e":"AQAB"}]}
+    """,
+    ["api.read", "api.write"]);
+```
+
+The client posts `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer` and the signed JWT as `client_assertion`. The assertion must use `RS256`, set both `iss` and `sub` to the client ID, use the published token endpoint URL as `aud`, and contain a valid `exp`. Its lifetime is limited by `ClientAssertionMaximumLifetime` (five minutes by default) with `ClientAssertionClockSkew` (one minute by default). When a `jti` is present, the built-in repository rejects replay for the assertion's remaining lifetime.
+
 Authorization requests may omit `redirect_uri` when the client has exactly one registered redirect URI; in that case the server uses the registered value automatically. When `redirect_uri` is supplied, it must exactly match one of the client's registered `RedirectUris`. The default persisted client management service rejects non-absolute redirect URIs at create/update time, and the authorization endpoint refuses to redirect to unregistered callback URLs.
 
 `ITokenService` accepts explicit multi-value claims through `TokenClaim.Array(...)`. The issuer expands those values into repeated same-name claims so the resulting JWT payload is emitted as a standard JSON array claim.

@@ -20,6 +20,8 @@ public sealed record OAuthClientDescriptor
 
     public required IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; }
 
+    public string JsonWebKeySet { get; init; } = string.Empty;
+
     public required OAuthClientType ClientType { get; init; }
 
     public required bool IsEnabled { get; init; }
@@ -50,6 +52,8 @@ public sealed record CreateOAuthClientRequest
 
     public IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; } = [];
 
+    public string? JsonWebKeySet { get; init; }
+
     public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
 
     public bool IsEnabled { get; init; } = true;
@@ -64,6 +68,8 @@ public sealed record UpdateOAuthClientRequest
     public IReadOnlyList<string> RedirectUris { get; init; } = [];
 
     public IReadOnlyList<OAuthClientClaim> AccessTokenClaims { get; init; } = [];
+
+    public string? JsonWebKeySet { get; init; }
 
     public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
 

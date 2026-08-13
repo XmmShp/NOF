@@ -4,7 +4,10 @@ public sealed record OAuthClientCredentialsValidationRequest(
     string ClientId,
     string? ClientSecret,
     IReadOnlySet<string> RequestedScopes,
-    string AuthenticationMethod);
+    string AuthenticationMethod,
+    string? ClientAssertion = null,
+    string? ClientAssertionType = null,
+    string? Audience = null);
 
 public abstract record OAuthClientCredentialsValidationResult
 {

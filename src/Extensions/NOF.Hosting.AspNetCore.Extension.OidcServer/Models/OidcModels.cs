@@ -43,6 +43,9 @@ public sealed record OAuthServerMetadata
     [JsonPropertyName("token_endpoint_auth_methods_supported")]
     public required IReadOnlyList<string> TokenEndpointAuthMethodsSupported { get; init; }
 
+    [JsonPropertyName("token_endpoint_auth_signing_alg_values_supported")]
+    public IReadOnlyList<string>? TokenEndpointAuthSigningAlgValuesSupported { get; init; }
+
     [JsonPropertyName("revocation_endpoint_auth_methods_supported")]
     public IReadOnlyList<string>? RevocationEndpointAuthMethodsSupported { get; init; }
 

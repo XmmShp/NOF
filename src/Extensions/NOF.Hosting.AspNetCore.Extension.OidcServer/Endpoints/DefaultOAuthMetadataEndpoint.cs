@@ -27,9 +27,25 @@ public sealed class DefaultOAuthMetadataEndpoint(IOptions<OAuthAuthorizationServ
                 OAuthGrantTypes.RefreshToken,
                 OAuthGrantTypes.TokenExchange
             ],
-            TokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
-            RevocationEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"],
-            IntrospectionEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post"],
+            TokenEndpointAuthMethodsSupported =
+            [
+                OAuthClientAuthenticationMethods.ClientSecretBasic,
+                OAuthClientAuthenticationMethods.ClientSecretPost,
+                OAuthClientAuthenticationMethods.PrivateKeyJwt,
+                OAuthClientAuthenticationMethods.None
+            ],
+            TokenEndpointAuthSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256],
+            RevocationEndpointAuthMethodsSupported =
+            [
+                OAuthClientAuthenticationMethods.ClientSecretBasic,
+                OAuthClientAuthenticationMethods.ClientSecretPost,
+                OAuthClientAuthenticationMethods.None
+            ],
+            IntrospectionEndpointAuthMethodsSupported =
+            [
+                OAuthClientAuthenticationMethods.ClientSecretBasic,
+                OAuthClientAuthenticationMethods.ClientSecretPost
+            ],
             SubjectTypesSupported = ["public"],
             IdTokenSigningAlgValuesSupported = [SecurityAlgorithms.RsaSha256],
             CodeChallengeMethodsSupported = ["plain", "S256"],

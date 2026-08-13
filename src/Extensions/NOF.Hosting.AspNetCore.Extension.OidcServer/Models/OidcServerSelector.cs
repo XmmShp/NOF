@@ -99,4 +99,50 @@ public readonly struct OidcServerSelector
 
         return this;
     }
+
+    public OidcServerSelector AddClientAssertionClient(
+        string clientId,
+        string jsonWebKeySet,
+        IEnumerable<string>? allowedScopes = null,
+        string? displayName = null,
+        IEnumerable<OAuthClientClaim>? accessTokenClaims = null,
+        bool isEnabled = true,
+        IEnumerable<string>? redirectUris = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(jsonWebKeySet);
+
+        var normalizedClientId = clientId.Trim();
+        var normalizedJsonWebKeySet = jsonWebKeySet.Trim();
+        var normalizedDisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedClientId : displayName.Trim();
+        var scopes = allowedScopes?
+            .Where(static scope => !string.IsNullOrWhiteSpace(scope))
+            .Select(static scope => scope.Trim())
+            .ToArray() ?? [];
+        var redirects = redirectUris?
+            .Where(static redirectUri => !string.IsNullOrWhiteSpace(redirectUri))
+            .Select(static redirectUri => redirectUri.Trim())
+            .ToArray() ?? [];
+        var claims = accessTokenClaims?
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
+            .Select(static claim => new OAuthClientClaim(claim.Type.Trim(), claim.Value))
+            .ToArray() ?? [];
+
+        Builder.Services.Configure<OidcServerBootstrapOptions>(options =>
+        {
+            options.ConfidentialClients.Add(new CreateOAuthClientRequest
+            {
+                ClientId = normalizedClientId,
+                DisplayName = normalizedDisplayName,
+                AllowedScopes = scopes,
+                RedirectUris = redirects,
+                AccessTokenClaims = claims,
+                JsonWebKeySet = normalizedJsonWebKeySet,
+                ClientType = OAuthClientType.Confidential,
+                IsEnabled = isEnabled
+            });
+        });
+
+        return this;
+    }
 }
