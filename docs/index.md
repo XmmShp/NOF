@@ -40,4 +40,4 @@ dotnet add package NOF.Test
 
 ## API Reference
 
-Browse the [API documentation](api/index.md) generated from XML doc comments.
+Browse the [API documentation](~/api/index.md) generated from XML doc comments.

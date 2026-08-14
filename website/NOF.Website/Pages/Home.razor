@@ -1,0 +1,249 @@
+@page "/"
+
+<PageTitle>NOF — Neat Opinionated Framework for .NET</PageTitle>
+
+<HeadContent>
+    <meta name="description" content="NOF is a modular, convention-driven .NET framework for clean architecture, CQRS, reliable messaging, source generation, multi-tenancy, and observability." />
+    <meta name="theme-color" content="#f4f1e8" />
+    <meta property="og:title" content="NOF — Neat Opinionated Framework" />
+    <meta property="og:description" content="Build scalable .NET systems with strong boundaries, reliable messaging, and less infrastructure glue." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://xmmshp.github.io/NOF/" />
+    <meta property="og:image" content="https://xmmshp.github.io/NOF/og.png" />
+    <meta property="og:image:width" content="1731" />
+    <meta property="og:image:height" content="909" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://xmmshp.github.io/NOF/og.png" />
+</HeadContent>
+
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<header class="site-header">
+    <a class="brand" href="./" aria-label="NOF homepage">
+        <span class="brand-mark" aria-hidden="true"><span>N</span></span>
+        <span class="brand-name">NOF</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#principles">Why NOF</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#quickstart">Quick start</a>
+        <a href="design/">Design</a>
+        <a class="nav-docs" href="api/">API Reference <span aria-hidden="true">↗</span></a>
+    </nav>
+</header>
+
+<main id="main-content">
+    <section class="hero section-shell" aria-labelledby="hero-title">
+        <div class="hero-copy">
+            <div class="release-pill"><span></span> Built for .NET 10</div>
+            <p class="eyebrow">NEAT · OPINIONATED · FRAMEWORK</p>
+            <h1 id="hero-title">Ship the architecture.<br /><em>Skip the ceremony.</em></h1>
+            <p class="hero-lede">
+                NOF gives ambitious .NET teams a coherent way to build modular systems—clean boundaries,
+                generated plumbing, reliable messaging, and observability included.
+            </p>
+            <div class="hero-actions">
+                <a class="button button-primary" href="#quickstart">Start building <span aria-hidden="true">→</span></a>
+                <a class="button button-secondary" href="https://github.com/XmmShp/NOF" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a>
+            </div>
+            <p class="hero-note"><span>Apache 2.0</span><span>Open source</span><span>Convention-driven</span></p>
+        </div>
+
+        <div class="hero-visual" aria-label="NOF application bootstrap example">
+            <div class="code-window">
+                <div class="code-window-bar">
+                    <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+                    <span>Program.cs</span>
+                    <span class="code-status">NOF / READY</span>
+                </div>
+                <pre><code><span class="code-keyword">var</span> builder = <span class="code-type">NOFWebApplicationBuilder</span>
+    .<span class="code-method">Create</span>(args);
+
+builder.<span class="code-method">AddApplicationPart</span>(
+    <span class="code-keyword">typeof</span>(OrderService).Assembly);
+
+builder.<span class="code-method">UseDbContext</span>&lt;OrdersDbContext&gt;()
+    .<span class="code-method">WithTenantMode</span>(TenantMode.DatabasePerTenant)
+    .<span class="code-method">MigrateOnInitialize</span>();
+
+builder.<span class="code-method">AddRpcServer</span>&lt;OrderService&gt;();
+
+<span class="code-keyword">var</span> app = <span class="code-keyword">await</span> builder.<span class="code-method">BuildAsync</span>();
+<span class="code-keyword">await</span> app.<span class="code-method">RunAsync</span>();</code></pre>
+                <div class="code-footer">
+                    <span><i></i> Source generators active</span>
+                    <span>12 lines to a real service</span>
+                </div>
+            </div>
+            <div class="orbit orbit-one" aria-hidden="true"></div>
+            <div class="orbit orbit-two" aria-hidden="true"></div>
+            <div class="visual-stamp" aria-hidden="true">N<br />O<br />F</div>
+        </div>
+    </section>
+
+    <section class="signal-strip" aria-label="Framework highlights">
+        <div><span>01</span><strong>Source-generated</strong><small>Compile-time wiring</small></div>
+        <div><span>02</span><strong>Outbox-first</strong><small>Reliable delivery</small></div>
+        <div><span>03</span><strong>Observable</strong><small>OpenTelemetry native</small></div>
+        <div><span>04</span><strong>Portable</strong><small>Web, console, MAUI</small></div>
+    </section>
+
+    <section id="principles" class="principles section-shell section-space" aria-labelledby="principles-title">
+        <div class="section-heading">
+            <p class="eyebrow">STRONG DEFAULTS, OPEN EDGES</p>
+            <h2 id="principles-title">Clear boundaries.<br />Less glue.</h2>
+            <p>NOF coordinates the hard parts of distributed applications without turning your domain into framework code.</p>
+        </div>
+
+        <div class="principle-grid">
+            <article class="principle-card principle-card-blue">
+                <span class="card-index">01</span>
+                <div class="card-symbol" aria-hidden="true">{ }</div>
+                <h3>Contract first</h3>
+                <p>Define typed RPC contracts once. NOF generates clients, servers, HTTP endpoints, and dispatch wiring at compile time.</p>
+                <ul>
+                    <li>Typed request and response models</li>
+                    <li>Streaming RPC with SSE</li>
+                    <li>AOT-aware serialization paths</li>
+                </ul>
+            </article>
+
+            <article class="principle-card principle-card-dark">
+                <span class="card-index">02</span>
+                <div class="card-symbol" aria-hidden="true">→□</div>
+                <h3>Reliable by design</h3>
+                <p>Inbox/outbox, ordered delivery, commands, and notifications are part of one model—not a collection of afterthoughts.</p>
+                <ul>
+                    <li>Transactional message dispatch</li>
+                    <li>RabbitMQ and in-memory transports</li>
+                    <li>Idempotent inbound processing</li>
+                </ul>
+            </article>
+
+            <article class="principle-card principle-card-paper">
+                <span class="card-index">03</span>
+                <div class="card-symbol" aria-hidden="true">◎</div>
+                <h3>Operationally legible</h3>
+                <p>Multi-tenancy, authentication, startup sequencing, and telemetry share the same runtime vocabulary.</p>
+                <ul>
+                    <li>OpenTelemetry instrumentation</li>
+                    <li>Dependency-aware initialization</li>
+                    <li>Tenant-aware persistence</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+    <section id="architecture" class="architecture section-space" aria-labelledby="architecture-title">
+        <div class="section-shell architecture-inner">
+            <div class="architecture-copy">
+                <p class="eyebrow eyebrow-light">A SYSTEM YOU CAN REASON ABOUT</p>
+                <h2 id="architecture-title">One mental model,<br />from domain to runtime.</h2>
+                <p>
+                    Each layer has a job. Dependencies point inward. Infrastructure stays replaceable,
+                    while source generators keep the boundaries fast and explicit.
+                </p>
+                <a class="text-link" href="design/">Explore the design notes <span aria-hidden="true">→</span></a>
+            </div>
+
+            <div class="layer-stack" aria-label="NOF framework layers">
+                <article class="layer layer-hosting">
+                    <span>04</span><div><strong>Hosting</strong><small>ASP.NET Core · Blazor · Console · MAUI</small></div><i>edge</i>
+                </article>
+                <article class="layer layer-infrastructure">
+                    <span>03</span><div><strong>Infrastructure</strong><small>Persistence · Messaging · Auth · Telemetry</small></div><i>adapters</i>
+                </article>
+                <article class="layer layer-application">
+                    <span>02</span><div><strong>Application</strong><small>RPC · Handlers · State machines · Pipelines</small></div><i>use cases</i>
+                </article>
+                <article class="layer layer-domain">
+                    <span>01</span><div><strong>Domain</strong><small>Value objects · Failures · Business rules</small></div><i>core</i>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="capabilities section-shell section-space" aria-labelledby="capabilities-title">
+        <div class="section-heading section-heading-row">
+            <div>
+                <p class="eyebrow">BATTERIES, COORDINATED</p>
+                <h2 id="capabilities-title">Built for systems<br />that have to last.</h2>
+            </div>
+            <p>Adopt the complete runtime or choose focused packages. The conventions stay consistent across the stack.</p>
+        </div>
+
+        <div class="capability-list">
+            <article><span class="capability-number">01</span><h3>CQRS & messaging</h3><p>Typed commands, notifications, RPC, streaming, and handler pipelines.</p><span class="capability-mark">↗</span></article>
+            <article><span class="capability-number">02</span><h3>Source generation</h3><p>Move registration and transport plumbing from runtime reflection to compile time.</p><span class="capability-mark">⌁</span></article>
+            <article><span class="capability-number">03</span><h3>Transactional data</h3><p>EF Core and NHibernate integration with inbox/outbox and unit-of-work semantics.</p><span class="capability-mark">◇</span></article>
+            <article><span class="capability-number">04</span><h3>Identity & tenancy</h3><p>Authorization, OIDC endpoints, propagated context, and tenant-aware persistence.</p><span class="capability-mark">◎</span></article>
+            <article><span class="capability-number">05</span><h3>State machines</h3><p>Declarative transitions with persistent state and event-driven workflows.</p><span class="capability-mark">⇄</span></article>
+            <article><span class="capability-number">06</span><h3>Observability</h3><p>Tracing, metrics, and structured logs that follow work across service boundaries.</p><span class="capability-mark">∿</span></article>
+        </div>
+    </section>
+
+    <section id="quickstart" class="quickstart section-space" aria-labelledby="quickstart-title">
+        <div class="section-shell quickstart-inner">
+            <div class="quickstart-copy">
+                <p class="eyebrow">FROM ZERO TO SERVICE</p>
+                <h2 id="quickstart-title">Start with one package.<br />Grow without a rewrite.</h2>
+                <p>Install the ASP.NET Core host and core infrastructure, then add only the adapters your system needs.</p>
+                <div class="quick-links">
+                    <a href="api/">Browse API reference <span aria-hidden="true">→</span></a>
+                    <a href="https://www.nuget.org/profiles/XmmShp" target="_blank" rel="noreferrer">Explore NuGet packages <span aria-hidden="true">↗</span></a>
+                </div>
+            </div>
+
+            <div class="install-panel">
+                <div class="install-tabs"><span class="active">CLI</span><span>PackageReference</span></div>
+                <div class="install-command"><span>$</span><code>dotnet add package NOF.Hosting.AspNetCore</code></div>
+                <div class="install-command"><span>$</span><code>dotnet add package NOF.Infrastructure</code></div>
+                <div class="install-command"><span>$</span><code>dotnet add package NOF.Infrastructure.RabbitMQ</code></div>
+                <div class="install-ready"><i></i><span>Restore complete</span><strong>Ready to build</strong></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ecosystem section-shell section-space" aria-labelledby="ecosystem-title">
+        <p class="eyebrow">THE NOF ECOSYSTEM</p>
+        <h2 id="ecosystem-title">A focused package for every boundary.</h2>
+        <div class="package-cloud" aria-label="Selected NOF packages">
+            <a href="https://www.nuget.org/packages/NOF.Domain" target="_blank" rel="noreferrer"><span>01</span>NOF.Domain</a>
+            <a href="https://www.nuget.org/packages/NOF.Contract" target="_blank" rel="noreferrer"><span>02</span>NOF.Contract</a>
+            <a href="https://www.nuget.org/packages/NOF.Application" target="_blank" rel="noreferrer"><span>03</span>NOF.Application</a>
+            <a href="https://www.nuget.org/packages/NOF.Infrastructure" target="_blank" rel="noreferrer"><span>04</span>NOF.Infrastructure</a>
+            <a href="https://www.nuget.org/packages/NOF.Hosting.AspNetCore" target="_blank" rel="noreferrer"><span>05</span>NOF.Hosting.AspNetCore</a>
+            <a href="https://www.nuget.org/packages/NOF.Infrastructure.RabbitMQ" target="_blank" rel="noreferrer"><span>06</span>NOF.Infrastructure.RabbitMQ</a>
+            <a href="https://www.nuget.org/packages/NOF.UI" target="_blank" rel="noreferrer"><span>07</span>NOF.UI</a>
+            <a href="https://www.nuget.org/packages/NOF.Test" target="_blank" rel="noreferrer"><span>08</span>NOF.Test</a>
+        </div>
+    </section>
+
+    <section class="closing-cta">
+        <div class="closing-grid" aria-hidden="true"></div>
+        <div class="section-shell closing-inner">
+            <p class="eyebrow eyebrow-light">MAKE THE COMPLEX EXPLICIT</p>
+            <h2>Your domain deserves<br />better infrastructure.</h2>
+            <p>Start with NOF and spend your engineering time on the decisions that make your system different.</p>
+            <div class="hero-actions">
+                <a class="button button-light" href="https://github.com/XmmShp/NOF" target="_blank" rel="noreferrer">Explore the repository <span aria-hidden="true">↗</span></a>
+                <a class="button button-outline-light" href="api/">Read the API docs <span aria-hidden="true">→</span></a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer section-shell">
+    <a class="brand footer-brand" href="./" aria-label="NOF homepage">
+        <span class="brand-mark" aria-hidden="true"><span>N</span></span>
+        <span><strong>NOF</strong><small>Neat Opinionated Framework</small></span>
+    </a>
+    <p>Open source under Apache 2.0.<br />Built for modern .NET systems.</p>
+    <div class="footer-links">
+        <a href="api/">API Reference</a>
+        <a href="design/">Design</a>
+        <a href="https://github.com/XmmShp/NOF" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://www.nuget.org/profiles/XmmShp" target="_blank" rel="noreferrer">NuGet</a>
+    </div>
+</footer>

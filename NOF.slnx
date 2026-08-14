@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/website/">
+    <Project Path="website/NOF.Website/NOF.Website.csproj" />
+  </Folder>
   <Folder Name="/sample/">
     <File Path="sample/Directory.Packages.props" />
     <Project Path="sample/NOF.Sample.AppHost/NOF.Sample.AppHost.csproj" Id="1a4e8e94-b2d1-47b2-a87d-eb4d146b8bf7" />

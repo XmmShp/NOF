@@ -255,6 +255,9 @@ jobs:
   deploy-docs:
     runs-on: ubuntu-latest
     needs: build-and-test
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
     - name: Checkout code
@@ -282,8 +285,26 @@ jobs:
     - name: Build documentation
       run: docfx docfx.json
 
+    - name: Install WebAssembly tools
+      run: dotnet workload install wasm-tools
+
+    - name: Publish homepage
+      run: dotnet publish website/NOF.Website/NOF.Website.csproj --configuration ${{ env.CONFIGURATION }} --no-restore --output _homepage
+
+    - name: Assemble Pages site
+      shell: bash
+      run: |
+        set -euo pipefail
+        sed -i 's|<base href="/" />|<base href="/NOF/" />|' _homepage/wwwroot/index.html
+        cp _homepage/wwwroot/index.html _homepage/wwwroot/404.html
+        cp -a _homepage/wwwroot/. _site/
+        touch _site/.nojekyll
+
+    - name: Configure GitHub Pages
+      uses: actions/configure-pages@v5
+
     - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         path: _site
 
