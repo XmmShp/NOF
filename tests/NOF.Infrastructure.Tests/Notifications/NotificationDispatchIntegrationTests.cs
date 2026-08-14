@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
+using System.Collections.Concurrent;
 using Xunit;
 
 namespace NOF.Infrastructure.Tests.Notifications;
@@ -230,6 +232,58 @@ public sealed class NotificationDispatchIntegrationTests
     }
 
     [Fact]
+    public async Task DeferPublishAsync_WhenDeliveryFails_ShouldUseAllRetriesAndReportFailedBatch()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddNOFInfrastructure();
+        builder.Services.Configure<TransactionalMessageOptions>(static options =>
+        {
+            options.Outbox.PollingInterval = TimeSpan.FromMilliseconds(10);
+            options.Outbox.BatchSize = 10;
+            options.Outbox.MaxRetryCount = 2;
+        });
+
+        var rider = new AlwaysFailingNotificationRider();
+        builder.Services.ReplaceOrAddSingleton<INotificationRider>(rider);
+        var loggerProvider = new CapturingLoggerProvider();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(loggerProvider);
+
+        using var host = builder.Build();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await host.StartAsync(timeout.Token);
+
+        try
+        {
+            using (var scope = host.Services.CreateScope())
+            {
+                var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+                await publisher.DeferPublishAsync(new FailingNotification(), Context.Empty, timeout.Token);
+                await dbContext.SaveChangesAsync(timeout.Token);
+            }
+
+            await WaitUntilAsync(() => rider.AttemptCount == 2, timeout.Token);
+            var outboxMessage = await WaitForOutboxStatusAsync(
+                host.Services,
+                OutboxMessageStatus.Failed,
+                timeout.Token);
+            await WaitUntilAsync(
+                () => loggerProvider.Messages.Contains("Outbox batch processed: 0 sent, 1 failed"),
+                timeout.Token);
+
+            Assert.Equal(2, outboxMessage.RetryCount);
+            Assert.Null(outboxMessage.SentAtUtc);
+            Assert.NotNull(outboxMessage.FailedAtUtc);
+            Assert.Equal("Transport unavailable.", outboxMessage.ErrorMessage);
+        }
+        finally
+        {
+            await host.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task OrderedNotification_ShouldWaitForMissingPredecessorAndThenProcessContiguously()
     {
         var builder = Host.CreateApplicationBuilder();
@@ -340,6 +394,28 @@ public sealed class NotificationDispatchIntegrationTests
         }
     }
 
+    private static async Task<NOFOutboxMessage> WaitForOutboxStatusAsync(
+        IServiceProvider services,
+        OutboxMessageStatus status,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var scope = services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            var message = await dbContext.Set<NOFOutboxMessage>()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(cancellationToken);
+            if (message?.Status == status)
+            {
+                return message;
+            }
+
+            await Task.Delay(10, cancellationToken);
+        }
+    }
+
     private abstract record BaseNotification(string Value);
 
     private sealed record ConcreteNotification(string Value) : BaseNotification(Value);
@@ -347,6 +423,55 @@ public sealed class NotificationDispatchIntegrationTests
     private sealed record OrderedNotification(int Value);
 
     private sealed record FailingNotification;
+
+    private sealed class AlwaysFailingNotificationRider : INotificationRider
+    {
+        private int _attemptCount;
+
+        public int AttemptCount => Volatile.Read(ref _attemptCount);
+
+        public Task PublishAsync(
+            ReadOnlyMemory<byte> payload,
+            string messageRoute,
+            IEnumerable<KeyValuePair<string, string?>>? headers,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _attemptCount);
+            throw new InvalidOperationException("Transport unavailable.");
+        }
+    }
+
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly ConcurrentQueue<string> _messages = new();
+
+        public IReadOnlyCollection<string> Messages => _messages;
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(_messages);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class CapturingLogger(ConcurrentQueue<string> messages) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull
+                => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                messages.Enqueue(formatter(state, exception));
+            }
+        }
+    }
 
     private sealed class NotificationDispatchProbe
     {

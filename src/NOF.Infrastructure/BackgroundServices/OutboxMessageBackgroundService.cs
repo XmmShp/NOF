@@ -88,7 +88,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         }
     }
 
-    private async Task ProcessSingleMessageAsync(
+    private async Task<bool> ProcessSingleMessageAsync(
         IServiceProvider scopedServiceProvider,
         IDbContext dbContext,
         NOFOutboxMessage message,
@@ -96,12 +96,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         INotificationRider notificationRider,
         CancellationToken cancellationToken)
     {
-        if (message.RetryCount >= _options.MaxRetryCount)
+        if (message.RetryCount > _options.MaxRetryCount)
         {
             await AtomicRecordDeliveryFailureAsync(dbContext, message, $"Exceeded max retry count ({_options.MaxRetryCount})", cancellationToken);
             _logger.LogWarning("Message {MessageId} exceeded max retry count ({MaxRetry}), marked as failed",
                 message.Id, _options.MaxRetryCount);
-            return;
+            return false;
         }
 
         // Restore the tracing context
@@ -154,7 +154,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                     await AtomicRecordDeliveryFailureAsync(dbContext, message, "Unsupported message type", cancellationToken);
                     _logger.LogError("Message {MessageId} has unsupported message type: {Type}",
                         message.Id, message.MessageType);
-                    break;
+                    return false;
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -175,6 +175,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
 
         // Processing completed successfully, set Activity status to OK
         activity?.SetStatus(ActivityStatusCode.Ok);
+        return true;
     }
 
     private static void AddOrderingHeaders(
@@ -251,8 +252,29 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             var message = messages[index];
             try
             {
-                await ProcessSingleMessageAsync(scopedServiceProvider, dbContext, message, commandRider, notificationRider, cancellationToken);
-                succeededIds.Add(message.Id);
+                var succeeded = await ProcessSingleMessageAsync(
+                    scopedServiceProvider,
+                    dbContext,
+                    message,
+                    commandRider,
+                    notificationRider,
+                    cancellationToken);
+                if (succeeded)
+                {
+                    succeededIds.Add(message.Id);
+                    continue;
+                }
+
+                failedCount++;
+
+                // Do not allow later messages in the ordered batch to overtake a failed predecessor.
+                var unprocessedIds = messages.Skip(index + 1).Select(static pending => pending.Id).ToArray();
+                if (unprocessedIds.Length > 0)
+                {
+                    await AtomicReleaseClaimsAsync(dbContext, unprocessedIds, cancellationToken);
+                }
+
+                break;
             }
             catch (Exception ex)
             {
@@ -270,19 +292,35 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
         }
 
-        if (succeededIds.Count > 0)
+        if (succeededIds.Count == 0)
         {
-            try
+            _logger.LogInformation(
+                "Outbox batch processed: {Succeeded} sent, {Failed} failed",
+                0,
+                failedCount);
+            return;
+        }
+
+        try
+        {
+            var sentCount = await AtomicMarkAsSentAsync(dbContext, succeededIds, cancellationToken);
+            if (sentCount != succeededIds.Count)
             {
-                await AtomicMarkAsSentAsync(dbContext, succeededIds, cancellationToken);
-                _logger.LogInformation(
-                    "Outbox batch processed: {Succeeded} sent, {Failed} failed",
-                    succeededIds.Count, failedCount);
+                var notMarkedAsSent = succeededIds.Count - sentCount;
+                failedCount += notMarkedAsSent;
+                _logger.LogWarning(
+                    "Failed to mark {Count} delivered outbox messages as sent because they were no longer pending",
+                    notMarkedAsSent);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
-            }
+
+            _logger.LogInformation(
+                "Outbox batch processed: {Succeeded} sent, {Failed} failed",
+                sentCount,
+                failedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark {Count} claimed messages as sent", succeededIds.Count);
         }
     }
 
@@ -353,14 +391,14 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 cancellationToken);
     }
 
-    private static async ValueTask AtomicMarkAsSentAsync(
+    private static async ValueTask<int> AtomicMarkAsSentAsync(
         IDbContext dbContext,
         IEnumerable<Guid> messageIds,
         CancellationToken cancellationToken = default)
     {
         var sentAt = DateTime.UtcNow;
 
-        await dbContext.Set<NOFOutboxMessage>()
+        return await dbContext.Set<NOFOutboxMessage>()
             .Where(m => messageIds.Contains(m.Id) && m.Status == OutboxMessageStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Status, OutboxMessageStatus.Sent)

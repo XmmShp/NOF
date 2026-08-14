@@ -66,15 +66,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
     private async Task RegisterConsumersFromRegistryAsync(CancellationToken cancellationToken)
     {
-        var commandRegistrations = _commandHandlerRegistry.Freeze()
-            .Select(info => new
-            {
-                MessageRoute = info.CommandTypeName,
-                info.HandlerTypeName,
-                QueueName = BuildCommandQueueName(info.HandlerTypeName)
-            })
-            .Distinct()
-            .ToArray();
+        var commandRegistrations = BuildCommandConsumerRegistrations(_commandHandlerRegistry.Freeze());
 
         foreach (var registration in commandRegistrations)
         {
@@ -98,11 +90,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         var channel = await _connectionManager.CreateChannelAsync();
         _channels.Add(channel);
 
+        await RabbitMQTopology.DeclareSystemTopologyAsync(channel, cancellationToken);
+
         await channel.ExchangeDeclareAsync(
             exchange: messageRoute,
             type: "direct",
             durable: _options.Value.Durable,
             autoDelete: _options.Value.AutoDelete,
+            arguments: RabbitMQTopology.BuildBusinessExchangeArguments(),
             cancellationToken: cancellationToken);
 
         await channel.QueueDeclareAsync(
@@ -110,6 +105,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
             durable: _options.Value.Durable,
             exclusive: false,
             autoDelete: _options.Value.AutoDelete,
+            arguments: RabbitMQTopology.BuildBusinessQueueArguments(),
             cancellationToken: cancellationToken);
 
         await channel.QueueBindAsync(
@@ -140,11 +136,14 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         var channel = await _connectionManager.CreateChannelAsync();
         _channels.Add(channel);
 
+        await RabbitMQTopology.DeclareSystemTopologyAsync(channel, cancellationToken);
+
         await channel.QueueDeclareAsync(
             queue: queueName,
             durable: _options.Value.Durable,
             exclusive: false,
             autoDelete: _options.Value.AutoDelete,
+            arguments: RabbitMQTopology.BuildBusinessQueueArguments(),
             cancellationToken: cancellationToken);
 
         foreach (var notificationType in notificationTypes)
@@ -155,6 +154,7 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
                 type: "fanout",
                 durable: _options.Value.Durable,
                 autoDelete: _options.Value.AutoDelete,
+                arguments: RabbitMQTopology.BuildBusinessExchangeArguments(),
                 cancellationToken: cancellationToken);
 
             await channel.QueueBindAsync(
@@ -335,11 +335,35 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
     private static string GetMessageExchangeName(Type messageType)
         => messageType.DisplayName;
 
-    internal static string BuildCommandQueueName(string handlerDisplayName)
+    internal static IReadOnlyCollection<CommandConsumerRegistration> BuildCommandConsumerRegistrations(
+        IEnumerable<CommandHandlerRegistration> registrations)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handlerDisplayName);
-        return handlerDisplayName;
+        ArgumentNullException.ThrowIfNull(registrations);
+
+        return [.. registrations
+            .GroupBy(static registration => registration.CommandTypeName, StringComparer.Ordinal)
+            .Select(static group =>
+            {
+                var handlerTypeNames = group
+                    .Select(static registration => registration.HandlerTypeName)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+
+                if (handlerTypeNames.Length != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Command '{group.Key}' must have exactly one handler, but found: {string.Join(", ", handlerTypeNames)}.");
+                }
+
+                return new CommandConsumerRegistration(
+                    group.Key,
+                    handlerTypeNames[0],
+                    RabbitMQTopology.BuildCommandQueueName(group.Key));
+            })];
     }
+
+    internal static string BuildCommandQueueName(string messageRoute)
+        => RabbitMQTopology.BuildCommandQueueName(messageRoute);
 
     internal static string BuildNotificationQueueName(string? applicationName, string handlerDisplayName)
     {
@@ -410,4 +434,9 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
         string QueueName,
         string HandlerTypeName,
         IReadOnlyCollection<Type> NotificationTypes);
+
+    internal sealed record CommandConsumerRegistration(
+        string MessageRoute,
+        string HandlerTypeName,
+        string QueueName);
 }

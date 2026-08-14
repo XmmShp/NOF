@@ -9,12 +9,44 @@ namespace NOF.Infrastructure.RabbitMQ.Tests.Services;
 public class RabbitMQConsumerHostedServiceTests
 {
     [Fact]
-    public void BuildCommandQueueName_ShouldUseHandlerName()
+    public void BuildCommandQueueName_ShouldUseCommandRoute()
     {
         var queueName = RabbitMQConsumerHostedService.BuildCommandQueueName(
-            "App.Commands.CreateOrderHandler");
+            "App.Commands.CreateOrderCommand");
 
-        Assert.Equal("App.Commands.CreateOrderHandler", queueName);
+        Assert.Equal("App.Commands.CreateOrderCommand", queueName);
+    }
+
+    [Fact]
+    public void BuildCommandConsumerRegistrations_ShouldUseOneRouteQueueForDuplicateRegistrations()
+    {
+        var registrations = new[]
+        {
+            new CommandHandlerRegistration(typeof(TestCommandHandler), typeof(TestCommand)),
+            new CommandHandlerRegistration(typeof(TestCommandHandler), typeof(TestCommand))
+        };
+
+        var consumer = Assert.Single(
+            RabbitMQConsumerHostedService.BuildCommandConsumerRegistrations(registrations));
+
+        Assert.Equal(typeof(TestCommand).DisplayName, consumer.MessageRoute);
+        Assert.Equal(typeof(TestCommand).DisplayName, consumer.QueueName);
+        Assert.Equal(typeof(TestCommandHandler).DisplayName, consumer.HandlerTypeName);
+    }
+
+    [Fact]
+    public void BuildCommandConsumerRegistrations_ShouldRejectMultipleHandlersForOneCommand()
+    {
+        var registrations = new[]
+        {
+            new CommandHandlerRegistration(typeof(TestCommandHandler), typeof(TestCommand)),
+            new CommandHandlerRegistration(typeof(SecondTestCommandHandler), typeof(TestCommand))
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => RabbitMQConsumerHostedService.BuildCommandConsumerRegistrations(registrations));
+
+        Assert.Contains(typeof(TestCommand).DisplayName, exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -124,9 +156,45 @@ public class RabbitMQConsumerHostedServiceTests
         Assert.False(requeue);
     }
 
+    [Fact]
+    public void RabbitMQTopology_ShouldUseNamespacedInfrastructureNames()
+    {
+        Assert.StartsWith("nof.io-vii.com.", RabbitMQTopology.UnroutableExchangeName, StringComparison.Ordinal);
+        Assert.StartsWith("nof.io-vii.com.", RabbitMQTopology.UnroutableQueueName, StringComparison.Ordinal);
+        Assert.StartsWith("nof.io-vii.com.", RabbitMQTopology.DeadLetterExchangeName, StringComparison.Ordinal);
+        Assert.StartsWith("nof.io-vii.com.", RabbitMQTopology.DeadLetterQueueName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RabbitMQTopology_ShouldConnectBusinessResourcesToFailureExchanges()
+    {
+        var exchangeArguments = RabbitMQTopology.BuildBusinessExchangeArguments();
+        var queueArguments = RabbitMQTopology.BuildBusinessQueueArguments();
+
+        Assert.Equal(
+            RabbitMQTopology.UnroutableExchangeName,
+            exchangeArguments["alternate-exchange"]);
+        Assert.Equal(
+            RabbitMQTopology.DeadLetterExchangeName,
+            queueArguments["x-dead-letter-exchange"]);
+    }
+
+    [Fact]
+    public void RabbitMQTopology_ShouldAddOriginalRouteHeadersForReplay()
+    {
+        var headers = new Dictionary<string, object?>();
+
+        RabbitMQTopology.AddOriginalRouteHeaders(headers, "App.OrderCreated", string.Empty);
+
+        Assert.Equal("App.OrderCreated", headers[RabbitMQTopology.OriginalExchangeHeader]);
+        Assert.Equal(string.Empty, headers[RabbitMQTopology.OriginalRoutingKeyHeader]);
+    }
+
     private sealed class TestCommand;
 
     private sealed class TestCommandHandler;
+
+    private sealed class SecondTestCommandHandler;
 
     private sealed class TestNotification;
 
