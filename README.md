@@ -130,7 +130,7 @@ NOF.Infrastructure.*           <- Messaging and caching providers
 
 ## Documentation
 
-Visit the [NOF homepage](https://xmmshp.github.io/NOF/) for an overview and quick start. Full generated API documentation is available in the [API Reference](https://xmmshp.github.io/NOF/api/).
+Visit the [NOF homepage](https://nof.io-vii.com/) for an overview and quick start. Full generated API documentation is available in the [API Reference](https://nof.io-vii.com/api/).
 
 ## JSON And AOT
 

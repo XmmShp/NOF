@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Have a question about using NOF? Please check the [documentation](https://xmmshp.github.io/NOF/) first.
+        Have a question about using NOF? Please check the [documentation](https://nof.io-vii.com/) first.
 
   - type: input
     id: package

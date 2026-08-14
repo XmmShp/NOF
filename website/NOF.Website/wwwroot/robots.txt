@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://xmmshp.github.io/NOF/sitemap.xml
+Sitemap: https://nof.io-vii.com/sitemap.xml

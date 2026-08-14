@@ -295,7 +295,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        sed -i 's|<base href="/" />|<base href="/NOF/" />|' _homepage/wwwroot/index.html
+        grep -q '<base href="/" />' _homepage/wwwroot/index.html
         cp _homepage/wwwroot/index.html _homepage/wwwroot/404.html
         cp -a _homepage/wwwroot/. _site/
         touch _site/.nojekyll
