@@ -1,5 +1,6 @@
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 
 namespace NOF.Sample.Application.EventHandlers;
 
@@ -15,7 +16,7 @@ public class AddChildNodeOnConfigNodeCreated : InMemoryEventHandler<ConfigNodeCr
         _dbContext = dbContext;
     }
 
-    public override async Task HandleAsync(ConfigNodeCreatedEvent @event, CancellationToken cancellationToken)
+    public override async Task HandleAsync(ConfigNodeCreatedEvent @event, Context context, CancellationToken cancellationToken)
     {
         if (@event.ParentId.HasValue)
         {

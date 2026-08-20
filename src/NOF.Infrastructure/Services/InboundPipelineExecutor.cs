@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NOF.Abstraction;
 using NOF.Application;
 using NOF.Contract;
 using NOF.Hosting;
@@ -35,14 +36,14 @@ public sealed class CommandInboundPipelineExecutor
         var message = invoker.Bind(payload, _serializer.Deserialize);
         var context = CreateContext(invoker.HandlerType, invoker.MessageType, headers);
         CommandHandlerDelegate terminal = (currentContext, currentMessage, ct)
-            => invoker.InvokeAsync(_serviceProvider, currentMessage, currentContext, ct);
+            => ExecuteCommandHandlerAsync(_serviceProvider, invoker, currentContext, currentMessage, ct);
         CommandHandlerDelegate pipeline = terminal;
         for (var i = middlewares.Count - 1; i >= 0; i--)
         {
             var middleware = middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentMessage, ct)
-                => ExecuteCommandMiddlewareAsync(_serviceProvider, middleware, currentContext, currentMessage, next, ct);
+                => ExecuteCommandMiddlewareAsync(middleware, currentContext, currentMessage, next, ct);
         }
 
         await pipeline(context, message, cancellationToken).ConfigureAwait(false);
@@ -75,14 +76,25 @@ public sealed class CommandInboundPipelineExecutor
         }.CopyHeadersFrom(headers);
     }
     private static async ValueTask ExecuteCommandMiddlewareAsync(
-        IServiceProvider services,
         ICommandInboundMiddleware middleware,
         CommandInboundContext context,
         object message,
         CommandHandlerDelegate next,
         CancellationToken cancellationToken)
     {
+        using var _ = EventPublisher.PushContext(context);
         await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async ValueTask ExecuteCommandHandlerAsync(
+        IServiceProvider services,
+        ICommandInboundHandlerInvoker invoker,
+        CommandInboundContext context,
+        object message,
+        CancellationToken cancellationToken)
+    {
+        using var _ = EventPublisher.PushContext(context);
+        await invoker.InvokeAsync(services, message, context, cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -114,14 +126,14 @@ public sealed class NotificationInboundPipelineExecutor
         var message = invoker.Bind(payload, _serializer.Deserialize);
         var context = CreateContext(invoker.HandlerType, invoker.MessageType, headers);
         NotificationHandlerDelegate terminal = (currentContext, currentMessage, ct)
-            => invoker.InvokeAsync(_serviceProvider, currentMessage, currentContext, ct);
+            => ExecuteNotificationHandlerAsync(_serviceProvider, invoker, currentContext, currentMessage, ct);
         NotificationHandlerDelegate pipeline = terminal;
         for (var i = middlewares.Count - 1; i >= 0; i--)
         {
             var middleware = middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentMessage, ct)
-                => ExecuteNotificationMiddlewareAsync(_serviceProvider, middleware, currentContext, currentMessage, next, ct);
+                => ExecuteNotificationMiddlewareAsync(middleware, currentContext, currentMessage, next, ct);
         }
 
         await pipeline(context, message, cancellationToken).ConfigureAwait(false);
@@ -154,14 +166,25 @@ public sealed class NotificationInboundPipelineExecutor
         }.CopyHeadersFrom(headers);
     }
     private static async ValueTask ExecuteNotificationMiddlewareAsync(
-        IServiceProvider services,
         INotificationInboundMiddleware middleware,
         NotificationInboundContext context,
         object message,
         NotificationHandlerDelegate next,
         CancellationToken cancellationToken)
     {
+        using var _ = EventPublisher.PushContext(context);
         await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async ValueTask ExecuteNotificationHandlerAsync(
+        IServiceProvider services,
+        INotificationInboundHandlerInvoker invoker,
+        NotificationInboundContext context,
+        object message,
+        CancellationToken cancellationToken)
+    {
+        using var _ = EventPublisher.PushContext(context);
+        await invoker.InvokeAsync(services, message, context, cancellationToken).ConfigureAwait(false);
     }
 }
 
@@ -196,7 +219,7 @@ public sealed class RequestInboundPipelineExecutor
             var middleware = middlewares[i];
             var next = pipeline;
             pipeline = (currentContext, currentRequest, ct)
-                => ExecuteRequestMiddlewareAsync(_serviceProvider, middleware, currentContext, currentRequest, next, ct);
+                => ExecuteRequestMiddlewareAsync(middleware, currentContext, currentRequest, next, ct);
         }
 
         await pipeline(context, request, cancellationToken).ConfigureAwait(false);
@@ -245,6 +268,7 @@ public sealed class RequestInboundPipelineExecutor
         object request,
         CancellationToken cancellationToken)
     {
+        using var _ = EventPublisher.PushContext(context);
         var handler = (RpcHandler)services.GetRequiredService(handlerType);
         var response = await handler.HandleAsync(request, context, cancellationToken).ConfigureAwait(false);
         context.SetResponse(
@@ -253,13 +277,13 @@ public sealed class RequestInboundPipelineExecutor
     }
 
     private static async ValueTask ExecuteRequestMiddlewareAsync(
-        IServiceProvider services,
         IRequestInboundMiddleware middleware,
         RequestInboundContext context,
         object request,
         RequestHandlerDelegate next,
         CancellationToken cancellationToken)
     {
+        using var _ = EventPublisher.PushContext(context);
         await middleware.InvokeAsync(context, request, next, cancellationToken).ConfigureAwait(false);
     }
 }

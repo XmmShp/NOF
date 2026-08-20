@@ -106,10 +106,11 @@ public record OrderConfirmedEvent(OrderId Id);
 
 ```csharp
 using NOF.Abstraction;
+using NOF.Contract;
 
 public sealed class OrderCreatedProjectionHandler : InMemoryEventHandler<OrderCreatedEvent>
 {
-    public override Task HandleAsync(OrderCreatedEvent @event, CancellationToken cancellationToken)
+    public override Task HandleAsync(OrderCreatedEvent @event, Context context, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -143,7 +144,7 @@ public sealed class CreateOrder : OrderService.CreateOrder
 ## Notes
 
 - Prefer ordinary domain classes plus value objects over nonexistent aggregate root base types.
-- Raise in-process domain events with `PublishAsEvent()` for convenience, or `PublishAsEvent(publisher)` when you want the dependency to stay explicit.
+- Raise in-process domain events with `PublishAsEvent()`. Inside a NOF handler it automatically inherits the `Context` bound to the ambient publisher, so domain methods do not need a `Context` parameter solely for event propagation.
 - Handle those events with `InMemoryEventHandler<TEvent>` in the current DI scope.
 - Persist changes through `DbContext` / `NOFDbContext` in the application layer.
 - `[NewableValueObject]` generates both `New()` and `New(IIdGenerator)`.

@@ -67,6 +67,7 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         Assert.False(probe.HandlerUsedCallerScopeMarker);
         Assert.True(probe.EventHandlerUsedHandlerDbContext);
         Assert.True(probe.EventHandlerUsedHandlerScopeMarker);
+        Assert.True(probe.EventHandlerUsedHandlerContext);
         Assert.Equal(2, probe.HandlerScopeMarkers.Count);
         Assert.All(probe.HandlerScopeMarkers, handlerMarker => Assert.NotSame(marker, handlerMarker));
         Assert.NotSame(probe.HandlerScopeMarkers[0], probe.HandlerScopeMarkers[1]);
@@ -165,6 +166,10 @@ public sealed class LocalScopeProbe
 
     public bool EventHandlerUsedHandlerScopeMarker { get; set; }
 
+    public Context? HandlerContext { get; set; }
+
+    public bool EventHandlerUsedHandlerContext { get; set; }
+
     public List<LocalScopeMarker> HandlerScopeMarkers { get; } = [];
 
     public int DaemonServiceActivations { get; set; }
@@ -251,6 +256,7 @@ public sealed class ScopeCheckHandler(
         probe.HandlerUsedCallerScopeDbContext = ReferenceEquals(request.ExpectedDbContext, dbContext);
         probe.HandlerUsedCallerScopeMarker = ReferenceEquals(request.ExpectedMarker, marker);
         probe.HandlerScopeMarkers.Add(marker);
+        probe.HandlerContext = context;
         new ScopeCheckEvent(dbContext, marker).PublishAsEvent();
         return Task.FromResult(Result.Success());
     }
@@ -261,10 +267,11 @@ public sealed class ScopeCheckEventHandler(
     LocalScopeMarker marker,
     LocalScopeProbe probe) : InMemoryEventHandler<ScopeCheckEvent>
 {
-    public override Task HandleAsync(ScopeCheckEvent @event, CancellationToken cancellationToken)
+    public override Task HandleAsync(ScopeCheckEvent @event, Context context, CancellationToken cancellationToken)
     {
         probe.EventHandlerUsedHandlerDbContext = ReferenceEquals(@event.HandlerDbContext, dbContext);
         probe.EventHandlerUsedHandlerScopeMarker = ReferenceEquals(@event.HandlerMarker, marker);
+        probe.EventHandlerUsedHandlerContext = ReferenceEquals(probe.HandlerContext, context);
         return Task.CompletedTask;
     }
 }

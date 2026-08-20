@@ -58,7 +58,7 @@ public sealed class AllSourceGeneratorsMonolithTests
 
             public sealed class AppEventHandler : InMemoryEventHandler<AppEvent>
             {
-                public override Task HandleAsync(AppEvent @event, CancellationToken cancellationToken)
+                public override Task HandleAsync(AppEvent @event, Context context, CancellationToken cancellationToken)
                     => Task.CompletedTask;
             }
 

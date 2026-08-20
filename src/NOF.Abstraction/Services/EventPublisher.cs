@@ -1,3 +1,4 @@
+using NOF.Contract;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Abstraction;
@@ -12,6 +13,7 @@ namespace NOF.Abstraction;
 public static class EventPublisher
 {
     private static readonly AsyncLocal<IEventPublisher?> _currentPublisher = new();
+    private static readonly AsyncLocal<Context?> _currentContext = new();
 
     /// <summary>
     /// Pushes an ambient <see cref="IEventPublisher"/> into the current async flow for convenience API usage.
@@ -40,14 +42,35 @@ public static class EventPublisher
     /// <summary>
     /// Publishes an event through the ambient publisher convenience API.
     /// </summary>
+    public static void PublishEvent(object payload, Type[] eventTypes, Context context)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(eventTypes);
+        ArgumentNullException.ThrowIfNull(context);
+
+        var publisher = GetCurrentPublisher();
+        publisher.PublishAsync(payload, eventTypes, context, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Publishes an event through the ambient publisher with its bound context.
+    /// </summary>
     public static void PublishEvent(object payload, Type[] eventTypes)
     {
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentNullException.ThrowIfNull(eventTypes);
 
-        var publisher = _currentPublisher.Value
-            ?? throw new InvalidOperationException("No ambient IEventPublisher is available for the current async flow.");
-        publisher.PublishAsync(payload, eventTypes, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
+        var publisher = GetCurrentPublisher();
+        publisher.PublishAsync(payload, eventTypes, GetCurrentContext(), CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+
+    public static void PublishEvent(
+        object payload,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type runtimeType,
+        Context context)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeType);
+        PublishEvent(payload, runtimeType.GetAllAssignableTypes(), context);
     }
 
     public static void PublishEvent(
@@ -58,20 +81,56 @@ public static class EventPublisher
         PublishEvent(payload, runtimeType.GetAllAssignableTypes());
     }
 
+    public static void PublishEvent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TPayload>(
+        TPayload payload,
+        Context context)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        PublishEvent(payload, typeof(TPayload), context);
+    }
+
     public static void PublishEvent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] TPayload>(TPayload payload)
     {
         ArgumentNullException.ThrowIfNull(payload);
         PublishEvent(payload, typeof(TPayload));
     }
 
+    internal static IDisposable PushContext(Context context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (ReferenceEquals(_currentContext.Value, context))
+        {
+            return EmptyScope.Instance;
+        }
+
+        var previous = _currentContext.Value;
+        _currentContext.Value = context;
+        return new AmbientContextScope(previous);
+    }
+
+    internal static IDisposable PushPublisherIfNeeded(IEventPublisher publisher)
+    {
+        ArgumentNullException.ThrowIfNull(publisher);
+        return ReferenceEquals(_currentPublisher.Value, publisher)
+            ? EmptyScope.Instance
+            : PushCurrent(publisher);
+    }
+
+    private static IEventPublisher GetCurrentPublisher()
+        => _currentPublisher.Value
+            ?? throw new InvalidOperationException("No ambient IEventPublisher is available for the current async flow.");
+
+    private static Context GetCurrentContext()
+        => _currentContext.Value ?? Context.Empty;
+
     private sealed class AmbientPublisherScope : IDisposable
     {
-        private readonly IEventPublisher? _previousPublisher;
+        private readonly IEventPublisher? _previous;
         private bool _disposed;
 
-        public AmbientPublisherScope(IEventPublisher? previousPublisher)
+        public AmbientPublisherScope(IEventPublisher? previous)
         {
-            _previousPublisher = previousPublisher;
+            _previous = previous;
         }
 
         public void Dispose()
@@ -81,8 +140,39 @@ public static class EventPublisher
                 return;
             }
 
-            _currentPublisher.Value = _previousPublisher;
+            _currentPublisher.Value = _previous;
             _disposed = true;
+        }
+    }
+
+    private sealed class AmbientContextScope : IDisposable
+    {
+        private readonly Context? _previous;
+        private bool _disposed;
+
+        public AmbientContextScope(Context? previous)
+        {
+            _previous = previous;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _currentContext.Value = _previous;
+            _disposed = true;
+        }
+    }
+
+    private sealed class EmptyScope : IDisposable
+    {
+        public static EmptyScope Instance { get; } = new();
+
+        public void Dispose()
+        {
         }
     }
 }

@@ -20,7 +20,7 @@ public record ProjectionRebuilt(string TenantId);
 ```csharp
 public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRebuilt>
 {
-    public override Task HandleAsync(ProjectionRebuilt @event, CancellationToken cancellationToken)
+    public override Task HandleAsync(ProjectionRebuilt @event, Context context, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -30,7 +30,7 @@ public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRe
 ## 3. Publish the Event in Scope
 
 ```csharp
-await _eventPublisher.PublishAsync(new ProjectionRebuilt("tenant-a"), cancellationToken);
+await _eventPublisher.PublishAsync(new ProjectionRebuilt("tenant-a"), context, cancellationToken);
 ```
 
 ## 4. Use the Transactional Outbox for Cross-Boundary Work
@@ -59,6 +59,7 @@ public sealed class CreateOrderHandler : CommandHandler<CreateOrderCommand>
 
 ## Notes
 
-- Use `InMemoryEventHandler<T>` for same-scope, in-process reactions.
+- Use `InMemoryEventHandler<T>` for same-scope, in-process reactions. Pass the current `Context` to preserve execution metadata downstream.
+- Domain code can continue to call `PublishAsEvent()` without accepting `Context`; NOF binds the current handler context to the ambient publisher and preserves it across secondary in-memory events.
 - Use deferred notifications or commands when the work should flow through the outbox and optional transport integrations such as RabbitMQ.
 - Persist data through `DbContext` / `NOFDbContext` in the application layer.

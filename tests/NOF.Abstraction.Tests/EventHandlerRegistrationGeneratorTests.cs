@@ -13,12 +13,13 @@ public class EventHandlerRegistrationGeneratorTests
     {
         const string source = """
             using NOF.Abstraction;
+            using NOF.Contract;
             namespace App
             {
                 public record MyEvent;
                 public class MyEventHandler : InMemoryEventHandler<MyEvent>
                 {
-                    public override System.Threading.Tasks.Task HandleAsync(MyEvent @event, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
+                    public override System.Threading.Tasks.Task HandleAsync(MyEvent @event, Context context, System.Threading.CancellationToken cancellationToken) => throw new System.NotImplementedException();
                 }
             }
             """;

@@ -1,3 +1,5 @@
+using NOF.Contract;
+
 namespace NOF.Abstraction;
 
 /// <summary>
@@ -14,11 +16,18 @@ public sealed class InMemoryEventPublisher : IEventPublisher
         _eventHandlerRegistry = eventHandlerRegistry;
     }
 
-    public async Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken)
+    public async Task PublishAsync(
+        object payload,
+        Type[] eventTypes,
+        Context context,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentNullException.ThrowIfNull(eventTypes);
+        ArgumentNullException.ThrowIfNull(context);
 
+        using var publisherScope = EventPublisher.PushPublisherIfNeeded(this);
+        using var contextScope = EventPublisher.PushContext(context);
         foreach (var eventType in eventTypes)
         {
             foreach (var handlerType in _eventHandlerRegistry.GetHandlerTypes(eventType))
@@ -28,7 +37,7 @@ public sealed class InMemoryEventPublisher : IEventPublisher
                     throw new InvalidOperationException($"Event handler type '{handlerType}' is not registered in the current scope.");
                 }
 
-                await handler.HandleAsync(payload, cancellationToken).ConfigureAwait(false);
+                await handler.HandleAsync(payload, context, cancellationToken).ConfigureAwait(false);
             }
         }
     }

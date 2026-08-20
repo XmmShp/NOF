@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using NOF.Domain;
 using NOF.Hosting;
 using NOF.Infrastructure.EntityFrameworkCore;
@@ -1885,7 +1886,11 @@ public class SqliteInMemoryPersistenceTests
     {
         public List<object> Events { get; } = [];
 
-        public Task PublishAsync(object payload, Type[] eventTypes, CancellationToken cancellationToken)
+        public Task PublishAsync(
+            object payload,
+            Type[] eventTypes,
+            Context context,
+            CancellationToken cancellationToken)
         {
             Events.Add(payload);
             return Task.CompletedTask;

@@ -34,7 +34,9 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 | `ICommandSender` | `DeferSend(command)` | outbox dispatch on save |
 | `INotificationPublisher` | `PublishAsync(notification, ct)` | immediate broadcast |
 | `INotificationPublisher` | `DeferPublish(notification)` | outbox dispatch on save |
-| `IEventPublisher` | `PublishAsync(payload, ct)` | in-scope event dispatch |
+| `IEventPublisher` | `PublishAsync(payload, context, ct)` | in-scope event dispatch with execution-context propagation |
+
+`PublishAsEvent()` combines the publisher bound once by the current dependency injection scope's daemon service with the `Context` bound at the current handler or event-dispatch boundary. Domain methods do not need to accept `Context` solely to forward it to an in-memory event.
 
 ## Source Generator Surface
 

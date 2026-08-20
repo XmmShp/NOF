@@ -66,7 +66,7 @@ public record ProjectionRebuilt(string TenantId);
 
 public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRebuilt>
 {
-    public override Task HandleAsync(ProjectionRebuilt @event, CancellationToken cancellationToken)
+    public override Task HandleAsync(ProjectionRebuilt @event, Context context, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

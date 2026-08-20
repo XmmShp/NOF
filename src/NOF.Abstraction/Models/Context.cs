@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 namespace NOF.Contract;
 
 /// <summary>
-/// Immutable execution context passed explicitly across RPC boundaries.
+/// Immutable execution context passed explicitly across NOF execution boundaries.
 /// </summary>
 public class Context
 {
@@ -89,5 +89,4 @@ public class Context
         return new ReadOnlyDictionary<object, object?>(
             new Dictionary<object, object?>(items));
     }
-
 }
