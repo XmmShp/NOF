@@ -15,6 +15,7 @@ public sealed class DefaultOAuthMetadataEndpoint(IOptions<OAuthAuthorizationServ
             Issuer = issuer,
             AuthorizationEndpoint = $"{issuer}/authorize",
             TokenEndpoint = $"{issuer}/token",
+            RegistrationEndpoint = $"{issuer}/register",
             RevocationEndpoint = $"{issuer}/revoke",
             IntrospectionEndpoint = $"{issuer}/introspect",
             UserInfoEndpoint = $"{issuer}/userinfo",

@@ -9,8 +9,9 @@ This package provides NOF authentication authority capabilities and exposes them
 ## Features
 
 - `AddOidcServer(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, key rotation, OIDC protocol services, and default persisted OAuth client management services
-- `MapOidcServer()` exposes discovery, authorization, token, revocation, introspection, userinfo, and JWKS endpoints
+- `MapOidcServer()` exposes discovery, authorization, token, revocation, introspection, userinfo, JWKS, and dynamic client registration endpoints
 - Supports `authorization_code`, `refresh_token`, `client_credentials`, and `token_exchange` grants
+- Supports RFC 7591 client registration and RFC 7592 client configuration management
 - Uses standard ASP.NET Core HTTP behavior for redirects, form posts, status codes, and JSON responses
 
 ## Usage
@@ -40,6 +41,53 @@ await app.RunAsync();
 `options.Issuer` is the final issuer identifier published in discovery metadata and embedded into issued tokens. It should usually include the OIDC path segment such as `/oauth2`. `options.PathBase` only controls where the local endpoints are mapped and is not appended to `Issuer` automatically.
 
 `AddOidcServer(...)` registers a default persisted OAuth client repository as `IOAuthClientRepository` and a default `IOAuthTokenExchangeHandler`. Applications can replace either service when they need custom client validation, management behavior, or token-exchange claim construction.
+
+## Dynamic client registration
+
+Dynamic client registration is enabled whenever `MapOidcServer()` is used. The discovery document publishes `registration_endpoint`, and the following endpoints are mapped under `PathBase`:
+
+- `POST /oauth2/register` creates a client according to RFC 7591.
+- `GET /oauth2/register/{clientId}` reads its configuration according to RFC 7592.
+- `PUT /oauth2/register/{clientId}` performs a full metadata replacement.
+- `DELETE /oauth2/register/{clientId}` removes the client.
+
+The default `POST` policy requires a NOF access token whose audience is `AccessTokenAudience` and whose scopes include `client.register`. A confidential bootstrap client can be granted that scope and use its access token as the Initial Access Token:
+
+```http
+POST /oauth2/register HTTP/1.1
+Authorization: Bearer <initial-access-token>
+Content-Type: application/json
+
+{
+  "redirect_uris": ["https://app.example.com/oauth/callback"],
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "client_name": "Example App",
+  "scope": "openid profile offline_access",
+  "application_type": "web"
+}
+```
+
+The registration response includes a `registration_access_token` and `registration_client_uri`. Use that token as a Bearer token for the RFC 7592 endpoints. Successful `GET` and `PUT` operations rotate it, so clients must persist the newly returned value. For confidential clients using a shared secret, those operations also rotate `client_secret`. Client secrets and registration access tokens are stored as salted hashes and are returned in plaintext only when issued or rotated.
+
+Registration and configuration requests require HTTPS by default. The accepted scopes, grants, authentication methods, HTTPS policy, and Initial Access Token scope can be configured through `OAuthAuthorizationServerOptions.ClientRegistration*` and `RequireHttpsForClientRegistration`.
+
+To implement anonymous registration or another admission policy, replace `IOAuthInitialAccessTokenHandler`. The registration endpoints remain enabled; only the admission decision changes:
+
+```csharp
+using Microsoft.AspNetCore.Http;
+using NOF.Contract;
+using NOF.Hosting.AspNetCore.Extension.OidcServer;
+
+public sealed class AnonymousClientRegistrationHandler : IOAuthInitialAccessTokenHandler
+{
+    public Task<Result> HandleAsync(HttpRequest request, CancellationToken cancellationToken)
+        => Task.FromResult(Result.Success());
+}
+
+builder.Services.AddScoped<IOAuthInitialAccessTokenHandler, AnonymousClientRegistrationHandler>();
+```
 
 Bootstrap helpers are available on the returned selector:
 

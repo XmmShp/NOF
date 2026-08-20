@@ -20,6 +20,20 @@ public sealed class OAuthClient
 
     public string AccessTokenClaims { get; set; } = "[]";
 
+    public string TokenEndpointAuthenticationMethod { get; set; } = string.Empty;
+
+    public string AllowedGrantTypes { get; set; } = "[]";
+
+    public string AllowedResponseTypes { get; set; } = "[]";
+
+    public string ApplicationType { get; set; } = OAuthClientApplicationTypes.Web;
+
+    public string RegistrationMetadata { get; set; } = "{}";
+
+    public string RegistrationAccessTokenHash { get; set; } = string.Empty;
+
+    public string RegistrationAccessTokenSalt { get; set; } = string.Empty;
+
     public OAuthClientType ClientType { get; set; } = OAuthClientType.Confidential;
 
     public bool IsEnabled { get; set; } = true;
@@ -47,6 +61,13 @@ public sealed class OAuthClientModelCreatingContributor : IDbContextModelCreatin
             entity.Property(e => e.AllowedScopes).IsRequired();
             entity.Property(e => e.RedirectUris).IsRequired();
             entity.Property(e => e.AccessTokenClaims).IsRequired();
+            entity.Property(e => e.TokenEndpointAuthenticationMethod).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.AllowedGrantTypes).IsRequired();
+            entity.Property(e => e.AllowedResponseTypes).IsRequired();
+            entity.Property(e => e.ApplicationType).HasMaxLength(16).IsRequired();
+            entity.Property(e => e.RegistrationMetadata).IsRequired();
+            entity.Property(e => e.RegistrationAccessTokenHash).HasMaxLength(128).IsRequired();
+            entity.Property(e => e.RegistrationAccessTokenSalt).HasMaxLength(64).IsRequired();
             entity.Property(e => e.ClientType).IsRequired();
             entity.Property(e => e.IsEnabled).IsRequired();
             entity.Property(e => e.CreatedAtUtc).IsRequired();

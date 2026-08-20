@@ -3,10 +3,11 @@ using OidcRoutes = Microsoft.AspNetCore.Routing.NOFOidcServerExtensions;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 
-public sealed class DefaultOAuthAuthorizeEndpoint(IServiceProvider serviceProvider) : IOAuthAuthorizeEndpoint
+public sealed class DefaultOAuthAuthorizeEndpoint : IOAuthAuthorizeEndpoint
 {
-    public async Task<IResult> HandleAsync(OAuthAuthorizeEndpointRequest request, CancellationToken cancellationToken)
+    public Task<IResult> HandleAsync(OAuthAuthorizeEndpointRequest request, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var authorizationRequest = new OAuthAuthorizationRequest(
             ResponseType: request.Request.ResponseType,
             ClientId: request.Request.ClientId,
@@ -17,22 +18,11 @@ public sealed class DefaultOAuthAuthorizeEndpoint(IServiceProvider serviceProvid
             CodeChallenge: OidcRoutes.EmptyToNull(request.Request.CodeChallenge),
             CodeChallengeMethod: OidcRoutes.EmptyToNull(request.Request.CodeChallengeMethod));
 
-        var validation = await OidcRoutes.ValidateAuthorizationRequestAsync(
-            serviceProvider,
-            authorizationRequest,
-            cancellationToken).ConfigureAwait(false);
-        authorizationRequest = validation.Request;
-        var validationError = validation.Error;
-        if (validationError is not null)
-        {
-            return OidcRoutes.CreateAuthorizeFailureResult(authorizationRequest, validationError, validation.AllowRedirect);
-        }
-
-        return OidcRoutes.CreateAuthorizeFailureResult(
+        return Task.FromResult<IResult>(OidcRoutes.CreateAuthorizeFailureResult(
             authorizationRequest,
             OidcRoutes.CreateOAuthError(
                 "server_error",
                 "OAuth authorize endpoint is not configured. Replace IOAuthAuthorizeEndpoint to implement authorization."),
-            allowRedirect: true);
+            allowRedirect: true));
     }
 }

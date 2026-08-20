@@ -18,6 +18,9 @@ public static partial class NOFOidcServerExtensions
             builder.Services.TryAddScoped<PersistenceOAuthClientRepository>();
             builder.Services.TryAddScoped<IOAuthClientRepository>(static serviceProvider =>
                 serviceProvider.GetRequiredService<PersistenceOAuthClientRepository>());
+            builder.Services.TryAddScoped<IOAuthClientRegistrationRepository>(static serviceProvider =>
+                serviceProvider.GetRequiredService<PersistenceOAuthClientRepository>());
+            builder.Services.TryAddScoped<IOAuthInitialAccessTokenHandler, DefaultOAuthInitialAccessTokenHandler>();
             builder.Services.TryAddScoped<IOAuthTokenExchangeHandler, DefaultOAuthTokenExchangeHandler>();
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, PersistedSigningKeyModelCreatingContributor>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, RevokedRefreshTokenModelCreatingContributor>());
@@ -35,6 +38,7 @@ public static partial class NOFOidcServerExtensions
             builder.Services.TryAddScoped<IOAuthRevokeEndpoint, DefaultOAuthRevokeEndpoint>();
             builder.Services.TryAddScoped<IOAuthIntrospectEndpoint, DefaultOAuthIntrospectEndpoint>();
             builder.Services.TryAddScoped<IOAuthUserInfoEndpoint, DefaultOAuthUserInfoEndpoint>();
+            builder.Services.TryAddScoped<IOAuthClientRegistrationEndpoint, DefaultOAuthClientRegistrationEndpoint>();
             builder.Services.TryAddScoped<OAuthAuthorizationCodeIssuer>();
             builder.Services.AddHostedService<SigningKeyRotationBackgroundService>();
             builder.Services.AddOptions<OidcServerBootstrapOptions>();

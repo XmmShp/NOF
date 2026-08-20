@@ -16,6 +16,22 @@ public static class OAuthClientAuthenticationMethods
     public const string None = "none";
 }
 
+public static class OAuthClientApplicationTypes
+{
+    public const string Web = "web";
+    public const string Native = "native";
+}
+
+public static class OAuthSubjectTypes
+{
+    public const string Public = "public";
+}
+
+public static class OAuthSigningAlgorithms
+{
+    public const string RsaSha256 = "RS256";
+}
+
 public static class OAuthClientAssertionTypes
 {
     public const string JwtBearer = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
@@ -33,6 +49,7 @@ public static class OAuthScope
     public const string Profile = "profile";
     public const string Email = "email";
     public const string OfflineAccess = "offline_access";
+    public const string ClientRegistration = "client.register";
 }
 
 public static class OAuthClaimTypes

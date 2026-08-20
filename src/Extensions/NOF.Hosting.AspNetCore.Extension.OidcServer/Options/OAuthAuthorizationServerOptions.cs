@@ -62,7 +62,8 @@ public sealed class OAuthAuthorizationServerOptions
         OAuthScope.OpenId,
         OAuthScope.Profile,
         OAuthScope.Email,
-        OAuthScope.OfflineAccess
+        OAuthScope.OfflineAccess,
+        OAuthScope.ClientRegistration
     ];
 
     public IReadOnlyList<string> ClaimsSupported { get; set; } =
@@ -74,5 +75,46 @@ public sealed class OAuthAuthorizationServerOptions
         OAuthClaimTypes.EmailVerified,
         OAuthClaimTypes.Groups,
         OAuthClaimTypes.Entitlements
+    ];
+
+    /// <summary>
+    /// Gets or sets the scope required on the initial access token used at the dynamic client registration endpoint.
+    /// </summary>
+    public string ClientRegistrationInitialAccessTokenScope { get; set; } = OAuthScope.ClientRegistration;
+
+    /// <summary>
+    /// Gets or sets whether dynamic registration and client configuration endpoints require HTTPS requests.
+    /// </summary>
+    public bool RequireHttpsForClientRegistration { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the scopes that dynamically registered clients may request.
+    /// </summary>
+    public IReadOnlyList<string> ClientRegistrationScopesAllowed { get; set; } =
+    [
+        OAuthScope.OpenId,
+        OAuthScope.Profile,
+        OAuthScope.Email,
+        OAuthScope.OfflineAccess
+    ];
+
+    /// <summary>
+    /// Gets or sets the grant types that dynamically registered clients may request.
+    /// </summary>
+    public IReadOnlyList<string> ClientRegistrationGrantTypesAllowed { get; set; } =
+    [
+        OAuthGrantTypes.AuthorizationCode,
+        OAuthGrantTypes.RefreshToken
+    ];
+
+    /// <summary>
+    /// Gets or sets the token endpoint authentication methods available to dynamically registered clients.
+    /// </summary>
+    public IReadOnlyList<string> ClientRegistrationAuthenticationMethodsAllowed { get; set; } =
+    [
+        OAuthClientAuthenticationMethods.ClientSecretBasic,
+        OAuthClientAuthenticationMethods.ClientSecretPost,
+        OAuthClientAuthenticationMethods.PrivateKeyJwt,
+        OAuthClientAuthenticationMethods.None
     ];
 }

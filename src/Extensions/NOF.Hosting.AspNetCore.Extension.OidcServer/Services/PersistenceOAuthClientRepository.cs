@@ -13,7 +13,7 @@ namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
 public sealed class PersistenceOAuthClientRepository(
     IDbContext dbContext,
     ICacheService cacheService,
-    IOptions<OAuthAuthorizationServerOptions> oauthOptions) : IOAuthClientRepository
+    IOptions<OAuthAuthorizationServerOptions> oauthOptions) : IOAuthClientRepository, IOAuthClientRegistrationRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -32,6 +32,17 @@ public sealed class PersistenceOAuthClientRepository(
             || client.ClientType != OAuthClientType.Confidential)
         {
             return new OAuthClientCredentialsValidationResult.Failure("invalid_client", "client credentials are invalid.");
+        }
+
+        if (!IsAuthenticationMethodRegistered(client, request.AuthenticationMethod))
+        {
+            return new OAuthClientCredentialsValidationResult.Failure("invalid_client", "client authentication method is not registered.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.GrantType)
+            && !DeserializeGrantTypes(client).Contains(request.GrantType))
+        {
+            return new OAuthClientCredentialsValidationResult.Failure("unauthorized_client", "grant_type is not allowed for this client.");
         }
 
         JwtSecurityToken? validatedClientAssertion = null;
@@ -109,6 +120,12 @@ public sealed class PersistenceOAuthClientRepository(
     public async Task<Result<OAuthClientSecretDescriptor>> CreateAsync(
         CreateOAuthClientRequest request,
         CancellationToken cancellationToken = default)
+        => await CreateAsync(request, null, cancellationToken).ConfigureAwait(false);
+
+    private async Task<Result<OAuthClientSecretDescriptor>> CreateAsync(
+        CreateOAuthClientRequest request,
+        (string Salt, string Hash)? registrationAccessToken,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.ClientId))
         {
@@ -136,8 +153,40 @@ public sealed class PersistenceOAuthClientRepository(
             return Result.Fail("invalid_request", "public clients must not register client assertion keys.");
         }
 
+        var authenticationMethod = NormalizeAuthenticationMethod(
+            request.TokenEndpointAuthenticationMethod,
+            request.ClientType,
+            jsonWebKeySet);
+        var authenticationError = ValidateAuthenticationMethod(
+            authenticationMethod,
+            request.ClientType,
+            jsonWebKeySet);
+        if (authenticationError is not null)
+        {
+            return Result.Fail("invalid_request", authenticationError);
+        }
+
+        var grantTypes = NormalizeGrantTypes(request.AllowedGrantTypes, request.ClientType);
+        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes);
+        if (request.ClientType == OAuthClientType.Public && grantTypes.Contains(OAuthGrantTypes.ClientCredentials))
+        {
+            return Result.Fail("invalid_request", "public clients must not use the client_credentials grant type.");
+        }
+        var protocolError = request.AllowedGrantTypes.Count > 0 || request.AllowedResponseTypes.Count > 0
+            ? ValidateProtocolMetadata(grantTypes, responseTypes, redirectUris)
+            : null;
+        if (protocolError is not null)
+        {
+            return Result.Fail("invalid_request", protocolError);
+        }
+
+        if (!IsSupportedApplicationType(request.ApplicationType))
+        {
+            return Result.Fail("invalid_request", "application_type is not supported.");
+        }
+
         var (secret, salt, hash) = request.ClientType == OAuthClientType.Public
-            || (!string.IsNullOrEmpty(jsonWebKeySet) && string.IsNullOrWhiteSpace(request.ClientSecret))
+            || string.Equals(authenticationMethod, OAuthClientAuthenticationMethods.PrivateKeyJwt, StringComparison.Ordinal)
             ? (null, string.Empty, string.Empty)
             : CreateSecretMaterial(request.ClientSecret);
         var now = DateTime.UtcNow;
@@ -151,6 +200,15 @@ public sealed class PersistenceOAuthClientRepository(
             AllowedScopes = SerializeScopes(request.AllowedScopes),
             RedirectUris = SerializeRedirectUris(redirectUris),
             AccessTokenClaims = SerializeClaims(request.AccessTokenClaims),
+            TokenEndpointAuthenticationMethod = string.IsNullOrWhiteSpace(request.TokenEndpointAuthenticationMethod)
+                ? string.Empty
+                : authenticationMethod,
+            AllowedGrantTypes = SerializeStrings(grantTypes),
+            AllowedResponseTypes = SerializeStrings(responseTypes),
+            ApplicationType = request.ApplicationType.Trim(),
+            RegistrationMetadata = SerializeRegistrationMetadata(request),
+            RegistrationAccessTokenSalt = registrationAccessToken?.Salt ?? string.Empty,
+            RegistrationAccessTokenHash = registrationAccessToken?.Hash ?? string.Empty,
             ClientType = request.ClientType,
             IsEnabled = request.IsEnabled,
             CreatedAtUtc = now,
@@ -201,10 +259,56 @@ public sealed class PersistenceOAuthClientRepository(
             return Result.Fail("invalid_request", "public clients must not register client assertion keys.");
         }
 
+        var authenticationMethod = NormalizeAuthenticationMethod(
+            request.TokenEndpointAuthenticationMethod,
+            request.ClientType,
+            jsonWebKeySet);
+        var authenticationError = ValidateAuthenticationMethod(
+            authenticationMethod,
+            request.ClientType,
+            jsonWebKeySet);
+        if (authenticationError is not null)
+        {
+            return Result.Fail("invalid_request", authenticationError);
+        }
+
+        if (request.ClientType == OAuthClientType.Confidential
+            && IsClientSecretAuthenticationMethod(authenticationMethod)
+            && string.IsNullOrWhiteSpace(client.SecretHash))
+        {
+            return Result.Fail("invalid_operation", "rotate the client secret before selecting a client secret authentication method.");
+        }
+
+        var grantTypes = NormalizeGrantTypes(request.AllowedGrantTypes, request.ClientType);
+        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes);
+        if (request.ClientType == OAuthClientType.Public && grantTypes.Contains(OAuthGrantTypes.ClientCredentials))
+        {
+            return Result.Fail("invalid_request", "public clients must not use the client_credentials grant type.");
+        }
+        var protocolError = request.AllowedGrantTypes.Count > 0 || request.AllowedResponseTypes.Count > 0
+            ? ValidateProtocolMetadata(grantTypes, responseTypes, redirectUris)
+            : null;
+        if (protocolError is not null)
+        {
+            return Result.Fail("invalid_request", protocolError);
+        }
+
+        if (!IsSupportedApplicationType(request.ApplicationType))
+        {
+            return Result.Fail("invalid_request", "application_type is not supported.");
+        }
+
         client.DisplayName = NormalizeDisplayName(request.DisplayName, client.ClientId);
         client.AllowedScopes = SerializeScopes(request.AllowedScopes);
         client.RedirectUris = SerializeRedirectUris(redirectUris);
         client.AccessTokenClaims = SerializeClaims(request.AccessTokenClaims);
+        client.TokenEndpointAuthenticationMethod = string.IsNullOrWhiteSpace(request.TokenEndpointAuthenticationMethod)
+            ? string.Empty
+            : authenticationMethod;
+        client.AllowedGrantTypes = SerializeStrings(grantTypes);
+        client.AllowedResponseTypes = SerializeStrings(responseTypes);
+        client.ApplicationType = request.ApplicationType.Trim();
+        client.RegistrationMetadata = SerializeRegistrationMetadata(request);
         client.ClientType = request.ClientType;
         if (client.ClientType == OAuthClientType.Public)
         {
@@ -212,12 +316,218 @@ public sealed class PersistenceOAuthClientRepository(
             client.SecretHash = string.Empty;
             jsonWebKeySet = string.Empty;
         }
+        else if (string.Equals(authenticationMethod, OAuthClientAuthenticationMethods.PrivateKeyJwt, StringComparison.Ordinal))
+        {
+            client.SecretSalt = string.Empty;
+            client.SecretHash = string.Empty;
+        }
         client.JsonWebKeySet = jsonWebKeySet;
         client.IsEnabled = request.IsEnabled;
         client.UpdatedAtUtc = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return Result.Success(ToDescriptor(client));
+    }
+
+    public async Task<Result<OAuthClientRegistrationSecretDescriptor>> RegisterAsync(
+        CreateOAuthClientRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var (registrationToken, registrationSalt, registrationHash) = CreateRegistrationAccessTokenMaterial();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var clientId = $"nof_dcr_{Base64UrlEncode(RandomNumberGenerator.GetBytes(24))}";
+            var createResult = await CreateAsync(
+                request with { ClientId = clientId },
+                (registrationSalt, registrationHash),
+                cancellationToken).ConfigureAwait(false);
+            if (createResult.IsSuccess)
+            {
+                return Result.Success(new OAuthClientRegistrationSecretDescriptor
+                {
+                    Client = createResult.Value.Client,
+                    ClientSecret = createResult.Value.ClientSecret,
+                    RegistrationAccessToken = registrationToken
+                });
+            }
+
+            if (!string.Equals(createResult.ErrorCode, "conflict", StringComparison.Ordinal))
+            {
+                return Result.Fail(createResult.ErrorCode, createResult.Message);
+            }
+        }
+
+        return Result.Fail("server_error", "unable to allocate a unique client_id.");
+    }
+
+    public async Task<Result<OAuthClientRegistrationSecretDescriptor>> GetAsync(
+        string clientId,
+        string registrationAccessToken,
+        CancellationToken cancellationToken = default)
+    {
+        await using var registrationLock = await cacheService.AcquireLockAsync(
+            $"oidc:client-registration:{clientId}",
+            TimeSpan.FromSeconds(30),
+            cancellationToken).ConfigureAwait(false);
+        var client = await FindClientAsync(clientId, cancellationToken).ConfigureAwait(false);
+        if (client is null || !ValidateRegistrationAccessToken(client, registrationAccessToken))
+        {
+            return Result.Fail("invalid_token", "registration access token is invalid.");
+        }
+
+        var (rotatedToken, salt, hash) = CreateRegistrationAccessTokenMaterial();
+        client.RegistrationAccessTokenSalt = salt;
+        client.RegistrationAccessTokenHash = hash;
+        string? rotatedClientSecret = null;
+        if (client.ClientType == OAuthClientType.Confidential
+            && IsClientSecretAuthenticationMethod(ResolveTokenEndpointAuthenticationMethod(client)))
+        {
+            var secretMaterial = CreateSecretMaterial();
+            rotatedClientSecret = secretMaterial.Secret;
+            client.SecretSalt = secretMaterial.Salt;
+            client.SecretHash = secretMaterial.Hash;
+        }
+        client.UpdatedAtUtc = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(new OAuthClientRegistrationSecretDescriptor
+        {
+            Client = ToDescriptor(client),
+            ClientSecret = rotatedClientSecret,
+            RegistrationAccessToken = rotatedToken
+        });
+    }
+
+    public async Task<Result<OAuthClientRegistrationSecretDescriptor>> UpdateAsync(
+        string clientId,
+        string registrationAccessToken,
+        string? currentClientSecret,
+        UpdateOAuthClientRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        await using var registrationLock = await cacheService.AcquireLockAsync(
+            $"oidc:client-registration:{clientId}",
+            TimeSpan.FromSeconds(30),
+            cancellationToken).ConfigureAwait(false);
+        var client = await FindClientAsync(clientId, cancellationToken).ConfigureAwait(false);
+        if (client is null || !ValidateRegistrationAccessToken(client, registrationAccessToken))
+        {
+            return Result.Fail("invalid_token", "registration access token is invalid.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentClientSecret)
+            && (string.IsNullOrWhiteSpace(client.SecretHash)
+                || !VerifySecret(currentClientSecret, client.SecretSalt, client.SecretHash)))
+        {
+            return Result.Fail("invalid_client_metadata", "client_secret does not match the currently issued secret.");
+        }
+
+        var redirectUris = NormalizeRedirectUris(request.RedirectUris);
+        if (redirectUris is null)
+        {
+            return Result.Fail("invalid_redirect_uri", "redirect_uris must contain only valid absolute URIs.");
+        }
+
+        if (!TryNormalizeJsonWebKeySet(request.JsonWebKeySet, out var jsonWebKeySet))
+        {
+            return Result.Fail("invalid_client_metadata", "jwks must contain valid public RSA signing keys.");
+        }
+
+        if (request.ClientType == OAuthClientType.Public && !string.IsNullOrEmpty(jsonWebKeySet))
+        {
+            return Result.Fail("invalid_client_metadata", "public clients must not register client assertion keys.");
+        }
+
+        var authenticationMethod = NormalizeAuthenticationMethod(
+            request.TokenEndpointAuthenticationMethod,
+            request.ClientType,
+            jsonWebKeySet);
+        var authenticationError = ValidateAuthenticationMethod(
+            authenticationMethod,
+            request.ClientType,
+            jsonWebKeySet);
+        if (authenticationError is not null)
+        {
+            return Result.Fail("invalid_client_metadata", authenticationError);
+        }
+
+        var grantTypes = NormalizeGrantTypes(request.AllowedGrantTypes, request.ClientType);
+        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes);
+        if (request.ClientType == OAuthClientType.Public && grantTypes.Contains(OAuthGrantTypes.ClientCredentials))
+        {
+            return Result.Fail("invalid_client_metadata", "public clients must not use the client_credentials grant type.");
+        }
+        var protocolError = ValidateProtocolMetadata(grantTypes, responseTypes, redirectUris);
+        if (protocolError is not null)
+        {
+            return Result.Fail("invalid_client_metadata", protocolError);
+        }
+
+        if (!IsSupportedApplicationType(request.ApplicationType))
+        {
+            return Result.Fail("invalid_client_metadata", "application_type is not supported.");
+        }
+
+        string? newClientSecret = null;
+        if (request.ClientType == OAuthClientType.Public
+            || string.Equals(authenticationMethod, OAuthClientAuthenticationMethods.PrivateKeyJwt, StringComparison.Ordinal))
+        {
+            client.SecretSalt = string.Empty;
+            client.SecretHash = string.Empty;
+        }
+        else
+        {
+            var secretMaterial = CreateSecretMaterial();
+            newClientSecret = secretMaterial.Secret;
+            client.SecretSalt = secretMaterial.Salt;
+            client.SecretHash = secretMaterial.Hash;
+        }
+
+        client.DisplayName = NormalizeDisplayName(request.DisplayName, client.ClientId);
+        client.AllowedScopes = SerializeScopes(request.AllowedScopes);
+        client.RedirectUris = SerializeRedirectUris(redirectUris);
+        client.AccessTokenClaims = "[]";
+        client.JsonWebKeySet = jsonWebKeySet;
+        client.TokenEndpointAuthenticationMethod = authenticationMethod;
+        client.AllowedGrantTypes = SerializeStrings(grantTypes);
+        client.AllowedResponseTypes = SerializeStrings(responseTypes);
+        client.ApplicationType = request.ApplicationType.Trim();
+        client.RegistrationMetadata = SerializeRegistrationMetadata(request);
+        client.ClientType = request.ClientType;
+        client.IsEnabled = true;
+        client.UpdatedAtUtc = DateTime.UtcNow;
+
+        var (rotatedToken, registrationSalt, registrationHash) = CreateRegistrationAccessTokenMaterial();
+        client.RegistrationAccessTokenSalt = registrationSalt;
+        client.RegistrationAccessTokenHash = registrationHash;
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(new OAuthClientRegistrationSecretDescriptor
+        {
+            Client = ToDescriptor(client),
+            ClientSecret = newClientSecret,
+            RegistrationAccessToken = rotatedToken
+        });
+    }
+
+    public async Task<Result> DeleteAsync(
+        string clientId,
+        string registrationAccessToken,
+        CancellationToken cancellationToken = default)
+    {
+        await using var registrationLock = await cacheService.AcquireLockAsync(
+            $"oidc:client-registration:{clientId}",
+            TimeSpan.FromSeconds(30),
+            cancellationToken).ConfigureAwait(false);
+        var client = await FindClientAsync(clientId, cancellationToken).ConfigureAwait(false);
+        if (client is null || !ValidateRegistrationAccessToken(client, registrationAccessToken))
+        {
+            return Result.Fail("invalid_token", "registration access token is invalid.");
+        }
+
+        dbContext.Set<OAuthClient>().Remove(client);
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result.Success();
     }
 
     public async Task<Result<OAuthClientSecretDescriptor>> RotateSecretAsync(
@@ -283,6 +593,7 @@ public sealed class PersistenceOAuthClientRepository(
 
     private static OAuthClientDescriptor ToDescriptor(OAuthClient client)
     {
+        var registrationMetadata = DeserializeRegistrationMetadata(client.RegistrationMetadata);
         return new OAuthClientDescriptor
         {
             ClientId = client.ClientId,
@@ -291,6 +602,21 @@ public sealed class PersistenceOAuthClientRepository(
             RedirectUris = DeserializeRedirectUris(client.RedirectUris).OrderBy(static uri => uri, StringComparer.Ordinal).ToArray(),
             AccessTokenClaims = DeserializeClaims(client.AccessTokenClaims),
             JsonWebKeySet = client.JsonWebKeySet,
+            TokenEndpointAuthenticationMethod = ResolveTokenEndpointAuthenticationMethod(client),
+            AllowedGrantTypes = DeserializeGrantTypes(client).OrderBy(static value => value, StringComparer.Ordinal).ToArray(),
+            AllowedResponseTypes = DeserializeResponseTypes(client).OrderBy(static value => value, StringComparer.Ordinal).ToArray(),
+            ApplicationType = string.IsNullOrWhiteSpace(client.ApplicationType)
+                ? OAuthClientApplicationTypes.Web
+                : client.ApplicationType,
+            SubjectType = registrationMetadata.SubjectType,
+            IdTokenSignedResponseAlgorithm = registrationMetadata.IdTokenSignedResponseAlgorithm,
+            ClientUri = registrationMetadata.ClientUri,
+            LogoUri = registrationMetadata.LogoUri,
+            Contacts = registrationMetadata.Contacts,
+            TermsOfServiceUri = registrationMetadata.TermsOfServiceUri,
+            PolicyUri = registrationMetadata.PolicyUri,
+            SoftwareId = registrationMetadata.SoftwareId,
+            SoftwareVersion = registrationMetadata.SoftwareVersion,
             ClientType = client.ClientType,
             IsEnabled = client.IsEnabled,
             CreatedAtUtc = client.CreatedAtUtc,
@@ -310,6 +636,45 @@ public sealed class PersistenceOAuthClientRepository(
                 .OrderBy(static scope => scope, StringComparer.Ordinal)
                 .ToArray(),
             JsonOptions);
+
+    private static string SerializeStrings(IEnumerable<string> values)
+        => JsonSerializer.Serialize(
+            values
+                .Where(static value => !string.IsNullOrWhiteSpace(value))
+                .Select(static value => value.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(static value => value, StringComparer.Ordinal)
+                .ToArray(),
+            JsonOptions);
+
+    private static IReadOnlySet<string> DeserializeStrings(string values)
+    {
+        if (string.IsNullOrWhiteSpace(values))
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
+
+        return (JsonSerializer.Deserialize<string[]>(values, JsonOptions) ?? [])
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static IReadOnlySet<string> DeserializeGrantTypes(OAuthClient client)
+    {
+        var grantTypes = DeserializeStrings(client.AllowedGrantTypes);
+        return grantTypes.Count > 0
+            ? grantTypes
+            : NormalizeGrantTypes([], client.ClientType);
+    }
+
+    private static IReadOnlySet<string> DeserializeResponseTypes(OAuthClient client)
+    {
+        var responseTypes = DeserializeStrings(client.AllowedResponseTypes);
+        return responseTypes.Count > 0
+            ? responseTypes
+            : NormalizeResponseTypes([]);
+    }
 
     private static IReadOnlySet<string> DeserializeScopes(string scopes)
         => (JsonSerializer.Deserialize<string[]>(scopes, JsonOptions) ?? [])
@@ -350,7 +715,8 @@ public sealed class PersistenceOAuthClientRepository(
             }
 
             var trimmed = redirectUri.Trim();
-            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out _))
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+                || !string.IsNullOrEmpty(uri.Fragment))
             {
                 return null;
             }
@@ -371,6 +737,240 @@ public sealed class PersistenceOAuthClientRepository(
 
     private static IReadOnlyList<OAuthClientClaim> DeserializeClaims(string claims)
         => JsonSerializer.Deserialize<OAuthClientClaim[]>(claims, JsonOptions) ?? [];
+
+    private static string NormalizeAuthenticationMethod(
+        string? authenticationMethod,
+        OAuthClientType clientType,
+        string jsonWebKeySet)
+    {
+        if (!string.IsNullOrWhiteSpace(authenticationMethod))
+        {
+            return authenticationMethod.Trim();
+        }
+
+        if (clientType == OAuthClientType.Public)
+        {
+            return OAuthClientAuthenticationMethods.None;
+        }
+
+        return string.IsNullOrWhiteSpace(jsonWebKeySet)
+            ? OAuthClientAuthenticationMethods.ClientSecretBasic
+            : OAuthClientAuthenticationMethods.PrivateKeyJwt;
+    }
+
+    private static string ResolveTokenEndpointAuthenticationMethod(OAuthClient client)
+        => NormalizeAuthenticationMethod(
+            client.TokenEndpointAuthenticationMethod,
+            client.ClientType,
+            client.JsonWebKeySet);
+
+    private static bool IsAuthenticationMethodRegistered(OAuthClient client, string authenticationMethod)
+    {
+        if (!string.IsNullOrWhiteSpace(client.TokenEndpointAuthenticationMethod))
+        {
+            return string.Equals(
+                authenticationMethod,
+                client.TokenEndpointAuthenticationMethod,
+                StringComparison.Ordinal);
+        }
+
+        var resolvedAuthenticationMethod = ResolveTokenEndpointAuthenticationMethod(client);
+        return IsClientSecretAuthenticationMethod(resolvedAuthenticationMethod)
+            ? IsClientSecretAuthenticationMethod(authenticationMethod)
+            : string.Equals(authenticationMethod, resolvedAuthenticationMethod, StringComparison.Ordinal);
+    }
+
+    private static string? ValidateAuthenticationMethod(
+        string authenticationMethod,
+        OAuthClientType clientType,
+        string jsonWebKeySet)
+    {
+        if (clientType == OAuthClientType.Public)
+        {
+            return string.Equals(authenticationMethod, OAuthClientAuthenticationMethods.None, StringComparison.Ordinal)
+                ? null
+                : "public clients must use token_endpoint_auth_method=none.";
+        }
+
+        if (string.Equals(authenticationMethod, OAuthClientAuthenticationMethods.None, StringComparison.Ordinal))
+        {
+            return "confidential clients must authenticate at the token endpoint.";
+        }
+
+        if (string.Equals(authenticationMethod, OAuthClientAuthenticationMethods.PrivateKeyJwt, StringComparison.Ordinal))
+        {
+            return string.IsNullOrWhiteSpace(jsonWebKeySet)
+                ? "private_key_jwt clients must register jwks."
+                : null;
+        }
+
+        return IsClientSecretAuthenticationMethod(authenticationMethod)
+            ? null
+            : "token_endpoint_auth_method is not supported.";
+    }
+
+    private static IReadOnlySet<string> NormalizeGrantTypes(
+        IEnumerable<string> grantTypes,
+        OAuthClientType clientType)
+    {
+        var normalized = grantTypes
+            .Where(static grantType => !string.IsNullOrWhiteSpace(grantType))
+            .Select(static grantType => grantType.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+        if (normalized.Count > 0)
+        {
+            return normalized;
+        }
+
+        return clientType == OAuthClientType.Public
+            ? new HashSet<string>(
+                [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.RefreshToken, OAuthGrantTypes.TokenExchange],
+                StringComparer.Ordinal)
+            : new HashSet<string>(
+                [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.RefreshToken, OAuthGrantTypes.ClientCredentials, OAuthGrantTypes.TokenExchange],
+                StringComparer.Ordinal);
+    }
+
+    private static IReadOnlySet<string> NormalizeResponseTypes(IEnumerable<string> responseTypes)
+    {
+        var normalized = responseTypes
+            .Where(static responseType => !string.IsNullOrWhiteSpace(responseType))
+            .Select(static responseType => responseType.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+        return normalized.Count > 0
+            ? normalized
+            : new HashSet<string>(["code"], StringComparer.Ordinal);
+    }
+
+    private static string? ValidateProtocolMetadata(
+        IReadOnlySet<string> grantTypes,
+        IReadOnlySet<string> responseTypes,
+        IReadOnlySet<string> redirectUris)
+    {
+        var supportedGrantTypes = new HashSet<string>(
+            [
+                OAuthGrantTypes.AuthorizationCode,
+                OAuthGrantTypes.RefreshToken,
+                OAuthGrantTypes.ClientCredentials,
+                OAuthGrantTypes.TokenExchange
+            ],
+            StringComparer.Ordinal);
+        if (grantTypes.Any(grantType => !supportedGrantTypes.Contains(grantType)))
+        {
+            return "grant_types contains an unsupported value.";
+        }
+
+        if (responseTypes.Any(static responseType => !string.Equals(responseType, "code", StringComparison.Ordinal)))
+        {
+            return "response_types contains an unsupported value.";
+        }
+
+        if (grantTypes.Contains(OAuthGrantTypes.AuthorizationCode) != responseTypes.Contains("code"))
+        {
+            return "authorization_code and response_type=code must be registered together.";
+        }
+
+        if (grantTypes.Contains(OAuthGrantTypes.AuthorizationCode) && redirectUris.Count == 0)
+        {
+            return "redirect_uris is required for authorization_code clients.";
+        }
+
+        return null;
+    }
+
+    private static bool IsSupportedApplicationType(string applicationType)
+        => string.Equals(applicationType, OAuthClientApplicationTypes.Web, StringComparison.Ordinal)
+           || string.Equals(applicationType, OAuthClientApplicationTypes.Native, StringComparison.Ordinal);
+
+    private static bool ValidateRegistrationAccessToken(OAuthClient? client, string registrationAccessToken)
+        => client is not null
+           && !string.IsNullOrWhiteSpace(registrationAccessToken)
+           && !string.IsNullOrWhiteSpace(client.RegistrationAccessTokenHash)
+           && VerifySecret(
+               registrationAccessToken.Trim(),
+               client.RegistrationAccessTokenSalt,
+               client.RegistrationAccessTokenHash);
+
+    private static (string Token, string Salt, string Hash) CreateRegistrationAccessTokenMaterial()
+    {
+        var token = $"nof_reg_{Base64UrlEncode(RandomNumberGenerator.GetBytes(32))}";
+        var salt = Base64UrlEncode(RandomNumberGenerator.GetBytes(16));
+        return (token, salt, HashSecret(token, salt));
+    }
+
+    private static string? EmptyToNull(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string SerializeRegistrationMetadata(CreateOAuthClientRequest request)
+        => SerializeRegistrationMetadata(
+            request.SubjectType,
+            request.IdTokenSignedResponseAlgorithm,
+            request.ClientUri,
+            request.LogoUri,
+            request.Contacts,
+            request.TermsOfServiceUri,
+            request.PolicyUri,
+            request.SoftwareId,
+            request.SoftwareVersion);
+
+    private static string SerializeRegistrationMetadata(UpdateOAuthClientRequest request)
+        => SerializeRegistrationMetadata(
+            request.SubjectType,
+            request.IdTokenSignedResponseAlgorithm,
+            request.ClientUri,
+            request.LogoUri,
+            request.Contacts,
+            request.TermsOfServiceUri,
+            request.PolicyUri,
+            request.SoftwareId,
+            request.SoftwareVersion);
+
+    private static string SerializeRegistrationMetadata(
+        string subjectType,
+        string idTokenSignedResponseAlgorithm,
+        string? clientUri,
+        string? logoUri,
+        IReadOnlyList<string> contacts,
+        string? termsOfServiceUri,
+        string? policyUri,
+        string? softwareId,
+        string? softwareVersion)
+        => JsonSerializer.Serialize(
+            new OAuthClientStoredRegistrationMetadata
+            {
+                SubjectType = subjectType,
+                IdTokenSignedResponseAlgorithm = idTokenSignedResponseAlgorithm,
+                ClientUri = EmptyToNull(clientUri),
+                LogoUri = EmptyToNull(logoUri),
+                Contacts = contacts
+                    .Where(static contact => !string.IsNullOrWhiteSpace(contact))
+                    .Select(static contact => contact.Trim())
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray(),
+                TermsOfServiceUri = EmptyToNull(termsOfServiceUri),
+                PolicyUri = EmptyToNull(policyUri),
+                SoftwareId = EmptyToNull(softwareId),
+                SoftwareVersion = EmptyToNull(softwareVersion)
+            },
+            JsonOptions);
+
+    private static OAuthClientStoredRegistrationMetadata DeserializeRegistrationMetadata(string metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata))
+        {
+            return new OAuthClientStoredRegistrationMetadata();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<OAuthClientStoredRegistrationMetadata>(metadata, JsonOptions)
+                ?? new OAuthClientStoredRegistrationMetadata();
+        }
+        catch (JsonException)
+        {
+            return new OAuthClientStoredRegistrationMetadata();
+        }
+    }
 
     private JwtSecurityToken? ValidateClientAssertion(
         OAuthClient client,

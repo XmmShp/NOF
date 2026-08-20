@@ -22,6 +22,32 @@ public sealed record OAuthClientDescriptor
 
     public string JsonWebKeySet { get; init; } = string.Empty;
 
+    public string TokenEndpointAuthenticationMethod { get; init; } = string.Empty;
+
+    public IReadOnlyList<string> AllowedGrantTypes { get; init; } = [];
+
+    public IReadOnlyList<string> AllowedResponseTypes { get; init; } = [];
+
+    public string ApplicationType { get; init; } = OAuthClientApplicationTypes.Web;
+
+    public string SubjectType { get; init; } = OAuthSubjectTypes.Public;
+
+    public string IdTokenSignedResponseAlgorithm { get; init; } = OAuthSigningAlgorithms.RsaSha256;
+
+    public string? ClientUri { get; init; }
+
+    public string? LogoUri { get; init; }
+
+    public IReadOnlyList<string> Contacts { get; init; } = [];
+
+    public string? TermsOfServiceUri { get; init; }
+
+    public string? PolicyUri { get; init; }
+
+    public string? SoftwareId { get; init; }
+
+    public string? SoftwareVersion { get; init; }
+
     public required OAuthClientType ClientType { get; init; }
 
     public required bool IsEnabled { get; init; }
@@ -54,6 +80,32 @@ public sealed record CreateOAuthClientRequest
 
     public string? JsonWebKeySet { get; init; }
 
+    public string? TokenEndpointAuthenticationMethod { get; init; }
+
+    public IReadOnlyList<string> AllowedGrantTypes { get; init; } = [];
+
+    public IReadOnlyList<string> AllowedResponseTypes { get; init; } = [];
+
+    public string ApplicationType { get; init; } = OAuthClientApplicationTypes.Web;
+
+    public string SubjectType { get; init; } = OAuthSubjectTypes.Public;
+
+    public string IdTokenSignedResponseAlgorithm { get; init; } = OAuthSigningAlgorithms.RsaSha256;
+
+    public string? ClientUri { get; init; }
+
+    public string? LogoUri { get; init; }
+
+    public IReadOnlyList<string> Contacts { get; init; } = [];
+
+    public string? TermsOfServiceUri { get; init; }
+
+    public string? PolicyUri { get; init; }
+
+    public string? SoftwareId { get; init; }
+
+    public string? SoftwareVersion { get; init; }
+
     public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
 
     public bool IsEnabled { get; init; } = true;
@@ -71,7 +123,42 @@ public sealed record UpdateOAuthClientRequest
 
     public string? JsonWebKeySet { get; init; }
 
+    public string? TokenEndpointAuthenticationMethod { get; init; }
+
+    public IReadOnlyList<string> AllowedGrantTypes { get; init; } = [];
+
+    public IReadOnlyList<string> AllowedResponseTypes { get; init; } = [];
+
+    public string ApplicationType { get; init; } = OAuthClientApplicationTypes.Web;
+
+    public string SubjectType { get; init; } = OAuthSubjectTypes.Public;
+
+    public string IdTokenSignedResponseAlgorithm { get; init; } = OAuthSigningAlgorithms.RsaSha256;
+
+    public string? ClientUri { get; init; }
+
+    public string? LogoUri { get; init; }
+
+    public IReadOnlyList<string> Contacts { get; init; } = [];
+
+    public string? TermsOfServiceUri { get; init; }
+
+    public string? PolicyUri { get; init; }
+
+    public string? SoftwareId { get; init; }
+
+    public string? SoftwareVersion { get; init; }
+
     public OAuthClientType ClientType { get; init; } = OAuthClientType.Confidential;
 
     public bool IsEnabled { get; init; } = true;
+}
+
+public sealed record OAuthClientRegistrationSecretDescriptor
+{
+    public required OAuthClientDescriptor Client { get; init; }
+
+    public string? ClientSecret { get; init; }
+
+    public required string RegistrationAccessToken { get; init; }
 }

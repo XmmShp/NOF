@@ -7,7 +7,8 @@ public sealed record OAuthClientCredentialsValidationRequest(
     string AuthenticationMethod,
     string? ClientAssertion = null,
     string? ClientAssertionType = null,
-    string? Audience = null);
+    string? Audience = null,
+    string? GrantType = null);
 
 public abstract record OAuthClientCredentialsValidationResult
 {

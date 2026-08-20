@@ -106,6 +106,8 @@ public sealed class AuthenticationExtensionsTests
         Assert.Contains("/oauth2/revoke", routes);
         Assert.Contains("/oauth2/introspect", routes);
         Assert.Contains("/oauth2/authorize", routes);
+        Assert.Contains("/oauth2/register", routes);
+        Assert.Contains("/oauth2/register/{clientId}", routes);
         Assert.Contains("/.well-known/openid-configuration", routes);
     }
 
@@ -115,6 +117,89 @@ public sealed class AuthenticationExtensionsTests
         var options = new OAuthAuthorizationServerOptions();
 
         Assert.Contains(OAuthScope.OfflineAccess, options.ScopesSupported);
+    }
+
+    [Fact]
+    public void OAuthAuthorizationServerOptions_ShouldEnableProtectedDynamicRegistrationByDefault()
+    {
+        var options = new OAuthAuthorizationServerOptions();
+
+        Assert.True(options.RequireHttpsForClientRegistration);
+        Assert.Equal(OAuthScope.ClientRegistration, options.ClientRegistrationInitialAccessTokenScope);
+        Assert.Contains(OAuthScope.ClientRegistration, options.ScopesSupported);
+    }
+
+    [Fact]
+    public async Task DefaultOAuthInitialAccessTokenHandler_ShouldRequireConfiguredScope()
+    {
+        var tokenService = new TestTokenService
+        {
+            IntrospectTokenResult = Result.Success(new IntrospectTokenResponse
+            {
+                Active = true,
+                Claims = [new TokenClaim(OAuthClaimTypes.Scope, "openid profile")]
+            })
+        };
+        var handler = new DefaultOAuthInitialAccessTokenHandler(
+            tokenService,
+            Options.Create(new OAuthAuthorizationServerOptions
+            {
+                AccessTokenAudience = "nof-tests"
+            }));
+        var httpContext = new DefaultHttpContext();
+
+        var missing = await handler.HandleAsync(httpContext.Request, CancellationToken.None);
+        httpContext.Request.Headers.Authorization = "Bearer initial-access-token";
+
+        var rejected = await handler.HandleAsync(httpContext.Request, CancellationToken.None);
+        tokenService.IntrospectTokenResult = Result.Success(new IntrospectTokenResponse
+        {
+            Active = true,
+            Claims = [new TokenClaim(OAuthClaimTypes.Scope, $"openid {OAuthScope.ClientRegistration}")]
+        });
+        var accepted = await handler.HandleAsync(httpContext.Request, CancellationToken.None);
+
+        Assert.False(missing.IsSuccess);
+        Assert.Equal("invalid_token", missing.ErrorCode);
+        Assert.False(rejected.IsSuccess);
+        Assert.Equal("insufficient_scope", rejected.ErrorCode);
+        Assert.True(accepted.IsSuccess, accepted.Message);
+    }
+
+    [Fact]
+    public async Task AddOidcServer_ShouldAllowReplacingInitialAccessTokenHandlerForAnonymousRegistration()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-dcr-handler-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+        builder.Services.AddScoped<IOAuthInitialAccessTokenHandler, AnonymousInitialAccessTokenHandler>();
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+
+        Assert.IsType<AnonymousInitialAccessTokenHandler>(scope.GetRequiredService<IOAuthInitialAccessTokenHandler>());
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = scope.Services
+        };
+        httpContext.Request.Scheme = Uri.UriSchemeHttps;
+        var result = await scope.GetRequiredService<IOAuthClientRegistrationEndpoint>().RegisterAsync(
+            httpContext.Request,
+            new OAuthClientRegistrationRequest
+            {
+                RedirectUris = ["https://anonymous.local/callback"],
+                TokenEndpointAuthenticationMethod = OAuthClientAuthenticationMethods.None,
+                ClientName = "Anonymous Registration",
+                Scope = OAuthScope.OpenId
+            },
+            CancellationToken.None);
+
+        Assert.Equal(
+            StatusCodes.Status201Created,
+            Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
+        var response = Assert.IsType<OAuthClientRegistrationResponse>(
+            Assert.IsAssignableFrom<IValueHttpResult>(result).Value);
+        Assert.StartsWith("nof_dcr_", response.ClientId, StringComparison.Ordinal);
+        Assert.StartsWith("nof_reg_", response.RegistrationAccessToken, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -916,6 +1001,143 @@ public sealed class AuthenticationExtensionsTests
     }
 
     [Fact]
+    public async Task DynamicClientRegistrationRepository_ShouldSupportRfc7591AndRfc7592Lifecycle()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-dcr-lifecycle-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var registrationRepository = scope.GetRequiredService<IOAuthClientRegistrationRepository>();
+        var clientRepository = scope.GetRequiredService<IOAuthClientRepository>();
+        var dbContext = scope.GetRequiredService<NOFDbContext>();
+
+        var registration = await registrationRepository.RegisterAsync(new CreateOAuthClientRequest
+        {
+            DisplayName = "Dynamic Public App",
+            AllowedScopes = [OAuthScope.OpenId, OAuthScope.Profile],
+            RedirectUris = ["https://dynamic.local/callback"],
+            TokenEndpointAuthenticationMethod = OAuthClientAuthenticationMethods.None,
+            AllowedGrantTypes = [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.RefreshToken],
+            AllowedResponseTypes = ["code"],
+            ApplicationType = OAuthClientApplicationTypes.Web,
+            SubjectType = OAuthSubjectTypes.Public,
+            IdTokenSignedResponseAlgorithm = OAuthSigningAlgorithms.RsaSha256,
+            Contacts = ["owner@dynamic.local"],
+            ClientType = OAuthClientType.Public
+        });
+
+        Assert.True(registration.IsSuccess, registration.Message);
+        Assert.StartsWith("nof_dcr_", registration.Value.Client.ClientId, StringComparison.Ordinal);
+        Assert.StartsWith("nof_reg_", registration.Value.RegistrationAccessToken, StringComparison.Ordinal);
+        Assert.Null(registration.Value.ClientSecret);
+        Assert.Equal(OAuthClientAuthenticationMethods.None, registration.Value.Client.TokenEndpointAuthenticationMethod);
+
+        var storedClient = await EntityFrameworkQueryableExtensions.SingleAsync(
+            dbContext.Set<OAuthClient>(),
+            client => client.ClientId == registration.Value.Client.ClientId);
+        Assert.NotEqual(registration.Value.RegistrationAccessToken, storedClient.RegistrationAccessTokenHash);
+        Assert.DoesNotContain(registration.Value.RegistrationAccessToken, storedClient.RegistrationAccessTokenHash, StringComparison.Ordinal);
+
+        var read = await registrationRepository.GetAsync(
+            registration.Value.Client.ClientId,
+            registration.Value.RegistrationAccessToken);
+        Assert.True(read.IsSuccess, read.Message);
+        Assert.NotEqual(registration.Value.RegistrationAccessToken, read.Value.RegistrationAccessToken);
+
+        var staleRead = await registrationRepository.GetAsync(
+            registration.Value.Client.ClientId,
+            registration.Value.RegistrationAccessToken);
+        Assert.False(staleRead.IsSuccess);
+        Assert.Equal("invalid_token", staleRead.ErrorCode);
+
+        var update = await registrationRepository.UpdateAsync(
+            registration.Value.Client.ClientId,
+            read.Value.RegistrationAccessToken,
+            currentClientSecret: null,
+            new UpdateOAuthClientRequest
+            {
+                DisplayName = "Renamed Dynamic Public App",
+                AllowedScopes = [OAuthScope.OpenId],
+                RedirectUris = ["https://dynamic.local/new-callback"],
+                TokenEndpointAuthenticationMethod = OAuthClientAuthenticationMethods.None,
+                AllowedGrantTypes = [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.RefreshToken],
+                AllowedResponseTypes = ["code"],
+                ApplicationType = OAuthClientApplicationTypes.Web,
+                SubjectType = OAuthSubjectTypes.Public,
+                IdTokenSignedResponseAlgorithm = OAuthSigningAlgorithms.RsaSha256,
+                Contacts = ["new-owner@dynamic.local"],
+                ClientType = OAuthClientType.Public
+            });
+
+        Assert.True(update.IsSuccess, update.Message);
+        Assert.Equal("Renamed Dynamic Public App", update.Value.Client.DisplayName);
+        Assert.Equal(["https://dynamic.local/new-callback"], update.Value.Client.RedirectUris);
+        Assert.Equal(["new-owner@dynamic.local"], update.Value.Client.Contacts);
+        Assert.NotEqual(read.Value.RegistrationAccessToken, update.Value.RegistrationAccessToken);
+
+        var deletion = await registrationRepository.DeleteAsync(
+            registration.Value.Client.ClientId,
+            update.Value.RegistrationAccessToken);
+        var deletedClient = await clientRepository.GetAsync(registration.Value.Client.ClientId);
+
+        Assert.True(deletion.IsSuccess, deletion.Message);
+        Assert.False(deletedClient.IsSuccess);
+        Assert.Equal("not_found", deletedClient.ErrorCode);
+    }
+
+    [Fact]
+    public async Task DynamicClientRegistrationRepository_ReadShouldRotateConfidentialClientCredentials()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-dcr-secret-rotation-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var registrationRepository = scope.GetRequiredService<IOAuthClientRegistrationRepository>();
+        var clientRepository = scope.GetRequiredService<IOAuthClientRepository>();
+        var registration = await registrationRepository.RegisterAsync(new CreateOAuthClientRequest
+        {
+            DisplayName = "Dynamic Confidential App",
+            AllowedScopes = [OAuthScope.OpenId],
+            RedirectUris = ["https://confidential-dynamic.local/callback"],
+            TokenEndpointAuthenticationMethod = OAuthClientAuthenticationMethods.ClientSecretBasic,
+            AllowedGrantTypes = [OAuthGrantTypes.AuthorizationCode, OAuthGrantTypes.RefreshToken],
+            AllowedResponseTypes = ["code"],
+            ApplicationType = OAuthClientApplicationTypes.Web,
+            ClientType = OAuthClientType.Confidential
+        });
+
+        Assert.True(registration.IsSuccess, registration.Message);
+        Assert.NotNull(registration.Value.ClientSecret);
+        var read = await registrationRepository.GetAsync(
+            registration.Value.Client.ClientId,
+            registration.Value.RegistrationAccessToken);
+
+        Assert.True(read.IsSuccess, read.Message);
+        Assert.NotNull(read.Value.ClientSecret);
+        Assert.NotEqual(registration.Value.ClientSecret, read.Value.ClientSecret);
+
+        var oldCredentials = await clientRepository.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                registration.Value.Client.ClientId,
+                registration.Value.ClientSecret,
+                new HashSet<string>([OAuthScope.OpenId], StringComparer.Ordinal),
+                OAuthClientAuthenticationMethods.ClientSecretBasic,
+                GrantType: OAuthGrantTypes.AuthorizationCode),
+            CancellationToken.None);
+        var rotatedCredentials = await clientRepository.ValidateClientCredentialsAsync(
+            new OAuthClientCredentialsValidationRequest(
+                registration.Value.Client.ClientId,
+                read.Value.ClientSecret,
+                new HashSet<string>([OAuthScope.OpenId], StringComparer.Ordinal),
+                OAuthClientAuthenticationMethods.ClientSecretBasic,
+                GrantType: OAuthGrantTypes.AuthorizationCode),
+            CancellationToken.None);
+
+        Assert.IsType<OAuthClientCredentialsValidationResult.Failure>(oldCredentials);
+        Assert.IsType<OAuthClientCredentialsValidationResult.Success>(rotatedCredentials);
+    }
+
+    [Fact]
     public async Task AddOidcServer_OAuthClientService_ShouldPersistRedirectUris()
     {
         var builder = CreateAuthorityBuilder($"Data Source=nof-oauth-client-redirect-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
@@ -1557,6 +1779,16 @@ public sealed class AuthenticationExtensionsTests
             .WithOptions(static (optionsBuilder, databaseConnectionString) => optionsBuilder.UseSqlite(databaseConnectionString));
 
         return builder;
+    }
+
+    private sealed class AnonymousInitialAccessTokenHandler : IOAuthInitialAccessTokenHandler
+    {
+        public Task<Result> HandleAsync(HttpRequest request, CancellationToken cancellationToken)
+        {
+            _ = request;
+            _ = cancellationToken;
+            return Task.FromResult(Result.Success());
+        }
     }
 
     private sealed class TestOAuthClientRepository : IOAuthClientRepository
