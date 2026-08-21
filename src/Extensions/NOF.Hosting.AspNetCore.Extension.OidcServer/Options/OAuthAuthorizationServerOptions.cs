@@ -46,6 +46,42 @@ public sealed class OAuthAuthorizationServerOptions
     public TimeSpan AuthorizationCodeExpiration { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// Gets or sets how long device and user codes remain valid.
+    /// </summary>
+    public TimeSpan DeviceCodeExpiration { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Gets or sets the initial minimum interval between device token polling requests.
+    /// </summary>
+    public TimeSpan DevicePollingInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets or sets the number of significant characters in a device-flow user code.
+    /// </summary>
+    [Range(8, 12, ErrorMessage = "DeviceUserCodeLength must be between 8 and 12.")]
+    public int DeviceUserCodeLength { get; set; } = 8;
+
+    /// <summary>
+    /// Gets or sets an optional absolute verification URI. When omitted, <c>{Issuer}/device</c> is used.
+    /// </summary>
+    public string? DeviceVerificationUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long a successfully redeemed response remains available for transport retries.
+    /// </summary>
+    public TimeSpan RedeemedDeviceCodeGracePeriod { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Gets or sets how long expired device-code tombstones remain available to return <c>expired_token</c>.
+    /// </summary>
+    public TimeSpan ExpiredDeviceCodeRetention { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Gets or sets whether device authorization requests require HTTPS.
+    /// </summary>
+    public bool RequireHttpsForDeviceAuthorization { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the maximum accepted lifetime of a private-key JWT client assertion.
     /// </summary>
     public TimeSpan ClientAssertionMaximumLifetime { get; set; } = TimeSpan.FromMinutes(5);
@@ -104,7 +140,8 @@ public sealed class OAuthAuthorizationServerOptions
     public IReadOnlyList<string> ClientRegistrationGrantTypesAllowed { get; set; } =
     [
         OAuthGrantTypes.AuthorizationCode,
-        OAuthGrantTypes.RefreshToken
+        OAuthGrantTypes.RefreshToken,
+        OAuthGrantTypes.DeviceCode
     ];
 
     /// <summary>

@@ -22,6 +22,9 @@ public sealed record OAuthServerMetadata
     [JsonPropertyName("token_endpoint")]
     public required string TokenEndpoint { get; init; }
 
+    [JsonPropertyName("device_authorization_endpoint")]
+    public required string DeviceAuthorizationEndpoint { get; init; }
+
     [JsonPropertyName("registration_endpoint")]
     public required string RegistrationEndpoint { get; init; }
 

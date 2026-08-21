@@ -31,6 +31,9 @@ public sealed record OAuthTokenRequest
     [FromForm(Name = "refresh_token")]
     public string RefreshToken { get; set; } = string.Empty;
 
+    [FromForm(Name = "device_code")]
+    public string DeviceCode { get; set; } = string.Empty;
+
     [FromForm(Name = "scope")]
     public string Scope { get; set; } = string.Empty;
 

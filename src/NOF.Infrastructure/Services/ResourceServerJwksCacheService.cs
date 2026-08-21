@@ -160,7 +160,9 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
         try
         {
-            var metadata = await GetMetadataAsync(cancellationToken).ConfigureAwait(false);
+            var metadata = string.IsNullOrWhiteSpace(_configuredIssuer)
+                ? await GetMetadataAsync(cancellationToken).ConfigureAwait(false)
+                : new OAuthAuthorizationServerMetadataDocument { Issuer = _configuredIssuer };
             var document = await GetJwksAsync(cancellationToken).ConfigureAwait(false);
             var keys = JwksSecurityKeyConverter.ToSecurityKeys(document.Keys);
 

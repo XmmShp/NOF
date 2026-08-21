@@ -100,6 +100,49 @@ public readonly struct OidcServerSelector
         return this;
     }
 
+    public OidcServerSelector AddDeviceClient(
+        string clientId,
+        IEnumerable<string>? allowedScopes = null,
+        string? displayName = null,
+        IEnumerable<OAuthClientClaim>? accessTokenClaims = null,
+        bool isEnabled = true,
+        bool allowRefreshTokens = true)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+        var normalizedClientId = clientId.Trim();
+        var normalizedDisplayName = string.IsNullOrWhiteSpace(displayName) ? normalizedClientId : displayName.Trim();
+        var scopes = allowedScopes?
+            .Where(static scope => !string.IsNullOrWhiteSpace(scope))
+            .Select(static scope => scope.Trim())
+            .ToArray() ?? [];
+        var claims = accessTokenClaims?
+            .Where(static claim => !string.IsNullOrWhiteSpace(claim.Type))
+            .Select(static claim => new OAuthClientClaim(claim.Type.Trim(), claim.Value))
+            .ToArray() ?? [];
+
+        Builder.Services.Configure<OidcServerBootstrapOptions>(options =>
+        {
+            options.PublicClients.Add(new CreateOAuthClientRequest
+            {
+                ClientId = normalizedClientId,
+                DisplayName = normalizedDisplayName,
+                AllowedScopes = scopes,
+                AccessTokenClaims = claims,
+                TokenEndpointAuthenticationMethod = OAuthClientAuthenticationMethods.None,
+                AllowedGrantTypes = allowRefreshTokens
+                    ? [OAuthGrantTypes.DeviceCode, OAuthGrantTypes.RefreshToken]
+                    : [OAuthGrantTypes.DeviceCode],
+                AllowedResponseTypes = [],
+                ApplicationType = OAuthClientApplicationTypes.Native,
+                ClientType = OAuthClientType.Public,
+                IsEnabled = isEnabled
+            });
+        });
+
+        return this;
+    }
+
     public OidcServerSelector AddClientAssertionClient(
         string clientId,
         string jsonWebKeySet,

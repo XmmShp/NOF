@@ -10,7 +10,7 @@ This package provides NOF authentication authority capabilities and exposes them
 
 - `AddOidcServer(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, key rotation, OIDC protocol services, and default persisted OAuth client management services
 - `MapOidcServer()` exposes discovery, authorization, token, revocation, introspection, userinfo, JWKS, and dynamic client registration endpoints
-- Supports `authorization_code`, `refresh_token`, `client_credentials`, and `token_exchange` grants
+- Supports `authorization_code`, `refresh_token`, `client_credentials`, `device_code`, and `token_exchange` grants
 - Supports RFC 7591 client registration and RFC 7592 client configuration management
 - Uses standard ASP.NET Core HTTP behavior for redirects, form posts, status codes, and JSON responses
 
@@ -39,6 +39,8 @@ await app.RunAsync();
 ```
 
 `options.Issuer` is the final issuer identifier published in discovery metadata and embedded into issued tokens. It should usually include the OIDC path segment such as `/oauth2`. `options.PathBase` only controls where the local endpoints are mapped and is not appended to `Issuer` automatically.
+
+When the same application also calls `AddAuthenticationResourceServer(...)`, token validation reads the co-located server metadata and signing keys directly from dependency injection. It does not make a backchannel HTTP request to the public issuer. `ExpectedIssuer` and `Audience` still control issuer and audience validation and should match `Issuer` and `AccessTokenAudience`, respectively.
 
 `AddOidcServer(...)` registers a default persisted OAuth client repository as `IOAuthClientRepository` and a default `IOAuthTokenExchangeHandler`. Applications can replace either service when they need custom client validation, management behavior, or token-exchange claim construction.
 
@@ -133,6 +135,61 @@ Authorization requests may omit `redirect_uri` when the client has exactly one r
 `ITokenService` accepts explicit multi-value claims through `TokenClaim.Array(...)`. The issuer expands those values into repeated same-name claims so the resulting JWT payload is emitted as a standard JSON array claim.
 
 `ITokenService` also accepts explicit JSON object claims through `TokenClaim.Json(...)`. The default token-exchange handler emits the standard chained `act` claim for confidential clients, omits `act` for public clients, and by default issues client-credentials subjects in the form `client:{client_id}`.
+
+## Device authorization flow
+
+RFC 8628 device authorization is available through `POST /oauth2/device_authorization` and the existing
+`POST /oauth2/token` endpoint. Device clients must explicitly register the
+`urn:ietf:params:oauth:grant-type:device_code` grant; it is not added to existing public clients implicitly.
+
+The selector provides a public-device-client shortcut:
+
+```csharp
+builder.AddOidcServer(options =>
+{
+    options.Issuer = "https://auth.example.com/oauth2";
+    options.AccessTokenAudience = "your-app";
+    options.SigningKeyEncryptionKey = "your-shared-signing-key-passphrase";
+})
+.AddDeviceClient(
+    "living-room-tv",
+    ["openid", "profile", "offline_access"],
+    displayName: "Living Room TV");
+```
+
+The device authorization response contains `device_code`, `user_code`, `verification_uri`,
+`verification_uri_complete`, `expires_in`, and `interval`. The client polls the token endpoint with:
+
+```http
+POST /oauth2/token HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&
+device_code=<device-code>&
+client_id=living-room-tv
+```
+
+NOF provides the protocol and distributed-cache state machine but does not prescribe an application login or
+consent UI. Replace `IOAuthDeviceVerificationEndpoint` and use `IOAuthDeviceGrantService` to inspect and complete
+the request:
+
+```csharp
+builder.Services.AddScoped<IOAuthDeviceVerificationEndpoint, YourDeviceVerificationEndpoint>();
+
+var pending = await deviceGrantService.GetPendingAsync(userCode, cancellationToken);
+await deviceGrantService.ApproveAsync(userCode, subject, cancellationToken);
+// or: await deviceGrantService.DenyAsync(userCode, cancellationToken);
+```
+
+The verification endpoint must authenticate the user, protect state-changing form posts against CSRF, rate-limit
+user-code attempts by authenticated user and network source, and clearly display the client, requested scopes, and
+user code before approval. NOF adds no-store, clickjacking, and referrer-policy response headers to the mapped
+verification route. Configure a shared cache rider for multi-instance deployments because device authorization
+state and locks are stored through `ICacheService`.
+
+Device defaults are configurable with `DeviceCodeExpiration`, `DevicePollingInterval`,
+`DeviceUserCodeLength`, `DeviceVerificationUri`, `RedeemedDeviceCodeGracePeriod`,
+`ExpiredDeviceCodeRetention`, and `RequireHttpsForDeviceAuthorization`.
 
 ## License
 

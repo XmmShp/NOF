@@ -41,6 +41,8 @@ public sealed class AuthenticationExtensionsTests
         Assert.NotNull(scope.GetRequiredService<IJwksService>());
         Assert.NotNull(scope.GetRequiredService<ISigningKeyService>());
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.IsType<LocalAuthorizationServerMetadataService>(
+            scope.GetRequiredService<IAuthorizationServerMetadataService>());
         Assert.Contains(builder.Services, descriptor =>
             descriptor.ServiceType == typeof(ISigningKeyService) &&
             descriptor.Lifetime == ServiceLifetime.Scoped);
@@ -103,6 +105,8 @@ public sealed class AuthenticationExtensionsTests
             .ToArray();
 
         Assert.Contains("/oauth2/token", routes);
+        Assert.Contains("/oauth2/device_authorization", routes);
+        Assert.Contains("/oauth2/device", routes);
         Assert.Contains("/oauth2/revoke", routes);
         Assert.Contains("/oauth2/introspect", routes);
         Assert.Contains("/oauth2/authorize", routes);
@@ -1659,8 +1663,45 @@ public sealed class AuthenticationExtensionsTests
         var cache = host.Services.GetRequiredService<ResourceServerJwksCacheService>();
         using var scope = host.CreateScope();
 
-        Assert.NotNull(cache);
+        var keys = await cache.GetSecurityKeysAsync();
+
+        Assert.NotEmpty(keys);
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.IsType<LocalAuthorizationServerMetadataService>(
+            scope.GetRequiredService<IAuthorizationServerMetadataService>());
+    }
+
+    [Fact]
+    public async Task AddResourceServer_ThenOidcServer_ShouldResolveIssuerAndKeysLocally()
+    {
+        const string issuer = "http://localhost:5080/oauth2";
+        var builder = NOFTestAppBuilder.Create();
+        builder.Services.AddAuthenticationResourceServer(options =>
+        {
+            options.AuthorizationServerIssuer = issuer;
+            options.RequireHttpsMetadata = false;
+        });
+        builder.AddOidcServer(options =>
+        {
+            options.Issuer = issuer;
+            options.SigningKeyEncryptionKey = SigningKeyEncryptionKey;
+        });
+        builder.UseDbContext<NOFDbContext>()
+            .WithConnectionString($"Data Source=nof-local-resource-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared")
+            .WithOptions(static (optionsBuilder, databaseConnectionString) => optionsBuilder.UseSqlite(databaseConnectionString));
+
+        await using var host = await builder.BuildTestHostAsync();
+        var cache = host.Services.GetRequiredService<ResourceServerJwksCacheService>();
+        using var scope = host.CreateScope();
+
+        var keys = await cache.GetSecurityKeysAsync();
+        var resolvedIssuer = await cache.GetIssuerAsync();
+
+        Assert.NotEmpty(keys);
+        Assert.Equal(issuer, resolvedIssuer);
+        Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
+        Assert.IsType<LocalAuthorizationServerMetadataService>(
+            scope.GetRequiredService<IAuthorizationServerMetadataService>());
     }
 
     [Fact]

@@ -10,6 +10,10 @@ public sealed record OAuthTokenEndpointRequest(
     HttpRequest HttpRequest,
     OAuthTokenRequest Request);
 
+public sealed record OAuthDeviceAuthorizationEndpointRequest(
+    HttpRequest HttpRequest,
+    OAuthDeviceAuthorizationRequest Request);
+
 public sealed record OAuthRevokeEndpointRequest(
     HttpRequest HttpRequest,
     string? Token,

@@ -219,12 +219,34 @@ public sealed class ResourceServerJwksCacheServiceTests
         Assert.Equal(1, jwksService.RefreshCallCount);
     }
 
-    private static ResourceServerJwksCacheService CreateService(FakeJwksService jwksService, TimeProvider? timeProvider = null, TimeSpan? minimumRefreshInterval = null)
+    [Fact]
+    public async Task GetSecurityKeysAsync_WhenExpectedIssuerConfigured_ShouldNotRequestMetadata()
+    {
+        var jwksService = new FakeJwksService(
+            [_ => Task.FromResult(CreateJwksDocument("kid-1"))],
+            [_ => throw new InvalidOperationException("metadata should not be requested")]);
+        var service = CreateService(jwksService, expectedIssuer: "https://issuer.local/oauth2");
+
+        var keys = await service.GetSecurityKeysAsync();
+        var issuer = await service.GetIssuerAsync();
+
+        Assert.Equal("kid-1", Assert.Single(keys).KeyId);
+        Assert.Equal("https://issuer.local/oauth2", issuer);
+        Assert.Equal(0, jwksService.MetadataCallCount);
+        Assert.Equal(1, jwksService.RefreshCallCount);
+    }
+
+    private static ResourceServerJwksCacheService CreateService(
+        FakeJwksService jwksService,
+        TimeProvider? timeProvider = null,
+        TimeSpan? minimumRefreshInterval = null,
+        string? expectedIssuer = null)
         => new(
             CreateScopeFactory(jwksService),
             Options.Create(new AuthenticationResourceServerOptions
             {
-                JwksRefreshInterval = minimumRefreshInterval ?? TimeSpan.FromMinutes(10)
+                JwksRefreshInterval = minimumRefreshInterval ?? TimeSpan.FromMinutes(10),
+                ExpectedIssuer = expectedIssuer
             }),
             timeProvider ?? TimeProvider.System);
 

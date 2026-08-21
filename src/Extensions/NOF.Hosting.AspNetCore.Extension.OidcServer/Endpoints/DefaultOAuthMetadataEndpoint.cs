@@ -15,6 +15,7 @@ public sealed class DefaultOAuthMetadataEndpoint(IOptions<OAuthAuthorizationServ
             Issuer = issuer,
             AuthorizationEndpoint = $"{issuer}/authorize",
             TokenEndpoint = $"{issuer}/token",
+            DeviceAuthorizationEndpoint = $"{issuer}/device_authorization",
             RegistrationEndpoint = $"{issuer}/register",
             RevocationEndpoint = $"{issuer}/revoke",
             IntrospectionEndpoint = $"{issuer}/introspect",
@@ -26,6 +27,7 @@ public sealed class DefaultOAuthMetadataEndpoint(IOptions<OAuthAuthorizationServ
                 OAuthGrantTypes.AuthorizationCode,
                 OAuthGrantTypes.ClientCredentials,
                 OAuthGrantTypes.RefreshToken,
+                OAuthGrantTypes.DeviceCode,
                 OAuthGrantTypes.TokenExchange
             ],
             TokenEndpointAuthMethodsSupported =

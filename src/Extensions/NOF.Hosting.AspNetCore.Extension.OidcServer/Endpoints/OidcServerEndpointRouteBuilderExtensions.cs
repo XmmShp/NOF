@@ -66,6 +66,8 @@ public static partial class NOFOidcServerExtensions
                     => endpoint.HandleAsync(cancellationToken));
 
             group.MapGet("/authorize", AuthorizeAsync);
+            group.MapPost("/device_authorization", DeviceAuthorizationAsync).DisableAntiforgery();
+            group.MapMethods("/device", [HttpMethods.Get, HttpMethods.Post], DeviceVerificationAsync);
             group.MapPost("/token", TokenAsync).DisableAntiforgery();
             group.MapPost("/revoke", RevokeAsync).DisableAntiforgery();
             group.MapPost("/introspect", IntrospectAsync).DisableAntiforgery();
@@ -147,6 +149,7 @@ public static partial class NOFOidcServerExtensions
         [FromForm(Name = "redirect_uri")] string? redirectUri,
         [FromForm(Name = "code_verifier")] string? codeVerifier,
         [FromForm(Name = "refresh_token")] string? refreshToken,
+        [FromForm(Name = "device_code")] string? deviceCode,
         [FromForm(Name = "scope")] string? scope,
         [FromForm(Name = "subject_token")] string? subjectToken,
         [FromForm(Name = "subject_token_type")] string? subjectTokenType,
@@ -167,6 +170,7 @@ public static partial class NOFOidcServerExtensions
             RedirectUri = redirectUri ?? string.Empty,
             CodeVerifier = codeVerifier ?? string.Empty,
             RefreshToken = refreshToken ?? string.Empty,
+            DeviceCode = deviceCode ?? string.Empty,
             Scope = scope ?? string.Empty,
             SubjectToken = subjectToken ?? string.Empty,
             SubjectTokenType = subjectTokenType ?? string.Empty,
@@ -179,6 +183,42 @@ public static partial class NOFOidcServerExtensions
         return await endpoint.HandleAsync(
             new OAuthTokenEndpointRequest(httpRequest, request),
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<AspNetResult> DeviceAuthorizationAsync(
+        HttpRequest httpRequest,
+        [FromForm(Name = "client_id")] string? clientId,
+        [FromForm(Name = "client_secret")] string? clientSecret,
+        [FromForm(Name = "client_assertion_type")] string? clientAssertionType,
+        [FromForm(Name = "client_assertion")] string? clientAssertion,
+        [FromForm(Name = "scope")] string? scope,
+        [FromServices] IOAuthDeviceAuthorizationEndpoint endpoint,
+        CancellationToken cancellationToken)
+    {
+        var request = new OAuthDeviceAuthorizationRequest
+        {
+            ClientId = clientId ?? string.Empty,
+            ClientSecret = clientSecret ?? string.Empty,
+            ClientAssertionType = clientAssertionType ?? string.Empty,
+            ClientAssertion = clientAssertion ?? string.Empty,
+            Scope = scope ?? string.Empty
+        };
+        return await endpoint.HandleAsync(
+            new OAuthDeviceAuthorizationEndpointRequest(httpRequest, request),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<AspNetResult> DeviceVerificationAsync(
+        HttpRequest httpRequest,
+        [FromServices] IOAuthDeviceVerificationEndpoint endpoint,
+        CancellationToken cancellationToken)
+    {
+        httpRequest.HttpContext.Response.Headers.CacheControl = "no-store";
+        httpRequest.HttpContext.Response.Headers.Pragma = "no-cache";
+        httpRequest.HttpContext.Response.Headers.ContentSecurityPolicy = "frame-ancestors 'none'";
+        httpRequest.HttpContext.Response.Headers.XFrameOptions = "DENY";
+        httpRequest.HttpContext.Response.Headers["Referrer-Policy"] = "no-referrer";
+        return await endpoint.HandleAsync(httpRequest, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<AspNetResult> UserInfoAsync(
@@ -451,6 +491,34 @@ public static partial class NOFOidcServerExtensions
             : Result.Success(response);
     }
 
+    internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromDeviceCodeAsync(
+        HttpRequest httpRequest,
+        OAuthTokenRequest request,
+        IServiceProvider serviceProvider,
+        IOAuthDeviceGrantService deviceGrantService,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.DeviceCode))
+        {
+            return Fail("invalid_request", "device_code is required.");
+        }
+
+        var authenticationError = await ValidateClientAuthenticationAsync(
+            httpRequest,
+            request,
+            serviceProvider,
+            cancellationToken).ConfigureAwait(false);
+        if (authenticationError is not null)
+        {
+            return Fail(authenticationError.Error, authenticationError.ErrorDescription);
+        }
+
+        return await deviceGrantService.RedeemAsync(
+            request.DeviceCode,
+            request.ClientId,
+            cancellationToken).ConfigureAwait(false);
+    }
+
     private static async ValueTask<OAuthTokenEndpointResponse?> IssueTokenResponseAsync(
         IOAuthSubjectService subjectService,
         ITokenService tokenService,
@@ -465,95 +533,21 @@ public static partial class NOFOidcServerExtensions
         bool issueRefreshToken,
         CancellationToken cancellationToken)
     {
-        var scopes = ParseScopes(scope);
-        var profile = await subjectService.GetProfileAsync(subject, scopes, cancellationToken).ConfigureAwait(false);
-        if (profile is null)
-        {
-            return null;
-        }
-
-        var accessClaims = profile.AccessTokenClaims
-            .Select(static claim => new TokenClaim(claim.Key, claim.Value))
-            .ToList();
-        accessClaims.Add(new TokenClaim(OAuthClaimTypes.Scope, string.Join(' ', scopes)));
-        if (additionalAccessClaims is not null)
-        {
-            accessClaims.AddRange(additionalAccessClaims);
-        }
-
-        var issueResult = await tokenService.IssueTokenAsync(
-            new IssueTokenRequest
-            {
-                Audience = oauthOptions.AccessTokenAudience,
-                AccessTokenExpiration = oauthOptions.AccessTokenExpiration,
-                AccessClaims = accessClaims.ToArray(),
-                ClientId = clientId,
-                RefreshToken = issueRefreshToken
-                    ? new RefreshTokenOptions
-                    {
-                        Expiration = oauthOptions.RefreshTokenExpiration,
-                        Claims =
-                        [
-                            new TokenClaim(OAuthClaimTypes.Subject, subject),
-                            new TokenClaim(OAuthClaimTypes.Scope, string.Join(' ', scopes)),
-                            new TokenClaim(OAuthClaimTypes.ClientId, clientId)
-                        ]
-                    }
-                    : null
-            },
-            cancellationToken).ConfigureAwait(false);
-        if (!issueResult.IsSuccess || (issueRefreshToken && issueResult.Value.RefreshToken is null))
-        {
-            return null;
-        }
-
-        string? idToken = null;
-        if (!string.IsNullOrWhiteSpace(idTokenAudience) && scopes.Contains(OAuthScope.OpenId))
-        {
-            var idTokenClaims = profile.IdentityClaims
-                .Where(claim => ShouldEmitIdentityClaim(claim.Key, scopes))
-                .Select(claim => claim.Key == OAuthClaimTypes.IssuedAt && long.TryParse(claim.Value, out _)
-                    ? new Claim(claim.Key, claim.Value, ClaimValueTypes.Integer64)
-                    : new Claim(claim.Key, claim.Value))
-                .ToList();
-            if (idTokenClaims.All(static claim => claim.Type != OAuthClaimTypes.Subject))
-            {
-                idTokenClaims.Insert(0, new Claim(OAuthClaimTypes.Subject, profile.Subject));
-            }
-
-            idTokenClaims.Add(new Claim(
-                OAuthClaimTypes.IssuedAt,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-                ClaimValueTypes.Integer64));
-
-            if (!string.IsNullOrWhiteSpace(nonce))
-            {
-                idTokenClaims.Add(new Claim(OAuthClaimTypes.Nonce, nonce));
-            }
-
-            var now = DateTime.UtcNow;
-            var signingKey = (await signingKeyService.GetCurrentSigningKeyAsync(cancellationToken).ConfigureAwait(false)).Key;
-            var token = new JwtSecurityToken(
-                issuer: oauthOptions.Issuer,
-                audience: idTokenAudience,
-                claims: idTokenClaims,
-                notBefore: now,
-                expires: now.Add(oauthOptions.AccessTokenExpiration),
-                signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256));
-            token.Header["typ"] = "JWT";
-
-            idToken = new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        return new OAuthTokenEndpointResponse
-        {
-            AccessToken = issueResult.Value.AccessToken,
-            TokenType = "Bearer",
-            ExpiresIn = (long)oauthOptions.AccessTokenExpiration.TotalSeconds,
-            RefreshToken = issueResult.Value.RefreshToken?.Token,
-            Scope = string.Join(' ', scopes),
-            IdToken = idToken
-        };
+        return await new OAuthTokenResponseIssuer(
+                subjectService,
+                tokenService,
+                signingKeyService,
+                Options.Create(oauthOptions))
+            .IssueAsync(
+                subject,
+                scope,
+                clientId,
+                idTokenAudience,
+                nonce,
+                additionalAccessClaims,
+                issueRefreshToken,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal static async Task<Result<OAuthTokenEndpointResponse>> TokenFromTokenExchangeAsync(
@@ -1038,7 +1032,8 @@ public static partial class NOFOidcServerExtensions
         HttpRequest httpRequest,
         OAuthTokenRequest request,
         IServiceProvider serviceProvider,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? clientAssertionAudience = null)
     {
         ArgumentNullException.ThrowIfNull(httpRequest);
         ArgumentNullException.ThrowIfNull(request);
@@ -1105,7 +1100,8 @@ public static partial class NOFOidcServerExtensions
             }
 
             if (string.Equals(request.GrantType, OAuthGrantTypes.RefreshToken, StringComparison.Ordinal)
-                || string.Equals(request.GrantType, OAuthGrantTypes.TokenExchange, StringComparison.Ordinal))
+                || string.Equals(request.GrantType, OAuthGrantTypes.TokenExchange, StringComparison.Ordinal)
+                || string.Equals(request.GrantType, OAuthGrantTypes.DeviceCode, StringComparison.Ordinal))
             {
                 return null;
             }
@@ -1130,7 +1126,7 @@ public static partial class NOFOidcServerExtensions
                 clientCredentials.AuthenticationMethod,
                 EmptyToNull(request.ClientAssertion),
                 EmptyToNull(request.ClientAssertionType),
-                ResolveTokenEndpointAudience(serviceProvider),
+                clientAssertionAudience ?? ResolveTokenEndpointAudience(serviceProvider),
                 request.GrantType),
             cancellationToken).ConfigureAwait(false);
 

@@ -190,7 +190,8 @@ public sealed class DefaultOAuthClientRegistrationEndpoint(
             ? OAuthClientType.Public
             : OAuthClientType.Confidential;
         var grantTypes = NormalizeValues(request.GrantTypes ?? [OAuthGrantTypes.AuthorizationCode]);
-        var responseTypes = NormalizeValues(request.ResponseTypes ?? ["code"]);
+        var responseTypes = NormalizeValues(request.ResponseTypes
+            ?? (grantTypes.Contains(OAuthGrantTypes.AuthorizationCode, StringComparer.Ordinal) ? ["code"] : []));
         var redirectUris = NormalizeValues(request.RedirectUris ?? []);
         var scopes = (request.Scope ?? string.Empty)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

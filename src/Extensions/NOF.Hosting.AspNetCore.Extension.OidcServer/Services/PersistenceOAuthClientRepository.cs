@@ -167,7 +167,7 @@ public sealed class PersistenceOAuthClientRepository(
         }
 
         var grantTypes = NormalizeGrantTypes(request.AllowedGrantTypes, request.ClientType);
-        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes);
+        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes, grantTypes);
         if (request.ClientType == OAuthClientType.Public && grantTypes.Contains(OAuthGrantTypes.ClientCredentials))
         {
             return Result.Fail("invalid_request", "public clients must not use the client_credentials grant type.");
@@ -280,7 +280,7 @@ public sealed class PersistenceOAuthClientRepository(
         }
 
         var grantTypes = NormalizeGrantTypes(request.AllowedGrantTypes, request.ClientType);
-        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes);
+        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes, grantTypes);
         if (request.ClientType == OAuthClientType.Public && grantTypes.Contains(OAuthGrantTypes.ClientCredentials))
         {
             return Result.Fail("invalid_request", "public clients must not use the client_credentials grant type.");
@@ -452,7 +452,7 @@ public sealed class PersistenceOAuthClientRepository(
         }
 
         var grantTypes = NormalizeGrantTypes(request.AllowedGrantTypes, request.ClientType);
-        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes);
+        var responseTypes = NormalizeResponseTypes(request.AllowedResponseTypes, grantTypes);
         if (request.ClientType == OAuthClientType.Public && grantTypes.Contains(OAuthGrantTypes.ClientCredentials))
         {
             return Result.Fail("invalid_client_metadata", "public clients must not use the client_credentials grant type.");
@@ -673,7 +673,7 @@ public sealed class PersistenceOAuthClientRepository(
         var responseTypes = DeserializeStrings(client.AllowedResponseTypes);
         return responseTypes.Count > 0
             ? responseTypes
-            : NormalizeResponseTypes([]);
+            : NormalizeResponseTypes([], DeserializeGrantTypes(client));
     }
 
     private static IReadOnlySet<string> DeserializeScopes(string scopes)
@@ -831,15 +831,22 @@ public sealed class PersistenceOAuthClientRepository(
                 StringComparer.Ordinal);
     }
 
-    private static IReadOnlySet<string> NormalizeResponseTypes(IEnumerable<string> responseTypes)
+    private static IReadOnlySet<string> NormalizeResponseTypes(
+        IEnumerable<string> responseTypes,
+        IReadOnlySet<string> grantTypes)
     {
         var normalized = responseTypes
             .Where(static responseType => !string.IsNullOrWhiteSpace(responseType))
             .Select(static responseType => responseType.Trim())
             .ToHashSet(StringComparer.Ordinal);
-        return normalized.Count > 0
-            ? normalized
-            : new HashSet<string>(["code"], StringComparer.Ordinal);
+        if (normalized.Count > 0)
+        {
+            return normalized;
+        }
+
+        return grantTypes.Contains(OAuthGrantTypes.AuthorizationCode)
+            ? new HashSet<string>(["code"], StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
     }
 
     private static string? ValidateProtocolMetadata(
@@ -852,6 +859,7 @@ public sealed class PersistenceOAuthClientRepository(
                 OAuthGrantTypes.AuthorizationCode,
                 OAuthGrantTypes.RefreshToken,
                 OAuthGrantTypes.ClientCredentials,
+                OAuthGrantTypes.DeviceCode,
                 OAuthGrantTypes.TokenExchange
             ],
             StringComparer.Ordinal);
