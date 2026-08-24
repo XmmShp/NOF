@@ -53,7 +53,7 @@ Dynamic client registration is enabled whenever `MapOidcServer()` is used. The d
 - `PUT /oauth2/register/{clientId}` performs a full metadata replacement.
 - `DELETE /oauth2/register/{clientId}` removes the client.
 
-The default `POST` policy requires a NOF access token whose audience is `AccessTokenAudience` and whose scopes include `client.register`. A confidential bootstrap client can be granted that scope and use its access token as the Initial Access Token:
+The default `POST` policy requires a NOF access token whose audience is `AccessTokenAudience` and whose scopes include `client:register`. A confidential bootstrap client can be granted that scope and use its access token as the Initial Access Token:
 
 ```http
 POST /oauth2/register HTTP/1.1

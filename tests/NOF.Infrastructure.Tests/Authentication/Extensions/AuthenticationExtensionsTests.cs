@@ -129,6 +129,7 @@ public sealed class AuthenticationExtensionsTests
         var options = new OAuthAuthorizationServerOptions();
 
         Assert.True(options.RequireHttpsForClientRegistration);
+        Assert.Equal("client:register", OAuthScope.ClientRegistration);
         Assert.Equal(OAuthScope.ClientRegistration, options.ClientRegistrationInitialAccessTokenScope);
         Assert.Contains(OAuthScope.ClientRegistration, options.ScopesSupported);
     }

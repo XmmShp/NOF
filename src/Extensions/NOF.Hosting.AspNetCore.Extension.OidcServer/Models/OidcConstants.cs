@@ -50,7 +50,7 @@ public static class OAuthScope
     public const string Profile = "profile";
     public const string Email = "email";
     public const string OfflineAccess = "offline_access";
-    public const string ClientRegistration = "client.register";
+    public const string ClientRegistration = "client:register";
 }
 
 public static class OAuthClaimTypes
