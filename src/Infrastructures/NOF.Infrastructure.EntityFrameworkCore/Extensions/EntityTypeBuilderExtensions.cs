@@ -12,6 +12,13 @@ public static class EntityTypeBuilderExtensions
             entityBuilder.Metadata.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
             return entityBuilder;
         }
+
+        public EntityTypeBuilder<TEntity> HasSoftDelete(bool enabled = true)
+        {
+            ArgumentNullException.ThrowIfNull(entityBuilder);
+            entityBuilder.Metadata.SetAnnotation(SoftDeleteModelHelper.SoftDeleteEnabledAnnotationName, enabled);
+            return entityBuilder;
+        }
     }
 
     extension(EntityTypeBuilder entityBuilder)
@@ -20,6 +27,13 @@ public static class EntityTypeBuilderExtensions
         {
             ArgumentNullException.ThrowIfNull(entityBuilder);
             entityBuilder.Metadata.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
+            return entityBuilder;
+        }
+
+        public EntityTypeBuilder HasSoftDelete(bool enabled = true)
+        {
+            ArgumentNullException.ThrowIfNull(entityBuilder);
+            entityBuilder.Metadata.SetAnnotation(SoftDeleteModelHelper.SoftDeleteEnabledAnnotationName, enabled);
             return entityBuilder;
         }
     }

@@ -31,7 +31,7 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
                 continue;
             }
 
-            var shouldConfigureSoftDelete = useSoftDelete && SoftDeleteModelHelper.ShouldConfigureSoftDelete(entityType);
+            var shouldConfigureSoftDelete = SoftDeleteModelHelper.ShouldConfigureSoftDelete(entityType, useSoftDelete);
             var shouldConfigureTenantBehavior = TenantModelHelper.ShouldConfigureTenantBehavior(entityType);
             if (!shouldConfigureSoftDelete && !shouldConfigureTenantBehavior)
             {

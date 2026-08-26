@@ -37,3 +37,26 @@ builder.UseDbContext<AppDbContext>()
 ```
 
 For lightweight local or test scenarios, call `AddNOFEntityFrameworkCore()` to register the default SQLite in-memory persistence.
+
+## Soft delete
+
+Soft delete is enabled for all supported root entity types by default. Use `WithSoftDelete` to change the default for a `DbContext`, and `HasSoftDelete` in the EF model to override it for an individual root entity type:
+
+```csharp
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+builder.UseDbContext<AppDbContext>()
+    .WithSoftDelete(false);
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    modelBuilder.Entity<Order>(entity =>
+    {
+        entity.HasSoftDelete();
+    });
+}
+```
+
+The entity-level setting takes precedence over the `DbContext` default. Call `HasSoftDelete(false)` to opt a root entity type out when the default is enabled. Owned entity types inherit the lifecycle of their owner and cannot be configured independently.

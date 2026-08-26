@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
@@ -536,6 +537,73 @@ public class SqliteInMemoryPersistenceTests
                 .IgnoreQueryFilters()
                 .Where(e => e.Id == 10)
                 .Select(e => EF.Property<long>(e, "__DeletedAtUnixTime")));
+
+        Assert.True(deletedAtUnixTime > 0);
+    }
+
+    [Fact]
+    public async Task HasSoftDelete_Disabled_ShouldOverrideEnabledDbContextDefault()
+    {
+        using var services = CreateServiceProvider();
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var entityType = db.Model.FindEntityType(typeof(TestHardDeleteOverrideRecord));
+
+        Assert.NotNull(entityType);
+        Assert.Null(entityType.FindProperty("__DeletedAtUnixTime"));
+
+        var record = new TestHardDeleteOverrideRecord
+        {
+            Id = 1,
+            Name = "hard-delete-override"
+        };
+        db.Set<TestHardDeleteOverrideRecord>().Add(record);
+        await db.SaveChangesAsync();
+
+        db.Set<TestHardDeleteOverrideRecord>().Remove(record);
+        await db.SaveChangesAsync();
+
+        Assert.Null(await SingleOrDefaultAsync(
+            db.Set<TestHardDeleteOverrideRecord>().IgnoreQueryFilters(),
+            entity => entity.Id == record.Id));
+    }
+
+    [Fact]
+    public async Task HasSoftDelete_Enabled_ShouldOverrideDisabledDbContextDefault()
+    {
+        using var services = CreateServiceProvider(softDeleteEnabled: false);
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var entityType = db.Model.FindEntityType(typeof(TestSoftDeleteOverrideRecord));
+
+        Assert.NotNull(entityType);
+        Assert.NotNull(entityType.FindProperty("__DeletedAtUnixTime"));
+
+        var record = new TestSoftDeleteOverrideRecord
+        {
+            Id = 1,
+            Name = "soft-delete-override"
+        };
+        db.Set<TestSoftDeleteOverrideRecord>().Add(record);
+        await db.SaveChangesAsync();
+
+        db.Set<TestSoftDeleteOverrideRecord>().Remove(record);
+        await db.SaveChangesAsync();
+
+        Assert.Null(await db.FindAsync<TestSoftDeleteOverrideRecord>([record.Id]));
+        Assert.Null(await SingleOrDefaultAsync(
+            db.Set<TestSoftDeleteOverrideRecord>(),
+            entity => entity.Id == record.Id));
+
+        var deletedAtUnixTime = await SingleAsync(
+            db.Set<TestSoftDeleteOverrideRecord>()
+                .IgnoreQueryFilters()
+                .Where(entity => entity.Id == record.Id)
+                .Select(entity => EF.Property<long>(entity, "__DeletedAtUnixTime")));
 
         Assert.True(deletedAtUnixTime > 0);
     }
@@ -2005,6 +2073,20 @@ public class SqliteInMemoryPersistenceTests
         public string Code { get; init; } = string.Empty;
     }
 
+    private sealed class TestHardDeleteOverrideRecord
+    {
+        public long Id { get; init; }
+
+        public string Name { get; init; } = string.Empty;
+    }
+
+    private sealed class TestSoftDeleteOverrideRecord
+    {
+        public long Id { get; init; }
+
+        public string Name { get; init; } = string.Empty;
+    }
+
     private sealed class TestOrderWithOwned
     {
         public long Id { get; init; }
@@ -2327,6 +2409,22 @@ public class SqliteInMemoryPersistenceTests
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Code).HasMaxLength(256).IsRequired();
                 entity.HasIndex(e => e.Code).IsUnique();
+            });
+
+            modelBuilder.Entity<TestHardDeleteOverrideRecord>(entity =>
+            {
+                entity.ToTable(nameof(TestHardDeleteOverrideRecord));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+                entity.HasSoftDelete(false);
+            });
+
+            modelBuilder.Entity<TestSoftDeleteOverrideRecord>(entity =>
+            {
+                entity.ToTable(nameof(TestSoftDeleteOverrideRecord));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+                entity.HasSoftDelete();
             });
 
             modelBuilder.Entity<TestOrderWithOwned>(entity =>

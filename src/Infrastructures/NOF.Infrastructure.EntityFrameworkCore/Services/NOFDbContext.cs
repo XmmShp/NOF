@@ -67,11 +67,6 @@ public class NOFDbContext : DbContext
 
     private void ApplySoftDeleteRules()
     {
-        if (!CurrentSoftDeleteEnabled)
-        {
-            return;
-        }
-
         var deletedEntries = ChangeTracker.Entries()
             .Where(entry => entry.State == EntityState.Deleted)
             .ToList();
@@ -143,7 +138,7 @@ public class NOFDbContext : DbContext
 
     private bool IsSoftDeletedEntity(object? entity)
     {
-        if (entity is null || !CurrentSoftDeleteEnabled)
+        if (entity is null)
         {
             return false;
         }
