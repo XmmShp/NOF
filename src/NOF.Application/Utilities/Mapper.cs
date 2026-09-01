@@ -1,25 +1,27 @@
 namespace NOF.Application;
 
 /// <summary>
-/// Provides access to the ambient <see cref="IMapper"/> for the current async flow.
+/// Provides convenience access to the ambient <see cref="IMapper"/> for the current async flow.
 /// </summary>
 /// <remarks>
-/// This is part of NOF's convenience API support. Explicit <see cref="IMapper"/>
-/// dependencies remain the primary runtime contract.
+/// The ambient mapper is bound by the current dependency injection scope. Use
+/// <see cref="PushCurrent(IMapper)"/> to establish an explicit boundary in standalone code and tests.
 /// </remarks>
 public static class Mapper
 {
     private static readonly AsyncLocal<IMapper?> _currentMapper = new();
 
     /// <summary>
-    /// Gets the ambient <see cref="IMapper"/> instance for the current async flow.
+    /// Gets the ambient <see cref="IMapper"/> for the current async flow.
     /// </summary>
     public static IMapper Current
-    {
-        get => _currentMapper.Value ?? throw new InvalidOperationException(
-            "No ambient IMapper is available for the current async flow.");
-    }
+        => _currentMapper.Value ?? throw new InvalidOperationException(
+            "No ambient IMapper is available for the current async flow. " +
+            "Resolve the scope's daemon services or use an explicit IMapper.");
 
+    /// <summary>
+    /// Pushes an ambient mapper and restores the previous mapper when the returned scope is disposed.
+    /// </summary>
     public static IDisposable PushCurrent(IMapper mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
@@ -29,6 +31,9 @@ public static class Mapper
         return new AmbientMapperScope(previous);
     }
 
+    /// <summary>
+    /// Resolves and pushes the current dependency injection scope's mapper.
+    /// </summary>
     public static IDisposable PushCurrent(IServiceProvider services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -38,15 +43,9 @@ public static class Mapper
         return PushCurrent(mapper);
     }
 
-    private sealed class AmbientMapperScope : IDisposable
+    private sealed class AmbientMapperScope(IMapper? previous) : IDisposable
     {
-        private readonly IMapper? _previousMapper;
         private bool _disposed;
-
-        public AmbientMapperScope(IMapper? previousMapper)
-        {
-            _previousMapper = previousMapper;
-        }
 
         public void Dispose()
         {
@@ -55,7 +54,7 @@ public static class Mapper
                 return;
             }
 
-            _currentMapper.Value = _previousMapper;
+            _currentMapper.Value = previous;
             _disposed = true;
         }
     }

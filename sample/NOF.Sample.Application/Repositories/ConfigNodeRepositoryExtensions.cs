@@ -6,27 +6,25 @@ public static class ConfigNodeRepositoryExtensions
 {
     extension(IRepository<ConfigNode> set)
     {
-        public Task<List<ConfigNode>> GetRootNodesAsync(CancellationToken cancellationToken = default)
+        public IAsyncQueryable<ConfigNode> QueryRootNodes()
         {
             return set.AsNoTracking()
                 .Where(n => n.ParentId == null)
-                .ToListAsync(cancellationToken);
+                .AsAsyncQueryable();
         }
 
-        public Task<ConfigNode?> GetNodeByIdAsync(
-            ConfigNodeId id,
-            CancellationToken cancellationToken = default)
+        public IAsyncQueryable<ConfigNode> QueryNodeById(ConfigNodeId id)
         {
             return set.AsNoTracking()
-                .FirstOrDefaultAsync(n => n.Id == id, cancellationToken);
+                .Where(n => n.Id == id)
+                .AsAsyncQueryable();
         }
 
-        public Task<ConfigNode?> GetNodeByNameAsync(
-            ConfigNodeName name,
-            CancellationToken cancellationToken = default)
+        public IAsyncQueryable<ConfigNode> QueryNodeByName(ConfigNodeName name)
         {
             return set.AsNoTracking()
-                .FirstOrDefaultAsync(node => node.Name == name, cancellationToken);
+                .Where(node => node.Name == name)
+                .AsAsyncQueryable();
         }
 
         public Task<ConfigNode?> FindByNameAsync(

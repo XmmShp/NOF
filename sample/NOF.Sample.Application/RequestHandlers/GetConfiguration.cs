@@ -11,13 +11,11 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
 {
     private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IMapper _mapper;
 
-    public GetConfiguration(IDbContext dbContext, ICacheService cache, IMapper mapper)
+    public GetConfiguration(IDbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _mapper = mapper;
     }
 
     public override async Task<Result<GetConfigurationResponse>> HandleAsync(GetConfigurationRequest request, Context context, CancellationToken cancellationToken)
@@ -88,13 +86,15 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
             return cachedValue.Value;
         }
 
-        var node = await _dbContext.Set<ConfigNode>().GetNodeByNameAsync(name, cancellationToken);
-        if (node is null)
+        var dto = await _dbContext.Set<ConfigNode>()
+            .QueryNodeByName(name)
+            .ProjectTo<ConfigNodeDto>()
+            .FirstOrDefaultAsync(cancellationToken);
+        if (dto is null)
         {
             return null;
         }
 
-        var dto = _mapper.Map<ConfigNode, ConfigNodeDto>(node);
         await _cache.SetAsync(
             cacheKey,
             dto,
@@ -113,13 +113,15 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
             return cachedValue.Value;
         }
 
-        var node = await _dbContext.Set<ConfigNode>().GetNodeByIdAsync(id, cancellationToken);
-        if (node is null)
+        var dto = await _dbContext.Set<ConfigNode>()
+            .QueryNodeById(id)
+            .ProjectTo<ConfigNodeDto>()
+            .FirstOrDefaultAsync(cancellationToken);
+        if (dto is null)
         {
             return null;
         }
 
-        var dto = _mapper.Map<ConfigNode, ConfigNodeDto>(node);
         await _cache.SetAsync(
             cacheKey,
             dto,
@@ -196,4 +198,3 @@ public class GetConfiguration : NOFSampleService.GetConfiguration
         }
     }
 }
-

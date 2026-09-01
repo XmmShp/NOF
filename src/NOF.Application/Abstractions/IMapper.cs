@@ -1,53 +1,25 @@
+using System.Linq.Expressions;
+
 namespace NOF.Application;
 
-public delegate object MapFunc(object source, IMapper mapper);
-
 /// <summary>
-/// Maps an object of one type to another.
-/// All mappings must be explicitly registered — no built-in or implicit mappings are provided.
-/// <para>
-/// Each <see cref="MapKey"/> holds exactly one delegate. The only implicit behavior is
-/// <c>Nullable&lt;T&gt;</c> fallback: a mapping <c>A → T</c> is used for <c>A → T?</c>
-/// when no direct registration exists.
-/// </para>
+/// Resolves one expression-based mapping definition for both query projection and in-memory mapping.
 /// </summary>
 public interface IMapper
 {
-    #region Generic mapping
+    /// <summary>
+    /// Gets the fully expanded mapping expression for the requested closed type pair.
+    /// </summary>
+    Expression<Func<TSource, TDestination>> GetExpression<TSource, TDestination>(string? name = null);
 
     /// <summary>
-    /// Maps <paramref name="source"/> to <typeparamref name="TDestination"/>.
+    /// Projects an untyped query by applying the registered expression for its element type.
     /// </summary>
-    /// <param name="source">The source object.</param>
-    /// <param name="useRuntimeType">
-    /// When <see langword="true"/>, source type for lookup is <c>source.GetType()</c>
-    /// rather than <typeparamref name="TSource"/>.
-    /// </param>
-    /// <param name="name">Optional mapping name.</param>
-    /// <exception cref="InvalidOperationException">No mapping registered for this key.</exception>
-    TDestination Map<TSource, TDestination>(TSource source, bool useRuntimeType = false, string? name = null);
+    IQueryable<TDestination> ProjectTo<TDestination>(IQueryable source, string? name = null);
 
     /// <summary>
-    /// Attempts to map <paramref name="source"/>.
-    /// Returns <see langword="true"/> if a mapping was found and <paramref name="result"/> contains the mapped value.
+    /// Maps one value by compiling and caching the same expression returned by
+    /// <see cref="GetExpression{TSource, TDestination}(string?)"/>.
     /// </summary>
-    bool TryMap<TSource, TDestination>(TSource source, out TDestination result, bool useRuntimeType = false, string? name = null);
-
-    #endregion
-
-    #region Non-generic mapping
-
-    /// <summary>
-    /// Maps <paramref name="source"/> to <paramref name="destinationType"/>.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">No mapping registered for this key.</exception>
-    object Map(Type sourceType, Type destinationType, object source, string? name = null);
-
-    /// <summary>
-    /// Attempts a non-generic map.
-    /// Returns <see langword="true"/> if a mapping was found and <paramref name="result"/> contains the mapped value.
-    /// </summary>
-    bool TryMap(Type sourceType, Type destinationType, object source, out object? result, string? name = null);
-
-    #endregion
+    TDestination Map<TSource, TDestination>(TSource source, string? name = null);
 }

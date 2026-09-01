@@ -8,7 +8,7 @@ Contains the application service abstractions used to implement NOF applications
 
 This package does not define runtime outbound authentication directives.
 
-`AddNOFApplication()` registers the package-local application defaults, including mapper registries, the ambient mapper convenience API support, and the package-local Domain defaults.
+`AddNOFApplication()` registers the package-local application defaults, including expression-based mapping and the package-local Domain defaults.
 
 Commands and notifications are plain payload types. Handler discovery comes from the `CommandHandler<T>` and `NotificationHandler<T>` base classes rather than marker interfaces on the message types.
 
@@ -126,17 +126,33 @@ The async query surface is exposed through `IAsyncQueryable<T>` in `NOF.Domain` 
 
 ### Object Mapping (`IMapper`)
 
-NOF uses an explicit mapper with optional source-generated registrations via `[Mappable]`:
+NOF uses expression-based mappings for both database projection and in-memory conversion:
 
 ```csharp
 [Mappable<Order, OrderDto>]
-[Mappable<Order, OrderSummary>(TwoWay = true)]
+[Mappable<Order, OrderSummary>]
 public static partial class Mappings;
 ```
 
-The generator writes `MapperRegistration` entries into `Registry.MapperRegistry`.
-Those mappings become available once the assembly is added via `AddApplicationPart(...)`.
-Convenience APIs can use the ambient mapper via `source.Map`, while explicit code can use `source.MapWith(mapper)`.
+The generator writes `MappingRegistration` expressions into `MappingRegistry`.
+Those mappings become available once the assembly is added via `AddApplicationPart(...)`. Every direction must be declared explicitly, and the generator reports an error instead of falling back to an opaque runtime mapping.
+
+Apply a generated mapping directly to a query after filtering, ordering, and paging:
+
+```csharp
+var orders = await _dbContext.Set<Order>()
+    .AsNoTracking()
+    .Where(order => order.IsActive)
+    .ProjectTo<OrderDto>()
+    .ToListAsync(cancellationToken);
+```
+
+`ProjectTo<TDestination>()` receives an `IQueryable`, discovers the source type from `ElementType`, and resolves the expression through the ambient `Mapper.Current`. Each registration carries an AOT-safe generic query applicator, so no runtime generic method construction is required. Use `ProjectTo<TDestination>(mapper)` when an explicit mapper boundary is preferable.
+
+Diagnostic `NOF025` warns when filtering, ordering, paging, set operations, another projection, or predicate-bearing terminal operations are composed after `ProjectTo`. Plain materialization and client-side work after `AsEnumerable` are not reported.
+
+For an already materialized value, `IMapper.Map<TSource, TDestination>(source)` compiles and caches the same expression used by `ProjectTo`.
+Custom pure expressions can be registered with `services.AddMapping<TSource, TDestination>(expression)`.
 
 For package-local defaults:
 
@@ -144,8 +160,7 @@ For package-local defaults:
 services.AddNOFApplication();
 ```
 
-This registers the default `IMapper`, mapping registries, and scoped ambient mapper activation.
-Custom hosts still need the equivalent of `ResolveDaemonServices()` if they want to use the ambient `source.Map` convenience API.
+This registers `MappingRegistry`, the default `ExpressionMapper` implementation of `IMapper`, and a scoped daemon that binds `Mapper.Current` to the current async flow.
 
 `AddNOFApplication()` already includes `AddNOFDomain()`:
 

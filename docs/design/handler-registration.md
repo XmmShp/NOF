@@ -13,7 +13,7 @@ The runtime model is:
 - `Registry.CommandHandlerRegistry`
 - `Registry.NotificationHandlerRegistry`
 - `Registry.EventHandlerRegistry`
-- `Registry.MapperRegistry`
+- `MappingRegistry`
 3. At startup, `builder.AddApplicationPart(assembly)` executes those initializers.
 4. Registry collections freeze on first read; indexed registries build their indexes when frozen.
 5. Registration steps wire the runtime:

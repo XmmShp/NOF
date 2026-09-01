@@ -12,8 +12,8 @@ namespace NOF.Application.SourceGenerator;
 
 /// <summary>
 /// Source generator that discovers <c>partial static class</c> types annotated with
-/// <c>[Mappable&lt;TSource, TDest&gt;]</c> or <c>[Mappable(typeof(...), typeof(...))]</c>,
-/// and generates an AssemblyInitializer that registers mapping delegates into the global registry.
+/// <c>[Mappable&lt;TSource, TDest&gt;]</c> and generates an assembly initializer that
+/// registers mapping expressions into the application mapping registry.
 /// <para>
 /// Attributes can be scattered across multiple partial declarations of the same class.
 /// The generator merges them logically and emits a single AssemblyInitializer for the assembly.
@@ -22,14 +22,13 @@ namespace NOF.Application.SourceGenerator;
 [Generator]
 public class MappableGenerator : IIncrementalGenerator
 {
-    private const string NonGenericAttributeName = "NOF.Application.MappableAttribute";
 
     #region Diagnostic descriptors
 
     private static readonly DiagnosticDescriptor _duplicateMapping = new(
         id: "NOF020",
         title: "Duplicate mapping registration",
-        messageFormat: "Mapping from '{0}' to '{1}' is registered more than once (including TwoWay reverse mappings)",
+        messageFormat: "Mapping from '{0}' to '{1}' is registered more than once",
         category: "NOF.Application",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -45,17 +44,25 @@ public class MappableGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor _optionalSemanticMismatch = new(
         id: "NOF022",
         title: "Optional mapping semantic mismatch",
-        messageFormat: "Property '{0}': mapping between '{1}' and '{2}' has an Optional semantic mismatch and will use IMapper instead",
+        messageFormat: "Property '{0}': mapping between '{1}' and '{2}' has incompatible optional or nullable semantics",
         category: "NOF.Application",
-        DiagnosticSeverity.Warning,
+        DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor _unregisteredMapperFallback = new(
+    private static readonly DiagnosticDescriptor _missingNestedMapping = new(
         id: "NOF023",
-        title: "Mapper fallback to unregistered mapping",
-        messageFormat: "Property '{0}': mapping from '{1}' to '{2}' is not auto-generated and requires a manual IMapper registration",
+        title: "Nested mapping is not registered",
+        messageFormat: "Property '{0}': mapping from '{1}' to '{2}' requires an explicit mapping expression registration",
         category: "NOF.Application",
-        DiagnosticSeverity.Warning,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor _incompleteDestination = new(
+        id: "NOF024",
+        title: "Destination cannot be constructed completely",
+        messageFormat: "Destination member or constructor parameter '{0}' on '{1}' has no matching source property",
+        category: "NOF.Application",
+        DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     #endregion
@@ -122,23 +129,12 @@ public class MappableGenerator : IIncrementalGenerator
 
                 var location = attrSyntax.GetLocation();
 
-                // [Mappable<TSource, TDestination>]
                 if (attrType.IsGenericType &&
                     attrType.OriginalDefinition.ToDisplayString() == "NOF.Application.MappableAttribute<TSource, TDestination>")
                 {
                     var sourceType = attrType.TypeArguments[0];
                     var destType = attrType.TypeArguments[1];
-                    var twoWay = GetNamedBoolArg(attrData, "TwoWay");
-                    pairs.Add(new MappingPairInfo(sourceType, destType, twoWay, location));
-                }
-                // [Mappable(typeof(...), typeof(...))]
-                else if (attrType.ToDisplayString() == NonGenericAttributeName &&
-                         attrData.ConstructorArguments.Length == 2 &&
-                         attrData.ConstructorArguments[0].Value is INamedTypeSymbol src &&
-                         attrData.ConstructorArguments[1].Value is INamedTypeSymbol dst)
-                {
-                    var twoWay = GetNamedBoolArg(attrData, "TwoWay");
-                    pairs.Add(new MappingPairInfo(src, dst, twoWay, location));
+                    pairs.Add(new MappingPairInfo(sourceType, destType, location));
                 }
             }
         }
@@ -157,18 +153,6 @@ public class MappableGenerator : IIncrementalGenerator
             isPartial && isStatic,
             pairs,
             cds.GetLocation());
-    }
-
-    private static bool GetNamedBoolArg(AttributeData attr, string name)
-    {
-        foreach (var arg in attr.NamedArguments)
-        {
-            if (arg.Key == name && arg.Value.Value is bool b)
-            {
-                return b;
-            }
-        }
-        return false;
     }
 
     #endregion
@@ -190,8 +174,7 @@ public class MappableGenerator : IIncrementalGenerator
 
         var grouped = valid.GroupBy(d => new { d!.Namespace, d.TypeName }).ToList();
 
-        var registrationLines = new List<string>();
-        var allAutoPairs = new HashSet<(string, string)>();
+        var declaredPairs = new List<MappingPairInfo>();
 
         foreach (var group in grouped)
         {
@@ -203,61 +186,40 @@ public class MappableGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var allPairs = group.SelectMany(d => d!.Pairs).ToList();
+            declaredPairs.AddRange(group.SelectMany(d => d!.Pairs));
+        }
 
-            var seen = new Dictionary<(string, string), MappingPairInfo>();
-            var validPairs = new List<MappingPairInfo>();
-            var hasDuplicate = false;
-
-            foreach (var pair in allPairs)
+        var uniquePairs = new List<MappingPairInfo>();
+        var seen = new HashSet<(string, string)>();
+        foreach (var pair in declaredPairs)
+        {
+            if (!seen.Add((pair.SourceFullName, pair.DestFullName)))
             {
-                var fwd = (pair.SourceFullName, pair.DestFullName);
-                if (seen.ContainsKey(fwd))
-                {
-                    spc.ReportDiagnostic(Diagnostic.Create(_duplicateMapping, pair.Location, pair.SourceFullName, pair.DestFullName));
-                    hasDuplicate = true;
-                    continue;
-                }
-                seen[fwd] = pair;
-                validPairs.Add(pair);
-
-                if (pair.TwoWay)
-                {
-                    var rev = (pair.DestFullName, pair.SourceFullName);
-                    if (seen.ContainsKey(rev))
-                    {
-                        spc.ReportDiagnostic(Diagnostic.Create(_duplicateMapping, pair.Location, pair.DestFullName, pair.SourceFullName));
-                        hasDuplicate = true;
-                    }
-                    else
-                    {
-                        seen[rev] = pair;
-                    }
-                }
-            }
-
-            if (hasDuplicate || validPairs.Count == 0)
-            {
+                spc.ReportDiagnostic(Diagnostic.Create(
+                    _duplicateMapping,
+                    pair.Location,
+                    pair.SourceFullName,
+                    pair.DestFullName));
                 continue;
             }
 
-            foreach (var p in validPairs)
-            {
-                allAutoPairs.Add((p.SourceFullName, p.DestFullName));
-                if (p.TwoWay)
-                {
-                    allAutoPairs.Add((p.DestFullName, p.SourceFullName));
-                }
-            }
+            uniquePairs.Add(pair);
+        }
 
-            foreach (var pair in validPairs)
-            {
-                EmitMapping(registrationLines, pair.SourceType, pair.DestType, compilation, allAutoPairs, spc, pair.Location);
-                if (pair.TwoWay)
-                {
-                    EmitMapping(registrationLines, pair.DestType, pair.SourceType, compilation, allAutoPairs, spc, pair.Location);
-                }
-            }
+        var registrationLines = new List<string>();
+        var allAutoPairs = new HashSet<(string, string)>(
+            uniquePairs.Select(pair => (pair.SourceFullName, pair.DestFullName)));
+
+        foreach (var pair in uniquePairs)
+        {
+            EmitMapping(
+                registrationLines,
+                pair.SourceType,
+                pair.DestType,
+                compilation,
+                allAutoPairs,
+                spc,
+                pair.Location);
         }
 
         if (registrationLines.Count == 0)
@@ -266,7 +228,7 @@ public class MappableGenerator : IIncrementalGenerator
         }
 
         var sourceText = GenerateAssemblyInitializer(assemblyName, registrationLines);
-        spc.AddSource("MapperAssemblyInitializer.g.cs", SourceText.From(sourceText, Encoding.UTF8));
+        spc.AddSource("MappingAssemblyInitializer.g.cs", SourceText.From(sourceText, Encoding.UTF8));
     }
 
     #endregion
@@ -279,7 +241,7 @@ public class MappableGenerator : IIncrementalGenerator
     private static string GenerateAssemblyInitializer(string assemblyName, List<string> registrations)
     {
         var sanitizedName = assemblyName.Replace(".", "");
-        var initializerTypeName = $"__{sanitizedName}MapperAssemblyInitializer";
+        var initializerTypeName = $"__{sanitizedName}MappingAssemblyInitializer";
 
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated/>");
@@ -323,7 +285,7 @@ public class MappableGenerator : IIncrementalGenerator
             var expr = EmitConversion("src", sourceType, destType,
                 compilation, allAutoGeneratedPairs, spc, location, sourceType.Name, inlineEnumMapping: true);
             registrations.Add(
-                $"services.GetOrAddSingleton<global::NOF.Application.MapperRegistry>().Add(global::NOF.Application.MapperRegistration.Of<{srcFull}, {dstFull}>(src => {expr}));");
+                $"services.GetOrAddSingleton<global::NOF.Application.MappingRegistry>().Add(global::NOF.Application.MappingRegistration.Of<{srcFull}, {dstFull}>(src => {expr}));");
             return;
         }
 
@@ -350,6 +312,22 @@ public class MappableGenerator : IIncrementalGenerator
             }
         }
 
+        if (bestCtor != null)
+        {
+            var unmatchedParameter = bestCtor.Parameters.FirstOrDefault(parameter =>
+                !ctorMatchedParams.ContainsKey(parameter.Name)
+                && !parameter.HasExplicitDefaultValue);
+            if (unmatchedParameter is not null)
+            {
+                spc.ReportDiagnostic(Diagnostic.Create(
+                    _incompleteDestination,
+                    location,
+                    unmatchedParameter.Name,
+                    dstFull));
+                return;
+            }
+        }
+
         // Writable properties for member initializer
         var initProps = new List<(IPropertySymbol DstProp, IPropertySymbol SrcProp)>();
         foreach (var dstProp in dstWritableProps)
@@ -361,31 +339,22 @@ public class MappableGenerator : IIncrementalGenerator
             }
         }
 
-        // Determine if IMapper parameter is needed
-        var needsMapper = false;
-        foreach (var kvp in ctorMatchedParams)
+        var unmatchedRequiredProperty = dstWritableProps.FirstOrDefault(property =>
+            property.IsRequired
+            && !initProps.Any(pair => SymbolEqualityComparer.Default.Equals(pair.DstProp, property))
+            && !ctorMatchedParams.ContainsKey(property.Name));
+        if (unmatchedRequiredProperty is not null)
         {
-            if (NeedsMapper(kvp.Value.SrcProp.Type, kvp.Value.Param.Type, compilation))
-            {
-                needsMapper = true;
-                break;
-            }
-        }
-        if (!needsMapper)
-        {
-            foreach (var (dstProp, srcProp) in initProps)
-            {
-                if (NeedsMapper(srcProp.Type, dstProp.Type, compilation))
-                {
-                    needsMapper = true;
-                    break;
-                }
-            }
+            spc.ReportDiagnostic(Diagnostic.Create(
+                _incompleteDestination,
+                location,
+                unmatchedRequiredProperty.Name,
+                dstFull));
+            return;
         }
 
-        var header = needsMapper
-            ? $"services.GetOrAddSingleton<global::NOF.Application.MapperRegistry>().Add(global::NOF.Application.MapperRegistration.Of<{srcFull}, {dstFull}>((src, mapper) =>"
-            : $"services.GetOrAddSingleton<global::NOF.Application.MapperRegistry>().Add(global::NOF.Application.MapperRegistration.Of<{srcFull}, {dstFull}>(src =>";
+        var header =
+            $"services.GetOrAddSingleton<global::NOF.Application.MappingRegistry>().Add(global::NOF.Application.MappingRegistration.Of<{srcFull}, {dstFull}>(src =>";
 
         var sb = new StringBuilder();
         sb.AppendLine(header);
@@ -401,9 +370,9 @@ public class MappableGenerator : IIncrementalGenerator
                     ctorArgs.Add(EmitConversion($"src.{match.SrcProp.Name}", match.SrcProp.Type, param.Type,
                         compilation, allAutoGeneratedPairs, spc, location, match.SrcProp.Name));
                 }
-                else
+                else if (param.HasExplicitDefaultValue)
                 {
-                    ctorArgs.Add("default!");
+                    ctorArgs.Add("default");
                 }
             }
             sb.Append(string.Join(", ", ctorArgs));
@@ -539,7 +508,7 @@ public class MappableGenerator : IIncrementalGenerator
     /// 5. Result unwrap: Result&lt;T&gt; → T? only. Same nullable semantics as Optional.
     /// 6. ValueObject unwrap: IValueObject&lt;T&gt; → T only (exact underlying type).
     /// 7. Common primitive conversions (string↔int, int↔enum, etc.).
-    /// 8. Fallback: mapper.Map (with NOF023 warning if pair not auto-generated).
+    /// 8. Fallback: a nested mapping reference (NOF023 when the pair is not declared).
     /// </summary>
     private static string EmitConversion(
         string srcExpr, ITypeSymbol srcType, ITypeSymbol destType, Compilation compilation,
@@ -572,7 +541,7 @@ public class MappableGenerator : IIncrementalGenerator
         {
             return inlineEnumMapping
                 ? EmitEnumMappingConversion(srcExpr, srcType, destType)
-                : EmitMapperFallback(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
+                : EmitNestedMappingReference(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
         }
 
         // --- Unwrap source Optional<T> ---
@@ -593,7 +562,7 @@ public class MappableGenerator : IIncrementalGenerator
                     propertyName,
                     srcType.ToDisplayString(_fullyQualifiedFormat),
                     destType.ToDisplayString(_fullyQualifiedFormat)));
-                return EmitMapperFallback(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
+                return EmitNestedMappingReference(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
             }
 
             // Optional<T> → T? : unwrap via .Value, then recursively convert inner to dest
@@ -617,7 +586,7 @@ public class MappableGenerator : IIncrementalGenerator
                     propertyName,
                     srcType.ToDisplayString(_fullyQualifiedFormat),
                     destType.ToDisplayString(_fullyQualifiedFormat)));
-                return EmitMapperFallback(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
+                return EmitNestedMappingReference(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
             }
 
             // Result<T> → T? : unwrap via .Value!, then recursively convert inner to dest
@@ -634,8 +603,7 @@ public class MappableGenerator : IIncrementalGenerator
                 var innerFull = srcInnerFromVo.ToDisplayString(_fullyQualifiedFormat);
                 return $"(({innerFull}){srcExpr})";
             }
-            // VO → anything other than its underlying type: use IMapper
-            return EmitMapperFallback(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
+            return EmitNestedMappingReference(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
         }
 
         // --- Wrap into destination IValueObject<T> — only from exact underlying type ---
@@ -647,8 +615,7 @@ public class MappableGenerator : IIncrementalGenerator
                 var dstFull = destType.ToDisplayString(_fullyQualifiedFormat);
                 return $"{dstFull}.Of({srcExpr})";
             }
-            // Anything other than exact underlying type → VO: use IMapper
-            return EmitMapperFallback(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
+            return EmitNestedMappingReference(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
         }
 
         // --- Nullable<T> unwrap/wrap (value types, including Nullable<VO>) ---
@@ -676,12 +643,33 @@ public class MappableGenerator : IIncrementalGenerator
         {
             var innerExpr = EmitConversion("_item_", srcElemType, dstElemType,
                 compilation, allAutoGeneratedPairs, spc, location, propertyName, inlineEnumMapping);
-            // Use collection expression [..spread] — lets the compiler pick the right
-            // collection type for the target (List<T>, T[], IReadOnlyList<T>, custom, etc.)
-            var spreadExpr = innerExpr == "_item_"
+            var projected = innerExpr == "_item_"
                 ? srcExpr  // same element type, spread source directly
                 : $"{srcExpr}.Select(_item_ => {innerExpr})";
-            return $"[..{spreadExpr}]";
+
+            if (destType is IArrayTypeSymbol)
+            {
+                return $"{projected}.ToArray()";
+            }
+
+            var listDefinition = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1");
+            if (listDefinition is not null)
+            {
+                var listType = listDefinition.Construct(dstElemType);
+                if (compilation.ClassifyConversion(listType, destType).IsImplicit)
+                {
+                    return $"{projected}.ToList()";
+                }
+            }
+
+            return EmitNestedMappingReference(
+                srcExpr,
+                srcType,
+                destType,
+                allAutoGeneratedPairs,
+                spc,
+                location,
+                propertyName);
         }
 
         // --- Common primitive and enum conversions ---
@@ -690,11 +678,10 @@ public class MappableGenerator : IIncrementalGenerator
             return primitiveExpr;
         }
 
-        // --- Fallback: use IMapper ---
-        return EmitMapperFallback(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
+        return EmitNestedMappingReference(srcExpr, srcType, destType, allAutoGeneratedPairs, spc, location, propertyName);
     }
 
-    private static string EmitMapperFallback(
+    private static string EmitNestedMappingReference(
         string srcExpr, ITypeSymbol srcType, ITypeSymbol destType,
         HashSet<(string, string)> allAutoGeneratedPairs, SourceProductionContext spc,
         Location location, string propertyName)
@@ -704,112 +691,11 @@ public class MappableGenerator : IIncrementalGenerator
 
         if (!allAutoGeneratedPairs.Contains((srcFull, destFull)))
         {
-            spc.ReportDiagnostic(Diagnostic.Create(_unregisteredMapperFallback, location,
+            spc.ReportDiagnostic(Diagnostic.Create(_missingNestedMapping, location,
                 propertyName, srcFull, destFull));
         }
 
-        return $"mapper.Map<{srcFull}, {destFull}>({srcExpr})";
-    }
-
-    private static bool NeedsMapper(ITypeSymbol srcType, ITypeSymbol destType, Compilation compilation)
-    {
-        if (SymbolEqualityComparer.Default.Equals(srcType, destType))
-        {
-            return false;
-        }
-
-        // Implicit conversion (including user-defined) → no mapper
-        var conv = compilation.ClassifyConversion(srcType, destType);
-        if (conv.IsImplicit)
-        {
-            return false;
-        }
-
-        // User-defined explicit conversion → no mapper (will emit cast)
-        if (HasUserDefinedConversion(srcType, destType))
-        {
-            return false;
-        }
-
-        // Optional unwrap: Optional<T> → T? only
-        var srcInnerOpt = TryGetOptionalInner(srcType);
-        if (srcInnerOpt != null)
-        {
-            var srcInnerIsNullable = srcInnerOpt.NullableAnnotation == NullableAnnotation.Annotated
-                || (srcInnerOpt is INamedTypeSymbol { IsGenericType: true } ns1 && ns1.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T);
-            var destIsNullable = destType.NullableAnnotation == NullableAnnotation.Annotated
-                || (destType is INamedTypeSymbol { IsGenericType: true } nd1 && nd1.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T);
-
-            if (srcInnerIsNullable || !destIsNullable)
-            {
-                return true; // semantic mismatch → mapper
-            }
-
-            return NeedsMapper(srcInnerOpt, destType, compilation);
-        }
-
-        // Result unwrap: same nullable semantics as Optional
-        var srcInnerResult = TryGetResultInner(srcType);
-        if (srcInnerResult != null)
-        {
-            var srcResultInnerIsNullable = srcInnerResult.NullableAnnotation == NullableAnnotation.Annotated
-                || (srcInnerResult is INamedTypeSymbol { IsGenericType: true } nsr2 && nsr2.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T);
-            var destIsNullableForResult = destType.NullableAnnotation == NullableAnnotation.Annotated
-                || (destType is INamedTypeSymbol { IsGenericType: true } ndr2 && ndr2.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T);
-
-            if (srcResultInnerIsNullable || !destIsNullableForResult)
-            {
-                return true; // semantic mismatch → mapper
-            }
-
-            return NeedsMapper(srcInnerResult, destType, compilation);
-        }
-
-        // VO unwrap: only to exact underlying type
-        var srcInnerVo = TryGetValueObjectInner(srcType);
-        if (srcInnerVo != null)
-        {
-            return !EqualsIgnoringNullable(srcInnerVo, destType);
-        }
-
-        // VO wrap: only from exact underlying type
-        var dstInnerVo = TryGetValueObjectInner(destType);
-        if (dstInnerVo != null)
-        {
-            return !EqualsIgnoringNullable(srcType, dstInnerVo);
-        }
-
-        // Nullable<T> → Nullable<U> or Nullable<T> → U
-        var srcNullableInner = TryGetNullableUnderlying(srcType);
-        var dstNullableInner = TryGetNullableUnderlying(destType);
-        if (srcNullableInner != null && dstNullableInner != null)
-        {
-            return NeedsMapper(srcNullableInner, dstNullableInner, compilation);
-        }
-        if (srcNullableInner != null)
-        {
-            return NeedsMapper(srcNullableInner, destType, compilation);
-        }
-
-        // IEnumerable<T> → IEnumerable<U> / List<U> / array
-        var srcElem = TryGetEnumerableElementType(srcType);
-        var dstElem = TryGetEnumerableElementType(destType);
-        if (srcElem != null && dstElem != null)
-        {
-            return NeedsMapper(srcElem, dstElem, compilation);
-        }
-
-        if (srcType.TypeKind == TypeKind.Enum && destType.TypeKind == TypeKind.Enum)
-        {
-            return true;
-        }
-
-        if (TryEmitPrimitiveConversion("_", srcType, destType, out _))
-        {
-            return false;
-        }
-
-        return true;
+        return $"global::NOF.Application.MappingReference.Map<{srcFull}, {destFull}>({srcExpr})";
     }
 
     #endregion
@@ -932,9 +818,6 @@ public class MappableGenerator : IIncrementalGenerator
         var destIsEnum = destType.TypeKind == TypeKind.Enum;
         var srcIsNumeric = IsNumericType(srcType);
         var destIsNumeric = IsNumericType(destType);
-        var srcIsString = srcType.SpecialType == SpecialType.System_String;
-        var destIsString = destType.SpecialType == SpecialType.System_String;
-
         // numeric → numeric (cast)
         if (srcIsNumeric && destIsNumeric)
         {
@@ -956,36 +839,13 @@ public class MappableGenerator : IIncrementalGenerator
             return true;
         }
 
-        // T → string (ToString())
-        if (destIsString && !srcIsString)
-        {
-            result = srcType.IsValueType
-                ? $"({srcExpr}).ToString()!"
-                : $"({srcExpr})?.ToString() ?? \"\"";
-            return true;
-        }
-
-        // string → numeric (parse)
-        if (srcIsString && destIsNumeric)
-        {
-            result = $"{destFull}.Parse({srcExpr})";
-            return true;
-        }
-
-        // string → enum (Enum.Parse<T>)
-        if (srcIsString && destIsEnum)
-        {
-            result = $"global::System.Enum.Parse<{destFull}>({srcExpr})";
-            return true;
-        }
-
         return false;
     }
 
     private static string EmitEnumMappingConversion(string srcExpr, ITypeSymbol srcType, ITypeSymbol destType)
     {
         var destFull = destType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var arms = new List<string>();
+        var mappings = new List<(IFieldSymbol Source, IFieldSymbol Destination)>();
         var destMembers = GetEnumMembers(destType);
 
         foreach (var srcMember in GetEnumMembers(srcType))
@@ -1000,11 +860,18 @@ public class MappableGenerator : IIncrementalGenerator
                 continue;
             }
 
-            arms.Add($"{EmitEnumMemberReference(srcMember)} => {EmitEnumMemberReference(destMember)}");
+            mappings.Add((srcMember, destMember));
         }
 
-        arms.Add($"_ => ({destFull})(int)({srcExpr})");
-        return $"{srcExpr} switch {{ {string.Join(", ", arms)} }}";
+        var result = $"({destFull})(int)({srcExpr})";
+        for (var index = mappings.Count - 1; index >= 0; index--)
+        {
+            var mapping = mappings[index];
+            result = $"{srcExpr} == {EmitEnumMemberReference(mapping.Source)} ? " +
+                $"{EmitEnumMemberReference(mapping.Destination)} : ({result})";
+        }
+
+        return result;
     }
 
     private static string EmitEnumMemberReference(IFieldSymbol member)
@@ -1072,16 +939,14 @@ public class MappableGenerator : IIncrementalGenerator
         public ITypeSymbol DestType { get; }
         public string SourceFullName { get; }
         public string DestFullName { get; }
-        public bool TwoWay { get; }
         public Location Location { get; }
 
-        public MappingPairInfo(ITypeSymbol sourceType, ITypeSymbol destType, bool twoWay, Location location)
+        public MappingPairInfo(ITypeSymbol sourceType, ITypeSymbol destType, Location location)
         {
             SourceType = sourceType;
             DestType = destType;
             SourceFullName = sourceType.ToDisplayString(_fullyQualifiedFormat);
             DestFullName = destType.ToDisplayString(_fullyQualifiedFormat);
-            TwoWay = twoWay;
             Location = location;
         }
     }

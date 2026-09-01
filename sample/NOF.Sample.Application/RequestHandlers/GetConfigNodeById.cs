@@ -10,13 +10,11 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
 {
     private readonly IDbContext _dbContext;
     private readonly ICacheService _cache;
-    private readonly IMapper _mapper;
 
-    public GetConfigNodeById(IDbContext dbContext, ICacheService cache, IMapper mapper)
+    public GetConfigNodeById(IDbContext dbContext, ICacheService cache)
     {
         _dbContext = dbContext;
         _cache = cache;
-        _mapper = mapper;
     }
 
     public override async Task<Result<GetConfigNodeByIdResponse>> HandleAsync(GetConfigNodeByIdRequest request, Context context, CancellationToken cancellationToken)
@@ -33,14 +31,16 @@ public class GetConfigNodeById : NOFSampleService.GetConfigNodeById
             };
         }
 
-        var node = await _dbContext.Set<ConfigNode>().GetNodeByIdAsync(nodeId, cancellationToken);
+        var dto = await _dbContext.Set<ConfigNode>()
+            .QueryNodeById(nodeId)
+            .ProjectTo<ConfigNodeDto>()
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (node is null)
+        if (dto is null)
         {
             return Result.Fail("404", "Config node not found.");
         }
 
-        var dto = _mapper.Map<ConfigNode, ConfigNodeDto>(node);
         await _cache.SetAsync(
             cacheKey,
             dto,

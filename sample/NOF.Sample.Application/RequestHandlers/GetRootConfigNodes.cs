@@ -7,19 +7,18 @@ namespace NOF.Sample.Application.RequestHandlers;
 public class GetRootConfigNodes : NOFSampleService.GetRootConfigNodes
 {
     private readonly IDbContext _dbContext;
-    private readonly IMapper _mapper;
 
-    public GetRootConfigNodes(IDbContext dbContext, IMapper mapper)
+    public GetRootConfigNodes(IDbContext dbContext)
     {
         _dbContext = dbContext;
-        _mapper = mapper;
     }
 
     public override async Task<Result<GetRootConfigNodesResponse>> HandleAsync(GetRootConfigNodesRequest request, Context context, CancellationToken cancellationToken)
     {
-        var nodes = await _dbContext.Set<ConfigNode>().GetRootNodesAsync(cancellationToken);
-
-        var response = nodes.Select(node => _mapper.Map<ConfigNode, ConfigNodeDto>(node)).ToList();
+        var response = await _dbContext.Set<ConfigNode>()
+            .QueryRootNodes()
+            .ProjectTo<ConfigNodeDto>()
+            .ToListAsync(cancellationToken);
 
         return new GetRootConfigNodesResponse
         {

@@ -148,7 +148,7 @@ The `[Mappable]` source generator understands value objects natively:
 
 - **Unwrap**: `IValueObject<T>` → `T` via explicit cast `(T)value`. Only the exact underlying type is supported — a `string` value object won't auto-convert to `int`.
 - **Wrap**: `T` → `VoType.Of(value)`. Same exact-type restriction.
-- **Cross-VO**: `OrderName` → `CustomerId` always falls back to `IMapper`, because cross-VO mapping is a domain decision that should be explicit.
+- **Cross-VO**: `OrderName` → `CustomerId` requires an explicit mapping expression, because cross-VO mapping is a domain decision.
 
 The generator never looks for `.Value`. It uses the same explicit cast that hand-written code would use. The generated code is what you would have written — there is no special path for value objects that diverges from the language's own conversion mechanics.
 

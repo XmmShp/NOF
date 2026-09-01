@@ -66,7 +66,7 @@ public class NOFInfrastructureTests
     }
 
     [Fact]
-    public void AddNOFInfrastructure_ShouldRegisterAmbientMapperAndIdGeneratorDaemons()
+    public void AddNOFInfrastructure_ShouldRegisterSupportedAmbientDaemons()
     {
         var builder = new TestServiceRegistrationContext();
 

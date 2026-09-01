@@ -15,7 +15,7 @@ public class ServiceCollectionExtensionsTests
         services.AddNOFApplication();
 
         Assert.Contains(services, descriptor =>
-            descriptor.ServiceType == typeof(MapperRegistry) &&
+            descriptor.ServiceType == typeof(MappingRegistry) &&
             descriptor.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(CommandHandlerRegistry) &&
@@ -28,7 +28,7 @@ public class ServiceCollectionExtensionsTests
             descriptor.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(IMapper) &&
-            descriptor.ImplementationType == typeof(ManualMapper) &&
+            descriptor.ImplementationType == typeof(ExpressionMapper) &&
             descriptor.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(services, descriptor =>
             descriptor.ServiceType == typeof(IIdGenerator) &&
@@ -45,18 +45,48 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddNOFApplication_ShouldActivateAmbientMapperConvenienceApi()
+    public void AddNOFApplication_ShouldResolveExpressionMapper()
     {
         var services = new ServiceCollection();
         services.AddNOFApplication();
-        services.GetOrAddSingleton<MapperRegistry>()
-            .Add(MapperRegistration.Of<int, string>(value => value.ToString()));
+        services.GetOrAddSingleton<MappingRegistry>()
+            .Add(MappingRegistration.Of<int, string>(value => value.ToString()));
 
         using var provider = services.BuildServiceProvider();
-        using var scope = provider.CreateScope();
-        scope.ServiceProvider.ResolveDaemonServices();
+        var mapper = provider.GetRequiredService<IMapper>();
 
-        Assert.Equal("42", 42.Map.To<string>());
+        Assert.Equal("42", mapper.Map<int, string>(42));
+    }
+
+    [Fact]
+    public void AddNOFApplication_ShouldBindAmbientMapperForResolvedScope()
+    {
+        var services = new ServiceCollection();
+        services.AddMapping<int, string>(value => "mapped:" + value);
+
+        using var provider = services.BuildServiceProvider();
+        using (var scope = provider.CreateScope())
+        {
+            scope.ServiceProvider.ResolveDaemonServices();
+
+            Assert.Same(scope.ServiceProvider.GetRequiredService<IMapper>(), Mapper.Current);
+            Assert.Equal("mapped:5", new[] { 5 }.AsQueryable().ProjectTo<string>().Single());
+        }
+
+        Assert.Throws<InvalidOperationException>(() => Mapper.Current);
+    }
+
+    [Fact]
+    public void AddMapping_ShouldRegisterExpressionAndApplicationDefaults()
+    {
+        var services = new ServiceCollection();
+        services.AddMapping<int, string>(value => value.ToString());
+
+        using var provider = services.BuildServiceProvider();
+        var mapper = provider.GetRequiredService<IMapper>();
+
+        Assert.Equal("7", mapper.Map<int, string>(7));
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(MappingRegistry));
     }
 
     [Fact]
@@ -67,7 +97,7 @@ public class ServiceCollectionExtensionsTests
         services.AddNOFApplication();
         services.AddNOFApplication();
 
-        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(MapperRegistry));
+        _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(MappingRegistry));
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(CommandHandlerRegistry));
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(NotificationHandlerRegistry));
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(RpcServerRegistry));
@@ -75,10 +105,10 @@ public class ServiceCollectionExtensionsTests
         _ = Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IIdGenerator));
         _ = Assert.Single(services, descriptor =>
             descriptor.ServiceType == typeof(IDaemonService)
-            && descriptor.ImplementationType == typeof(MapperAmbientDaemonService));
+            && descriptor.ImplementationType == typeof(IdGeneratorAmbientDaemonService));
         _ = Assert.Single(services, descriptor =>
             descriptor.ServiceType == typeof(IDaemonService)
-            && descriptor.ImplementationType == typeof(IdGeneratorAmbientDaemonService));
+            && descriptor.ImplementationType == typeof(MapperAmbientDaemonService));
     }
 
     [Fact]

@@ -3,12 +3,8 @@ using NOF.Abstraction;
 namespace NOF.Application;
 
 /// <summary>
-/// Activates the ambient <see cref="IMapper"/> for the current dependency injection scope.
+/// Binds the current dependency injection scope's mapper to the ambient async flow.
 /// </summary>
-/// <remarks>
-/// This is part of NOF's convenience API support. Explicit <see cref="IMapper"/>
-/// dependencies remain the primary runtime contract.
-/// </remarks>
 public sealed class MapperAmbientDaemonService : IDaemonService, IDisposable
 {
     private readonly IDisposable _scope;

@@ -69,4 +69,6 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 - File-scoped namespaces, Allman braces, braces on all control-flow.
 - `Optional<T>` for PATCH semantics.
 - Persist application data through `DbContext` / `NOFDbContext` in application handlers.
-- Treat ambient APIs as convenience only: keep explicit `IMapper`, `IIdGenerator`, and `IEventPublisher` paths available in app code when that improves clarity or testability.
+- Mapping is expression-based; apply `ProjectTo<TDestination>()` only after filtering, ordering, and paging. Its `IQueryable` receiver resolves the source key from `ElementType` and uses the current async-flow-scoped `Mapper`.
+- Treat `NOF025` as an advisory signal that server-side query shaping occurs after `ProjectTo`; move that shaping before projection unless the warning is a documented conservative-analysis edge case.
+- Treat `Mapper`, `IdGenerator`, and `EventPublisher` ambient APIs as convenience only; keep their explicit paths available when that improves clarity or testability.

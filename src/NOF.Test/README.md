@@ -68,7 +68,7 @@ Represents a scoped test execution context. It makes it easy to configure execut
 - `SendAsync(...)`
 - `PublishAsync(...)`
 
-When a test scope is created, NOF also activates scoped daemon services so ambient conveniences such as `Mapper`, `IdGenerator`, and `EventPublisher` behave the same way they do in normal NOF execution scopes.
+When a test scope is created, NOF also activates scoped daemon services so ambient conveniences such as `Mapper`, `IdGenerator`, and `EventPublisher` behave the same way they do in normal NOF execution scopes. Use explicit overloads when a test needs to provide a specific mapper or publisher.
 
 ```csharp
 using var scope = host.CreateScope();
