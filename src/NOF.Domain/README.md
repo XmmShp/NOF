@@ -29,6 +29,8 @@ Implement `IValueObject<T>` on a `readonly partial struct` to define a value obj
 - equality members and `ToString()`
 - a nested `JsonConverter`
 
+Always construct a value object through `Of(...)` or another generated factory. Diagnostic `NOF018` rejects direct `default` and parameterless `new()` expressions. Because the CLR can still zero-initialize structs implicitly (for example in arrays, fields, and generic code), generated value objects also track validated initialization at runtime. An uninitialized sentinel never compares equal to a validated value and throws `InvalidOperationException` if it is converted, hashed, formatted, serialized, or passed through the persistence converter. Two uninitialized values compare equal to support ORM sentinel checks. A valid primitive default such as `Score.Of(0)` remains valid.
+
 The generated `JsonConverter` is AOT-friendly and resolves primitive serialization through `JsonTypeInfo`.
 If you use Native AOT-style publishing, make sure the `JsonSerializerOptions` passed to serialization includes metadata for the primitive type backing the value object.
 Best practice: keep `Normalize(T)` limited to canonicalization such as trimming or casing, and avoid calling `Of(...)` or `Validate(...)` from inside `Normalize`.

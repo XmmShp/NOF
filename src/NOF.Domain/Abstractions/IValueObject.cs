@@ -4,12 +4,14 @@ namespace NOF.Domain;
 /// Marks a <c>readonly partial struct</c> as a value object wrapping <typeparamref name="T"/>.
 /// The source generator will produce:
 /// <list type="bullet">
-///   <item>A private constructor accepting the primitive value.</item>
+///   <item>A private validated constructor accepting the primitive value.</item>
 ///   <item>A static <c>Of(T)</c> factory method that validates and returns the value object.</item>
 ///   <item>An explicit cast operator from the value object to <typeparamref name="T"/>.</item>
 ///   <item>A nested <c>JsonConverter</c> and a <c>[JsonConverter]</c> attribute on the struct.</item>
 ///   <item><c>Equals</c>, <c>GetHashCode</c>, and <c>ToString</c> delegating to the primitive.</item>
+///   <item>An initialization marker that prevents CLR zero-initialization from masquerading as a validated value.</item>
 /// </list>
+/// <para>Construct value objects through <c>Of(T)</c> or another generated factory. Direct <c>default</c> and parameterless <c>new()</c> expressions are reported by diagnostic <c>NOF018</c>.</para>
 /// <para>Override <see cref="Normalize"/> to normalize incoming primitive values before validation and construction.</para>
 /// <para>Override <see cref="Validate"/> to add custom validation logic.</para>
 /// </summary>

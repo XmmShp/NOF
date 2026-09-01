@@ -242,14 +242,29 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine($"        : global::System.IEquatable<{info.TypeName}>");
         sb.AppendLine("    {");
 
-        // Private backing field
+        // Private backing fields. A separate initialization marker is required because the
+        // primitive's default value may itself be a valid domain value.
         sb.AppendLine($"        private readonly {info.PrimitiveFullName} _value;");
+        sb.AppendLine("        private readonly bool _isInitialized;");
         sb.AppendLine();
 
-        // Private constructor
+        // Keep new ValueObject() from silently producing the same invalid state as default.
+        // The language can still zero-initialize structs in arrays and fields, so boundaries that
+        // expose or persist the primitive also call __EnsureInitialized().
+        sb.AppendLine("        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
+        sb.AppendLine($"        public {info.TypeName}()");
+        sb.AppendLine("        {");
+        sb.AppendLine("            _value = default!;");
+        sb.AppendLine("            _isInitialized = false;");
+        sb.AppendLine("            __EnsureInitialized();");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+
+        // Private validated constructor
         sb.AppendLine($"        private {info.TypeName}({info.PrimitiveFullName} value)");
         sb.AppendLine("        {");
         sb.AppendLine("            _value = value;");
+        sb.AppendLine("            _isInitialized = true;");
         sb.AppendLine("        }");
         sb.AppendLine();
 
@@ -308,23 +323,69 @@ public class ValueObjectGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
+        sb.AppendLine("        private void __EnsureInitialized()");
+        sb.AppendLine("        {");
+        sb.AppendLine("            if (!_isInitialized)");
+        sb.AppendLine("            {");
+        sb.AppendLine($"                throw new global::System.InvalidOperationException(\"Value object '{info.TypeName}' is uninitialized. Create it through {info.TypeName}.Of(...) or another generated factory.\");");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+
         // Explicit cast: value object → primitive (only direction kept)
         sb.AppendLine($"        public static explicit operator {info.PrimitiveFullName}({info.TypeName} vo)");
-        sb.AppendLine("            => vo._value;");
+        sb.AppendLine("        {");
+        sb.AppendLine("            vo.__EnsureInitialized();");
+        sb.AppendLine("            return vo._value;");
+        sb.AppendLine("        }");
         sb.AppendLine();
 
         // Equals / GetHashCode / ToString
-        sb.AppendLine($"        public bool Equals({info.TypeName} other) => global::System.Collections.Generic.EqualityComparer<{info.PrimitiveFullName}>.Default.Equals(_value, other._value);");
-        sb.AppendLine($"        public override bool Equals(object? obj) => obj is {info.TypeName} other && Equals(other);");
+        sb.AppendLine($"        public bool Equals({info.TypeName} other)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            // ORMs compare valid properties with the CLR default sentinel while tracking.");
+        sb.AppendLine("            // Keep that comparison safe without allowing default to equal a validated");
+        sb.AppendLine("            // value whose primitive also happens to be the primitive default.");
+        sb.AppendLine("            if (!_isInitialized || !other._isInitialized)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                return _isInitialized == other._isInitialized;");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine($"            return global::System.Collections.Generic.EqualityComparer<{info.PrimitiveFullName}>.Default.Equals(_value, other._value);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        public override bool Equals(object? obj)");
+        sb.AppendLine("        {");
+        sb.AppendLine($"            return obj is {info.TypeName} other && Equals(other);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
         if (info.PrimitiveIsValueType)
         {
-            sb.AppendLine("        public override int GetHashCode() => _value.GetHashCode();");
-            sb.AppendLine("        public override string ToString() => _value.ToString() ?? string.Empty;");
+            sb.AppendLine("        public override int GetHashCode()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            __EnsureInitialized();");
+            sb.AppendLine("            return _value.GetHashCode();");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        public override string ToString()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            __EnsureInitialized();");
+            sb.AppendLine("            return _value.ToString() ?? string.Empty;");
+            sb.AppendLine("        }");
         }
         else
         {
-            sb.AppendLine("        public override int GetHashCode() => _value?.GetHashCode() ?? 0;");
-            sb.AppendLine("        public override string ToString() => _value?.ToString() ?? string.Empty;");
+            sb.AppendLine("        public override int GetHashCode()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            __EnsureInitialized();");
+            sb.AppendLine("            return _value?.GetHashCode() ?? 0;");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        public override string ToString()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            __EnsureInitialized();");
+            sb.AppendLine("            return _value?.ToString() ?? string.Empty;");
+            sb.AppendLine("        }");
         }
         sb.AppendLine();
 
@@ -376,6 +437,7 @@ public class ValueObjectGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine($"            public override void Write(global::System.Text.Json.Utf8JsonWriter writer, {info.TypeName} value, global::System.Text.Json.JsonSerializerOptions options)");
         sb.AppendLine("            {");
+        sb.AppendLine("                value.__EnsureInitialized();");
         sb.AppendLine("                global::System.Text.Json.JsonSerializer.Serialize(writer, value._value, __GetPrimitiveJsonTypeInfo(options));");
         sb.AppendLine("            }");
         sb.AppendLine("        }");

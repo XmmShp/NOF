@@ -42,7 +42,7 @@ Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Appl
 
 | Attribute / Interface | Generates |
 |---|---|
-| `IValueObject<T>` | equality, converters, casts, validation hooks |
+| `IValueObject<T>` | equality, converters, casts, validation hooks; construct through `Of(...)`/generated factories, never `default` or parameterless `new()` (`NOF018`) |
 | `[NewableValueObject]` | static `New()` and `New(IIdGenerator)` |
 | `[ValueObjectLength(maximumLength, MinimumLength = ...)]` | string range validation and persistence maximum-length metadata |
 | `[AutoInject]` | DI registration |

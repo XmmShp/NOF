@@ -2,6 +2,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NOF.Domain;
 using NOF.Domain.SourceGenerator;
+using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Xunit;
 
@@ -29,6 +31,37 @@ public class ValueObjectGeneratorTests
         => result.GeneratedTrees
             .Select(t => t.GetText().ToString())
             .Single();
+
+    private static Assembly CompileGeneratedAssembly(string source)
+    {
+        var compilation = CSharpCompilation.CreateCompilation(
+            $"ValueObjectRuntimeTests_{Guid.NewGuid():N}",
+            source,
+            true,
+            _extraRefs);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new ValueObjectGenerator());
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
+
+        using var stream = new MemoryStream();
+        var emitResult = outputCompilation.Emit(stream);
+        Assert.True(
+            emitResult.Success,
+            $"Compilation failed: {string.Join(Environment.NewLine, emitResult.Diagnostics)}");
+        return Assembly.Load(stream.ToArray());
+    }
+
+    private static void AssertUninitialized(Action action)
+    {
+        var exception = Assert.ThrowsAny<Exception>(action);
+        while (exception is TargetInvocationException { InnerException: not null } invocationException)
+        {
+            exception = invocationException.InnerException;
+        }
+
+        var invalidOperationException = Assert.IsType<InvalidOperationException>(exception);
+        Assert.Contains("is uninitialized", invalidOperationException.Message, StringComparison.Ordinal);
+        Assert.Contains(".Of(...)", invalidOperationException.Message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void ValueObjectLengthAttribute_ValidatesMinimumLength()
@@ -142,6 +175,9 @@ public class ValueObjectGeneratorTests
         var code = GetVoCode(result);
 
         Assert.Contains("public static Name Of(string value)", code);
+        Assert.Contains("private readonly bool _isInitialized;", code);
+        Assert.Contains("public Name()", code);
+        Assert.Contains("private void __EnsureInitialized()", code);
         Assert.Contains("global::System.ArgumentNullException.ThrowIfNull(value)", code);
         Assert.Contains("public static explicit operator string(Name vo)", code);
         Assert.Contains("public static bool operator ==(Name left, Name right)", code);
@@ -154,6 +190,45 @@ public class ValueObjectGeneratorTests
         Assert.DoesNotContain("Of(string? value)", code); // no nullable overload for ref types
         Assert.DoesNotContain("public static Name New()", code);
         Assert.DoesNotContain("public override string? ToString()", code);
+    }
+
+    [Fact]
+    public void DefaultValueObject_CannotMasqueradeAsValidatedValue_OrExposePrimitive()
+    {
+        const string source = """
+            using NOF.Domain;
+            namespace Test;
+
+            public readonly partial struct Score : IValueObject<int>;
+            """;
+
+        var assembly = CompileGeneratedAssembly(source);
+        var valueObjectType = Assert.IsAssignableFrom<Type>(assembly.GetType("Test.Score"));
+        var factory = Assert.IsAssignableFrom<MethodInfo>(
+            valueObjectType.GetMethod("Of", BindingFlags.Public | BindingFlags.Static, [typeof(int)]));
+        var explicitCast = Assert.Single(
+            valueObjectType.GetMethods(BindingFlags.Public | BindingFlags.Static),
+            method => method.Name == "op_Explicit" && method.ReturnType == typeof(int));
+
+        // Array allocation is an implicit zero-initialization path that source analysis cannot
+        // diagnose without creating noise. It exercises the runtime guard directly.
+        var uninitialized = Assert.IsAssignableFrom<object>(
+            Array.CreateInstance(valueObjectType, 1).GetValue(0));
+        var validPrimitiveDefault = Assert.IsAssignableFrom<object>(factory.Invoke(null, [0]));
+
+        Assert.Equal(0, explicitCast.Invoke(null, [validPrimitiveDefault]));
+        Assert.Equal("0", validPrimitiveDefault.ToString());
+        Assert.True(validPrimitiveDefault.Equals(validPrimitiveDefault));
+        Assert.Equal("0", JsonSerializer.Serialize(validPrimitiveDefault, valueObjectType));
+
+        AssertUninitialized(() => explicitCast.Invoke(null, [uninitialized]));
+        Assert.True(uninitialized.Equals(uninitialized));
+        Assert.False(uninitialized.Equals(validPrimitiveDefault));
+        Assert.False(validPrimitiveDefault.Equals(uninitialized));
+        AssertUninitialized(() => uninitialized.GetHashCode());
+        AssertUninitialized(() => uninitialized.ToString());
+        AssertUninitialized(() => JsonSerializer.Serialize(uninitialized, valueObjectType));
+        AssertUninitialized(() => Activator.CreateInstance(valueObjectType));
     }
 
     [Fact]
