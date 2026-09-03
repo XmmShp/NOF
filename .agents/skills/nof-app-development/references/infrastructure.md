@@ -26,9 +26,11 @@ builder.UseDbContext<AppDbContext>()
     .MigrateOnInitialize();
 ```
 
-`NOFDbContext` applies the registered model contributors for NOF tenant, inbox, outbox, and ordered-message entities. It also supplies value-object conversion/length conventions, multi-tenancy, and soft delete. Soft delete is enabled by default; use `.WithSoftDelete(false)` for a context-wide opt-out or `HasSoftDelete(...)` in EF model configuration for an entity override.
+`NOFDbContext` applies the registered model contributors for inbox, outbox, and ordered-message entities. It also supplies value-object conversion/length conventions, multi-tenancy, and soft delete. Soft delete is enabled by default; use `.WithSoftDelete(false)` for a context-wide opt-out or `HasSoftDelete(...)` in EF model configuration for an entity override.
 
 The host may inject EF `DbContext` or the concrete context, but application handlers should use `IDbContext` / `IRepository<T>` so they remain provider-neutral.
+
+For dynamic database selection, replace the template lookup with `.WithConnectionStringResolver(...)`. Its context provides the normalized tenant ID, concrete `DbContext` type, tenant mode, fallback template, and scoped services, so the resolver can consult a tenant catalog, secret store, or shard map before `WithOptions(...)` configures the provider.
 
 ## Default In-Memory Infrastructure
 

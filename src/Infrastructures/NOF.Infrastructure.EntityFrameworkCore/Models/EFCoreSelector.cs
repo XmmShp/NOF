@@ -44,6 +44,24 @@ public readonly struct EFCoreSelector
         return this;
     }
 
+    /// <summary>
+    /// Configures a connection-string resolver that runs in the current database context scope.
+    /// The resolver can use the tenant, database context type, tenant mode, fallback template,
+    /// and scoped services.
+    /// </summary>
+    /// <param name="resolver">The connection-string resolver.</param>
+    /// <returns>The current selector.</returns>
+    public EFCoreSelector WithConnectionStringResolver(DbContextConnectionStringResolver resolver)
+    {
+        ArgumentNullException.ThrowIfNull(resolver);
+
+        Builder.Services.Configure<DbContextConfigurationOptions>(options =>
+        {
+            options.ConnectionStringResolver = resolver;
+        });
+        return this;
+    }
+
     public EFCoreSelector WithOptions(Action<DbContextOptionsBuilder, string> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);

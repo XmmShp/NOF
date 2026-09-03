@@ -59,6 +59,22 @@ builder.UseDbContext<AppDbContext>()
 
 For database-per-tenant mode, the connection string may contain `{tenantId}`. Shared-database mode adds tenant shadow state and filters. Soft delete is enabled by default and can be overridden per root entity with `HasSoftDelete(...)`.
 
+When a static template is insufficient, use a resolver:
+
+```csharp
+builder.UseDbContext<AppDbContext>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionStringResolver(context =>
+    {
+        var catalog = context.Services.GetRequiredService<ITenantDatabaseCatalog>();
+        return catalog.GetConnectionString(context.DbContextType, context.TenantId);
+    })
+    .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .MigrateOnInitialize();
+```
+
+The resolver runs once per context creation with the normalized tenant ID and current scoped services. Keep remote secret or catalog access cached because context creation is synchronous.
+
 ## 4. Configure the Connection String
 
 ```json

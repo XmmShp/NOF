@@ -110,8 +110,11 @@ Available configuration methods:
 
 - `WithTenantMode(...)`
 - `WithConnectionString(...)`
+- `WithConnectionStringResolver(...)`
 - `WithOptions(...)`
 - `MigrateOnInitialize()`
+
+The resolver receives the normalized tenant identifier, concrete `DbContext` type, tenant mode, fallback template, and scoped services. Use it for tenant catalogs, secret stores, or shard maps; the template remains the convenient static default.
 
 ## SQLite
 

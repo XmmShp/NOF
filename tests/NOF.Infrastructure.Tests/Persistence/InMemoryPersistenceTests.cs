@@ -129,6 +129,46 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public void UseDbContext_WithConnectionStringResolver_ShouldResolveFromContextAndScopedServices()
+    {
+        var builder = new TestServiceRegistrationContext();
+        var databaseName = $"nof-resolver-{Guid.NewGuid():N}";
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.Services.AddScoped(_ => new ConnectionStringResolverProbe(databaseName));
+
+        builder.AddNOFHosting();
+        builder.AddNOFInfrastructure();
+        builder.UseDbContext<TestDbContext>()
+            .WithTenantMode(TenantMode.DatabasePerTenant)
+            .WithConnectionString("fallback-{tenantId}")
+            .WithConnectionStringResolver(context =>
+            {
+                var resolvedProbe = context.Services.GetRequiredService<ConnectionStringResolverProbe>();
+                resolvedProbe.DbContextType = context.DbContextType;
+                resolvedProbe.TenantId = context.TenantId;
+                resolvedProbe.TenantMode = context.TenantMode;
+                resolvedProbe.ConnectionStringTemplate = context.ConnectionStringTemplate;
+                return $"Data Source={resolvedProbe.DatabaseName}-{context.TenantId};Mode=Memory;Cache=Shared";
+            })
+            .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseSqlite(connectionString));
+
+        using var services = BuildServiceProvider(builder);
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, "tenanta");
+
+        var probe = scope.ServiceProvider.GetRequiredService<ConnectionStringResolverProbe>();
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var connectionString = db.Database.GetConnectionString();
+
+        Assert.Contains($"{probe.DatabaseName}-tenanta", connectionString, StringComparison.Ordinal);
+        Assert.Equal(typeof(TestDbContext), probe.DbContextType);
+        Assert.Equal("tenanta", probe.TenantId);
+        Assert.Equal(TenantMode.DatabasePerTenant, probe.TenantMode);
+        Assert.Equal("fallback-{tenantId}", probe.ConnectionStringTemplate);
+    }
+
+    [Fact]
     public async Task AddMemoryInfrastructure_NonGeneric_ShouldRegisterDefaultDbContext()
     {
         var builder = new TestServiceRegistrationContext();
@@ -1949,6 +1989,19 @@ public class SqliteInMemoryPersistenceTests
     }
 
     private sealed record TestEvent(string Name);
+
+    private sealed class ConnectionStringResolverProbe(string databaseName)
+    {
+        public string DatabaseName { get; } = databaseName;
+
+        public Type? DbContextType { get; set; }
+
+        public string? TenantId { get; set; }
+
+        public TenantMode? TenantMode { get; set; }
+
+        public string? ConnectionStringTemplate { get; set; }
+    }
 
     private sealed class DynamicAuditEntry
     {

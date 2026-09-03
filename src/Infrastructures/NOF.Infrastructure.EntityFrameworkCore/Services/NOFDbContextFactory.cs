@@ -72,7 +72,17 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(modelCreatingExtension);
 
-        var connectionString = DbConnectionStringTemplateResolver.ResolveTenantId(_dbContextConfigurationOptions.ConnectionStringTemplate, tenantId);
+        var resolutionContext = new DbContextConnectionStringResolutionContext(
+            _serviceProvider,
+            typeof(TDbContext),
+            tenantId,
+            _dbContextConfigurationOptions.TenantMode,
+            _dbContextConfigurationOptions.ConnectionStringTemplate);
+        var resolver = _dbContextConfigurationOptions.ConnectionStringResolver
+            ?? throw new InvalidOperationException("The database context connection-string resolver is not configured.");
+        var connectionString = resolver(resolutionContext)
+            ?? throw new InvalidOperationException(
+                $"The connection-string resolver returned null for DbContext '{typeof(TDbContext).FullName}' and tenant '{tenantId}'.");
         _dbContextConfigurationOptions.Configure(optionsBuilder, connectionString);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
