@@ -1,21 +1,5 @@
 namespace NOF.Infrastructure;
 
-public sealed class NOFTenantModelCreatingContributor : IDbContextModelCreatingContributor
-{
-    public void Configure(IDbModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<NOFTenant>(entity =>
-        {
-            entity.IsHostOnly();
-            entity.ToTable(nameof(NOFTenant));
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.Name).IsUnique();
-            entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
-            entity.Property(e => e.Description).HasMaxLength(1000);
-        });
-    }
-}
-
 public sealed class NOFInboxMessageModelCreatingContributor : IDbContextModelCreatingContributor
 {
     public void Configure(IDbModelBuilder modelBuilder)

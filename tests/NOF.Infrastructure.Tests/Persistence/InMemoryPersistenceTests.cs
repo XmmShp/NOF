@@ -70,12 +70,16 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenantefcoredefault"), Name = "Tenant EFCore Default" });
+        db.Set<NOFOutboxOrderState>().Add(new NOFOutboxOrderState
+        {
+            OrderKey = "efcore-default",
+            Sequence = 1
+        });
         await db.SaveChangesAsync();
 
-        var tenant = await db.FindAsync<NOFTenant>([TenantId.Of("tenantefcoredefault")]);
-        Assert.NotNull(tenant);
-        Assert.Equal("Tenant EFCore Default", tenant.Name);
+        var orderState = await db.FindAsync<NOFOutboxOrderState>(["efcore-default", 1L]);
+        Assert.NotNull(orderState);
+        Assert.Equal(1, orderState.Sequence);
     }
 
     [Fact]
@@ -144,12 +148,16 @@ public class SqliteInMemoryPersistenceTests
 
         var db = scope.ServiceProvider.GetRequiredService<DbContext>();
 
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenantdefault"), Name = "Tenant Default" });
+        db.Set<NOFOutboxOrderState>().Add(new NOFOutboxOrderState
+        {
+            OrderKey = "default",
+            Sequence = 1
+        });
         await db.SaveChangesAsync();
 
-        var tenant = await db.FindAsync<NOFTenant>([TenantId.Of("tenantdefault")]);
-        Assert.NotNull(tenant);
-        Assert.Equal("Tenant Default", tenant.Name);
+        var orderState = await db.FindAsync<NOFOutboxOrderState>(["default", 1L]);
+        Assert.NotNull(orderState);
+        Assert.Equal(1, orderState.Sequence);
     }
 
     [Fact]
@@ -171,21 +179,17 @@ public class SqliteInMemoryPersistenceTests
         SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
 
         var db = scope.ServiceProvider.GetRequiredService<NOFDbContext>();
-        var tenant = db.Model.FindEntityType(typeof(NOFTenant));
         var inbox = db.Model.FindEntityType(typeof(NOFInboxMessage));
         var inboxOrderState = db.Model.FindEntityType(typeof(NOFInboxOrderState));
         var outbox = db.Model.FindEntityType(typeof(NOFOutboxMessage));
         var outboxOrderState = db.Model.FindEntityType(typeof(NOFOutboxOrderState));
-        Assert.NotNull(tenant);
         Assert.NotNull(inbox);
         Assert.NotNull(inboxOrderState);
         Assert.NotNull(outbox);
         Assert.NotNull(outboxOrderState);
 
-        Assert.Equal(nameof(NOFTenant), tenant.GetTableName());
         Assert.Equal(nameof(NOFInboxMessage), inbox.GetTableName());
         Assert.Equal(nameof(NOFOutboxMessage), outbox.GetTableName());
-        Assert.Equal(true, tenant.FindAnnotation("NOF:HostOnly")?.Value);
         Assert.Equal(true, inbox.FindAnnotation("NOF:HostOnly")?.Value);
         Assert.Equal(true, outbox.FindAnnotation("NOF:HostOnly")?.Value);
         Assert.Equal([nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.Route)],
@@ -194,9 +198,6 @@ public class SqliteInMemoryPersistenceTests
             inboxOrderState.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
         Assert.Equal([nameof(NOFOutboxOrderState.OrderKey), nameof(NOFOutboxOrderState.Sequence)],
             outboxOrderState.FindPrimaryKey()!.Properties.Select(static property => property.Name).ToArray());
-        Assert.Contains(tenant.GetIndexes(), index => index.IsUnique
-            && index.Properties.Select(static property => property.Name).SequenceEqual(
-                [nameof(NOFTenant.Name), "__DeletedAtUnixTime"]));
         Assert.Contains(outbox.GetIndexes(), index =>
             index.Properties.Select(static property => property.Name).SequenceEqual([nameof(NOFOutboxMessage.TraceParent)]));
     }
@@ -395,15 +396,15 @@ public class SqliteInMemoryPersistenceTests
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         await using var transaction = await db.Database.BeginTransactionAsync();
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenant1"), Name = "Tenant 1" });
+        db.Set<TestOrder>().Add(TestOrder.Create(101, "rollback"));
         await db.SaveChangesAsync();
         await transaction.RollbackAsync();
 
         using var verifyScope = services.CreateScope();
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
-        var tenant = await verifyDb.FindAsync<NOFTenant>([TenantId.Of("tenant1")]);
-        Assert.Null(tenant);
+        var order = await verifyDb.FindAsync<TestOrder>([101L]);
+        Assert.Null(order);
     }
 
     [Fact]
@@ -416,12 +417,12 @@ public class SqliteInMemoryPersistenceTests
         var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
 
         await using var outer = await db.Database.BeginTransactionAsync();
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("outer"), Name = "Outer" });
+        db.Set<TestOrder>().Add(TestOrder.Create(201, "outer"));
         await db.SaveChangesAsync();
 
         // Use savepoint for nested rollback semantics.
         await outer.CreateSavepointAsync("sp_inner");
-        db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("inner"), Name = "Inner" });
+        db.Set<TestOrder>().Add(TestOrder.Create(202, "inner"));
         await db.SaveChangesAsync();
         await outer.RollbackToSavepointAsync("sp_inner");
         await outer.CommitAsync();
@@ -429,8 +430,8 @@ public class SqliteInMemoryPersistenceTests
         using var verifyScope = services.CreateScope();
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
-        Assert.NotNull(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("outer")]));
-        Assert.Null(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("inner")]));
+        Assert.NotNull(await verifyDb.FindAsync<TestOrder>([201L]));
+        Assert.Null(await verifyDb.FindAsync<TestOrder>([202L]));
     }
 
     [Fact]
@@ -444,14 +445,14 @@ public class SqliteInMemoryPersistenceTests
 
         await using (await db.Database.BeginTransactionAsync())
         {
-            db.Set<NOFTenant>().Add(new NOFTenant { Id = TenantId.Of("tenantdispose"), Name = "Dispose" });
+            db.Set<TestOrder>().Add(TestOrder.Create(301, "dispose"));
             await db.SaveChangesAsync();
         }
 
         using var verifyScope = services.CreateScope();
         SetTenant(verifyScope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<TestDbContext>();
-        Assert.Null(await verifyDb.FindAsync<NOFTenant>([TenantId.Of("tenantdispose")]));
+        Assert.Null(await verifyDb.FindAsync<TestOrder>([301L]));
     }
 
     [Fact]
@@ -1759,24 +1760,6 @@ public class SqliteInMemoryPersistenceTests
             var verifyDb = verify.ServiceProvider.GetRequiredService<TestDbContext>();
             Assert.Null(await verifyDb.FindAsync<TestOrder>([9L]));
         }
-    }
-
-    [Fact]
-    public async Task Creating_HostTenant_Record_ShouldThrow()
-    {
-        using var services = CreateServiceProvider();
-        using var scope = services.CreateScope();
-        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
-
-        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
-        db.Set<NOFTenant>().Add(new NOFTenant
-        {
-            Id = TenantId.Host,
-            Name = "Host"
-        });
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
-        Assert.Contains(NOFAbstractionConstants.Tenant.HostId, ex.Message, StringComparison.Ordinal);
     }
 
     private static EFCoreSelector ConfigureSqliteInMemory(EFCoreSelector selector, string databaseName)

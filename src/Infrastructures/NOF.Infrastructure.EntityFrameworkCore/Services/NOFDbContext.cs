@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using NOF.Abstraction;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
@@ -172,8 +171,6 @@ public class NOFDbContext : DbContext
 
     private void ApplyTenantRules()
     {
-        ValidateTenantEntries();
-
         if (CurrentTenantMode != TenantMode.SharedDatabase)
         {
             return;
@@ -203,19 +200,6 @@ public class NOFDbContext : DbContext
             if (entry.State is EntityState.Added or EntityState.Modified)
             {
                 tenantProperty.CurrentValue = CurrentTenantId;
-            }
-        }
-    }
-
-    private void ValidateTenantEntries()
-    {
-        foreach (var entry in ChangeTracker.Entries<NOFTenant>()
-                     .Where(entry => entry.State is EntityState.Added or EntityState.Modified))
-        {
-            if (entry.Entity.Id == TenantId.Host)
-            {
-                throw new InvalidOperationException(
-                    $"Tenant id '{NOFAbstractionConstants.Tenant.HostId}' is reserved for the host tenant and cannot be created or updated as a tenant record.");
             }
         }
     }
