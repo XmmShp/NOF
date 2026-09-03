@@ -1,19 +1,15 @@
 ---
-description: Quick guide for NOF handler and RPC server implementation patterns
+description: Add NOF RPC, command, notification, or in-memory event handlers with the current Context-aware signatures
 ---
 
-# Add Handler or RPC Server Implementation
+# Add a Handler or RPC Server
 
-NOF currently has:
-
-- RPC server implementations (`RpcServer<TService>`)
-- command handlers (`CommandHandler<T>`)
-- notification handlers (`NotificationHandler<T>`)
-- in-memory event handlers (`InMemoryEventHandler<T>`)
+NOF has four handler shapes. A concrete class may inherit only one command, notification, or in-memory event handler base (`NOF001`).
 
 ## RPC Pattern
 
 ```csharp
+[TransportOverHttp(HttpRpcStyle.ControllerRpc)]
 public interface IOrderService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Get, "api/orders/get")]
@@ -24,21 +20,34 @@ public partial class OrderService : RpcServer<IOrderService>;
 
 public sealed class GetOrder : OrderService.GetOrder
 {
-    public override Task<Result<GetOrderResponse>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
+    public override Task<Result<GetOrderResponse>> HandleAsync(
+        GetOrderRequest request,
+        Context context,
+        CancellationToken cancellationToken)
     {
         return Task.FromResult(Result.Success(new GetOrderResponse(request.Id, "demo")));
     }
 }
 ```
 
+Register the server explicitly:
+
+```csharp
+builder.AddApplicationPart(typeof(OrderService).Assembly);
+builder.AddRpcServer<OrderService>();
+```
+
 ## Command Pattern
 
 ```csharp
-public record RebuildCacheCommand(string TenantId);
+public sealed record RebuildCacheCommand(string TenantId);
 
 public sealed class RebuildCacheHandler : CommandHandler<RebuildCacheCommand>
 {
-    public override Task HandleAsync(RebuildCacheCommand command, CancellationToken cancellationToken)
+    public override Task HandleAsync(
+        RebuildCacheCommand command,
+        Context context,
+        CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -48,11 +57,14 @@ public sealed class RebuildCacheHandler : CommandHandler<RebuildCacheCommand>
 ## Notification Pattern
 
 ```csharp
-public record OrderCreatedNotification(string OrderId);
+public sealed record OrderCreatedNotification(string OrderId);
 
 public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {
-    public override Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
+    public override Task HandleAsync(
+        OrderCreatedNotification notification,
+        Context context,
+        CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -62,13 +74,18 @@ public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotifi
 ## In-Memory Event Pattern
 
 ```csharp
-public record ProjectionRebuilt(string TenantId);
+public sealed record ProjectionRebuilt(string TenantId);
 
 public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRebuilt>
 {
-    public override Task HandleAsync(ProjectionRebuilt @event, Context context, CancellationToken cancellationToken)
+    public override Task HandleAsync(
+        ProjectionRebuilt @event,
+        Context context,
+        CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 }
 ```
+
+Command, notification, and event handlers are discovered through generated assembly initializers. Ensure the containing assembly is passed to `AddApplicationPart(...)`.

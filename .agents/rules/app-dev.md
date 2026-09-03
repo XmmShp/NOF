@@ -9,64 +9,46 @@ Use this file when building applications on top of NOF.
 ## Architecture
 
 ```text
-MyApp.Domain/      domain classes, value objects, failures, domain event payloads
-MyApp.Contract/    RPC contracts, request/response models, DTOs, failures
-MyApp.Application/ RPC servers, request handlers, command handlers, notification handlers, state machines
-MyApp/             host project (Program.cs, DbContext, appsettings)
+MyApp.Domain/      domain classes, value objects, failures, in-memory event payloads
+MyApp.Contract/    RPC contracts, request/response models, commands, notifications, DTOs
+MyApp.Application/ RPC servers and handlers, event handlers, mappings, cache keys
+MyApp/             host, concrete persistence provider, Program.cs, appsettings
 ```
 
-Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Application -> Contract`.
+Typical dependency direction is `Host -> Application`, `Application -> Domain + Contract`, with the host selecting infrastructure and hosting packages.
 
 ## Core Abstractions
 
-- `IRpcService`
-- `RpcServer<TService>` and generated nested RPC handler bases
-- `CommandHandler<T>`, `NotificationHandler<T>`, `InMemoryEventHandler<T>`
-- `ICommandSender`, `INotificationPublisher`, `IEventPublisher`
-- `CacheKey<T>`, `IMapper`, `Result` / `Result<T>`
-- `DbContext` / `NOFDbContext` for persistence
-- Commands and notifications are plain payload objects; use handler base types to opt into dispatch.
+- RPC: `IRpcService`, `RpcServer<TService>`, generated nested RPC handler bases, generated client interfaces and implementations.
+- Messaging: `CommandHandler<T>`, `NotificationHandler<T>`, `ICommandSender`, `INotificationPublisher`.
+- In-process events: `InMemoryEventHandler<T>`, `IEventPublisher`, `PublishAsEvent()`.
+- Persistence: `IDbContext`, `IDbContextFactory`, `IRepository<T>`, provider-neutral async LINQ extensions.
+- Caching and mapping: `ICacheService`, `CacheKey<T>`, `IMapper`, `ProjectTo<TDestination>()`.
+- Results and request models: `Result`, `Result<T>`, `StreamingResult<T>`, `Optional<T>`.
 
-## Source Generator Surface
+Commands and notifications are plain payload objects; inheriting the corresponding handler base opts a handler into generated registration.
 
-- `IValueObject<T>` and `[NewableValueObject]`
-- `[AutoInject]`
-- `[Failure]`
-- `[HttpEndpoint]`
-- `[Mappable<TSource, TDestination>]`
+## RPC Rules
+
+- Every RPC contract inherits `IRpcService` and declares exactly one transport: `[TransportOverHttp(...)]` or `[TransportOverMemory]`.
+- A contract method takes exactly one reference-type request and returns a non-task `IResult` implementation. Do not put `CancellationToken` on the contract method or suffix it with `Async`.
+- Controller-style HTTP methods use `[HttpEndpoint]`; JSON-RPC and memory contracts must not.
+- A generated server container is a `partial` class inheriting `RpcServer<TService>`.
+- Register each server with `builder.AddRpcServer<TServer>()`; the host maps applicable transports during `BuildAsync()`.
+- Generated client and server handler methods are asynchronous and receive `Context` explicitly.
 
 ## Program.cs Baseline
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
+using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
-using NOF.Infrastructure;
-using NOF.Infrastructure.Extension.Authentication;
-using NOF.Infrastructure.RabbitMQ;
-using NOF.Infrastructure.StackExchangeRedis;
+using NOF.Infrastructure.EntityFrameworkCore;
 
 var builder = NOFWebApplicationBuilder.Create(args);
 
-builder.AddApplicationPart(typeof(MyAppService).Assembly);
-
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
-    ?? throw new InvalidOperationException("Connection string 'redis' not found."));
-builder.AddAuthenticationAuthority(o =>
-{
-    o.Issuer = "MyApp";
-    o.SigningKeyEncryptionKey = builder.Configuration["NOF:Authority:SigningKeyEncryptionKey"]
-        ?? throw new InvalidOperationException("Configuration value 'NOF:Authority:SigningKeyEncryptionKey' not found.");
-});
-builder.AddAuthenticationResourceServer(o =>
-{
-    o.Issuer = "MyApp";
-    o.RequireHttpsMetadata = false;
-    o.JwksEndpoint = "http://localhost/.well-known/jwks.json";
-});
-builder.AddRabbitMQ(options =>
-{
-    options.ConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
-});
+builder.AddApplicationPart(typeof(OrderService).Assembly);
+builder.AddRpcServer<OrderService>();
 
 builder.UseDbContext<AppDbContext>()
     .WithTenantMode(TenantMode.DatabasePerTenant)
@@ -77,26 +59,33 @@ builder.UseDbContext<AppDbContext>()
 
 var app = await builder.BuildAsync();
 app.MapOpenApi();
-app.MapHttpEndpoint<MyAppService>();
 await app.RunAsync();
 ```
 
-## JWT Usage Notes
+Add Redis and RabbitMQ through `builder.Services.AddRedisCache(...)` and `builder.Services.AddRabbitMQ(...)`. `NOFWebApplicationBuilder.Create(args)` already registers the default in-memory persistence, cache, command rider, and notification rider; explicit providers replace those defaults.
 
-- Authority mode: `AddAuthenticationAuthority(...)`.
-- Resource server mode: `AddAuthenticationResourceServer(...)`.
-- `AddAuthenticationAuthority(...)` adds the authority assembly as an application part for you.
-- Expose authority HTTP endpoints explicitly with `app.MapHttpEndpoint<TokenAuthorityService>()` and a JWKS endpoint when needed.
+## Persistence Convention
 
-## Important Convention
+Application code depends on `IDbContext` and `IRepository<T>`, not EF Core `DbContext`. The host owns `NOFDbContext`, EF model configuration, migrations, and the call to `UseDbContext<T>()`.
 
-Persist application data through `DbContext` / `NOFDbContext` in the application layer. Do not rely on nonexistent public repository or unit-of-work abstractions.
+Deferred messages are added to the current `IDbContext` and become transactional only when the same context saves successfully:
 
-## Workflows
+```csharp
+await notificationPublisher.DeferPublishAsync(notification, context, cancellationToken);
+await dbContext.SaveChangesAsync(cancellationToken);
+```
 
-Use `.agents/workflows/app-dev/*` for step-by-step guides, especially:
-- `scaffold-nof-app.md`
-- `add-request-handler.md`
-- `add-jwt-auth.md`
-- `add-rabbitmq-messaging.md`
-- `add-redis-caching.md`
+## Authentication
+
+- Register a local OAuth/OIDC authority with `builder.AddOidcServer(...)` from `NOF.Hosting.AspNetCore.Extension.OidcServer`; its endpoints are mapped automatically.
+- Register JWT validation with `builder.Services.AddAuthenticationResourceServer(...)`, configuring `AuthorizationServerIssuer`, `ExpectedIssuer`, and optional `Audience`.
+- Read identity through `IUserContext`; read the normalized current tenant through `ICurrentTenant`.
+- OIDC persistence uses the configured `IDbContext`, so configure a durable provider and migrations for production.
+
+## Source Generators and Conventions
+
+- Construct `IValueObject<T>` values through generated `Of(...)` / `New(...)`; never use `default` or parameterless `new()` (`NOF018`).
+- Use `[ValueObjectLength]` on string-backed value objects instead of duplicating maximum lengths in persistence mapping.
+- Declare mappings on a `partial static` class with `[Mappable<TSource, TDestination>]`.
+- Filter, order, and page before `ProjectTo<TDestination>()`; `NOF025` reports server-side shaping after projection.
+- Add every assembly containing generated initializers with `AddApplicationPart(...)`.

@@ -1,45 +1,71 @@
 ---
-description: How to add a new infrastructure package to the NOF framework
+description: Add a provider package under src/Infrastructures using the current IServiceCollection and host-builder extension model
 ---
 
-# Add a New Infrastructure Package
+# Add an Infrastructure Provider Package
 
-Follow these steps to add a new infrastructure provider package to NOF.
+## 1. Create the Project
 
-1. Create the project directory under `src/Infrastructures/NOF.Infrastructure.<Name>/`.
+Place the project at `src/Infrastructures/NOF.Infrastructure.<Name>/NOF.Infrastructure.<Name>.csproj`.
 
-2. Create the `.csproj` file with the following structure:
-   ```xml
-   <Project Sdk="Microsoft.NET.Sdk">
-     <PropertyGroup>
-       <TargetFramework>net10.0</TargetFramework>
-       <ImplicitUsings>enable</ImplicitUsings>
-       <Nullable>enable</Nullable>
-       <Description>NOF infrastructure package for <Name>.</Description>
-     </PropertyGroup>
-     <ItemGroup>
-       <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
-     </ItemGroup>
-   </Project>
-   ```
+Use the existing providers as the template. A minimal provider generally looks like:
 
-3. Add any new NuGet dependency versions to the root `Directory.Packages.props` (never in the `.csproj`).
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PackageId>NOF.Infrastructure.MyProvider</PackageId>
+    <Description>MyProvider integration for the NOF Framework.</Description>
+  </PropertyGroup>
 
-4. Create a `README.md` in the project directory with a brief description.
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
+```
 
-5. Implement a service registration step:
-   - Create a class implementing `IServiceRegistrationStep`.
-   - Use `IAfter<T>` / `IBefore<T>` to declare ordering dependencies.
-   - Register services in `ExecuteAsync(IServiceRegistrationContext context)`.
+Add `NOF.Application` or `NOF.Hosting` references only when the implementation uses their APIs. Add external dependency versions to root `Directory.Packages.props`, never to the project file.
 
-6. Create a public extension method on `INOFAppBuilder` for fluent configuration (e.g., `builder.AddMyProvider()`).
+## 2. Register Services Directly
 
-7. Add the project to `NOF.slnx` under the `/src/Infrastructures/` folder.
+There is no service-registration-step pipeline. Expose an `IServiceCollection` extension for runtime replacement/configuration, following RabbitMQ and StackExchange.Redis:
 
-8. Ensure the new project is packable and has a `PackageId`. `.github/workflows/cd.yml` auto-discovers packable `src/**/*.csproj` files, so no per-project `dotnet pack` command needs to be added.
+```csharp
+namespace NOF.Hosting;
 
-9. Add the package to the table in `README.md`.
+public static partial class NOFInfrastructureMyProviderExtensions
+{
+    extension(IServiceCollection services)
+    {
+        public IServiceCollection AddMyProvider(Action<MyProviderOptions> configure)
+        {
+            services.Configure(configure);
+            services.ReplaceOrAddSingleton<IMyRuntime, MyRuntime>();
+            return services;
+        }
+    }
+}
+```
 
-10. Add tests under `tests/` if applicable.
+Use an `IHostApplicationBuilder` extension when registration needs environment data or returns a fluent selector, as the EF Core and NHibernate providers do.
 
-> **Reminder**: See the complete change checklist in `rules/nof-dev.md` — don't forget CI/CD, docs, sample, and tests.
+Use `ReplaceOrAdd*` when the provider intentionally replaces a NOF default. Use `TryAdd*` / `TryAddEnumerable` when user overrides or multiple implementations must be preserved.
+
+## 3. Add Initialization Only When Necessary
+
+If the provider must act after host construction, implement `IApplicationInitializationStep`, define ordering with `Compare(...)`, and register it through `services.AddInitializationStep(...)` or `TryAddInitializationStep(...)`. Do not recreate `IServiceRegistrationStep`, `IAfter<T>`, or `IBefore<T>`.
+
+## 4. Wire Repository Metadata
+
+1. Add the project to `NOF.slnx` under `/src/Infrastructures/`.
+2. Add a package `README.md` with installation, registration, and replacement semantics.
+3. Add the package to the root `README.md` table.
+4. If a dedicated test project is warranted, place it under `tests/Infrastructures/NOF.Infrastructure.<Name>.Tests/` and add it to `NOF.slnx`.
+5. Keep `PackageId` present. CD discovers packable `src/**/*.csproj` projects with a `PackageId`; it skips projects explicitly marked `<IsPackable>false</IsPackable>`.
+
+## 5. Verify
+
+Run formatting, the provider tests, a Release build of the package, and the sample or integration tests that exercise replacement of the default runtime service.

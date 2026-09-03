@@ -1,74 +1,56 @@
 ---
-description: How to add a new pipeline step (service registration or application initialization) to the NOF framework
+description: Register and order a post-build NOF application initialization step with IApplicationInitializationStep
 ---
 
-# Add a New Pipeline Step
+# Add an Application Initialization Step
 
-NOF uses a dependency-aware step pipeline for service registration and application initialization.
+NOF currently has one step contract: `IApplicationInitializationStep`. Service registration happens directly against `IServiceCollection` while configuring the builder.
 
-## Service Registration Step
+## 1. Implement the Step
 
-Runs during DI container setup, before the host is built.
+```csharp
+using Microsoft.Extensions.Hosting;
+using NOF.Hosting;
 
-1. Create a class implementing `IServiceRegistrationStep`:
-   ```csharp
-   public sealed class MyFeatureRegistrationStep : IServiceRegistrationStep, IAfter<IBaseSettingsServiceRegistrationStep>
-   {
-       public ValueTask ExecuteAsync(IServiceRegistrationContext context)
-       {
-           context.Services.AddSingleton<IMyService, MyService>();
-           return ValueTask.CompletedTask;
-       }
-   }
-   ```
+public sealed class MyFeatureInitializationStep : IApplicationInitializationStep
+{
+    public TopologyComparison Compare(IApplicationInitializationStep other)
+        => other is DatabaseReadyInitializationStep
+            ? TopologyComparison.After
+            : TopologyComparison.DoesNotMatter;
 
-2. Use `IAfter<T>` to declare that this step must run after another step.
-3. Use `IBefore<T>` to declare that this step must run before another step.
-4. Prefer the predefined marker interfaces from `NOF.Infrastructure/Steps/PredefinedSteps.cs` when you want to plug into a stable slot such as base settings, dependent service registration, or endpoint initialization.
-5. Register the step in the builder (typically via an extension method):
-   ```csharp
-   public static INOFAppBuilder AddMyFeature(this INOFAppBuilder builder)
-   {
-       builder.TryAddRegistrationStep(new MyFeatureRegistrationStep());
-       return builder;
-   }
-   ```
+    public async Task ExecuteAsync(IHost app)
+    {
+        var service = app.Services.GetRequiredService<IMyService>();
+        await service.InitializeAsync();
+    }
+}
+```
 
-## Application Initialization Step
+`Compare(other)` returns:
 
-Runs after the host is built but before it starts.
+- `Before` when this instance must run before `other`
+- `After` when this instance must run after `other`
+- `DoesNotMatter` when there is no ordering edge
 
-1. Create a class implementing `IApplicationInitializationStep`:
-   ```csharp
-   public sealed class MyFeatureInitializationStep : IApplicationInitializationStep, IAfter<IEndpointInitializationStep>
-   {
-       public async Task ExecuteAsync(IHost host)
-       {
-           var service = host.Services.GetRequiredService<IMyService>();
-           await service.InitializeAsync();
-       }
-   }
-   ```
+Ordering is instance/type based; there are no `IAfter<T>` or `IBefore<T>` marker interfaces.
 
-2. Register via `builder.TryAddInitializationStep(new MyFeatureInitializationStep())`.
+## 2. Register the Step
 
-## Step Ordering
+```csharp
+builder.Services.TryAddInitializationStep<MyFeatureInitializationStep>();
+```
 
-- Steps are executed in **topological order** based on `IAfter<T>` and `IBefore<T>` declarations.
-- Circular dependencies will cause a runtime error.
-- `NOFAppBuilder.BuildAsync()` always adds `AutoInjectServiceRegistrationStep` and hosting defaults before executing registered service steps.
-- `NOF.Infrastructure` exposes stable predefined ordering slots:
-  - `IBaseSettingsServiceRegistrationStep`
-  - `IDependentServiceRegistrationStep`
-  - `IDatabaseMigrationInitializationStep`
-  - `IDataSeedInitializationStep`
-  - `IObservabilityInitializationStep`
-  - `ISecurityInitializationStep`
-  - `IResponseFormattingInitializationStep`
-  - `IAuthenticationInitializationStep`
-  - `IBusinessLogicInitializationStep`
-  - `IEndpointInitializationStep`
-- Concrete defaults such as `OpenTelemetryRegistrationStep`, `RequestHandlerServiceRegistrationStep`, and `HandlerServiceRegistrationStep` come from `NOF.Infrastructure`.
-- Ambient conveniences like `Mapper`, `IdGenerator`, and `EventPublisher` are no longer initialized through application initialization steps; they are activated in scoped execution boundaries through `IDaemonService`.
+Available APIs include instance, type, and factory overloads of `AddInitializationStep(...)` and `TryAddInitializationStep(...)`, plus `RemoveInitializationStep<T>()` and the predicate overload for registered instances.
 
-> **Reminder**: See the complete change checklist in `rules/nof-dev.md` — don't forget CI/CD, docs, sample, and tests.
+Use `TryAddInitializationStep` when only one implementation-type registration should exist. Use `AddInitializationStep` when multiple instances of the same type are intentional.
+
+## 3. Understand Execution
+
+`BuildNOFAsync(...)` builds the host and then calls `InitializeNOFAsync()`. That method resolves all registered initialization steps, orders them with `DependencyGraph<IApplicationInitializationStep>`, and executes them sequentially. A dependency cycle throws `InvalidOperationException`.
+
+The same `ITopologizable<T>` / `TopologyComparison` model orders request/message middleware and RPC transports, so follow the same comparison semantics when extending those pipelines.
+
+## 4. Test
+
+Test registration idempotency separately from ordering. For ordering tests, register concrete probe instances and assert execution order; also cover any replacement/removal behavior exposed by the feature.

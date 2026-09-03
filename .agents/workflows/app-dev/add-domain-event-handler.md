@@ -1,65 +1,68 @@
 ---
-description: How to add in-process event handlers and transactional outbox behavior in a NOF application
+description: Add in-process event handlers and transactional outbox dispatch to a NOF application
 ---
 
-# Add In-Process Event Handlers and Transactional Outbox
+# Add In-Process Events and Transactional Messages
 
-NOF supports two complementary patterns:
+NOF has two separate mechanisms:
 
-- in-process events via `InMemoryEventHandler<T>` and `IEventPublisher`
-- transactional outbox dispatch via `INotificationPublisher.DeferPublish(...)` and `ICommandSender.DeferSend(...)`
+- in-process, current-scope events through `IEventPublisher` and `InMemoryEventHandler<T>`
+- cross-boundary commands/notifications, optionally staged in the transactional outbox
 
-## 1. Define an In-Process Event
-
-```csharp
-public record ProjectionRebuilt(string TenantId);
-```
-
-## 2. Implement an Event Handler
+## 1. Define and Handle an In-Process Event
 
 ```csharp
+public sealed record ProjectionRebuilt(string TenantId);
+
 public sealed class ProjectionRebuiltHandler : InMemoryEventHandler<ProjectionRebuilt>
 {
-    public override Task HandleAsync(ProjectionRebuilt @event, Context context, CancellationToken cancellationToken)
+    public override Task HandleAsync(
+        ProjectionRebuilt @event,
+        Context context,
+        CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 }
 ```
 
-## 3. Publish the Event in Scope
+## 2. Publish Explicitly
 
 ```csharp
-await _eventPublisher.PublishAsync(new ProjectionRebuilt("tenant-a"), context, cancellationToken);
+await eventPublisher.PublishAsync(
+    new ProjectionRebuilt("tenant-a"),
+    context,
+    cancellationToken);
 ```
 
-## 4. Use the Transactional Outbox for Cross-Boundary Work
+Domain methods may instead call `payload.PublishAsEvent()`. At a NOF handler/event boundary, the ambient publisher carries the current `Context` into nested in-memory events.
+
+## 3. Stage a Transactional Notification
 
 ```csharp
-public sealed class CreateOrderHandler : CommandHandler<CreateOrderCommand>
+public sealed class CreateOrderHandler(
+    IDbContext dbContext,
+    INotificationPublisher publisher)
+    : CommandHandler<CreateOrderCommand>
 {
-    private readonly DbContext _dbContext;
-    private readonly INotificationPublisher _publisher;
-
-    public CreateOrderHandler(DbContext dbContext, INotificationPublisher publisher)
-    {
-        _dbContext = dbContext;
-        _publisher = publisher;
-    }
-
-    public override async Task HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken)
+    public override async Task HandleAsync(
+        CreateOrderCommand command,
+        Context context,
+        CancellationToken cancellationToken)
     {
         var order = Order.Create(EmailAddress.Of(command.CustomerEmail));
-        _dbContext.Set<Order>().Add(order);
-        _publisher.DeferPublish(new OrderCreatedNotification(order.Id));
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.Set<Order>().Add(order);
+
+        await publisher.DeferPublishAsync(
+            new OrderCreatedNotification(order.Id),
+            context,
+            cancellationToken);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
 ```
 
-## Notes
+`DeferPublishAsync(...)` and `DeferSendAsync(...)` add an outbox entity to the current `IDbContext`; saving that same context commits it with application data. Immediate `PublishAsync(...)` / `SendAsync(...)` bypass the outbox.
 
-- Use `InMemoryEventHandler<T>` for same-scope, in-process reactions. Pass the current `Context` to preserve execution metadata downstream.
-- Domain code can continue to call `PublishAsEvent()` without accepting `Context`; NOF binds the current handler context to the ambient publisher and preserves it across secondary in-memory events.
-- Use deferred notifications or commands when the work should flow through the outbox and optional transport integrations such as RabbitMQ.
-- Persist data through `DbContext` / `NOFDbContext` in the application layer.
+For ordered streams, use `DeferPublishOrderedAsync(...)` or `DeferSendOrderedAsync(...)` with a stable order key. Set `completesOrderKey` only on the final message, and ensure every participating consumer sees an unbroken stream.

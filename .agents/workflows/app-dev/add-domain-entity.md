@@ -1,20 +1,14 @@
 ---
-description: How to add domain types in a NOF application using the current value-object and in-memory event model
+description: Add domain classes, generated value objects, failures, and in-memory events to a NOF application
 ---
 
 # Add Domain Types
 
-NOF currently models domain code around:
+NOF domain code uses ordinary classes plus generated value objects and failures. There is no framework aggregate-root or entity base class.
 
-- value objects via `IValueObject<T>`
-- generated IDs via `[NewableValueObject]`
-- failure definitions via `[Failure(...)]`
-- ordinary domain classes
-- in-process domain events via `PublishAsEvent()` with an explicit `PublishAsEvent(IEventPublisher)` alternative
+## 1. Add a Value Object
 
-## Add a Value Object
-
-Value objects are immutable types wrapping a primitive. Implement `IValueObject<T>` and the source generator produces constructors, factory methods, JSON converters, equality, and casts.
+Value objects are `readonly partial struct` types implementing `IValueObject<T>`:
 
 ```csharp
 using NOF.Domain;
@@ -23,29 +17,31 @@ using NOF.Domain;
 public readonly partial struct OrderId : IValueObject<long>;
 ```
 
-For value objects with validation:
+`[NewableValueObject]` is valid only for `IValueObject<long>` and generates `New()` plus `New(IIdGenerator)`.
+
+For a normalized and validated string value object:
 
 ```csharp
 using NOF.Domain;
 
+[ValueObjectLength(200, MinimumLength = 3)]
 public readonly partial struct EmailAddress : IValueObject<string>
 {
+    public static string Normalize(string value) => value.Trim().ToLowerInvariant();
+
     public static void Validate(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ValidationException("Email cannot be empty.");
-        }
-
         if (!value.Contains('@'))
         {
-            throw new ValidationException("Invalid email format.");
+            throw new DomainValidationException("Invalid email format.");
         }
     }
 }
 ```
 
-## Add Failure Definitions
+Construct values through `EmailAddress.Of(...)` and extract the primitive with an explicit cast. `default(EmailAddress)` and `new EmailAddress()` are invalid (`NOF018`).
+
+## 2. Add Failure Definitions
 
 ```csharp
 using NOF.Domain;
@@ -55,13 +51,15 @@ using NOF.Domain;
 public static partial class OrderFailures;
 ```
 
-## Add a Domain Class
+The generator emits static `Failure` members such as `OrderFailures.InvalidStatus`.
+
+## 3. Add a Domain Class and Events
 
 ```csharp
 using NOF.Abstraction;
 using NOF.Domain;
 
-public class Order
+public sealed class Order
 {
     public OrderId Id { get; init; }
     public EmailAddress CustomerEmail { get; private set; }
@@ -93,59 +91,52 @@ public class Order
         new OrderConfirmedEvent(Id).PublishAsEvent();
     }
 }
+
+public sealed record OrderCreatedEvent(OrderId Id, EmailAddress CustomerEmail);
+public sealed record OrderConfirmedEvent(OrderId Id);
 ```
 
-## Add an In-Memory Event
+`PublishAsEvent()` is synchronous convenience over the ambient publisher. Inside a NOF execution boundary it forwards the current `Context`. For explicit asynchronous control, inject `IEventPublisher` at the application boundary and call `PublishAsync(...)`.
 
-```csharp
-public record OrderCreatedEvent(OrderId Id, EmailAddress CustomerEmail);
-public record OrderConfirmedEvent(OrderId Id);
-```
-
-## Handle the Event in Application Layer
+## 4. Handle an Event
 
 ```csharp
 using NOF.Abstraction;
+using NOF.Application;
 using NOF.Contract;
 
-public sealed class OrderCreatedProjectionHandler : InMemoryEventHandler<OrderCreatedEvent>
+public sealed class OrderCreatedProjectionHandler(IDbContext dbContext)
+    : InMemoryEventHandler<OrderCreatedEvent>
 {
-    public override Task HandleAsync(OrderCreatedEvent @event, Context context, CancellationToken cancellationToken)
+    public override Task HandleAsync(
+        OrderCreatedEvent @event,
+        Context context,
+        CancellationToken cancellationToken)
     {
+        dbContext.Set<OrderProjection>().Add(OrderProjection.From(@event));
         return Task.CompletedTask;
     }
 }
 ```
 
-## Persist with `DbContext`
+The handler is registered by its generated assembly initializer when the containing assembly is added with `AddApplicationPart(...)`.
 
-Application handlers persist domain objects directly through `DbContext` / `NOFDbContext`:
+## 5. Persist from the Application Layer
 
 ```csharp
-public sealed class CreateOrder : OrderService.CreateOrder
+public sealed class CreateOrder(IDbContext dbContext) : OrderService.CreateOrder
 {
-    private readonly DbContext _dbContext;
-
-    public CreateOrder(DbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
-
-    public override async Task<Result> HandleAsync(CreateOrderRequest request, CancellationToken cancellationToken)
+    public override async Task<Result> HandleAsync(
+        CreateOrderRequest request,
+        Context context,
+        CancellationToken cancellationToken)
     {
         var order = Order.Create(EmailAddress.Of(request.CustomerEmail));
-        _dbContext.Set<Order>().Add(order);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.Set<Order>().Add(order);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }
 ```
 
-## Notes
-
-- Prefer ordinary domain classes plus value objects over nonexistent aggregate root base types.
-- Raise in-process domain events with `PublishAsEvent()`. Inside a NOF handler it automatically inherits the `Context` bound to the ambient publisher, so domain methods do not need a `Context` parameter solely for event propagation.
-- Handle those events with `InMemoryEventHandler<TEvent>` in the current DI scope.
-- Persist changes through `DbContext` / `NOFDbContext` in the application layer.
-- `[NewableValueObject]` generates both `New()` and `New(IIdGenerator)`.
-- Value objects use explicit casts rather than a public `.Value` property.
+Application code uses `IDbContext` / `IRepository<T>`. Concrete EF Core `DbContext` and `NOFDbContext` stay in the host project.

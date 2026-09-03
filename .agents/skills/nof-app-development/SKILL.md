@@ -1,74 +1,83 @@
 ---
 name: nof-app-development
-description: Build .NET applications using the NOF (Neat Opinionated Framework) with clean architecture, CQRS messaging, source generators, and DDD patterns. Use when the user asks to create a new NOF application, add features (entities, handlers, endpoints, caching, messaging, auth) to an existing NOF app, or references NOF abstractions like `IRpcService`, `CommandHandler<T>`, `NotificationHandler<T>`, `Result`, `CacheKey`, or `DbContext`.
+description: Build .NET applications using the NOF (Neat Opinionated Framework) with clean architecture, RPC/CQRS messaging, provider-neutral persistence, source generators, caching, and OAuth/OIDC. Use when creating or changing a NOF app or when working with abstractions such as IRpcService, RpcServer<T>, CommandHandler<T>, NotificationHandler<T>, IDbContext, IRepository<T>, Result, or CacheKey<T>.
 ---
 
 # NOF Application Development
 
+Read `../../rules/app-dev.md` first. Use `references/recipes.md` for application code shapes and `references/infrastructure.md` for provider and authentication setup.
+
 ## Architecture
 
 ```text
-MyApp.Domain/      domain classes, value objects, failures, in-memory event payloads
-MyApp.Contract/    DTOs, RPC contracts, request/response models
-MyApp.Application/ service implementations, handlers, state machines, cache keys
-MyApp/             host program and infrastructure wiring
+MyApp.Domain/      domain types, value objects, failures, in-memory event payloads
+MyApp.Contract/    RPC contracts, requests/responses, commands, notifications, DTOs
+MyApp.Application/ RPC servers and handlers, message/event handlers, mappings, cache keys
+MyApp/             host and concrete persistence/transport configuration
 ```
 
-Dependency direction: `Host -> Application -> Domain`, `Host -> Contract`, `Application -> Contract`.
+Application code should remain provider-neutral by using `IDbContext` and `IRepository<T>`; concrete EF Core or NHibernate types belong in the host.
 
-## Message Types
+## Message and RPC Types
 
-| Type | Contract | Handling |
+| Concern | Declaration | Handler / registration |
 |---|---|---|
-| RPC operation | `IRpcService` method | generated nested handler base under `RpcServer<TService>` |
-| Command | plain payload object | `CommandHandler<T>` |
-| Notification | plain payload object | `NotificationHandler<T>` |
-| In-memory event | arbitrary payload object | `InMemoryEventHandler<T>` |
+| RPC | `IRpcService` + exactly one transport attribute | generated nested base under `RpcServer<TService>`; register with `AddRpcServer<TServer>()` |
+| Command | plain payload | `CommandHandler<T>` |
+| Notification | plain payload | `NotificationHandler<T>` |
+| In-memory event | arbitrary payload | `InMemoryEventHandler<T>` |
+
+All generated RPC handlers, command handlers, notification handlers, and in-memory event handlers receive `Context` plus `CancellationToken`.
 
 ## Dispatch APIs
 
 | Interface | Method | Use |
 |---|---|---|
-| Generated RPC client/service | service methods | request/response operations |
-| `ICommandSender` | `SendAsync(command, ct)` | immediate command dispatch |
-| `ICommandSender` | `DeferSend(command)` | outbox dispatch on save |
-| `INotificationPublisher` | `PublishAsync(notification, ct)` | immediate broadcast |
-| `INotificationPublisher` | `DeferPublish(notification)` | outbox dispatch on save |
-| `IEventPublisher` | `PublishAsync(payload, context, ct)` | in-scope event dispatch with execution-context propagation |
+| Generated RPC client | `OperationAsync(request, context, ct)` | transport-selected request/response or stream |
+| `ICommandSender` | `SendAsync(command, context, ct)` | immediate command dispatch |
+| `ICommandSender` | `DeferSendAsync(command, context, ct)` | stage a command in the current outbox |
+| `ICommandSender` | `DeferSendOrderedAsync(command, orderKey, context, ..., ct)` | stage ordered command delivery |
+| `INotificationPublisher` | `PublishAsync(notification, context, ct)` | immediate fan-out |
+| `INotificationPublisher` | `DeferPublishAsync(notification, context, ct)` | stage a notification in the current outbox |
+| `INotificationPublisher` | `DeferPublishOrderedAsync(notification, orderKey, context, ..., ct)` | stage ordered notification delivery |
+| `IEventPublisher` | `PublishAsync(payload, context, ct)` | current-scope in-memory event dispatch |
 
-`PublishAsEvent()` combines the publisher bound once by the current dependency injection scope's daemon service with the `Context` bound at the current handler or event-dispatch boundary. Domain methods do not need to accept `Context` solely to forward it to an in-memory event.
+Save the same `IDbContext` after a deferred dispatch to commit the application changes and outbox record together.
+
+`PublishAsEvent()` uses the ambient publisher and current handler context. Prefer an injected `IEventPublisher` and its explicit async API when asynchronous control or test visibility matters.
 
 ## Source Generator Surface
 
-| Attribute / Interface | Generates |
+| Attribute / interface | Behavior |
 |---|---|
-| `IValueObject<T>` | equality, converters, casts, validation hooks; construct through `Of(...)`/generated factories, never `default` or parameterless `new()` (`NOF018`) |
-| `[NewableValueObject]` | static `New()` and `New(IIdGenerator)` |
-| `[ValueObjectLength(maximumLength, MinimumLength = ...)]` | string range validation and persistence maximum-length metadata |
-| `[AutoInject]` | DI registration |
-| `[HttpEndpoint]` | HTTP route metadata for RPC methods |
-| `[TransportOverMemory]` | in-process-only RPC transport without external endpoint mapping |
-| `[Mappable]` | mapping registrations |
-| `[Failure]` | static failure definitions |
+| `IValueObject<T>` | generates validated `Of(...)`, explicit primitive cast, equality, JSON conversion, and initialization checks |
+| `[NewableValueObject]` | for `IValueObject<long>` only; generates `New()` and `New(IIdGenerator)` |
+| `[ValueObjectLength(max, MinimumLength = ...)]` | validates string length and supplies persistence maximum-length metadata |
+| `[AutoInject(ServiceLifetime...)]` | emits DI descriptors through an assembly initializer |
+| `[Failure(...)]` | generates static `Failure` members |
+| `[Mappable<TSource, TDestination>]` | generates expression mapping registration on a `partial static` class |
+| `[TransportOverHttp(style, prefix)]` | selects controller RPC or JSON-RPC HTTP transport |
+| `[TransportOverMemory]` | limits a contract to generated in-process clients |
+| `[HttpEndpoint]` | declares controller-style HTTP verb and operation route |
 
 ## Decision Guide
 
-| I want to... | Use |
+| Goal | Use |
 |---|---|
-| expose HTTP API | `IRpcService` + `[TransportOverHttp]` + `builder.AddRpcServer<TRpcServer>()` |
-| keep an RPC service in process | `IRpcService` + `[TransportOverMemory]` + generated local client |
-| send async work | payload object + `ICommandSender` |
-| publish notifications | payload object + `INotificationPublisher` |
-| publish in-memory events | payload object + `PublishAsEvent()` / `PublishAsEvent(publisher)` / `IEventPublisher` |
-| persist application data | `DbContext` / `NOFDbContext` + `SaveChangesAsync()` |
-| cache data | `CacheKey<T>` + `ICacheService` |
-| add JWT auth | `AddAuthenticationAuthority(...)` and/or `AddAuthenticationResourceServer(...)` |
+| expose controller-style HTTP RPC | `[TransportOverHttp(HttpRpcStyle.ControllerRpc)]`, method `[HttpEndpoint]`, `AddRpcServer<T>()` |
+| expose JSON-RPC | `[TransportOverHttp(HttpRpcStyle.JsonRpc, routePrefix)]`, no method `[HttpEndpoint]` |
+| keep RPC in process | `[TransportOverMemory]` and generated local client |
+| persist application data | `IDbContext` / `IRepository<T>`; choose EF Core or NHibernate in the host |
+| cache data | `CacheKey<T>` + `ICacheService`; optionally replace the memory rider with Redis |
+| send cross-boundary work | `ICommandSender` / `INotificationPublisher`, passing the current `Context` |
+| add an OAuth/OIDC server | `AddOidcServer(...)` |
+| validate access tokens | `services.AddAuthenticationResourceServer(...)` |
 
 ## Conventions
 
-- File-scoped namespaces, Allman braces, braces on all control-flow.
-- `Optional<T>` for PATCH semantics.
-- Persist application data through `DbContext` / `NOFDbContext` in application handlers.
-- Mapping is expression-based; apply `ProjectTo<TDestination>()` only after filtering, ordering, and paging. Its `IQueryable` receiver resolves the source key from `ElementType` and uses the current async-flow-scoped `Mapper`.
-- Treat `NOF025` as an advisory signal that server-side query shaping occurs after `ProjectTo`; move that shaping before projection unless the warning is a documented conservative-analysis edge case.
-- Treat `Mapper`, `IdGenerator`, and `EventPublisher` ambient APIs as convenience only; keep their explicit paths available when that improves clarity or testability.
+- Add assemblies containing handlers, mappings, or `[AutoInject]` services through `AddApplicationPart(...)`.
+- Register every RPC server explicitly through `AddRpcServer<TServer>()`; applicable endpoints are mapped during `BuildAsync()`.
+- Build request contracts with one reference-type request and a non-task `IResult` return.
+- Keep persistence-provider APIs out of the application layer.
+- Apply filtering, ordering, and paging before `ProjectTo<TDestination>()`.
+- Keep explicit paths available when ambient `Mapper`, `IdGenerator`, or `EventPublisher` conveniences make dependencies unclear.

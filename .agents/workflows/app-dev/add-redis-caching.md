@@ -1,27 +1,27 @@
 ---
-description: How to add Redis caching with typed CacheKey in a NOF application
+description: Replace NOF's in-memory cache rider with Redis while retaining typed CacheKey APIs
 ---
 
 # Add Redis Caching
 
-NOF provides typed caching via `ICacheService` and `CacheKey<T>`, with Redis support from `NOF.Infrastructure.StackExchangeRedis`.
+NOF exposes typed caching through `ICacheService` and `CacheKey<T>`. `NOF.Infrastructure.StackExchangeRedis` replaces the storage rider while keeping the application API unchanged.
 
-## 1. Add NuGet Package
+## 1. Add the Package to the Host
 
 ```bash
 dotnet add package NOF.Infrastructure.StackExchangeRedis
 ```
 
-## 2. Register in Program.cs
+## 2. Register Redis
 
 ```csharp
-using NOF.Infrastructure.StackExchangeRedis;
-
-builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
+builder.Services.AddRedisCache(builder.Configuration.GetConnectionString("redis")
     ?? throw new InvalidOperationException("Connection string 'redis' not found."));
 ```
 
-## 3. Configure Connection String
+The overloads accept a StackExchange.Redis `ConfigurationOptions` or a connection string, plus optional connection/cache configuration delegates.
+
+## 3. Configure the Connection
 
 ```json
 {
@@ -31,54 +31,48 @@ builder.AddRedisCache(builder.Configuration.GetConnectionString("redis")
 }
 ```
 
-## 4. Define Typed Cache Keys
+## 4. Define Typed Keys
 
 ```csharp
 using NOF.Application;
 
-public record OrderCacheKey(long OrderId)
+public sealed record OrderCacheKey(long OrderId)
     : CacheKey<OrderDto>($"Order:{OrderId}");
 ```
 
-## 5. Use `ICacheService` in Handlers
+## 5. Use the Cache from an Application Handler
 
 ```csharp
-public sealed class GetOrder : OrderService.GetOrder
+public sealed class GetOrder(IDbContext dbContext, ICacheService cache)
+    : OrderService.GetOrder
 {
-    private readonly DbContext _dbContext;
-    private readonly ICacheService _cache;
-
-    public GetOrder(DbContext dbContext, ICacheService cache)
+    public override async Task<Result<OrderDto>> HandleAsync(
+        GetOrderRequest request,
+        Context context,
+        CancellationToken cancellationToken)
     {
-        _dbContext = dbContext;
-        _cache = cache;
-    }
-
-    public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
-    {
-        var cacheKey = new OrderCacheKey(request.Id);
-        var cached = await _cache.GetAsync(cacheKey, cancellationToken: cancellationToken);
+        var key = new OrderCacheKey(request.Id);
+        var cached = await cache.GetAsync(key, cancellationToken);
         if (cached.HasValue)
         {
             return Result.Success(cached.Value);
         }
 
-        var order = await _dbContext.Set<Order>().FindAsync([request.Id], cancellationToken);
+        var order = await dbContext.Set<Order>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(entity => entity.Id == request.Id, cancellationToken);
         if (order is null)
         {
             return Result.Fail("404", "Order not found");
         }
 
         var dto = new OrderDto(order.Id, order.Status);
-        await _cache.SetAsync(cacheKey, dto, cancellationToken: cancellationToken);
+        await cache.SetAsync(key, dto, cancellationToken: cancellationToken);
         return Result.Success(dto);
     }
 }
 ```
 
-## Notes
+`ICacheService` also implements `IDistributedCache` and supports multi-key operations, atomic counters, TTL operations, and distributed locks. Cache keys are tenant-prefixed by default; use `IgnoreQueryFilters()` only for deliberate cross-tenant/host access.
 
-- `ICacheService` also satisfies `IDistributedCache`.
-- `AddRedisCache(...)` replaces the default in-memory cache registration.
-- Use typed `CacheKey<T>` records rather than ad-hoc string keys when possible.
-- Prefer `DbContext` / `NOFDbContext` in handlers instead of assuming a framework-provided repository abstraction.
+Use `builder.Services.AddRedisBackplane(...)` separately when `IBackplane` should use Redis as well.

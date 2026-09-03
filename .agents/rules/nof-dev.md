@@ -8,65 +8,63 @@ Use this file when contributing to the NOF framework itself.
 
 ## Repository Layout
 
-- `src/` framework source packages.
-- `src/Hostings/` host-specific packages.
-- `src/Infrastructures/` infrastructure providers.
-- `src/Extensions/` optional extension packages.
-- `sample/` runnable sample app.
-- `tests/` test projects. Most package and host tests live in `tests/NOF.*.Tests`, with extension tests in `tests/Extensions/`, infrastructure provider tests in `tests/Infrastructures/`, and shared helpers in `tests/Common/`.
-- `docs/` DocFX documentation.
+- `src/`: runtime packages, source generators, code fixes, hosting integrations, extensions, and providers.
+- `src/Hostings/`: ASP.NET Core, Blazor WebAssembly, Console, and MAUI hosts.
+- `src/Infrastructures/`: EF Core, NHibernate, RabbitMQ, and StackExchange.Redis providers.
+- `src/Extensions/`: optional feature packages, currently the ASP.NET Core OIDC server.
+- `sample/`: runnable multi-project sample and Aspire app host.
+- `sample-tests/`: sample integration tests.
+- `tests/NOF.*.Tests`: core, hosting, UI, and test-helper tests.
+- `tests/Infrastructures/*`: provider-specific tests.
+- `tests/Common/SourceGenerator`: shared generator test helpers.
+- `docs/`: DocFX content; `website/`: homepage application.
 
 ## Tech Stack
 
-- .NET 10 / C# 14 features (`extension` blocks are used in this repo).
-- Central Package Management via root `Directory.Packages.props`.
-- Roslyn incremental generators.
-- xUnit + Moq.
+- .NET 10 and current C# (`extension` blocks are used throughout the repository).
+- Central Package Management through root `Directory.Packages.props`; `sample/Directory.Packages.props` imports it for sample-only versions.
+- Roslyn incremental generators and analyzers targeting `netstandard2.0`.
+- xUnit and Moq.
 
-## Key Patterns
+## Current Runtime Patterns
 
-- CQRS: `IRpcService`, `RpcServer<TService>`, `CommandHandler<T>`, `NotificationHandler<T>`, `InMemoryEventHandler<T>`, `ICommandSender`, `INotificationPublisher`, `IEventPublisher`.
-- Commands and notifications are plain payload types; discovery comes from handler base types, not marker interfaces.
-- Step pipeline: registration and initialization steps with `IAfter<T>` / `IBefore<T>`.
-- Source-gen attributes: `[AutoInject]`, `[HttpEndpoint]`, `[Failure]`, `[Mappable]`, `[NewableValueObject]`.
-- Transactional outbox: `ICommandSender.DeferSend(...)` / `INotificationPublisher.DeferPublish(...)`.
-- `Registry` is builder-owned and first-class; do not document or implement it as hidden builder property-bag state.
-- `AutoInjectRegistry` stores `ServiceDescriptor` entries directly.
-- `TypeResolver` is DI-managed; do not reintroduce `TypeRegistry` or other mutable process-wide lookup singletons.
-- Ambient convenience APIs such as `Mapper`, `IdGenerator`, and `EventPublisher` are async-flow scoped and must keep explicit overloads available.
-- Prefer DI singletons over mutable `static` state when data must be shared per host or per builder.
+- RPC: `IRpcService`, one `[TransportOverHttp(...)]` or `[TransportOverMemory]` declaration, `RpcServer<TService>`, generated clients, and `AddRpcServer<TServer>()`.
+- Messaging: plain payload types plus `CommandHandler<T>` / `NotificationHandler<T>`; all handler and dispatch APIs receive `Context`.
+- In-memory events: `InMemoryEventHandler<T>`, `IEventPublisher`, and optional `PublishAsEvent()` ambient convenience.
+- Transactional outbox: asynchronous `DeferSendAsync(...)` / `DeferPublishAsync(...)`, plus ordered variants, followed by `IDbContext.SaveChangesAsync()`.
+- Persistence: application-facing `IDbContext`, `IDbContextFactory`, and `IRepository<T>`; EF Core and NHibernate adapters live in provider packages.
+- Initialization: `IApplicationInitializationStep` instances are registered in `IServiceCollection` and ordered by `Compare(...)` returning `TopologyComparison`.
+- Source generation: `[AutoInject]`, `[Failure]`, `[Mappable<TSource, TDestination>]`, `[NewableValueObject]`, `IValueObject<T>`, handler registration, and RPC client/server generation.
+- Application parts: `AddApplicationPart(assembly)` runs generated `AssemblyInitializeAttribute` initializers against the current `IServiceCollection`.
+- Registries: `EventHandlerRegistry`, `MappingRegistry`, `CommandHandlerRegistry`, `NotificationHandlerRegistry`, and `RpcServerRegistry` are singleton instances stored in DI and freeze on first read. Do not reintroduce a process-wide type registry.
+- Ambient helpers: `Mapper`, `IdGenerator`, and `EventPublisher` are scoped through daemon-service resolution; explicit APIs remain the primary runtime contracts.
 
 ## Coding Rules
 
-- File-scoped namespaces.
-- Braces on all control-flow.
-- Allman style.
-- Public APIs in `src/` require XML comments.
-- Do not place NuGet versions in individual `.csproj` files.
+- Use file-scoped namespaces, Allman braces, and braces for every control-flow body.
+- Add XML documentation for public APIs under `src/`.
+- Do not put NuGet versions in individual `.csproj` files.
+- Register services directly through `IServiceCollection`; there is no service-registration-step pipeline.
+- Preserve Native AOT annotations and analyzer isolation: a generator must not depend on another generator's output being visible as input.
 
 ## Build Commands
 
 ```bash
-dotnet restore
-dotnet build --configuration Release
-dotnet test
-dotnet format --verify-no-changes
+dotnet restore NOF.slnx
+dotnet format --verify-no-changes --verbosity diagnostic
+dotnet build NOF.slnx --configuration Release --no-restore
+dotnet test NOF.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
 ```
+
+The GitHub matrix installs the MAUI workload on Windows before restore. See `workflows/nof-dev/run-ci-locally.md` for the exact sequence.
 
 ## Change Checklist
 
 Before considering work done, verify all applicable items:
 
-1. Tests updated:
-- Parent package tests and source generator tests are kept together (for example `NOF.Domain` + `NOF.Domain.SourceGenerator` in `tests/NOF.Domain.Tests`).
-- Extension package tests are added under `tests/Extensions/*`.
-
-2. Sample app still compiles and demonstrates changed behavior.
-
-3. Docs updated:
-- XML docs on public APIs.
-- `README.md`, `docs/`, and `.agents/*` where relevant.
-
-4. CI/CD updated when adding package/test projects.
-
-5. Central package management respected (versions only in root `Directory.Packages.props`).
+1. Put runtime and generator tests in the owning package test project; put provider tests under `tests/Infrastructures/` when a dedicated project is warranted.
+2. Keep the sample and `sample-tests` compiling when public behavior changes.
+3. Update public XML docs, `README.md`, `docs/`, and `.agents/` as applicable.
+4. Add new projects to `NOF.slnx`; update CI/CD only when its discovery or build inputs require it.
+5. Add dependency versions only to root `Directory.Packages.props`, or to `sample/Directory.Packages.props` for sample-only packages.
+6. Run `dotnet format`, review any changes, then run the relevant builds and tests.

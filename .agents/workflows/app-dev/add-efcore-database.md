@@ -1,30 +1,27 @@
 ---
-description: How to set up EF Core with PostgreSQL, configure DbContext, and manage migrations in a NOF application
+description: Configure the NOF Entity Framework Core provider with PostgreSQL, migrations, tenancy, and soft delete
 ---
 
 # Add EF Core Database with PostgreSQL
 
-## 1. Add NuGet Packages
-
-In the host project:
+## 1. Add Packages to the Host
 
 ```bash
-dotnet add package NOF.Infrastructure
+dotnet add package NOF.Infrastructure.EntityFrameworkCore
 dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
 ```
 
-## 2. Create the DbContext
+`NOF.Infrastructure.EntityFrameworkCore` is the package that contains `NOFDbContext` and `UseDbContext<T>()`; those APIs are not in the core `NOF.Infrastructure` package.
 
-Create a class inheriting from `NOFDbContext` in the host project:
+## 2. Create the Host DbContext
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
-using NOF.Infrastructure;
+using NOF.Infrastructure.EntityFrameworkCore;
 
-public class AppDbContext : NOFDbContext
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
+    : NOFDbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
     public DbSet<Order> Orders => Set<Order>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,27 +31,35 @@ public class AppDbContext : NOFDbContext
         modelBuilder.Entity<Order>(entity =>
         {
             entity.ToTable("Orders");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.CustomerEmail).HasMaxLength(200);
+            entity.HasKey(order => order.Id);
         });
     }
 }
 ```
 
-## 3. Register in Program.cs
+Always call `base.OnModelCreating(modelBuilder)` so registered NOF model contributors are applied.
+
+String-backed value objects should declare `[ValueObjectLength]` in domain code. The provider uses that metadata for maximum length; avoid duplicating `HasMaxLength(...)`.
+
+## 3. Register the Provider
 
 ```csharp
+using Microsoft.EntityFrameworkCore;
+using NOF.Hosting;
+using NOF.Infrastructure.EntityFrameworkCore;
+
 builder.UseDbContext<AppDbContext>()
     .WithTenantMode(TenantMode.DatabasePerTenant)
     .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
         ?? throw new InvalidOperationException("Connection string 'postgres' not found."))
     .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
+    .WithSoftDelete(true)
     .MigrateOnInitialize();
 ```
 
-## 4. Configure Connection String
+For database-per-tenant mode, the connection string may contain `{tenantId}`. Shared-database mode adds tenant shadow state and filters. Soft delete is enabled by default and can be overridden per root entity with `HasSoftDelete(...)`.
 
-In `appsettings.json`:
+## 4. Configure the Connection String
 
 ```json
 {
@@ -68,13 +73,28 @@ In `appsettings.json`:
 
 ```bash
 dotnet tool install --global dotnet-ef
-dotnet ef migrations add InitialCreate --project MyApp --context AppDbContext
-dotnet ef database update --project MyApp --context AppDbContext
+dotnet ef migrations add InitialCreate --project MyApp --startup-project MyApp --context AppDbContext
+dotnet ef database update --project MyApp --startup-project MyApp --context AppDbContext
 ```
 
-## Notes
+`MigrateOnInitialize()` adds a host initialization step that applies migrations before later components such as OIDC client bootstrapping.
 
-- `NOFDbContext` configures outbox, inbox, and state machine context tables.
-- Value objects implementing `IValueObject<T>` are handled automatically.
-- `MigrateOnInitialize()` applies pending migrations on startup through an initialization step.
-- Application handlers persist entities directly through `DbContext` / `NOFDbContext`.
+## Application-Layer Usage
+
+Application handlers inject `IDbContext` or `IRepository<T>`, not EF Core `DbContext`:
+
+```csharp
+public sealed class CreateOrder(IDbContext dbContext) : OrderService.CreateOrder
+{
+    public override async Task<Result> HandleAsync(
+        CreateOrderRequest request,
+        Context context,
+        CancellationToken cancellationToken)
+    {
+        var order = Order.Create(EmailAddress.Of(request.CustomerEmail));
+        dbContext.Set<Order>().Add(order);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
+```
