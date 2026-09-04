@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using NOF.SourceGenerator.Shared;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -11,6 +12,9 @@ namespace NOF.Abstraction.SourceGenerator;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class DaemonServiceResolutionAnalyzer : DiagnosticAnalyzer
 {
+    private const string ServiceProviderExtensionsMetadataName =
+        "Microsoft.Extensions.DependencyInjection.ServiceProviderExtensions";
+
     private static readonly DiagnosticDescriptor _descriptor = new(
         id: "NOF040",
         title: "Resolve daemon services after creating a scope",
@@ -25,10 +29,24 @@ public sealed class DaemonServiceResolutionAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, Microsoft.CodeAnalysis.CSharp.SyntaxKind.InvocationExpression);
+        context.RegisterCompilationStartAction(static compilationContext =>
+        {
+            var serviceProviderExtensionsType = compilationContext.Compilation.GetTypeByMetadataName(
+                ServiceProviderExtensionsMetadataName);
+            if (serviceProviderExtensionsType is null)
+            {
+                return;
+            }
+
+            compilationContext.RegisterSyntaxNodeAction(
+                syntaxContext => AnalyzeInvocation(syntaxContext, serviceProviderExtensionsType),
+                Microsoft.CodeAnalysis.CSharp.SyntaxKind.InvocationExpression);
+        });
     }
 
-    private static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    private static void AnalyzeInvocation(
+        SyntaxNodeAnalysisContext context,
+        INamedTypeSymbol serviceProviderExtensionsType)
     {
         if (context.Node is not InvocationExpressionSyntax invocationSyntax)
         {
@@ -43,7 +61,12 @@ public sealed class DaemonServiceResolutionAnalyzer : DiagnosticAnalyzer
 
         if (TryGetScopeName(invocationSyntax, context.SemanticModel, context.CancellationToken, out var scopeName)
             && scopeName is not null
-            && IsResolveDaemonServicesCallPresent(invocationSyntax, scopeName, context.SemanticModel, context.CancellationToken))
+            && IsResolveDaemonServicesCallPresent(
+                invocationSyntax,
+                scopeName,
+                serviceProviderExtensionsType,
+                context.SemanticModel,
+                context.CancellationToken))
         {
             return;
         }
@@ -84,6 +107,7 @@ public sealed class DaemonServiceResolutionAnalyzer : DiagnosticAnalyzer
     private static bool IsResolveDaemonServicesCallPresent(
         InvocationExpressionSyntax invocationSyntax,
         string scopeName,
+        INamedTypeSymbol serviceProviderExtensionsType,
         SemanticModel semanticModel,
         CancellationToken cancellationToken)
     {
@@ -93,7 +117,12 @@ public sealed class DaemonServiceResolutionAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        return IsResolveDaemonServicesStatement(followUpStatement, scopeName, semanticModel, cancellationToken);
+        return IsResolveDaemonServicesStatement(
+            followUpStatement,
+            scopeName,
+            serviceProviderExtensionsType,
+            semanticModel,
+            cancellationToken);
     }
 
     private static bool TryResolveFollowUpStatement(
@@ -152,28 +181,37 @@ public sealed class DaemonServiceResolutionAnalyzer : DiagnosticAnalyzer
     private static bool IsResolveDaemonServicesStatement(
         StatementSyntax statement,
         string scopeName,
+        INamedTypeSymbol serviceProviderExtensionsType,
         SemanticModel semanticModel,
         CancellationToken cancellationToken)
     {
         return semanticModel.GetOperation(statement, cancellationToken)?
             .DescendantsAndSelf()
             .OfType<IInvocationOperation>()
-            .Any(invocation => IsResolveDaemonServicesInvocation(invocation, scopeName)) == true;
+            .Any(invocation => IsResolveDaemonServicesInvocation(
+                invocation,
+                scopeName,
+                serviceProviderExtensionsType)) == true;
     }
 
-    private static bool IsResolveDaemonServicesInvocation(IInvocationOperation invocation, string scopeName)
+    private static bool IsResolveDaemonServicesInvocation(
+        IInvocationOperation invocation,
+        string scopeName,
+        INamedTypeSymbol serviceProviderExtensionsType)
     {
-        if (invocation.TargetMethod.Name != "ResolveDaemonServices")
+        if (invocation.TargetMethod.Name != "ResolveDaemonServices"
+            || !ExtensionMemberSymbol.IsDeclaredBy(
+                invocation.TargetMethod,
+                serviceProviderExtensionsType))
         {
             return false;
         }
 
         var receiver = UnwrapOperation(invocation.Instance);
         if (receiver is null
-            && invocation.TargetMethod.IsExtensionMethod
-            && invocation.Arguments.Length > 0)
+            && invocation.Arguments.FirstOrDefault(static argument => argument.Parameter?.Ordinal == 0) is { } receiverArgument)
         {
-            receiver = UnwrapOperation(invocation.Arguments[0].Value);
+            receiver = UnwrapOperation(receiverArgument.Value);
         }
 
         if (receiver is not IPropertyReferenceOperation

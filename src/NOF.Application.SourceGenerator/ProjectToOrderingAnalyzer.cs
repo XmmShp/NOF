@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
+using NOF.SourceGenerator.Shared;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -322,11 +323,8 @@ public sealed class ProjectToOrderingAnalyzer : DiagnosticAnalyzer
     private static bool IsProjectTo(
         IMethodSymbol method,
         INamedTypeSymbol mappingExtensionsType)
-    {
-        method = method.ReducedFrom ?? method;
-        return method.Name == "ProjectTo"
-            && SymbolEqualityComparer.Default.Equals(method.ContainingType, mappingExtensionsType);
-    }
+        => method.Name == "ProjectTo"
+            && ExtensionMemberSymbol.IsDeclaredBy(method, mappingExtensionsType);
 
     private static bool IsTransparentQueryMethod(IMethodSymbol method)
         => _transparentQueryMethods.Contains(method.Name);

@@ -121,4 +121,41 @@ public sealed class DaemonServiceResolutionAnalyzerTests
         var diagnostics = await GetDiagnosticsAsync(source);
         Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "NOF040");
     }
+
+    [Fact]
+    public async Task CreateScope_WithUnrelatedSameNamedExtension_ReportsNOF040()
+    {
+        const string source = """
+            using Microsoft.Extensions.DependencyInjection;
+            using System;
+
+            namespace Test;
+
+            public static class UnrelatedExtensions
+            {
+                public static IServiceProvider ResolveDaemonServices(this IServiceProvider services)
+                    => services;
+            }
+
+            public sealed class Worker
+            {
+                private readonly IServiceProvider _services;
+
+                public Worker(IServiceProvider services)
+                {
+                    _services = services;
+                }
+
+                public object? Run()
+                {
+                    using var scope = _services.CreateScope();
+                    UnrelatedExtensions.ResolveDaemonServices(scope.ServiceProvider);
+                    return scope.ServiceProvider.GetService(typeof(object));
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "NOF040");
+    }
 }

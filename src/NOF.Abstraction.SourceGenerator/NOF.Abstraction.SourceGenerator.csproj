@@ -20,4 +20,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\SourceGenerator.Shared\ExtensionMemberSymbol.cs" Link="Shared\ExtensionMemberSymbol.cs" />
+  </ItemGroup>
+
 </Project>
