@@ -36,6 +36,10 @@ builder.UseDbContext<AppDbContext>()
     .MigrateOnInitialize();
 ```
 
+`MigrateOnInitialize()` migrates the context resolved during host initialization. It does not
+enumerate application-defined tenant databases in `DatabasePerTenant` mode; use the explicit
+tenant migration API below when those databases must be migrated as part of deployment.
+
 For lightweight local or test scenarios, call `AddNOFEntityFrameworkCore()` to register the default SQLite in-memory persistence.
 
 ## Dynamic connection resolution
@@ -55,6 +59,66 @@ builder.UseDbContext<AppDbContext>()
 ```
 
 The resolution context exposes the normalized tenant identifier, concrete `DbContext` type, tenant mode, fallback template, and the current scoped service provider. Resolution is synchronous because NOF's `IDbContextFactory` creates contexts synchronously; cache remotely acquired secrets or connection metadata in the resolver's dependency.
+
+## Custom tenant migration orchestration
+
+`UseDbContext<TDbContext>()` registers `ITenantDbContextFactory<TDbContext>`. It creates a strongly
+typed context for an explicit tenant without changing `ICurrentTenant`, and reuses the configured
+tenant connection-string resolver and provider options. The `MigrateAsync` extension makes it
+convenient to build a deployment job around an application-owned tenant catalog:
+
+```csharp
+public sealed class TenantDatabaseMigrator(
+    IServiceScopeFactory scopeFactory,
+    ITenantCatalog tenantCatalog)
+{
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        await foreach (var tenant in tenantCatalog.GetAllAsync(cancellationToken))
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var factory = scope.ServiceProvider
+                .GetRequiredService<ITenantDbContextFactory<AppDbContext>>();
+
+            await factory.MigrateAsync(tenant.Id, cancellationToken);
+        }
+    }
+}
+```
+
+The application owns tenant discovery, retries, concurrency limits, and deployment coordination.
+The factory owns tenant normalization and connection resolution; the migration helper owns context
+disposal and delegates locking and migration execution to EF Core.
+
+### Custom database context factory
+
+`NOFDbContextFactory<TDbContext>` is public and its typed context creation methods are virtual.
+Register a derived factory with the two-type-parameter `UseDbContext` overload when context creation
+requires behavior beyond connection-string resolution:
+
+```csharp
+public sealed class AppDbContextFactory(
+    IServiceProvider services,
+    ITenantDatabaseProvisioner provisioner)
+    : NOFDbContextFactory<AppDbContext>(services)
+{
+    public override AppDbContext CreateDbContext(string tenantId)
+    {
+        provisioner.EnsureProvisioned(tenantId);
+        return base.CreateDbContext(tenantId);
+    }
+}
+
+builder.UseDbContext<AppDbContext, AppDbContextFactory>()
+    .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithConnectionStringResolver(/* ... */)
+    .WithOptions(/* ... */);
+```
+
+The custom factory is registered as itself and as `NOFDbContextFactory<TDbContext>`,
+`ITenantDbContextFactory<TDbContext>`, EF Core's `IDbContextFactory<TDbContext>`, and NOF's
+provider-neutral `IDbContextFactory`. Prefer `WithConnectionStringResolver(...)` when only database
+routing differs; derive the factory when the context creation lifecycle itself must change.
 
 ## Soft delete
 

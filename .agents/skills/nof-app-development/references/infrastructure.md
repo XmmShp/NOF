@@ -26,11 +26,25 @@ builder.UseDbContext<AppDbContext>()
     .MigrateOnInitialize();
 ```
 
+`MigrateOnInitialize()` migrates the context resolved during host initialization. It does not
+enumerate application-defined tenant databases in `DatabasePerTenant` mode.
+
 `NOFDbContext` applies the registered model contributors for inbox, outbox, and ordered-message entities. It also supplies value-object conversion/length conventions, multi-tenancy, and soft delete. Soft delete is enabled by default; use `.WithSoftDelete(false)` for a context-wide opt-out or `HasSoftDelete(...)` in EF model configuration for an entity override.
 
 The host may inject EF `DbContext` or the concrete context, but application handlers should use `IDbContext` / `IRepository<T>` so they remain provider-neutral.
 
 For dynamic database selection, replace the template lookup with `.WithConnectionStringResolver(...)`. Its context provides the normalized tenant ID, concrete `DbContext` type, tenant mode, fallback template, and scoped services, so the resolver can consult a tenant catalog, secret store, or shard map before `WithOptions(...)` configures the provider.
+
+For an application-owned migration job, resolve `ITenantDbContextFactory<TDbContext>` in a scope
+and call `MigrateAsync(tenantId, cancellationToken)` for each tenant. The application remains in
+control of tenant enumeration, retries, and concurrency, while the factory reuses the configured
+tenant connection resolution and provider options.
+
+When the context creation lifecycle itself must be customized, derive from
+`NOFDbContextFactory<TDbContext>`, override `CreateDbContext()` and/or
+`CreateDbContext(string tenantId)`, and register it with
+`UseDbContext<TDbContext, TDbContextFactory>()`. Prefer `WithConnectionStringResolver(...)` when
+only tenant database routing differs.
 
 ## Default In-Memory Infrastructure
 

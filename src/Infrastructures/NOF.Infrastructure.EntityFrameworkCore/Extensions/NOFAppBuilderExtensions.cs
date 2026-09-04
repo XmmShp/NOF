@@ -32,17 +32,38 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<SqliteInMemoryConnectionKeeper>();
             builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped<NOFDbContextFactory<TDbContext>, NOFDbContextFactory<TDbContext>>());
             builder.Services.ReplaceOrAddScoped<IDbContextFactory>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>());
-            builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>, TypedDbContextFactory<TDbContext>>();
-            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateConcreteDbContext());
+            builder.Services.ReplaceOrAddScoped<ITenantDbContextFactory<TDbContext>>(sp =>
+                sp.GetRequiredService<NOFDbContextFactory<TDbContext>>());
+            builder.Services.ReplaceOrAddScoped<IDbContextFactory<TDbContext>>(sp =>
+                sp.GetRequiredService<ITenantDbContextFactory<TDbContext>>());
+            builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateDbContext());
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
             builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<IDbContextFactory>().CreateDbContext());
             builder.Services.AddRepositoryProviders();
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
-                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateConcreteDbContext());
+                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateDbContext());
             }
 
             return new EFCoreSelector(builder, typeof(TDbContext));
+        }
+
+        public EFCoreSelector UseDbContext<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDbContextFactory>()
+            where TDbContext : NOFDbContext
+            where TDbContextFactory : NOFDbContextFactory<TDbContext>
+        {
+            var selector = builder.UseDbContext<TDbContext>();
+            if (typeof(TDbContextFactory) == typeof(NOFDbContextFactory<TDbContext>))
+            {
+                return selector;
+            }
+
+            builder.Services.ReplaceOrAdd(ServiceDescriptor.Scoped<TDbContextFactory, TDbContextFactory>());
+            builder.Services.ReplaceOrAddScoped<NOFDbContextFactory<TDbContext>>(sp =>
+                sp.GetRequiredService<TDbContextFactory>());
+            return selector;
         }
 
     }

@@ -151,6 +151,47 @@ public class NOFInfrastructureTests
     }
 
     [Fact]
+    public void UseDbContext_ShouldRegisterTenantAwareTypedFactory()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddNOFInfrastructure();
+        builder.UseDbContext<NOFDbContext>();
+
+        using var provider = BuildServiceProvider(builder);
+        using var scope = provider.CreateScope();
+
+        var tenantFactory = scope.ServiceProvider.GetRequiredService<ITenantDbContextFactory<NOFDbContext>>();
+        var efFactory = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<NOFDbContext>>();
+
+        Assert.Same(tenantFactory, efFactory);
+    }
+
+    [Fact]
+    public void UseDbContext_WithCustomFactory_ShouldDispatchThroughOverriddenFactory()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddNOFInfrastructure();
+        builder.UseDbContext<NOFDbContext, OverriddenDbContextFactory>();
+
+        using var provider = BuildServiceProvider(builder);
+        using var scope = provider.CreateScope();
+
+        var customFactory = scope.ServiceProvider.GetRequiredService<OverriddenDbContextFactory>();
+        var baseFactory = scope.ServiceProvider.GetRequiredService<NOFDbContextFactory<NOFDbContext>>();
+        var tenantFactory = scope.ServiceProvider.GetRequiredService<ITenantDbContextFactory<NOFDbContext>>();
+        var efFactory = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<NOFDbContext>>();
+        var nofFactory = scope.ServiceProvider.GetRequiredService<NOF.Application.IDbContextFactory>();
+
+        Assert.Same(customFactory, baseFactory);
+        Assert.Same(customFactory, tenantFactory);
+        Assert.Same(customFactory, efFactory);
+        Assert.Same(customFactory, nofFactory);
+
+        using var dbContext = tenantFactory.CreateDbContext("tenant-a");
+        Assert.Equal("tenant-a", customFactory.LastTenantId);
+    }
+
+    [Fact]
     public void AddNOFInfrastructure_ShouldValidateSnowflakeOptions()
     {
         var builder = new TestServiceRegistrationContext();
@@ -320,6 +361,23 @@ public class NOFInfrastructureTests
         private long _current = 1000;
 
         public long NextId() => Interlocked.Increment(ref _current);
+    }
+
+    private sealed class OverriddenDbContextFactory : NOFDbContextFactory<NOFDbContext>
+    {
+        public OverriddenDbContextFactory(IServiceProvider serviceProvider)
+            : base(serviceProvider)
+        {
+        }
+
+        public string? LastTenantId { get; private set; }
+
+        public override NOFDbContext CreateDbContext(string tenantId)
+        {
+            LastTenantId = tenantId;
+            return new NOFDbContext(
+                new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<NOFDbContext>().Options);
+        }
     }
 
     private static ServiceProvider BuildServiceProvider(TestServiceRegistrationContext builder)

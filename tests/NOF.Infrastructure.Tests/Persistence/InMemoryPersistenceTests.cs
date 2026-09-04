@@ -169,6 +169,34 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public void TenantDbContextFactory_ShouldCreateContextForExplicitNormalizedTenant()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
+        builder.AddNOFHosting();
+        builder.AddNOFInfrastructure();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<TestDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant),
+            $"nof-explicit-tenant-{Guid.NewGuid():N}");
+
+        using var services = BuildServiceProvider(builder);
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+
+        var factory = scope.ServiceProvider.GetRequiredService<ITenantDbContextFactory<TestDbContext>>();
+        using var dbContext = factory.CreateDbContext(" tenanta ");
+
+        Assert.Equal("tenanta", dbContext.CurrentTenantId);
+        Assert.Contains("-tenanta", dbContext.Database.GetConnectionString(), StringComparison.Ordinal);
+        Assert.Equal(
+            NOFAbstractionConstants.Tenant.HostId,
+            scope.ServiceProvider.GetRequiredService<ICurrentTenant>().TenantId);
+    }
+
+    [Fact]
     public async Task AddMemoryInfrastructure_NonGeneric_ShouldRegisterDefaultDbContext()
     {
         var builder = new TestServiceRegistrationContext();

@@ -135,6 +135,11 @@ Available configuration methods:
 
 The resolver receives the normalized tenant identifier, concrete `DbContext` type, tenant mode, fallback template, and scoped services. Use it for tenant catalogs, secret stores, or shard maps; the template remains the convenient static default.
 
+`MigrateOnInitialize()` migrates the context resolved during host initialization; it cannot
+discover application-owned tenant databases. A custom deployment migrator can resolve
+`ITenantDbContextFactory<TDbContext>` from a scope and call
+`MigrateAsync(tenantId, cancellationToken)` for each tenant.
+
 ## SQLite
 
 For SQLite, provide the provider configuration via `WithOptions(...)`:

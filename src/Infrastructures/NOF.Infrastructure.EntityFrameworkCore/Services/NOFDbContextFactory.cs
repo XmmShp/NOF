@@ -11,25 +11,39 @@ using System.Reflection;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
 
-internal sealed class TypedDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>(NOFDbContextFactory<TDbContext> dbContextFactory) : IDbContextFactory<TDbContext>
-    where TDbContext : NOFDbContext
-{
-    public TDbContext CreateDbContext()
-        => dbContextFactory.CreateConcreteDbContext();
-}
-
-internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext> : IDbContextFactory
+/// <summary>
+/// Creates tenant-aware Entity Framework Core database contexts for NOF persistence.
+/// </summary>
+/// <typeparam name="TDbContext">The concrete NOF database context type.</typeparam>
+public class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties)] TDbContext>
+    : ITenantDbContextFactory<TDbContext>, IDbContextFactory
     where TDbContext : NOFDbContext
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> MigrationLocks = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, byte> MigratedContexts = new(StringComparer.Ordinal);
 
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ICurrentTenant _currentTenant;
-    private readonly DbContextConfigurationOptions _dbContextConfigurationOptions;
-    private readonly IEnumerable<IDbContextModelCreatingContributor> _modelCreatingContributors;
-    private readonly ILogger<NOFDbContextFactory<TDbContext>> _logger;
+    /// <summary>
+    /// Initializes a derived tenant-aware database context factory from its scoped service provider.
+    /// </summary>
+    /// <param name="serviceProvider">The scoped service provider used to resolve factory dependencies.</param>
+    protected NOFDbContextFactory(IServiceProvider serviceProvider)
+        : this(
+            serviceProvider,
+            serviceProvider.GetRequiredService<ICurrentTenant>(),
+            serviceProvider.GetRequiredService<IOptions<DbContextConfigurationOptions>>(),
+            serviceProvider.GetServices<IDbContextModelCreatingContributor>(),
+            serviceProvider.GetRequiredService<ILogger<NOFDbContextFactory<TDbContext>>>())
+    {
+    }
 
+    /// <summary>
+    /// Initializes a tenant-aware database context factory.
+    /// </summary>
+    /// <param name="serviceProvider">The scoped service provider used to construct contexts.</param>
+    /// <param name="currentTenant">The current tenant accessor.</param>
+    /// <param name="dbContextConfigurationOptions">The configured database context options.</param>
+    /// <param name="modelCreatingContributors">The registered model contributors.</param>
+    /// <param name="logger">The factory logger.</param>
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
         ICurrentTenant currentTenant,
@@ -37,23 +51,51 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
         IEnumerable<IDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
-        _serviceProvider = serviceProvider;
-        _currentTenant = currentTenant;
-        _dbContextConfigurationOptions = dbContextConfigurationOptions.Value;
-        _modelCreatingContributors = modelCreatingContributors;
-        _logger = logger;
+        ServiceProvider = serviceProvider;
+        CurrentTenant = currentTenant;
+        ConfigurationOptions = dbContextConfigurationOptions.Value;
+        ModelCreatingContributors = modelCreatingContributors;
+        Logger = logger;
     }
 
-    public IDbContext CreateDbContext()
-        => new EfCoreDbContextAdapter(CreateConcreteDbContext());
+    /// <summary>
+    /// Gets the scoped service provider used to construct contexts.
+    /// </summary>
+    protected IServiceProvider ServiceProvider { get; }
 
-    public IDbContext CreateDbContext(string tenantId)
-        => new EfCoreDbContextAdapter(CreateConcreteDbContext(tenantId));
+    /// <summary>
+    /// Gets the current tenant accessor.
+    /// </summary>
+    protected ICurrentTenant CurrentTenant { get; }
 
-    internal TDbContext CreateConcreteDbContext()
-        => CreateConcreteDbContext(TenantId.Normalize(_currentTenant.TenantId));
+    /// <summary>
+    /// Gets the configured database context options.
+    /// </summary>
+    protected DbContextConfigurationOptions ConfigurationOptions { get; }
 
-    internal TDbContext CreateConcreteDbContext(string tenantId)
+    /// <summary>
+    /// Gets the model contributors applied to created contexts.
+    /// </summary>
+    protected IEnumerable<IDbContextModelCreatingContributor> ModelCreatingContributors { get; }
+
+    /// <summary>
+    /// Gets the factory logger.
+    /// </summary>
+    protected ILogger<NOFDbContextFactory<TDbContext>> Logger { get; }
+
+    /// <summary>
+    /// Creates a strongly typed database context for the current tenant.
+    /// </summary>
+    /// <returns>A database context owned by the caller.</returns>
+    public virtual TDbContext CreateDbContext()
+        => CreateDbContext(TenantId.Normalize(CurrentTenant.TenantId));
+
+    /// <summary>
+    /// Creates a strongly typed database context for an explicit tenant.
+    /// </summary>
+    /// <param name="tenantId">The tenant whose connection should be resolved.</param>
+    /// <returns>A database context owned by the caller.</returns>
+    public virtual TDbContext CreateDbContext(string tenantId)
     {
         tenantId = TenantId.Normalize(tenantId);
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
@@ -61,33 +103,33 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
         var extension = new NOFTenantDbContextOptionsExtension
         {
             TenantId = tenantId,
-            TenantMode = _dbContextConfigurationOptions.TenantMode,
-            SoftDeleteEnabled = _dbContextConfigurationOptions.SoftDeleteEnabled
+            TenantMode = ConfigurationOptions.TenantMode,
+            SoftDeleteEnabled = ConfigurationOptions.SoftDeleteEnabled
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
 
         var modelCreatingExtension = new NOFModelCreatingDbContextOptionsExtension
         {
-            Contributors = [.. _modelCreatingContributors]
+            Contributors = [.. ModelCreatingContributors]
         };
         ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(modelCreatingExtension);
 
         var resolutionContext = new DbContextConnectionStringResolutionContext(
-            _serviceProvider,
+            ServiceProvider,
             typeof(TDbContext),
             tenantId,
-            _dbContextConfigurationOptions.TenantMode,
-            _dbContextConfigurationOptions.ConnectionStringTemplate);
-        var resolver = _dbContextConfigurationOptions.ConnectionStringResolver
+            ConfigurationOptions.TenantMode,
+            ConfigurationOptions.ConnectionStringTemplate);
+        var resolver = ConfigurationOptions.ConnectionStringResolver
             ?? throw new InvalidOperationException("The database context connection-string resolver is not configured.");
         var connectionString = resolver(resolutionContext)
             ?? throw new InvalidOperationException(
                 $"The connection-string resolver returned null for DbContext '{typeof(TDbContext).FullName}' and tenant '{tenantId}'.");
-        _dbContextConfigurationOptions.Configure(optionsBuilder, connectionString);
+        ConfigurationOptions.Configure(optionsBuilder, connectionString);
         optionsBuilder.ReplaceService<IModelCustomizer, NOFModelCustomizer>();
         optionsBuilder.ReplaceService<IValueConverterSelector, ValueObjectValueConverterSelector>();
 
-        var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(_serviceProvider, optionsBuilder.Options);
+        var dbContext = ActivatorUtilities.CreateInstance<TDbContext>(ServiceProvider, optionsBuilder.Options);
         EnsureSqliteInMemoryConnectionIsKeptAlive(dbContext);
 
         var contextType = string.IsNullOrWhiteSpace(tenantId) ? "Host" : "Tenant";
@@ -100,9 +142,15 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
             }
         }
 
-        _logger.LogDebug("Created {DbContextType} for {ContextType}", typeof(TDbContext).Name, contextType);
+        Logger.LogDebug("Created {DbContextType} for {ContextType}", typeof(TDbContext).Name, contextType);
         return dbContext;
     }
+
+    IDbContext IDbContextFactory.CreateDbContext()
+        => new EfCoreDbContextAdapter(CreateDbContext());
+
+    IDbContext IDbContextFactory.CreateDbContext(string tenantId)
+        => new EfCoreDbContextAdapter(CreateDbContext(tenantId));
 
     private void EnsureSqliteSchemaInitialized(TDbContext dbContext, string contextType)
     {
@@ -131,7 +179,7 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
                 dbContext.Database.EnsureCreated();
             }
             MigratedContexts.TryAdd(key, 0);
-            _logger.LogDebug("Initialized SQLite schema for {ContextType}", contextType);
+            Logger.LogDebug("Initialized SQLite schema for {ContextType}", contextType);
         }
         finally
         {
@@ -170,7 +218,7 @@ internal sealed class NOFDbContextFactory<[DynamicallyAccessedMembers(Dynamicall
             return;
         }
 
-        var keeper = _serviceProvider.GetService<SqliteInMemoryConnectionKeeper>();
+        var keeper = ServiceProvider.GetService<SqliteInMemoryConnectionKeeper>();
         keeper?.EnsureConnection(connectionString);
     }
 }

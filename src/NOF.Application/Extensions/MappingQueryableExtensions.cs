@@ -7,29 +7,30 @@ namespace System.Linq;
 /// </summary>
 public static class MappingQueryableExtensions
 {
-    /// <summary>
-    /// Applies the ambient mapper's expression as the query's projection.
-    /// Filtering, ordering, and paging should be composed before this call.
-    /// </summary>
-    public static IQueryable<TDestination> ProjectTo<TDestination>(
-        this IQueryable source,
-        string? name = null)
+    extension(IQueryable source)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        return Mapper.Current.ProjectTo<TDestination>(source, name);
-    }
+        /// <summary>
+        /// Applies the ambient mapper's expression as the query's projection.
+        /// Filtering, ordering, and paging should be composed before this call.
+        /// </summary>
+        public IQueryable<TDestination> ProjectTo<TDestination>(
+            string? name = null)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            return Mapper.Current.ProjectTo<TDestination>(source, name);
+        }
 
-    /// <summary>
-    /// Applies the provided mapper's expression as the query's projection.
-    /// </summary>
-    public static IQueryable<TDestination> ProjectTo<TDestination>(
-        this IQueryable source,
-        IMapper mapper,
-        string? name = null)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(mapper);
+        /// <summary>
+        /// Applies the provided mapper's expression as the query's projection.
+        /// </summary>
+        public IQueryable<TDestination> ProjectTo<TDestination>(
+            IMapper mapper,
+            string? name = null)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(mapper);
 
-        return mapper.ProjectTo<TDestination>(source, name);
+            return mapper.ProjectTo<TDestination>(source, name);
+        }
     }
 }
