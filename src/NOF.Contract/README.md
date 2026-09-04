@@ -129,7 +129,7 @@ No HTTP client is generated for a memory-only contract. Each server transport de
 
 ## Context
 
-Use `Context` for explicit per-call metadata. Header snapshots may be copied into `Context.Items` by transport/infrastructure components.
+Use `Context` for explicit per-call metadata. Header snapshots may be copied into `Context.Items` by transport/infrastructure components. String item keys use ordinal, case-insensitive comparison to preserve HTTP header semantics; non-string keys retain their default equality behavior.
 
 Runtime outbound authentication directives are provided by `NOF.Application`, not `NOF.Contract`.
 

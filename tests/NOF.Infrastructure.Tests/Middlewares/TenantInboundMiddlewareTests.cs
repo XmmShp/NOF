@@ -57,6 +57,33 @@ public class TenantInboundMiddlewareTests
         }
     }
 
+    [Fact]
+    public async Task InvokeAsync_WithLowercaseIncomingTenantHeader_ShouldUseIncomingTenantHeader()
+    {
+        var currentTenant = new CurrentTenant();
+        using var previousTenantScope = currentTenant.PushTenant("previous");
+        var middleware = new TenantInboundMiddleware(currentTenant);
+        var message = new object();
+        var inboundContext = (CommandInboundContext)CreateContext(message.GetType())
+            .CopyHeadersFrom([
+                new KeyValuePair<string, string?>("x-tenant-id", "tenanta")
+            ]);
+        var tenantDuringNext = string.Empty;
+
+        await middleware.InvokeAsync(inboundContext, message, CaptureNextContext, default);
+        Assert.Equal("tenanta", tenantDuringNext);
+        Assert.Equal("previous", currentTenant.TenantId);
+
+        ValueTask CaptureNextContext(CommandInboundContext context, object forwardedMessage, CancellationToken cancellationToken)
+        {
+            _ = context;
+            _ = forwardedMessage;
+            _ = cancellationToken;
+            tenantDuringNext = currentTenant.TenantId;
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private static CommandInboundContext CreateContext(Type messageType)
     {
         return new CommandInboundContext

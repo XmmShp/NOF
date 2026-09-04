@@ -19,6 +19,18 @@ public class ContextExtensionsTests
     }
 
     [Fact]
+    public void CopyHeadersFrom_ShouldAllowCaseInsensitiveHeaderLookup()
+    {
+        var context = Context.Empty.CopyHeadersFrom(
+        [
+            new KeyValuePair<string, string?>("x-tenant-id", "tenant-a")
+        ]);
+
+        Assert.True(context.TryGetItem("X-Tenant-Id", out var tenantId));
+        Assert.Equal("tenant-a", tenantId);
+    }
+
+    [Fact]
     public void WithItems_ShouldMergeWithExistingItems()
     {
         var context = Context.Empty
