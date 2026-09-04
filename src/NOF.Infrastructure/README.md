@@ -29,6 +29,7 @@ dotnet add package NOF.Infrastructure
 This package includes:
 
 - in-memory cache (`ICacheService` + `MemoryCacheServiceRider`)
+- in-memory object storage (`IObjectStorage` + `MemoryObjectStorageRider`)
 - in-memory backplane (`IBackplane` + `MemoryBackplane`)
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-memory persistence for tests/development (`services.AddInMemoryPersistence()`)
@@ -47,6 +48,24 @@ The default backplane implementation is also host-local:
 
 - subscriptions live in `MemoryBackplaneState`
 - published messages are delivered only to subscribers inside the same NOF host process
+
+The default object storage implementation is intended for development and tests. Its objects live in a host-local `MemoryObjectStorageRiderState`. Replace `IObjectStorageRider` in a provider package to connect a durable backend while keeping application code unchanged. For AWS S3 and S3-compatible services, reference `NOF.Infrastructure.AmazonS3`:
+
+```csharp
+builder.Services.AddAmazonS3ObjectStorage(options =>
+{
+    options.Region = "ap-southeast-1";
+});
+```
+
+Object keys can be isolated by tenant through `ObjectStorageOptions.KeyPrefix`:
+
+```csharp
+builder.Services.Configure<ObjectStorageOptions>(options =>
+    options.KeyPrefix = "tenants/{tenantId}/");
+```
+
+`IObjectStorage.IgnoreKeyPrefix()` provides an explicit administrative view over physical keys when cross-tenant access is required.
 
 ## Local RPC Clients
 

@@ -9,7 +9,7 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsPackable>true</IsPackable>
     <PackageId>NOF.Application</PackageId>
-    <Description>Application layer for the NOF Framework — request/command/notification handlers, state machines, caching, and unit of work.</Description>
+    <Description>Application layer for the NOF Framework — handlers, state machines, caching, object storage, and unit of work.</Description>
   </PropertyGroup>
 
   <ItemGroup>

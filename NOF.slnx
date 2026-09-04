@@ -49,6 +49,7 @@
     <Project Path="src/Extensions/NOF.Hosting.AspNetCore.Extension.OidcServer/NOF.Hosting.AspNetCore.Extension.OidcServer.csproj" />
   </Folder>
   <Folder Name="/src/Infrastructures/">
+    <Project Path="src/Infrastructures/NOF.Infrastructure.AmazonS3/NOF.Infrastructure.AmazonS3.csproj" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore/NOF.Infrastructure.EntityFrameworkCore.csproj" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator/NOF.Infrastructure.EntityFrameworkCore.SourceGenerator.csproj" />
     <Project Path="src/Infrastructures/NOF.Infrastructure.NHibernate/NOF.Infrastructure.NHibernate.csproj" />
@@ -67,6 +68,7 @@
     <Project Path="tests/NOF.UI.Tests/NOF.UI.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Infrastructures/">
+    <Project Path="tests/Infrastructures/NOF.Infrastructure.AmazonS3.Tests/NOF.Infrastructure.AmazonS3.Tests.csproj" />
     <Project Path="tests/Infrastructures/NOF.Infrastructure.RabbitMQ.Tests/NOF.Infrastructure.RabbitMQ.Tests.csproj" />
   </Folder>
 </Solution>

@@ -33,6 +33,8 @@ public class NOFInfrastructureTests
         Assert.Equal("InMemoryDbContext", scope.ServiceProvider.GetRequiredService<IDbContext>().GetType().Name);
         Assert.IsType<CacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
         Assert.IsType<MemoryCacheServiceRider>(scope.ServiceProvider.GetRequiredService<ICacheServiceRider>());
+        Assert.IsType<ObjectStorageService>(scope.ServiceProvider.GetRequiredService<IObjectStorage>());
+        Assert.IsType<MemoryObjectStorageRider>(scope.ServiceProvider.GetRequiredService<IObjectStorageRider>());
     }
 
     [Fact]

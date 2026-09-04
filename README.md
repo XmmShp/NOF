@@ -13,6 +13,7 @@
 - **Transactional Outbox** - reliable message delivery with inbox/outbox pattern built into EF Core infrastructure
 - **State Machines** - declarative, event-driven state machine builder with persistent context
 - **Multi-Tenancy** - tenant-aware persistence and deployment-aware runtime defaults
+- **Object Storage** - provider-neutral streaming storage with tenant-aware key isolation
 - **Modular Pipeline** - dependency-aware registration and initialization steps
 - **OpenTelemetry** - built-in tracing, metrics, and logging integration
 
@@ -31,9 +32,10 @@
 | [`NOF.Abstraction`](https://www.nuget.org/packages/NOF.Abstraction)                                                               | Shared annotations, user context, ambient headers, and in-memory event primitives                                       |
 | [`NOF.Domain`](https://www.nuget.org/packages/NOF.Domain)                                                                         | Domain primitives - value objects, failures, domain exceptions, and ID generation                                       |
 | [`NOF.Contract`](https://www.nuget.org/packages/NOF.Contract)                                                                     | Contract layer - RPC contracts, request/response models, `Result<T>`, `StreamingResult<T>`, `Optional<T>`, HTTP endpoint attributes |
-| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application)                                                               | Application layer - RPC servers, handlers, state machines, mapper abstractions, and caching contracts                   |
+| [`NOF.Application`](https://www.nuget.org/packages/NOF.Application)                                                               | Application layer - RPC servers, handlers, state machines, mapping, caching, and object-storage contracts              |
 | [`NOF.Hosting`](https://www.nuget.org/packages/NOF.Hosting)                                               | Hosting abstractions - builder contracts, step contracts, dependency ordering, and JWT outbound propagation             |
-| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - builder defaults, EF Core integration, transactional messaging, OpenTelemetry, auth resource server, and runtime wiring |
+| [`NOF.Infrastructure`](https://www.nuget.org/packages/NOF.Infrastructure)                                                         | Core infrastructure - runtime defaults, object storage, transactional messaging, OpenTelemetry, auth resource server, and service wiring |
+| [`NOF.Infrastructure.AmazonS3`](https://www.nuget.org/packages/NOF.Infrastructure.AmazonS3)                                       | AWS S3 and S3-compatible object-storage rider                                                                           |
 | [`NOF.UI`](https://www.nuget.org/packages/NOF.UI)                                                                                 | Reusable UI primitives - authorization components, browser storage, browser info, and Blazor client helpers             |
 | [`NOF.Hosting.AspNetCore`](https://www.nuget.org/packages/NOF.Hosting.AspNetCore)                                                 | ASP.NET Core hosting - middleware, OpenAPI registration, service endpoint mapping, JSON configuration, and SSE streaming |
 | [`NOF.Hosting.BlazorWebAssembly`](https://www.nuget.org/packages/NOF.Hosting.BlazorWebAssembly)                                   | Blazor WebAssembly hosting - host builder integration for browser apps                                                  |

@@ -61,6 +61,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
             builder.Services.TryAddSingleton<CacheServiceLocalLockState>();
             builder.Services.TryAddSingleton<MemoryBackplaneState>();
+            builder.Services.TryAddSingleton<MemoryObjectStorageRiderState>();
             builder.Services.TryAddScoped<ICacheService>(sp => new CacheService(
                 sp.GetRequiredService<ICacheServiceRider>(),
                 sp.GetRequiredService<IObjectSerializer>(),
@@ -69,6 +70,10 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<ICurrentTenant>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
+            builder.Services.TryAddScoped<IObjectStorage>(sp => new ObjectStorageService(
+                sp.GetRequiredService<IObjectStorageRider>(),
+                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ObjectStorageOptions>>(),
+                sp.GetRequiredService<ICurrentTenant>()));
             builder.Services.TryAddSingleton<IBackplane>(sp => new MemoryBackplane(
                 sp.GetRequiredService<MemoryBackplaneState>()));
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxMessageModelCreatingContributor>());
@@ -80,6 +85,7 @@ public static partial class NOFInfrastructureExtensions
 
             #region Options
             builder.Services.AddOptions<CacheServiceOptions>();
+            builder.Services.AddOptions<ObjectStorageOptions>();
             builder.Services.AddOptions<AuthenticationResourceServerOptions>();
             builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()
                 .Validate(static options => options.ApplicationIdBits > 0, "ApplicationIdBits must be greater than zero.")
@@ -142,6 +148,8 @@ public static partial class NOFInfrastructureExtensions
             #region Default Persistence
             builder.Services.TryAddScoped<ICacheServiceRider>(sp => new MemoryCacheServiceRider(
                 sp.GetRequiredService<MemoryCacheServiceRiderState>()));
+            builder.Services.TryAddScoped<IObjectStorageRider>(sp => new MemoryObjectStorageRider(
+                sp.GetRequiredService<MemoryObjectStorageRiderState>()));
             builder.Services.TryAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
             #endregion

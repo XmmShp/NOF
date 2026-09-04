@@ -4,7 +4,7 @@ Application layer package for the [NOF Framework](https://github.com/XmmShp/NOF)
 
 ## Overview
 
-Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, mapping, caching, and persistence contracts.
+Contains the application service abstractions used to implement NOF applications: RPC servers, request handlers, command handlers, notification handlers, mapping, caching, object storage, and persistence contracts.
 
 This package does not define runtime outbound authentication directives.
 
@@ -182,6 +182,32 @@ dotnet add package NOF.Application
 ```
 
 `ICacheService` also implements `IDistributedCache`, so standard distributed cache consumers can resolve either abstraction from NOF cache registrations.
+
+### Object Storage
+
+Application code can use `IObjectStorage` without depending on a cloud SDK. The common surface supports uploads, streaming reads, metadata, existence checks, deletes, server-side copies, and prefix-based enumeration:
+
+```csharp
+await using var content = File.OpenRead("invoice.pdf");
+var stored = await objectStorage.PutAsync(
+    "documents",
+    $"invoices/{invoiceId}.pdf",
+    content,
+    new ObjectStorageWriteOptions { ContentType = "application/pdf" },
+    cancellationToken);
+
+var result = await objectStorage.OpenReadAsync(
+    stored.BucketName,
+    stored.ObjectKey,
+    cancellationToken);
+if (result.HasValue)
+{
+    await using var objectContent = result.Value.Content;
+    // Stream objectContent to the caller or another destination.
+}
+```
+
+The host selects an `IObjectStorageRider`; application handlers continue to depend only on `IObjectStorage`.
 
 ## License
 

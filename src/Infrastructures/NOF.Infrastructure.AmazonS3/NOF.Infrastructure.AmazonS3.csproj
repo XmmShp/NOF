@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <PackageId>NOF.Infrastructure.AmazonS3</PackageId>
+    <Description>AWS S3 and S3-compatible object storage provider for the NOF Framework.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NOF.Infrastructure\NOF.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
