@@ -30,9 +30,9 @@ public sealed class DbContextConfigurationOptions
     public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;
 
     /// <summary>
-    /// Gets or sets whether soft delete is enabled by default.
+    /// Gets or sets whether soft delete is enabled for entity types that do not override it.
     /// </summary>
-    public bool SoftDeleteEnabled { get; set; } = true;
+    public bool SoftDeleteEnabled { get; set; }
 }
 
 /// <summary>

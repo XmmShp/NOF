@@ -568,6 +568,30 @@ public class SqliteInMemoryPersistenceTests
     }
 
     [Fact]
+    public void SoftDelete_ShouldBeDisabledByDefault()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
+        builder.AddNOFHosting();
+        builder.AddNOFInfrastructure();
+        ConfigureSqliteInMemory(
+            builder.UseDbContext<TestDbContext>()
+                .WithTenantMode(TenantMode.DatabasePerTenant),
+            $"nof-soft-delete-default-{Guid.NewGuid():N}");
+
+        using var services = BuildServiceProvider(builder);
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+        var db = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+
+        var entityType = db.Model.FindEntityType(typeof(TestOrder));
+        Assert.NotNull(entityType);
+        Assert.Null(entityType.FindProperty("__DeletedAtUnixTime"));
+    }
+
+    [Fact]
     public async Task SoftDelete_ShouldAddShadowDeletedAtUnixTimeAndFilterDeletedRows()
     {
         using var services = CreateServiceProvider();

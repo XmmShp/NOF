@@ -138,6 +138,29 @@ public class NOFInfrastructureTests
     }
 
     [Fact]
+    public void AddNOFInfrastructure_ShouldDisableSoftDeleteByDefault()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddNOFInfrastructure();
+
+        using var provider = BuildServiceProvider(builder);
+        var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
+        Assert.False(options.SoftDeleteEnabled);
+    }
+
+    [Fact]
+    public void UseDbContext_WithSoftDelete_ShouldEnableSoftDelete()
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.AddNOFInfrastructure();
+        builder.UseDbContext<NOFDbContext>().WithSoftDelete(true);
+
+        using var provider = BuildServiceProvider(builder);
+        var options = provider.GetRequiredService<IOptions<DbContextConfigurationOptions>>().Value;
+        Assert.True(options.SoftDeleteEnabled);
+    }
+
+    [Fact]
     public void UseDbContext_MigrateOnInitialize_ShouldRegisterDatabaseMigrationStep()
     {
         var builder = new TestServiceRegistrationContext();

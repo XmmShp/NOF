@@ -45,6 +45,7 @@ builder.Services.AddRabbitMQ(options =>
 
 builder.UseDbContext<ConfigurationDbContext>()
     .WithTenantMode(TenantMode.DatabasePerTenant)
+    .WithSoftDelete(true)
     .WithConnectionString(builder.Configuration.GetConnectionString("postgres")
         ?? throw new InvalidOperationException("Connection string 'postgres' not found in configuration."))
     .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))

@@ -136,13 +136,13 @@ routing differs; derive the factory when the context creation lifecycle itself m
 
 ## Soft delete
 
-Soft delete is enabled for all supported root entity types by default. Use `WithSoftDelete` to change the default for a `DbContext`, and `HasSoftDelete` in the EF model to override it for an individual root entity type:
+Soft delete is disabled by default. Enable it explicitly for every supported root entity type in a `DbContext` with `WithSoftDelete(true)`, or opt in an individual root entity type with `HasSoftDelete()`:
 
 ```csharp
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 builder.UseDbContext<AppDbContext>()
-    .WithSoftDelete(false);
+    .WithSoftDelete(true);
 
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
@@ -155,4 +155,8 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 }
 ```
 
-The entity-level setting takes precedence over the `DbContext` default. Call `HasSoftDelete(false)` to opt a root entity type out when the default is enabled. Owned entity types inherit the lifecycle of their owner and cannot be configured independently.
+The entity-level setting takes precedence over the `DbContext` setting. Call `HasSoftDelete(false)` to opt a root entity type out when soft delete is enabled for the context. Owned entity types inherit the lifecycle of their owner and cannot be configured independently.
+
+Applications upgrading from a version where soft delete was enabled by default should add
+`WithSoftDelete(true)` before generating or applying further migrations if they intend to preserve
+their existing delete columns, indexes, filters, and behavior.

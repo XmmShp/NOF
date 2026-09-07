@@ -12,7 +12,7 @@ internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
     public string TenantId { get; set; } = NOFAbstractionConstants.Tenant.HostId;
     public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;
-    public bool SoftDeleteEnabled { get; set; } = true;
+    public bool SoftDeleteEnabled { get; set; }
 
     public void ApplyServices(IServiceCollection services)
     {

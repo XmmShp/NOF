@@ -34,7 +34,7 @@ tenant database. Their schemas are identical, so tenant databases must accept ta
 host-level features as a potentially empty schema superset. Inbox and outbox tables can contain
 tenant-scoped transactional messages and are not guaranteed to be empty.
 
-`NOFDbContext` applies the registered model contributors for inbox, outbox, and ordered-message entities. It also supplies value-object conversion/length conventions, multi-tenancy, and soft delete. Soft delete is enabled by default; use `.WithSoftDelete(false)` for a context-wide opt-out or `HasSoftDelete(...)` in EF model configuration for an entity override.
+`NOFDbContext` applies the registered model contributors for inbox, outbox, and ordered-message entities. It also supplies value-object conversion/length conventions, multi-tenancy, and opt-in soft delete. Soft delete is disabled by default; use `.WithSoftDelete(true)` for a context-wide opt-in or `HasSoftDelete()` in EF model configuration for an entity-level opt-in.
 
 The host may inject EF `DbContext` or the concrete context, but application handlers should use `IDbContext` / `IRepository<T>` so they remain provider-neutral.
 
