@@ -29,6 +29,11 @@ builder.UseDbContext<AppDbContext>()
 `MigrateOnInitialize()` migrates the context resolved during host initialization. It does not
 enumerate application-defined tenant databases in `DatabasePerTenant` mode.
 
+`DatabasePerTenant` deliberately uses the same model and migration chain for the host and every
+tenant database. Their schemas are identical, so tenant databases must accept tables used only by
+host-level features as a potentially empty schema superset. Inbox and outbox tables can contain
+tenant-scoped transactional messages and are not guaranteed to be empty.
+
 `NOFDbContext` applies the registered model contributors for inbox, outbox, and ordered-message entities. It also supplies value-object conversion/length conventions, multi-tenancy, and soft delete. Soft delete is enabled by default; use `.WithSoftDelete(false)` for a context-wide opt-out or `HasSoftDelete(...)` in EF model configuration for an entity override.
 
 The host may inject EF `DbContext` or the concrete context, but application handlers should use `IDbContext` / `IRepository<T>` so they remain provider-neutral.

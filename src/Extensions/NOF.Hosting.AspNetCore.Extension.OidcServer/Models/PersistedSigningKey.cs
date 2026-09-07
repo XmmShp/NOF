@@ -33,7 +33,6 @@ public sealed class PersistedSigningKeyModelCreatingContributor : IDbContextMode
     {
         modelBuilder.Entity<PersistedSigningKey>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(PersistedSigningKey));
             entity.HasKey(e => e.Kid);
             entity.HasIndex(e => new { e.Status, e.CreatedAtUtc });

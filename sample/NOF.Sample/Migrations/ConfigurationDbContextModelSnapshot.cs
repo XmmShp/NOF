@@ -116,8 +116,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("__DeletedAtUnixTime");
 
                     b.ToTable("OAuthClient", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Hosting.AspNetCore.Extension.OidcServer.PersistedSigningKey", b =>
@@ -160,8 +158,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("Status", "InvalidatedAtUtc");
 
                     b.ToTable("PersistedSigningKey", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Hosting.AspNetCore.Extension.OidcServer.RevokedRefreshToken", b =>
@@ -185,8 +181,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("__DeletedAtUnixTime");
 
                     b.ToTable("RevokedRefreshToken", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFInboxMessage", b =>
@@ -263,8 +257,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("Route", "OrderKey", "Sequence");
 
                     b.ToTable("NOFInboxMessage", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFInboxOrderState", b =>
@@ -314,8 +306,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("ClaimedBy", "ClaimExpiresAtUtc");
 
                     b.ToTable("NOFInboxOrderState", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFOutboxMessage", b =>
@@ -399,8 +389,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("Status", "CreatedAtUtc");
 
                     b.ToTable("NOFOutboxMessage", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Infrastructure.NOFOutboxOrderState", b =>
@@ -430,8 +418,6 @@ namespace NOF.Sample.Migrations
                     b.HasIndex("__DeletedAtUnixTime");
 
                     b.ToTable("NOFOutboxOrderState", (string)null);
-
-                    b.HasAnnotation("NOF:HostOnly", true);
                 });
 
             modelBuilder.Entity("NOF.Sample.Application.Entities.ConfigNodeChildren", b =>

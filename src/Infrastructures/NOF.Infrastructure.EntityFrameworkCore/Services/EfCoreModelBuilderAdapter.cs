@@ -30,12 +30,6 @@ internal sealed class EfCoreEntityTypeBuilderAdapter<TEntity>(EntityTypeBuilder<
         return this;
     }
 
-    public IDbEntityTypeBuilder<TEntity> IsHostOnly()
-    {
-        _entityBuilder.IsHostOnly();
-        return this;
-    }
-
     public IDbEntityTypeBuilder<TEntity> HasKey<TProperty>(Expression<Func<TEntity, TProperty>> keyExpression)
     {
         _entityBuilder.HasKey(ToObjectExpression(keyExpression));

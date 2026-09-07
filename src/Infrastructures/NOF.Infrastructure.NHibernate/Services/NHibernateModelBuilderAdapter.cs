@@ -30,12 +30,6 @@ internal sealed class NHibernateEntityTypeBuilderAdapter<TEntity>(NHibernateEnti
         return this;
     }
 
-    public IDbEntityTypeBuilder<TEntity> IsHostOnly()
-    {
-        _definition.IsHostOnly = true;
-        return this;
-    }
-
     public IDbEntityTypeBuilder<TEntity> HasKey<TProperty>(Expression<Func<TEntity, TProperty>> keyExpression)
     {
         _definition.KeyPropertyNames = [.. ExtractPropertyNames(keyExpression)];
@@ -132,8 +126,6 @@ internal sealed class NHibernateEntityDefinition(Type entityType)
     public Type EntityType { get; } = entityType;
 
     public string? TableName { get; set; }
-
-    public bool IsHostOnly { get; set; }
 
     public List<string> KeyPropertyNames { get; set; } = [];
 

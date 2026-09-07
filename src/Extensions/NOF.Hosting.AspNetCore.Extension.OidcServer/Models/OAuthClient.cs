@@ -49,7 +49,6 @@ public sealed class OAuthClientModelCreatingContributor : IDbContextModelCreatin
     {
         modelBuilder.Entity<OAuthClient>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(OAuthClient));
             entity.HasKey(e => e.ClientId);
             entity.HasIndex(e => e.IsEnabled);

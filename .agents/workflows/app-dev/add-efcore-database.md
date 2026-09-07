@@ -57,7 +57,7 @@ builder.UseDbContext<AppDbContext>()
     .MigrateOnInitialize();
 ```
 
-For database-per-tenant mode, the connection string may contain `{tenantId}`. Shared-database mode adds tenant shadow state and filters. Soft delete is enabled by default and can be overridden per root entity with `HasSoftDelete(...)`.
+For database-per-tenant mode, the connection string may contain `{tenantId}`. The host database and every tenant database deliberately use the same model, migration chain, and schema. Tenant databases must accept tables used only by host-level features as a potentially empty schema superset; inbox and outbox tables may still contain tenant-scoped messages. Shared-database mode adds tenant shadow state and filters to every supported root entity. Soft delete is enabled by default and can be overridden per root entity with `HasSoftDelete(...)`.
 
 When a static template is insufficient, use a resolver:
 

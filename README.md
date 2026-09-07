@@ -82,6 +82,8 @@ app.MapOpenApi();
 await app.RunAsync();
 ```
 
+In `DatabasePerTenant` mode, NOF deliberately uses one model and one migration chain for both the host database and every tenant database. They therefore have identical schemas. Tables used only by host-level features are still present in tenant databases and may remain empty; accepting this schema superset is the tradeoff for simpler model construction, migrations, deployment orchestration, and persistence-provider behavior.
+
 ## Streaming RPC
 
 NOF RPC contracts can expose server-streaming operations by returning `StreamingResult<T>` from the contract surface. Generated clients normalize those methods to `Task<StreamingResult<T>>`.

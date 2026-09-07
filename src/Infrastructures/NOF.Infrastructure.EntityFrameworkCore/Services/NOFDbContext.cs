@@ -184,11 +184,6 @@ public class NOFDbContext : DbContext
                 continue;
             }
 
-            if (TenantModelHelper.IsHostOnlyEntity(entry.Metadata))
-            {
-                continue;
-            }
-
             var tenantProperty = entry.Properties.FirstOrDefault(property => property.Metadata.Name == TenantModelHelper.TenantIdPropertyName);
             if (tenantProperty is null)
             {

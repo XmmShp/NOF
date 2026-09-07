@@ -19,6 +19,11 @@ Current limitations:
 - `AsNoTracking()` currently returns the same LINQ query shape without a dedicated no-tracking session
 - schema management is limited to NHibernate `SchemaUpdate`
 
+In `DatabasePerTenant` mode, the host database and all tenant databases use the same model and
+therefore the same schema. Tenant databases must accept tables used only by host-level features as
+an intentional, potentially empty schema superset. This avoids separate host and tenant model,
+schema-update, provider, and deployment paths.
+
 ## Usage
 
 ```csharp

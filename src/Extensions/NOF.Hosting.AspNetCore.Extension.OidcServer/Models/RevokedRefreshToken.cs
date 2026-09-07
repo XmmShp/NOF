@@ -15,7 +15,6 @@ public sealed class RevokedRefreshTokenModelCreatingContributor : IDbContextMode
     {
         modelBuilder.Entity<RevokedRefreshToken>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(RevokedRefreshToken));
             entity.HasKey(e => e.TokenId);
             entity.HasIndex(e => e.ExpiresAtUtc);

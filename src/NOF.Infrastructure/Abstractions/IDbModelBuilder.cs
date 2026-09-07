@@ -16,8 +16,6 @@ public interface IDbEntityTypeBuilder<TEntity>
 {
     IDbEntityTypeBuilder<TEntity> ToTable(string name);
 
-    IDbEntityTypeBuilder<TEntity> IsHostOnly();
-
     IDbEntityTypeBuilder<TEntity> HasKey<TProperty>(Expression<Func<TEntity, TProperty>> keyExpression);
 
     IDbEntityTypeBuilder<TEntity> HasKey(params string[] propertyNames);

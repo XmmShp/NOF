@@ -6,7 +6,6 @@ public sealed class NOFInboxMessageModelCreatingContributor : IDbContextModelCre
     {
         modelBuilder.Entity<NOFInboxMessage>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(NOFInboxMessage));
             entity.HasKey(nameof(NOFInboxMessage.Id), nameof(NOFInboxMessage.Route));
             entity.HasIndex(nameof(NOFInboxMessage.Status), nameof(NOFInboxMessage.CreatedAtUtc));
@@ -29,7 +28,6 @@ public sealed class NOFInboxOrderStateModelCreatingContributor : IDbContextModel
     {
         modelBuilder.Entity<NOFInboxOrderState>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(NOFInboxOrderState));
             entity.HasKey(nameof(NOFInboxOrderState.Route), nameof(NOFInboxOrderState.OrderKey));
             entity.Property(e => e.Route).HasMaxLength(512).IsRequired();
@@ -48,7 +46,6 @@ public sealed class NOFOutboxMessageModelCreatingContributor : IDbContextModelCr
     {
         modelBuilder.Entity<NOFOutboxMessage>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(NOFOutboxMessage));
             entity.HasKey(e => e.Id);
             entity.HasIndex(nameof(NOFOutboxMessage.Status), nameof(NOFOutboxMessage.CreatedAtUtc));
@@ -73,7 +70,6 @@ public sealed class NOFOutboxOrderStateModelCreatingContributor : IDbContextMode
     {
         modelBuilder.Entity<NOFOutboxOrderState>(entity =>
         {
-            entity.IsHostOnly();
             entity.ToTable(nameof(NOFOutboxOrderState));
             entity.HasKey(nameof(NOFOutboxOrderState.OrderKey), nameof(NOFOutboxOrderState.Sequence));
             entity.Property(e => e.OrderKey).HasMaxLength(OutboxOrderSequenceAllocator.MaxOrderKeyLength).IsRequired();

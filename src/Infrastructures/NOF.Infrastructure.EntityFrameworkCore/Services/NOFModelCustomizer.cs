@@ -60,17 +60,8 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
                 continue;
             }
 
-            var isHostOnly = TenantModelHelper.IsHostOnlyEntity(entityType);
             if (!useTenantDiscriminator)
             {
-                if (isHostOnly)
-                {
-                    entityType.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
-                }
-                else
-                {
-                    entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
-                }
                 if (shouldConfigureSoftDelete)
                 {
                     ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
@@ -78,19 +69,6 @@ internal sealed class NOFModelCustomizer : ModelCustomizer
 
                 continue;
             }
-
-            if (isHostOnly)
-            {
-                entityType.SetAnnotation(TenantModelHelper.HostOnlyAnnotationName, true);
-                if (shouldConfigureSoftDelete)
-                {
-                    ConfigureSoftDeleteUniqueIndexes(entityType, entityBuilder);
-                }
-
-                continue;
-            }
-
-            entityType.RemoveAnnotation(TenantModelHelper.HostOnlyAnnotationName);
 
             var tenantProperty = entityBuilder.Property<string>(TenantModelHelper.TenantIdPropertyName);
             tenantProperty.HasMaxLength(TenantModelHelper.TenantIdMaxLength);

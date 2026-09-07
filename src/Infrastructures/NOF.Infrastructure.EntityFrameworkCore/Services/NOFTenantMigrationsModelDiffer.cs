@@ -25,9 +25,8 @@ internal sealed class NOFTenantMigrationsModelDiffer : IMigrationsModelDiffer
         }
 
         var tenantScopedTables = target.Tables
-            .Where(table => table.EntityTypeMappings.Any(mapping =>
-                mapping.TypeBase is IReadOnlyEntityType entityType
-                && !TenantModelHelper.IsHostOnlyEntity(entityType)))
+            .Where(table => table.Columns.Any(column =>
+                string.Equals(column.Name, TenantModelHelper.TenantIdPropertyName, StringComparison.OrdinalIgnoreCase)))
             .ToDictionary(
                 table => GetTableKey(table.Schema, table.Name),
                 table => table,

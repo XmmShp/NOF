@@ -40,6 +40,20 @@ builder.UseDbContext<AppDbContext>()
 enumerate application-defined tenant databases in `DatabasePerTenant` mode; use the explicit
 tenant migration API below when those databases must be migrated as part of deployment.
 
+### Database-per-tenant schema policy
+
+NOF uses one `DbContext` model and one migration chain for the host database and every tenant
+database. Their database schemas are therefore identical. Tables that are used only by host-level
+features, such as some OIDC configuration tables, are still created in tenant databases and may
+remain empty. Tenant databases must accept this schema superset.
+
+This is an intentional engineering tradeoff. NOF does not maintain separate host and tenant model
+variants because doing so would substantially increase model caching, migration generation,
+deployment orchestration, provider integration, and testing complexity. Data placement remains a
+runtime responsibility determined by the selected connection and current tenant. Inbox and outbox
+tables are not necessarily empty in tenant databases because tenant-scoped transactional messaging
+may use them.
+
 For lightweight local or test scenarios, call `AddNOFEntityFrameworkCore()` to register the default SQLite in-memory persistence.
 
 ## Dynamic connection resolution
