@@ -12,8 +12,8 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 {
     private readonly AsyncServiceScope _scope;
     private Context _context = Context.Empty;
+    private IDisposable? _contextScope;
     private Activity? _tracingActivity;
-    private IDisposable? _tenantScope;
 
     public NOFTestScope(AsyncServiceScope scope)
     {
@@ -33,9 +33,7 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public NOFTestScope SetTenant(string? tenantId)
     {
-        _tenantScope?.Dispose();
-        _tenantScope = GetRequiredService<IMutableCurrentTenant>().PushTenant(TenantId.Normalize(tenantId));
-        return this;
+        return SetContext(Context.WithTenantId(TenantId.Normalize(tenantId)));
     }
 
     public NOFTestScope SetTracing(string? traceId, string? spanId)
@@ -64,25 +62,24 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
     public NOFTestScope SetContext(Context context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _contextScope?.Dispose();
+        _contextScope = Context.PushCurrent(_context);
         return this;
     }
 
     public NOFTestScope SetContextItem(object key, object? value)
     {
-        _context = Context.WithItem(key, value);
-        return this;
+        return SetContext(Context.WithItem(key, value));
     }
 
     public NOFTestScope SetContextItems(IReadOnlyDictionary<object, object?> items)
     {
-        _context = Context.WithItems(items);
-        return this;
+        return SetContext(Context.WithItems(items));
     }
 
     public NOFTestScope RemoveContextItem(object key)
     {
-        _context = Context.WithoutItem(key);
-        return this;
+        return SetContext(Context.WithoutItem(key));
     }
 
     public NOFTestScope SetUser(string userId, string? name = null, IEnumerable<string>? permissions = null, string authenticationType = "Test")
@@ -140,14 +137,14 @@ public sealed class NOFTestScope : IAsyncDisposable, IDisposable
 
     public void Dispose()
     {
-        _tenantScope?.Dispose();
+        _contextScope?.Dispose();
         _tracingActivity?.Dispose();
         _scope.Dispose();
     }
 
     public ValueTask DisposeAsync()
     {
-        _tenantScope?.Dispose();
+        _contextScope?.Dispose();
         _tracingActivity?.Dispose();
         return _scope.DisposeAsync();
     }

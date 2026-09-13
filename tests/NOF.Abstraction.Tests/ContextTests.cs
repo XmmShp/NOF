@@ -49,4 +49,49 @@ public class ContextTests
         Assert.Equal("second", context[secondKey]);
         Assert.Equal(2, context.Items.Count);
     }
+
+    [Fact]
+    public void TenantId_ShouldBeNormalizedAndDefaultToHost()
+    {
+        Assert.Equal("host", Context.Empty.TenantId);
+        Assert.Equal("tenanta", Context.Empty.WithTenantId(" tenanta ").TenantId);
+    }
+
+    [Fact]
+    public async Task PushCurrent_ShouldFlowAcrossAwaitAndRestorePreviousContext()
+    {
+        var previous = Context.Empty.WithTenantId("previous");
+        var current = Context.Empty.WithTenantId("current");
+
+        using (Context.PushCurrent(previous))
+        {
+            using (Context.PushCurrent(current))
+            {
+                await Task.Yield();
+                Assert.Same(current, Context.Current);
+            }
+
+            Assert.Same(previous, Context.Current);
+        }
+
+        Assert.Same(Context.Empty, Context.Current);
+    }
+
+    [Fact]
+    public async Task PushCurrent_ShouldIsolateParallelAsyncFlows()
+    {
+        var tenantIds = await Task.WhenAll(
+            ObserveTenantAsync("tenanta"),
+            ObserveTenantAsync("tenantb"));
+
+        Assert.Equal(["tenanta", "tenantb"], tenantIds);
+        Assert.Same(Context.Empty, Context.Current);
+
+        static async Task<string> ObserveTenantAsync(string tenantId)
+        {
+            using var _ = Context.PushCurrent(Context.Empty.WithTenantId(tenantId));
+            await Task.Yield();
+            return Context.Current.TenantId;
+        }
+    }
 }

@@ -7,7 +7,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Applies explicitly supported ambient context values to outbound transport headers.
 /// </summary>
-public sealed class TenantHeaderOutboundMiddleware(ICurrentTenant currentTenant) :
+public sealed class TenantHeaderOutboundMiddleware :
     ICommandOutboundMiddleware,
     INotificationOutboundMiddleware,
     IRequestOutboundMiddleware
@@ -41,7 +41,7 @@ public sealed class TenantHeaderOutboundMiddleware(ICurrentTenant currentTenant)
 
     private void ApplyTenantHeader(Context context)
     {
-        var tenantId = TenantId.Normalize(currentTenant.TenantId);
+        var tenantId = TenantId.Normalize(GetTenantId(context));
         if (!string.IsNullOrWhiteSpace(tenantId))
         {
             switch (context)
@@ -58,4 +58,10 @@ public sealed class TenantHeaderOutboundMiddleware(ICurrentTenant currentTenant)
             }
         }
     }
+
+    private static string GetTenantId(Context context)
+        => context.TryGetItem(NOFAbstractionConstants.Transport.Headers.TenantId, out var value)
+            && value is string tenantId
+                ? tenantId
+                : Context.Current.TenantId;
 }

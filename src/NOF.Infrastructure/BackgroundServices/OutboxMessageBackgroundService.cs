@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -80,7 +81,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             }
 
             _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
-            await ProcessMessagesBatch(scope.ServiceProvider, dbContext, pendingMessages, commandRider, notificationRider, cancellationToken);
+            await ProcessMessagesBatch(dbContext, pendingMessages, commandRider, notificationRider, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -89,7 +90,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     }
 
     private async Task<bool> ProcessSingleMessageAsync(
-        IServiceProvider scopedServiceProvider,
         IDbContext dbContext,
         NOFOutboxMessage message,
         ICommandRider commandRider,
@@ -115,11 +115,10 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         // Restore the ambient execution context for downstream components that rely on it.
         // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
         // and restore it when actually dispatching the outbox message.
-        var currentTenant = scopedServiceProvider.GetRequiredService<IMutableCurrentTenant>();
         var tenantId = headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
             ? TenantId.Normalize(headerTenantId)
             : TenantId.Normalize(null);
-        using var _ = currentTenant.PushTenant(tenantId);
+        using var _ = Context.PushCurrent(Context.Empty.WithTenantId(tenantId));
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageType, dispatchRoutes[0]);
@@ -236,7 +235,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     }
 
     private async Task ProcessMessagesBatch(
-        IServiceProvider scopedServiceProvider,
         IDbContext dbContext,
         IReadOnlyCollection<NOFOutboxMessage> pendingMessages,
         ICommandRider commandRider,
@@ -253,7 +251,6 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             try
             {
                 var succeeded = await ProcessSingleMessageAsync(
-                    scopedServiceProvider,
                     dbContext,
                     message,
                     commandRider,

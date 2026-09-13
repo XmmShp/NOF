@@ -95,10 +95,10 @@ await dbContext.SaveChangesAsync(cancellationToken);
 ## Access User and Tenant
 
 ```csharp
-public sealed class MyHandler(IUserContext userContext, ICurrentTenant currentTenant)
+public sealed class MyHandler(IUserContext userContext)
 {
     public string? CurrentUserId => userContext.User.Id;
-    public string CurrentTenantId => currentTenant.TenantId;
+    public string GetTenantId(Context context) => context.TenantId;
 }
 ```
 

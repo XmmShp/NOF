@@ -42,7 +42,7 @@ public class EventPublisherTests
         var context = Context.Empty.WithItem("correlation-id", "42");
 
         using var publisherScope = EventPublisher.PushCurrent(publisher);
-        using var contextScope = EventPublisher.PushContext(context);
+        using var contextScope = Context.PushCurrent(context);
         payload.PublishAsEvent();
 
         await publisher.LastInvocation!;

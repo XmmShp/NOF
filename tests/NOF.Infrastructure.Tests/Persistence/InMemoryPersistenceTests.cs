@@ -21,6 +21,8 @@ namespace NOF.Infrastructure.Tests.Persistence;
 
 public class SqliteInMemoryPersistenceTests
 {
+    private static readonly AsyncLocal<IDisposable?> TenantScope = new();
+
     private static Task<TSource> SingleAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
@@ -192,7 +194,7 @@ public class SqliteInMemoryPersistenceTests
         Assert.Contains("-tenanta", dbContext.Database.GetConnectionString(), StringComparison.Ordinal);
         Assert.Equal(
             NOFAbstractionConstants.Tenant.HostId,
-            scope.ServiceProvider.GetRequiredService<ICurrentTenant>().TenantId);
+            Context.Current.TenantId);
     }
 
     [Fact]
@@ -1978,7 +1980,9 @@ public class SqliteInMemoryPersistenceTests
 
     private static void SetTenant(IServiceProvider services, string? tenantId)
     {
-        _ = services.GetRequiredService<IMutableCurrentTenant>().PushTenant(TenantId.Normalize(tenantId));
+        _ = services;
+        TenantScope.Value?.Dispose();
+        TenantScope.Value = Context.PushCurrent(Context.Empty.WithTenantId(TenantId.Normalize(tenantId)));
     }
 
     private static void DeleteDirectoryWithRetry(string directory)

@@ -52,9 +52,6 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SnowflakeIdGeneratorOptions>>().Value,
                 builder.Environment.ServiceId,
                 builder.Environment.InstanceId)));
-            builder.Services.TryAddScoped<CurrentTenant>();
-            builder.Services.TryAddScoped<ICurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
-            builder.Services.TryAddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
             builder.Services.TryAddScoped<IInboundAuthorizationHandler, DefaultInboundAuthorizationHandler>();
             builder.Services.TryAddScoped<RpcServerInvocationResolver>();
 
@@ -67,13 +64,11 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<IObjectSerializer>(),
                 sp.GetRequiredService<ICacheLockRetryStrategy>(),
                 sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<CacheServiceOptions>>(),
-                sp.GetRequiredService<ICurrentTenant>(),
                 sp.GetRequiredService<CacheServiceLocalLockState>()));
             builder.Services.TryAddScoped<IDistributedCache>(sp => sp.GetRequiredService<ICacheService>());
             builder.Services.TryAddScoped<IObjectStorage>(sp => new ObjectStorageService(
                 sp.GetRequiredService<IObjectStorageRider>(),
-                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ObjectStorageOptions>>(),
-                sp.GetRequiredService<ICurrentTenant>()));
+                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ObjectStorageOptions>>()));
             builder.Services.TryAddSingleton<IBackplane>(sp => new MemoryBackplane(
                 sp.GetRequiredService<MemoryBackplaneState>()));
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDbContextModelCreatingContributor, NOFInboxMessageModelCreatingContributor>());

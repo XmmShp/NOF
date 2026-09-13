@@ -125,26 +125,26 @@ public sealed class AuthorizationInboundMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WhenAuthenticatedUserHasTenant_ShouldOverrideCurrentTenant()
+    public async Task InvokeAsync_WhenAuthenticatedUserHasTenant_ShouldOverrideContextTenant()
     {
         var userContext = new UserContext();
         userContext.User.AddIdentity(CreateAuthenticatedIdentity(
             ClaimTypes.Permission, "input-method",
             ClaimTypes.TenantId, "tenantb"));
-        var currentTenant = new CurrentTenant();
-        using var tenantScope = currentTenant.PushTenant("tenanta");
-        var middleware = CreateMiddleware(userContext, currentTenant);
-        var context = CreateRequestContext(nameof(TestService.OverridePermissionMethod), handlerMethodName: nameof(TestHandler.AllowAnonymousHandler));
+        var middleware = CreateMiddleware(userContext);
+        var context = (RequestInboundContext)CreateRequestContext(
+            nameof(TestService.OverridePermissionMethod),
+            handlerMethodName: nameof(TestHandler.AllowAnonymousHandler)).WithTenantId("tenanta");
 
         var tenantDuringNext = string.Empty;
-        await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) =>
+        await middleware.InvokeAsync(context, new TestRequest(), (forwardedContext, _, _) =>
         {
-            tenantDuringNext = currentTenant.TenantId;
+            tenantDuringNext = forwardedContext.TenantId;
             return ValueTask.CompletedTask;
         }, default);
 
         Assert.Equal("tenantb", tenantDuringNext);
-        Assert.Equal("tenanta", currentTenant.TenantId);
+        Assert.Equal("tenanta", context.TenantId);
     }
 
     [Fact]
@@ -265,12 +265,10 @@ public sealed class AuthorizationInboundMiddlewareTests
 
     private static AuthorizationInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        IMutableCurrentTenant? currentTenant = null,
         IInboundAuthorizationHandler? authorizationHandler = null)
         => new(
             userContext,
             authorizationHandler ?? new DefaultInboundAuthorizationHandler(NullLogger<DefaultInboundAuthorizationHandler>.Instance),
-            currentTenant ?? new CurrentTenant(),
             Options.Create(new AuthenticationResourceServerOptions
             {
                 AuthorizationServerIssuer = "https://auth.local/oauth2"

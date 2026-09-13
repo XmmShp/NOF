@@ -20,7 +20,7 @@ public class NOFTestHostTests
 
         using var scope = host.CreateScope();
         Assert.NotNull(scope.GetRequiredService<IUserContext>());
-        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, scope.GetRequiredService<ICurrentTenant>().TenantId);
+        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, scope.Context.TenantId);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class NOFTestHostTests
         scope.SetTenant("tenanta")
             .SetTracing(traceId, spanId)
             .SetUser("user-1", "Alice", ["orders.read", "orders.write"]);
-        Assert.Equal("tenanta", scope.GetRequiredService<ICurrentTenant>().TenantId);
+        Assert.Equal("tenanta", scope.Context.TenantId);
         Assert.NotNull(Activity.Current);
         Assert.Equal(traceId, Activity.Current.TraceId.ToString());
         Assert.Equal(spanId, Activity.Current.ParentSpanId.ToString());
@@ -60,6 +60,7 @@ public class NOFTestHostTests
 
         Assert.Equal("scope", scope.Context["case"]);
         Assert.False(scope.Context.TryGetItem("step", out _));
+        Assert.Same(scope.Context, Context.Current);
     }
 
     [Fact]

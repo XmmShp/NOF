@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
+using NOF.Contract;
 using NOF.Hosting;
 using System.Diagnostics;
 using System.Globalization;
@@ -10,7 +11,6 @@ namespace NOF.Infrastructure;
 public sealed class AuthorizationInboundMiddleware(
     IUserContext userContext,
     IInboundAuthorizationHandler authorizationHandler,
-    IMutableCurrentTenant currentTenant,
     IOptions<AuthenticationResourceServerOptions> options) :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
@@ -47,8 +47,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
-        using var trustedTenantScope = PushTrustedTenant();
-        await next(context, message, cancellationToken);
+        await next(WithTrustedTenant(context), message, cancellationToken);
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
@@ -70,8 +69,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
-        using var trustedTenantScope = PushTrustedTenant();
-        await next(context, message, cancellationToken);
+        await next(WithTrustedTenant(context), message, cancellationToken);
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
@@ -96,8 +94,7 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
-        using var trustedTenantScope = PushTrustedTenant();
-        await next(context, request, cancellationToken);
+        await next(WithTrustedTenant(context), request, cancellationToken);
     }
 
     private void ApplyFailure(RequestInboundContext context, InboundAuthorizationResult.Denied failure)
@@ -137,21 +134,22 @@ public sealed class AuthorizationInboundMiddleware(
     private static string EscapeChallengeValue(string value)
         => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
-    private IDisposable? PushTrustedTenant()
+    private TContext WithTrustedTenant<TContext>(TContext context)
+        where TContext : Context
     {
         if (!userContext.User.IsAuthenticated)
         {
-            return null;
+            return context;
         }
 
         var trustedTenantId = userContext.User.TenantId;
         if (string.IsNullOrWhiteSpace(trustedTenantId))
         {
-            return null;
+            return context;
         }
 
         var tenantId = TenantId.Normalize(trustedTenantId);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        return currentTenant.PushTenant(tenantId);
+        return (TContext)context.WithTenantId(tenantId);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using NOF.Contract;
 using System.Text.Json;
 using Xunit;
 
@@ -9,6 +10,7 @@ public sealed class CacheServiceTests
     [Fact]
     public async Task IgnoreQueryFilters_ShouldBypassConfiguredKeyPrefix()
     {
+        using var _ = Context.PushCurrent(Context.Empty.WithTenantId("tenanta"));
         var cacheService = CreateCacheService();
         var sharedCache = cacheService.IgnoreQueryFilters();
 
@@ -31,6 +33,7 @@ public sealed class CacheServiceTests
     [Fact]
     public async Task DifferentMemoryHosts_ShouldNotShareInMemoryCacheState()
     {
+        using var _ = Context.PushCurrent(Context.Empty.WithTenantId("tenanta"));
         var hostA = CreateCacheService(
             new MemoryCacheServiceRider(new MemoryCacheServiceRiderState()),
             new CacheServiceLocalLockState());
@@ -57,9 +60,6 @@ public sealed class CacheServiceTests
         ICacheServiceRider rider,
         CacheServiceLocalLockState localLockState)
     {
-        var currentTenant = new CurrentTenant();
-        _ = currentTenant.PushTenant(TenantId.Normalize("tenant-a"));
-
         return new CacheService(
             rider,
             new TestObjectSerializer(),
@@ -68,7 +68,6 @@ public sealed class CacheServiceTests
             {
                 KeyPrefix = "tenant:{tenantId}:"
             }),
-            currentTenant,
             localLockState);
     }
 

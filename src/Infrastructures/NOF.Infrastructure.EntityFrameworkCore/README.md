@@ -77,7 +77,7 @@ The resolution context exposes the normalized tenant identifier, concrete `DbCon
 ## Custom tenant migration orchestration
 
 `UseDbContext<TDbContext>()` registers `ITenantDbContextFactory<TDbContext>`. It creates a strongly
-typed context for an explicit tenant without changing `ICurrentTenant`, and reuses the configured
+typed context for an explicit tenant without changing `Context.Current`, and reuses the configured
 tenant connection-string resolver and provider options. The `MigrateAsync` extension makes it
 convenient to build a deployment job around an application-owned tenant catalog:
 

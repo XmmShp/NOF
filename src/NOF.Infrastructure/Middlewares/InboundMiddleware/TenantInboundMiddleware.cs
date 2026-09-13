@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace NOF.Infrastructure;
 
-public sealed class TenantInboundMiddleware(IMutableCurrentTenant currentTenant) :
+public sealed class TenantInboundMiddleware :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
     IRequestInboundMiddleware
@@ -23,27 +23,21 @@ public sealed class TenantInboundMiddleware(IMutableCurrentTenant currentTenant)
     {
         var tenantId = GetTenantId(context);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        await InvokeWithTenantAsync(tenantId, () => next(context, message, cancellationToken));
+        await next((CommandInboundContext)context.WithTenantId(tenantId), message, cancellationToken);
     }
 
     public async ValueTask InvokeAsync(NotificationInboundContext context, object message, NotificationHandlerDelegate next, CancellationToken cancellationToken)
     {
         var tenantId = GetTenantId(context);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        await InvokeWithTenantAsync(tenantId, () => next(context, message, cancellationToken));
+        await next((NotificationInboundContext)context.WithTenantId(tenantId), message, cancellationToken);
     }
 
     public async ValueTask InvokeAsync(RequestInboundContext context, object request, RequestHandlerDelegate next, CancellationToken cancellationToken)
     {
         var tenantId = GetTenantId(context);
         Activity.Current?.SetTag(NOFInfrastructureConstants.InboundPipeline.Tags.TenantId, tenantId);
-        await InvokeWithTenantAsync(tenantId, () => next(context, request, cancellationToken));
-    }
-
-    private async ValueTask InvokeWithTenantAsync(string tenantId, Func<ValueTask> next)
-    {
-        using var _ = currentTenant.PushTenant(tenantId);
-        await next();
+        await next((RequestInboundContext)context.WithTenantId(tenantId), request, cancellationToken);
     }
 
     private static string GetTenantId(Context context)

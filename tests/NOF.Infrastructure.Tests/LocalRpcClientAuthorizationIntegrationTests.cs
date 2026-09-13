@@ -82,9 +82,6 @@ public sealed class LocalRpcClientAuthorizationIntegrationTests
         services.AddLogging();
 
         services.AddSingleton<IUserContext, UserContext>();
-        services.AddScoped<CurrentTenant>();
-        services.AddScoped<ICurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
-        services.AddScoped<IMutableCurrentTenant>(static sp => sp.GetRequiredService<CurrentTenant>());
         services.AddScoped<IDbContext, LocalScopedDbContext>();
         services.AddScoped<LocalScopeMarker>();
         services.AddSingleton<InvocationRecorder>();

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Contract;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -29,7 +30,6 @@ public class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessed
     protected NOFDbContextFactory(IServiceProvider serviceProvider)
         : this(
             serviceProvider,
-            serviceProvider.GetRequiredService<ICurrentTenant>(),
             serviceProvider.GetRequiredService<IOptions<DbContextConfigurationOptions>>(),
             serviceProvider.GetServices<IDbContextModelCreatingContributor>(),
             serviceProvider.GetRequiredService<ILogger<NOFDbContextFactory<TDbContext>>>())
@@ -40,19 +40,16 @@ public class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessed
     /// Initializes a tenant-aware database context factory.
     /// </summary>
     /// <param name="serviceProvider">The scoped service provider used to construct contexts.</param>
-    /// <param name="currentTenant">The current tenant accessor.</param>
     /// <param name="dbContextConfigurationOptions">The configured database context options.</param>
     /// <param name="modelCreatingContributors">The registered model contributors.</param>
     /// <param name="logger">The factory logger.</param>
     public NOFDbContextFactory(
         IServiceProvider serviceProvider,
-        ICurrentTenant currentTenant,
         IOptions<DbContextConfigurationOptions> dbContextConfigurationOptions,
         IEnumerable<IDbContextModelCreatingContributor> modelCreatingContributors,
         ILogger<NOFDbContextFactory<TDbContext>> logger)
     {
         ServiceProvider = serviceProvider;
-        CurrentTenant = currentTenant;
         ConfigurationOptions = dbContextConfigurationOptions.Value;
         ModelCreatingContributors = modelCreatingContributors;
         Logger = logger;
@@ -62,11 +59,6 @@ public class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessed
     /// Gets the scoped service provider used to construct contexts.
     /// </summary>
     protected IServiceProvider ServiceProvider { get; }
-
-    /// <summary>
-    /// Gets the current tenant accessor.
-    /// </summary>
-    protected ICurrentTenant CurrentTenant { get; }
 
     /// <summary>
     /// Gets the configured database context options.
@@ -88,7 +80,7 @@ public class NOFDbContextFactory<[DynamicallyAccessedMembers(DynamicallyAccessed
     /// </summary>
     /// <returns>A database context owned by the caller.</returns>
     public virtual TDbContext CreateDbContext()
-        => CreateDbContext(TenantId.Normalize(CurrentTenant.TenantId));
+        => CreateDbContext(TenantId.Normalize(Context.Current.TenantId));
 
     /// <summary>
     /// Creates a strongly typed database context for an explicit tenant.

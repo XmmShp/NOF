@@ -37,7 +37,7 @@ Use this file when contributing to the NOF framework itself.
 - Source generation: `[AutoInject]`, `[Failure]`, `[Mappable<TSource, TDestination>]`, `[NewableValueObject]`, `IValueObject<T>`, handler registration, and RPC client/server generation.
 - Application parts: `AddApplicationPart(assembly)` runs generated `AssemblyInitializeAttribute` initializers against the current `IServiceCollection`.
 - Registries: `EventHandlerRegistry`, `MappingRegistry`, `CommandHandlerRegistry`, `NotificationHandlerRegistry`, and `RpcServerRegistry` are singleton instances stored in DI and freeze on first read. Do not reintroduce a process-wide type registry.
-- Ambient helpers: `Mapper`, `IdGenerator`, and `EventPublisher` are scoped through daemon-service resolution; explicit APIs remain the primary runtime contracts.
+- Ambient helpers: `Mapper`, `IdGenerator`, and `EventPublisher` are scoped through daemon-service resolution; `Context.Current` follows the current async execution flow. Explicit APIs remain the primary runtime contracts.
 
 ## Coding Rules
 

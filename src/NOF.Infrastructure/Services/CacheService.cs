@@ -11,7 +11,6 @@ public sealed class CacheService : ICacheService
     private readonly IObjectSerializer _serializer;
     private readonly ICacheLockRetryStrategy _lockRetryStrategy;
     private readonly CacheServiceOptions _options;
-    private readonly ICurrentTenant _currentTenant;
     private readonly CacheServiceLocalLockState _localLockState;
     private readonly bool _ignoreQueryFilters;
 
@@ -19,14 +18,12 @@ public sealed class CacheService : ICacheService
         ICacheServiceRider rider,
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
-        IOptions<CacheServiceOptions> options,
-        ICurrentTenant currentTenant)
+        IOptions<CacheServiceOptions> options)
         : this(
             rider,
             serializer,
             lockRetryStrategy,
             options?.Value ?? throw new ArgumentNullException(nameof(options)),
-            currentTenant,
             new CacheServiceLocalLockState(),
             ignoreQueryFilters: false)
     {
@@ -37,14 +34,12 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         IOptions<CacheServiceOptions> options,
-        ICurrentTenant currentTenant,
         CacheServiceLocalLockState localLockState)
         : this(
             rider,
             serializer,
             lockRetryStrategy,
             options?.Value ?? throw new ArgumentNullException(nameof(options)),
-            currentTenant,
             localLockState,
             ignoreQueryFilters: false)
     {
@@ -55,7 +50,6 @@ public sealed class CacheService : ICacheService
         IObjectSerializer serializer,
         ICacheLockRetryStrategy lockRetryStrategy,
         CacheServiceOptions options,
-        ICurrentTenant currentTenant,
         CacheServiceLocalLockState localLockState,
         bool ignoreQueryFilters)
     {
@@ -63,14 +57,12 @@ public sealed class CacheService : ICacheService
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(lockRetryStrategy);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(currentTenant);
         ArgumentNullException.ThrowIfNull(localLockState);
 
         _rider = rider;
         _serializer = serializer;
         _lockRetryStrategy = lockRetryStrategy;
         _options = options;
-        _currentTenant = currentTenant;
         _localLockState = localLockState;
         _ignoreQueryFilters = ignoreQueryFilters;
     }
@@ -78,7 +70,7 @@ public sealed class CacheService : ICacheService
     public ICacheService IgnoreQueryFilters()
         => _ignoreQueryFilters
             ? this
-            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _currentTenant, _localLockState, ignoreQueryFilters: true);
+            : new CacheService(_rider, _serializer, _lockRetryStrategy, _options, _localLockState, ignoreQueryFilters: true);
 
     private string ApplyKeyPrefix(string key)
     {
@@ -88,7 +80,7 @@ public sealed class CacheService : ICacheService
         }
 
         var keyPrefixTemplate = _options.KeyPrefix ?? string.Empty;
-        var tenantId = TenantId.Normalize(_currentTenant.TenantId);
+        var tenantId = TenantId.Normalize(Context.Current.TenantId);
         var keyPrefix = DbConnectionStringTemplateResolver.ResolveTenantId(
             keyPrefixTemplate,
             tenantId);

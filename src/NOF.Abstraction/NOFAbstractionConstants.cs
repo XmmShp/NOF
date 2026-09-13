@@ -19,7 +19,7 @@ public static class NOFAbstractionConstants
         /// Normalizes a tenant ID.
         /// </summary>
         public static string NormalizeTenantId(string? tenantId)
-            => string.IsNullOrWhiteSpace(tenantId) ? HostId : tenantId;
+            => string.IsNullOrWhiteSpace(tenantId) ? HostId : tenantId.Trim();
     }
 
     public static class Transport

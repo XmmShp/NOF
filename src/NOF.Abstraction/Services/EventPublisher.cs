@@ -13,7 +13,6 @@ namespace NOF.Abstraction;
 public static class EventPublisher
 {
     private static readonly AsyncLocal<IEventPublisher?> _currentPublisher = new();
-    private static readonly AsyncLocal<Context?> _currentContext = new();
 
     /// <summary>
     /// Pushes an ambient <see cref="IEventPublisher"/> into the current async flow for convenience API usage.
@@ -61,7 +60,7 @@ public static class EventPublisher
         ArgumentNullException.ThrowIfNull(eventTypes);
 
         var publisher = GetCurrentPublisher();
-        publisher.PublishAsync(payload, eventTypes, GetCurrentContext(), CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
+        publisher.PublishAsync(payload, eventTypes, Context.Current, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     public static void PublishEvent(
@@ -95,19 +94,6 @@ public static class EventPublisher
         PublishEvent(payload, typeof(TPayload));
     }
 
-    internal static IDisposable PushContext(Context context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        if (ReferenceEquals(_currentContext.Value, context))
-        {
-            return EmptyScope.Instance;
-        }
-
-        var previous = _currentContext.Value;
-        _currentContext.Value = context;
-        return new AmbientContextScope(previous);
-    }
-
     internal static IDisposable PushPublisherIfNeeded(IEventPublisher publisher)
     {
         ArgumentNullException.ThrowIfNull(publisher);
@@ -119,9 +105,6 @@ public static class EventPublisher
     private static IEventPublisher GetCurrentPublisher()
         => _currentPublisher.Value
             ?? throw new InvalidOperationException("No ambient IEventPublisher is available for the current async flow.");
-
-    private static Context GetCurrentContext()
-        => _currentContext.Value ?? Context.Empty;
 
     private sealed class AmbientPublisherScope : IDisposable
     {
@@ -141,28 +124,6 @@ public static class EventPublisher
             }
 
             _currentPublisher.Value = _previous;
-            _disposed = true;
-        }
-    }
-
-    private sealed class AmbientContextScope : IDisposable
-    {
-        private readonly Context? _previous;
-        private bool _disposed;
-
-        public AmbientContextScope(Context? previous)
-        {
-            _previous = previous;
-        }
-
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _currentContext.Value = _previous;
             _disposed = true;
         }
     }

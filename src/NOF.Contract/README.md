@@ -129,7 +129,7 @@ No HTTP client is generated for a memory-only contract. Each server transport de
 
 ## Context
 
-Use `Context` for explicit per-call metadata. Header snapshots may be copied into `Context.Items` by transport/infrastructure components. String item keys use ordinal, case-insensitive comparison to preserve HTTP header semantics; non-string keys retain their default equality behavior.
+Use `Context` for explicit per-call metadata. `Context.TenantId` exposes the normalized effective tenant, while `WithTenantId(...)` returns a new context with a tenant value. `Context.Current` exposes the context bound to the current async flow and falls back to `Context.Empty`; handlers should prefer the context passed to them explicitly. Header snapshots may be copied into `Context.Items` by transport/infrastructure components. String item keys use ordinal, case-insensitive comparison to preserve HTTP header semantics; non-string keys retain their default equality behavior.
 
 Runtime outbound authentication directives are provided by `NOF.Application`, not `NOF.Contract`.
 

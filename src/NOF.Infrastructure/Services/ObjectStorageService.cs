@@ -12,7 +12,6 @@ public sealed class ObjectStorageService : IObjectStorage
 {
     private readonly IObjectStorageRider _rider;
     private readonly ObjectStorageOptions _options;
-    private readonly ICurrentTenant _currentTenant;
     private readonly bool _ignoreKeyPrefix;
 
     /// <summary>
@@ -20,12 +19,10 @@ public sealed class ObjectStorageService : IObjectStorage
     /// </summary>
     public ObjectStorageService(
         IObjectStorageRider rider,
-        IOptions<ObjectStorageOptions> options,
-        ICurrentTenant currentTenant)
+        IOptions<ObjectStorageOptions> options)
         : this(
             rider,
             options?.Value ?? throw new ArgumentNullException(nameof(options)),
-            currentTenant,
             ignoreKeyPrefix: false)
     {
     }
@@ -33,16 +30,13 @@ public sealed class ObjectStorageService : IObjectStorage
     private ObjectStorageService(
         IObjectStorageRider rider,
         ObjectStorageOptions options,
-        ICurrentTenant currentTenant,
         bool ignoreKeyPrefix)
     {
         ArgumentNullException.ThrowIfNull(rider);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(currentTenant);
 
         _rider = rider;
         _options = options;
-        _currentTenant = currentTenant;
         _ignoreKeyPrefix = ignoreKeyPrefix;
     }
 
@@ -50,7 +44,7 @@ public sealed class ObjectStorageService : IObjectStorage
     public IObjectStorage IgnoreKeyPrefix()
         => _ignoreKeyPrefix
             ? this
-            : new ObjectStorageService(_rider, _options, _currentTenant, ignoreKeyPrefix: true);
+            : new ObjectStorageService(_rider, _options, ignoreKeyPrefix: true);
 
     /// <inheritdoc />
     public async ValueTask<ObjectStorageObjectInfo> PutAsync(
@@ -190,7 +184,7 @@ public sealed class ObjectStorageService : IObjectStorage
 
         return DbConnectionStringTemplateResolver.ResolveTenantId(
             _options.KeyPrefix,
-            _currentTenant.TenantId);
+            Context.Current.TenantId);
     }
 
     private static string ApplyKeyPrefix(string objectKey, string keyPrefix)

@@ -79,7 +79,7 @@ await dbContext.SaveChangesAsync(cancellationToken);
 
 - Register a local OAuth/OIDC authority with `builder.AddOidcServer(...)` from `NOF.Hosting.AspNetCore.Extension.OidcServer`; its endpoints are mapped automatically.
 - Register JWT validation with `builder.Services.AddAuthenticationResourceServer(...)`, configuring `AuthorizationServerIssuer`, `ExpectedIssuer`, and optional `Audience`.
-- Read identity through `IUserContext`; read the normalized current tenant through `ICurrentTenant`.
+- Read identity through `IUserContext`; read the normalized current tenant from the handler's explicit `Context.TenantId`.
 - OIDC persistence uses the configured `IDbContext`, so configure a durable provider and migrations for production.
 
 ## Source Generators and Conventions

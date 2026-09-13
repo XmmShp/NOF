@@ -72,12 +72,12 @@ The resource server discovers metadata and JWKS from `AuthorizationServerIssuer`
 ## 5. Access Identity and Tenant State
 
 ```csharp
-public sealed class GetProfile(IUserContext userContext, ICurrentTenant currentTenant)
+public sealed class GetProfile(IUserContext userContext)
 {
     public string? UserId => userContext.User.Id;
     public IReadOnlyList<string> Permissions => userContext.User.Permissions;
-    public string TenantId => currentTenant.TenantId;
+    public string GetTenantId(Context context) => context.TenantId;
 }
 ```
 
-`ITransparentInfos` and the old `JwksEndpoint` option are not part of the current public API. The resource-server middleware populates `IUserContext`; authorization/tenant middleware derives trusted tenant state for `ICurrentTenant`.
+`ITransparentInfos` and the old `JwksEndpoint` option are not part of the current public API. The resource-server middleware populates `IUserContext`; authorization/tenant middleware derives trusted tenant state and stores it in the execution `Context`.

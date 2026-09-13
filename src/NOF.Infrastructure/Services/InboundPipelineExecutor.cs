@@ -82,7 +82,7 @@ public sealed class CommandInboundPipelineExecutor
         CommandHandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        using var _ = EventPublisher.PushContext(context);
+        using var _ = Context.PushCurrent(context);
         await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
     }
 
@@ -93,7 +93,7 @@ public sealed class CommandInboundPipelineExecutor
         object message,
         CancellationToken cancellationToken)
     {
-        using var _ = EventPublisher.PushContext(context);
+        using var _ = Context.PushCurrent(context);
         await invoker.InvokeAsync(services, message, context, cancellationToken).ConfigureAwait(false);
     }
 }
@@ -172,7 +172,7 @@ public sealed class NotificationInboundPipelineExecutor
         NotificationHandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        using var _ = EventPublisher.PushContext(context);
+        using var _ = Context.PushCurrent(context);
         await middleware.InvokeAsync(context, message, next, cancellationToken).ConfigureAwait(false);
     }
 
@@ -183,7 +183,7 @@ public sealed class NotificationInboundPipelineExecutor
         object message,
         CancellationToken cancellationToken)
     {
-        using var _ = EventPublisher.PushContext(context);
+        using var _ = Context.PushCurrent(context);
         await invoker.InvokeAsync(services, message, context, cancellationToken).ConfigureAwait(false);
     }
 }
@@ -268,7 +268,7 @@ public sealed class RequestInboundPipelineExecutor
         object request,
         CancellationToken cancellationToken)
     {
-        using var _ = EventPublisher.PushContext(context);
+        using var _ = Context.PushCurrent(context);
         var handler = (RpcHandler)services.GetRequiredService(handlerType);
         var response = await handler.HandleAsync(request, context, cancellationToken).ConfigureAwait(false);
         context.SetResponse(
@@ -283,7 +283,7 @@ public sealed class RequestInboundPipelineExecutor
         RequestHandlerDelegate next,
         CancellationToken cancellationToken)
     {
-        using var _ = EventPublisher.PushContext(context);
+        using var _ = Context.PushCurrent(context);
         await middleware.InvokeAsync(context, request, next, cancellationToken).ConfigureAwait(false);
     }
 }

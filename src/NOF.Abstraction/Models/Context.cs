@@ -1,3 +1,4 @@
+using NOF.Abstraction;
 using System.Collections.ObjectModel;
 
 namespace NOF.Contract;
@@ -11,6 +12,7 @@ namespace NOF.Contract;
 /// </remarks>
 public class Context
 {
+    private static readonly AsyncLocal<Context?> AmbientContext = new();
     private static readonly IReadOnlyDictionary<object, object?> EmptyItems =
         new ReadOnlyDictionary<object, object?>(CreateMutableItems());
 
@@ -26,7 +28,21 @@ public class Context
 
     public static Context Empty { get; } = new();
 
+    /// <summary>
+    /// Gets the context bound to the current asynchronous control flow.
+    /// </summary>
+    public static Context Current => AmbientContext.Value ?? Empty;
+
     public IReadOnlyDictionary<object, object?> Items { get; }
+
+    /// <summary>
+    /// Gets the normalized tenant identifier carried by this context.
+    /// </summary>
+    public string TenantId
+        => TryGetItem(NOFAbstractionConstants.Transport.Headers.TenantId, out var value)
+            && value is string tenantId
+                ? NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId)
+                : NOFAbstractionConstants.Tenant.HostId;
 
     public object? this[object key]
         => TryGetItem(key, out var value)
@@ -46,6 +62,30 @@ public class Context
         var items = CreateMutableItems(Items);
         items[key] = value;
         return Clone(CreateReadOnlyItems(items));
+    }
+
+    /// <summary>
+    /// Creates a context carrying the specified normalized tenant identifier.
+    /// </summary>
+    public Context WithTenantId(string? tenantId)
+        => WithItem(
+            NOFAbstractionConstants.Transport.Headers.TenantId,
+            NOFAbstractionConstants.Tenant.NormalizeTenantId(tenantId));
+
+    /// <summary>
+    /// Binds a context to the current asynchronous control flow until the returned scope is disposed.
+    /// </summary>
+    public static IDisposable PushCurrent(Context context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (ReferenceEquals(AmbientContext.Value, context))
+        {
+            return EmptyScope.Instance;
+        }
+
+        var previous = AmbientContext.Value;
+        AmbientContext.Value = context;
+        return new AmbientContextScope(previous);
     }
 
     public Context WithItems(IReadOnlyDictionary<object, object?> items)
@@ -130,5 +170,30 @@ public class Context
             => obj is string value
                 ? StringComparer.OrdinalIgnoreCase.GetHashCode(value)
                 : EqualityComparer<object>.Default.GetHashCode(obj);
+    }
+
+    private sealed class AmbientContextScope(Context? previous) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            AmbientContext.Value = previous;
+            _disposed = true;
+        }
+    }
+
+    private sealed class EmptyScope : IDisposable
+    {
+        public static EmptyScope Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
     }
 }

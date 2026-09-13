@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using NOF.Application;
+using NOF.Contract;
 using System.Text;
 using Xunit;
 
@@ -88,16 +89,14 @@ public sealed class ObjectStorageServiceTests
     public async Task Service_ShouldApplyTenantPrefixWithoutLeakingPhysicalKeys()
     {
         using var rider = new MemoryObjectStorageRider();
-        var currentTenant = new CurrentTenant();
         var service = new ObjectStorageService(
             rider,
             Options.Create(new ObjectStorageOptions
             {
                 KeyPrefix = "tenants/{tenantId}/"
-            }),
-            currentTenant);
+            }));
 
-        using (currentTenant.PushTenant("tenanta"))
+        using (Context.PushCurrent(Context.Empty.WithTenantId("tenanta")))
         {
             await PutTextAsync(service, "documents", "invoices/42.txt", "tenant a");
 
@@ -120,7 +119,7 @@ public sealed class ObjectStorageServiceTests
             Assert.Equal("tenants/tenanta/invoices/42.txt", physicalInfo.Value.ObjectKey);
         }
 
-        using (currentTenant.PushTenant("tenantb"))
+        using (Context.PushCurrent(Context.Empty.WithTenantId("tenantb")))
         {
             Assert.False(await service.ExistsAsync("documents", "invoices/42.txt"));
         }

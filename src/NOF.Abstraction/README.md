@@ -8,6 +8,7 @@ Provides shared contracts and annotations intended for use across layers:
 
 - `[AutoInject]` via `Microsoft.Extensions.DependencyInjection`
 - the foundational `NOF.Contract.Context` execution context type
+- async-flow ambient execution context access through `Context.Current`
 - `InMemoryEventHandler<TEvent>` / `IEventPublisher`
 - `AddNOFAbstraction()` for package-local runtime registration
 - ambient event publishing helpers via `EventPublisher` and `PublishAsEvent(...)`
@@ -30,7 +31,7 @@ For convenience, NOF also exposes an ambient publisher facade:
 - `payload.PublishAsEvent(publisher, context)` keeps both the publisher and context explicit
 - `AddNOFAbstraction()` registers the scoped ambient activation service
 
-The ambient publisher and context have separate lifetimes. The daemon service binds the publisher once for the dependency injection scope, while NOF binds only the current `Context` at RPC, command, notification, and nested event-dispatch boundaries. Calls outside a bound handler context use `Context.Empty`. The ambient API is a convenience layer. The explicit `IEventPublisher` dependency remains the primary runtime contract.
+The ambient publisher and context have separate lifetimes. The daemon service binds the publisher once for the dependency injection scope, while NOF binds `Context.Current` at RPC, command, notification, and nested event-dispatch boundaries. Calls outside a bound execution context use `Context.Empty`. Ambient access is a convenience for infrastructure APIs that do not receive a context parameter; handlers should continue using their explicit `Context`, and `IEventPublisher` remains the primary event-publishing contract.
 
 ```csharp
 public sealed class OrderCreatedHandler : InMemoryEventHandler<OrderCreated>

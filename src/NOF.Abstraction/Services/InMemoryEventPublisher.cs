@@ -27,7 +27,7 @@ public sealed class InMemoryEventPublisher : IEventPublisher
         ArgumentNullException.ThrowIfNull(context);
 
         using var publisherScope = EventPublisher.PushPublisherIfNeeded(this);
-        using var contextScope = EventPublisher.PushContext(context);
+        using var contextScope = Context.PushCurrent(context);
         foreach (var eventType in eventTypes)
         {
             foreach (var handlerType in _eventHandlerRegistry.GetHandlerTypes(eventType))
