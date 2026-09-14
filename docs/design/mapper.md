@@ -96,6 +96,8 @@ var projected = query.ProjectTo<OrderDto>(mapper);
 
 Diagnostic `NOF025` warns when server-side query shaping is applied after `ProjectTo`, including filtering, ordering, paging, set operations, another projection, and predicate-bearing terminal operations such as `FirstOrDefault(predicate)` or `AnyAsync(predicate)`. It follows direct chains plus single-initializer local variables and aliases.
 
+Diagnostic `NOF026` warns when an `IQueryable` uses `Select(x => mapper.Map<TSource, TDestination>(x))`. Use `ProjectTo<TDestination>(mapper)` instead so the registered expression remains visible to the query provider.
+
 To limit false positives, the analyzer does not warn for plain materialization or execution, client-side work after `AsEnumerable`, query tags, returning the projected query, passing it to a non-query consumer, or locals whose origin becomes ambiguous through reassignment or conditional flow. These conservative cases can produce false negatives; the rule is advisory and intentionally prefers a missed warning over claiming an uncertain projection order.
 
 ## Nested Mapping
@@ -118,5 +120,6 @@ Expansion:
 - `NOF023`: required nested mapping is not declared
 - `NOF024`: destination constructor parameter or required member cannot be bound
 - `NOF025`: server-side query shaping continues after `ProjectTo`
+- `NOF026`: `Queryable.Select` invokes `IMapper.Map` instead of query projection
 
 Provider translation support is verified with relational integration tests rather than EF Core's in-memory provider.

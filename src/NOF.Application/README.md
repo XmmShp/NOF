@@ -151,6 +151,8 @@ var orders = await _dbContext.Set<Order>()
 
 Diagnostic `NOF025` warns when filtering, ordering, paging, set operations, another projection, or predicate-bearing terminal operations are composed after `ProjectTo`. Plain materialization and client-side work after `AsEnumerable` are not reported.
 
+Diagnostic `NOF026` warns for `Queryable.Select(x => mapper.Map<TSource, TDestination>(x))`; use `ProjectTo<TDestination>(mapper)` so the mapping expression can be translated by the query provider.
+
 For an already materialized value, `IMapper.Map<TSource, TDestination>(source)` compiles and caches the same expression used by `ProjectTo`.
 Custom pure expressions can be registered with `services.AddMapping<TSource, TDestination>(expression)`.
 
