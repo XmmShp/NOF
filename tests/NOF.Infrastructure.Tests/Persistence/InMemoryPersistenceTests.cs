@@ -1886,10 +1886,115 @@ public class SqliteInMemoryPersistenceTests
         return BuildServiceProvider(builder);
     }
 
+    [Fact]
+    public async Task MessageProcessors_ShouldClaimMessagesFromHostAndTenantDatabases()
+    {
+        using var services = CreateServiceProvider(
+            new TransactionalMessageOptions
+            {
+                Inbox = new TransactionalMessageProcessorOptions
+                {
+                    PollingInterval = TimeSpan.FromMilliseconds(10),
+                    MaxRetryCount = 1,
+                    BatchSize = 10
+                },
+                Outbox = new TransactionalMessageProcessorOptions
+                {
+                    PollingInterval = TimeSpan.FromMilliseconds(10),
+                    MaxRetryCount = 1,
+                    BatchSize = 10
+                }
+            },
+            messageTenantProvider: new TestMessageTenantProvider());
+
+        var messageId = Guid.NewGuid();
+        foreach (var tenantId in new[] { NOFAbstractionConstants.Tenant.HostId, "tenanta" })
+        {
+            using var tenantContext = Context.PushCurrent(Context.Empty.WithTenantId(tenantId));
+            using var scope = services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+            dbContext.Set<NOFInboxMessage>().Add(new NOFInboxMessage
+            {
+                Id = messageId,
+                Route = "missing-handler",
+                MessageType = (InboxMessageType)999,
+                Payload = [],
+                Headers = "{}"
+            });
+            dbContext.Set<NOFOutboxMessage>().Add(new NOFOutboxMessage
+            {
+                Id = messageId,
+                DispatchRoutes = "[\"missing-handler\"]",
+                MessageType = (OutboxMessageType)999,
+                Payload = [],
+                Headers = "{}"
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var inboxProcessor = services.GetServices<IHostedService>().OfType<InboxMessageBackgroundService>().Single();
+        var outboxProcessor = services.GetServices<IHostedService>().OfType<OutboxMessageBackgroundService>().Single();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await inboxProcessor.StartAsync(timeout.Token);
+        await outboxProcessor.StartAsync(timeout.Token);
+        try
+        {
+            while (true)
+            {
+                var failedCount = 0;
+                foreach (var tenantId in new[] { NOFAbstractionConstants.Tenant.HostId, "tenanta" })
+                {
+                    using var tenantContext = Context.PushCurrent(Context.Empty.WithTenantId(tenantId));
+                    using var scope = services.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<IDbContext>();
+                    var message = await System.Linq.QueryableAsyncExtensions.FirstAsync(
+                        dbContext.Set<NOFInboxMessage>(),
+                        m => m.Id == messageId,
+                        timeout.Token);
+                    if (message.Status == InboxMessageStatus.Failed)
+                    {
+                        failedCount++;
+                    }
+                    var outboxMessage = await System.Linq.QueryableAsyncExtensions.FirstAsync(
+                        dbContext.Set<NOFOutboxMessage>(),
+                        m => m.Id == messageId,
+                        timeout.Token);
+                    if (outboxMessage.Status == OutboxMessageStatus.Failed)
+                    {
+                        failedCount++;
+                    }
+                }
+
+                if (failedCount == 4)
+                {
+                    break;
+                }
+
+                await Task.Delay(20, timeout.Token);
+            }
+        }
+        finally
+        {
+            await inboxProcessor.StopAsync(CancellationToken.None);
+            await outboxProcessor.StopAsync(CancellationToken.None);
+        }
+    }
+
+    private sealed class TestMessageTenantProvider : ITransactionalMessageTenantProvider
+    {
+        public async IAsyncEnumerable<string> GetTenantIdsAsync(
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            yield return "tenanta";
+        }
+    }
+
     private static ServiceProvider CreateServiceProvider(
         TransactionalMessageOptions? transactionalMessageOptions = null,
         TenantMode tenantMode = TenantMode.DatabasePerTenant,
-        bool softDeleteEnabled = true)
+        bool softDeleteEnabled = true,
+        ITransactionalMessageTenantProvider? messageTenantProvider = null)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -1898,6 +2003,10 @@ public class SqliteInMemoryPersistenceTests
 
         builder.AddNOFHosting();
         builder.AddNOFInfrastructure();
+        if (messageTenantProvider is not null)
+        {
+            builder.Services.ReplaceOrAddSingleton<ITransactionalMessageTenantProvider>(_ => messageTenantProvider);
+        }
         ConfigureSqliteInMemory(
             builder.UseDbContext<TestDbContext>()
                 .WithTenantMode(tenantMode)

@@ -16,19 +16,22 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly ITransactionalMessageTenantProvider _tenantProvider;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        ITransactionalMessageTenantProvider tenantProvider)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
         _hostEnvironment = hostEnvironment;
+        _tenantProvider = tenantProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,7 +45,18 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             try
             {
                 await Task.Delay(_options.PollingInterval, stoppingToken);
-                await ProcessPendingMessagesAsync(stoppingToken);
+                await foreach (var tenantId in TransactionalMessageTenants.EnumerateAsync(_tenantProvider, stoppingToken))
+                {
+                    using var tenantScope = TransactionalMessageTenants.Push(tenantId);
+                    try
+                    {
+                        await ProcessPendingMessagesAsync(stoppingToken);
+                    }
+                    catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+                    {
+                        _logger.LogError(ex, "Error processing outbox messages for tenant {TenantId}", tenantId);
+                    }
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -80,7 +94,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
                 return;
             }
 
-            _logger.LogDebug("Claimed {Count} pending messages across all tenant scopes", pendingMessages.Count);
+            _logger.LogDebug("Claimed {Count} pending outbox messages", pendingMessages.Count);
             await ProcessMessagesBatch(dbContext, pendingMessages, commandRider, notificationRider, cancellationToken);
         }
         catch (Exception ex)
@@ -111,13 +125,12 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
             ? new Dictionary<string, string?>()
             : _objectSerializer.Deserialize<Dictionary<string, string?>>(message.Headers) ?? new Dictionary<string, string?>();
         AddOrderingHeaders(message, headers);
+        var tenantId = TenantId.Normalize(Context.Current.TenantId);
+        headers[NOFAbstractionConstants.Transport.Headers.TenantId] = tenantId;
 
         // Restore the ambient execution context for downstream components that rely on it.
         // This keeps "deferred send" semantics consistent: we persist the execution context snapshot,
         // and restore it when actually dispatching the outbox message.
-        var tenantId = headers.TryGetValue(NOFAbstractionConstants.Transport.Headers.TenantId, out var headerTenantId)
-            ? TenantId.Normalize(headerTenantId)
-            : TenantId.Normalize(null);
         using var _ = Context.PushCurrent(Context.Empty.WithTenantId(tenantId));
 
         activity?.SetTag(NOFInfrastructureConstants.OutboundPipeline.Tags.MessageId, message.Id.ToString());

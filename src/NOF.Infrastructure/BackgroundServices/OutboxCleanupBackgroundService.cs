@@ -14,17 +14,20 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     private readonly ILogger<OutboxCleanupBackgroundService> _logger;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly ITransactionalMessageTenantProvider _tenantProvider;
 
     public OutboxCleanupBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxCleanupBackgroundService> logger,
-        IHostEnvironment hostEnvironment)
+        IHostEnvironment hostEnvironment,
+        ITransactionalMessageTenantProvider tenantProvider)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;
         _logger = logger;
         _hostEnvironment = hostEnvironment;
+        _tenantProvider = tenantProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,7 +49,18 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
                     continue;
                 }
 
-                await CleanupOutboxAsync(stoppingToken);
+                await foreach (var tenantId in TransactionalMessageTenants.EnumerateAsync(_tenantProvider, stoppingToken))
+                {
+                    using var tenantScope = TransactionalMessageTenants.Push(tenantId);
+                    try
+                    {
+                        await CleanupOutboxAsync(stoppingToken);
+                    }
+                    catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+                    {
+                        _logger.LogError(ex, "Error cleaning outbox for tenant {TenantId}", tenantId);
+                    }
+                }
             }
             catch (OperationCanceledException)
             {

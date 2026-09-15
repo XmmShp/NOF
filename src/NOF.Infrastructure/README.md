@@ -140,6 +140,21 @@ discover application-owned tenant databases. A custom deployment migrator can re
 `ITenantDbContextFactory<TDbContext>` from a scope and call
 `MigrateAsync(tenantId, cancellationToken)` for each tenant.
 
+Transactional inbox and outbox processors also need the application's tenant catalog to
+poll database-per-tenant message tables. Register an `ITransactionalMessageTenantProvider`
+that enumerates tenant IDs from durable storage:
+
+```csharp
+builder.Services.AddSingleton<ITransactionalMessageTenantProvider, AppTenantCatalog>();
+```
+
+`AppTenantCatalog.GetTenantIdsAsync` should return every active tenant database, including
+tenants with messages written before this process started. NOF always polls the host database
+and deduplicates normalized tenant IDs. The default provider returns no additional tenants.
+The same catalog is used by inbox and outbox cleanup. A catalog failure is logged and retried
+at the next polling interval; an error in one tenant database does not prevent other tenants
+from being processed.
+
 ## SQLite
 
 For SQLite, provide the provider configuration via `WithOptions(...)`:

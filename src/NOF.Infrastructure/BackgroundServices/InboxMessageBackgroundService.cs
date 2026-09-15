@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NOF.Abstraction;
 using NOF.Application;
+using NOF.Contract;
 using System.Diagnostics;
 
 namespace NOF.Infrastructure;
@@ -17,6 +18,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<InboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
+    private readonly ITransactionalMessageTenantProvider _tenantProvider;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
@@ -25,7 +27,8 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         IHostEnvironment hostEnvironment,
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
-        IObjectSerializer objectSerializer)
+        IObjectSerializer objectSerializer,
+        ITransactionalMessageTenantProvider tenantProvider)
     {
         _serviceProvider = serviceProvider;
         _commandHandlerRegistry = commandHandlerRegistry;
@@ -34,6 +37,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         _options = options.Value.Inbox;
         _logger = logger;
         _objectSerializer = objectSerializer;
+        _tenantProvider = tenantProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -47,7 +51,18 @@ public sealed class InboxMessageBackgroundService : BackgroundService
             try
             {
                 await Task.Delay(_options.PollingInterval, stoppingToken);
-                await ProcessPendingMessagesAsync(stoppingToken);
+                await foreach (var tenantId in TransactionalMessageTenants.EnumerateAsync(_tenantProvider, stoppingToken))
+                {
+                    using var tenantScope = TransactionalMessageTenants.Push(tenantId);
+                    try
+                    {
+                        await ProcessPendingMessagesAsync(stoppingToken);
+                    }
+                    catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+                    {
+                        _logger.LogError(ex, "Error processing inbox messages for tenant {TenantId}", tenantId);
+                    }
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -182,7 +197,15 @@ public sealed class InboxMessageBackgroundService : BackgroundService
 
             var headers = DeserializeHeaders(pendingMessage.Headers);
             var traceParent = ExtractTraceParent(headers);
-            var processingHeaders = RemoveTraceParent(headers);
+            var processingHeaders = RemoveTraceParent(headers)
+                .Where(static header => !string.Equals(
+                    header.Key,
+                    NOFAbstractionConstants.Transport.Headers.TenantId,
+                    StringComparison.OrdinalIgnoreCase))
+                .Append(new KeyValuePair<string, string?>(
+                    NOFAbstractionConstants.Transport.Headers.TenantId,
+                    TenantId.Normalize(Context.Current.TenantId)))
+                .ToArray();
             var handlerTypeName = ResolveHandlerTypeName(pendingMessage);
 
             using var activity = StartBoundaryActivity(message, traceParent);
