@@ -131,6 +131,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.AddNotificationInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<TenantInboundMiddleware>();
             builder.Services.AddRequestInboundMiddleware<AuthorizationInboundMiddleware>();
+            builder.Services.AddRequestInboundMiddleware<HostTenantInboundMiddleware>();
             builder.Services.AddCommandInboundMiddleware<AuthorizationInboundMiddleware>();
             builder.Services.AddNotificationInboundMiddleware<AuthorizationInboundMiddleware>();
             builder.Services.AddCommandInboundMiddleware<TracingInboundMiddleware>();

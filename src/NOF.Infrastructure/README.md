@@ -10,6 +10,7 @@ Unified infrastructure entry package for the [NOF Framework](https://github.com/
 - in-memory cache and messaging riders
 - OpenTelemetry registration and transport middleware
 - JWT resource server validation and command/notification token propagation
+- `[UseHostTenant]` RPC execution after authorization, registered by default through `HostTenantInboundMiddleware`
 - ambient `IMapper` and `IIdGenerator` activation through scoped `IDaemonService` implementations
 
 This lets consumers reference one package/project while still getting the full default infrastructure setup.

@@ -35,7 +35,15 @@ public sealed class TenantHeaderOutboundMiddleware :
 
     public ValueTask InvokeAsync(RequestOutboundContext context, object request, RequestOutboundHandlerDelegate next, CancellationToken cancellationToken)
     {
-        ApplyTenantHeader(context);
+        if (UseHostTenantAttribute.IsRequired(context.MethodInfo))
+        {
+            context.Headers[NOFAbstractionConstants.Transport.Headers.TenantId] = NOFAbstractionConstants.Tenant.HostId;
+        }
+        else
+        {
+            ApplyTenantHeader(context);
+        }
+
         return next(context, request, cancellationToken);
     }
 

@@ -26,6 +26,24 @@ public record SendEmailCommand(string To, string Subject, string Body);
 public record OrderCreatedNotification(Guid OrderId);
 ```
 
+### Host-Tenant RPC Operations
+
+Use `[UseHostTenant]` on an RPC contract method to execute the operation in the host tenant:
+
+```csharp
+[TransportOverMemory]
+public interface IPlatformUserService : IRpcService
+{
+    [UseHostTenant]
+    [RequirePermission("platform.users.read")]
+    Result<UserProfile> GetUser(GetUserRequest request);
+}
+```
+
+The default NOF request pipeline authorizes the caller normally, then selects the host tenant before resolving the handler and its dependencies. This applies to HTTP and in-process RPC. The method's explicit `Context` and `Context.Current` both use the host tenant; the caller's context is restored after the invocation. The attribute selects execution tenancy and does not grant host permissions or bypass authorization.
+
+The built-in tenant-header outbound middleware sends the host tenant for marked methods. Custom client tenant selectors can check `UseHostTenantAttribute.IsRequired(methodInfo)`. The metadata key is `nof.tenant.use_host`; `[Metadata(UseHostTenantAttribute.MetadataKey, "true")]` is equivalent. Unmarked methods retain normal tenant selection.
+
 ### Result Type
 
 ```csharp
