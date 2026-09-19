@@ -287,8 +287,9 @@ public sealed class RequestInboundPipelineExecutor
         await middleware.InvokeAsync(context, request, next, cancellationToken).ConfigureAwait(false);
     }
 }
+/// <summary>Resolves handler and service metadata for inbound execution contexts.</summary>
 
-internal static class InboundContextReflection
+public static class InboundContextReflection
 {
     public static MethodInfo ResolveServiceMethodInfo(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type serviceType,

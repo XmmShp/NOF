@@ -1,6 +1,7 @@
 namespace NOF.Hosting.AspNetCore;
+/// <summary>Describes the RPC operation associated with an HTTP endpoint.</summary>
 
-internal sealed class NofRpcHttpEndpointMetadata
+public sealed class NofRpcHttpEndpointMetadata
 {
     public static NofRpcHttpEndpointMetadata Instance { get; } = new();
 

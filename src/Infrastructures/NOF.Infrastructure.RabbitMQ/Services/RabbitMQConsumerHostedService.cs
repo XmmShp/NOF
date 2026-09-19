@@ -429,13 +429,15 @@ public class RabbitMQConsumerHostedService : IHostedService, IDisposable
 
         _disposed = true;
     }
+    /// <summary>Describes a RabbitMQ notification consumer registration.</summary>
 
-    internal sealed record NotificationConsumerRegistration(
+    public sealed record NotificationConsumerRegistration(
         string QueueName,
         string HandlerTypeName,
         IReadOnlyCollection<Type> NotificationTypes);
+    /// <summary>Describes a RabbitMQ command consumer registration.</summary>
 
-    internal sealed record CommandConsumerRegistration(
+    public sealed record CommandConsumerRegistration(
         string MessageRoute,
         string HandlerTypeName,
         string QueueName);

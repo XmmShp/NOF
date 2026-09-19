@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Applies NOF model conventions and configuration contributors.</summary>
 
-internal sealed class NOFModelCustomizer : ModelCustomizer
+public sealed class NOFModelCustomizer : ModelCustomizer
 {
     public NOFModelCustomizer(ModelCustomizerDependencies dependencies) : base(dependencies)
     {

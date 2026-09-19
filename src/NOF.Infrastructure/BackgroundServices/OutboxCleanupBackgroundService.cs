@@ -8,7 +8,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Outbox cleanup service that periodically removes old sent messages to maintain database performance.
 /// </summary>
-internal sealed class OutboxCleanupBackgroundService : BackgroundService
+public sealed class OutboxCleanupBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<OutboxCleanupBackgroundService> _logger;

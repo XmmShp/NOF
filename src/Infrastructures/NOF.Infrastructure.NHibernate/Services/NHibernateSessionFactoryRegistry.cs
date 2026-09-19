@@ -9,8 +9,9 @@ using System.Data;
 using System.Reflection;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Maintains NHibernate session factories for tenant connections.</summary>
 
-internal sealed class NHibernateSessionFactoryRegistry
+public sealed class NHibernateSessionFactoryRegistry
 {
     private static readonly MethodInfo RegisterEntityMethod = typeof(NHibernateSessionFactoryRegistry)
         .GetMethod(nameof(RegisterEntity), BindingFlags.NonPublic | BindingFlags.Static)!;

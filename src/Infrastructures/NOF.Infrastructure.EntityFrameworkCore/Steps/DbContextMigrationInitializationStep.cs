@@ -6,8 +6,9 @@ using NOF.Contract;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Migrates the host database during application initialization.</summary>
 
-internal sealed class DbContextMigrationInitializationStep(Type dbContextType) : IApplicationInitializationStep
+public sealed class DbContextMigrationInitializationStep(Type dbContextType) : IApplicationInitializationStep
 {
     internal Type DbContextType { get; } = dbContextType;
 

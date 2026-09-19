@@ -4,8 +4,9 @@ using System.Collections;
 using System.Linq.Expressions;
 
 namespace NOF.Infrastructure;
+/// <summary>Resolves repository operations through a database context.</summary>
 
-internal sealed class RepositoryProvider<TEntity>(IDbContext dbContext) : IRepository<TEntity>
+public sealed class RepositoryProvider<TEntity>(IDbContext dbContext) : IRepository<TEntity>
     where TEntity : class
 {
     private IRepository<TEntity> Repository => dbContext.Set<TEntity>();

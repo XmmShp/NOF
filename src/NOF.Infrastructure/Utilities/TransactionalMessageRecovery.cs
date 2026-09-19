@@ -1,8 +1,9 @@
 using NOF.Application;
 
 namespace NOF.Infrastructure;
+/// <summary>Recovers transactional messages whose processing claims have expired.</summary>
 
-internal static class TransactionalMessageRecovery
+public static class TransactionalMessageRecovery
 {
     private const string MaxRetryExceededError = "Exceeded max retry count";
 

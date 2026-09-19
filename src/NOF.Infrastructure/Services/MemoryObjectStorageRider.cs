@@ -218,8 +218,10 @@ public sealed class MemoryObjectStorageRider : IObjectStorageRider, IDisposable
             throw new ArgumentException("The object content stream must be readable.", nameof(content));
         }
     }
+    /// <summary>Identifies an object by its bucket name and object key.</summary>
 
-    internal readonly record struct ObjectIdentifier(string BucketName, string ObjectKey);
+    public readonly record struct ObjectIdentifier(string BucketName, string ObjectKey);
+    /// <summary>Stores in-memory object content and its metadata.</summary>
 
-    internal sealed record StoredObject(byte[] Content, ObjectStorageObjectInfo Info);
+    public sealed record StoredObject(byte[] Content, ObjectStorageObjectInfo Info);
 }

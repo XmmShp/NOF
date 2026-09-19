@@ -9,7 +9,7 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Inbox cleanup service that periodically removes old processed messages to maintain database performance.
 /// </summary>
-internal sealed class InboxCleanupBackgroundService : BackgroundService
+public sealed class InboxCleanupBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<InboxCleanupBackgroundService> _logger;

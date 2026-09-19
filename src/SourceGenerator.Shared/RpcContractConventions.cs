@@ -6,6 +6,7 @@ namespace NOF.SourceGeneration;
 /// Naming conventions shared by RPC generators. Every value is derived exclusively from
 /// user-authored RPC service/server declarations; generated symbols are never inspected.
 /// </summary>
+// Kept internal: this source is linked into multiple assemblies; public copies would expose duplicate fully qualified types.
 internal static class RpcContractConventions
 {
     public static string GetClientInterfaceName(string serviceInterfaceName)

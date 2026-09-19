@@ -289,6 +289,7 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
         public override async ValueTask DisposeAsync() { await inner.DisposeAsync(); GC.SuppressFinalize(this); }
     }
 }
+/// <summary>Provides generated JSON metadata for local object storage records.</summary>
 
 [JsonSerializable(typeof(ObjectStorageObjectInfo))]
-internal partial class FileSystemObjectStorageJsonContext : JsonSerializerContext;
+public partial class FileSystemObjectStorageJsonContext : JsonSerializerContext;

@@ -5,6 +5,8 @@ using NOF.Contract;
 using NOF.Contract.SourceGenerator;
 using System.Collections.Immutable;
 using Xunit;
+using HttpRpcStyle = NOF.Contract.HttpRpcStyle;
+using HttpVerb = NOF.Contract.HttpVerb;
 
 namespace NOF.SourceGenerator.Tests;
 

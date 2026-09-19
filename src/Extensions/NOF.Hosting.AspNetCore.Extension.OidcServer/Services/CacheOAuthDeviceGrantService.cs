@@ -427,16 +427,18 @@ public sealed class CacheOAuthDeviceGrantService(
             && CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
     }
 }
+/// <summary>Describes the approval state of a device authorization request.</summary>
 
-internal enum OidcDeviceAuthorizationStatus
+public enum OidcDeviceAuthorizationStatus
 {
     Pending = 0,
     Approved = 1,
     Denied = 2,
     Redeemed = 3
 }
+/// <summary>Stores the cached state of a device authorization request.</summary>
 
-internal sealed record OidcDeviceAuthorizationCacheValue
+public sealed record OidcDeviceAuthorizationCacheValue
 {
     public required string UserCode { get; init; }
 
@@ -467,9 +469,11 @@ internal sealed record OidcDeviceAuthorizationCacheValue
 
     public OAuthTokenEndpointResponse? RedeemedResponse { get; init; }
 }
+/// <summary>Identifies a cached device authorization by its device-code digest.</summary>
 
-internal sealed record OidcDeviceAuthorizationCacheKey(string DeviceCodeDigest)
+public sealed record OidcDeviceAuthorizationCacheKey(string DeviceCodeDigest)
     : CacheKey<OidcDeviceAuthorizationCacheValue>($"nof:oauth:device-code:{DeviceCodeDigest}");
+/// <summary>Identifies a cached device authorization by its user-code digest.</summary>
 
-internal sealed record OidcDeviceUserCodeCacheKey(string UserCodeDigest)
+public sealed record OidcDeviceUserCodeCacheKey(string UserCodeDigest)
     : CacheKey<string>($"nof:oauth:user-code:{UserCodeDigest}");

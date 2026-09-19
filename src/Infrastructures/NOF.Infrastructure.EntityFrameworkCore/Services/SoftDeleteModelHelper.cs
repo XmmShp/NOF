@@ -4,8 +4,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Applies soft-delete model configuration.</summary>
 
-internal static class SoftDeleteModelHelper
+public static class SoftDeleteModelHelper
 {
     public const string SoftDeleteEnabledAnnotationName = "NOF:SoftDeleteEnabled";
     public const string DeletedAtUnixTimePropertyName = "__DeletedAtUnixTime";

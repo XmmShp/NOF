@@ -67,11 +67,13 @@ public sealed class OAuthAuthorizationCodeIssuer(
         return builder.Uri.ToString();
     }
 }
+/// <summary>Identifies a cached OAuth authorization code.</summary>
 
-internal sealed record OidcAuthorizationCodeCacheKey(string Code)
+public sealed record OidcAuthorizationCodeCacheKey(string Code)
     : CacheKey<OidcAuthorizationCodeCacheValue>($"nof:oauth:auth-code:{Code}");
+/// <summary>Stores the data associated with an OAuth authorization code.</summary>
 
-internal sealed record OidcAuthorizationCodeCacheValue
+public sealed record OidcAuthorizationCodeCacheValue
 {
     public required string Subject { get; init; }
 

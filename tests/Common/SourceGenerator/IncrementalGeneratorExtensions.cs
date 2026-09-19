@@ -4,6 +4,8 @@ using Xunit;
 
 namespace Microsoft.CodeAnalysis;
 
+// Kept internal: this source is linked into multiple assemblies; public copies would expose duplicate fully qualified types.
+
 internal static class IncrementalGeneratorExtensions
 {
     extension(IIncrementalGenerator generator)

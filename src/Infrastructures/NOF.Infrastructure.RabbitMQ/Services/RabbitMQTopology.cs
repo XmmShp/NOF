@@ -1,8 +1,9 @@
 using RabbitMQ.Client;
 
 namespace NOF.Infrastructure.RabbitMQ;
+/// <summary>Defines RabbitMQ topology conventions used by NOF messaging.</summary>
 
-internal static class RabbitMQTopology
+public static class RabbitMQTopology
 {
     public const string UnroutableExchangeName = "nof.io-vii.com.unroutable.exchange";
     public const string UnroutableQueueName = "nof.io-vii.com.unroutable.queue";

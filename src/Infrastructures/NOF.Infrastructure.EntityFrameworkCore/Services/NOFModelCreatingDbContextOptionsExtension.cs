@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Carries model configuration contributors in EF Core options.</summary>
 
-internal sealed class NOFModelCreatingDbContextOptionsExtension : IDbContextOptionsExtension
+public sealed class NOFModelCreatingDbContextOptionsExtension : IDbContextOptionsExtension
 {
     public IReadOnlyList<IDbContextModelCreatingContributor> Contributors { get; init; } = [];
 

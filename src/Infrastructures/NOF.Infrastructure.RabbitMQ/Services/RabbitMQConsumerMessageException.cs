@@ -1,6 +1,7 @@
 namespace NOF.Infrastructure.RabbitMQ;
+/// <summary>Reports a failure while processing a RabbitMQ message.</summary>
 
-internal sealed class RabbitMQConsumerMessageException : Exception
+public sealed class RabbitMQConsumerMessageException : Exception
 {
     public RabbitMQConsumerMessageException(string message, bool requeue, Exception? innerException = null)
         : base(message, innerException)

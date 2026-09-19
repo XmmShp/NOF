@@ -6,8 +6,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Maps NOF value objects to primitive NHibernate storage types.</summary>
 
-internal sealed class NHibernateValueObjectUserType<TValueObject, TPrimitive> : IUserType
+public sealed class NHibernateValueObjectUserType<TValueObject, TPrimitive> : IUserType
     where TValueObject : struct
     where TPrimitive : notnull
 {

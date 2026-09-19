@@ -2,6 +2,8 @@ using Microsoft.CodeAnalysis;
 
 namespace NOF.SourceGenerator.Shared;
 
+// Kept internal: this source is linked into multiple assemblies; public copies would expose duplicate fully qualified types.
+
 internal static class ExtensionMemberSymbol
 {
     public static bool IsDeclaredBy(

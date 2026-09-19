@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System.Linq.Expressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Configures database models for EF Core.</summary>
 
-internal sealed class EfCoreModelBuilderAdapter(ModelBuilder modelBuilder) : IDbModelBuilder
+public sealed class EfCoreModelBuilderAdapter(ModelBuilder modelBuilder) : IDbModelBuilder
 {
     private readonly ModelBuilder _modelBuilder = modelBuilder;
 
@@ -17,8 +18,9 @@ internal sealed class EfCoreModelBuilderAdapter(ModelBuilder modelBuilder) : IDb
         });
     }
 }
+/// <summary>Configures entity mappings for EF Core.</summary>
 
-internal sealed class EfCoreEntityTypeBuilderAdapter<TEntity>(EntityTypeBuilder<TEntity> entityBuilder)
+public sealed class EfCoreEntityTypeBuilderAdapter<TEntity>(EntityTypeBuilder<TEntity> entityBuilder)
     : IDbEntityTypeBuilder<TEntity>
     where TEntity : class
 {
@@ -60,8 +62,9 @@ internal sealed class EfCoreEntityTypeBuilderAdapter<TEntity>(EntityTypeBuilder<
         return Expression.Lambda<Func<TEntity, object?>>(body, expression.Parameters);
     }
 }
+/// <summary>Configures index mappings for EF Core.</summary>
 
-internal sealed class EfCoreIndexBuilderAdapter<TEntity>(IndexBuilder<TEntity> indexBuilder)
+public sealed class EfCoreIndexBuilderAdapter<TEntity>(IndexBuilder<TEntity> indexBuilder)
     : IDbIndexBuilder<TEntity>
     where TEntity : class
 {
@@ -73,8 +76,9 @@ internal sealed class EfCoreIndexBuilderAdapter<TEntity>(IndexBuilder<TEntity> i
         return this;
     }
 }
+/// <summary>Configures property mappings for EF Core.</summary>
 
-internal sealed class EfCorePropertyBuilderAdapter<TEntity, TProperty>(PropertyBuilder<TProperty> propertyBuilder)
+public sealed class EfCorePropertyBuilderAdapter<TEntity, TProperty>(PropertyBuilder<TProperty> propertyBuilder)
     : IDbPropertyBuilder<TEntity, TProperty>
     where TEntity : class
 {

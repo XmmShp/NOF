@@ -9,8 +9,9 @@ using System.Text;
 using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
+/// <summary>Handles JSON-RPC HTTP requests and responses.</summary>
 
-internal static class JsonRpcEndpointHandler
+public static class JsonRpcEndpointHandler
 {
     private const string JsonRpcVersion = "2.0";
     private static readonly MethodInfo _createStreamingResultMethod = typeof(JsonRpcEndpointHandler)

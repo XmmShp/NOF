@@ -3,8 +3,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 
 namespace NOF.Application.SourceGenerator;
+/// <summary>Analyzes RPC server symbols for source generation.</summary>
 
-internal static class RpcServerSymbolHelper
+public static class RpcServerSymbolHelper
 {
     private const string RpcServerFqn = "NOF.Application.RpcServer<TRpcService>";
 

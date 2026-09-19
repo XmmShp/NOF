@@ -4,8 +4,9 @@ using NOF.Application;
 using NOF.Hosting;
 
 namespace NOF.Infrastructure;
+/// <summary>Initializes registered RPC server transports.</summary>
 
-internal sealed class RpcServerTransportInitializationStep : IApplicationInitializationStep
+public sealed class RpcServerTransportInitializationStep : IApplicationInitializationStep
 {
     public TopologyComparison Compare(IApplicationInitializationStep other)
         => TopologyComparison.DoesNotMatter;

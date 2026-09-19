@@ -20,7 +20,7 @@ public sealed class TypeResolverSynchronizationTests
     }
 }
 
-internal sealed class __TypeResolverSynchronizationAssemblyInitializer : IAssemblyInitializer
+public sealed class __TypeResolverSynchronizationAssemblyInitializer : IAssemblyInitializer
 {
     public static void Initialize(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
     {
@@ -28,4 +28,4 @@ internal sealed class __TypeResolverSynchronizationAssemblyInitializer : IAssemb
     }
 }
 
-internal sealed class __TypeResolverSynchronizationProbe;
+public sealed class __TypeResolverSynchronizationProbe;

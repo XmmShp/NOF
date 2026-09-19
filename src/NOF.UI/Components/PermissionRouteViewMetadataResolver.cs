@@ -1,8 +1,9 @@
 using NOF.Contract;
 
 namespace NOF.UI.Components;
+/// <summary>Resolves permission metadata for routable UI components.</summary>
 
-internal static class PermissionRouteViewMetadataResolver
+public static class PermissionRouteViewMetadataResolver
 {
     internal static string? ResolveRequiredPermission(Type pageType)
     {

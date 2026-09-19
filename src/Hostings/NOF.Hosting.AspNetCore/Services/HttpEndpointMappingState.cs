@@ -1,6 +1,7 @@
 namespace NOF.Hosting.AspNetCore;
+/// <summary>Tracks HTTP endpoint registration state for a host.</summary>
 
-internal sealed class HttpEndpointMappingState
+public sealed class HttpEndpointMappingState
 {
     private readonly Lock _lock = new();
     private readonly HashSet<string> _mappedKeys = [];

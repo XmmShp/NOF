@@ -3,8 +3,9 @@ using Amazon.Runtime;
 using Amazon.S3;
 
 namespace NOF.Infrastructure.AmazonS3;
+/// <summary>Creates S3 clients from object storage options.</summary>
 
-internal static class AmazonS3ClientFactory
+public static class AmazonS3ClientFactory
 {
     public static IAmazonS3 Create(AmazonS3ObjectStorageOptions options)
     {

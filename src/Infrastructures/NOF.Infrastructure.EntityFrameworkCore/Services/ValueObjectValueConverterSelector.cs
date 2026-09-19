@@ -18,7 +18,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 /// </list>
 /// </para>
 /// </summary>
-internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
+public sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 {
     private static readonly ConcurrentDictionary<Type, ValueConverterInfo?> _cache = new();
     private static readonly Type _interfaceOpenType = typeof(IValueObject<>);
@@ -88,7 +88,7 @@ internal sealed class ValueObjectValueConverterSelector : ValueConverterSelector
 /// <summary>
 /// Typed <see cref="ValueConverter{TModel,TProvider}"/> for a value object.
 /// </summary>
-internal sealed class ValueObjectConverter<TValueObject, TPrimitive> : ValueConverter<TValueObject, TPrimitive>
+public sealed class ValueObjectConverter<TValueObject, TPrimitive> : ValueConverter<TValueObject, TPrimitive>
 {
     public ValueObjectConverter(MethodInfo ofMethod, MethodInfo castMethod)
         : base(

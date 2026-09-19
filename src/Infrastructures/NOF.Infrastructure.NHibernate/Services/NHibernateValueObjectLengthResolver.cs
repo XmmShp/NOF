@@ -2,8 +2,9 @@ using NOF.Domain;
 using System.Reflection;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Resolves declared length constraints for mapped value objects.</summary>
 
-internal static class NHibernateValueObjectLengthResolver
+public static class NHibernateValueObjectLengthResolver
 {
     private static readonly Type _valueObjectInterface = typeof(IValueObject<>);
 

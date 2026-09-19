@@ -6,8 +6,9 @@ using AppDbUpdateConcurrencyException = NOF.Application.DbUpdateConcurrencyExcep
 using AppDbUpdateException = NOF.Application.DbUpdateException;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Translates persistence exceptions for NHibernate.</summary>
 
-internal static class NHibernateExceptionTranslator
+public static class NHibernateExceptionTranslator
 {
     public static Exception TranslateSaveChangesException(Exception ex)
         => ex switch

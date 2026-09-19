@@ -8,8 +8,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Microsoft.AspNetCore.Routing;
+/// <summary>Maps NOF RPC operations to ASP.NET Core endpoints.</summary>
 
-internal static partial class NOFHostingAspNetCoreExtensions
+public static partial class NOFHostingAspNetCoreExtensions
 {
     [RequiresUnreferencedCode("JSON-RPC endpoint mapping uses runtime request and response type metadata.")]
     [RequiresDynamicCode("JSON-RPC endpoint mapping uses runtime request and response type metadata.")]

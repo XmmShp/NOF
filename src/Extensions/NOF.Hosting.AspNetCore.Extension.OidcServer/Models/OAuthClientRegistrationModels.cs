@@ -146,8 +146,9 @@ public sealed record OAuthClientRegistrationResponse
     [JsonPropertyName("id_token_signed_response_alg")]
     public required string IdTokenSignedResponseAlgorithm { get; init; }
 }
+/// <summary>Stores persisted OAuth client registration settings.</summary>
 
-internal sealed record OAuthClientStoredRegistrationMetadata
+public sealed record OAuthClientStoredRegistrationMetadata
 {
     public string SubjectType { get; init; } = OAuthSubjectTypes.Public;
 

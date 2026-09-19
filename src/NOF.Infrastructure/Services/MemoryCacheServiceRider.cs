@@ -296,8 +296,9 @@ public sealed class MemoryCacheServiceRider : ICacheServiceRider, IDisposable
 
         GC.SuppressFinalize(this);
     }
+    /// <summary>Stores a cached value and its expiration settings.</summary>
 
-    internal sealed class CacheEntry
+    public sealed class CacheEntry
     {
         public ReadOnlyMemory<byte> Data { get; }
         public DateTimeOffset? AbsoluteExpiration { get; }

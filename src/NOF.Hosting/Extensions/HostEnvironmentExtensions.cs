@@ -2,8 +2,9 @@ using Microsoft.Extensions.Configuration;
 using System.Runtime.CompilerServices;
 
 namespace Microsoft.Extensions.Hosting;
+/// <summary>Stores host environment extension values by owner instance.</summary>
 
-internal static class HostEnvironmentExtensionBag
+public static class HostEnvironmentExtensionBag
 {
     private static readonly ConditionalWeakTable<object, Dictionary<string, object>> _packages = [];
 

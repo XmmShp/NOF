@@ -7,11 +7,15 @@ using System.Linq;
 
 namespace NOF.SourceGenerator.Shared;
 
+// Kept internal: this source is linked into multiple assemblies; public copies would expose duplicate fully qualified types.
+
 internal enum ValueObjectLengthBuilderFamily
 {
     NofInfrastructure,
     EntityFrameworkCore,
 }
+
+// Kept internal: this source is linked into multiple assemblies; public copies would expose duplicate fully qualified types.
 
 internal static class ValueObjectLengthConfigurationAnalysis
 {

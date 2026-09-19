@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace NOF.Sample.Services;
 
-internal static class OAuthChainDemoContextKeys
+public static class OAuthChainDemoContextKeys
 {
     public static readonly object AccessToken = new();
 }

@@ -307,7 +307,7 @@ public sealed class GetFleetOverviewHandler(InvocationRecorder recorder) : RpcHa
     }
 }
 
-internal static class TestPrincipalFactory
+public static class TestPrincipalFactory
 {
     public static ClaimsIdentity CreateAuthenticatedIdentity(params (string Type, string Value)[] claims)
     {

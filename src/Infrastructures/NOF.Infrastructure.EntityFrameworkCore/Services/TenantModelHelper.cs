@@ -4,8 +4,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Applies tenant-aware model configuration.</summary>
 
-internal static class TenantModelHelper
+public static class TenantModelHelper
 {
     public const string TenantIdPropertyName = "TenantId";
     public const int TenantIdMaxLength = 256;

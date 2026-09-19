@@ -3,10 +3,11 @@ using NOF.Domain;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NOF.Infrastructure;
+/// <summary>Implements database context operations over an in-memory persistence store.</summary>
 
 [RequiresDynamicCode("The in-memory persistence provider exposes LINQ IQueryable over in-memory collections and is intended for tests/development, not Native AOT.")]
 [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
-internal sealed class InMemoryDbContext(InMemoryPersistenceStore store) : IDbContext
+public sealed class InMemoryDbContext(InMemoryPersistenceStore store) : IDbContext
 {
     private readonly List<InMemoryPersistenceChange> _changes = [];
     private readonly Dictionary<Type, List<TrackedInMemoryEntity>> _trackedEntities = [];
@@ -153,10 +154,11 @@ internal sealed class InMemoryDbContext(InMemoryPersistenceStore store) : IDbCon
         entities[index] = entity;
     }
 }
+/// <summary>Tracks an entity and its original values for in-memory change detection.</summary>
 
 [RequiresDynamicCode("The in-memory persistence provider snapshots arbitrary entity types and is intended for tests/development, not Native AOT.")]
 [RequiresUnreferencedCode("The in-memory persistence provider snapshots arbitrary entity types via reflection and is intended for tests/development, not trimmed applications.")]
-internal sealed class TrackedInMemoryEntity(object entity, object original)
+public sealed class TrackedInMemoryEntity(object entity, object original)
 {
     public object Entity { get; } = entity;
     public object Original { get; private set; } = original;
@@ -166,8 +168,9 @@ internal sealed class TrackedInMemoryEntity(object entity, object original)
         Original = InMemoryPersistenceStore.CloneEntity(Entity);
     }
 }
+/// <summary>Implements repository operations over in-memory persistence.</summary>
 
-internal sealed class InMemoryRepository<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
+public sealed class InMemoryRepository<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
     where TEntity : class
 {
     private readonly InMemoryDbContext _dbContext;
@@ -254,8 +257,9 @@ internal sealed class InMemoryRepository<TEntity> : AsyncQueryable<TEntity>, IRe
     public IAsyncQueryable<TEntity> AsNoTracking()
         => new AsyncQueryable<TEntity>(_dbContext.Query<TEntity>(track: false), AsyncExecutor);
 }
+/// <summary>Executes asynchronous queries against in-memory persistence.</summary>
 
-internal sealed class InMemoryPersistenceAsyncQueryExecutor<TEntity>(InMemoryPersistenceStore store) : InMemoryAsyncQueryExecutor
+public sealed class InMemoryPersistenceAsyncQueryExecutor<TEntity>(InMemoryPersistenceStore store) : InMemoryAsyncQueryExecutor
     where TEntity : class
 {
     public override Task<int> ExecuteDeleteAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
@@ -275,8 +279,9 @@ internal sealed class InMemoryPersistenceAsyncQueryExecutor<TEntity>(InMemoryPer
             : base.ExecuteUpdateAsync(source, setters, cancellationToken);
     }
 }
+/// <summary>Implements transaction behavior for an in-memory database context.</summary>
 
-internal sealed class InMemoryDbContextTransaction : IDbContextTransaction
+public sealed class InMemoryDbContextTransaction : IDbContextTransaction
 {
     private readonly InMemoryPersistenceStore _store;
     private readonly InMemoryPersistenceSnapshot _snapshot;

@@ -2,8 +2,9 @@ using NOF.Application;
 using NOF.Contract;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Creates database contexts backed by tenant-aware NHibernate sessions.</summary>
 
-internal sealed class NHibernateDbContextFactory(
+public sealed class NHibernateDbContextFactory(
     NHibernateSessionFactoryRegistry sessionFactoryRegistry) : IDbContextFactory
 {
     public IDbContext CreateDbContext()

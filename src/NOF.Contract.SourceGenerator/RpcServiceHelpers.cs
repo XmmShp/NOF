@@ -7,8 +7,9 @@ using System.Linq;
 using System.Text;
 
 namespace NOF.Contract.SourceGenerator;
+/// <summary>Analyzes RPC service declarations for source generation.</summary>
 
-internal static class RpcServiceHelpers
+public static class RpcServiceHelpers
 {
     public const string HttpEndpointAttributeFqn = "NOF.Contract.HttpEndpointAttribute";
     public const string ParsableFqn = "System.IParsable<TSelf>";
@@ -278,16 +279,18 @@ internal static class RpcServiceHelpers
     }
 
 }
+/// <summary>Describes an RPC service method for source generation.</summary>
 
-internal sealed class ServiceMethodInfo
+public sealed class ServiceMethodInfo
 {
     public IMethodSymbol Method { get; set; } = null!;
     public INamedTypeSymbol? RequestType { get; set; }
     public ServiceReturnInfo ReturnInfo { get; set; } = new(null!);
     public string OperationName { get; set; } = string.Empty;
 }
+/// <summary>Describes an HTTP endpoint for RPC source generation.</summary>
 
-internal class EndpointInfo
+public class EndpointInfo
 {
     public INamedTypeSymbol? RequestType { get; set; }
     public ServiceReturnInfo ReturnInfo { get; set; } = new(null!);
@@ -299,8 +302,9 @@ internal class EndpointInfo
     public string? Summary { get; set; }
     public string[] Tags { get; set; } = [];
 }
+/// <summary>Describes an RPC return type for source generation.</summary>
 
-internal readonly struct ServiceReturnInfo
+public readonly struct ServiceReturnInfo
 {
     public ServiceReturnInfo(ITypeSymbol valueType)
     {
@@ -334,8 +338,9 @@ internal readonly struct ServiceReturnInfo
     public string ClientTaskReturnTypeDisplay
         => $"global::System.Threading.Tasks.Task<{ClientResponseTypeDisplay}>";
 }
+/// <summary>Represents HTTP verbs while analyzing RPC declarations.</summary>
 
-internal enum HttpVerb
+public enum HttpVerb
 {
     Get,
     Post,
@@ -343,14 +348,16 @@ internal enum HttpVerb
     Delete,
     Patch
 }
+/// <summary>Represents HTTP RPC styles while analyzing service declarations.</summary>
 
-internal enum HttpRpcStyle
+public enum HttpRpcStyle
 {
     JsonRpc,
     ControllerRpc
 }
+/// <summary>Describes the HTTP transport of an RPC service declaration.</summary>
 
-internal readonly struct HttpTransportInfo
+public readonly struct HttpTransportInfo
 {
     public HttpTransportInfo(HttpRpcStyle style, string? routePrefix)
     {

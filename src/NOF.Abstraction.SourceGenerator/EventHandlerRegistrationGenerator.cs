@@ -124,8 +124,10 @@ public sealed class EventHandlerRegistrationGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine($"namespace {assemblyName}");
         sb.AppendLine("{");
-        sb.AppendLine($"    internal sealed class {initializerTypeName} : global::NOF.Abstraction.IAssemblyInitializer");
+        sb.AppendLine("    /// <summary>Registers generated services for this assembly.</summary>");
+        sb.AppendLine($"    public sealed class {initializerTypeName} : global::NOF.Abstraction.IAssemblyInitializer");
         sb.AppendLine("    {");
+        sb.AppendLine("        /// <inheritdoc />");
         sb.AppendLine("        public static void Initialize(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
         sb.AppendLine("        {");
         sb.AppendLine($"            if (!services.InitializedTypes.Add(typeof({initializerTypeName})))");

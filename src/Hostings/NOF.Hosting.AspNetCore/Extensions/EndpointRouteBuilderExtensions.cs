@@ -13,10 +13,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Microsoft.AspNetCore.Routing;
+/// <summary>Maps NOF RPC operations to ASP.NET Core endpoints.</summary>
 
 [RequiresUnreferencedCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
 [RequiresDynamicCode("Endpoint mapping and response writing use reflection and runtime JSON serialization.")]
-internal static partial class NOFHostingAspNetCoreExtensions
+public static partial class NOFHostingAspNetCoreExtensions
 {
     private static readonly MethodInfo _createQueryHandlerMethod = typeof(NOFHostingAspNetCoreExtensions)
         .GetMethod(nameof(CreateQueryHandlerCore), BindingFlags.NonPublic | BindingFlags.Static)

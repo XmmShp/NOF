@@ -4,8 +4,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace NOF.Hosting.AspNetCore.Extension.OidcServer;
+/// <summary>Creates OAuth token responses from validated authorization grants.</summary>
 
-internal sealed class OAuthTokenResponseIssuer(
+public sealed class OAuthTokenResponseIssuer(
     IOAuthSubjectService subjectService,
     ITokenService tokenService,
     ISigningKeyService signingKeyService,

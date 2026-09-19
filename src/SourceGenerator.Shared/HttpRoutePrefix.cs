@@ -2,6 +2,8 @@ using System;
 
 namespace NOF.Internal;
 
+// Kept internal: this source is linked into multiple assemblies; public copies would expose duplicate fully qualified types.
+
 internal static class HttpRoutePrefix
 {
     public static string Normalize(string routePrefix)

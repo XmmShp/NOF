@@ -2,8 +2,9 @@ using NOF.Abstraction;
 using NOF.Contract;
 
 namespace NOF.Infrastructure;
+/// <summary>Enumerates tenants and establishes transactional message tenant contexts.</summary>
 
-internal static class TransactionalMessageTenants
+public static class TransactionalMessageTenants
 {
     public static async IAsyncEnumerable<string> EnumerateAsync(
         ITenantProvider provider,

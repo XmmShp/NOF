@@ -6,8 +6,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace NOF.Hosting.AspNetCore;
+/// <summary>Writes an RPC result as an HTTP response.</summary>
 
-internal sealed class RpcHttpResult(
+public sealed class RpcHttpResult(
     Contract.IResult rpcResult,
     int statusCode = StatusCodes.Status200OK) : Microsoft.AspNetCore.Http.IResult
 {
@@ -27,10 +28,11 @@ internal sealed class RpcHttpResult(
             cancellationToken: httpContext.RequestAborted).ConfigureAwait(false);
     }
 }
+/// <summary>Writes a streaming RPC result as an HTTP response.</summary>
 
 [RequiresUnreferencedCode("Streaming HTTP response writing may require runtime JSON serialization for transport bodies.")]
 [RequiresDynamicCode("Streaming HTTP response writing may require runtime JSON serialization for transport bodies.")]
-internal sealed class RpcStreamingHttpResult<TItem>(
+public sealed class RpcStreamingHttpResult<TItem>(
     StreamingResult<TItem> rpcResult) : Microsoft.AspNetCore.Http.IResult
 {
     private readonly StreamingResult<TItem> _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
@@ -48,8 +50,9 @@ internal sealed class RpcStreamingHttpResult<TItem>(
         return TypedResults.ServerSentEvents(_rpcResult.Value!).ExecuteAsync(httpContext);
     }
 }
+/// <summary>Writes a streaming RPC result using JSON-RPC.</summary>
 
-internal sealed class JsonRpcStreamingHttpResult<TItem>(
+public sealed class JsonRpcStreamingHttpResult<TItem>(
     StreamingResult<TItem> rpcResult,
     ReadOnlyMemory<byte> requestId,
     IObjectSerializer serializer) : Microsoft.AspNetCore.Http.IResult

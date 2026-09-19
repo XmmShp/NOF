@@ -3,8 +3,9 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Compares EF Core models for tenant-aware migrations.</summary>
 
-internal sealed class NOFTenantMigrationsModelDiffer : IMigrationsModelDiffer
+public sealed class NOFTenantMigrationsModelDiffer : IMigrationsModelDiffer
 {
     private readonly IMigrationsModelDiffer _inner;
 

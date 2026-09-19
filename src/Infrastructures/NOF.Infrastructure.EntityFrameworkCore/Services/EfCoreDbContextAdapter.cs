@@ -13,8 +13,9 @@ using EfDbUpdateConcurrencyException = Microsoft.EntityFrameworkCore.DbUpdateCon
 using EfDbUpdateException = Microsoft.EntityFrameworkCore.DbUpdateException;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Adapts database context operations for EF Core.</summary>
 
-internal sealed class EfCoreDbContextAdapter(DbContext dbContext) : IDbContext
+public sealed class EfCoreDbContextAdapter(DbContext dbContext) : IDbContext
 {
     private readonly DbContext _dbContext = dbContext;
     private readonly EfCoreAsyncQueryExecutor _asyncExecutor = new();
@@ -81,8 +82,9 @@ internal sealed class EfCoreDbContextAdapter(DbContext dbContext) : IDbContext
         }
     }
 }
+/// <summary>Adapts database transactions for EF Core.</summary>
 
-internal sealed class EfCoreDbContextTransactionAdapter(EfDbContextTransaction transaction) : IDbContextTransaction
+public sealed class EfCoreDbContextTransactionAdapter(EfDbContextTransaction transaction) : IDbContextTransaction
 {
     private readonly EfDbContextTransaction _transaction = transaction;
 
@@ -230,8 +232,9 @@ internal sealed class EfCoreDbContextTransactionAdapter(EfDbContextTransaction t
     public ValueTask DisposeAsync()
         => _transaction.DisposeAsync();
 }
+/// <summary>Implements repository operations for EF Core.</summary>
 
-internal sealed class EfCoreRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
+public sealed class EfCoreRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
     where TEntity : class
 {
     private readonly DbSet<TEntity> _dbSet;
@@ -290,8 +293,9 @@ internal sealed class EfCoreRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>
     public IAsyncQueryable<TEntity> AsNoTracking()
         => new AsyncQueryable<TEntity>(_dbSet.AsNoTracking(), AsyncExecutor);
 }
+/// <summary>Executes asynchronous queries for EF Core.</summary>
 
-internal sealed class EfCoreAsyncQueryExecutor : IAsyncQueryExecutor
+public sealed class EfCoreAsyncQueryExecutor : IAsyncQueryExecutor
 {
     private static readonly MethodInfo ApplyConstantSetPropertyMethod = typeof(EfCoreAsyncQueryExecutor)
         .GetMethod(nameof(ApplyConstantSetProperty), BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -446,8 +450,9 @@ internal sealed class EfCoreAsyncQueryExecutor : IAsyncQueryExecutor
             (Expression<Func<TSource, TProperty>>)propertyExpression,
             (Expression<Func<TSource, TProperty>>)valueExpression);
 }
+/// <summary>Translates persistence exceptions for EF Core.</summary>
 
-internal static class EfCoreExceptionTranslator
+public static class EfCoreExceptionTranslator
 {
     public static Exception TranslateSaveChangesException(Exception exception)
         => exception switch

@@ -261,15 +261,18 @@ public sealed class InMemoryPersistenceStore
         return clone;
     }
 }
+/// <summary>Captures the tables in an in-memory persistence store.</summary>
 
-internal sealed record InMemoryPersistenceSnapshot(Dictionary<Type, List<object>> Tables);
+public sealed record InMemoryPersistenceSnapshot(Dictionary<Type, List<object>> Tables);
+/// <summary>Describes a pending change to an in-memory persistence store.</summary>
 
-internal sealed record InMemoryPersistenceChange(
+public sealed record InMemoryPersistenceChange(
     InMemoryPersistenceChangeKind Kind,
     Type EntityType,
     object Entity);
+/// <summary>Identifies an in-memory persistence change operation.</summary>
 
-internal enum InMemoryPersistenceChangeKind
+public enum InMemoryPersistenceChangeKind
 {
     Add,
     Update,

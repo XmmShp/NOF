@@ -81,5 +81,6 @@ public sealed class OutboxOrderSequenceAllocator(
         public bool IsCompleted { get; set; }
     }
 }
+/// <summary>Describes the ordering metadata assigned to an outbox message.</summary>
 
-internal readonly record struct OutboxOrder(string OrderKey, long Sequence, bool CompletesOrderKey);
+public readonly record struct OutboxOrder(string OrderKey, long Sequence, bool CompletesOrderKey);

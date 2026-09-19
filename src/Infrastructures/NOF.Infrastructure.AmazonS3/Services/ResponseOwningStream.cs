@@ -1,8 +1,9 @@
 using Amazon.S3.Model;
 
 namespace NOF.Infrastructure.AmazonS3;
+/// <summary>Disposes an S3 response together with its content stream.</summary>
 
-internal sealed class ResponseOwningStream : Stream
+public sealed class ResponseOwningStream : Stream
 {
     private readonly GetObjectResponse _response;
     private readonly Stream _inner;

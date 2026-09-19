@@ -7,8 +7,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace NOF.Hosting.AspNetCore;
+/// <summary>Registers RPC servers with the ASP.NET Core transport.</summary>
 
-internal sealed class AspNetCoreRpcServerTransport : IRpcServerTransport
+public sealed class AspNetCoreRpcServerTransport : IRpcServerTransport
 {
     public AspNetCoreRpcServerTransport()
     {

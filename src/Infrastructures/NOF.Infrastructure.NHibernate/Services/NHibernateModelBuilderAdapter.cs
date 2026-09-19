@@ -3,8 +3,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Collects provider-neutral entity definitions for NHibernate mapping.</summary>
 
-internal sealed class NHibernateModelDefinitionBuilder : IDbModelBuilder
+public sealed class NHibernateModelDefinitionBuilder : IDbModelBuilder
 {
     private readonly ConcurrentDictionary<Type, NHibernateEntityDefinition> _entities = new();
 
@@ -17,8 +18,9 @@ internal sealed class NHibernateModelDefinitionBuilder : IDbModelBuilder
         configure(new NHibernateEntityTypeBuilderAdapter<TEntity>(definition));
     }
 }
+/// <summary>Configures entity mappings for NHibernate.</summary>
 
-internal sealed class NHibernateEntityTypeBuilderAdapter<TEntity>(NHibernateEntityDefinition definition)
+public sealed class NHibernateEntityTypeBuilderAdapter<TEntity>(NHibernateEntityDefinition definition)
     : IDbEntityTypeBuilder<TEntity>
     where TEntity : class
 {
@@ -88,8 +90,9 @@ internal sealed class NHibernateEntityTypeBuilderAdapter<TEntity>(NHibernateEnti
             _ => throw new NotSupportedException($"Unsupported property expression '{expression.NodeType}'.")
         };
 }
+/// <summary>Configures index mappings for NHibernate.</summary>
 
-internal sealed class NHibernateIndexBuilderAdapter<TEntity>(NHibernateIndexDefinition definition)
+public sealed class NHibernateIndexBuilderAdapter<TEntity>(NHibernateIndexDefinition definition)
     : IDbIndexBuilder<TEntity>
     where TEntity : class
 {
@@ -101,8 +104,9 @@ internal sealed class NHibernateIndexBuilderAdapter<TEntity>(NHibernateIndexDefi
         return this;
     }
 }
+/// <summary>Configures property mappings for NHibernate.</summary>
 
-internal sealed class NHibernatePropertyBuilderAdapter<TEntity, TProperty>(NHibernatePropertyDefinition definition)
+public sealed class NHibernatePropertyBuilderAdapter<TEntity, TProperty>(NHibernatePropertyDefinition definition)
     : IDbPropertyBuilder<TEntity, TProperty>
     where TEntity : class
 {
@@ -120,8 +124,9 @@ internal sealed class NHibernatePropertyBuilderAdapter<TEntity, TProperty>(NHibe
         return this;
     }
 }
+/// <summary>Describes an entity mapping for NHibernate.</summary>
 
-internal sealed class NHibernateEntityDefinition(Type entityType)
+public sealed class NHibernateEntityDefinition(Type entityType)
 {
     public Type EntityType { get; } = entityType;
 
@@ -137,15 +142,17 @@ internal sealed class NHibernateEntityDefinition(Type entityType)
         => EntityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)
            ?? throw new InvalidOperationException($"Property '{propertyName}' was not found on '{EntityType.FullName}'.");
 }
+/// <summary>Describes an index mapping for NHibernate.</summary>
 
-internal sealed class NHibernateIndexDefinition(IReadOnlyList<string> propertyNames)
+public sealed class NHibernateIndexDefinition(IReadOnlyList<string> propertyNames)
 {
     public IReadOnlyList<string> PropertyNames { get; } = propertyNames;
 
     public bool IsUnique { get; set; }
 }
+/// <summary>Describes a property mapping for NHibernate.</summary>
 
-internal sealed class NHibernatePropertyDefinition(string propertyName)
+public sealed class NHibernatePropertyDefinition(string propertyName)
 {
     public string PropertyName { get; } = propertyName;
 

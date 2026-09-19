@@ -6,8 +6,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 namespace NOF.Infrastructure.NHibernate;
+/// <summary>Adapts database context operations for NHibernate.</summary>
 
-internal sealed class NHibernateDbContextAdapter(ISession session) : IDbContext
+public sealed class NHibernateDbContextAdapter(ISession session) : IDbContext
 {
     private readonly ISession _session = session;
     private readonly NHibernateAsyncQueryExecutor _asyncExecutor = new(session);
@@ -61,8 +62,9 @@ internal sealed class NHibernateDbContextAdapter(ISession session) : IDbContext
         return Task.FromResult(BeginTransaction());
     }
 }
+/// <summary>Adapts database transactions for NHibernate.</summary>
 
-internal sealed class NHibernateDbContextTransactionAdapter(ITransaction transaction) : IDbContextTransaction
+public sealed class NHibernateDbContextTransactionAdapter(ITransaction transaction) : IDbContextTransaction
 {
     private readonly ITransaction _transaction = transaction;
 
@@ -145,8 +147,9 @@ internal sealed class NHibernateDbContextTransactionAdapter(ITransaction transac
         return ValueTask.CompletedTask;
     }
 }
+/// <summary>Implements repository operations for NHibernate.</summary>
 
-internal sealed class NHibernateRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
+public sealed class NHibernateRepositoryAdapter<TEntity> : AsyncQueryable<TEntity>, IRepository<TEntity>
     where TEntity : class
 {
     private readonly ISession _session;
@@ -234,8 +237,9 @@ internal sealed class NHibernateRepositoryAdapter<TEntity> : AsyncQueryable<TEnt
     public IAsyncQueryable<TEntity> AsNoTracking()
         => new AsyncQueryable<TEntity>(_session.Query<TEntity>(), AsyncExecutor);
 }
+/// <summary>Executes asynchronous queries for NHibernate.</summary>
 
-internal sealed class NHibernateAsyncQueryExecutor(ISession session) : IAsyncQueryExecutor
+public sealed class NHibernateAsyncQueryExecutor(ISession session) : IAsyncQueryExecutor
 {
     private static readonly ConcurrentDictionary<string, Delegate> PropertySetters = new(StringComparer.Ordinal);
     private readonly ISession _session = session;

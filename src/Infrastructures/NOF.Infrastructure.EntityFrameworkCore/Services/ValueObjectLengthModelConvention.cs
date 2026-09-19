@@ -3,8 +3,9 @@ using NOF.Domain;
 using System.Reflection;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
+/// <summary>Applies value-object length constraints to EF Core properties.</summary>
 
-internal static class ValueObjectLengthModelConvention
+public static class ValueObjectLengthModelConvention
 {
     private static readonly Type _valueObjectInterface = typeof(IValueObject<>);
 

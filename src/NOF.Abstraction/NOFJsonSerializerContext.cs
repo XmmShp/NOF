@@ -41,4 +41,4 @@ namespace NOF.Abstraction;
 [JsonSerializable(typeof(TimeSpan?))]
 [JsonSerializable(typeof(Dictionary<string, JsonElement>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
-internal partial class NOFJsonSerializerContext : JsonSerializerContext;
+public partial class NOFJsonSerializerContext : JsonSerializerContext;

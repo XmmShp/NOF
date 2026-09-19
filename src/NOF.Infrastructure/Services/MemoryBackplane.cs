@@ -54,8 +54,9 @@ public sealed class MemoryBackplane : IBackplane
         channelSubscriptions[subscriptionId] = subscription;
         return ValueTask.FromResult<IAsyncDisposable>(subscription);
     }
+    /// <summary>Represents a disposable subscription to the in-memory backplane.</summary>
 
-    internal abstract class Subscription : IAsyncDisposable
+    public abstract class Subscription : IAsyncDisposable
     {
         public abstract ValueTask DispatchAsync(object payload, CancellationToken cancellationToken);
 

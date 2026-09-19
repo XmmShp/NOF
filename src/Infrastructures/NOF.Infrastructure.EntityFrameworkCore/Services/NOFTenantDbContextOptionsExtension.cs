@@ -8,7 +8,7 @@ namespace NOF.Infrastructure.EntityFrameworkCore;
 /// <summary>
 /// DbContext options extension added for tenant-aware contexts.
 /// </summary>
-internal class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
+public class NOFTenantDbContextOptionsExtension : IDbContextOptionsExtension
 {
     public string TenantId { get; set; } = NOFAbstractionConstants.Tenant.HostId;
     public TenantMode TenantMode { get; set; } = TenantMode.DatabasePerTenant;

@@ -1,6 +1,7 @@
 namespace NOF.Infrastructure.AmazonS3;
+/// <summary>Counts bytes read from an underlying stream.</summary>
 
-internal sealed class CountingReadStream(Stream inner) : Stream
+public sealed class CountingReadStream(Stream inner) : Stream
 {
     private readonly Stream _inner = inner ?? throw new ArgumentNullException(nameof(inner));
 

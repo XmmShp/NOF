@@ -6,8 +6,9 @@ using System.Linq;
 using System.Text;
 
 namespace NOF.Infrastructure.SourceGenerator;
+/// <summary>Analyzes RPC declarations and emits client source code.</summary>
 
-internal static class RpcClientHelpers
+public static class RpcClientHelpers
 {
     public const string RpcServiceInterfaceFqn = "NOF.Contract.IRpcService";
     public const string ResultInterfaceFqn = "NOF.Contract.IResult";
