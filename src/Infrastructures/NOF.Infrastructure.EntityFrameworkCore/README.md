@@ -36,9 +36,32 @@ builder.UseDbContext<AppDbContext>()
     .MigrateOnInitialize();
 ```
 
-`MigrateOnInitialize()` migrates the context resolved during host initialization. It does not
-enumerate application-defined tenant databases in `DatabasePerTenant` mode; use the explicit
-tenant migration API below when those databases must be migrated as part of deployment.
+`MigrateOnInitialize()` awaits migration of the **host** database during initialization. A host
+migration failure prevents initialization from completing. In `DatabasePerTenant` mode, after
+`ApplicationStarted`, NOF enumerates `ITenantProvider` and migrates the other tenant databases
+sequentially in the background, using a fresh scope and tenant context for each database.
+Custom connection-string resolvers are used as usual. Startup does not wait for tenant migrations.
+In `SharedDatabase` mode only the host/shared database is migrated.
+
+Register the application's durable tenant catalog once for both migration and transactional messaging:
+
+```csharp
+builder.Services.AddSingleton<ITenantProvider, AppTenantCatalog>();
+```
+
+`ITenantProvider` is in `NOF.Infrastructure` and replaces `ITransactionalMessageTenantProvider`;
+update implementations and DI registrations to the new name. Its `GetTenantIdsAsync` method is unchanged.
+The default `HostTenantProvider` returns no additional tenants. Catalog implementations must support
+concurrent enumeration and should create scopes to query the host database. Return the tenants whose
+databases should be migrated and whose transactional messages should be processed.
+
+Host entries and duplicate normalized tenant IDs are skipped by the background migrator. A tenant
+migration failure is logged and does not prevent remaining tenants from migrating. Shutdown cancels
+the operation. Catalog enumeration failure is logged and ends the migration pass. This is one pass
+per application start, not a recurring provisioning service; tenants may be temporarily unavailable
+until their migrations complete. Use the explicit tenant migration API below for newly created tenants
+or to retry failures without restarting. Application-specific provisioning status and backfills remain
+the application's responsibility.
 
 ### Database-per-tenant schema policy
 

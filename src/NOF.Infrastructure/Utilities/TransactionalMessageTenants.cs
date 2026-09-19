@@ -6,7 +6,7 @@ namespace NOF.Infrastructure;
 internal static class TransactionalMessageTenants
 {
     public static async IAsyncEnumerable<string> EnumerateAsync(
-        ITransactionalMessageTenantProvider provider,
+        ITenantProvider provider,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);

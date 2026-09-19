@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace NOF.Infrastructure.EntityFrameworkCore;
@@ -73,12 +74,18 @@ public readonly struct EFCoreSelector
         return this;
     }
 
+    /// <summary>
+    /// Waits for host database migration during initialization, then migrates tenant databases
+    /// supplied by <see cref="ITenantProvider"/> in the background after the application starts.
+    /// </summary>
     public EFCoreSelector MigrateOnInitialize()
     {
         var dbContextType = DbContextType;
         Builder.Services.RemoveInitializationStep<DbContextMigrationInitializationStep>(existing =>
             existing.DbContextType == dbContextType);
         Builder.Services.AddInitializationStep(new DbContextMigrationInitializationStep(dbContextType));
+        Builder.Services.TryAddSingleton<ITenantProvider, HostTenantProvider>();
+        Builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, TenantDatabaseMigrationBackgroundService>());
         return this;
     }
 }

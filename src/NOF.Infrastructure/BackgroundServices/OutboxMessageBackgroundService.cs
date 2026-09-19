@@ -16,7 +16,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
     private readonly ILogger<OutboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
     private readonly IHostEnvironment _hostEnvironment;
-    private readonly ITransactionalMessageTenantProvider _tenantProvider;
+    private readonly ITenantProvider _tenantProvider;
 
     public OutboxMessageBackgroundService(
         IServiceProvider serviceProvider,
@@ -24,7 +24,7 @@ public sealed class OutboxMessageBackgroundService : BackgroundService
         ILogger<OutboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
         IHostEnvironment hostEnvironment,
-        ITransactionalMessageTenantProvider tenantProvider)
+        ITenantProvider tenantProvider)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;

@@ -14,14 +14,14 @@ internal sealed class OutboxCleanupBackgroundService : BackgroundService
     private readonly ILogger<OutboxCleanupBackgroundService> _logger;
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly IHostEnvironment _hostEnvironment;
-    private readonly ITransactionalMessageTenantProvider _tenantProvider;
+    private readonly ITenantProvider _tenantProvider;
 
     public OutboxCleanupBackgroundService(
         IServiceProvider serviceProvider,
         IOptions<TransactionalMessageOptions> options,
         ILogger<OutboxCleanupBackgroundService> logger,
         IHostEnvironment hostEnvironment,
-        ITransactionalMessageTenantProvider tenantProvider)
+        ITenantProvider tenantProvider)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value.Outbox;

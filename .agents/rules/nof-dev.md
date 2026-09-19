@@ -41,6 +41,7 @@ Use this file when contributing to the NOF framework itself.
 
 ## Coding Rules
 
+- Default classes to `public` throughout the repository. Use `internal` only when a compelling, concrete reason requires assembly-only visibility, and document that reason alongside the declaration. Being an implementation detail, a background service, or currently used only inside the repository is not sufficient justification.
 - Use file-scoped namespaces, Allman braces, and braces for every control-flow body.
 - Add XML documentation for public APIs under `src/`.
 - Do not put NuGet versions in individual `.csproj` files.

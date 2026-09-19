@@ -58,7 +58,7 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
             builder.Services.TryAddSingleton<CacheServiceLocalLockState>();
             builder.Services.TryAddSingleton<MemoryBackplaneState>();
-            builder.Services.TryAddSingleton<ITransactionalMessageTenantProvider, HostTransactionalMessageTenantProvider>();
+            builder.Services.TryAddSingleton<ITenantProvider, HostTenantProvider>();
             builder.Services.TryAddScoped<ICacheService>(sp => new CacheService(
                 sp.GetRequiredService<ICacheServiceRider>(),
                 sp.GetRequiredService<IObjectSerializer>(),

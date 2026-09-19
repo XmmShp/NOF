@@ -138,23 +138,29 @@ Available configuration methods:
 
 The resolver receives the normalized tenant identifier, concrete `DbContext` type, tenant mode, fallback template, and scoped services. Use it for tenant catalogs, secret stores, or shard maps; the template remains the convenient static default.
 
-`MigrateOnInitialize()` migrates the context resolved during host initialization; it cannot
-discover application-owned tenant databases. A custom deployment migrator can resolve
-`ITenantDbContextFactory<TDbContext>` from a scope and call
-`MigrateAsync(tenantId, cancellationToken)` for each tenant.
+`MigrateOnInitialize()` waits for host database migration during initialization. In
+`DatabasePerTenant` mode, it then migrates tenants from `ITenantProvider` sequentially in the
+background after the application starts. Each migration uses an isolated scope and the tenant's
+resolved connection string; one tenant failure is logged without stopping the remaining migrations.
+`SharedDatabase` mode migrates only the host/shared database. For newly provisioned tenants or
+explicit retries, resolve `ITenantDbContextFactory<TDbContext>` from a scope and call
+`MigrateAsync(tenantId, cancellationToken)`.
 
 Transactional inbox and outbox processors also need the application's tenant catalog to
-poll database-per-tenant message tables. Register an `ITransactionalMessageTenantProvider`
+poll database-per-tenant message tables. Register an `ITenantProvider`
 that enumerates tenant IDs from durable storage:
 
 ```csharp
-builder.Services.AddSingleton<ITransactionalMessageTenantProvider, AppTenantCatalog>();
+builder.Services.AddSingleton<ITenantProvider, AppTenantCatalog>();
 ```
 
 `AppTenantCatalog.GetTenantIdsAsync` should return every active tenant database, including
 tenants with messages written before this process started. NOF always polls the host database
 and deduplicates normalized tenant IDs. The default provider returns no additional tenants.
-The same catalog is used by inbox and outbox cleanup. A catalog failure is logged and retried
+`ITenantProvider` replaces `ITransactionalMessageTenantProvider`; update custom implementations
+and registrations to the new name. The same catalog is used by startup tenant migrations and
+inbox/outbox cleanup. Migrations enumerate once after startup; tenant migration failures require
+an explicit retry or a restart. For messaging, a catalog failure is logged and retried
 at the next polling interval; an error in one tenant database does not prevent other tenants
 from being processed.
 

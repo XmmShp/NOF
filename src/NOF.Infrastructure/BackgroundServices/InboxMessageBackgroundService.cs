@@ -18,7 +18,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
     private readonly TransactionalMessageProcessorOptions _options;
     private readonly ILogger<InboxMessageBackgroundService> _logger;
     private readonly IObjectSerializer _objectSerializer;
-    private readonly ITransactionalMessageTenantProvider _tenantProvider;
+    private readonly ITenantProvider _tenantProvider;
 
     public InboxMessageBackgroundService(
         IServiceProvider serviceProvider,
@@ -28,7 +28,7 @@ public sealed class InboxMessageBackgroundService : BackgroundService
         IOptions<TransactionalMessageOptions> options,
         ILogger<InboxMessageBackgroundService> logger,
         IObjectSerializer objectSerializer,
-        ITransactionalMessageTenantProvider tenantProvider)
+        ITenantProvider tenantProvider)
     {
         _serviceProvider = serviceProvider;
         _commandHandlerRegistry = commandHandlerRegistry;

@@ -1980,7 +1980,7 @@ public class SqliteInMemoryPersistenceTests
         }
     }
 
-    private sealed class TestMessageTenantProvider : ITransactionalMessageTenantProvider
+    private sealed class TestMessageTenantProvider : ITenantProvider
     {
         public async IAsyncEnumerable<string> GetTenantIdsAsync(
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -1994,7 +1994,7 @@ public class SqliteInMemoryPersistenceTests
         TransactionalMessageOptions? transactionalMessageOptions = null,
         TenantMode tenantMode = TenantMode.DatabasePerTenant,
         bool softDeleteEnabled = true,
-        ITransactionalMessageTenantProvider? messageTenantProvider = null)
+        ITenantProvider? messageTenantProvider = null)
     {
         var builder = new TestServiceRegistrationContext();
         builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
@@ -2005,7 +2005,7 @@ public class SqliteInMemoryPersistenceTests
         builder.AddNOFInfrastructure();
         if (messageTenantProvider is not null)
         {
-            builder.Services.ReplaceOrAddSingleton<ITransactionalMessageTenantProvider>(_ => messageTenantProvider);
+            builder.Services.ReplaceOrAddSingleton<ITenantProvider>(_ => messageTenantProvider);
         }
         ConfigureSqliteInMemory(
             builder.UseDbContext<TestDbContext>()
