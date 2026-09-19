@@ -58,7 +58,6 @@ public static partial class NOFInfrastructureExtensions
             builder.Services.TryAddSingleton<MemoryCacheServiceRiderState>();
             builder.Services.TryAddSingleton<CacheServiceLocalLockState>();
             builder.Services.TryAddSingleton<MemoryBackplaneState>();
-            builder.Services.TryAddSingleton<MemoryObjectStorageRiderState>();
             builder.Services.TryAddSingleton<ITransactionalMessageTenantProvider, HostTransactionalMessageTenantProvider>();
             builder.Services.TryAddScoped<ICacheService>(sp => new CacheService(
                 sp.GetRequiredService<ICacheServiceRider>(),
@@ -82,6 +81,7 @@ public static partial class NOFInfrastructureExtensions
             #region Options
             builder.Services.AddOptions<CacheServiceOptions>();
             builder.Services.AddOptions<ObjectStorageOptions>();
+            builder.Services.AddOptions<FileSystemObjectStorageOptions>();
             builder.Services.AddOptions<AuthenticationResourceServerOptions>();
             builder.Services.AddOptions<SnowflakeIdGeneratorOptions>()
                 .Validate(static options => options.ApplicationIdBits > 0, "ApplicationIdBits must be greater than zero.")
@@ -144,8 +144,7 @@ public static partial class NOFInfrastructureExtensions
             #region Default Persistence
             builder.Services.TryAddScoped<ICacheServiceRider>(sp => new MemoryCacheServiceRider(
                 sp.GetRequiredService<MemoryCacheServiceRiderState>()));
-            builder.Services.TryAddScoped<IObjectStorageRider>(sp => new MemoryObjectStorageRider(
-                sp.GetRequiredService<MemoryObjectStorageRiderState>()));
+            builder.Services.TryAddScoped<IObjectStorageRider, FileSystemObjectStorageRider>();
             builder.Services.TryAddSingleton<ICommandRider, MemoryCommandRider>();
             builder.Services.TryAddSingleton<INotificationRider, MemoryNotificationRider>();
             #endregion

@@ -18,6 +18,8 @@ It helps you write:
 
 Creates a lightweight host builder for tests while still going through the NOF registration pipeline.
 
+Object storage uses `MemoryObjectStorageRider` by default, with state isolated per test host. To test durable local storage, explicitly call `builder.Services.AddFileSystemObjectStorage(options => options.RootPath = testDirectory)`.
+
 ```csharp
 var builder = NOFTestAppBuilder.Create()
     .AddApplicationPartOf<MyRpcServer>()

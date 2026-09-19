@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 namespace NOF.Infrastructure;
 
 /// <summary>
-/// Provides host-local in-memory object storage for development and tests.
+/// Provides host-local in-memory object storage, primarily for isolated tests.
 /// </summary>
 public sealed class MemoryObjectStorageRider : IObjectStorageRider, IDisposable
 {

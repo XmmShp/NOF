@@ -34,7 +34,7 @@ public class NOFInfrastructureTests
         Assert.IsType<CacheService>(scope.ServiceProvider.GetRequiredService<ICacheService>());
         Assert.IsType<MemoryCacheServiceRider>(scope.ServiceProvider.GetRequiredService<ICacheServiceRider>());
         Assert.IsType<ObjectStorageService>(scope.ServiceProvider.GetRequiredService<IObjectStorage>());
-        Assert.IsType<MemoryObjectStorageRider>(scope.ServiceProvider.GetRequiredService<IObjectStorageRider>());
+        Assert.IsType<FileSystemObjectStorageRider>(scope.ServiceProvider.GetRequiredService<IObjectStorageRider>());
     }
 
     [Fact]

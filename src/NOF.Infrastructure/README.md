@@ -29,7 +29,7 @@ dotnet add package NOF.Infrastructure
 This package includes:
 
 - in-memory cache (`ICacheService` + `MemoryCacheServiceRider`)
-- in-memory object storage (`IObjectStorage` + `MemoryObjectStorageRider`)
+- local file system object storage (`IObjectStorage` + `FileSystemObjectStorageRider`), with an optional `MemoryObjectStorageRider` for tests
 - in-memory backplane (`IBackplane` + `MemoryBackplane`)
 - in-memory riders (`MemoryCommandRider`, `MemoryNotificationRider`)
 - in-memory persistence for tests/development (`services.AddInMemoryPersistence()`)
@@ -49,7 +49,9 @@ The default backplane implementation is also host-local:
 - subscriptions live in `MemoryBackplaneState`
 - published messages are delivered only to subscribers inside the same NOF host process
 
-The default object storage implementation is intended for development and tests. Its objects live in a host-local `MemoryObjectStorageRiderState`. Replace `IObjectStorageRider` in a provider package to connect a durable backend while keeping application code unchanged. For AWS S3 and S3-compatible services, reference `NOF.Infrastructure.AmazonS3`:
+The default object storage implementation persists content and metadata locally under `AppContext.BaseDirectory/App_Data/objects`. Configure a writable, persistent directory through `builder.Services.AddFileSystemObjectStorage(options => options.RootPath = "/data/objects")`. Relative paths resolve against the working directory. The directory is provider-owned: object names are hashed, and files contain both metadata and content; do not modify its files or add symbolic links. Writes replace complete objects atomically, and reads retain a snapshot across replacement or deletion. Listing uses ordinal key order and prefix matching; it scans the bucket's metadata files.
+
+For isolated tests, use `builder.Services.AddMemoryObjectStorage()`. `NOFTestAppBuilder` selects this automatically; state is shared between scopes within one host and discarded when that host is disposed. Replace `IObjectStorageRider` in a provider package to connect another backend while keeping application code unchanged. For AWS S3 and S3-compatible services, reference `NOF.Infrastructure.AmazonS3`:
 
 ```csharp
 builder.Services.AddAmazonS3ObjectStorage(options =>

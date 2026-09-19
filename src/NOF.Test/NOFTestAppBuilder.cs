@@ -79,6 +79,7 @@ public sealed class NOFTestAppBuilder : IHostApplicationBuilder
     private void ConfigureDefaultTestServices()
     {
         this.AddNOFInfrastructure();
+        Services.AddMemoryObjectStorage();
     }
 
     public void ConfigureContainer<TContainerBuilder>(IServiceProviderFactory<TContainerBuilder> factory, Action<TContainerBuilder>? configure = null)
