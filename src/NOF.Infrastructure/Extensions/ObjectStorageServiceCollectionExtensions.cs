@@ -13,7 +13,11 @@ public static partial class NOFInfrastructureExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
             services.AddOptions<FileSystemObjectStorageOptions>();
-            if (configureOptions is not null) services.Configure(configureOptions);
+            if (configureOptions is not null)
+            {
+                services.Configure(configureOptions);
+            }
+
             services.ReplaceOrAddScoped<IObjectStorageRider, FileSystemObjectStorageRider>();
             return services;
         }

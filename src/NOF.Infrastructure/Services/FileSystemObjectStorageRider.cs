@@ -120,7 +120,11 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
         CancellationToken cancellationToken = default)
     {
         var result = await OpenReadAsync(bucketName, objectKey, cancellationToken);
-        if (!result.HasValue) return Optional.None;
+        if (!result.HasValue)
+        {
+            return Optional.None;
+        }
+
         await using var content = result.Value.Content;
         return Optional.Of(result.Value.ObjectInfo);
     }
@@ -135,7 +139,8 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
         var path = GetPath(bucketName, objectKey);
         cancellationToken.ThrowIfCancellationRequested();
         var tombstone = Path.Combine(Path.GetDirectoryName(path)!, $"{Guid.NewGuid():N}.tmp");
-        try { File.Move(path, tombstone); }
+        try
+        { File.Move(path, tombstone); }
         catch (FileNotFoundException) { return ValueTask.FromResult(false); }
         catch (DirectoryNotFoundException) { return ValueTask.FromResult(false); }
         File.Delete(tombstone);
@@ -148,14 +153,21 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
     {
         _ = GetPath(destinationBucketName, destinationObjectKey);
         var source = await OpenReadAsync(sourceBucketName, sourceObjectKey, cancellationToken);
-        if (!source.HasValue) return Optional.None;
+        if (!source.HasValue)
+        {
+            return Optional.None;
+        }
+
         await using var content = source.Value.Content;
         var info = source.Value.ObjectInfo;
         return Optional.Of(await PutAsync(destinationBucketName, destinationObjectKey, content,
             new ObjectStorageWriteOptions
             {
-                ContentType = info.ContentType, ContentEncoding = info.ContentEncoding,
-                CacheControl = info.CacheControl, ContentDisposition = info.ContentDisposition, Metadata = info.Metadata
+                ContentType = info.ContentType,
+                ContentEncoding = info.ContentEncoding,
+                CacheControl = info.CacheControl,
+                ContentDisposition = info.ContentDisposition,
+                Metadata = info.Metadata
             }, cancellationToken));
     }
 
@@ -166,7 +178,11 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
         ArgumentException.ThrowIfNullOrWhiteSpace(bucketName);
         cancellationToken.ThrowIfCancellationRequested();
         var directory = Path.Combine(_rootPath, Hash(bucketName));
-        if (!Directory.Exists(directory)) yield break;
+        if (!Directory.Exists(directory))
+        {
+            yield break;
+        }
+
         var items = new List<ObjectStorageObjectInfo>();
         foreach (var path in Directory.EnumerateFiles(directory, "*.obj"))
         {
@@ -180,14 +196,21 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
                 var header = new byte[sizeof(int)];
                 await stream.ReadExactlyAsync(header, cancellationToken);
                 var length = BinaryPrimitives.ReadInt32LittleEndian(header);
-                if (length <= 0 || length > stream.Length - sizeof(int)) throw new InvalidDataException("Invalid object metadata length.");
+                if (length <= 0 || length > stream.Length - sizeof(int))
+                {
+                    throw new InvalidDataException("Invalid object metadata length.");
+                }
+
                 metadata = new byte[length];
                 await stream.ReadExactlyAsync(metadata, cancellationToken);
             }
             catch (FileNotFoundException) { continue; }
             var info = JsonSerializer.Deserialize(metadata, FileSystemObjectStorageJsonContext.Default.ObjectStorageObjectInfo)
                 ?? throw new InvalidDataException("Missing object metadata.");
-            if (info.BucketName == bucketName && info.ObjectKey.StartsWith(prefix ?? string.Empty, StringComparison.Ordinal)) items.Add(info);
+            if (info.BucketName == bucketName && info.ObjectKey.StartsWith(prefix ?? string.Empty, StringComparison.Ordinal))
+            {
+                items.Add(info);
+            }
         }
         foreach (var info in items.OrderBy(static item => item.ObjectKey, StringComparer.Ordinal))
         {
@@ -252,13 +275,17 @@ public sealed class FileSystemObjectStorageRider : IObjectStorageRider
                 SeekOrigin.End => checked(Length + offset),
                 _ => throw new ArgumentOutOfRangeException(nameof(origin))
             };
-            if (position < 0) throw new IOException("Cannot seek before the object content.");
+            if (position < 0)
+            {
+                throw new IOException("Cannot seek before the object content.");
+            }
+
             return inner.Seek(checked(_offset + position), SeekOrigin.Begin) - _offset;
         }
         public override void Flush() { }
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-        protected override void Dispose(bool disposing) { if (disposing) inner.Dispose(); base.Dispose(disposing); }
+        protected override void Dispose(bool disposing) { if (disposing) { inner.Dispose(); } base.Dispose(disposing); }
         public override async ValueTask DisposeAsync() { await inner.DisposeAsync(); GC.SuppressFinalize(this); }
     }
 }

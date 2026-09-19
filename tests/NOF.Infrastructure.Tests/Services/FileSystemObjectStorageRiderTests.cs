@@ -20,8 +20,11 @@ public sealed class FileSystemObjectStorageRiderTests : IDisposable
         using var input = new MemoryStream("hello"u8.ToArray());
         var stored = await rider.PutAsync("bucket", "nested/file", input, new ObjectStorageWriteOptions
         {
-            ContentType = "text/plain", ContentEncoding = "utf-8", CacheControl = "private",
-            ContentDisposition = "attachment", Metadata = new Dictionary<string, string> { ["Key"] = "value" }
+            ContentType = "text/plain",
+            ContentEncoding = "utf-8",
+            CacheControl = "private",
+            ContentDisposition = "attachment",
+            Metadata = new Dictionary<string, string> { ["Key"] = "value" }
         });
         Assert.True(input.CanRead);
         var reopened = CreateRider();
@@ -60,7 +63,11 @@ public sealed class FileSystemObjectStorageRiderTests : IDisposable
         Assert.Equal("new content", await Read(rider, "archive", "copy"));
         Assert.True((await rider.CopyAsync("archive", "copy", "archive", "copy")).HasValue);
         var keys = new List<string>();
-        await foreach (var info in rider.ListAsync("source", "reports/")) keys.Add(info.ObjectKey);
+        await foreach (var info in rider.ListAsync("source", "reports/"))
+        {
+            keys.Add(info.ObjectKey);
+        }
+
         Assert.Equal(["reports/a", "reports/b"], keys);
         Assert.True(await rider.DeleteAsync("source", "reports/b"));
         Assert.False(await rider.DeleteAsync("source", "reports/b"));
@@ -76,8 +83,16 @@ public sealed class FileSystemObjectStorageRiderTests : IDisposable
     {
         var rider = CreateRider();
         string[] keys = ["../outside", "C:\\outside", "/absolute", "a", "A", "a/b", "a\\b", "中文", "file.obj", "file.tmp"];
-        foreach (var key in keys) await Put(rider, "../bucket", key, key);
-        foreach (var key in keys) Assert.Equal(key, await Read(CreateRider(), "../bucket", key));
+        foreach (var key in keys)
+        {
+            await Put(rider, "../bucket", key, key);
+        }
+
+        foreach (var key in keys)
+        {
+            Assert.Equal(key, await Read(CreateRider(), "../bucket", key));
+        }
+
         Assert.False(await rider.ExistsAsync("../BUCKET", "a"));
         Assert.Equal(keys.Length, Directory.GetFiles(_root, "*.obj", SearchOption.AllDirectories).Length);
         Assert.Empty(Directory.GetFiles(_root, "*.tmp", SearchOption.AllDirectories));
@@ -134,7 +149,10 @@ public sealed class FileSystemObjectStorageRiderTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
     }
 
     private sealed class FailingStream : MemoryStream
