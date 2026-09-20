@@ -7,6 +7,31 @@ namespace NOF.Application;
 /// </summary>
 public interface IObjectStorage
 {
+    /// <summary>Gets whether this provider supports presigned upload and download requests.</summary>
+    bool SupportsPresignedRequests => false;
+
+    /// <summary>Signs a direct upload request for a logical object key, replacing the object if it exists.</summary>
+    /// <remarks>
+    /// Signing does not upload content. Authorize the caller and choose the bucket and key before signing.
+    /// The client must use the returned method and headers. Lifetime must be at least one second;
+    /// provider-specific maximum expiration limits apply.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">The provider has no presigning capability.</exception>
+    ValueTask<ObjectStoragePresignedRequest> CreatePresignedUploadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime,
+        ObjectStorageWriteOptions? options = null, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This object storage provider does not support presigned requests.");
+
+    /// <summary>Signs a direct download request for a logical object key without checking object existence.</summary>
+    /// <remarks>
+    /// Authorize the caller before signing. Lifetime must be at least one second;
+    /// provider-specific maximum expiration limits apply.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">The provider has no presigning capability.</exception>
+    ValueTask<ObjectStoragePresignedRequest> CreatePresignedDownloadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This object storage provider does not support presigned requests.");
+
     /// <summary>
     /// Creates a view that bypasses the configured object-key prefix.
     /// </summary>

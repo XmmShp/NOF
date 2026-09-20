@@ -137,6 +137,19 @@ builder.Services.AddAuthenticationResourceServer(options =>
 
 The resource server discovers OAuth authorization-server metadata and JWKS from `AuthorizationServerIssuer`. It populates `IUserContext` and the tenant pipeline for RPC, command, and notification handling.
 
+## Object Storage and Direct Transfers
+
+Application code uses `IObjectStorage`; the default rider stores objects on the local file system.
+Use `AddMemoryObjectStorage()` for tests or `AddAmazonS3ObjectStorage(...)` for an S3 endpoint.
+`CreatePresignedUploadAsync(bucket, key, lifetime, writeOptions, cancellationToken)` and
+`CreatePresignedDownloadAsync(bucket, key, lifetime, cancellationToken)` return a URL, HTTP method,
+required headers, and expiration for direct transfers. Check `SupportsPresignedRequests`: S3
+supports this capability; file system and memory riders throw `NotSupportedException`.
+Signing applies the same tenant-aware key prefix as ordinary storage operations. Authorize the
+caller and select the bucket/key before signing; send the returned headers unchanged and configure
+bucket CORS for browser clients. S3 lifetimes range from one second to seven days, and temporary
+credentials can expire sooner. Presigned PUT uploads raw content; it is not a multipart/POST-policy API.
+
 ## Configuration Snippet
 
 ```json

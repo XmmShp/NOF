@@ -70,6 +70,14 @@ builder.Services.Configure<ObjectStorageOptions>(options =>
 
 `IObjectStorage.IgnoreKeyPrefix()` provides an explicit administrative view over physical keys when cross-tenant access is required.
 
+`IObjectStorage` also exposes `SupportsPresignedRequests`, `CreatePresignedUploadAsync`, and
+`CreatePresignedDownloadAsync` for direct HTTP transfers. Returned requests include the URL,
+HTTP method, required headers, and requested expiration. They apply the same tenant key prefixes.
+S3 supports signing; the built-in file system and memory riders report `false` and throw
+`NotSupportedException` because they do not expose HTTP endpoints. The default interface methods
+preserve compatibility for custom riders that have not implemented signing. Authorize each signing
+request in the application before issuing a URL. See the S3 provider README for browser usage.
+
 ## Local RPC Clients
 
 The Infrastructure source generator discovers `RpcServer<TService>` implementations in the host and referenced application assemblies. For a server named `OrderService`, it generates a public `LocalOrderServiceClient` implementing the canonical client interface generated beside the service contract:

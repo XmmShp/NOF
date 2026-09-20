@@ -9,6 +9,20 @@ namespace NOF.Infrastructure;
 /// </summary>
 public interface IObjectStorageRider
 {
+    /// <summary>Gets whether this rider supports presigned upload and download requests.</summary>
+    bool SupportsPresignedRequests => false;
+
+    /// <summary>Signs a direct upload request using a physical object key.</summary>
+    ValueTask<ObjectStoragePresignedRequest> CreatePresignedUploadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime,
+        ObjectStorageWriteOptions? options = null, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This object storage rider does not support presigned requests.");
+
+    /// <summary>Signs a direct download request using a physical object key.</summary>
+    ValueTask<ObjectStoragePresignedRequest> CreatePresignedDownloadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This object storage rider does not support presigned requests.");
+
     ValueTask<ObjectStorageObjectInfo> PutAsync(
         string bucketName,
         string objectKey,

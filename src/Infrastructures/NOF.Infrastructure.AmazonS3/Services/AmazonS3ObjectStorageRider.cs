@@ -19,6 +19,73 @@ public sealed class AmazonS3ObjectStorageRider : IObjectStorageRider
     private readonly IAmazonS3 _client;
     private readonly AmazonS3ObjectStorageOptions _options;
 
+    /// <inheritdoc />
+    public bool SupportsPresignedRequests => true;
+
+    /// <inheritdoc />
+    public ValueTask<ObjectStoragePresignedRequest> CreatePresignedUploadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime,
+        ObjectStorageWriteOptions? options = null, CancellationToken cancellationToken = default)
+        => CreatePresignedRequestAsync(bucketName, objectKey, lifetime, Amazon.S3.HttpVerb.PUT, options, cancellationToken);
+
+    /// <inheritdoc />
+    public ValueTask<ObjectStoragePresignedRequest> CreatePresignedDownloadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime, CancellationToken cancellationToken = default)
+        => CreatePresignedRequestAsync(bucketName, objectKey, lifetime, Amazon.S3.HttpVerb.GET, null, cancellationToken);
+
+    private async ValueTask<ObjectStoragePresignedRequest> CreatePresignedRequestAsync(
+        string bucketName, string objectKey, TimeSpan lifetime, Amazon.S3.HttpVerb verb,
+        ObjectStorageWriteOptions? options, CancellationToken cancellationToken)
+    {
+        ValidateLocation(bucketName, objectKey);
+        ArgumentOutOfRangeException.ThrowIfLessThan(lifetime, TimeSpan.FromSeconds(1));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(lifetime, TimeSpan.FromDays(7));
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.Add(lifetime).ToUnixTimeSeconds());
+        var useHttp = _client.Config?.UseHttp == true
+            || (Uri.TryCreate(_client.Config?.ServiceURL, UriKind.Absolute, out var endpoint)
+                && endpoint.Scheme == Uri.UriSchemeHttp);
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = bucketName,
+            Key = objectKey,
+            Verb = verb,
+            Expires = expiresAt.UtcDateTime,
+            Protocol = useHttp ? Protocol.HTTP : Protocol.HTTPS,
+            ContentType = options?.ContentType
+        };
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        AddHeader("Content-Type", options?.ContentType);
+        AddHeader("Content-Encoding", options?.ContentEncoding);
+        AddHeader("Cache-Control", options?.CacheControl);
+        AddHeader("Content-Disposition", options?.ContentDisposition);
+        if (options?.Metadata is not null)
+        {
+            foreach (var (key, value) in options.Metadata)
+            {
+                request.Metadata.Add(key, value);
+            }
+            foreach (var key in request.Metadata.Keys)
+            {
+                headers[key] = request.Metadata[key];
+            }
+        }
+
+        // The SDK does not accept a cancellation token for credential resolution/signing.
+        var url = await _client.GetPreSignedURLAsync(request).WaitAsync(cancellationToken);
+        return new ObjectStoragePresignedRequest(url, verb.ToString(), expiresAt, headers);
+
+        void AddHeader(string name, string? value)
+        {
+            if (value is not null)
+            {
+                request.Headers[name] = value;
+                headers[name] = value;
+            }
+        }
+    }
+
     /// <summary>
     /// Initializes a new AWS S3 object storage rider.
     /// </summary>

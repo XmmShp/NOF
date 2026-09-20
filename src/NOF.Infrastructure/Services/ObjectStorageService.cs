@@ -14,6 +14,32 @@ public sealed class ObjectStorageService : IObjectStorage
     private readonly ObjectStorageOptions _options;
     private readonly bool _ignoreKeyPrefix;
 
+    /// <inheritdoc />
+    public bool SupportsPresignedRequests => _rider.SupportsPresignedRequests;
+
+    /// <inheritdoc />
+    public ValueTask<ObjectStoragePresignedRequest> CreatePresignedUploadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime,
+        ObjectStorageWriteOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        ValidateLocation(bucketName, objectKey);
+        ArgumentOutOfRangeException.ThrowIfLessThan(lifetime, TimeSpan.FromSeconds(1));
+        cancellationToken.ThrowIfCancellationRequested();
+        return _rider.CreatePresignedUploadAsync(bucketName, ApplyKeyPrefix(objectKey, GetKeyPrefix()),
+            lifetime, options, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public ValueTask<ObjectStoragePresignedRequest> CreatePresignedDownloadAsync(
+        string bucketName, string objectKey, TimeSpan lifetime, CancellationToken cancellationToken = default)
+    {
+        ValidateLocation(bucketName, objectKey);
+        ArgumentOutOfRangeException.ThrowIfLessThan(lifetime, TimeSpan.FromSeconds(1));
+        cancellationToken.ThrowIfCancellationRequested();
+        return _rider.CreatePresignedDownloadAsync(bucketName, ApplyKeyPrefix(objectKey, GetKeyPrefix()),
+            lifetime, cancellationToken);
+    }
+
     /// <summary>
     /// Initializes a new object storage service.
     /// </summary>
