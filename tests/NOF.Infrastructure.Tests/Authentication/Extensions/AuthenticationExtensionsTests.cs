@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using NOF.Abstraction;
 using NOF.Contract;
 using NOF.Hosting;
 using NOF.Hosting.AspNetCore;
@@ -1670,6 +1671,61 @@ public sealed class AuthenticationExtensionsTests
         Assert.IsType<LocalJwksService>(scope.GetRequiredService<IJwksService>());
         Assert.IsType<LocalAuthorizationServerMetadataService>(
             scope.GetRequiredService<IAuthorizationServerMetadataService>());
+    }
+
+    [Fact]
+    public async Task AddOidcServer_AndResourceServer_ShouldCacheHostKeysWhenRefreshedFromTenantContext()
+    {
+        var builder = CreateAuthorityBuilder($"Data Source=nof-jwks-tenant-tests-{Guid.NewGuid():N}-{{tenantId}};Mode=Memory;Cache=Shared");
+        builder.Services.AddAuthenticationResourceServer(options =>
+        {
+            options.AuthorizationServerIssuer = "https://issuer.local";
+        });
+
+        await using var host = await builder.BuildTestHostAsync();
+        using var scope = host.CreateScope();
+        var signingKeyService = scope.GetRequiredService<ISigningKeyService>();
+        var hostKey = await signingKeyService.GetCurrentSigningKeyAsync();
+        var token = await scope.GetRequiredService<ITokenService>().IssueTokenAsync(
+            new IssueTokenRequest
+            {
+                ClientId = "tenant-client",
+                Audience = "nof-tests",
+                AccessTokenExpiration = TimeSpan.FromMinutes(10),
+                AccessClaims = [new(JwtRegisteredClaimNames.Sub, "user-1")]
+            }, CancellationToken.None);
+        Assert.True(token.IsSuccess, token.Message);
+        var cache = host.Services.GetRequiredService<ResourceServerJwksCacheService>();
+
+        using (Context.PushCurrent(Context.Empty.WithTenantId("tenant-1")))
+        {
+            var keys = await cache.GetSecurityKeysAsync();
+            Assert.Contains(keys, key => key.KeyId == hostKey.Kid);
+            new JwtSecurityTokenHandler().ValidateToken(token.Value.AccessToken, new TokenValidationParameters
+            {
+                ValidIssuer = "https://issuer.local",
+                ValidAudience = "nof-tests",
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKeys = keys
+            }, out _);
+            Assert.Equal("https://issuer.local", await cache.GetIssuerAsync());
+            Assert.Equal("tenant-1", Context.Current.TenantId);
+
+            await signingKeyService.RotateKeyAsync();
+            hostKey = await signingKeyService.GetCurrentSigningKeyAsync();
+            keys = await cache.RefreshNowAsync();
+            Assert.Contains(keys, key => key.KeyId == hostKey.Kid);
+            Assert.Equal("tenant-1", Context.Current.TenantId);
+        }
+
+        using (Context.PushCurrent(Context.Empty.WithTenantId("tenant-2")))
+        {
+            var keys = await cache.GetSecurityKeysAsync(hostKey.Kid);
+            Assert.Contains(keys, key => key.KeyId == hostKey.Kid);
+            Assert.Equal("tenant-2", Context.Current.TenantId);
+        }
+
+        Assert.Equal(NOFAbstractionConstants.Tenant.HostId, Context.Current.TenantId);
     }
 
     [Fact]

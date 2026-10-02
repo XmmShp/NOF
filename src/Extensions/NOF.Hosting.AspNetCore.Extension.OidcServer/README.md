@@ -10,6 +10,10 @@ This package provides NOF authentication authority capabilities and exposes them
 
 - `AddOidcServer(...)` registers signing-key persistence, JWT issuing, refresh-token revocation, local JWKS publishing, key rotation, OIDC protocol services, and default persisted OAuth client management services
 - `MapOidcServer()` exposes discovery, authorization, token, revocation, introspection, userinfo, JWKS, and dynamic client registration endpoints
+
+When the local authority is also a resource server, its shared JWKS cache refreshes in the host
+(platform) tenant context. Tenant requests therefore load validation keys from the same platform
+database used by the authority rather than from the requesting tenant's database.
 - Supports `authorization_code`, `refresh_token`, `client_credentials`, `device_code`, and `token_exchange` grants
 - Supports RFC 7591 client registration and RFC 7592 client configuration management
 - Uses standard ASP.NET Core HTTP behavior for redirects, form posts, status codes, and JSON responses

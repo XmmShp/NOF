@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using NOF.Abstraction;
+using NOF.Contract;
 using System.Collections.Concurrent;
 
 namespace NOF.Infrastructure;
@@ -8,6 +10,10 @@ namespace NOF.Infrastructure;
 /// <summary>
 /// Caches resource-server validation keys and refreshes them on demand.
 /// </summary>
+/// <remarks>
+/// Refreshes resolve authority services in the host tenant context so a tenant request
+/// cannot populate the shared cache with tenant-specific signing keys.
+/// </remarks>
 public sealed class ResourceServerJwksCacheService : IDisposable
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -156,6 +162,9 @@ public sealed class ResourceServerJwksCacheService : IDisposable
 
     private async Task<IReadOnlyList<SecurityKey>> RefreshUnsafeAsync(CancellationToken cancellationToken)
     {
+        // Validation keys belong to the authority, not the tenant that triggered this refresh.
+        // Bind the host context before resolving scoped services and their database contexts.
+        using var hostContext = Context.PushCurrent(Context.Empty.WithTenantId(NOFAbstractionConstants.Tenant.HostId));
         var previousSnapshot = CreateSnapshot();
 
         try
