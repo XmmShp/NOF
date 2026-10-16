@@ -109,9 +109,15 @@ public sealed class AuthenticationResourceServerInboundMiddleware :
                 try
                 {
                     var validIssuer = await GetValidIssuerAsync(cancellationToken).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(validIssuer))
+                    {
+                        _logger.LogWarning("Cannot validate an access token without a configured or discovered issuer");
+                        continue;
+                    }
+
                     var validationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuer = !string.IsNullOrEmpty(validIssuer),
+                        ValidateIssuer = true,
                         ValidIssuer = validIssuer,
                         ValidateAudience = !string.IsNullOrEmpty(_jwtOptions.Audience),
                         ValidAudience = _jwtOptions.Audience,

@@ -8,12 +8,19 @@
     <PackageVersion Include="Aspire.Hosting.Garnet" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.1.0" />
-    <PackageVersion Include="MessagePack" Version="[2.5.301,3.0.0)" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" />
+    <PackageVersion Include="MessagePack" Version="[2.5.303,3.0.0)" />
+    <!-- Align the sample Blazor packages with the patched debugger/server dependency. -->
+    <PackageVersion Update="Microsoft.AspNetCore.Components" Version="[10.0.13,10.1.0)" />
+    <PackageVersion Update="Microsoft.AspNetCore.Components.WebAssembly" Version="[10.0.13,10.1.0)" />
+    <PackageVersion Update="Microsoft.JSInterop" Version="[10.0.13,10.1.0)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.13" />
+    <!-- EF design tooling brings Pkcs transitively; retain its major version with security fixes. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="[9.0.21,10.0.0)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageVersion Update="Microsoft.Extensions.*" Version="[10.0.13,10.1.0)" />
   </ItemGroup>
 </Project>

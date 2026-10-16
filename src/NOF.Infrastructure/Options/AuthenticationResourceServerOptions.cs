@@ -7,7 +7,8 @@ public class AuthenticationResourceServerOptions
 {
 
     /// <summary>
-    /// Gets or sets the accepted access token sources.
+    /// Gets or sets the accepted access token header sources for the single configured authority.
+    /// This is not a list of trusted issuers.
     /// </summary>
     public List<AuthenticationTokenSourceOptions> Sources { get; set; } = [new AuthenticationTokenSourceOptions()];
 
@@ -33,12 +34,14 @@ public class AuthenticationResourceServerOptions
     /// <summary>
     /// Gets or sets the expected issuer for token validation.
     /// If null, the issuer from the discovered authorization server metadata is used.
+    /// Tokens are not authenticated if neither source supplies a non-empty issuer.
     /// </summary>
     public string? ExpectedIssuer { get; set; }
 
     /// <summary>
     /// Gets or sets the expected audience for token validation.
     /// If null, audience validation is disabled.
+    /// Production resource servers should always configure an explicit audience.
     /// </summary>
     public string? Audience { get; set; }
 

@@ -21,6 +21,67 @@ namespace NOF.Infrastructure.Tests.Persistence;
 
 public class SqliteInMemoryPersistenceTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ScopedPersistence_ShouldShareTrackingAndTransaction(bool useCustomContext, bool commit)
+    {
+        var builder = new TestServiceRegistrationContext();
+        builder.Services.AddSingleton<IIdGenerator>(new TestIdGenerator());
+        builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+        builder.AddNOFHosting();
+        builder.AddNOFInfrastructure();
+        var selector = useCustomContext
+            ? builder.UseDbContext<TestDbContext>()
+            : builder.UseDbContext<NOFDbContext>();
+        ConfigureSqliteInMemory(selector, $"nof-shared-scope-{Guid.NewGuid():N}");
+
+        using var services = BuildServiceProvider(builder);
+        using var scope = services.CreateScope();
+        SetTenant(scope.ServiceProvider, NOFAbstractionConstants.Tenant.HostId);
+        var concrete = scope.ServiceProvider.GetRequiredService<DbContext>();
+        Assert.Same(concrete, scope.ServiceProvider.GetRequiredService<NOFDbContext>());
+        if (useCustomContext)
+        {
+            Assert.Same(concrete, scope.ServiceProvider.GetRequiredService<TestDbContext>());
+        }
+
+        var application = scope.ServiceProvider.GetRequiredService<NOF.Application.IDbContext>();
+        var publisher = scope.ServiceProvider.GetRequiredService<INotificationPublisher>();
+        var sender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
+        await using (var transaction = await application.BeginTransactionAsync())
+        {
+            var state = new NOFOutboxOrderState { OrderKey = "shared", Sequence = 1 };
+            application.Set<NOFOutboxOrderState>().Add(state);
+            Assert.Same(state, Assert.Single(concrete.ChangeTracker.Entries<NOFOutboxOrderState>()).Entity);
+            Assert.NotNull(concrete.Database.CurrentTransaction);
+            await publisher.DeferPublishAsync(new ScopedTransactionMessage("first"), Context.Current);
+            await application.SaveChangesAsync();
+            concrete.Set<NOFOutboxOrderState>().Add(new NOFOutboxOrderState { OrderKey = "native", Sequence = 2 });
+            await sender.DeferSendAsync(new ScopedTransactionMessage("second"), Context.Current);
+            await application.SaveChangesAsync();
+            await application.SaveChangesAsync();
+            Assert.Equal(2, await EFQuery.CountAsync(concrete.Set<NOFOutboxMessage>()));
+            if (commit)
+            {
+                await transaction.CommitAsync();
+            }
+            else
+            {
+                await transaction.RollbackAsync();
+            }
+        }
+
+        using var verificationScope = services.CreateScope();
+        var verification = verificationScope.ServiceProvider.GetRequiredService<DbContext>();
+        Assert.Equal(commit ? 2 : 0, await EFQuery.CountAsync(verification.Set<NOFOutboxOrderState>()));
+        Assert.Equal(commit ? 2 : 0, await EFQuery.CountAsync(verification.Set<NOFOutboxMessage>()));
+    }
+
+    public sealed record ScopedTransactionMessage(string Value);
+
     private static readonly AsyncLocal<IDisposable?> TenantScope = new();
 
     private static Task<TSource> SingleAsync<TSource>(

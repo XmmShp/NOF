@@ -11,13 +11,23 @@ namespace NOF.Infrastructure;
 public sealed class AuthorizationInboundMiddleware(
     IUserContext userContext,
     IInboundAuthorizationHandler authorizationHandler,
-    IOptions<AuthenticationResourceServerOptions> options) :
+    IOptions<AuthenticationResourceServerOptions> options,
+    IOptions<TenantAuthorizationOptions> tenantOptions) :
     ICommandInboundMiddleware,
     INotificationInboundMiddleware,
     IRequestInboundMiddleware
 {
     private const string WwwAuthenticateHeader = "WWW-Authenticate";
     private readonly AuthenticationResourceServerOptions _options = options.Value;
+    private readonly TenantAuthorizationOptions _tenantOptions = tenantOptions.Value;
+
+    /// <summary>Creates authorization middleware with the default tenant trust policy.</summary>
+    public AuthorizationInboundMiddleware(IUserContext userContext,
+        IInboundAuthorizationHandler authorizationHandler,
+        IOptions<AuthenticationResourceServerOptions> options)
+        : this(userContext, authorizationHandler, options, Microsoft.Extensions.Options.Options.Create(new TenantAuthorizationOptions()))
+    {
+    }
 
     public TopologyComparison Compare(ICommandInboundMiddleware other)
         => other is TenantInboundMiddleware ? TopologyComparison.After : TopologyComparison.DoesNotMatter;
@@ -94,7 +104,44 @@ public sealed class AuthorizationInboundMiddleware(
             return;
         }
 
+        if (ValidateRequestTenant(context) is { } tenantFailure)
+        {
+            ApplyFailure(context, tenantFailure);
+            return;
+        }
+
         await next(WithTrustedTenant(context), request, cancellationToken);
+    }
+
+    private InboundAuthorizationResult.Denied? ValidateRequestTenant(RequestInboundContext context)
+    {
+        var isHostOperation = UseHostTenantAttribute.IsRequired(context.ServiceMethodInfo);
+        var isAuthenticated = userContext.User.IsAuthenticated;
+        var trustedTenant = isAuthenticated ? userContext.User.TenantId : null;
+        var normalizedTenant = TenantId.Normalize(trustedTenant);
+        if (_tenantOptions.RequireAuthenticatedTenantForRequests)
+        {
+            if (!isAuthenticated)
+            {
+                return new(Result.Fail("401", "Please login first"), 401, []);
+            }
+
+            if (!isHostOperation && (string.IsNullOrWhiteSpace(trustedTenant)
+                || normalizedTenant == NOFAbstractionConstants.Tenant.HostId))
+            {
+                return new(Result.Fail("403", "An authenticated tenant is required"), 403, []);
+            }
+        }
+
+        if (_tenantOptions.RejectMismatchedTenantForRequests && !isHostOperation
+            && !string.IsNullOrWhiteSpace(trustedTenant)
+            && context.TenantId != NOFAbstractionConstants.Tenant.HostId
+            && !string.Equals(context.TenantId, normalizedTenant, StringComparison.Ordinal))
+        {
+            return new(Result.Fail("403", "Request tenant does not match the authenticated tenant"), 403, []);
+        }
+
+        return null;
     }
 
     private void ApplyFailure(RequestInboundContext context, InboundAuthorizationResult.Denied failure)

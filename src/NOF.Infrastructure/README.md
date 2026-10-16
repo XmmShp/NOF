@@ -78,6 +78,80 @@ S3 supports signing; the built-in file system and memory riders report `false` a
 preserve compatibility for custom riders that have not implemented signing. Authorize each signing
 request in the application before issuing a URL. See the S3 provider README for browser usage.
 
+## Tenant authorization
+
+Tenant headers are routing input. The default inbound pipeline authenticates the caller,
+normalizes the tenant header (missing means `host`), authorizes the operation, and then
+replaces the tenant with the authenticated identity's tenant when one is present.
+An authenticated identity without a tenant retains header-based selection by default.
+For public RPC hosts that require tenant-bound identities, enable both checks:
+
+```csharp
+builder.Services.Configure<TenantAuthorizationOptions>(options =>
+{
+    options.RequireAuthenticatedTenantForRequests = true;
+    options.RejectMismatchedTenantForRequests = true;
+});
+```
+
+The first option requires authentication for every RPC request, including operations
+marked `AllowAnonymous`. Ordinary operations additionally require a non-host identity
+tenant. The second rejects conflicting non-host request and identity tenants. Missing
+or `host` headers allow selection from the verified identity. Rejection occurs before
+handler dependency resolution, with HTTP 401 or 403 on Controller RPC. Both options
+default to false for compatibility. Custom endpoints outside RPC are unaffected.
+
+`[UseHostTenant]` deliberately changes execution tenancy after authorization. It is
+exempt from identity-tenant and mismatch checks, but strict mode still requires an
+authenticated caller. Declare a separate `[RequirePermission("platform.manage")]`
+and validate platform access; the attribute alone grants no permissions.
+
+Use the existing `IInboundAuthorizationHandler` extension point to validate that the
+identity tenant is active and ready in an application-owned, trusted tenant catalog.
+Delegate ordinary permission checks to `DefaultInboundAuthorizationHandler`, then
+query that catalog before allowing execution. This hook runs before identity-based
+tenant replacement: read the authenticated `context.User.TenantId`, not the header's
+`context.ExecutionContext.TenantId`, when validating tenant membership. Do not resolve
+tenant-specific persistence while making that decision. The Host connection-string
+resolver must also reject unknown tenants instead of building database names from headers.
+See the [HTTP/JWT security test](../../tests/NOF.Hosting.AspNetCore.Tests/TenantRequestAuthorizationTests.cs)
+for a catalog decorator, strict configuration, and checks before tenant-service resolution.
+
+Command and notification consumers retain their existing behavior; these request
+options do not authenticate broker headers. Restrict broker publishers and subscriptions,
+and use `IInboundAuthorizationHandler` for `Command` and `Notification` to authorize
+the producer and catalog tenant. Carry only validated metadata from public requests.
+The handler's explicit `Context` contains the effective tenant; `WithTenantId` rewrites
+the same context item used by outbound tenant middleware. Do not reconstruct it from
+untrusted transport headers. Returning `Denied` for a message stops its handler;
+it does not throw or automatically send the message to a dead-letter queue. Design and
+test rejection/acknowledgement semantics when adding consumer authorization.
+
+## External access tokens
+
+The built-in resource server supports one trusted authority and one expected audience.
+Federate upstream identity sources through that authority when necessary. `Sources`
+selects token headers, not authorities; the JWKS cache is scoped to the configured
+authority and must not be switched according to an unverified token's issuer.
+
+```csharp
+builder.Services.AddAuthenticationResourceServer(options =>
+{
+    options.AuthorizationServerIssuer = "https://identity.example.com";
+    options.ExpectedIssuer = "https://identity.example.com";
+    options.Audience = "orders-api";
+    options.RequireHttpsMetadata = true;
+});
+```
+
+Replace issuer and audience with the values issued for your API. The issuer is always
+validated; if neither configuration nor metadata supplies one, authentication fails.
+Audience validation remains optional for compatibility, so configure it explicitly in
+production. Invalid tokens leave the caller unauthenticated; require authentication
+on protected operations through `RequirePermission` or the strict tenant policy.
+Map external tenant and permission claims to the NOF conventions in the trusted
+identity source. OAuth scope claims are not automatically converted to permissions.
+
 ## Local RPC Clients
 
 The Infrastructure source generator discovers `RpcServer<TService>` implementations in the host and referenced application assemblies. For a server named `OrderService`, it generates a public `LocalOrderServiceClient` implementing the canonical client interface generated beside the service contract:

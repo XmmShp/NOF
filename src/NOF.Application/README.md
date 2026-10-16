@@ -19,9 +19,9 @@ Commands and notifications are plain payload types. Handler discovery comes from
 RPC contracts are declared on `IRpcService` interfaces in the contract layer. Application implementations use `RpcServer<TService>`:
 
 ```csharp
-public partial class OrderService : RpcServer<IOrderService>;
-
 using NOF.Application;
+
+public partial class OrderService : RpcServer<IOrderService>;
 
 public sealed class GetOrder : OrderService.GetOrder
 {
@@ -32,7 +32,7 @@ public sealed class GetOrder : OrderService.GetOrder
         _dbContext = dbContext;
     }
 
-    public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, CancellationToken cancellationToken)
+    public override async Task<Result<OrderDto>> HandleAsync(GetOrderRequest request, Context context, CancellationToken cancellationToken)
     {
         var order = await _dbContext.Set<Order>()
             .FirstOrDefaultAsync(entity => entity.Id == request.Id, cancellationToken);
@@ -55,7 +55,7 @@ public partial class OrderService : RpcServer<IOrderService>;
 
 public sealed class Watch : OrderService.Watch
 {
-    public override Task<StreamingResult<OrderEvent>> HandleAsync(WatchOrdersRequest request, CancellationToken cancellationToken)
+    public override Task<StreamingResult<OrderEvent>> HandleAsync(WatchOrdersRequest request, Context context, CancellationToken cancellationToken)
     {
         return Task.FromResult(StreamingResult.Success(Stream()));
 
@@ -78,7 +78,7 @@ public record SendEmailCommand(string To, string Subject, string Body);
 
 public sealed class SendEmailHandler : CommandHandler<SendEmailCommand>
 {
-    public override Task HandleAsync(SendEmailCommand command, CancellationToken cancellationToken)
+    public override Task HandleAsync(SendEmailCommand command, Context context, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -92,7 +92,7 @@ public record OrderCreatedNotification(Guid OrderId);
 
 public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotification>
 {
-    public override Task HandleAsync(OrderCreatedNotification notification, CancellationToken cancellationToken)
+    public override Task HandleAsync(OrderCreatedNotification notification, Context context, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -103,11 +103,27 @@ public sealed class OrderCreatedHandler : NotificationHandler<OrderCreatedNotifi
 
 Use `ICommandSender` and `INotificationPublisher` for both immediate and deferred dispatch:
 
+The [compiled sample](../../sample/NOF.Sample.Application/Integration/TransactionalMessages.cs)
+contains the complete deferred-dispatch example.
+
 ```csharp
-_notificationPublisher.DeferPublish(new OrderCreatedNotification(order.Id));
-_commandSender.DeferSend(new SendEmailCommand(order.Email, "Created", "Order created."));
+await _notificationPublisher.DeferPublishAsync(new OrderCreatedNotification(order.Id), context, cancellationToken);
+await _commandSender.DeferSendAsync(new SendEmailCommand(order.Email, "Created", "Order created."), context, cancellationToken);
 await _dbContext.SaveChangesAsync(cancellationToken);
 ```
+
+Pass the handler's explicit `Context`. Deferred dispatch runs the outbound middleware and stores
+its resulting headers and trace parent in the outbox; arbitrary context items and the authenticated
+principal are not automatically serialized. Tenant-header middleware uses the explicit context's
+tenant item, falling back to `Context.Current.TenantId`. Pass the authorized handler context,
+and validate tenant access at public boundaries; passing `Context` alone does not establish tenant trust. Identity
+propagation requires an explicit outbound authentication policy. See the
+[tenant authorization](../NOF.Infrastructure/README.md#tenant-authorization) for the trust boundaries.
+
+With an explicit transaction, `SaveChangesAsync` writes inside that transaction and
+`CommitAsync` makes it durable. After rollback or an uncertain commit, dispose the scope and
+recover using a fresh context and an application idempotency key. See
+[persistence boundaries](../../docs/design/repository-uow.md).
 
 ### Persistence Abstractions
 

@@ -34,6 +34,7 @@ builder.AddOidcServer(o =>
 builder.Services.AddAuthenticationResourceServer(o =>
 {
     o.ExpectedIssuer = sampleIssuer;
+    o.Audience = "nof-sample";
     o.RequireHttpsMetadata = false;
     o.AuthorizationServerIssuer = sampleIssuer;
 });

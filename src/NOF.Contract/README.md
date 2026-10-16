@@ -62,6 +62,7 @@ Use `StreamingResult<T>` when an RPC method returns a server-side stream. This k
 public record WatchOrdersRequest(Guid CustomerId);
 public record OrderEvent(Guid OrderId, string Status);
 
+[TransportOverHttp(HttpRpcStyle.ControllerRpc)]
 public interface IOrderService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Get, "/api/orders/watch")]
@@ -72,7 +73,7 @@ public interface IOrderService : IRpcService
 ### RPC Contracts
 
 RPC service methods use a strict single-request signature, do not accept `CancellationToken` on the contract surface,
-do not end with `Async`, and must return a non-Task, non-`void` value. Unary methods may return plain payload types or `Result`-based types. Streaming methods must return `StreamingResult<T>`.
+do not end with `Async`, and must return a non-Task `IResult` implementation. Use `Result<T>` for a payload and `Result` when no response payload is needed. `Empty` can be a request type but is not an RPC return type. Streaming methods must return `StreamingResult<T>`.
 
 ```csharp
 public record GetOrderRequest(Guid Id);
@@ -91,7 +92,7 @@ public interface IOrderService : IRpcService
 
     [Summary("Archive order")]
     [HttpEndpoint(HttpVerb.Post, "/api/orders/archive")]
-    Empty Archive(ArchiveOrderRequest request);
+    Result Archive(ArchiveOrderRequest request);
 
     [Summary("Watch order events")]
     [HttpEndpoint(HttpVerb.Get, "/api/orders/watch")]

@@ -112,6 +112,8 @@ public static partial class NOFHostingAspNetCoreExtensions
 
                 builder.WithMetadata(NofRpcHttpEndpointMetadata.Instance);
                 ApplyDocumentation(builder, method);
+                builder.Produces(statusCode: StatusCodes.Status401Unauthorized, responseType: handlerMapping.ReturnType, contentType: "application/json");
+                builder.Produces(statusCode: StatusCodes.Status403Forbidden, responseType: handlerMapping.ReturnType, contentType: "application/json");
                 if (isStream)
                 {
                     builder.Produces(statusCode: 200, contentType: "text/event-stream");
@@ -257,7 +259,7 @@ public static partial class NOFHostingAspNetCoreExtensions
     {
         if (response is StreamingResult<TItem> streamingResult)
         {
-            return new RpcStreamingHttpResult<TItem>(streamingResult);
+            return new RpcStreamingHttpResult<TItem>(streamingResult, GetHttpStatusCode(httpContext));
         }
 
         if (response is not null)

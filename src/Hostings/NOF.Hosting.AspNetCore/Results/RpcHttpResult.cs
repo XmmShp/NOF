@@ -33,9 +33,16 @@ public sealed class RpcHttpResult(
 [RequiresUnreferencedCode("Streaming HTTP response writing may require runtime JSON serialization for transport bodies.")]
 [RequiresDynamicCode("Streaming HTTP response writing may require runtime JSON serialization for transport bodies.")]
 public sealed class RpcStreamingHttpResult<TItem>(
-    StreamingResult<TItem> rpcResult) : Microsoft.AspNetCore.Http.IResult
+    StreamingResult<TItem> rpcResult,
+    int statusCode) : Microsoft.AspNetCore.Http.IResult
 {
     private readonly StreamingResult<TItem> _rpcResult = rpcResult ?? throw new ArgumentNullException(nameof(rpcResult));
+
+    /// <summary>Creates a streaming response with the default HTTP success status.</summary>
+    public RpcStreamingHttpResult(StreamingResult<TItem> rpcResult)
+        : this(rpcResult, StatusCodes.Status200OK)
+    {
+    }
 
     public Task ExecuteAsync(HttpContext httpContext)
     {
@@ -43,7 +50,7 @@ public sealed class RpcStreamingHttpResult<TItem>(
 
         if (!_rpcResult.IsSuccess)
         {
-            return new RpcHttpResult(_rpcResult).ExecuteAsync(httpContext);
+            return new RpcHttpResult(_rpcResult, statusCode).ExecuteAsync(httpContext);
         }
 
         httpContext.Response.StatusCode = StatusCodes.Status200OK;

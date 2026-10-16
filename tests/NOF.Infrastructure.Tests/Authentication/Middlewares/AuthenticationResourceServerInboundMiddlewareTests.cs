@@ -13,6 +13,41 @@ namespace NOF.Infrastructure.Tests.Authentication.Middlewares;
 
 public sealed class AuthenticationResourceServerInboundMiddlewareTests
 {
+    [Theory]
+    [InlineData("https://auth.local", "api", "https://auth.local", "api", true)]
+    [InlineData("https://other.local", "api", "https://auth.local", "api", false)]
+    [InlineData("https://auth.local", "other-api", "https://auth.local", "api", false)]
+    [InlineData("https://auth.local", null, "https://auth.local", "api", false)]
+    [InlineData("https://auth.local", "api", null, "api", false)]
+    public async Task InvokeAsync_ShouldValidateIssuerAndAudience(
+        string tokenIssuer, string? tokenAudience, string? expectedIssuer, string expectedAudience, bool authenticated)
+    {
+        var userContext = new UserContext();
+        using var rsa = RSA.Create(2048);
+        var key = new ManagedSigningKey
+        {
+            Kid = "validation-key",
+            Key = new RsaSecurityKey(rsa) { KeyId = "validation-key" },
+            CreatedAtUtc = DateTime.UtcNow,
+            ActivatedAtUtc = DateTime.UtcNow
+        };
+        using var cache = CreateJwksService([key]);
+        var middleware = CreateMiddleware(userContext, cache, expectedIssuer, expectedAudience);
+        var token = CreateToken(key.Key, tokenIssuer, audience: tokenAudience);
+        var context = (RequestInboundContext)CreateInboundContext()
+            .WithItem(NOFAbstractionConstants.Transport.Headers.Authorization, $"Bearer {token}");
+        Context? forwarded = null;
+        await middleware.InvokeAsync(context, new object(), (next, _, _) =>
+        {
+            forwarded = next;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.Equal(authenticated, userContext.User.IsAuthenticated);
+        Assert.NotNull(forwarded);
+        Assert.Equal(!authenticated, forwarded.TryGetItem(NOFAbstractionConstants.Transport.Headers.Authorization, out _));
+    }
+
     [Fact]
     public async Task InvokeAsync_WhenAuthorizationHeaderMissing_ShouldContinueWithoutValidation()
     {
@@ -190,7 +225,9 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
 
     private static AuthenticationResourceServerInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        ResourceServerJwksCacheService jwksCacheService)
+        ResourceServerJwksCacheService jwksCacheService,
+        string? expectedIssuer = null,
+        string? audience = null)
     {
         return new AuthenticationResourceServerInboundMiddleware(
             userContext,
@@ -198,6 +235,8 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             Microsoft.Extensions.Options.Options.Create(new AuthenticationResourceServerOptions
             {
                 AuthorizationServerIssuer = "https://auth.local",
+                ExpectedIssuer = expectedIssuer,
+                Audience = audience,
                 RequireHttpsMetadata = true,
                 Sources =
                 [
@@ -228,12 +267,12 @@ public sealed class AuthenticationResourceServerInboundMiddlewareTests
             TimeProvider.System);
     }
 
-    private static string CreateToken(SecurityKey key, string issuer, IReadOnlyList<Claim>? claims = null)
+    private static string CreateToken(SecurityKey key, string issuer, IReadOnlyList<Claim>? claims = null, string? audience = null)
     {
         var now = DateTime.UtcNow;
         var token = new JwtSecurityToken(
             issuer: issuer,
-            audience: null,
+            audience: audience,
             claims: claims ?? [new Claim(JwtRegisteredClaimNames.Sub, "user-1")],
             notBefore: now.AddMinutes(-1),
             expires: now.AddMinutes(5),

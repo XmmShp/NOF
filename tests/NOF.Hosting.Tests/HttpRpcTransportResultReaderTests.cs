@@ -10,6 +10,27 @@ namespace NOF.Hosting.Tests;
 public sealed class HttpRpcTransportResultReaderTests
 {
     [Fact]
+    public async Task ReadAsync_WhenHttp200ContainsBusinessFailure_PreservesFailure()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{"isSuccess":false,"errorCode":"conflict","message":"Already approved","value":null,"extra":{}}""",
+                Encoding.UTF8,
+                "application/json")
+        };
+
+        var result = await HttpRpcTransportResultReader.ReadAsync(
+            response,
+            CreateTypeInfo<Result<TokenResponse>>(),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("conflict", result.ErrorCode);
+        Assert.Null(result.Value);
+    }
+
+    [Fact]
     public async Task ReadAsync_WhenResponseSucceeds_ReturnsBusinessResult()
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK)

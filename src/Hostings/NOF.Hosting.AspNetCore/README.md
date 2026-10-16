@@ -68,6 +68,7 @@ The JSON-RPC endpoint supports unary and streaming calls with object `params`. S
 Methods on ControllerRpc services are turned into minimal API endpoints:
 
 ```csharp
+[TransportOverHttp(HttpRpcStyle.ControllerRpc)]
 public interface IOrderService : IRpcService
 {
     [HttpEndpoint(HttpVerb.Get, "/api/orders/get")]
@@ -79,6 +80,40 @@ public interface IOrderService : IRpcService
 ```
 
 Route parameters such as `"{id}"` are not supported for RPC HTTP endpoints. Put input data on the request object instead.
+
+For example, a contract prefix `/api/orders` and operation route `/get` produce
+`/api/orders/get?Id=...` for GET. GET and DELETE bind request properties from query;
+POST, PUT and PATCH bind the request from a JSON body. OpenAPI uses these fixed paths.
+Generated clients use relative URIs; end a reverse-proxy `BaseAddress` path with `/`.
+
+## HTTP failures and Result
+
+Controller RPC keeps the HTTP transport outcome separate from the business Result:
+
+| Outcome | Default HTTP status | Body / client behavior |
+| --- | --- | --- |
+| Authentication required but missing/invalid | 401 | Failed Result with Bearer challenge |
+| Permission or configured tenant-policy denial | 403 | Failed Result with Bearer challenge |
+| Resource absent, validation failure or conflict returned by a handler | 200 | Failed Result with the application's error code |
+| `DomainException` from the handler | 200 | Failed Result preserving the domain code and message |
+| Unhandled concurrency or transient exception inside the inbound handler pipeline | 200 | Failed Result with code `500`; handle known failures explicitly in the application |
+| Malformed HTTP request/model binding failure | Usually 400 | ASP.NET Core binding response |
+| Proxy, network or failure outside the handler pipeline | Host/transport dependent | May return non-2xx or throw a network/serialization exception |
+
+Controller endpoints declare 200, 401 and 403 response metadata for OpenAPI. Business
+error codes do not automatically become HTTP status codes. Stream authorization failures
+return JSON with the authorization status before SSE starts; successful streams use SSE.
+Once a stream has started, its HTTP status cannot be changed to report a later failure.
+
+Generated clients deserialize a 2xx body into its Result, preserving `IsSuccess=false`.
+Always inspect `IsSuccess` before using `Value`. Non-2xx becomes a failed Result whose
+error code is the HTTP status and message contains the response body. The generated
+client does not retry automatically. If the Host adds HTTP resilience, retry writes
+only with a stable operation key and server-side deduplication. Transactional-message
+background retries are independent of HTTP client retries.
+
+JSON-RPC uses its own response/error envelope and should not be interpreted through
+this Controller RPC mapping table.
 
 For streaming methods, NOF emits `text/event-stream` responses and serializes each item from `StreamingResult<T>.Value` as an SSE `data:` payload. Generated HTTP clients automatically request SSE and materialize the response back into `Task<StreamingResult<T>>`.
 

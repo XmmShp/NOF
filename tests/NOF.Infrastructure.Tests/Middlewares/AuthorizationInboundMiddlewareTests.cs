@@ -9,6 +9,133 @@ namespace NOF.Infrastructure.Tests.Middlewares;
 
 public sealed class AuthorizationInboundMiddlewareTests
 {
+    [Theory]
+    [InlineData(null, "forged", "403")]
+    [InlineData("host", "forged", "403")]
+    [InlineData("tenantb", "tenanta", "403")]
+    [InlineData("tenantb", "tenantb", null)]
+    [InlineData("tenantb", "host", null)]
+    public async Task InvokeAsync_StrictTenantPolicy_ShouldValidateBeforeHandlerResolution(
+        string? identityTenant, string requestTenant, string? errorCode)
+    {
+        var userContext = new UserContext();
+        var identity = CreateAuthenticatedIdentity();
+        if (identityTenant is not null)
+        {
+            identity.AddClaim(new Claim(ClaimTypes.TenantId, identityTenant));
+        }
+        userContext.User.AddIdentity(identity);
+        var middleware = CreateMiddleware(userContext, tenantOptions: new()
+        {
+            RequireAuthenticatedTenantForRequests = true,
+            RejectMismatchedTenantForRequests = true
+        });
+        var context = (RequestInboundContext)CreateRequestContext(nameof(TestService.LoginOnlyMethod))
+            .WithTenantId(requestTenant);
+        string? forwardedTenant = null;
+
+        await middleware.InvokeAsync(context, new TestRequest(), (forwarded, _, _) =>
+        {
+            forwardedTenant = forwarded.TenantId;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        if (errorCode is not null)
+        {
+            Assert.Null(forwardedTenant);
+            Assert.Equal(errorCode, Assert.IsAssignableFrom<IResult>(context.Response).ErrorCode);
+            Assert.Equal(errorCode, context.ResponseHeaders[NOFInfrastructureConstants.Transport.Headers.HttpStatusCode]);
+        }
+        else
+        {
+            Assert.Equal(identityTenant, forwardedTenant);
+        }
+    }
+
+    [Fact]
+    public async Task InvokeAsync_StrictTenantPolicy_ShouldRequireAuthenticationOnAnonymousMethods()
+    {
+        var middleware = CreateMiddleware(new UserContext(), tenantOptions: new()
+        {
+            RequireAuthenticatedTenantForRequests = true
+        });
+        var context = CreateRequestContext(nameof(TestService.AllowAnonymousMethod));
+        var nextCalled = false;
+        await middleware.InvokeAsync(context, new TestRequest(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        Assert.False(nextCalled);
+        Assert.Equal("401", Assert.IsAssignableFrom<IResult>(context.Response).ErrorCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_StrictTenantPolicy_HostOperationStillRequiresPlatformPermission()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity());
+        var middleware = CreateMiddleware(userContext, tenantOptions: new()
+        {
+            RequireAuthenticatedTenantForRequests = true,
+            RejectMismatchedTenantForRequests = true
+        });
+        var deniedContext = CreateRequestContext(nameof(TestService.HostMethod));
+        await middleware.InvokeAsync(deniedContext, new TestRequest(), (_, _, _) =>
+            throw new InvalidOperationException("An unauthorized host handler must not run"), default);
+        Assert.Equal("403", Assert.IsAssignableFrom<IResult>(deniedContext.Response).ErrorCode);
+
+        userContext.Logout();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity(ClaimTypes.Permission, "platform.manage"));
+        var nextCalled = false;
+        await middleware.InvokeAsync(CreateRequestContext(nameof(TestService.HostMethod)), new TestRequest(), (_, _, _) =>
+        {
+            nextCalled = true;
+            return ValueTask.CompletedTask;
+        }, default);
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_StrictRequestPolicy_DoesNotChangeTrustedMessageTenantHandling()
+    {
+        var middleware = CreateMiddleware(new UserContext(), tenantOptions: new()
+        {
+            RequireAuthenticatedTenantForRequests = true,
+            RejectMismatchedTenantForRequests = true
+        });
+        var context = (CommandInboundContext)CreateCommandContext(
+            typeof(TestRequest), typeof(TestHandler), nameof(TestHandler.AllowAnonymousHandler)).WithTenantId("internaltenant");
+        string? forwardedTenant = null;
+        await middleware.InvokeAsync(context, new TestRequest(), (forwarded, _, _) =>
+        {
+            forwardedTenant = forwarded.TenantId;
+            return ValueTask.CompletedTask;
+        }, default);
+        Assert.Equal("internaltenant", forwardedTenant);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_AuthenticatedUserWithoutTenant_PreservesUntrustedContextTenant()
+    {
+        var userContext = new UserContext();
+        userContext.User.AddIdentity(CreateAuthenticatedIdentity());
+        var middleware = CreateMiddleware(userContext);
+        var context = (RequestInboundContext)CreateRequestContext(
+            nameof(TestService.LoginOnlyMethod)).WithTenantId("untrusted");
+
+        string? forwardedTenant = null;
+        await middleware.InvokeAsync(context, new TestRequest(), (forwarded, _, _) =>
+        {
+            forwardedTenant = forwarded.TenantId;
+            return ValueTask.CompletedTask;
+        }, default);
+
+        // Characterizes the default. Public hosts must add tenant authorization.
+        Assert.Equal("untrusted", forwardedTenant);
+    }
+
     [Fact]
     public async Task InvokeAsync_MethodAllowAnonymous_ShouldOverrideClassPermission_AndAllowUnauthenticated()
     {
@@ -265,14 +392,15 @@ public sealed class AuthorizationInboundMiddlewareTests
 
     private static AuthorizationInboundMiddleware CreateMiddleware(
         IUserContext userContext,
-        IInboundAuthorizationHandler? authorizationHandler = null)
+        IInboundAuthorizationHandler? authorizationHandler = null,
+        TenantAuthorizationOptions? tenantOptions = null)
         => new(
             userContext,
             authorizationHandler ?? new DefaultInboundAuthorizationHandler(NullLogger<DefaultInboundAuthorizationHandler>.Instance),
             Options.Create(new AuthenticationResourceServerOptions
             {
                 AuthorizationServerIssuer = "https://auth.local/oauth2"
-            }));
+            }), Options.Create(tenantOptions ?? new()));
 
     private static ClaimsIdentity CreateAuthenticatedIdentity(params string[] permissionClaims)
     {
@@ -290,6 +418,10 @@ public sealed class AuthorizationInboundMiddlewareTests
     [RequirePermission("input-type")]
     private sealed class TestService
     {
+        [UseHostTenant]
+        [RequirePermission("platform.manage")]
+        public void HostMethod(TestRequest request) { }
+
         [AllowAnonymous]
         public void AllowAnonymousMethod(TestRequest request) { }
 

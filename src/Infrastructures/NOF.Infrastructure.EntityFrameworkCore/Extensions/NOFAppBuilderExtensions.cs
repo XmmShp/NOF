@@ -38,11 +38,12 @@ public static partial class NOFInfrastructureExtensions
                 sp.GetRequiredService<ITenantDbContextFactory<TDbContext>>());
             builder.Services.ReplaceOrAddScoped<NOFDbContext>(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateDbContext());
             builder.Services.ReplaceOrAddScoped<DbContext>(sp => sp.GetRequiredService<NOFDbContext>());
-            builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<IDbContextFactory>().CreateDbContext());
+            builder.Services.ReplaceOrAddScoped<IDbContext>(sp =>
+                new EfCoreDbContextAdapter(sp.GetRequiredService<DbContext>()));
             builder.Services.AddRepositoryProviders();
             if (typeof(TDbContext) != typeof(NOFDbContext))
             {
-                builder.Services.ReplaceOrAddScoped(sp => sp.GetRequiredService<NOFDbContextFactory<TDbContext>>().CreateDbContext());
+                builder.Services.ReplaceOrAddScoped(sp => (TDbContext)sp.GetRequiredService<NOFDbContext>());
             }
 
             return new EFCoreSelector(builder, typeof(TDbContext));

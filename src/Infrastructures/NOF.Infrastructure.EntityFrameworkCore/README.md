@@ -81,6 +81,19 @@ For lightweight local or test scenarios, call `AddNOFEntityFrameworkCore()` to r
 
 ## Dynamic connection resolution
 
+### Sharing native operations with Application persistence
+
+`UseDbContext<AppDbContext>()` resolves `AppDbContext`, `NOFDbContext`, `DbContext`,
+and the application `IDbContext` adapter over the same scoped instance. A Host
+implementation can inject `AppDbContext` to execute provider-specific SQL and join
+the transaction started through `IDbContext`. Factory-created contexts are independent.
+See [persistence boundaries](../../../docs/design/repository-uow.md) for connection,
+transaction, tenant, and retry requirements.
+
+This corrects earlier registrations that created separate contexts for those service
+types. Code relying on independent change trackers must explicitly create separate
+contexts instead. Select the tenant before resolving any scoped persistence service.
+
 `WithConnectionString(...)` remains the simple default and supports the `{tenantId}` placeholder. Use `WithConnectionStringResolver(...)` when the connection must come from a tenant catalog, secret store, shard map, or another scoped service:
 
 ```csharp
@@ -126,6 +139,17 @@ public sealed class TenantDatabaseMigrator(
 The application owns tenant discovery, retries, concurrency limits, and deployment coordination.
 The factory owns tenant normalization and connection resolution; the migration helper owns context
 disposal and delegates locking and migration execution to EF Core.
+
+For a tenant readiness gate, persist `Pending`, `Migrating`, `Ready` or `Failed` plus
+the schema version in the Host tenant catalog. Use explicit migration orchestration,
+and publish `Ready` only after `MigrateAsync` and any required backfill complete.
+On failure, record the error and retry the same explicit API in a fresh scope.
+Provision new tenants through that same lifecycle. Check the catalog's readiness and
+version in `IInboundAuthorizationHandler` before resolving tenant persistence.
+Process health and successful Host migration do not establish tenant readiness.
+Use a deployment migration job or distributed lease to coordinate multiple replicas;
+the factory does not expose a distributed readiness service, and provider migration
+locks do not coordinate application backfills or status publication.
 
 ### Custom database context factory
 
