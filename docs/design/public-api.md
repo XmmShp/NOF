@@ -76,6 +76,15 @@ public class WatchUsers : UserService.WatchUsers
 builder.AddRpcServer<UserService>();
 ```
 
+Modules and plugins that receive only `IServiceCollection` can call
+`services.AddRpcServer<UserService>()` directly. This registration API belongs to
+`NOF.Application` in the `Microsoft.Extensions.DependencyInjection` namespace and
+requires no host builder or infrastructure package. The builder API delegates to
+it. Both register a scoped server and update the collection-local `RpcServerRegistry`;
+repeated registration is idempotent, and the last server registered for a contract
+wins. Register before the registry is first read. Host initialization still owns
+transport setup and endpoint mapping.
+
 OpenAPI service registration happens during builder creation. Call `app.MapOpenApi()` explicitly when you want to expose the document.
 
 When the mapped RPC method returns `StreamingResult<T>`, `NOF.Hosting.AspNetCore` exposes it as an SSE endpoint and generated HTTP clients consume it as `Task<StreamingResult<T>>`.

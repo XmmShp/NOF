@@ -11,12 +11,21 @@ namespace NOF.Hosting.AspNetCore.Tests;
 
 public sealed class HttpEndpointRegistrationTests
 {
-    [Fact]
-    public async Task AddRpcServer_ShouldMapRpcEndpointAutomatically()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AddRpcServer_ShouldMapRpcEndpointAutomatically(bool registerThroughServices)
     {
         var builder = NOFWebApplicationBuilder.Create([]);
         builder.WebApplicationBuilder.WebHost.UseTestServer();
-        builder.AddRpcServer<HookedRpcServer>();
+        if (registerThroughServices)
+        {
+            builder.Services.AddRpcServer<HookedRpcServer>();
+        }
+        else
+        {
+            builder.AddRpcServer<HookedRpcServer>();
+        }
         builder.Services.AddTransient<EchoHandler>();
 
         await using var app = await builder.BuildAsync();
@@ -41,7 +50,7 @@ public sealed class HttpEndpointRegistrationTests
         var builder = NOFWebApplicationBuilder.Create([]);
         builder.WebApplicationBuilder.WebHost.UseTestServer();
         builder.AddRpcServer<HookedRpcServer>();
-        builder.AddRpcServer<HookedRpcServer>();
+        builder.Services.AddRpcServer<HookedRpcServer>();
         builder.Services.AddTransient<EchoHandler>();
 
         await using var app = await builder.BuildAsync();

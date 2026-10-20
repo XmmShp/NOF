@@ -14,7 +14,7 @@ NOF keeps generic command and notification dispatch, but RPC-style request handl
 
 ## Notes
 
-- HTTP exposure for RPC services is registered through `builder.AddRpcServer<TRpcServer>()` and mapped automatically during application initialization.
+- HTTP exposure for RPC services is registered through `builder.AddRpcServer<TRpcServer>()` or `builder.Services.AddRpcServer<TRpcServer>()` and mapped automatically during application initialization.
 - OpenAPI registration is always enabled by `NOFWebApplicationBuilder.Create(args)`, but `app.MapOpenApi()` remains an explicit host decision.
 - Application implementations are built around `RpcServer<TService>` rather than ad-hoc request-dispatch APIs.
 - `RpcServer<TService>` discovery generates `Local{RpcServerName}Client`; the client interface is selected through `IRpcClient<TService>` rather than a naming convention or marker attribute.

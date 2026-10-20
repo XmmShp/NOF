@@ -73,6 +73,7 @@ builder.UseDbContext<AppDbContext>()
     .WithOptions(static (optionsBuilder, connectionString) => optionsBuilder.UseNpgsql(connectionString))
     .MigrateOnInitialize();
 
+// Modules with only IServiceCollection can use services.AddRpcServer<MyAppService>().
 builder.AddRpcServer<MyAppService>();
 
 var app = await builder.BuildAsync();

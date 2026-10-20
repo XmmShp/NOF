@@ -20,11 +20,7 @@ public static partial class NOFInfrastructureExtensions
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TRpcServer>()
             where TRpcServer : RpcServer, IRpcServer
         {
-            builder.Services.TryAddScoped<TRpcServer>();
-
-            var registry = builder.Services.GetOrAddSingleton<RpcServerRegistry>();
-            registry.RemoveWhere(existing => existing.ServiceType == TRpcServer.ServiceType);
-            registry.Add(new RpcServerRegistration(TRpcServer.ServiceType, typeof(TRpcServer)));
+            builder.Services.AddRpcServer<TRpcServer>();
             return builder;
         }
 
